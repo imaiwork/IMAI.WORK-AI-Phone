@@ -5,11 +5,40 @@
   <a href="https://imai.work" target="_blank"><img src="https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/e3878c24-77be-4db1-8046-14cf7e7a0f42.png" width="100%" alt="IMAI.WORK Logo" /></a>
 </p>
 
+
+---
+
+<table>
+  <tr>
+    <td width="100%" align="center">
+      <a href="https://gitee.com/activity/2025opensource?ident=IBYOKG">
+        <img src="https://img.shields.io/badge/🔥_Gitee_2025-年度投票-FF4B2B?style=for-the-badge&logo=gitee&logoColor=white" height="40">
+      </a>
+      <br><br>
+      <strong>投出你宝贵的一票</strong><br>
+      <span style="font-size: 12px; color: #666;">凭投票截图可领取项目 PPT 源文件</span>
+      <br><br>
+      <a href="https://gitee.com/activity/2025opensource?ident=IBYOKG">
+         <img src="https://img.shields.io/badge/立即投票-点击跳转-FF416C?style=flat-square">
+      </a>
+    </td>
+
+</table>
+
+---
+
+
+
+
 <p align="center">
 <a href="https://yijianshi.feishu.cn/space/preview/docx/WN4Fd4Yk3o6WEKxGKAWcvlVtnlf" target="_blank">在线演示</a>｜
 <a href="https://imai.work">官方网站</a>｜
 <a href="./README-EN.md">English</a>
 </p>
+
+
+
+
 
 <p align="center">
   <a href="https://vuejs.org/"><img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D" alt="Vue.js" /></a>
