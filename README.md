@@ -24,6 +24,10 @@
 
 IMAI.WORK 是一款专为 B2B 企业设计的全自动 AI 获客开源系统。通过 AI 驱动的手机自动化技术，彻底革新传统获客模式，实现"手机还在干活，电脑还在干活，但人不见了"的全自动获客体验。
 
+
+
+
+
 ## 企业实力
 
 原创公司2017年成立，9年研发，8年互联网SaaS经验，5年AI研发经验，研发人员占比 90% 以上。2022年基于NLP（大语言模型的前身）研发应用《获客兔》在抖音开放平台持续霸榜第三名5个月。
@@ -82,17 +86,92 @@ cd imai-work
 # 复制并修改环境变量配置
 cp .env.example .env
 
-# 使用 Docker 启动应用
-docker compose up -d
+# 参考教程搭建系统
+https://yijianshi.feishu.cn/wiki/K4VdwEtb7ikiOnkmv2ScIX67nGf?from=from_copylink
+
+【复制到浏览器打开】
 ```
 
-启动完成后，访问 http://localhost:3000 进入系统。
+启动完成后，访问 http://域名 进入系统。
 
 ## 系统截图
 
-![IMAI.WORK 截图](./assets/screenshots/dashboard.png)
-![IMAI.WORK 截图](./assets/screenshots/active-engine.png)
-![IMAI.WORK 截图](./assets/screenshots/passive-engine.png)
+## 📌 功能模块截图示例
+### PC主界面
+![AI个微截图](https://update.imai.work/uploads/images/20251205/202512051317304f45a3353.png)  
+![AI个微截图](https://update.imai.work/uploads/images/20251205/20251205131730f3e638090.png)
+![AI个微截图](https://update.imai.work/uploads/images/20251205/20251205131730a62396833.png)
+
+### 1. AI个微 & 矩阵发布（RPA智能手机）
+自动化微信/多账号管理、好友聊天、SOP营销、朋友圈管理
+![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E4%B8%AA%E5%BE%AE%E9%A6%96%E9%A1%B5.png)  
+![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E4%B8%AA%E5%BE%AESOP.png)
+![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%AE%A2%E6%88%B7%E6%B5%81%E7%A8%8B%E7%AE%A1%E7%90%86.png)
+![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%9C%8B%E5%8F%8B%E5%9C%88.png)
+![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%87%AA%E5%8A%A8%E6%A0%87%E7%AD%BE.png)
+![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%BE%AE%E4%BF%A1%E7%AE%A1%E7%90%86.png)
+
+### 2. 视频号 & 小红书 AI 自动获客
+视频号自动爬取、私信引导、批量发布；小红书自动引流与内容发布  
+![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E7%9F%A9%E9%98%B5%E8%B4%A6%E5%8F%B7%E7%AE%A1%E7%90%86.png)
+![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%A7%86%E9%A2%91%E5%8F%B7%E8%8E%B7%E5%AE%A2.png)
+![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%87%AA%E5%8A%A8%E8%8E%B7%E5%AE%A2%E5%B0%8F%E7%A8%8B%E5%BA%8F.png)
+![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E7%BA%BF%E7%B4%A2%E8%AF%8D%E7%94%9F%E6%88%90.png)
+![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E4%BB%BB%E5%8A%A1%E8%AE%BE%E7%BD%AE.png)
+![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%8E%B7%E5%AE%A2%E6%97%B6%E9%97%B4%E8%AE%BE%E5%AE%9A.png)
+
+### 3. AI会议纪要
+实时会议记录、音视频转写、多语言翻译、摘要与思维导图生成  
+![会议纪要截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E4%BC%9A%E8%AE%AE%E7%BA%AA%E8%A6%81.png)  
+![会议纪要截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E4%BC%9A%E8%AE%AE%E8%BD%AC%E5%86%99%E5%86%85%E5%AE%B9.png)  
+
+### 4. AI数字人及视频创作
+数字人形象克隆、音色克隆、视频合成、智能剪辑与混剪  
+![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%95%B0%E5%AD%97%E4%BA%BA.png)  
+![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%95%B0%E5%AD%97%E4%BA%BA%E5%BD%A2%E8%B1%A1.png)
+![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%95%B0%E5%AD%97%E4%BA%BA%E8%A7%86%E9%A2%91%E7%94%9F%E6%88%90.png)
+![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E9%9F%B3%E8%89%B2%E7%AE%A1%E7%98%A4.png) 
+![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%88%9B%E4%BD%9C%E8%AE%B0%E5%BD%95.png) 
+![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%B0%8F%E7%A8%8B%E5%BA%8F%E6%95%B0%E5%AD%97%E4%BA%BA.png) 
+
+
+### 5. AI美工
+文生图/图生图、商品海报生成、模特换衣、图生视频  
+![AI美工截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/Ai%E7%94%9F%E5%9B%BE.png)  
+![AI美工截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%9B%BE%E7%94%9F%E5%9B%BE.png)  
+
+
+### 6. AI工作台聊天
+多模型切换、智能体调用、文件理解、联网搜索  
+![AI聊天截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E9%80%9A%E7%94%A8%E8%81%8A%E5%A4%A9.png)    
+
+### 7. AI陪练
+场景模拟、练习报告、自定义场景训练  
+![AI陪练截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%99%BA%E8%83%BD%E9%99%AA%E7%BB%83.png)  
+
+
+### 8. AI人事
+岗位管理、自动招聘、AI面试、面试报告与数据导出  
+![AI人事截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%87%AA%E5%8A%A8%E9%9D%A2%E8%AF%951.png)  
+![AI人事截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%87%AA%E5%8A%A8%E9%9D%A2%E8%AF%95.png)
+
+
+### 9. AI思维导图
+自动生成结构化思维导图  
+![思维导图截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%80%9D%E7%BB%B4%E5%AF%BC%E5%9B%BE.png)  
+
+### 10. 知识库（RAG & 向量）
+知识库管理、训练、智能切片、向量检索、多知识库挂载  
+![知识库截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%90%91%E9%87%8F%E7%9F%A5%E8%AF%86%E5%BA%93.png)  
+
+
+### 11. OEM & AI智能体
+品牌授权、自定义智能体模型、文件解析、网页/公众号/API调用  
+![OEM截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/Ai%E6%99%BA%E8%83%BD%E4%BD%93.png)  
+![AI智能体截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%96%B0%E5%A2%9EAi%E6%99%BA%E8%83%BD%E4%BD%93.png)
+![AI智能体截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%99%BA%E8%83%BD%E4%BD%93%E5%8F%91%E5%B8%83.png)
+
+
 
 ## 贡献指南
 
@@ -101,6 +180,11 @@ docker compose up -d
 3. 提交更改 (`git commit -m 'feat: add amazing feature'`)
 4. 推送分支 (`git push origin feature/amazing-feature`)
 5. 提交 Pull Request
+
+## 📢 特别通知
+
+**`******FORK大于3次，可免费获得商业授权码******`**
+
 
 ### Commit 类型
 
@@ -118,7 +202,7 @@ docker compose up -d
 本项目采用自定义双重许可证:
 
 - **社区版许可**: 可用于学习、研究和非商业用途
-- **商业许可**: 如需商业使用，请联系 business@imai.work
+- **商业许可**: 如需商业使用，请联系https://imai.work/ 
 
 ## Star 历史
 
@@ -126,14 +210,14 @@ docker compose up -d
 
 ## 支持项目
 
-如果您觉得项目有价值，欢迎给我们 Star ⭐ 或通过以下方式支持:
+如果您觉得项目有价值，欢迎给我们 Star ⭐ ，给与Star后凭截图获取项目所有宣传PPT源文件、PSD、sketch源文件:
 
 <p align="center">
-  <img src="./assets/donate.png" width="180" alt="打赏码">
+  <img src="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png" width="600" alt="打赏码">
 </p>
 
 ## 联系我们
 
 - [GitHub Issues](https://github.com/imai-work/imai-work/issues)
-- [官方社区](https://forum.imai.work)
-- [商务合作](mailto:business@imai.work)
+- [官方社区](https://imai.fan)
+- [商务合作](https://imai.work/ )
