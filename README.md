@@ -206,14 +206,15 @@ https://yijianshi.feishu.cn/wiki/K4VdwEtb7ikiOnkmv2ScIX67nGf?from=from_copylink
 
 ## Star 历史
 
-[![Star History Chart](https://api.star-history.com/svg?repos=imai-work/imai-work&type=Date)](https://star-history.com/#imai-work/imai-work&Date)
+
+[![Star History Chart](https://api.star-history.com/svg?repos=imai-work/imai-work,imaiwork/imaiwork&type=date&legend=top-left)](https://www.star-history.com/#imai-work/imai-work&imaiwork/imaiwork&type=date&legend=top-left)
 
 ## 支持项目
 
 如果您觉得项目有价值，欢迎给我们 Star ⭐ ，给与Star后凭截图获取项目所有宣传PPT源文件、PSD、sketch源文件:
 
 <p align="center">
-  <img src="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png" width="600" alt="打赏码">
+  <img src="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png"  alt="打赏码">
 </p>
 
 ## 联系我们
