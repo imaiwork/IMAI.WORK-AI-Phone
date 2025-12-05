@@ -1,0 +1,62 @@
+@use "element.scss";
+@use "var.css";
+@use "public.scss";
+@tailwind base;
+@tailwind components;
+
+@layer components {
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+        width: 0;
+    }
+    .group {
+        @apply visible;
+    }
+    .bg-token-sidebar-surface-secondary {
+        background-color: var(--sidebar-surface-secondary);
+    }
+    .bg-token-sidebar-surface-secondary-primary {
+        background-color: var(--sidebar-surface-secondary-primary);
+    }
+    .bg-token-sidebar-surface-secondary-primary-7 {
+        background-color: var(--sidebar-surface-secondary-primary-7);
+    }
+    .bg-token-main-surface-secondary {
+        background-color: var(--main-surface-secondary);
+    }
+    .bg-token-file-surface-secondary {
+        background-color: var(--file-surface-secondary);
+    }
+    .border-token-border-light {
+        border-color: var(--border-light);
+    }
+    .text-token-text-secondary {
+        color: var(--text-secondary);
+    }
+    .text-token-text-tertiary {
+        color: var(--text-tertiary);
+    }
+    .text-token-text-primary {
+        color: var(--color-minor);
+    }
+    .border-token-border-medium {
+        border-color: var(--border-medium);
+    }
+    .border-token-border-heavy {
+        border-color: var(--border-heavy);
+    }
+    .border-token-primary {
+        border-color: var(--border-primary);
+    }
+    .border-token-primary-2 {
+        border-color: var(--border-primary-2);
+    }
+    .border-token-primary-3 {
+        border-color: var(--border-primary-3);
+    }
+}
+
+@font-face {
+    font-family: "digital-number";
+    src: url("@/assets/fonts/sa-digital-number.ttf");
+}

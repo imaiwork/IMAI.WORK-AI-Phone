@@ -1,0 +1,102 @@
+import cssMacro from "weapp-tailwindcss/css-macro";
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+    content: ["./index.html", "./src/**/*.{html,js,ts,jsx,tsx,vue}"],
+    theme: {
+        colors: {
+            white: "var(--color-white, #ffffff)",
+            black: "var(--color-black, #000000)",
+            main: "var(--color-main, #1D2129)",
+            content: "var(--color-content, #666666)",
+            muted: "var(--color-muted, #999999)",
+            page: "var(--color-bg, #F9FAFB)",
+            light: "var(--color-light, #E2E2E2)",
+            disabled: "var(--color-disabled, #c8c9cc)",
+            minor: "var(--color-minor, #0d0d0d)",
+            "btn-text": "var(--color-btn-text, white)",
+            voice: "var(--color-voice, #4AA061)",
+            primary: {
+                DEFAULT: "var(--color-primary, #0065FB)",
+                "light-1": "var(--color-primary-light-1, #1A74FB)",
+                "light-2": "var(--color-primary-light-2, #3383FC)",
+                "light-3": "var(--color-primary-light-3, #4D93FC)",
+                "light-4": "var(--color-primary-light-4, #66A2FD)",
+                "light-5": "var(--color-primary-light-5, #80B1FD)",
+                "light-6": "var(--color-primary-light-6, #99C0FE)",
+                "light-7": "var(--color-primary-light-7, #B3D0FE)",
+                "light-8": "var(--color-primary-light-8, #CCDFFF)",
+                "light-9": "var(--color-primary-light-9, #E6EFFF)",
+                "dark-1": "var(--color-primary-dark-1, #005BE2)",
+                "dark-2": "var(--color-primary-dark-2, #0051C8)",
+                "dark-3": "var(--color-primary-dark-3, #0047AF)",
+                "dark-4": "var(--color-primary-dark-4, #003D96)",
+                "dark-5": "var(--color-primary-dark-5, #00337D)",
+                "dark-6": "var(--color-primary-dark-6, #002964)",
+                "dark-7": "var(--color-primary-dark-7, #001F4B)",
+                "dark-8": "var(--color-primary-dark-8, #001532)",
+                "dark-9": "var(--color-primary-dark-9, #000B19)",
+            },
+            success: {
+                DEFAULT: "var(--color-success, #19be6b)",
+                "light-3": "var(--color-success-light-3, rgb(94, 210, 151))",
+                "light-5": "var(--color-success-light-5, rgb(140, 223, 181))",
+                "light-7": "var(--color-success-light-7, rgb(186, 236, 211))",
+                "light-9": "var(--color-success-light-9, rgb(232, 249, 240))",
+                "dark-2": "var(--color-success-dark-2, rgb(20, 152, 86))",
+            },
+            warning: {
+                DEFAULT: "var(--color-warning, #ff9900)",
+                "light-3": "var(--color-warning-light-3, rgb(255, 184, 77))",
+                "light-5": "var(--color-warning-light-5, rgb(255, 204, 128))",
+                "light-7": "var(--color-warning-light-7, rgb(255, 224, 179))",
+                "light-9": "var(--color-warning-light-9, rgb(255, 245, 230))",
+                "dark-2": "var(--color-warning-dark-2, rgb(204, 122, 0))",
+            },
+            error: {
+                DEFAULT: "var(--color-error, #f56c6c)",
+                "light-3": "var(--color-error-light-3, rgb(255, 107, 119))",
+                "light-5": "var(--color-error-light-5, rgb(255, 150, 158))",
+                "light-7": "var(--color-error-light-7, rgb(255, 192, 197))",
+                "light-9": "var(--color-error-light-9, rgb(255, 234, 236))",
+                "dark-2": "var(--color-error-dark-2, rgb(204, 35, 48))",
+            },
+            info: {
+                DEFAULT: "var(--color-info, #909399)",
+                "light-3": "var(--color-info-light-3, rgb(177, 179, 184))",
+                "light-5": "var(--color-info-light-5, rgb(200, 201, 204))",
+                "light-7": "var(--color-info-light-7, rgb(222, 223, 224))",
+                "light-9": "var(--color-info-light-9, rgb(244, 244, 245))",
+                "dark-2": "var(--color-info-dark-2, rgb(115, 118, 122))",
+            },
+        },
+        fontSize: {
+            xs: "24rpx",
+            sm: "26rpx",
+            base: "28rpx",
+            lg: "30rpx",
+            xl: "32rpx",
+            "2xl": "34rpx",
+            "3xl": "38rpx",
+            "4xl": "40rpx",
+            "5xl": "44rpx",
+        },
+        fontFamily: {
+            sans: ["Source Han Sans CN", "Helvetica Neue", "Arial", "sans-serif"],
+        },
+    },
+    corePlugins: {
+        // 小程序不需要 preflight，因为这主要是给 h5 的，如果你要同时开发小程序和 h5 端，你应该使用环境变量来控制它
+        preflight: false,
+    },
+    plugins: [
+        cssMacro({
+            variantsMap: {
+                wx: "MP-WEIXIN",
+                "-wx": {
+                    value: "MP-WEIXIN",
+                    negative: true,
+                },
+            },
+        }),
+    ],
+};

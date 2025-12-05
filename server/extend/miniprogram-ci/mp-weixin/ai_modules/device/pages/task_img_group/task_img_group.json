@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "编辑图组",
+  "usingComponents": {
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "upload-progress": "../../../../components/upload-progress/upload-progress"
+  }
+}

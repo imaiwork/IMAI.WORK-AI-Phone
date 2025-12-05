@@ -1,0 +1,154 @@
+{
+    "name": "IMAI",
+    "appid": "__UNI__837DFBD",
+    "description": "",
+    "versionName": "2.0.2",
+    "versionCode": 100,
+    "transformPx": false,
+    /* 5+App特有相关 */
+    "app-plus": {
+        "compatible": {
+            "ignoreVersion": true //true表示忽略版本检查提示框，HBuilderX1.9.0及以上版本支持
+        },
+        "usingComponents": true,
+        "nvueStyleCompiler": "uni-app",
+        "compilerVersion": 3,
+        "splashscreen": {
+            "alwaysShowBeforeRender": true,
+            "waiting": true,
+            "autoclose": true,
+            "delay": 0
+        },
+        /* 模块配置 */
+        "modules": {
+            "Payment": {},
+            "OAuth": {},
+            "Share": {},
+            "Record": {},
+            "VideoPlayer": {},
+            "UIWebview": {},
+            "Camera": {}
+        },
+        /* 应用发布信息 */
+        "distribute": {
+            /* android打包配置 */
+            "android": {
+                "permissions": [
+                    "<uses-feature android:name=\"android.hardware.camera\"/>",
+                    "<uses-feature android:name=\"android.hardware.camera.autofocus\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.CAMERA\"/>",
+                    "<uses-permission android:name=\"android.permission.CHANGE_NETWORK_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.CHANGE_WIFI_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.FLASHLIGHT\"/>",
+                    "<uses-permission android:name=\"android.permission.GET_ACCOUNTS\"/>",
+                    "<uses-permission android:name=\"android.permission.INTERNET\"/>",
+                    "<uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\"/>",
+                    "<uses-permission android:name=\"android.permission.MOUNT_UNMOUNT_FILESYSTEMS\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_LOGS\"/>",
+                    "<uses-permission android:name=\"android.permission.READ_PHONE_STATE\"/>",
+                    "<uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>",
+                    "<uses-permission android:name=\"android.permission.VIBRATE\"/>",
+                    "<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>",
+                    "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>",
+                    "<uses-permission android:name=\"android.permission.WRITE_SETTINGS\"/>"
+                ],
+                "abiFilters": [
+                    "armeabi-v7a",
+                    "arm64-v8a",
+                    "x86"
+                ]
+            },
+            /* ios打包配置 */
+            "ios": {
+                "dSYMs": false,
+                "privacyDescription": {
+                    "NSCameraUsageDescription": "您可以拍照设置头像、拍照上传图片",
+                    "NSPhotoLibraryAddUsageDescription": "您可以设置头像、保存图片到相册，还可以上传图片",
+                    "NSPhotoLibraryUsageDescription": "您可以设置头像、保存图片到相册，还可以上传图片",
+                    "NSUserTrackingUsageDescription": "根据您的习惯为您推荐",
+                    "NSMicrophoneUsageDescription": "您可以使用语音输入功能"
+                }
+            },
+            /* SDK配置 */
+            "sdkConfigs": {},
+            "icons": {
+                "android": {
+                    "hdpi": "unpackage/res/icons/72x72.png",
+                    "xhdpi": "unpackage/res/icons/96x96.png",
+                    "xxhdpi": "unpackage/res/icons/144x144.png",
+                    "xxxhdpi": "unpackage/res/icons/192x192.png"
+                },
+                "ios": {
+                    "appstore": "unpackage/res/icons/1024x1024.png",
+                    "ipad": {
+                        "app": "unpackage/res/icons/76x76.png",
+                        "app@2x": "unpackage/res/icons/152x152.png",
+                        "notification": "unpackage/res/icons/20x20.png",
+                        "notification@2x": "unpackage/res/icons/40x40.png",
+                        "proapp@2x": "unpackage/res/icons/167x167.png",
+                        "settings": "unpackage/res/icons/29x29.png",
+                        "settings@2x": "unpackage/res/icons/58x58.png",
+                        "spotlight": "unpackage/res/icons/40x40.png",
+                        "spotlight@2x": "unpackage/res/icons/80x80.png"
+                    },
+                    "iphone": {
+                        "app@2x": "unpackage/res/icons/120x120.png",
+                        "app@3x": "unpackage/res/icons/180x180.png",
+                        "notification@2x": "unpackage/res/icons/40x40.png",
+                        "notification@3x": "unpackage/res/icons/60x60.png",
+                        "settings@2x": "unpackage/res/icons/58x58.png",
+                        "settings@3x": "unpackage/res/icons/87x87.png",
+                        "spotlight@2x": "unpackage/res/icons/80x80.png",
+                        "spotlight@3x": "unpackage/res/icons/120x120.png"
+                    }
+                }
+            },
+            "splashscreen": {
+                "useOriginalMsgbox": true
+            }
+        }
+    },
+    /* 快应用特有相关 */
+    "quickapp": {},
+    /* 小程序特有相关 */
+    "mp-weixin": {
+        "appid": "wx240aed4afb266747",
+        "optimization": {
+            "subPackages": true
+        },
+        "setting": {
+            "urlCheck": false,
+            "es6": true,
+            "minified": true,
+            "ignoreUploadUnusedFiles": true
+        },
+        "__usePrivacyCheck__": true,
+        "usingComponents": true,
+        "libVersion": "latest",
+        "plugins": {}
+    },
+    "mp-alipay": {
+        "usingComponents": true
+    },
+    "mp-baidu": {
+        "usingComponents": true
+    },
+    "mp-toutiao": {
+        "usingComponents": true
+    },
+    "uniStatistics": {
+        "enable": false
+    },
+    "vueVersion": "3",
+    "h5": {
+        "router": {
+            "mode": "history",
+            "base": "/mobile/"
+        },
+        "title": "加载中"
+    },
+    "_spaceID": "mp-62a38312-a6b8-4502-9a4c-9bb095d26ddd"
+}

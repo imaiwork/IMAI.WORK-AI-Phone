@@ -1,0 +1,33 @@
+{
+  "name": "alibabacloud/mts-20140618",
+  "description": "Alibaba Cloud ApsaraVideo for Media Processing (20140618) SDK Library for PHP",
+  "type": "library",
+  "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "Alibaba Cloud SDK",
+      "email": "sdk-team@alibabacloud.com"
+    }
+  ],
+  "require": {
+    "php": ">5.5",
+    "alibabacloud/tea-utils": "^0.2.20",
+    "alibabacloud/darabonba-openapi": "^0.2.12",
+    "alibabacloud/openapi-util": "^0.1.10|^0.2.1",
+    "alibabacloud/endpoint-util": "^0.1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "AlibabaCloud\\SDK\\Mts\\V20140618\\": "src"
+    }
+  },
+  "scripts": {
+    "fixer": "php-cs-fixer fix ./"
+  },
+  "config": {
+    "sort-packages": true,
+    "preferred-install": "dist",
+    "optimize-autoloader": true
+  },
+  "prefer-stable": true
+}

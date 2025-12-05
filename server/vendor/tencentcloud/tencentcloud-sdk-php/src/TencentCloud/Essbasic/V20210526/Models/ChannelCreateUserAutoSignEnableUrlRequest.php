@@ -1,0 +1,168 @@
+<?php
+/*
+ * Copyright (c) 2017-2025 Tencent. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+namespace TencentCloud\Essbasic\V20210526\Models;
+use TencentCloud\Common\AbstractModel;
+
+/**
+ * ChannelCreateUserAutoSignEnableUrl请求参数结构体
+ *
+ * @method Agent getAgent() 获取关于渠道应用的相关信息，包括渠道应用标识、第三方平台子客企业标识及第三方平台子客企业中的员工标识等内容，您可以参阅开发者中心所提供的 Agent 结构体以获取详细定义。
+ * @method void setAgent(Agent $Agent) 设置关于渠道应用的相关信息，包括渠道应用标识、第三方平台子客企业标识及第三方平台子客企业中的员工标识等内容，您可以参阅开发者中心所提供的 Agent 结构体以获取详细定义。
+ * @method string getSceneKey() 获取自动签使用的场景值, 可以选择的场景值如下:
+<ul><li> **E_PRESCRIPTION_AUTO_SIGN** :  电子处方场景</li><li> **OTHER** :  通用场景</li></ul>
+ * @method void setSceneKey(string $SceneKey) 设置自动签使用的场景值, 可以选择的场景值如下:
+<ul><li> **E_PRESCRIPTION_AUTO_SIGN** :  电子处方场景</li><li> **OTHER** :  通用场景</li></ul>
+ * @method UserInfo getOperator() 获取执行本接口操作的员工信息。
+注: `在调用此接口时，请确保指定的员工已获得所需的接口调用权限，并具备接口传入的相应资源的数据权限。`
+ * @method void setOperator(UserInfo $Operator) 设置执行本接口操作的员工信息。
+注: `在调用此接口时，请确保指定的员工已获得所需的接口调用权限，并具备接口传入的相应资源的数据权限。`
+ * @method AutoSignConfig getAutoSignConfig() 获取自动签开通配置信息, 包括开通的人员的信息等
+ * @method void setAutoSignConfig(AutoSignConfig $AutoSignConfig) 设置自动签开通配置信息, 包括开通的人员的信息等
+ * @method string getUrlType() 获取生成的链接类型：
+<ul><li> 不传(即为空值) 则会生成小程序端开通链接(默认)</li>
+<li> **H5SIGN** : 生成H5端开通链接</li></ul>
+ * @method void setUrlType(string $UrlType) 设置生成的链接类型：
+<ul><li> 不传(即为空值) 则会生成小程序端开通链接(默认)</li>
+<li> **H5SIGN** : 生成H5端开通链接</li></ul>
+ * @method string getNotifyType() 获取是否通知开通方，通知类型:<ul><li>默认为不通知开通方</li><li>**SMS** :  短信通知 ,如果需要短信通知则NotifyAddress填写对方的手机号</li></ul>
+ * @method void setNotifyType(string $NotifyType) 设置是否通知开通方，通知类型:<ul><li>默认为不通知开通方</li><li>**SMS** :  短信通知 ,如果需要短信通知则NotifyAddress填写对方的手机号</li></ul>
+ * @method string getNotifyAddress() 获取如果通知类型NotifyType选择为SMS，则此处为手机号, 其他通知类型不需要设置此项
+ * @method void setNotifyAddress(string $NotifyAddress) 设置如果通知类型NotifyType选择为SMS，则此处为手机号, 其他通知类型不需要设置此项
+ * @method integer getExpiredTime() 获取链接的过期时间，格式为Unix时间戳，不能早于当前时间，且最大为当前时间往后30天。`如果不传，默认过期时间为当前时间往后7天。`
+ * @method void setExpiredTime(integer $ExpiredTime) 设置链接的过期时间，格式为Unix时间戳，不能早于当前时间，且最大为当前时间往后30天。`如果不传，默认过期时间为当前时间往后7天。`
+ * @method string getUserData() 获取调用方自定义的个性化字段(可自定义此字段的值)，并以base64方式编码，支持的最大数据大小为 20480长度。 在个人自动签的开通、关闭等回调信息场景中，该字段的信息将原封不动地透传给贵方。 
+ * @method void setUserData(string $UserData) 设置调用方自定义的个性化字段(可自定义此字段的值)，并以base64方式编码，支持的最大数据大小为 20480长度。 在个人自动签的开通、关闭等回调信息场景中，该字段的信息将原封不动地透传给贵方。 
+ */
+class ChannelCreateUserAutoSignEnableUrlRequest extends AbstractModel
+{
+    /**
+     * @var Agent 关于渠道应用的相关信息，包括渠道应用标识、第三方平台子客企业标识及第三方平台子客企业中的员工标识等内容，您可以参阅开发者中心所提供的 Agent 结构体以获取详细定义。
+     */
+    public $Agent;
+
+    /**
+     * @var string 自动签使用的场景值, 可以选择的场景值如下:
+<ul><li> **E_PRESCRIPTION_AUTO_SIGN** :  电子处方场景</li><li> **OTHER** :  通用场景</li></ul>
+     */
+    public $SceneKey;
+
+    /**
+     * @var UserInfo 执行本接口操作的员工信息。
+注: `在调用此接口时，请确保指定的员工已获得所需的接口调用权限，并具备接口传入的相应资源的数据权限。`
+     */
+    public $Operator;
+
+    /**
+     * @var AutoSignConfig 自动签开通配置信息, 包括开通的人员的信息等
+     */
+    public $AutoSignConfig;
+
+    /**
+     * @var string 生成的链接类型：
+<ul><li> 不传(即为空值) 则会生成小程序端开通链接(默认)</li>
+<li> **H5SIGN** : 生成H5端开通链接</li></ul>
+     */
+    public $UrlType;
+
+    /**
+     * @var string 是否通知开通方，通知类型:<ul><li>默认为不通知开通方</li><li>**SMS** :  短信通知 ,如果需要短信通知则NotifyAddress填写对方的手机号</li></ul>
+     */
+    public $NotifyType;
+
+    /**
+     * @var string 如果通知类型NotifyType选择为SMS，则此处为手机号, 其他通知类型不需要设置此项
+     */
+    public $NotifyAddress;
+
+    /**
+     * @var integer 链接的过期时间，格式为Unix时间戳，不能早于当前时间，且最大为当前时间往后30天。`如果不传，默认过期时间为当前时间往后7天。`
+     */
+    public $ExpiredTime;
+
+    /**
+     * @var string 调用方自定义的个性化字段(可自定义此字段的值)，并以base64方式编码，支持的最大数据大小为 20480长度。 在个人自动签的开通、关闭等回调信息场景中，该字段的信息将原封不动地透传给贵方。 
+     */
+    public $UserData;
+
+    /**
+     * @param Agent $Agent 关于渠道应用的相关信息，包括渠道应用标识、第三方平台子客企业标识及第三方平台子客企业中的员工标识等内容，您可以参阅开发者中心所提供的 Agent 结构体以获取详细定义。
+     * @param string $SceneKey 自动签使用的场景值, 可以选择的场景值如下:
+<ul><li> **E_PRESCRIPTION_AUTO_SIGN** :  电子处方场景</li><li> **OTHER** :  通用场景</li></ul>
+     * @param UserInfo $Operator 执行本接口操作的员工信息。
+注: `在调用此接口时，请确保指定的员工已获得所需的接口调用权限，并具备接口传入的相应资源的数据权限。`
+     * @param AutoSignConfig $AutoSignConfig 自动签开通配置信息, 包括开通的人员的信息等
+     * @param string $UrlType 生成的链接类型：
+<ul><li> 不传(即为空值) 则会生成小程序端开通链接(默认)</li>
+<li> **H5SIGN** : 生成H5端开通链接</li></ul>
+     * @param string $NotifyType 是否通知开通方，通知类型:<ul><li>默认为不通知开通方</li><li>**SMS** :  短信通知 ,如果需要短信通知则NotifyAddress填写对方的手机号</li></ul>
+     * @param string $NotifyAddress 如果通知类型NotifyType选择为SMS，则此处为手机号, 其他通知类型不需要设置此项
+     * @param integer $ExpiredTime 链接的过期时间，格式为Unix时间戳，不能早于当前时间，且最大为当前时间往后30天。`如果不传，默认过期时间为当前时间往后7天。`
+     * @param string $UserData 调用方自定义的个性化字段(可自定义此字段的值)，并以base64方式编码，支持的最大数据大小为 20480长度。 在个人自动签的开通、关闭等回调信息场景中，该字段的信息将原封不动地透传给贵方。 
+     */
+    function __construct()
+    {
+
+    }
+
+    /**
+     * For internal only. DO NOT USE IT.
+     */
+    public function deserialize($param)
+    {
+        if ($param === null) {
+            return;
+        }
+        if (array_key_exists("Agent",$param) and $param["Agent"] !== null) {
+            $this->Agent = new Agent();
+            $this->Agent->deserialize($param["Agent"]);
+        }
+
+        if (array_key_exists("SceneKey",$param) and $param["SceneKey"] !== null) {
+            $this->SceneKey = $param["SceneKey"];
+        }
+
+        if (array_key_exists("Operator",$param) and $param["Operator"] !== null) {
+            $this->Operator = new UserInfo();
+            $this->Operator->deserialize($param["Operator"]);
+        }
+
+        if (array_key_exists("AutoSignConfig",$param) and $param["AutoSignConfig"] !== null) {
+            $this->AutoSignConfig = new AutoSignConfig();
+            $this->AutoSignConfig->deserialize($param["AutoSignConfig"]);
+        }
+
+        if (array_key_exists("UrlType",$param) and $param["UrlType"] !== null) {
+            $this->UrlType = $param["UrlType"];
+        }
+
+        if (array_key_exists("NotifyType",$param) and $param["NotifyType"] !== null) {
+            $this->NotifyType = $param["NotifyType"];
+        }
+
+        if (array_key_exists("NotifyAddress",$param) and $param["NotifyAddress"] !== null) {
+            $this->NotifyAddress = $param["NotifyAddress"];
+        }
+
+        if (array_key_exists("ExpiredTime",$param) and $param["ExpiredTime"] !== null) {
+            $this->ExpiredTime = $param["ExpiredTime"];
+        }
+
+        if (array_key_exists("UserData",$param) and $param["UserData"] !== null) {
+            $this->UserData = $param["UserData"];
+        }
+    }
+}

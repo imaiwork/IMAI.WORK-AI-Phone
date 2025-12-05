@@ -1,0 +1,1 @@
+var r=(T=>(T[T.CONTENT=1]="CONTENT",T[T.HIT_TEST=2]="HIT_TEST",T[T.SETTING=3]="SETTING",T))(r||{}),N=(T=>(T.VECTOR="vector",T.RAG="rag",T))(N||{}),R=(T=>(T[T.RAG=1]="RAG",T[T.VECTOR=2]="VECTOR",T))(R||{});export{N as KnTypeEnum,R as KnbTypeEnum,r as SidebarTypeEnum};

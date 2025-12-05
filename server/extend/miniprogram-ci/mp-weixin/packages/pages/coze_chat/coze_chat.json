@@ -1,0 +1,18 @@
+{
+  "navigationBarTitleText": "",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "chat-scroll-view": "../../../components/chat-scroll-view/chat-scroll-view",
+    "u-input": "../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "file-upload": "../../../components/file-upload/file-upload",
+    "u-line": "../../../uni_modules/vk-uview-ui/components/u-line/u-line",
+    "empty": "../../../components/empty/empty",
+    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
+    "popup-bottom": "../../../components/popup-bottom/popup-bottom",
+    "recharge-popup": "../../../components/recharge-popup/recharge-popup"
+  }
+}

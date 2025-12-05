@@ -1,0 +1,177 @@
+<template>
+    <div class="h-full flex flex-col px-3 pb-3">
+        <div class="flex-shrink-0" v-loading="loading">
+            <ElUpload
+                ref="uploadRef"
+                drag
+                show-progress
+                multiple
+                :auto-upload="false"
+                :show-file-list="false"
+                :accept="accept"
+                :limit="50"
+                :on-change="onFileChange">
+                <div class="text-[#00000080] flex items-center gap-2 justify-center">
+                    <Icon name="local-icon-upload" />
+                    拖拽文件至此，或点击<span class="text-primary"> 选择文件 </span>
+                </div>
+                <div class="text-[#00000080] mt-2">支持 {{ accept }} 文件</div>
+                <ElButton link type="primary" class="mt-2" @click.stop>
+                    <a href="/static/file/template/kn_qa.csv" target="_blank">点击下载模版</a>
+                </ElButton>
+            </ElUpload>
+            <div class="mt-2 text-[#00000080] text-xs leading-5">
+                先完成填写后再上传，问题总数建议不要超过1000条，否则上传会卡顿
+                <br />
+                导入前会进行去重，如果问题和答案完全相同，则不会被导入，所以最终导入的内容可能会比文件的内容少。但是，对于带有换行的内容，目前无法去重。
+            </div>
+        </div>
+        <div class="grow min-h-0 mt-3 flex gap-x-2" v-if="data.length > 0">
+            <div class="w-1/4 h-full flex flex-col bg-[#F6F6F6] rounded-xl border border-[#efefef]">
+                <div class="flex-shrink-1 min-h-0 mb-3">
+                    <ElScrollbar>
+                        <div class="p-3 flex flex-col gap-y-2">
+                            <div
+                                v-for="(item, index) in data"
+                                :key="index"
+                                class="flex items-center p-2 rounded-lg mt-1 cursor-pointer"
+                                :class="[
+                                    currIndex == index
+                                        ? 'bg-[#0065fb0d] shadow-[0_0_0_1px_var(--color-primary)]'
+                                        : 'bg-[#f6f6f6] shadow-[0_0_0_1px_#EFEFEF]',
+                                ]"
+                                @click="selectStage(index)">
+                                <div
+                                    class="w-5 h-5 rounded bg-[#0000000d] flex items-center justify-center"
+                                    :class="{ 'bg-primary text-white': currIndex == index }">
+                                    <Icon name="local-icon-upload2"></Icon>
+                                </div>
+                                <div class="ml-2 line-clamp-1 flex-1">
+                                    {{ item.name }}
+                                </div>
+                                <div @click="handleDeleteFile(index)">
+                                    <close-btn />
+                                </div>
+                            </div>
+                        </div>
+                    </ElScrollbar>
+                </div>
+            </div>
+            <div class="flex-1 flex flex-col bg-[#F6F6F6] rounded-xl border border-[#efefef]">
+                <div class="px-3 mt-3">分段预览（{{ data[currIndex]?.data.length }}组）</div>
+                <div class="grow min-h-0">
+                    <ElScrollbar>
+                        <div class="px-3">
+                            <div
+                                v-for="(item, index) in data[currIndex]?.data"
+                                :key="index"
+                                class="rounded-xl p-[10px] mt-2 break-all bg-white">
+                                <CsvItem
+                                    v-model:q="item.q"
+                                    v-model:a="item.a"
+                                    :index="index"
+                                    :name="data[currIndex]?.name"
+                                    @delete="handleDeleteStage(index)" />
+                            </div>
+                        </div>
+                    </ElScrollbar>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { uploadFile } from "@/api/app";
+import type { UploadFile, UploadInstance } from "element-plus";
+import { isSameFile, type IDataItem } from "./hook";
+import CsvItem from "./csv-item.vue";
+
+const uploadRef = shallowRef<UploadInstance>();
+
+const data = defineModel<IDataItem[]>("modelValue", { required: true });
+
+const fileAccept = [".csv", ".xlsx"];
+const accept = fileAccept.join(", ");
+
+const fileList = ref<File[]>([]);
+
+const loading = ref(false);
+
+const currIndex = ref(0);
+
+const onFileChange = async ({ raw: file }: UploadFile) => {
+    try {
+        if (file) {
+            const { uri } = await uploadFile({
+                file: file,
+            });
+            // 验证文件类型
+            const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+            if (!fileAccept.includes(fileExtension)) {
+                throw `不支持的文件类型，请上传 ${accept} 格式的文件`;
+            }
+
+            loading.value = true;
+            await isSameFile(file, fileList.value);
+            const content = await parseFile(file);
+            if (!content) {
+                throw "解析结果为空，已自动忽略";
+            }
+            if (!isArray(content)) {
+                throw "解析失败";
+            }
+
+            data.value.push({
+                name: file.name,
+                size: file.size,
+                path: uri,
+                data: content,
+            });
+            //@ts-ignore
+            file.data = content;
+
+            fileList.value.push(file);
+            selectStage(fileList.value.length - 1);
+        }
+    } catch (error: any) {
+        feedback.msgError(error);
+    } finally {
+        loading.value = false;
+        uploadRef.value?.clearFiles();
+    }
+};
+
+const parseFile = async (file: any) => {
+    const suffix = file.name.substring(file.name.lastIndexOf(".") + 1);
+    let res = "";
+    switch (suffix) {
+        case "csv":
+            res = await readCsvContent(file);
+            break;
+        case "xlsx":
+            res = await readXlsxContent(file);
+            break;
+    }
+    return res;
+};
+
+const handleDeleteFile = async (index: any) => {
+    useNuxtApp().$confirm({
+        message: "确定要删除该段落吗？",
+        onConfirm: () => {
+            data.value.splice(index, 1);
+        },
+    });
+};
+
+const handleDeleteStage = async (index: any) => {
+    data.value[currIndex.value].data.splice(index, 1);
+};
+
+const selectStage = (index: number) => {
+    currIndex.value = index;
+};
+</script>
+
+<style lang="scss"></style>

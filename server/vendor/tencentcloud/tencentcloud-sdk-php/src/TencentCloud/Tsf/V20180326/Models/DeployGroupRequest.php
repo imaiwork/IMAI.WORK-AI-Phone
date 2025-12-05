@@ -1,0 +1,292 @@
+<?php
+/*
+ * Copyright (c) 2017-2025 Tencent. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+namespace TencentCloud\Tsf\V20180326\Models;
+use TencentCloud\Common\AbstractModel;
+
+/**
+ * DeployGroup请求参数结构体
+ *
+ * @method string getGroupId() 获取部署组ID，可通过调用[DescribeContainerGroups](https://cloud.tencent.com/document/api/649/36068)查询已创建的部署组列表或登录控制台进行查看；也可以调用[CreateContainGroup](https://cloud.tencent.com/document/api/649/36075)创建新的部署组。
+ * @method void setGroupId(string $GroupId) 设置部署组ID，可通过调用[DescribeContainerGroups](https://cloud.tencent.com/document/api/649/36068)查询已创建的部署组列表或登录控制台进行查看；也可以调用[CreateContainGroup](https://cloud.tencent.com/document/api/649/36075)创建新的部署组。
+ * @method string getPkgId() 获取软件包ID，可通过调用DescribeUploadInfo接口时[获取上传程序包信息](https://cloud.tencent.com/document/api/649/36078)返回的COS上传信息获取，登录[控制台](https://console.cloud.tencent.com/tsf/product?rid=1)进行查看
+ * @method void setPkgId(string $PkgId) 设置软件包ID，可通过调用DescribeUploadInfo接口时[获取上传程序包信息](https://cloud.tencent.com/document/api/649/36078)返回的COS上传信息获取，登录[控制台](https://console.cloud.tencent.com/tsf/product?rid=1)进行查看
+ * @method string getStartupParameters() 获取部署组启动参数
+ * @method void setStartupParameters(string $StartupParameters) 设置部署组启动参数
+ * @method string getDeployDesc() 获取部署应用描述信息
+ * @method void setDeployDesc(string $DeployDesc) 设置部署应用描述信息
+ * @method boolean getForceStart() 获取是否允许强制启动
+ * @method void setForceStart(boolean $ForceStart) 设置是否允许强制启动
+ * @method boolean getEnableHealthCheck() 获取是否开启健康检查
+ * @method void setEnableHealthCheck(boolean $EnableHealthCheck) 设置是否开启健康检查
+ * @method HealthCheckSettings getHealthCheckSettings() 获取开启健康检查时，配置健康检查
+ * @method void setHealthCheckSettings(HealthCheckSettings $HealthCheckSettings) 设置开启健康检查时，配置健康检查
+ * @method integer getUpdateType() 获取部署方式，0表示快速更新，1表示滚动更新
+ * @method void setUpdateType(integer $UpdateType) 设置部署方式，0表示快速更新，1表示滚动更新
+ * @method boolean getDeployBetaEnable() 获取是否启用beta批次
+ * @method void setDeployBetaEnable(boolean $DeployBetaEnable) 设置是否启用beta批次
+ * @method array getDeployBatch() 获取滚动发布每个批次参与的实例比率
+ * @method void setDeployBatch(array $DeployBatch) 设置滚动发布每个批次参与的实例比率
+ * @method string getDeployExeMode() 获取滚动发布的执行方式，auto表示自动， manual表示手动
+ * @method void setDeployExeMode(string $DeployExeMode) 设置滚动发布的执行方式，auto表示自动， manual表示手动
+ * @method integer getDeployWaitTime() 获取滚动发布每个批次的时间间隔，单位min。默认值是0，不等待。
+ * @method void setDeployWaitTime(integer $DeployWaitTime) 设置滚动发布每个批次的时间间隔，单位min。默认值是0，不等待。
+ * @method string getStartScript() 获取启动脚本 base64编码
+ * @method void setStartScript(string $StartScript) 设置启动脚本 base64编码
+ * @method string getStopScript() 获取停止脚本 base64编码
+ * @method void setStopScript(string $StopScript) 设置停止脚本 base64编码
+ * @method boolean getIncrementalDeployment() 获取是否进行增量部署，默认为false，全量更新
+ * @method void setIncrementalDeployment(boolean $IncrementalDeployment) 设置是否进行增量部署，默认为false，全量更新
+ * @method string getJdkName() 获取JDK名称: konaJDK或openJDK
+ * @method void setJdkName(string $JdkName) 设置JDK名称: konaJDK或openJDK
+ * @method string getJdkVersion() 获取konaJDK版本：8、11和17
+openJDK版本：8、17
+ * @method void setJdkVersion(string $JdkVersion) 设置konaJDK版本：8、11和17
+openJDK版本：8、17
+ * @method array getAgentProfileList() 获取部署agent的类型、版本
+ * @method void setAgentProfileList(array $AgentProfileList) 设置部署agent的类型、版本
+ * @method WarmupSetting getWarmupSetting() 获取预热参数配置
+ * @method void setWarmupSetting(WarmupSetting $WarmupSetting) 设置预热参数配置
+ * @method boolean getEnableBatchHealthCheck() 获取开启分批健康检查
+ * @method void setEnableBatchHealthCheck(boolean $EnableBatchHealthCheck) 设置开启分批健康检查
+ */
+class DeployGroupRequest extends AbstractModel
+{
+    /**
+     * @var string 部署组ID，可通过调用[DescribeContainerGroups](https://cloud.tencent.com/document/api/649/36068)查询已创建的部署组列表或登录控制台进行查看；也可以调用[CreateContainGroup](https://cloud.tencent.com/document/api/649/36075)创建新的部署组。
+     */
+    public $GroupId;
+
+    /**
+     * @var string 软件包ID，可通过调用DescribeUploadInfo接口时[获取上传程序包信息](https://cloud.tencent.com/document/api/649/36078)返回的COS上传信息获取，登录[控制台](https://console.cloud.tencent.com/tsf/product?rid=1)进行查看
+     */
+    public $PkgId;
+
+    /**
+     * @var string 部署组启动参数
+     */
+    public $StartupParameters;
+
+    /**
+     * @var string 部署应用描述信息
+     */
+    public $DeployDesc;
+
+    /**
+     * @var boolean 是否允许强制启动
+     */
+    public $ForceStart;
+
+    /**
+     * @var boolean 是否开启健康检查
+     */
+    public $EnableHealthCheck;
+
+    /**
+     * @var HealthCheckSettings 开启健康检查时，配置健康检查
+     */
+    public $HealthCheckSettings;
+
+    /**
+     * @var integer 部署方式，0表示快速更新，1表示滚动更新
+     */
+    public $UpdateType;
+
+    /**
+     * @var boolean 是否启用beta批次
+     */
+    public $DeployBetaEnable;
+
+    /**
+     * @var array 滚动发布每个批次参与的实例比率
+     */
+    public $DeployBatch;
+
+    /**
+     * @var string 滚动发布的执行方式，auto表示自动， manual表示手动
+     */
+    public $DeployExeMode;
+
+    /**
+     * @var integer 滚动发布每个批次的时间间隔，单位min。默认值是0，不等待。
+     */
+    public $DeployWaitTime;
+
+    /**
+     * @var string 启动脚本 base64编码
+     */
+    public $StartScript;
+
+    /**
+     * @var string 停止脚本 base64编码
+     */
+    public $StopScript;
+
+    /**
+     * @var boolean 是否进行增量部署，默认为false，全量更新
+     */
+    public $IncrementalDeployment;
+
+    /**
+     * @var string JDK名称: konaJDK或openJDK
+     */
+    public $JdkName;
+
+    /**
+     * @var string konaJDK版本：8、11和17
+openJDK版本：8、17
+     */
+    public $JdkVersion;
+
+    /**
+     * @var array 部署agent的类型、版本
+     */
+    public $AgentProfileList;
+
+    /**
+     * @var WarmupSetting 预热参数配置
+     */
+    public $WarmupSetting;
+
+    /**
+     * @var boolean 开启分批健康检查
+     */
+    public $EnableBatchHealthCheck;
+
+    /**
+     * @param string $GroupId 部署组ID，可通过调用[DescribeContainerGroups](https://cloud.tencent.com/document/api/649/36068)查询已创建的部署组列表或登录控制台进行查看；也可以调用[CreateContainGroup](https://cloud.tencent.com/document/api/649/36075)创建新的部署组。
+     * @param string $PkgId 软件包ID，可通过调用DescribeUploadInfo接口时[获取上传程序包信息](https://cloud.tencent.com/document/api/649/36078)返回的COS上传信息获取，登录[控制台](https://console.cloud.tencent.com/tsf/product?rid=1)进行查看
+     * @param string $StartupParameters 部署组启动参数
+     * @param string $DeployDesc 部署应用描述信息
+     * @param boolean $ForceStart 是否允许强制启动
+     * @param boolean $EnableHealthCheck 是否开启健康检查
+     * @param HealthCheckSettings $HealthCheckSettings 开启健康检查时，配置健康检查
+     * @param integer $UpdateType 部署方式，0表示快速更新，1表示滚动更新
+     * @param boolean $DeployBetaEnable 是否启用beta批次
+     * @param array $DeployBatch 滚动发布每个批次参与的实例比率
+     * @param string $DeployExeMode 滚动发布的执行方式，auto表示自动， manual表示手动
+     * @param integer $DeployWaitTime 滚动发布每个批次的时间间隔，单位min。默认值是0，不等待。
+     * @param string $StartScript 启动脚本 base64编码
+     * @param string $StopScript 停止脚本 base64编码
+     * @param boolean $IncrementalDeployment 是否进行增量部署，默认为false，全量更新
+     * @param string $JdkName JDK名称: konaJDK或openJDK
+     * @param string $JdkVersion konaJDK版本：8、11和17
+openJDK版本：8、17
+     * @param array $AgentProfileList 部署agent的类型、版本
+     * @param WarmupSetting $WarmupSetting 预热参数配置
+     * @param boolean $EnableBatchHealthCheck 开启分批健康检查
+     */
+    function __construct()
+    {
+
+    }
+
+    /**
+     * For internal only. DO NOT USE IT.
+     */
+    public function deserialize($param)
+    {
+        if ($param === null) {
+            return;
+        }
+        if (array_key_exists("GroupId",$param) and $param["GroupId"] !== null) {
+            $this->GroupId = $param["GroupId"];
+        }
+
+        if (array_key_exists("PkgId",$param) and $param["PkgId"] !== null) {
+            $this->PkgId = $param["PkgId"];
+        }
+
+        if (array_key_exists("StartupParameters",$param) and $param["StartupParameters"] !== null) {
+            $this->StartupParameters = $param["StartupParameters"];
+        }
+
+        if (array_key_exists("DeployDesc",$param) and $param["DeployDesc"] !== null) {
+            $this->DeployDesc = $param["DeployDesc"];
+        }
+
+        if (array_key_exists("ForceStart",$param) and $param["ForceStart"] !== null) {
+            $this->ForceStart = $param["ForceStart"];
+        }
+
+        if (array_key_exists("EnableHealthCheck",$param) and $param["EnableHealthCheck"] !== null) {
+            $this->EnableHealthCheck = $param["EnableHealthCheck"];
+        }
+
+        if (array_key_exists("HealthCheckSettings",$param) and $param["HealthCheckSettings"] !== null) {
+            $this->HealthCheckSettings = new HealthCheckSettings();
+            $this->HealthCheckSettings->deserialize($param["HealthCheckSettings"]);
+        }
+
+        if (array_key_exists("UpdateType",$param) and $param["UpdateType"] !== null) {
+            $this->UpdateType = $param["UpdateType"];
+        }
+
+        if (array_key_exists("DeployBetaEnable",$param) and $param["DeployBetaEnable"] !== null) {
+            $this->DeployBetaEnable = $param["DeployBetaEnable"];
+        }
+
+        if (array_key_exists("DeployBatch",$param) and $param["DeployBatch"] !== null) {
+            $this->DeployBatch = $param["DeployBatch"];
+        }
+
+        if (array_key_exists("DeployExeMode",$param) and $param["DeployExeMode"] !== null) {
+            $this->DeployExeMode = $param["DeployExeMode"];
+        }
+
+        if (array_key_exists("DeployWaitTime",$param) and $param["DeployWaitTime"] !== null) {
+            $this->DeployWaitTime = $param["DeployWaitTime"];
+        }
+
+        if (array_key_exists("StartScript",$param) and $param["StartScript"] !== null) {
+            $this->StartScript = $param["StartScript"];
+        }
+
+        if (array_key_exists("StopScript",$param) and $param["StopScript"] !== null) {
+            $this->StopScript = $param["StopScript"];
+        }
+
+        if (array_key_exists("IncrementalDeployment",$param) and $param["IncrementalDeployment"] !== null) {
+            $this->IncrementalDeployment = $param["IncrementalDeployment"];
+        }
+
+        if (array_key_exists("JdkName",$param) and $param["JdkName"] !== null) {
+            $this->JdkName = $param["JdkName"];
+        }
+
+        if (array_key_exists("JdkVersion",$param) and $param["JdkVersion"] !== null) {
+            $this->JdkVersion = $param["JdkVersion"];
+        }
+
+        if (array_key_exists("AgentProfileList",$param) and $param["AgentProfileList"] !== null) {
+            $this->AgentProfileList = [];
+            foreach ($param["AgentProfileList"] as $key => $value){
+                $obj = new AgentProfile();
+                $obj->deserialize($value);
+                array_push($this->AgentProfileList, $obj);
+            }
+        }
+
+        if (array_key_exists("WarmupSetting",$param) and $param["WarmupSetting"] !== null) {
+            $this->WarmupSetting = new WarmupSetting();
+            $this->WarmupSetting->deserialize($param["WarmupSetting"]);
+        }
+
+        if (array_key_exists("EnableBatchHealthCheck",$param) and $param["EnableBatchHealthCheck"] !== null) {
+            $this->EnableBatchHealthCheck = $param["EnableBatchHealthCheck"];
+        }
+    }
+}

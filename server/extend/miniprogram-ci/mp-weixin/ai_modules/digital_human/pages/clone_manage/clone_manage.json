@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "我的克隆",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-tabs": "../../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "video-preview": "../../../../components/video-preview/video-preview",
+    "video-item": "../../components/video-item/video-item"
+  }
+}

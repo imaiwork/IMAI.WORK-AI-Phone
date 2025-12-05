@@ -1,0 +1,54 @@
+// 替换uview颜色变量
+
+$u-main-color: theme("colors.main");
+$u-content-color: theme("colors.content");
+$u-tips-color: theme("colors.muted");
+$u-light-color: theme("colors.light");
+$u-border-color: theme("colors.light");
+$u-bg-color: theme("colors.page");
+$u-disabled-color: theme("colors.disabled");
+$u-minor-color: theme("colors[minor]");
+$u-type-primary: theme("colors.primary.DEFAULT");
+$u-type-primary-disabled: theme("colors.primary[light-3]");
+$u-type-primary-dark: theme("colors.primary[dark-2]");
+$u-type-primary-light: theme("colors.primary[light-9]");
+
+$u-type-warning: theme("colors.warning.DEFAULT");
+$u-type-warning-disabled: theme("colors.warning[light-3]");
+$u-type-warning-dark: theme("colors.warning[dark-2]");
+$u-type-warning-light: theme("colors.warning[light-9]");
+
+$u-type-success: theme("colors.success.DEFAULT");
+$u-type-success-disabled: theme("colors.success[light-3]");
+$u-type-success-dark: theme("colors.success[dark-2]");
+$u-type-success-light: theme("colors.success[light-9]");
+
+$u-type-error: theme("colors.error.DEFAULT");
+$u-type-error-disabled: theme("colors.error[light-3]");
+$u-type-error-dark: theme("colors.error[dark-2]");
+$u-type-error-light: theme("colors.error[light-9]");
+
+$u-type-info: theme("colors.info.DEFAULT");
+$u-type-info-disabled: theme("colors.info[light-3]");
+$u-type-info-dark: theme("colors.info[dark-2]");
+$u-type-info-light: theme("colors.info[light-9]");
+
+$u-form-item-height: 60rpx;
+$u-form-item-border-color: theme("colors.light");
+
+$-color-white: theme("colors.white");
+$-color-black: theme("colors.black");
+
+$u-color-btn-text: theme("colors[btn-text]");
+
+$u-sidebar-surface-secondary: #ececec;
+$u-border-light: rgba(0, 0, 0, 0.1);
+$u-main-surface-secondary: #f9f9f9;
+$u-text-secondary: #7d7d7d;
+$u-text-error: #fb0000;
+$u-text-tertiary: #b4b4b4;
+$u-border-medium: rgba(0, 0, 0, 0.15);
+$u-file-surface-secondary: #f0f0f0;
+$u-text-color-primary: #b4b4b4;
+$u-border-heavy: rgba(0, 0, 0, 0.2);
+$u-border-primary: #e3e3e3;

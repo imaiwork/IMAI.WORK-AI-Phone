@@ -1,0 +1,1 @@
+import{d as n,k as _,l as s,m as a,a3 as o,_ as c}from"./entry.ca4d3d61.js";const p=n({__name:"index",props:{width:{type:String,default:"48px"},height:{type:String,default:"48px"}},setup(t){const e=t;return(d,i)=>(_(),s("div",null,[a("div",{class:"loader",style:o({width:e.width,height:e.height})},null,4)]))}});const r=c(p,[["__scopeId","data-v-75efe7c4"]]);export{r as _};

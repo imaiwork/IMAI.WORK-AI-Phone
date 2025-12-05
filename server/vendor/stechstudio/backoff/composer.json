@@ -1,0 +1,23 @@
+{
+    "name": "stechstudio/backoff",
+    "description": "PHP library providing retry functionality with multiple backoff strategies and jitter support",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Joseph Szobody",
+            "email": "joseph@stechstudio.com"
+        }
+    ],
+    "require": {},
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4":{
+            "STS\\Backoff\\": "src"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    }
+}

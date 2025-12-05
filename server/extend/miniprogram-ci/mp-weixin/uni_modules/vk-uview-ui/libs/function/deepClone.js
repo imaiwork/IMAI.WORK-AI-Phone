@@ -1,0 +1,1 @@
+"use strict";exports.deepClone=function t(e){if([null,void 0,NaN,!1].includes(e))return e;if("object"!=typeof e&&"function"!=typeof e)return e;var o,r=(o=e,"[object Array]"===Object.prototype.toString.call(o)?[]:{});for(let n in e)e.hasOwnProperty(n)&&(r[n]="object"==typeof e[n]?t(e[n]):e[n]);return r};

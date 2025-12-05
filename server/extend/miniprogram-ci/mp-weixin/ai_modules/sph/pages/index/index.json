@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "AI自动获客",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "empty": "../../../../components/empty/empty",
+    "task-card": "../../components/task-card/task-card",
+    "task-edit": "../../components/task-edit/task-edit"
+  }
+}

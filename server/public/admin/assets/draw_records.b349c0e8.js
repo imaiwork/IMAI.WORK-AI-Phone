@@ -1,0 +1,1 @@
+import{r}from"./index.f10dd425.js";function d(e){return r.get({url:"/hd.hdImage/lists",params:e})}function o(e){return r.post({url:"/hd.hdImage/delete",params:e})}function a(e){return r.get({url:"/draw.videoRecord/lists",params:e})}function s(e){return r.post({url:"/draw.videoRecord/del",params:e})}export{s as a,a as b,o as d,d as g};

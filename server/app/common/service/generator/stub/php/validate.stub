@@ -1,0 +1,83 @@
+<?php
+
+
+{NAMESPACE}
+
+
+use app\common\validate\BaseValidate;
+
+
+/**
+ * {CLASS_COMMENT}
+ * Class {UPPER_CAMEL_NAME}Validate
+ * @package app\{MODULE_NAME}\validate{PACKAGE_NAME}
+ */
+class {UPPER_CAMEL_NAME}Validate extends BaseValidate
+{
+
+     /**
+      * 设置校验规则
+      * @var string[]
+      */
+    protected $rule = [
+{RULE}
+    ];
+
+
+    /**
+     * 参数描述
+     * @var string[]
+     */
+    protected $field = [
+{FIELD}
+    ];
+
+
+    /**
+     * @notes 添加场景
+     * @return {UPPER_CAMEL_NAME}Validate
+     * @author {AUTHOR}
+     * @date {DATE}
+     */
+    public function sceneAdd()
+    {
+        {ADD_PARAMS}
+    }
+
+
+    /**
+     * @notes 编辑场景
+     * @return {UPPER_CAMEL_NAME}Validate
+     * @author {AUTHOR}
+     * @date {DATE}
+     */
+    public function sceneEdit()
+    {
+        {EDIT_PARAMS}
+    }
+
+
+    /**
+     * @notes 删除场景
+     * @return {UPPER_CAMEL_NAME}Validate
+     * @author {AUTHOR}
+     * @date {DATE}
+     */
+    public function sceneDelete()
+    {
+        return $this->only(['{PK}']);
+    }
+
+
+    /**
+     * @notes 详情场景
+     * @return {UPPER_CAMEL_NAME}Validate
+     * @author {AUTHOR}
+     * @date {DATE}
+     */
+    public function sceneDetail()
+    {
+        return $this->only(['{PK}']);
+    }
+
+}

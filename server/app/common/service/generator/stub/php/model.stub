@@ -1,0 +1,23 @@
+<?php
+
+
+{NAMESPACE}
+
+
+use app\common\model\BaseModel;
+{USE}
+
+
+/**
+ * {CLASS_COMMENT}
+ * Class {UPPER_CAMEL_NAME}
+ * @package app\common\model{PACKAGE_NAME}
+ */
+class {UPPER_CAMEL_NAME} extends BaseModel
+{
+    {DELETE_USE}
+    protected $name = '{TABLE_NAME}';
+    {DELETE_TIME}
+
+    {RELATION_MODEL}
+}

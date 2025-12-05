@@ -1,0 +1,202 @@
+<?php
+return [
+    'ultra' => [
+        "prompt"          => [
+            "desc"    => "您希望在输出图像中看到的内容。明确定义元素、颜色和主题的强有力的描述性提示将带来更好的结果",
+            "select"  => "",
+            "default" => [],
+            'require' => true,
+        ],
+        'aspect_ratio'    => [
+            'desc'    => "控制生成的图像的纵横比。",
+            "select"  => [
+                '16:9',
+                '1:1',
+                '21:9',
+                '2:3',
+                '3:2',
+                '4:5',
+                '5:4',
+                '9:16',
+                '9:21',
+            ],
+            "default" => "1:1",
+            'require' => false,
+        ],
+        "negative_prompt" => [
+            "desc"    => "描述您不希望在输出图像中看到的内容的文本格式简介。这是一项高级功能。",
+            "select"  => [],
+            "default" => "",
+            'require' => false,
+        ],
+        'seed'            => [
+            'desc'    => "一个特定值，用于指导生成的随机性 0 .. 4294967294 ",
+            "select"  => [],
+            "default" => "0",
+            'require' => false,
+        ],
+        'output_format'   => [
+            'desc'    => "指定生成的图像的类型。",
+            "select"  => [
+                'jpeg',
+                'png',
+                'webp',
+            ],
+            "default" => "webp",
+            'require' => false,
+        ],
+    ],
+    'core'  => [
+        "prompt"          => [
+            "desc"    => "您希望在输出图像中看到的内容。明确定义元素、颜色和主题的强有力的描述性提示将带来更好的结果",
+            "select"  => [],
+            "default" => "",
+            'require' => true,
+        ],
+        'aspect_ratio'    => [
+            'desc'    => "控制生成的图像的纵横比。",
+            "select"  => [
+                '16:9',
+                '1:1',
+                '21:9',
+                '2:3',
+                '3:2',
+                '4:5',
+                '5:4',
+                '9:16',
+                '9:21',
+            ],
+            "default" => "1:1",
+            'require' => false,
+        ],
+        "negative_prompt" => [
+            "desc"    => "描述您不希望在输出图像中看到的内容的文本格式简介。这是一项高级功能。",
+            "select"  => [],
+            "default" => "",
+            'require' => false,
+        ],
+        'seed'            => [
+            'desc'    => "一个特定值，用于指导生成的随机性 0 .. 4294967294 ",
+            "select"  => [],
+            "default" => "0",
+            'require' => false,
+        ],
+        'style_preset'    => [
+            'desc'    => "将图像模型引导至特定样式。",
+            "select"  => [
+                '3d-model',
+                'analog-film',
+                'anime',
+                'cinematic',
+                'comic-book',
+                'digital-art',
+                'enhance',
+                'fantasy-art',
+                'isometric',
+                'line-art',
+                'low-poly',
+                'modeling-compound',
+                'neon-punk origami',
+                'photographic',
+                'pixel-art',
+                'tile-texture',
+            ],
+            "default" => "",
+            'require' => false,
+        ],
+        'output_format'   => [
+            'desc'    => "指定生成的图像的类型。",
+            "select"  => [
+                'jpeg',
+                'png',
+                'webp',
+            ],
+            "default" => "webp",
+            'require' => false,
+        ],
+    ],
+    'sd3'   => [
+        "prompt"          => [
+            "desc"    => "您希望在输出图像中看到的内容。明确定义元素、颜色和主题的强有力的描述性提示将带来更好的结果",
+            "select"  => [],
+            "default" => "",
+            'require' => false,
+        ],
+        "mode"            => [
+            "desc"    => "text-to-image 只需要参数 prompt" . PHP_EOL . "image-to-image 需要的参数有 prompt image strength",
+            "select"  => [
+                "image-to-image",
+                "text-to-image"
+            ],
+            "default" => "text-to-image",
+            'require' => false,
+        ],
+        "image"           => [
+            "desc"    => "用作生成起点的图像。 只允许 jpeg，png，webp 每一个必须至少有64个像素",
+            "select"  => [
+                'jpeg',
+                'png',
+                'webp',
+            ],
+            "default" => "text-to-image",
+            'require' => false,
+        ],
+        "strength"        => [
+            "desc"    => "有时称为去噪，该参数控制该参数对生成的图像有多大影响。值为0将生成与输入相同的图像。值为1相当于您根本没有传入任何图像 以图生图可用",
+            "select"  => [
+                '0',
+                '1',
+            ],
+            "default" => "",
+            'require' => false,
+        ],
+        'aspect_ratio'    => [
+            'desc'    => "控制生成的图像的纵横比。",
+            "select"  => [
+                '16:9',
+                '1:1',
+                '21:9',
+                '2:3',
+                '3:2',
+                '4:5',
+                '5:4',
+                '9:16',
+                '9:21',
+            ],
+            "default" => "1:1",
+            'require' => false,
+        ],
+        'model'           => [
+            'desc'    => "sd3-medium 需要3.5积分" . PHP_EOL . "sd3-large 需要6.5积分" . PHP_EOL . "sd3-large-turbo 需要4积分",
+            "select"  => [
+                'sd3-large',
+                'sd3-large-turbo',
+                'sd3-medium',
+            ],
+            "default" => "sd3-large",
+            'require' => false,
+        ],
+        'seed'            => [
+            'desc'    => "一个特定值，用于指导生成的随机性 0 .. 4294967294 ",
+            "select"  => [],
+            "default" => "0",
+            'require' => false,
+        ],
+        'output_format'   => [
+            'desc'    => "指定生成的图像的类型。",
+            "select"  => [
+                'jpeg',
+                'png',
+                'webp',
+            ],
+            "default" => "webp",
+            'require' => false,
+        ],
+        "negative_prompt" => [
+            "desc"    => "描述您不希望在输出图像中看到的内容的文本格式简介。这是一项高级功能。",
+            "select"  => [],
+            "default" => "",
+            'require' => false,
+        ],
+    ]
+];

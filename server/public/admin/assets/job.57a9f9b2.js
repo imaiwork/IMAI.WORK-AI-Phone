@@ -1,0 +1,1 @@
+import{r as t}from"./index.f10dd425.js";const i=e=>t.get({url:"/interview.interviewJob/lists",params:e}),n=e=>t.get({url:"/interview.interviewJob/detail",params:e}),o=e=>t.post({url:"/interview.interviewJob/delete",data:e}),s=e=>t.post({url:"/interview.interviewJob/changeStatus",data:e});export{i as a,s as b,n as g,o as i};

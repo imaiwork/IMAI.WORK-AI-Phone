@@ -1,0 +1,17 @@
+<?php
+
+
+namespace app\common\model\kb;
+
+use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
+
+/**
+ * 知识库模型
+ */
+class KbKnow extends BaseModel
+{
+    use SoftDelete;
+
+    protected string $deleteTime = 'delete_time';
+}

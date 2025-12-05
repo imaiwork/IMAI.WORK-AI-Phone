@@ -1,0 +1,77 @@
+<?php
+/*
+ * Copyright (c) 2017-2025 Tencent. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+namespace TencentCloud\Lke\V20231130\Models;
+use TencentCloud\Common\AbstractModel;
+
+/**
+ * RetryDocParse请求参数结构体
+ *
+ * @method string getBotBizId() 获取应用ID
+ * @method void setBotBizId(string $BotBizId) 设置应用ID
+ * @method string getDocBizId() 获取废弃
+ * @method void setDocBizId(string $DocBizId) 设置废弃
+ * @method array getDocBizIds() 获取集合最大上限50个，DocBizIds有值使用DocBizIds，为空时则使用DocBizId(兼容废弃字段)
+ * @method void setDocBizIds(array $DocBizIds) 设置集合最大上限50个，DocBizIds有值使用DocBizIds，为空时则使用DocBizId(兼容废弃字段)
+ */
+class RetryDocParseRequest extends AbstractModel
+{
+    /**
+     * @var string 应用ID
+     */
+    public $BotBizId;
+
+    /**
+     * @var string 废弃
+     */
+    public $DocBizId;
+
+    /**
+     * @var array 集合最大上限50个，DocBizIds有值使用DocBizIds，为空时则使用DocBizId(兼容废弃字段)
+     */
+    public $DocBizIds;
+
+    /**
+     * @param string $BotBizId 应用ID
+     * @param string $DocBizId 废弃
+     * @param array $DocBizIds 集合最大上限50个，DocBizIds有值使用DocBizIds，为空时则使用DocBizId(兼容废弃字段)
+     */
+    function __construct()
+    {
+
+    }
+
+    /**
+     * For internal only. DO NOT USE IT.
+     */
+    public function deserialize($param)
+    {
+        if ($param === null) {
+            return;
+        }
+        if (array_key_exists("BotBizId",$param) and $param["BotBizId"] !== null) {
+            $this->BotBizId = $param["BotBizId"];
+        }
+
+        if (array_key_exists("DocBizId",$param) and $param["DocBizId"] !== null) {
+            $this->DocBizId = $param["DocBizId"];
+        }
+
+        if (array_key_exists("DocBizIds",$param) and $param["DocBizIds"] !== null) {
+            $this->DocBizIds = $param["DocBizIds"];
+        }
+    }
+}

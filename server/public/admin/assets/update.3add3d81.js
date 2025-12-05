@@ -1,0 +1,1 @@
+import{r as t}from"./index.f10dd425.js";function u(e){return t.get({url:"/update/lists",params:e})}function a(e){return t.post({url:"/update/check",params:e})}function s(e){return t.post({url:"/update/exec",params:e})}export{a,u as g,s as u};

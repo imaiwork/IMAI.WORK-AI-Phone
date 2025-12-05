@@ -1,0 +1,14 @@
+{
+  "navigationBarTitleText": "创建任务",
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../../components/empty/empty",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "upload-progress": "../../../../components/upload-progress/upload-progress",
+    "video-preview": "../../../../components/video-preview/video-preview",
+    "bast-setting": "../../components/bast-setting/bast-setting"
+  }
+}

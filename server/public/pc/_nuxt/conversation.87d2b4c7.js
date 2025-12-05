@@ -1,0 +1,1 @@
+import{_ as o}from"./conversation.vue.16736f7e.js";import"./el-avatar.7274e511.js";import"./entry.062f432e.js";import"./el-empty.f71775a4.js";import"./vue-virtual-scroller.esm.fd8a86fd.js";/* empty css                             */import"./useHandle.1586da0e.js";import"./person_wechat.703f63bb.js";import"./index.cf59f1a8.js";export{o as default};

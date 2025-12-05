@@ -1,0 +1,1 @@
+var N=(I=>(I[I.AI_RECOMMEND=1]="AI_RECOMMEND",I[I.TECHNOLOGY=2]="TECHNOLOGY",I[I.LIFE=3]="LIFE",I[I.MARKETING=4]="MARKETING",I[I.KNOWLEDGE=5]="KNOWLEDGE",I[I.VARIETY=6]="VARIETY",I))(N||{});const O={[1]:"Ai智能推荐",[2]:"科技风格",[3]:"生活风格",[4]:"营销风格",[5]:"知识科普风格",[6]:"综艺风格"};export{N as ClipStyleEnum,O as ClipStyleMap};

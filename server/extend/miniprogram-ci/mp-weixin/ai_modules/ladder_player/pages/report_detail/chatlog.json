@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "chatting": "../../components/chatting/chatting"
+  }
+}

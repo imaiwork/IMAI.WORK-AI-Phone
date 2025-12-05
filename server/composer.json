@@ -1,0 +1,90 @@
+{
+    "name": "topthink/think",
+    "description": "the new thinkphp framework",
+    "type": "project",
+    "keywords": [
+        "framework",
+        "thinkphp",
+        "ORM"
+    ],
+    "homepage": "http://thinkphp.cn/",
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "liu21st",
+            "email": "liu21st@gmail.com"
+        },
+        {
+            "name": "yunwuxin",
+            "email": "448901948@qq.com"
+        }        
+    ],
+    "require": {
+        "php": ">=8.0",
+        "topthink/framework": "^8.0.2",
+        "topthink/think-orm": "^3.0",
+        "topthink/think-multi-app": "^1.0",
+        "topthink/think-view": "^2.0",
+        "dragonmantank/cron-expression": "^3.3",
+        "phpoffice/phpspreadsheet": "^1.22",
+        "qiniu/php-sdk": "7.4",
+        "qcloud/cos-sdk-v5": "^2.5",
+        "aliyuncs/oss-sdk-php": "^2.7",
+        "rmccue/requests": "^2.0",
+        "w7corp/easywechat": "^6.8",
+        "tencentcloud/sms": "^3.0",
+        "alipaysdk/easysdk": "^2.2",
+        "ext-curl": "*",
+        "ext-openssl": "*",
+        "ext-mbstring": "*",
+        "james-heinrich/getid3": "^1.9",
+        "topthink/think-queue": "3.0.8",
+        "nesbot/carbon": "2.54.0",
+        "symfony/translation": "4.4.47",
+        "symfony/yaml": "^3.4",
+        "alibabacloud/client": "^1.5",
+        "tencentcloud/tencentcloud-sdk-php": "^3.0",
+        "phpoffice/phpword": "^1.2",
+        "topthink/think-swoole": "^4.1",
+        "predis/predis": "^3.0",
+        "google/protobuf": "^4.31",
+        "guzzlehttp/guzzle": "^7.9",
+        "lustre/php-dfa-sensitive": "^1.4",
+        "ramsey/uuid": "*",
+        "symfony/browser-kit": "*",
+        "symfony/css-selector": "*",
+        "fukuball/jieba-php": "*",
+        "overtrue/pinyin": "^5.3",
+        "endroid/qr-code": "^4.8",
+        "alibabacloud/mts-20140618": "2.1.0",
+        "workerman/workerman": "^4.2",
+        "workerman/channel": "^1.2"
+    },
+    "require-dev": {
+        "symfony/var-dumper": ">=4.2",
+        "topthink/think-trace":"^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "app\\": "app",
+            "Jubo\\JuLiao\\IM\\Wx\\Proto\\": "extend/lib/protobuf/Jubo/JuLiao/IM/Wx/Proto",
+            "GPBMetadata\\": "extend/lib/protobuf/GPBMetadata"
+        },
+        "psr-0": {
+            "": "extend/"
+        }
+    },
+    "config": {
+        "preferred-install": "dist",
+        "allow-plugins": {
+            "easywechat-composer/easywechat-composer": false,
+            "topthink/think-installer": true
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "@php think service:discover",
+            "@php think vendor:publish"
+        ]
+    }
+}

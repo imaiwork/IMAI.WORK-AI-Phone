@@ -1,0 +1,1 @@
+import{r as e}from"./index.f10dd425.js";function s(){return e.get({url:"/setting.user.user/getConfig"})}function u(t){return e.post({url:"/setting.user.user/setConfig",params:t})}function n(){return e.get({url:"/setting.user.user/getRegisterConfig"})}function g(t){return e.post({url:"/setting.user.user/setRegisterConfig",params:t})}export{n as a,u as b,s as g,g as s};

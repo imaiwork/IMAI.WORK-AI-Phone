@@ -1,0 +1,1 @@
+"use strict";exports.getParent=function(r,t){let e=this.$parent;for(;e;){if(e.$options.name===r){let r={};if(Array.isArray(t))t.map((t=>{r[t]=e[t]?e[t]:""}));else for(let n in t)Array.isArray(t[n])?t[n].length?r[n]=t[n]:r[n]=e[n]:t[n].constructor===Object?Object.keys(t[n]).length?r[n]=t[n]:r[n]=e[n]:r[n]=t[n]||!1===t[n]?t[n]:e[n];return r}e=e.$parent}return{}};

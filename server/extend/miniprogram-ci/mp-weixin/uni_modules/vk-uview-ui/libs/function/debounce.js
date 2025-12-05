@@ -1,0 +1,1 @@
+"use strict";let t=null;exports.debounce=function(e,n=500,u=!1){if(null!==t&&clearTimeout(t),u){var o=!t;t=setTimeout((function(){t=null}),n),o&&"function"==typeof e&&e()}else t=setTimeout((function(){"function"==typeof e&&e()}),n)};

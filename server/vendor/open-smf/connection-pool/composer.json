@@ -1,0 +1,40 @@
+{
+  "name": "open-smf/connection-pool",
+  "type": "library",
+  "license": "MIT",
+  "support": {
+    "issues": "https://github.com/open-smf/connection-pool/issues",
+    "source": "https://github.com/open-smf/connection-pool"
+  },
+  "description": "A common connection pool based on Swoole is usually used as the database connection pool.",
+  "keywords": [
+    "swoole",
+    "connection-pool",
+    "database-connection-pool"
+  ],
+  "homepage": "https://github.com/open-smf/connection-pool",
+  "authors": [
+    {
+      "name": "Xie Biao",
+      "email": "hhxsv5@sina.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.0.0",
+    "ext-json": "*",
+    "ext-swoole": ">=4.2.9"
+  },
+  "suggest": {
+    "ext-redis": "A PHP extension for Redis."
+  },
+  "autoload": {
+    "psr-4": {
+      "Smf\\ConnectionPool\\": "src"
+    }
+  },
+  "prefer-stable": true,
+  "minimum-stability": "dev",
+  "require-dev": {
+    "swoole/ide-helper": "@dev"
+  }
+}

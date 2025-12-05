@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="50" height="5" viewBox="0 0 50 5" fill="none">
+  <g opacity="0.5">
+    <path opacity="0.05" d="M1 0V5" stroke="#9EB4FD"/>
+    <path opacity="0.1" d="M7 0V5" stroke="#9EB4FD"/>
+    <path opacity="0.3" d="M13 0V5" stroke="#9EB4FD"/>
+    <path opacity="0.5" d="M19 0V5" stroke="#9EB4FD"/>
+    <path opacity="0.7" d="M25 0V5" stroke="#9EB4FD"/>
+    <path opacity="0.9" d="M31 0V5" stroke="#9EB4FD"/>
+    <path d="M37 0V5" stroke="#9EB4FD"/>
+    <path d="M43 0V5" stroke="#9EB4FD"/>
+    <path d="M49 0V5" stroke="#9EB4FD"/>
+  </g>
+</svg>

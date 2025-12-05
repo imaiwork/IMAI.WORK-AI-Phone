@@ -1,0 +1,1 @@
+import{r as n}from"./index.f10dd425.js";function g(t){return n.post({url:"/channel.web_page_setting/setConfig",params:t})}function i(){return n.get({url:"/channel.web_page_setting/getConfig"})}function o(){return n.get({url:"/channel.pc_setting/getConfig"})}function r(t){return n.post({url:"/channel.pc_setting/setConfig",params:t})}export{o as a,r as b,i as g,g as s};

@@ -1,0 +1,1 @@
+import{t as n}from"./toNumber.33289b44.js";function t(d,f,i){return d===d&&(i!==void 0&&(d=d<=i?d:i),f!==void 0&&(d=d>=f?d:f)),d}function c(d,f,i){return i===void 0&&(i=f,f=void 0),i!==void 0&&(i=n(i),i=i===i?i:0),f!==void 0&&(f=n(f),f=f===f?f:0),t(n(d),f,i)}export{c};

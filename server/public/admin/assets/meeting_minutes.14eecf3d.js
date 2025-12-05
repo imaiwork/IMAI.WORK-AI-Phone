@@ -1,0 +1,1 @@
+import{r as t}from"./index.f10dd425.js";function r(e){return t.get({url:"/audio.audio/lists",params:e})}function o(e){return t.post({url:"/audio.audio/delete",params:e})}function u(e){return t.get({url:"/audio.audio/detail",params:e})}export{r as a,o as d,u as g};

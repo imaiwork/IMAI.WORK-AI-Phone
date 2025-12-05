@@ -1,0 +1,1 @@
+import{r as n}from"./index.f10dd425.js";function s(t){return n.post({url:"/channel.mnp_settings/setConfig",params:t})}function p(){return n.get({url:"/channel.mnp_settings/getConfig"})}function r(){return n.get({url:"/channel.mnp_settings/getMnpLocalVersion"})}function o(t){return n.post({url:"/channel.mnp_settings/uploadMnp",params:t})}export{r as a,p as g,s,o as u};

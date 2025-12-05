@@ -1,0 +1,12 @@
+node_modules
+.idea
+*.log*
+.nuxt
+.nitro
+.cache
+.output
+.vite
+*.env
+*.env.development
+*.env.production
+dist

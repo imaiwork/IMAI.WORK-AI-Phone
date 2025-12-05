@@ -1,0 +1,106 @@
+:root {
+    .el-input__inner {
+        --el-input-inner-height: 38px;
+    }
+    .el-input--small {
+        .el-input__inner {
+            --el-input-inner-height: 24px;
+        }
+    }
+
+    .el-form-item {
+        --font-size: var(--el-font-size-base);
+        align-items: center;
+        .el-form-item__label {
+            line-height: initial;
+            align-items: center;
+        }
+    }
+
+    .el-select__wrapper {
+        min-height: var(--el-input-wrapper-height);
+        height: 100%;
+        font-size: var(--el-font-size-base);
+    }
+    .el-button--primary {
+        --el-button-disabled-bg-color: var(--el-color-primary-light-3);
+        --el-button-disabled-border-color: var(--el-color-primary-light-3);
+    }
+    .el-message {
+        --el-message-padding: 20px 16px;
+        border-radius: 1000px;
+        .el-message__content {
+            color: var(--el-color-white);
+        }
+    }
+    .el-message--error {
+        background-color: var(--el-color-error-fill);
+    }
+    .el-message--warning {
+        background-color: var(--el-color-warning-fill);
+    }
+    .el-message--success {
+        background-color: var(--el-color-success-fill);
+    }
+    .el-message--success,
+    .el-message--error {
+        .el-icon {
+            color: var(--el-color-white);
+        }
+    }
+
+    .el-message-box__errormsg {
+        color: var(--el-color-error-light-9);
+    }
+
+    .el-table {
+        --el-table-header-text-color: var(--el-text-color-primary);
+        --el-table-header-bg-color: var(--table-header-bg-color);
+        .el-table__cell {
+            text-align: center;
+        }
+        thead {
+            th {
+                font-weight: 400;
+                &.el-table__cell {
+                    background-color: transparent;
+
+                    &.el-table-fixed-column--right {
+                        background-color: var(--color-white);
+                    }
+                    &.is-leaf {
+                        border-top: var(--el-table-border);
+                    }
+                }
+            }
+        }
+    }
+
+    .el-checkbox {
+        --el-checkbox-font-size: var(--el-font-size-base);
+    }
+
+    .el-tabs__item {
+        font-weight: 400;
+    }
+
+    .el-message {
+        border-style: none;
+    }
+
+    .el-dialog {
+        --el-dialog-border-radius: var(--el-border-radius-xl);
+        --el-dialog-content-font-size: var(--el-font-size-base);
+    }
+    .el-button:focus-visible {
+        outline: none;
+    }
+    .el-input-number.is-controls-right .el-input-number__decrease,
+    .el-input-number.is-controls-right .el-input-number__increase {
+        --el-input-number-controls-height: 20px;
+    }
+    .el-input-number.is-controls-right[class*="small"] [class*="decrease"],
+    .el-input-number.is-controls-right[class*="small"] [class*="increase"] {
+        --el-input-number-controls-height: 12px;
+    }
+}

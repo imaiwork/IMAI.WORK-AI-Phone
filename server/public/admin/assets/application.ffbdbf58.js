@@ -1,0 +1,1 @@
+import{r as a}from"./index.f10dd425.js";function f(t){return a.get({url:"/staff.staff/lists",params:t})}function i(t){return a.get({url:"/staff.staff/detail",params:t})}function e(t){return a.post({url:"/staff.staff/edit",params:t})}function n(t){return a.post({url:"/staff.staff/changeStatus",params:t})}export{f as a,n as c,e,i as g};

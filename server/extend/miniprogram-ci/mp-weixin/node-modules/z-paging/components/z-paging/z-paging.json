@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "z-paging-empty-view": "../z-paging-empty-view/z-paging-empty-view",
+    "z-paging-refresh": "./components/z-paging-refresh",
+    "z-paging-load-more": "./components/z-paging-load-more"
+  }
+}

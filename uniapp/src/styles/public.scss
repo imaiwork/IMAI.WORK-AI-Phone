@@ -1,0 +1,255 @@
+page {
+    background-color: $u-bg-color;
+    height: 100%;
+    font-size: 26rpx;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: theme("fontFamily.sans");
+    --color-primary: #0065fb;
+}
+
+uni-modal {
+    z-index: 999999 !important;
+}
+
+button::after {
+    border: none !important;
+}
+
+.safe-area {
+    padding-bottom: calc(constant(safe-area-inset-bottom));
+    padding-bottom: calc(env(safe-area-inset-bottom));
+}
+
+.index-bg {
+    top: 0;
+    z-index: 1;
+    left: 0;
+    position: absolute;
+    filter: blur(20px);
+    background: linear-gradient(90deg, #f1f7ff 50%, #faf3f3 50%);
+    height: 180rpx;
+    width: 100%;
+}
+
+.page-bg {
+    background: linear-gradient(
+        209deg,
+        rgba(221, 238, 255, 1) 0%,
+        rgba(221, 238, 255, 1) 10%,
+        rgba(249, 250, 251, 0.2) 32%
+    );
+}
+
+.loader {
+    --w: 10ch;
+    font-weight: bold;
+    font-family: monospace;
+    font-size: 30rpx;
+    line-height: 1.4em;
+    letter-spacing: var(--w);
+    width: var(--w);
+    overflow: hidden;
+    white-space: nowrap;
+    color: #0000;
+    text-shadow: calc(0 * var(--w)) 0 #000, calc(-1 * var(--w)) 0 #000, calc(-2 * var(--w)) 0 #000,
+        calc(-3 * var(--w)) 0 #000, calc(-4 * var(--w)) 0 #000, calc(-5 * var(--w)) 0 #000, calc(-6 * var(--w)) 0 #000,
+        calc(-7 * var(--w)) 0 #000, calc(-8 * var(--w)) 0 #000, calc(-9 * var(--w)) 0 #000;
+    animation: Loading 2s infinite linear;
+}
+.loader:before {
+    content: "Loading...";
+}
+
+@keyframes Loading {
+    9.09% {
+        text-shadow: calc(0 * var(--w)) -10px #000, calc(-1 * var(--w)) 0 #000, calc(-2 * var(--w)) 0 #000,
+            calc(-3 * var(--w)) 0 #000, calc(-4 * var(--w)) 0 #000, calc(-5 * var(--w)) 0 #000,
+            calc(-6 * var(--w)) 0 #000, calc(-7 * var(--w)) 0 #000, calc(-8 * var(--w)) 0 #000,
+            calc(-9 * var(--w)) 0 #000;
+    }
+    18.18% {
+        text-shadow: calc(0 * var(--w)) 0 #000, calc(-1 * var(--w)) -10px #000, calc(-2 * var(--w)) 0 #000,
+            calc(-3 * var(--w)) 0 #000, calc(-4 * var(--w)) 0 #000, calc(-5 * var(--w)) 0 #000,
+            calc(-6 * var(--w)) 0 #000, calc(-7 * var(--w)) 0 #000, calc(-8 * var(--w)) 0 #000,
+            calc(-9 * var(--w)) 0 #000;
+    }
+    27.27% {
+        text-shadow: calc(0 * var(--w)) 0 #000, calc(-1 * var(--w)) 0 #000, calc(-2 * var(--w)) -10px #000,
+            calc(-3 * var(--w)) 0 #000, calc(-4 * var(--w)) 0 #000, calc(-5 * var(--w)) 0 #000,
+            calc(-6 * var(--w)) 0 #000, calc(-7 * var(--w)) 0 #000, calc(-8 * var(--w)) 0 #000,
+            calc(-9 * var(--w)) 0 #000;
+    }
+    36.36% {
+        text-shadow: calc(0 * var(--w)) 0 #000, calc(-1 * var(--w)) 0 #000, calc(-2 * var(--w)) 0 #000,
+            calc(-3 * var(--w)) -10px #000, calc(-4 * var(--w)) 0 #000, calc(-5 * var(--w)) 0 #000,
+            calc(-6 * var(--w)) 0 #000, calc(-7 * var(--w)) 0 #000, calc(-8 * var(--w)) 0 #000,
+            calc(-9 * var(--w)) 0 #000;
+    }
+    45.45% {
+        text-shadow: calc(0 * var(--w)) 0 #000, calc(-1 * var(--w)) 0 #000, calc(-2 * var(--w)) 0 #000,
+            calc(-3 * var(--w)) 0 #000, calc(-4 * var(--w)) -10px #000, calc(-5 * var(--w)) 0 #000,
+            calc(-6 * var(--w)) 0 #000, calc(-7 * var(--w)) 0 #000, calc(-8 * var(--w)) 0 #000,
+            calc(-9 * var(--w)) 0 #000;
+    }
+    54.54% {
+        text-shadow: calc(0 * var(--w)) 0 #000, calc(-1 * var(--w)) 0 #000, calc(-2 * var(--w)) 0 #000,
+            calc(-3 * var(--w)) 0 #000, calc(-4 * var(--w)) 0 #000, calc(-5 * var(--w)) -10px #000,
+            calc(-6 * var(--w)) 0 #000, calc(-7 * var(--w)) 0 #000, calc(-8 * var(--w)) 0 #000,
+            calc(-9 * var(--w)) 0 #000;
+    }
+    63.63% {
+        text-shadow: calc(0 * var(--w)) 0 #000, calc(-1 * var(--w)) 0 #000, calc(-2 * var(--w)) 0 #000,
+            calc(-3 * var(--w)) 0 #000, calc(-4 * var(--w)) 0 #000, calc(-5 * var(--w)) 0 #000,
+            calc(-6 * var(--w)) -10px #000, calc(-7 * var(--w)) 0 #000, calc(-8 * var(--w)) 0 #000,
+            calc(-9 * var(--w)) 0 #000;
+    }
+    72.72% {
+        text-shadow: calc(0 * var(--w)) 0 #000, calc(-1 * var(--w)) 0 #000, calc(-2 * var(--w)) 0 #000,
+            calc(-3 * var(--w)) 0 #000, calc(-4 * var(--w)) 0 #000, calc(-5 * var(--w)) 0 #000,
+            calc(-6 * var(--w)) 0 #000, calc(-7 * var(--w)) -10px #000, calc(-8 * var(--w)) 0 #000,
+            calc(-9 * var(--w)) 0 #000;
+    }
+    81.81% {
+        text-shadow: calc(0 * var(--w)) 0 #000, calc(-1 * var(--w)) 0 #000, calc(-2 * var(--w)) 0 #000,
+            calc(-3 * var(--w)) 0 #000, calc(-4 * var(--w)) 0 #000, calc(-5 * var(--w)) 0 #000,
+            calc(-6 * var(--w)) 0 #000, calc(-7 * var(--w)) 0 #000, calc(-8 * var(--w)) -10px #000,
+            calc(-9 * var(--w)) 0 #000;
+    }
+    90.90% {
+        text-shadow: calc(0 * var(--w)) 0 #000, calc(-1 * var(--w)) 0 #000, calc(-2 * var(--w)) 0 #000,
+            calc(-3 * var(--w)) 0 #000, calc(-4 * var(--w)) 0 #000, calc(-5 * var(--w)) 0 #000,
+            calc(-6 * var(--w)) 0 #000, calc(-7 * var(--w)) 0 #000, calc(-8 * var(--w)) 0 #000,
+            calc(-9 * var(--w)) -10px #000;
+    }
+}
+
+.chat-loader {
+    width: fit-content;
+    font-weight: bold;
+    font-family: monospace;
+    font-size: 24rpx;
+    clip-path: inset(0 3ch 0 0);
+    animation: chatLoader 1s steps(4) infinite;
+}
+.chat-loader:before {
+    content: "Loading...";
+}
+@keyframes chatLoader {
+    to {
+        clip-path: inset(0 -1ch 0 0);
+    }
+}
+
+.digital-human-tag {
+    @apply rounded-full px-[28rpx] py-[8rpx] text-white  shadow-[0px_6px_12px_0px_rgba(0,0,0,0.24)] text-xs;
+    backdrop-filter: blur(6px);
+    &-1 {
+        background: linear-gradient(180deg, #1af7cf50 0%, #0065fb50 100%);
+    }
+    &-2 {
+        background: linear-gradient(180deg, #caffb150 0%, #3bb84050 100%);
+    }
+    &-4 {
+        background: linear-gradient(180deg, #fffcaa80 0%, #ff62d880 100%);
+    }
+    &-6 {
+        background: linear-gradient(180deg, #4df6ff80 0%, #881abbc0 100%);
+    }
+    &-7 {
+        background: linear-gradient(180deg, #fc624780 0%, #fc6247cc 100%);
+    }
+}
+.dh-version-name {
+    @apply w-[136rpx] h-[48rpx] flex items-center justify-center text-white text-xs rounded-full;
+    border: 1px solid #ffffff33;
+    background: #ffffff1a;
+    backdrop-filter: blur(6px);
+}
+
+.dh-bg {
+    background: linear-gradient(132.98deg, #dbf9fc 0%, #f7fcff 40%);
+}
+
+.device-bg {
+    background: linear-gradient(180deg, rgba(220, 234, 252, 1) 0%, rgba(243, 244, 251, 1) 100%);
+}
+
+.form-ipt {
+    @apply h-[100rpx] bg-[#F9FAFB] flex items-center rounded-[48rpx] px-4 border border-solid border-[transparent];
+
+    &.is-focus {
+        box-shadow: 0px 0px 0px 2px #0065fb33;
+        border-color: $u-type-primary !important;
+        background: rgba(0, 101, 251, 0.03);
+    }
+    &.is-error {
+        border-color: $u-type-error !important;
+        box-shadow: 0px 0px 0px 2px #fb000033;
+        background: #fb000008;
+    }
+}
+
+.font-digital-number {
+    font-family: "digital-number";
+}
+
+.progress-loader {
+    height: 2px;
+    width: 300px;
+    background: rgb(44, 44, 44);
+    position: relative;
+    overflow: hidden;
+}
+.progress-loader .black_overlay {
+    background: linear-gradient(
+        87deg,
+        rgb(0, 0, 0) 0%,
+        rgba(0, 0, 0, 0.14) 30%,
+        rgba(0, 0, 0, 0.14) 70%,
+        rgb(0, 0, 0) 100%
+    );
+    position: absolute;
+    inset: 0px;
+}
+.progress-loader .light {
+    width: 70px;
+    height: 100%;
+    position: absolute;
+    left: -20%;
+    top: 0px;
+    background: linear-gradient(
+        87deg,
+        rgba(0, 0, 0, 0) 0%,
+        rgb(0, 204, 255) 40%,
+        rgb(0, 204, 255) 60%,
+        rgba(0, 0, 0, 0) 100%
+    );
+    animation: light 2s infinite ease-in-out;
+}
+
+@keyframes light {
+    from {
+        left: -30%;
+    }
+    to {
+        left: 100%;
+    }
+}
+
+.zp-l-text-rpx {
+    font-size: 26rpx !important;
+}
+
+.rotation {
+    @apply w-5 h-5 border-[10rpx] border-dotted border-white rounded-full inline-block mb-2;
+    animation: rotation 3s linear infinite;
+}
+@keyframes rotation {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

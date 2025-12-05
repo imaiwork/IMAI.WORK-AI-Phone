@@ -1,0 +1,1 @@
+"use strict";var R=(R=>(R[R.WAITING=0]="WAITING",R[R.RECORDING=1]="RECORDING",R[R.RECORDING_PAUSE=2]="RECORDING_PAUSE",R[R.ING=3]="ING",R[R.SUCCESS=4]="SUCCESS",R[R.ERROR=5]="ERROR",R))(R||{}),E=(R=>(R.SINGLE="single",R.BATCH="batch",R))(E||{});exports.CreateType=E,exports.TurnStatus=R;

@@ -1,0 +1,1 @@
+function u(s,o){if(s.focus(),s.selectionStart!==void 0){const a=s.selectionStart,i=s.selectionEnd;typeof s.setRangeText!==void 0?s.setRangeText(o):s.value=s.value.substring(0,a)+o+s.value.substring(i,s.value.length),s.selectionStart=a+o.length,s.selectionEnd=a+o.length}else s.value+=o;return s.value}export{u as s};

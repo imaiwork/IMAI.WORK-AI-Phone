@@ -1,0 +1,213 @@
+<?php
+/*
+ * Copyright (c) 2017-2025 Tencent. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+namespace TencentCloud\Cdb\V20170320\Models;
+use TencentCloud\Common\AbstractModel;
+
+/**
+ * DescribeSlowLogData请求参数结构体
+ *
+ * @method string getInstanceId() 获取实例 ID。可通过 [DescribeDBInstances](https://cloud.tencent.com/document/product/236/15872) 接口获取。
+ * @method void setInstanceId(string $InstanceId) 设置实例 ID。可通过 [DescribeDBInstances](https://cloud.tencent.com/document/product/236/15872) 接口获取。
+ * @method integer getStartTime() 获取开始时间戳。例如 1585142640。
+说明：此参数单位为秒的时间戳。
+ * @method void setStartTime(integer $StartTime) 设置开始时间戳。例如 1585142640。
+说明：此参数单位为秒的时间戳。
+ * @method integer getEndTime() 获取结束时间戳。例如 1585142640。
+说明：此参数单位为秒的时间戳。
+ * @method void setEndTime(integer $EndTime) 设置结束时间戳。例如 1585142640。
+说明：此参数单位为秒的时间戳。
+ * @method array getUserHosts() 获取客户端 Host 列表。
+ * @method void setUserHosts(array $UserHosts) 设置客户端 Host 列表。
+ * @method array getUserNames() 获取客户端 用户名 列表。
+ * @method void setUserNames(array $UserNames) 设置客户端 用户名 列表。
+ * @method array getDataBases() 获取访问的 数据库 列表。
+ * @method void setDataBases(array $DataBases) 设置访问的 数据库 列表。
+ * @method string getSortBy() 获取排序字段，当前支持字段及含义如下，默认值为 Timestamp。
+1. Timestamp：SQL 的执行时间
+2. QueryTime：SQL 的执行时长（秒）
+3. LockTime：锁时长（秒）
+4. RowsExamined：扫描行数
+5. RowsSent：结果集行数
+ * @method void setSortBy(string $SortBy) 设置排序字段，当前支持字段及含义如下，默认值为 Timestamp。
+1. Timestamp：SQL 的执行时间
+2. QueryTime：SQL 的执行时长（秒）
+3. LockTime：锁时长（秒）
+4. RowsExamined：扫描行数
+5. RowsSent：结果集行数
+ * @method string getOrderBy() 获取升序还是降序排列。当前支持值为 ASC - 升序，DESC - 降序 ，默认值为 ASC。
+ * @method void setOrderBy(string $OrderBy) 设置升序还是降序排列。当前支持值为 ASC - 升序，DESC - 降序 ，默认值为 ASC。
+ * @method integer getOffset() 获取偏移量，默认为0，最大为9999。
+ * @method void setOffset(integer $Offset) 设置偏移量，默认为0，最大为9999。
+ * @method integer getLimit() 获取一次性返回的记录数量，默认为100，最大为800。
+ * @method void setLimit(integer $Limit) 设置一次性返回的记录数量，默认为100，最大为800。
+ * @method string getInstType() 获取仅在实例为主实例或者灾备实例时生效，可选值：slave，代表拉取从机的日志。
+ * @method void setInstType(string $InstType) 设置仅在实例为主实例或者灾备实例时生效，可选值：slave，代表拉取从机的日志。
+ * @method string getOpResourceId() 获取节点ID
+ * @method void setOpResourceId(string $OpResourceId) 设置节点ID
+ */
+class DescribeSlowLogDataRequest extends AbstractModel
+{
+    /**
+     * @var string 实例 ID。可通过 [DescribeDBInstances](https://cloud.tencent.com/document/product/236/15872) 接口获取。
+     */
+    public $InstanceId;
+
+    /**
+     * @var integer 开始时间戳。例如 1585142640。
+说明：此参数单位为秒的时间戳。
+     */
+    public $StartTime;
+
+    /**
+     * @var integer 结束时间戳。例如 1585142640。
+说明：此参数单位为秒的时间戳。
+     */
+    public $EndTime;
+
+    /**
+     * @var array 客户端 Host 列表。
+     */
+    public $UserHosts;
+
+    /**
+     * @var array 客户端 用户名 列表。
+     */
+    public $UserNames;
+
+    /**
+     * @var array 访问的 数据库 列表。
+     */
+    public $DataBases;
+
+    /**
+     * @var string 排序字段，当前支持字段及含义如下，默认值为 Timestamp。
+1. Timestamp：SQL 的执行时间
+2. QueryTime：SQL 的执行时长（秒）
+3. LockTime：锁时长（秒）
+4. RowsExamined：扫描行数
+5. RowsSent：结果集行数
+     */
+    public $SortBy;
+
+    /**
+     * @var string 升序还是降序排列。当前支持值为 ASC - 升序，DESC - 降序 ，默认值为 ASC。
+     */
+    public $OrderBy;
+
+    /**
+     * @var integer 偏移量，默认为0，最大为9999。
+     */
+    public $Offset;
+
+    /**
+     * @var integer 一次性返回的记录数量，默认为100，最大为800。
+     */
+    public $Limit;
+
+    /**
+     * @var string 仅在实例为主实例或者灾备实例时生效，可选值：slave，代表拉取从机的日志。
+     */
+    public $InstType;
+
+    /**
+     * @var string 节点ID
+     */
+    public $OpResourceId;
+
+    /**
+     * @param string $InstanceId 实例 ID。可通过 [DescribeDBInstances](https://cloud.tencent.com/document/product/236/15872) 接口获取。
+     * @param integer $StartTime 开始时间戳。例如 1585142640。
+说明：此参数单位为秒的时间戳。
+     * @param integer $EndTime 结束时间戳。例如 1585142640。
+说明：此参数单位为秒的时间戳。
+     * @param array $UserHosts 客户端 Host 列表。
+     * @param array $UserNames 客户端 用户名 列表。
+     * @param array $DataBases 访问的 数据库 列表。
+     * @param string $SortBy 排序字段，当前支持字段及含义如下，默认值为 Timestamp。
+1. Timestamp：SQL 的执行时间
+2. QueryTime：SQL 的执行时长（秒）
+3. LockTime：锁时长（秒）
+4. RowsExamined：扫描行数
+5. RowsSent：结果集行数
+     * @param string $OrderBy 升序还是降序排列。当前支持值为 ASC - 升序，DESC - 降序 ，默认值为 ASC。
+     * @param integer $Offset 偏移量，默认为0，最大为9999。
+     * @param integer $Limit 一次性返回的记录数量，默认为100，最大为800。
+     * @param string $InstType 仅在实例为主实例或者灾备实例时生效，可选值：slave，代表拉取从机的日志。
+     * @param string $OpResourceId 节点ID
+     */
+    function __construct()
+    {
+
+    }
+
+    /**
+     * For internal only. DO NOT USE IT.
+     */
+    public function deserialize($param)
+    {
+        if ($param === null) {
+            return;
+        }
+        if (array_key_exists("InstanceId",$param) and $param["InstanceId"] !== null) {
+            $this->InstanceId = $param["InstanceId"];
+        }
+
+        if (array_key_exists("StartTime",$param) and $param["StartTime"] !== null) {
+            $this->StartTime = $param["StartTime"];
+        }
+
+        if (array_key_exists("EndTime",$param) and $param["EndTime"] !== null) {
+            $this->EndTime = $param["EndTime"];
+        }
+
+        if (array_key_exists("UserHosts",$param) and $param["UserHosts"] !== null) {
+            $this->UserHosts = $param["UserHosts"];
+        }
+
+        if (array_key_exists("UserNames",$param) and $param["UserNames"] !== null) {
+            $this->UserNames = $param["UserNames"];
+        }
+
+        if (array_key_exists("DataBases",$param) and $param["DataBases"] !== null) {
+            $this->DataBases = $param["DataBases"];
+        }
+
+        if (array_key_exists("SortBy",$param) and $param["SortBy"] !== null) {
+            $this->SortBy = $param["SortBy"];
+        }
+
+        if (array_key_exists("OrderBy",$param) and $param["OrderBy"] !== null) {
+            $this->OrderBy = $param["OrderBy"];
+        }
+
+        if (array_key_exists("Offset",$param) and $param["Offset"] !== null) {
+            $this->Offset = $param["Offset"];
+        }
+
+        if (array_key_exists("Limit",$param) and $param["Limit"] !== null) {
+            $this->Limit = $param["Limit"];
+        }
+
+        if (array_key_exists("InstType",$param) and $param["InstType"] !== null) {
+            $this->InstType = $param["InstType"];
+        }
+
+        if (array_key_exists("OpResourceId",$param) and $param["OpResourceId"] !== null) {
+            $this->OpResourceId = $param["OpResourceId"];
+        }
+    }
+}

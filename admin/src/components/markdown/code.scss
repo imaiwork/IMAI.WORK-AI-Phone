@@ -1,0 +1,181 @@
+$line-height: 1.375;
+:root {
+    --code-bg-color: #35373f;
+    --code-hl-bg-color: rgba(0, 0, 0, 0.66);
+    --code-ln-color: #6e6e7f;
+    --code-ln-wrapper-width: 3.5rem;
+}
+.markdown-it-container {
+    font-size: 13px !important;
+    background-color: transparent !important;
+    color: #1f2328 !important;
+    code {
+        color: #476582;
+        padding: 0.25rem;
+        margin: 0;
+        font-size: 0.85em;
+        border-radius: 3px;
+    }
+    code[class*="language-"],
+    pre[class*="language-"] {
+        color: #ccc;
+        background: none;
+        font-size: 1em;
+        text-align: left;
+        white-space: pre;
+        word-spacing: normal;
+        word-break: normal;
+        word-wrap: normal;
+        line-height: 1.5;
+
+        -moz-tab-size: 4;
+        -o-tab-size: 4;
+        tab-size: 4;
+
+        -webkit-hyphens: none;
+        -moz-hyphens: none;
+        -ms-hyphens: none;
+        hyphens: none;
+    }
+
+    /* Code blocks */
+    pre[class*="language-"] {
+        padding: 20px 0;
+        margin: 0;
+        overflow: auto;
+    }
+
+    :not(pre) > code[class*="language-"],
+    pre[class*="language-"] {
+        font-size: 0.85em;
+        background: #35373f;
+    }
+
+    /* Inline code */
+    :not(pre) > code[class*="language-"] {
+        border-radius: 0.3em;
+        white-space: normal;
+    }
+
+    pre,
+    pre[class*="language-"] {
+        line-height: $line-height;
+        border-radius: 6px;
+        overflow: visible;
+        display: inline-block;
+        padding: 20px;
+        code {
+            color: #fff;
+            padding: 0;
+            background-color: transparent !important;
+            border-radius: 0;
+            overflow-wrap: unset;
+            -webkit-font-smoothing: auto;
+            -moz-osx-font-smoothing: auto;
+        }
+    }
+
+    div[class*="language-"] {
+        position: relative;
+        background-color: var(--code-bg-color);
+        border-radius: 6px;
+        padding-top: 32px;
+        margin: 0.85rem 0;
+        overflow: hidden;
+        .code-copy-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #595b63;
+            color: #e0e0e0;
+            height: 32px;
+            line-height: 32px;
+            font-size: 12px;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            padding: 0 12px;
+
+            &::before {
+                content: attr(data-ext);
+                position: absolute;
+                z-index: 3;
+                top: 0;
+                font-size: 0.75rem;
+                color: #e0e0e0;
+            }
+            .code-copy-btn {
+                position: absolute;
+                z-index: 3;
+                top: 0;
+                right: 1rem;
+                font-size: 0.75rem;
+                color: #e0e0e0;
+                cursor: pointer;
+            }
+        }
+
+        pre,
+        pre[class*="language-"] {
+            // force override the background color to be compatible with shiki
+            background: transparent !important;
+            position: relative;
+            z-index: 1;
+        }
+        .pre-code-scroll {
+            overflow: auto;
+        }
+
+        &:not(.line-numbers-mode) {
+            .line-numbers {
+                display: none;
+            }
+        }
+
+        &.line-numbers-mode {
+            padding-left: var(--code-ln-wrapper-width);
+            pre {
+                vertical-align: middle;
+                padding: 20px 20px 20px 0;
+            }
+
+            .line-numbers {
+                left: 0;
+                position: absolute;
+                top: 0;
+                width: var(--code-ln-wrapper-width);
+                text-align: center;
+                color: var(--code-ln-color);
+                padding-top: 52px;
+                line-height: $line-height;
+                counter-reset: line-number;
+
+                .line-number {
+                    position: relative;
+                    z-index: 3;
+                    user-select: none;
+                    height: #{$line-height - 0.2}em;
+                    &::before {
+                        display: block;
+                        counter-increment: line-number;
+                        content: counter(line-number);
+                        font-size: 0.8em;
+                        height: 100%;
+                    }
+                }
+            }
+
+            // &::after {
+            //   content: "";
+            //   position: absolute;
+            //   top: 0;
+            //   left: 0;
+            //   width: var(--code-ln-wrapper-width);
+            //   height: 100%;
+            //   border-radius: 6px 0 0 6px;
+            //   border-right: 1px solid var(--code-hl-bg-color);
+            // }
+        }
+    }
+}

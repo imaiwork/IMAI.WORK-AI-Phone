@@ -1,0 +1,1 @@
+var e=(t=>(t.TEXT="WidgetInput",t.TEXTAREA="WidgetTextarea",t.SELECT="WidgetSelect",t.MULTIPLE="WidgetMultiple",t))(e||{});const g={WidgetInput:"单行文本",WidgetTextarea:"多行文本",WidgetSelect:"下拉选择（单选）",WidgetMultiple:"下拉选择（多选）"};export{e as FieldTypeEnum,g as FieldTypeMap};

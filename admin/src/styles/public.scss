@@ -1,0 +1,44 @@
+body {
+	@apply text-sm text-tx-primary overflow-hidden min-w-[375px];
+}
+.form-tips {
+	@apply text-tx-secondary text-sm leading-6 mt-1;
+}
+
+.clearfix:after {
+	content: "";
+	display: block;
+	clear: both;
+	visibility: hidden;
+}
+
+/* NProgress */
+#nprogress .bar {
+	@apply bg-primary #{!important};
+}
+
+:focus-visible {
+	outline: none;
+}
+
+.mm-toolbar {
+	display: flex;
+	user-select: none;
+	align-items: center;
+	border-width: 1px;
+	--un-border-opacity: 1;
+	border-color: rgb(212 212 216 / var(--un-border-opacity));
+	border-radius: 0.25rem;
+	border-style: solid;
+	--un-bg-opacity: 1;
+	background-color: rgb(255 255 255 / var(--un-bg-opacity));
+	padding: 0.25rem;
+	line-height: 1;
+	position: absolute;
+	bottom: 0.5rem;
+	right: 0.5rem;
+	z-index: 2;
+	.mm-toolbar-brand {
+		display: none;
+	}
+}

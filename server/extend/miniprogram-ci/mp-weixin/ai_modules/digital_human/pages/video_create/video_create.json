@@ -1,0 +1,17 @@
+{
+  "navigationBarTitleText": "数字人纯口播视频",
+  "usingComponents": {
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "video-preview": "../../../../components/video-preview/video-preview",
+    "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
+    "select-anchor": "../../components/choose-anchor/choose-anchor",
+    "choose-tone": "../../components/choose-tone/choose-tone",
+    "choose-model": "../../components/choose-model/choose-model",
+    "model-rule": "../../components/model-rule/model-rule",
+    "content-input": "../../components/content-input/content-input",
+    "agreement": "../../components/agreement/agreement",
+    "create-panel": "../../components/create-panel/create-panel"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "navigationBarTitleText": "任务日历",
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "calendar-simple": "../../components/calendar-simple/calendar-simple",
+    "semi-circle-progress": "../../components/semi-circle-progress/semi-circle-progress",
+    "task-list": "../../components/task-list/task-list",
+    "task-detail-pop": "../../components/task-detail-pop/task-detail-pop",
+    "task-edit-name-pop": "../../components/task-edit-name/task-edit-name"
+  }
+}

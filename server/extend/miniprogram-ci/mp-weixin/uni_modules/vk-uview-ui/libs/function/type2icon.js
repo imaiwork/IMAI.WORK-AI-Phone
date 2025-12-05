@@ -1,0 +1,1 @@
+"use strict";exports.type2icon=function(r="success",e=!1){-1==["primary","info","error","warning","success"].indexOf(r)&&(r="success");let c="";switch(r){case"primary":case"info":c="info-circle";break;case"error":c="close-circle";break;case"warning":c="error-circle";break;default:c="checkmark-circle"}return e&&(c+="-fill"),c};

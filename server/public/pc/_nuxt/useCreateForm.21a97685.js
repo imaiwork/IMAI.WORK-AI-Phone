@@ -1,0 +1,1 @@
+import{r as a}from"./entry.ca4d3d61.js";const n=a({}),s=(e,t)=>{const r=o.get(e);r&&r(t)},o=new Map,c=(e,t)=>{o.set(e,t)};function m(){return{formData:n,setFormData:t=>{n.value=t,s("update:formData",t)},onEvent:c}}export{m as default};

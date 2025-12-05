@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "chat-msg-item": "../chat-msg-item/chat-msg-item"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "file-upload": "../../../../components/file-upload/file-upload"
+  }
+}

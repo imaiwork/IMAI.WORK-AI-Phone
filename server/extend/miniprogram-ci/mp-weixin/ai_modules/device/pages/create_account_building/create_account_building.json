@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "养号",
+  "usingComponents": {
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "bast-setting-v2": "../../components/bast-setting-v2/bast-setting-v2"
+  }
+}

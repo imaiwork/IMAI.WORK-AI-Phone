@@ -1,0 +1,1 @@
+import{r as t}from"./index.f10dd425.js";function i(e){return t.get({url:"/device.publish/lists",params:e})}function s(e){return t.post({url:"/device.publish/delete",data:e})}function u(e){return t.get({url:"/device.publish/recordLists",params:e})}function l(e){return t.post({url:"/device.publish/recordDelete",data:e})}export{s as a,i as b,l as d,u as g};

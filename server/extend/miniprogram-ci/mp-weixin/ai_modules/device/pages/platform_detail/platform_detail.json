@@ -1,0 +1,18 @@
+{
+  "navigationBarTitleText": "平台详情",
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "u-tabs": "../../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
+    "video-preview": "../../../../components/video-preview/video-preview",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog"
+  }
+}

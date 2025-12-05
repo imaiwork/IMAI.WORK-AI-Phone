@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "AI面试",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": false,
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "empty": "../../../../components/empty/empty"
+  }
+}

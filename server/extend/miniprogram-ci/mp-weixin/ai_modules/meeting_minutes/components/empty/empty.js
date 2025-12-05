@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../common/vendor.js"),t=require("../../../../common/assets.js"),o=e.defineComponent({__name:"empty",props:{title:{default:"暂无会议记录"},iconSize:{default:192}},setup:o=>(i,n)=>({a:t._imports_0$36,b:o.iconSize+"rpx",c:o.iconSize+"rpx",d:e.t(o.title)})});wx.createComponent(o);

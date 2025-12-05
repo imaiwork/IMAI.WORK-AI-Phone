@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "输入文案",
+  "navigationBarBackgroundColor": "#F9FAFB",
+  "usingComponents": {
+    "u-line": "../../../../uni_modules/vk-uview-ui/components/u-line/u-line",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button"
+  }
+}

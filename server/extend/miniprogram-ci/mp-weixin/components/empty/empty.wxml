@@ -1,0 +1,1 @@
+<view class="flex flex-col items-center justify-center"><image src="/static/images/common/empty.png" style="{{'width:' + a + ';' + ('height:' + b)}}"></image><text class="text-xs text-_h969EA9_">{{c}}</text></view>

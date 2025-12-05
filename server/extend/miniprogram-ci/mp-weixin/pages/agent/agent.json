@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-tabs": "../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "u-navbar": "../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-search": "../../uni_modules/vk-uview-ui/components/u-search/u-search",
+    "u-icon": "../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../components/empty/empty",
+    "z-paging": "../../node-modules/z-paging/components/z-paging/z-paging",
+    "tabbar": "../../components/tabbar/tabbar"
+  }
+}

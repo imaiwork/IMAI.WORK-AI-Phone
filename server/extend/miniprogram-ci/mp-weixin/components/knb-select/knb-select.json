@@ -1,0 +1,10 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-tabs": "../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "u-search": "../../uni_modules/vk-uview-ui/components/u-search/u-search",
+    "empty": "../empty/empty",
+    "z-paging": "../../node-modules/z-paging/components/z-paging/z-paging",
+    "popup-bottom": "../popup-bottom/popup-bottom"
+  }
+}

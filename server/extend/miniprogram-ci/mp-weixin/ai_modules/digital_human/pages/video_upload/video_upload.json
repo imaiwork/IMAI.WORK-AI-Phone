@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "视频上传",
+  "navigationBarBackgroundColor": "#F9FAFB",
+  "usingComponents": {
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
+    "video-player": "../../components/video-player/video-player",
+    "upload-loading": "../../components/upload-loading/upload-loading"
+  }
+}
