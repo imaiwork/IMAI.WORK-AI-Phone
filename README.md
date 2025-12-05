@@ -2,7 +2,7 @@
 
 
 <p align="center">
-  <a href="https://imai.work" target="_blank"><img src="https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/e3878c24-77be-4db1-8046-14cf7e7a0f42.png" width="100%" alt="IMAI.WORK Logo" /></a>
+  <a href="https://imai.work" target="_blank"><img src="https://update.imai.work/uploads/images/20251205/202512051358425fb334225.png" width="100%" alt="IMAI.WORK Logo" /></a>
 </p>
 
 
@@ -133,72 +133,71 @@ https://yijianshi.feishu.cn/wiki/K4VdwEtb7ikiOnkmv2ScIX67nGf?from=from_copylink
 
 ### 1. AI个微 & 矩阵发布（RPA智能手机）
 自动化微信/多账号管理、好友聊天、SOP营销、朋友圈管理
-![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E4%B8%AA%E5%BE%AE%E9%A6%96%E9%A1%B5.png)  
-![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E4%B8%AA%E5%BE%AESOP.png)
-![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%AE%A2%E6%88%B7%E6%B5%81%E7%A8%8B%E7%AE%A1%E7%90%86.png)
-![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%9C%8B%E5%8F%8B%E5%9C%88.png)
-![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%87%AA%E5%8A%A8%E6%A0%87%E7%AD%BE.png)
-![AI个微截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%BE%AE%E4%BF%A1%E7%AE%A1%E7%90%86.png)
+![AI个微截图](https://update.imai.work/uploads/images/20251205/20251205135842304c58380.png)  
+![AI个微截图](https://update.imai.work/uploads/images/20251205/20251205135842454fa5073.png)
+![AI个微截图](https://update.imai.work/uploads/images/20251205/202512051358420daf06339.png)
+![AI个微截图](https://update.imai.work/uploads/images/20251205/202512051358420daf06339.png)
+![AI个微截图](https://update.imai.work/uploads/images/20251205/20251205135842e8f1f8570.png)
+![AI个微截图](https://update.imai.work/uploads/images/20251205/2025120513584383b7e8455.png)
 
 ### 2. 视频号 & 小红书 AI 自动获客
 视频号自动爬取、私信引导、批量发布；小红书自动引流与内容发布  
-![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E7%9F%A9%E9%98%B5%E8%B4%A6%E5%8F%B7%E7%AE%A1%E7%90%86.png)
-![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%A7%86%E9%A2%91%E5%8F%B7%E8%8E%B7%E5%AE%A2.png)
-![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%87%AA%E5%8A%A8%E8%8E%B7%E5%AE%A2%E5%B0%8F%E7%A8%8B%E5%BA%8F.png)
-![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E7%BA%BF%E7%B4%A2%E8%AF%8D%E7%94%9F%E6%88%90.png)
-![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E4%BB%BB%E5%8A%A1%E8%AE%BE%E7%BD%AE.png)
-![截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%8E%B7%E5%AE%A2%E6%97%B6%E9%97%B4%E8%AE%BE%E5%AE%9A.png)
+![截图](https://update.imai.work/uploads/images/20251205/20251205135842bb9be4903.png)
+![截图](https://update.imai.work/uploads/images/20251205/20251205135859088502809.png)
+![截图](https://update.imai.work/uploads/images/20251205/20251205135859df5a53651.png)
+![截图](https://update.imai.work/uploads/images/20251205/202512051358594ce740213.png)
+
 
 ### 3. AI会议纪要
 实时会议记录、音视频转写、多语言翻译、摘要与思维导图生成  
-![会议纪要截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E4%BC%9A%E8%AE%AE%E7%BA%AA%E8%A6%81.png)  
-![会议纪要截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E4%BC%9A%E8%AE%AE%E8%BD%AC%E5%86%99%E5%86%85%E5%AE%B9.png)  
+![会议纪要截图](https://update.imai.work/uploads/images/20251205/202512051358591a5473497.png)  
+![会议纪要截图](https://update.imai.work/uploads/images/20251205/20251205135859195978338.png)  
 
 ### 4. AI数字人及视频创作
 数字人形象克隆、音色克隆、视频合成、智能剪辑与混剪  
-![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%95%B0%E5%AD%97%E4%BA%BA.png)  
-![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%95%B0%E5%AD%97%E4%BA%BA%E5%BD%A2%E8%B1%A1.png)
-![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%95%B0%E5%AD%97%E4%BA%BA%E8%A7%86%E9%A2%91%E7%94%9F%E6%88%90.png)
-![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E9%9F%B3%E8%89%B2%E7%AE%A1%E7%98%A4.png) 
-![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%88%9B%E4%BD%9C%E8%AE%B0%E5%BD%95.png) 
-![AI数字人截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%B0%8F%E7%A8%8B%E5%BA%8F%E6%95%B0%E5%AD%97%E4%BA%BA.png) 
+![AI数字人截图](https://update.imai.work/uploads/images/20251205/2025120513585959bc61345.png)  
+![AI数字人截图](https://update.imai.work/uploads/images/20251205/202512051359003d3e60600.png)
+![AI数字人截图](https://update.imai.work/uploads/images/20251205/2025120513590004ec13878.png)
+![AI数字人截图](https://update.imai.work/uploads/images/20251205/20251205135912f49500846.png) 
+![AI数字人截图](https://update.imai.work/uploads/images/20251205/20251205135859423f08727.png) 
+
 
 
 ### 5. AI美工
 文生图/图生图、商品海报生成、模特换衣、图生视频  
-![AI美工截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/Ai%E7%94%9F%E5%9B%BE.png)  
-![AI美工截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%9B%BE%E7%94%9F%E5%9B%BE.png)  
+![AI美工截图](https://update.imai.work/uploads/images/20251205/20251205135912661304070.png)  
+![AI美工截图](https://update.imai.work/uploads/images/20251205/20251205135912a24c33516.png)  
 
 
 ### 6. AI工作台聊天
 多模型切换、智能体调用、文件理解、联网搜索  
-![AI聊天截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E9%80%9A%E7%94%A8%E8%81%8A%E5%A4%A9.png)    
+![AI聊天截图](https://update.imai.work/uploads/images/20251205/202512051359121f0e09255.png)    
 
 ### 7. AI陪练
 场景模拟、练习报告、自定义场景训练  
-![AI陪练截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%99%BA%E8%83%BD%E9%99%AA%E7%BB%83.png)  
+![AI陪练截图](https://update.imai.work/uploads/images/20251205/20251205135912071e89104.png)  
 
 
 ### 8. AI人事
 岗位管理、自动招聘、AI面试、面试报告与数据导出  
-![AI人事截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%87%AA%E5%8A%A8%E9%9D%A2%E8%AF%951.png)  
-![AI人事截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E8%87%AA%E5%8A%A8%E9%9D%A2%E8%AF%95.png)
+![AI人事截图](https://update.imai.work/uploads/images/20251205/202512051359122514d2265.png)  
+![AI人事截图](https://update.imai.work/uploads/images/20251205/202512051359122a9c66641.png)
 
 
 ### 9. AI思维导图
 自动生成结构化思维导图  
-![思维导图截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%80%9D%E7%BB%B4%E5%AF%BC%E5%9B%BE.png)  
+![思维导图截图](https://update.imai.work/uploads/images/20251205/20251205135912f9ccd3833.png)  
 
 ### 10. 知识库（RAG & 向量）
 知识库管理、训练、智能切片、向量检索、多知识库挂载  
-![知识库截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E5%90%91%E9%87%8F%E7%9F%A5%E8%AF%86%E5%BA%93.png)  
+![知识库截图](https://update.imai.work/uploads/images/20251205/20251205135912619c74751.png)  
 
 
 ### 11. OEM & AI智能体
 品牌授权、自定义智能体模型、文件解析、网页/公众号/API调用  
-![OEM截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/Ai%E6%99%BA%E8%83%BD%E4%BD%93.png)  
-![AI智能体截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%96%B0%E5%A2%9EAi%E6%99%BA%E8%83%BD%E4%BD%93.png)
-![AI智能体截图](https://gitee.com/tsinghua-open/imaiwork/raw/master/ReadMepicture/%E6%99%BA%E8%83%BD%E4%BD%93%E5%8F%91%E5%B8%83.png)
+![OEM截图](https://update.imai.work/uploads/images/20251205/202512051359122bd992345.png)  
+![AI智能体截图](https://update.imai.work/uploads/images/20251205/20251205135921f4fe02740.png)
+![AI智能体截图](https://update.imai.work/uploads/images/20251205/20251205135921802619834.png)
 
 
 
