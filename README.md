@@ -1,9 +1,6 @@
 
 
 
-<p align="center">
-  <a href="https://imai.work" target="_blank"><img src="https://update.imai.work/uploads/images/20251205/202512051358425fb334225.png" width="100%" alt="IMAI.WORK Logo" /></a>
-</p>
 
 
 ---
@@ -31,13 +28,11 @@
 
 
 <p align="center">
-
-  <a href="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png" target="_blank">免费加入官方交流群</a>｜
-  <a href="https://yijianshi.feishu.cn/space/preview/docx/WN4Fd4Yk3o6WEKxGKAWcvlVtnlf" target="_blank">在线演示</a>｜
-<a href="https://imai.work" target="_blank">官方网站</a>｜
-<a href="./README-EN.md" target="_blank">English</a>
+  <a href="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png" target="_blank">免费加入官方交流群</a>&nbsp;|&nbsp;
+  <a href="https://yijianshi.feishu.cn/space/preview/docx/WN4Fd4Yk3o6WEKxGKAWcvlVtnlf" target="_blank">在线演示</a>&nbsp;|&nbsp;
+  <a href="https://imai.work" target="_blank">官方网站</a>&nbsp;|&nbsp;
+  <a href="./README-EN.md" target="_blank">English</a>
 </p>
-
 
 
 
@@ -51,6 +46,11 @@
   <a href="https://redis.io/"><img src="https://img.shields.io/badge/Redis-6.x-DC382D" alt="Redis" /></a>
   <a href="https://www.java.com/"><img src="https://img.shields.io/badge/Java-17.x-007396" alt="Java" /></a>
   <a href="https://www.uipath.com/"><img src="https://img.shields.io/badge/RPA-2023-fa4616" alt="RPA" /></a>
+</p>
+
+
+<p align="center">
+  <a href="https://imai.work" target="_blank"><img src="https://update.imai.work/uploads/images/20251205/202512051358425fb334225.png" width="100%" alt="IMAI.WORK Logo" /></a>
 </p>
 
 IMAI.WORK 是一款专为 B2B 企业设计的全自动 AI 获客开源系统。通过 AI 驱动的手机自动化技术，彻底革新传统获客模式，实现"手机还在干活，电脑还在干活，但人不见了"的全自动获客体验。
