@@ -31,10 +31,11 @@
 
 
 <p align="center">
-<a href="https://yijianshi.feishu.cn/space/preview/docx/WN4Fd4Yk3o6WEKxGKAWcvlVtnlf" target="_blank">在线演示</a>｜
-  <a href="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png">免费加入官方交流群</a>｜
-<a href="https://imai.work">官方网站</a>｜
-<a href="./README-EN.md">English</a>
+
+  <a href="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png" target="_blank">免费加入官方交流群</a>｜
+  <a href="https://yijianshi.feishu.cn/space/preview/docx/WN4Fd4Yk3o6WEKxGKAWcvlVtnlf" target="_blank">在线演示</a>｜
+<a href="https://imai.work" target="_blank">官方网站</a>｜
+<a href="./README-EN.md" target="_blank">English</a>
 </p>
 
 
