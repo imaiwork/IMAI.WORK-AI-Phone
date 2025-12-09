@@ -19,7 +19,23 @@
          <img src="https://img.shields.io/badge/立即投票-点击跳转-FF416C?style=flat-square">
       </a>
     </td>
+  </tr>
 
+  <!-- 新增：参与共研专区 -->
+  <tr>
+    <td width="100%" align="center" style="padding-top: 18px;">
+      <img src="https://img.shields.io/badge/🤝_参与共研-可免费获客商业版权限-00C853?style=for-the-badge&logo=handshake&logoColor=white" height="40" alt="参与共研，可免费获客商业版权限">
+      <br><br>
+      <strong>参与共研计划</strong><br>
+      <span style="font-size: 12px; color: #666;">
+        加入共研，即可获得<span style="color:#00C853;font-weight:600;">免费获客</span>与<span style="color:#00C853;font-weight:600;">商业版权限</span>授权支持
+      </span>
+      <br><br>
+      <a href="https://gitee.com/activity/2025opensource?ident=IBYOKG#co-research">
+        <img src="https://img.shields.io/badge/立即参与-查看详情-00BFA5?style=flat-square">
+      </a>
+    </td>
+  </tr>
 </table>
 
 ---
