@@ -210,9 +210,8 @@ https://yijianshi.feishu.cn/wiki/K4VdwEtb7ikiOnkmv2ScIX67nGf?from=from_copylink
 - **商业许可**: 如需商业使用，请联系https://imai.work/ 
 
 ## Star 历史
+[![Star History Chart](https://api.star-history.com/svg?repos=imaiwork/IMAI.WORK-AI-Phone&type=date&legend=top-left)](https://www.star-history.com/#imaiwork/IMAI.WORK-AI-Phone&type=date&legend=top-left)
 
-
-[![Star History Chart](https://api.star-history.com/svg?repos=imai-work/imai-work,imaiwork/imaiwork&type=date&legend=top-left)](https://www.star-history.com/#imai-work/imai-work&imaiwork/imaiwork&type=date&legend=top-left)
 
 ## 支持项目
 
