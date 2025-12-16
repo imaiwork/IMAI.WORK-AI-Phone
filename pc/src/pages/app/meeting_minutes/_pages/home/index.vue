@@ -192,7 +192,6 @@ import { TurnStatus } from "../../_enums";
 import AddAudio from "./_components/add-audio.vue";
 import useHandleApi from "../../_hooks/useHandleApi";
 import KnbBind from "@/components/knb-bind/index.vue";
-import { clearTimeout } from "node:timers";
 const emit = defineEmits(["openRealTime"]);
 
 const router = useRouter();
