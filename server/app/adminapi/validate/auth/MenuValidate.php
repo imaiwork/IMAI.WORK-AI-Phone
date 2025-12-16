@@ -118,6 +118,7 @@ class MenuValidate extends BaseValidate
      */
     protected function checkUniqueName($value, $rule, $data)
     {
+        return true;
         if ($data['type'] != 'M') {
             return true;
         }

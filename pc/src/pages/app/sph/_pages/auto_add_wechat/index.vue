@@ -17,6 +17,7 @@
                                 :key="item.id"
                                 :label="item.device_code"
                                 :value="item.device_code">
+                                {{ item.device_name }}（{{ item.device_code }}）
                             </ElOption>
                         </ElSelect>
                     </ElFormItem>
@@ -102,7 +103,9 @@
                     :header-row-style="{ height: '62px' }"
                     :row-style="{ height: '50px' }"
                     v-loading="pager.loading">
-                    <ElTableColumn prop="device_code" label="执行设备" width="240" fixed="left"> </ElTableColumn>
+                    <ElTableColumn prop="device_code" label="执行设备" width="240" fixed="left">
+                        <template #default="{ row }"> {{ row.device_name || "-" }}（{{ row.device_code }}） </template>
+                    </ElTableColumn>
                     <ElTableColumn label="添加渠道" width="140">
                         <template #default="{ row }">
                             {{ getAppTypeName(row.channel) }}

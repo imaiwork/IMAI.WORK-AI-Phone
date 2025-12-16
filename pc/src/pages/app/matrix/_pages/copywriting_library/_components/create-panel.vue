@@ -87,7 +87,7 @@ import {
     updateCopywritingLibrary,
     getCopywritingLibraryDetail,
     getCopywritingLibraryContentAi,
-} from "@/api/redbook";
+} from "~/api/matrix";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import CopywritingCard from "../../../_components/copywriting-card.vue";

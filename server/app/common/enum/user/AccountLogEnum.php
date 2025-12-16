@@ -165,6 +165,15 @@ class AccountLogEnum
     const TOKENS_DEC_HUMAN_AVATAR_SHANJIAN = 5030;
     const TOKENS_DEC_HUMAN_VOICE_SHANJIAN = 5031;
     const TOKENS_DEC_HUMAN_VIDEO_SHANJIAN = 5032;
+    const TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN = 5033;
+    const TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN = 5034;
+    const TOKENS_DEC_NEWS_MIXCUT_SHANJIAN = 5035;
+    const TOKENS_DEC_HUMAN_VIDEO_SHANJIAN_ADD = 5036;
+    const TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN_ADD = 5037;
+    const TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN_ADD = 5038;
+    const TOKENS_DEC_NEWS_MIXCUT_SHANJIAN_ADD = 5039;
+
+
 
     const TOKENS_DEC_HUMAN_EXT = 5060;
 
@@ -204,7 +213,10 @@ class AccountLogEnum
     const TOKENS_INC_CARDCODE_GIVE  = 9105;  //卡密兑换赠送算力值
 
     const TOKENS_DEC_AI_XHS = 9104;
-
+    const TOKENS_INC_SHANJIAN_TYPE1 = 9150;
+    const TOKENS_INC_SHANJIAN_TYPE2 = 9151;
+    const TOKENS_INC_SHANJIAN_TYPE3 = 9152;
+    const TOKENS_INC_SHANJIAN_TYPE4 = 9153;
 
      /**
      * 短视频
@@ -228,8 +240,14 @@ class AccountLogEnum
     const TOKENS_DEC_COZE_PUBLISH_CONTENT_GENERATED= 10103;
 
     const TOKENS_DEC_MATRIX_COPYWRITING = 10104;
+    const TOKENS_DEC_SORA_COPYWRITING = 10105;
+    const TOKENS_DEC_SORA_VIDEO = 10106;
 
 
+    const TOKENS_DEC_NEWS_MIXCUT_TITLE = 10200;
+
+    const TOKENS_DEC_COMBINED_PICTURE_TITLE = 10201;
+    const TOKENS_DEC_COMBINED_PICTURE = 10202;
     /**
      * 用户算力（减少类型汇总）
      */
@@ -295,6 +313,16 @@ class AccountLogEnum
         self::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN,
         self::TOKENS_DEC_HUMAN_VOICE_SHANJIAN,
         self::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN,
+        self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN,
+        self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN,
+        self::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN,
+        self::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN_ADD,
+        self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN_ADD,
+        self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN_ADD,
+        self::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN_ADD,
+
+
+
         self::TOKENS_DEC_HUMAN_EXT,
         self::TOKENS_DEC_DOUBAO_TEXT_TO_POSTERIMAGE,
         self::TOKENS_DEC_SPH_ADD_WECHAT,
@@ -312,6 +340,10 @@ class AccountLogEnum
         self::TOKENS_DEC_COZE_TEXT,
         self::TOKENS_DEC_COZE_PUBLISH_CONTENT_GENERATED,
         self::TOKENS_DEC_MATRIX_COPYWRITING,
+        self::TOKENS_DEC_NEWS_MIXCUT_TITLE,
+        self::TOKENS_DEC_COMBINED_PICTURE_TITLE,
+        self::TOKENS_DEC_COMBINED_PICTURE,
+        self::TOKENS_DEC_SORA_VIDEO,
     ];
 
 
@@ -322,6 +354,10 @@ class AccountLogEnum
         self::TOKENS_INC_ADMIN,
         self::TOKENS_INC_RECHARGE,
         self::TOKENS_INC_HUMAN,
+        self::TOKENS_INC_SHANJIAN_TYPE1,
+        self::TOKENS_INC_SHANJIAN_TYPE2,
+        self::TOKENS_INC_SHANJIAN_TYPE3,
+        self::TOKENS_INC_SHANJIAN_TYPE4,
         self::TOKENS_INC_CARDCODE_GIVE,
     ];
 
@@ -366,6 +402,10 @@ class AccountLogEnum
 
             self::TOKENS_INC_REGISTER               => '注册增加算力',
             self::TOKENS_INC_HUMAN                  => '数字人视频合成退费',
+            self::TOKENS_INC_SHANJIAN_TYPE1        => '克隆数字人混剪剪辑视频预扣费超额扣费退费',
+            self::TOKENS_INC_SHANJIAN_TYPE2        => '真人口播混剪视预扣费超额扣费退费',
+            self::TOKENS_INC_SHANJIAN_TYPE3        => '素材混剪视频预扣费超额扣费退费',
+            self::TOKENS_INC_SHANJIAN_TYPE4        => '新闻体混剪视频预扣费超额扣费退费',
             self::TOKENS_INC_ADMIN                  => '平台增加算力',
             self::TOKENS_INC_RECHARGE               => '购买算力加油包',
             self::TOKENS_DEC_ADMIN                  => '平台减少算力',
@@ -440,8 +480,20 @@ class AccountLogEnum
             self::TOKENS_DEC_HUMAN_VIDEO_CHANJING  => '数字人视频 - 蝉镜-减少算力',
 
             self::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN => '口播混剪形象克隆扣费减少算力',
-            self::TOKENS_DEC_HUMAN_VOICE_SHANJIAN  => '口播混剪音色克隆扣费减少算力',
+            self::TOKENS_DEC_HUMAN_VOICE_SHANJIAN  => '极速版音色克隆扣费减少算力',
             self::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN  => '口播混剪视频克隆扣费减少算力',
+            self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN  => '真人口播混剪扣费减少算力',
+            self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN => '素材混剪视频扣费减少算力',
+            self::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN  => '新闻体视频扣费减少算力',
+            self::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN_ADD  => '克隆数字人混剪剪辑视频预扣费补足费用补扣',
+            self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN_ADD  => '真人口播混剪视频预扣费补足费用补扣',
+            self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN_ADD  => '素材混剪视频预扣费补足费用补扣',
+            self::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN_ADD  => '新闻体混剪视频预扣费补足费用补扣',
+
+
+
+
+
             self::TOKENS_DEC_HUMAN_EXT             => '数字人视频合成补扣',
 
 
@@ -461,6 +513,10 @@ class AccountLogEnum
             self::TOKENS_DEC_COZE_TEXT             => '口播混剪视频文案生成减少算力',
             self::TOKENS_DEC_COZE_PUBLISH_CONTENT_GENERATED => 'Coze发布内容生成减少算力',
             self::TOKENS_DEC_MATRIX_COPYWRITING => '矩阵文案生成减少算力',
+            self::TOKENS_DEC_NEWS_MIXCUT_TITLE => '新闻体标题生成减少算力',
+            self::TOKENS_DEC_COMBINED_PICTURE_TITLE => '小红书图片合成封面标题内容生成减少算力',
+            self::TOKENS_DEC_COMBINED_PICTURE => '小红书图片自动合成减少算力',
+            self::TOKENS_DEC_SORA_VIDEO => '一句话生成视频减少算力',
         ];
         if ($flag) {
             return $desc;

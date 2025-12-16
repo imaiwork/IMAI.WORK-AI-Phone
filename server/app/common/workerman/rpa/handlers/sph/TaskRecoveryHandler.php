@@ -26,6 +26,8 @@ class TaskRecoveryHandler extends BaseMessageHandler
             $this->payload['code'] =  WorkerEnum::SPH_RECOVERY_ERROR_CODE;
             $this->payload['type'] = 'error';
             $this->sendError($this->connection,  $this->payload);
+        } finally{
+            unset($content);
         }
     }
 

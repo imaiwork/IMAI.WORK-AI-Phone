@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { getBaseUrl } from "@/utils/env";
+import { useUserStore } from "@/stores/user";
 
 interface Detail {
     logo: string;
@@ -231,6 +231,12 @@ export const useChatStore = defineStore("chat", () => {
     function resetRoute() {
         history.replaceState("", "", `?`);
     }
+
+    onMounted(() => {
+        if (!useUserStore().isLogin) {
+            resetRoute();
+        }
+    });
 
     return {
         // State

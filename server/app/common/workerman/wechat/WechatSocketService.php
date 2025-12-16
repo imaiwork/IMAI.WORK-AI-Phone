@@ -47,46 +47,46 @@ class WechatSocketService
         ])->log();
 
         // 每1秒执行一次
-        $time_interval = 10;
-        $timerid = \Workerman\Timer::add($time_interval, function(){
-            $key = 'push:device:*';
-            $keys = $this->redis()->keys($key);
-            if (empty($keys)) {
-                return;
-            }
-            foreach ($keys as $key) {
-                $content = $this->redis()->rpop($key);
-                if (empty($content)) {
-                    continue;
-                }
-                $content = json_decode($content, true);
-                if (empty($content)) {
-                    continue;
-                }
-                $deviceId = str_replace('push:device:', '', $key);
-                 // 3. 构建消息发送请求
-                $content = \app\common\workerman\wechat\handlers\client\TalkToFriendTaskHandler::handle($content);
-                // 4. 构建protobuf消息
-                $message = new \Jubo\JuLiao\IM\Wx\Proto\TransportMessage();
-                $message->setMsgType($content['MsgType']);
-                $any = new \Google\Protobuf\Any();
-                $any->pack($content['Content']);
-                $message->setContent($any);
-                $data = $message->serializeToString();
-                // 5. 发送到设备端
-                $channel = "socket.{$deviceId}.message";
-                \Channel\Client::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
-                \Channel\Client::publish($channel, [
-                    'data' => $data
-                ]);
+        // $time_interval = 10;
+        // $timerid = \Workerman\Timer::add($time_interval, function(){
+        //     $key = 'push:device:*';
+        //     $keys = $this->redis()->keys($key);
+        //     if (empty($keys)) {
+        //         return;
+        //     }
+        //     foreach ($keys as $key) {
+        //         $content = $this->redis()->rpop($key);
+        //         if (empty($content)) {
+        //             continue;
+        //         }
+        //         $content = json_decode($content, true);
+        //         if (empty($content)) {
+        //             continue;
+        //         }
+        //         $deviceId = str_replace('push:device:', '', $key);
+        //          // 3. 构建消息发送请求
+        //         $content = \app\common\workerman\wechat\handlers\client\TalkToFriendTaskHandler::handle($content);
+        //         // 4. 构建protobuf消息
+        //         $message = new \Jubo\JuLiao\IM\Wx\Proto\TransportMessage();
+        //         $message->setMsgType($content['MsgType']);
+        //         $any = new \Google\Protobuf\Any();
+        //         $any->pack($content['Content']);
+        //         $message->setContent($any);
+        //         $data = $message->serializeToString();
+        //         // 5. 发送到设备端
+        //         $channel = "socket.{$deviceId}.message";
+        //         \Channel\Client::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+        //         \Channel\Client::publish($channel, [
+        //             'data' => $data
+        //         ]);
 
-            }
-        });
-        \Workerman\Timer::del($timerid);
-        // 心跳保活（每5分钟）
-        \Workerman\Timer::add(300, function() {
-            \think\facade\Db::connect('mysql')->query('select 1');
-        });
+        //     }
+        // });
+        // \Workerman\Timer::del($timerid);
+        // // 心跳保活（每5分钟）
+        // \Workerman\Timer::add(300, function() {
+        //     \think\facade\Db::connect('mysql')->query('select 1');
+        // });
     }
 
     /**

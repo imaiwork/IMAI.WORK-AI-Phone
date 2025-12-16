@@ -123,6 +123,10 @@ class MessageService
                 $this->circlePostTaskOpt($deviceId, $response);
             }
 
+            if($msgType == 2027){
+                $this->deviceAppUpgradeNoticeOpt($deviceId, $response);
+            }
+
             // 根据消息类型处理响应
             match ($msgType) {
                 // Socket设备消息响应
@@ -148,6 +152,8 @@ class MessageService
 
             // 发送消息到Socket进程 
             $connection->send(pack('N', strlen($meesage)) . $meesage);
+        } finally{
+            unset($connection, $data);
         }
     }
 

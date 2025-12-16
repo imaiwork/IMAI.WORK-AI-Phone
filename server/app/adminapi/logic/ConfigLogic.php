@@ -33,6 +33,12 @@ class ConfigLogic
         foreach ($chatModels['channel'] as $key=>$value){
             $chatModels['channel'][$key]['logo'] = isset($value['logo']) ? FileService::getFileUrl($value['logo']) : '';
         }
+        //视频案例
+        $videoCases = ConfigService::get('digital_human', 'video_case', []);
+        foreach ($videoCases as $key=> $videoCase){
+            $videoCases[$key]['image'] = FileService::getFileUrl($videoCase['image']);
+            $videoCases[$key]['video_case_url'] = FileService::getFileUrl($videoCase['video_case_url']);
+        }
         $banner =  config('app.app_host') . '/static/images/human/banner.png';
 
         //配置按模块分类，配置放到对应的模块里面，不要单独写，或者写到别的模块里面
@@ -82,6 +88,7 @@ class ConfigLogic
                 'voice' => $modelList['voice'] ?? [],
                 'shanjian_auth' => ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI'),
                 'banner' =>  FileService::getFileUrl(ConfigService::get('digital_human', 'banner', $banner)),
+                'video_case' => $videoCases,
             ],
             'draw' => [
                 'channel' => $hdList['channel'] ?? [],
@@ -149,6 +156,17 @@ class ConfigLogic
                 foreach ($params['voice'] as $key => $value) {
 
                     $params['voice'][$key]['logo'] = FileService::setFileUrl($value['logo']);
+                }
+            }
+        }
+
+        //视频案例配置
+        if ($type == 'digital_human' && $name == 'video_case') {
+            if (!empty($params)) {
+                foreach ($params as $key => $value){
+                    $params[$key]['name'] = $value['name'];
+                    $params[$key]['image'] = FileService::setFileUrl($value['image']);
+                    $params[$key]['video_case_url'] = FileService::setFileUrl($value['video_case_url']);
                 }
             }
         }

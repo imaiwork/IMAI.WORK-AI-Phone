@@ -82,6 +82,8 @@ class TaskRecordSaveHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
+        } finally{
+            unset($content);
         }
     }
 
@@ -198,7 +200,7 @@ class TaskRecordSaveHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        }
+        } 
     }
 
     public function sphBase64ToImage(array $item, string $code)
@@ -281,7 +283,7 @@ class TaskRecordSaveHandler extends BaseMessageHandler
             ];
 
             $this->sendError($this->connection,  $this->payload);
-        }
+        } 
     }
 
 

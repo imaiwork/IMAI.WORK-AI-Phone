@@ -112,7 +112,9 @@
                                         v-for="item in deviceOptions.deviceLists"
                                         :label="item.device_code"
                                         :value="item.device_code"
-                                        :key="item.device_code"></ElOption>
+                                        :key="item.device_code">
+                                        {{ item.device_name }}（{{ item.device_code }}）
+                                    </ElOption>
                                 </ElSelect>
                             </div>
                         </div>
@@ -173,7 +175,10 @@
                         </div>
                         <div class="bg-app-bg-3 rounded-xl shadow-[0_0_0_1px_var(--app-border-color-2)] p-4 mt-4">
                             <div class="text-white">自动加好友设置</div>
-                            <div class="mt-2">
+                            <div class="text-[#ffffff80] text-xs mt-2">
+                                注意：开启此任务请确保当前网络是常用安全网络，加资账号为常态化老号
+                            </div>
+                            <div class="mt-4">
                                 <div class="text-[#ffffff80] mb-3">加微微信：</div>
                                 <ElSelect
                                     v-model="formData.wechat_id"

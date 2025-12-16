@@ -60,7 +60,7 @@
                                     v-for="item in tagLists"
                                     :key="item.id"
                                     :label="item.tag_name"
-                                    :value="item.id"></ElOption>
+                                    :value="item.tag_id"></ElOption>
                             </ElSelect>
                         </div>
                     </div>
@@ -98,7 +98,7 @@
                                     v-for="item in tagLists"
                                     :key="item.id"
                                     :label="item.tag_name"
-                                    :value="item.id"></ElOption>
+                                    :value="item.tag_id"></ElOption>
                             </ElSelect>
                         </div>
                     </div>

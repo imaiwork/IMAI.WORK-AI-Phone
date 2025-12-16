@@ -110,7 +110,7 @@
 
 <script setup lang="ts">
 import { ThemeEnum, AppTypeEnum } from "@/enums/appEnums";
-import { getCopywritingLibraryList, deleteCopywritingLibrary } from "@/api/redbook";
+import { getCopywritingLibraryList, deleteCopywritingLibrary } from "~/api/matrix";
 import { HandleMenuType } from "@/components/handle-menu/typings";
 import { CopywritingTypeEnum } from "~/pages/app/matrix/_enums";
 import Empty from "@/pages/app/matrix/_components/empty.vue";

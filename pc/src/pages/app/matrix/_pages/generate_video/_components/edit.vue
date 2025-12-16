@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { getDigitalHumanVideoEdit } from "@/api/redbook";
+import { getDigitalHumanVideoEdit } from "~/api/matrix";
 import { ThemeEnum } from "@/enums/appEnums";
 
 const emit = defineEmits(["success", "close"]);

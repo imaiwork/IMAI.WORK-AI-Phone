@@ -63,7 +63,7 @@
                             </view>
                         </view>
                     </view>
-                    <template v-if="currentPlatform == AppTypeEnum.XHS">
+                    <template v-if="currentPlatform != AppTypeEnum.WECHAT">
                         <view
                             class="flex items-center justify-between gap-2 h-[80rpx] border-[0] border-b border-t border-solid border-[#00000008]">
                             <view class="font-bold flex-shrink-0">私信开关</view>
@@ -375,7 +375,7 @@
         </template>
     </popup-bottom>
     <video-preview
-        v-model:show="showVideoPreview"
+        v-model="showVideoPreview"
         title="视频预览"
         :poster="previewVideo.pic"
         :video-url="previewVideo.url" />
@@ -398,14 +398,12 @@ import {
     changeAccountStatus,
 } from "@/api/device";
 import { getAgentList } from "@/api/agent";
-// 导入枚举类型
 import { AppTypeEnum, DeviceCmdEnum, DeviceCmdCodeEnum } from "@/enums/appEnums";
-// 导入工具函数
 import { formatNumberToWanOrYi } from "@/utils/util";
-// 导入自定义Hooks
 import { useDevice } from "@/ai_modules/device/hooks/useDevice";
 import useDeviceWs from "@/ai_modules/device/hooks/useDeviceWs";
 import { DeviceEventAction } from "@/ai_modules/device/enums";
+import VideoPreview from "@/components/video-preview/video-preview.vue";
 
 // 初始化WebSocket服务
 const { send, onEvent, close } = useDeviceWs();
@@ -466,7 +464,7 @@ const getTabList = computed(() => {
         name: "发布详情",
         key: "publish_detail",
     };
-    if (currentPlatform.value == AppTypeEnum.XHS) {
+    if (currentPlatform.value != AppTypeEnum.WECHAT) {
         return [
             commonTabs,
             {
@@ -759,6 +757,7 @@ const handleOpenAiChange = async (value: boolean) => {
         await changeAccountStatus({
             account: currentPlatformAccount.value.account,
             open_ai: value ? 1 : 0,
+            account_type: currentPlatform.value,
         });
         uni.hideLoading();
         uni.showToast({
@@ -768,6 +767,7 @@ const handleOpenAiChange = async (value: boolean) => {
         });
         getDeviceAccount();
     } catch (error) {
+        currentPlatformAccount.value.open_ai = value ? 1 : 0;
         uni.hideLoading();
         uni.showToast({
             title: "更新失败",
@@ -789,6 +789,7 @@ const handleBindRobotConfirm = async () => {
             robot_id: selectedRobotId.value,
             takeover_mode: 1, // 接管模式
             open_ai: currentPlatformAccount.value.open_ai,
+            account_type: currentPlatform.value,
         });
         uni.hideLoading();
         uni.showToast({

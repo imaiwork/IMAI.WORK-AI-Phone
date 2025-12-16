@@ -1,32 +1,29 @@
 <template>
     <view class="h-screen flex flex-col relative">
-        <view class="index-bg"></view>
-        <view class="relative z-30">
-            <u-navbar
-                :border-bottom="false"
-                :is-fixed="false"
-                :is-custom-back-icon="true"
-                :background="{
-                    background: 'transparent',
-                }">
-                <template #custom-back-icon>
-                    <view @click="handleBack">
-                        <u-icon name="/static/images/icons/back_black.svg" size="32"></u-icon>
-                    </view>
-                </template>
-                <view class="flex items-center gap-2">
-                    <view
-                        class="leading-[0] w-[64rpx] h-[64rpx] p-[6rpx] rounded-[10rpx] border border-solid border-[#E5E6F3] bg-white flex-shrink-0">
-                        <image :src="detail.logo" class="w-full h-full rounded-[10rpx]"></image>
-                    </view>
-                    <view>
-                        <view class="font-bold text-[28rpx] line-clamp-1">{{ detail.name }}</view>
-                        <view class="text-[20rpx] text-[#969EA9] line-clamp-1">{{ detail.description }}</view>
-                    </view>
+        <u-navbar
+            :border-bottom="false"
+            :is-fixed="false"
+            :is-custom-back-icon="true"
+            :background="{
+                background: 'transparent',
+            }">
+            <template #custom-back-icon>
+                <view @click="handleBack">
+                    <u-icon name="/static/images/icons/back_black.svg" size="32"></u-icon>
                 </view>
-            </u-navbar>
-        </view>
-        <view class="grow min-h-0 relative z-10">
+            </template>
+            <view class="flex items-center gap-2">
+                <view
+                    class="leading-[0] w-[64rpx] h-[64rpx] p-[6rpx] rounded-[10rpx] border border-solid border-[#E5E6F3] bg-white flex-shrink-0">
+                    <image :src="detail.logo" class="w-full h-full rounded-[10rpx]"></image>
+                </view>
+                <view>
+                    <view class="font-bold text-[28rpx] line-clamp-1">{{ detail.name }}</view>
+                    <view class="text-[20rpx] text-[#969EA9] line-clamp-1">{{ detail.description }}</view>
+                </view>
+            </view>
+        </u-navbar>
+        <view class="grow min-h-0">
             <chat-scroll-view
                 ref="chattingRef"
                 is-staff
@@ -39,10 +36,8 @@
                 @content-post="contentPost"
                 @confirm-knb="confirmKnb">
                 <template #content>
-                    <view
-                        class="flex items-center justify-center flex-col h-full w-full px-4"
-                        v-if="chatContentList.length == 0">
-                        <view class="mb-3">
+                    <view class="pt-[20vh] h-full w-full px-4" v-if="chatContentList.length == 0">
+                        <view class="mb-3 flex justify-center">
                             <image :src="detail.logo" v-if="detail.logo" class="w-[96rpx] h-[96rpx] rounded-full" />
                         </view>
                         <view class="text-center text-2xl font-semibold">
@@ -357,5 +352,13 @@ onLoad(({ id, task_id }: any) => {
     detail.id = id;
     taskId.value = task_id;
     init();
+});
+
+onUnload(() => {
+    chattingRef.value?.hideKeyboard();
+});
+
+onHide(() => {
+    chattingRef.value?.hideKeyboard();
 });
 </script>

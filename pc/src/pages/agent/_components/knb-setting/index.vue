@@ -26,6 +26,8 @@
                                 placeholder="请选择挂靠知识库"
                                 remote
                                 filterable
+                                collapse-tags
+                                collapse-tags-tooltip
                                 :multiple="formData.kb_type == KnbTypeEnum.VECTOR"
                                 :remote-method="getKnLists">
                                 <ElOption

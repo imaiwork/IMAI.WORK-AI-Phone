@@ -5,7 +5,8 @@
             :show-device="false"
             :show-accounts="true"
             :current-frequency="currentFrequency"
-            :platform-types="[AppTypeEnum.XHS]"
+            :platform-types="[AppTypeEnum.XHS, AppTypeEnum.DOUYIN, AppTypeEnum.KUAISHOU]"
+            :multiple="0"
             @change-frequency="currentFrequency = $event" />
         <view class="mt-[50rpx]" v-if="taskErrorMsg">
             <view class="font-bold">任务冲突：</view>
@@ -37,6 +38,9 @@ import { addGrowthAccountTask } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import BastSettingV2 from "@/ai_modules/device/components/bast-setting-v2/bast-setting-v2.vue";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { on } = useEventBusManager();
 
 const formData = reactive<{
     name: string;
@@ -107,7 +111,7 @@ const handleSubmit = async () => {
     }
 };
 onLoad(() => {
-    uni.$on("confirm", (e: any) => {
+    on("confirm", (e: any) => {
         const { type, data } = e;
         if (type === ListenerTypeEnum.CHOOSE_ACCOUNT) {
             if (data.length === 0) return;
@@ -119,9 +123,5 @@ onLoad(() => {
             currentFrequency.value = 5;
         }
     });
-});
-
-onUnload(() => {
-    uni.$off("confirm");
 });
 </script>

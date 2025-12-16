@@ -23,24 +23,82 @@
                     {{ item }}
                 </view>
             </view>
-            <view class="flex items-center py-[26rpx]">
-                <view v-for="(day, index) in getDays" class="calendar-item" :key="index" @click="selectDate(day.date)">
-                    <view
-                        class="grid-item"
-                        :class="{
-                            today: day.isToday,
-                            selected: day.date === selectedDate,
-                            'text-[#0000004d]': index == 0 || index == weekDays.length - 1,
-                        }">
-                        {{ day.day }}
+            <swiper
+                :current="swiperCurrent"
+                :duration="swiperDuration"
+                @animationfinish="onAnimationFinish"
+                class="py-[26rpx] h-[90rpx]">
+                <swiper-item>
+                    <view class="flex">
+                        <view
+                            v-for="day in previousWeekDays"
+                            class="calendar-item"
+                            :key="day.date"
+                            @click="selectDate(day.date)">
+                            <view
+                                class="grid-item"
+                                :class="{
+                                    today: day.isToday,
+                                    selected: day.date === selectedDate,
+                                    'text-[#0000004d]':
+                                        new Date(day.date.replace(/-/g, '/')).getDay() === 0 ||
+                                        new Date(day.date.replace(/-/g, '/')).getDay() === 6,
+                                }">
+                                {{ day.day }}
+                            </view>
+                        </view>
                     </view>
-                </view>
-            </view>
+                </swiper-item>
+                <swiper-item>
+                    <view class="flex">
+                        <view
+                            v-for="day in currentWeekDays"
+                            class="calendar-item"
+                            :key="day.date"
+                            @click="selectDate(day.date)">
+                            <view
+                                class="grid-item"
+                                :class="{
+                                    today: day.isToday,
+                                    selected: day.date === selectedDate,
+                                    'text-[#0000004d]':
+                                        new Date(day.date.replace(/-/g, '/')).getDay() === 0 ||
+                                        new Date(day.date.replace(/-/g, '/')).getDay() === 6,
+                                }">
+                                {{ day.day }}
+                            </view>
+                        </view>
+                    </view>
+                </swiper-item>
+                <swiper-item>
+                    <view class="flex">
+                        <view
+                            v-for="day in nextWeekDays"
+                            class="calendar-item"
+                            :key="day.date"
+                            @click="selectDate(day.date)">
+                            <view
+                                class="grid-item"
+                                :class="{
+                                    today: day.isToday,
+                                    selected: day.date === selectedDate,
+                                    'text-[#0000004d]':
+                                        new Date(day.date.replace(/-/g, '/')).getDay() === 0 ||
+                                        new Date(day.date.replace(/-/g, '/')).getDay() === 6,
+                                }">
+                                {{ day.day }}
+                            </view>
+                        </view>
+                    </view>
+                </swiper-item>
+            </swiper>
         </view>
     </view>
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted, nextTick } from "vue";
+
 interface Day {
     date: string;
     day: number;
@@ -66,60 +124,103 @@ const selectedDate = computed({
 });
 
 const getDay = computed(() =>
-    uni.$u.timeFormat(selectedDate.value ? new Date(selectedDate.value) : new Date(), "yyyy年mm月dd日")
+    uni.$u.timeFormat(
+        selectedDate.value ? new Date(selectedDate.value.replace(/-/g, "/")) : new Date(),
+        "yyyy年mm月dd日"
+    )
 );
 
-const getDays = computed(() => {
-    const centerDate = selectedDate.value
-        ? new Date(selectedDate.value.replace(/-/g, "/"))
-        : new Date();
+const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+
+const currentDate = ref(new Date()); // Represents the Sunday of the current week
+const previousWeekDays = ref<Day[]>([]);
+const currentWeekDays = ref<Day[]>([]);
+const nextWeekDays = ref<Day[]>([]);
+
+const swiperCurrent = ref(1);
+const isAnimating = ref(false);
+const swiperDuration = computed(() => (isAnimating.value ? 0 : 300));
+
+const generateWeek = (dateForWeek: Date): Day[] => {
+    const dayArray: Day[] = [];
     const today = new Date();
     const todayDateString = uni.$u.timeFormat(today, "yyyy-mm-dd");
 
-    const days: Day[] = [];
+    const startOfWeek = new Date(dateForWeek);
+    startOfWeek.setDate(dateForWeek.getDate() - dateForWeek.getDay()); // Set to Sunday
 
-    // 获取前3天
-    for (let i = 3; i > 0; i--) {
-        const date = new Date(centerDate);
-        date.setDate(centerDate.getDate() - i);
-        const dateString = uni.$u.timeFormat(date, "yyyy-mm-dd");
-        days.push({
+    for (let i = 0; i < 7; i++) {
+        const current = new Date(startOfWeek);
+        current.setDate(startOfWeek.getDate() + i);
+        const dateString = uni.$u.timeFormat(current, "yyyy-mm-dd");
+        dayArray.push({
             date: dateString,
-            day: uni.$u.timeFormat(date, "dd"),
+            day: current.getDate(),
             isToday: dateString === todayDateString,
         });
     }
+    return dayArray;
+};
 
-    // 添加中间日期
-    const centerDateString = uni.$u.timeFormat(centerDate, "yyyy-mm-dd");
-    days.push({
-        date: centerDateString,
-        day: uni.$u.timeFormat(centerDate, "dd"),
-        isToday: centerDateString === todayDateString,
-    });
+const updateWeeks = (baseDate: Date) => {
+    currentWeekDays.value = generateWeek(baseDate);
 
-    // 获取后3天
-    for (let i = 1; i <= 3; i++) {
-        const date = new Date(centerDate);
-        date.setDate(centerDate.getDate() + i);
-        const dateString = uni.$u.timeFormat(date, "yyyy-mm-dd");
-        days.push({
-            date: dateString,
-            day: uni.$u.timeFormat(date, "dd"),
-            isToday: dateString === todayDateString,
-        });
+    const prevDate = new Date(baseDate);
+    prevDate.setDate(prevDate.getDate() - 7);
+    previousWeekDays.value = generateWeek(prevDate);
+
+    const nextDate = new Date(baseDate);
+    nextDate.setDate(nextDate.getDate() + 7);
+    nextWeekDays.value = generateWeek(nextDate);
+};
+
+onMounted(() => {
+    const initialDate = props.modelValue ? new Date(props.modelValue.replace(/-/g, "/")) : new Date();
+    const startOfWeek = new Date(initialDate);
+    startOfWeek.setDate(initialDate.getDate() - initialDate.getDay());
+    currentDate.value = startOfWeek;
+    updateWeeks(startOfWeek);
+});
+
+const onAnimationFinish = async ({ detail }: any) => {
+    if (detail.source !== "touch") return;
+    const newIndex = detail.current;
+    if (newIndex === swiperCurrent.value) return;
+
+    isAnimating.value = true;
+
+    if (newIndex === 2) {
+        // Swiped to Next
+        const newCurrentDate = new Date(currentDate.value);
+        newCurrentDate.setDate(newCurrentDate.getDate() + 7);
+        currentDate.value = newCurrentDate;
+
+        previousWeekDays.value = currentWeekDays.value;
+        currentWeekDays.value = nextWeekDays.value;
+        swiperCurrent.value = 1;
+
+        await nextTick();
+        const newNextDate = new Date(currentDate.value);
+        newNextDate.setDate(newNextDate.getDate() + 7);
+        nextWeekDays.value = generateWeek(newNextDate);
+    } else if (newIndex === 0) {
+        // Swiped to Previous
+        const newCurrentDate = new Date(currentDate.value);
+        newCurrentDate.setDate(newCurrentDate.getDate() - 7);
+        currentDate.value = newCurrentDate;
+
+        nextWeekDays.value = currentWeekDays.value;
+        currentWeekDays.value = previousWeekDays.value;
+        swiperCurrent.value = 1;
+
+        await nextTick();
+        const newPrevDate = new Date(currentDate.value);
+        newPrevDate.setDate(newPrevDate.getDate() - 7);
+        previousWeekDays.value = generateWeek(newPrevDate);
     }
 
-    return days;
-});
-
-const weekDays = computed(() => {
-    const daysOfWeek = ["日", "一", "二", "三", "四", "五", "六"];
-    return getDays.value.map(day => {
-        const date = new Date(day.date.replace(/-/g, "/"));
-        return daysOfWeek[date.getDay()];
-    });
-});
+    isAnimating.value = false;
+};
 
 const selectDate = (date: string) => {
     selectedDate.value = date;

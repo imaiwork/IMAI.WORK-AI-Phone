@@ -23,9 +23,10 @@ class TakeOverLogic extends ApiLogic
     {
         Db::startTrans();
         try {
-
+            //校验只能选择一种平台
+            TaskLogic::checkAccounts($params['accounts']);
             $times = TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
-            //print_r($times);die;
+            
             $params['user_id'] = self::$uid;
             $accounts = $params['accounts'];
             $params['accounts'] = json_encode($params['accounts'], JSON_UNESCAPED_UNICODE);

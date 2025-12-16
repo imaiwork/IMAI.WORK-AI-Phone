@@ -203,6 +203,14 @@ class PcLogic extends BaseLogic
         foreach ($chatModels['channel'] as $key=>$value){
             $chatModels['channel'][$key]['logo'] = isset($value['logo']) ? FileService::getFileUrl($value['logo']) : '';
         }
+
+        //视频案例
+        $videoCases = ConfigService::get('digital_human', 'video_case', []);
+        foreach ($videoCases as $key=> $videoCase){
+            $videoCases[$key]['image'] = FileService::getFileUrl($videoCase['image']);
+            $videoCases[$key]['video_case_url'] = FileService::getFileUrl($videoCase['video_case_url']);
+        }
+
         $banner =  config('app.app_host') . '/static/images/human/banner.png';
         $transcoding = true;
         $config = [
@@ -256,7 +264,7 @@ class PcLogic extends BaseLogic
                 'voice' => $modelList['voice'] ?? [],
                 'shanjian_auth' => ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI'),
                 'banner' =>  FileService::getFileUrl(ConfigService::get('digital_human', 'banner', $banner)),
-
+                'video_case' => $videoCases,
             ],
             'card_code'                 => [
                 'is_open'   => ConfigService::get('card_code','is_open',0),
@@ -272,7 +280,6 @@ class PcLogic extends BaseLogic
             'by_name'=>  self::getByName(),
             'ai_model' =>  $chatModels,
             'wechat_remarks' => ConfigService::get('add_remark', 'wechat', []),
-
         ];
     }
 

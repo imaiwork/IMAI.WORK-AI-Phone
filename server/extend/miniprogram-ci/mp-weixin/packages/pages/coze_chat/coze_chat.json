@@ -13,6 +13,8 @@
     "empty": "../../../components/empty/empty",
     "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
     "popup-bottom": "../../../components/popup-bottom/popup-bottom",
+    "data-select": "../../../components/data-select/data-select",
+    "u-button": "../../../uni_modules/vk-uview-ui/components/u-button/u-button",
     "recharge-popup": "../../../components/recharge-popup/recharge-popup"
   }
 }

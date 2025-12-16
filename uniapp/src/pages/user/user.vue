@@ -83,7 +83,7 @@
                                 </view>
                             </view>
                             <view class="grid grid-cols-3 mt-[28rpx] gap-x-[20rpx]">
-                                <router-navigate class="menu-link" to="/packages/pages/creation_record/creation_record">
+                                <router-navigate class="menu-link" to="/packages/pages/creation/creation">
                                     <image
                                         src="/static/images/common/creation_record_card.png"
                                         class="w-full h-full"></image>
@@ -245,7 +245,7 @@ const handleUtils = (type: string) => {
 
             break;
         case "creation_record":
-            pathUrl = "/packages/pages/creation_record/creation_record";
+            pathUrl = "/packages/pages/creation/creation";
             break;
     }
     uni.$u.route({

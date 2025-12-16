@@ -62,6 +62,9 @@
 import { getTaskList } from "@/api/sph";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import ClueCard from "@/ai_modules/device/components/clue-card/clue-card.vue";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const pagingRef = shallowRef();
 const taskList = ref<any[]>([]);
@@ -93,7 +96,7 @@ const handleConfirm = () => {
         uni.$u.toast("请选择线索");
         return;
     }
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.WECHAT_CLUE,
         data: selectedList.value.map((item) => {
             const task = taskList.value[item];

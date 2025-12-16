@@ -105,7 +105,6 @@ import { getPublishRecordVideoList } from "@/api/digital_human";
 import { AppTypeEnum } from "@/enums/appEnums";
 import XHSIcon from "@/ai_modules/digital_human/static/images/common/xhs.png";
 import SPHIcon from "@/ai_modules/digital_human/static/images/common/sph.png";
-import VideoPreviewV2 from "@/ai_modules/digital_human/components/video-preview-v2/video-preview-v2.vue";
 const dataLists = ref<any[]>([]);
 
 const pagingRef = shallowRef();

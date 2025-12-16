@@ -286,7 +286,8 @@ class UserLogic extends BaseLogic
     {
         try {
             $deviceBindCode = User::where('id', '=', $params['user_id'])->value('device_bind_qrcode');
-            $domain         = $_SERVER['HTTP_HOST'];
+            $host           = env('app.host');
+            $domain         = parse_url($host)['host'] ?? $_SERVER['HTTP_HOST'];
             if (empty($deviceBindCode)) {
                 $uuid       = (Uuid::uuid4())->toString();
                 $writer     = new PngWriter();

@@ -7,6 +7,14 @@
                     <view v-if="item.automatic_clip == 1" class="absolute left-2 top-2 text-[20rpx] text-white"
                         >AI剪辑</view
                     >
+                    <view v-if="showVersion" class="absolute bottom-2 z-[51]">
+                        <view
+                            class="digital-human-tag"
+                            :class="`digital-human-tag-${item.model_version}`"
+                            v-if="modelVersionMap[item.model_version]">
+                            {{ modelVersionMap[item.model_version] }}
+                        </view>
+                    </view>
                 </view>
             </view>
             <view class="absolute top-2 right-2 z-[8888]" v-if="showMore">

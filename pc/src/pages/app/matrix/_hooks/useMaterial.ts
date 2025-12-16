@@ -3,7 +3,7 @@ import {
     addCopywritingMaterial as apiAddCopywritingMaterial,
     updateCopywritingMaterial as apiUpdateCopywritingMaterial,
     deleteCopywritingMaterial as apiDeleteCopywritingMaterial,
-} from "@/api/redbook";
+} from "~/api/matrix";
 import { useDebounceFn } from "@vueuse/core";
 export default function useMaterial() {
     const getCopywritingMaterialDetail = async (id: string) => {

@@ -22,9 +22,7 @@
                             </view>
                         </view>
                         <view class="absolute top-2 right-2" v-if="isChoose(item)">
-                            <image
-                                src="@/ai_modules/digital_human/static/icons/success.svg"
-                                class="w-[28rpx] h-[28rpx]"></image>
+                            <image src="/static/images/icons/success.svg" class="w-[28rpx] h-[28rpx]"></image>
                         </view>
                     </view>
                 </view>
@@ -43,7 +41,7 @@
         </view>
     </view>
     <video-preview
-        v-model:show="showVideoPreview"
+        v-model="showVideoPreview"
         title="视频预览"
         :video-url="previewVideoUrl"
         @confirm="showVideoPreview = false" />
@@ -52,6 +50,10 @@
 <script setup lang="ts">
 import { shanjianAnchorAuthorizedList } from "@/api/digital_human";
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import VideoPreview from "@/components/video-preview/video-preview.vue";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const dataList = ref<any[]>([]);
 const pagingRef = ref<any>(null);
@@ -90,7 +92,7 @@ const handleChoose = (item: any) => {
 const handleConfirm = () => {
     if (!chooseVideo.value) return;
     uni.navigateBack();
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.ANCHOR_AUTH,
         data: {
             url: chooseVideo.value.authorized_url,

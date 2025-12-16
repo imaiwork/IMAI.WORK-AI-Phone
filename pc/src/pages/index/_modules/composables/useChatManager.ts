@@ -2,7 +2,9 @@ import { storeToRefs } from "pinia";
 import { chatSendTextStream, getChatLog } from "@/api/chat";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
-import { useChatStore, type ChatMessage, type ChatFile } from "../stores/chat";
+import { useChatStore, type ChatMessage } from "../stores/chat";
+import { useChatEventBus } from "./useChatEventBus";
+import dayjs from "dayjs";
 
 /**
  * @description useChatManager Composable
@@ -19,6 +21,7 @@ export function useChatManager() {
     const chatStore = useChatStore();
     const userStore = useUserStore();
     const appStore = useAppStore();
+    const { triggerHistoryRefresh } = useChatEventBus();
 
     // --- 从 Store 中获取响应式状态 ---
     const { taskId, agentValue, chatContentList, isReceiving, isStopChat, isDeep, isNetwork, fileLists, extraParams } =
@@ -71,7 +74,13 @@ export function useChatManager() {
                 if (!text) return;
                 try {
                     const { object, content, task_id: newTaskId, usage, reasoning_content } = JSON.parse(text);
-                    if (!taskId.value) {
+                    if (newTaskId && !taskId.value) {
+                        const firstMessage = chatContentList.value[0];
+                        triggerHistoryRefresh({
+                            taskId: newTaskId,
+                            message: firstMessage?.message,
+                            createTime: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                        });
                         chatStore.setTaskId(newTaskId);
                         replaceState({
                             task_id: newTaskId,
@@ -138,8 +147,6 @@ export function useChatManager() {
 
             chatStore.chatContentList = historyMessages;
             chatScrollToBottom();
-        } catch (err) {
-            feedback.msgError("获取聊天记录失败");
         } finally {
             chatStore.isLoading = false;
         }

@@ -32,7 +32,7 @@
         </el-card>
         <el-card shadow="never" class="!border-none mt-4">
             <el-table size="large" :data="pager.lists" v-loading="pager.loading">
-                <el-table-column label="ID" prop="id" width="80"></el-table-column>
+                <el-table-column label="ID" prop="id" min-width="80"></el-table-column>
                 <el-table-column label="头像" min-width="100">
                     <template #default="{ row }">
                         <el-avatar :src="row.avatar" :size="50" />

@@ -24,7 +24,7 @@
         <view class="fixed bottom-0 left-0 w-full h-[180rpx] bg-white px-6 pt-4">
             <u-button
                 type="primary"
-                :custom-style="{ height: '100rpx', borderRadius: '12rpx', fontWeight: 'bold' }"
+                :custom-style="{ height: '100rpx', borderRadius: '16rpx', fontWeight: 'bold' }"
                 @click="handleSave"
                 >确定保存</u-button
             >
@@ -35,6 +35,9 @@
 <script setup lang="ts">
 import Calendar from "@/ai_modules/device/components/calendar/calendar.vue";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const date = ref<string[]>([]);
 const calendarRef = ref<InstanceType<typeof Calendar>>();
@@ -85,7 +88,7 @@ const handleSave = () => {
 
         return;
     }
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.CHOOSE_DATE,
         data: date.value,
     });

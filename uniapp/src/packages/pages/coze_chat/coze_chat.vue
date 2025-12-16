@@ -38,28 +38,16 @@
                 @content-post="contentPost">
                 <template #content>
                     <view
-                        class="flex items-center justify-center flex-col h-full w-full px-4"
+                        class="flex items-center flex-col h-full w-full px-4 pt-[10vh]"
                         v-if="chatContentList.length == 0">
-                        <view class="mb-3">
-                            <image :src="detail.avatar" v-if="detail.avatar" class="w-[96rpx] h-[96rpx] rounded-full" />
+                        <image :src="detail.avatar" v-if="detail.avatar" class="w-[96rpx] h-[96rpx] rounded-full" />
+                        <view class="text-center w-[80%] mx-auto mt-[34rpx]">
+                            {{ config?.onboarding_info?.prologue }}
                         </view>
-                        <view class="text-center text-2xl font-semibold">
-                            {{ detail.name }}
-                        </view>
-                        <view class="text-sm text-center mt-1">
-                            {{ detail.description }}
-                        </view>
-                        <view class="mt-4 mx-4 flex">
-                            <view class="flex flex-wrap gap-4">
-                                <view class="w-[47%]" v-for="(item, index) in detail.preliminary_ask" :key="index">
-                                    <view
-                                        v-if="item.value"
-                                        class="w-full h-full bg-white p-4 text-sm rounded-2xl"
-                                        @click="contentPost(item.value)">
-                                        <div class="line-clamp-5 break-all">
-                                            {{ item.value }}
-                                        </div>
-                                    </view>
+                        <view class="flex flex-col gap-2 w-[80%] mx-auto mt-[62rpx]">
+                            <view v-for="(item, index) in config?.onboarding_info?.suggested_questions" :key="index">
+                                <view class="bg-[#F6F6F6] rounded-[8px] px-4 py-2" @click="contentPost(item)">
+                                    {{ item }}
                                 </view>
                             </view>
                         </view>
@@ -69,8 +57,21 @@
                     <view
                         class="flex-shrink-0 flex items-center bg-[#F2F2F2] justify-center rounded-full w-[90rpx] h-[90rpx]"
                         @click="showHistory = true">
-                        <u-icon name="/static/images/icons/history.svg" :size="48"></u-icon>
+                        <u-icon name="/static/images/icons/history.svg" :size="32"></u-icon>
                     </view>
+                </template>
+                <template #chatAreaTop>
+                    <scroll-view scroll-x>
+                        <view class="flex gap-2 whitespace-nowrap">
+                            <view
+                                v-for="(item, index) in config?.shortcut_commands"
+                                :key="index"
+                                class="border border-solid border-[#E5E5E5] rounded-[16rpx] px-[22rpx] py-[12rpx]"
+                                @click="openCommand(index)">
+                                {{ item.name }}
+                            </view>
+                        </view>
+                    </scroll-view>
                 </template>
             </chat-scroll-view>
         </view>
@@ -174,7 +175,7 @@
                     </view>
                 </scroll-view>
             </view>
-            <view class="flex-shrink-0 bg-[#FFFFFFE0] shadow-[0_4rpx_10rpx_2rpx_rgba(0,0,0,0.1)] safe-area">
+            <view class="flex-shrink-0 bg-[#FFFFFFE0] shadow-[0_4rpx_10rpx_2rpx_rgba(0,0,0,0.1)] pb-4">
                 <view class="px-4 flex items-center gap-x-5 pt-[20rpx]" v-if="!flowResult">
                     <view class="flex flex-col items-center gap-1 px-2 flex-shrink-0" @click="showHistory = true">
                         <u-icon name="/static/images/icons/history.svg" :size="48"></u-icon>
@@ -243,6 +244,55 @@
                 </view>
             </template>
         </popup-bottom>
+        <popup-bottom v-model:show="showCommand" :title="getShortcutCommands?.name" custom-class="bg-[#F6F6F6]">
+            <template #content>
+                <view class="flex flex-col h-full">
+                    <scroll-view scroll-y class="grow min-h-0">
+                        <view class="p-4 flex flex-col gap-4">
+                            <view v-for="(item, index) in getShortcutCommands?.components" :key="index">
+                                <view class="font-bold">{{ item.name }}</view>
+                                <view class="mt-[14rpx] bg-white rounded-[20rpx] px-3 py-1">
+                                    <u-input
+                                        v-if="item.type === 'text'"
+                                        v-model="item.default_value"
+                                        :placeholder="item.description"
+                                        clearable />
+                                    <data-select
+                                        v-model="item.default_value"
+                                        :is-border="false"
+                                        :localdata="item.options?.map((item: any) => ({ text: item, value: item })) || []"
+                                        v-if="item.type === 'select'">
+                                    </data-select>
+                                    <file-upload
+                                        v-if="item.type === 'file'"
+                                        v-model="commandFile[item.name]"
+                                        file-type="all"
+                                        return-type="object"
+                                        :file-extname="getAccept(item.options)"
+                                        @update:modelValue="handleFileUpload($event, item.name)">
+                                        <template #trigger>
+                                            <view class="flex items-center justify-center gap-x-1 h-[100rpx]">
+                                                <u-icon name="plus" color="#0065FB" :size="16"></u-icon>
+                                                <text class="text-primary font-bold">上传文件</text>
+                                            </view>
+                                        </template>
+                                    </file-upload>
+                                </view>
+                            </view>
+                        </view>
+                    </scroll-view>
+                    <view class="my-4 px-4">
+                        <u-button
+                            type="primary"
+                            :disabled="isSendDisabled"
+                            :custom-style="{ height: '90rpx', fontWeight: 'bold', borderRadius: '20rpx' }"
+                            @click="handleSaveCommand"
+                            >直接发送</u-button
+                        >
+                    </view>
+                </view>
+            </template>
+        </popup-bottom>
         <recharge-popup ref="rechargePopupRef"></recharge-popup>
     </view>
 </template>
@@ -257,6 +307,7 @@ import {
     cozeAgentChatView,
     cozeAgentChatMsgList,
     cozeWorkflowGenerate,
+    cozeAgentGetConfig,
 } from "@/api/agent";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
@@ -353,13 +404,47 @@ const detail = reactive<AgentDetail>({
     inputs: "",
     outputs: "",
 });
+const config = ref<any>({});
+const extraData = ref<any>({});
+const commandFile = ref<any>({});
+const showCommand = ref(false);
+const currCommandIndex = ref(-1);
+
+const acceptMap: Record<string, string[]> = {
+    image: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"],
+    audio: ["mp3", "wav", "wma", "aac", "m4a", "ogg", "flac"],
+    doc: ["doc", "docx", "pdf", "txt", "md"],
+    table: ["xls", "xlsx", "csv", "tsv"],
+    code: ["py", "java", "html", "css", "js", "php", "c", "cpp", "sh", "json", "xml"],
+    zip: ["zip", "rar", "7z", "tar", "gz", "bz2", "iso", "dmg", "pkg", "deb", "rpm", "msi", "exe"],
+    ppt: ["ppt", "pptx", "pptm", "pptm", "pptx"],
+    video: ["mp4", "mov", "avi", "mkv", "wmv", "flv", "webm"],
+    txt: ["txt", "md", "log", "error", "warning", "info", "debug"],
+};
+
+const getShortcutCommands = computed(() => {
+    return currCommandIndex.value >= 0 ? config.value?.shortcut_commands?.[currCommandIndex.value] || {} : {};
+});
+
+const isSendDisabled = computed(() => {
+    const { components } = getShortcutCommands.value;
+    if (components && components.length > 0) {
+        const isDisabled = components.some((item: any) => {
+            if (item.type === "file") {
+                return !commandFile.value?.[item.name];
+            } else {
+                return !item.default_value;
+            }
+        });
+        return isDisabled;
+    }
+    return true;
+});
 
 // 表单状态
 const formFlowData = ref<Record<string, string>>({});
 const ruleFlow = ref<Record<string, { required: boolean; message: string }>>({});
 const isStream = computed(() => detail.stream == 1);
-
-const isImageError = ref(false);
 
 /**
  * 从详情生成表单项
@@ -404,6 +489,17 @@ const getOutputParams = computed(() => {
         return {};
     }
 });
+
+const getAccept = (options: any[]) => {
+    if (options.length) {
+        const accept: string[] = [];
+        options.forEach((item: any) => {
+            accept.push(...acceptMap[item]);
+        });
+        return accept;
+    }
+    return [];
+};
 
 // 历史记录状态
 const recordLists = ref<BaseMessage[]>([]);
@@ -582,6 +678,42 @@ const handleStreamMessage = (value: string, result: BaseMessage) => {
         });
 };
 
+const openCommand = (index: number) => {
+    showCommand.value = true;
+    currCommandIndex.value = index;
+};
+
+const closeCommand = () => {
+    currCommandIndex.value = -1;
+    extraData.value = {};
+    commandFile.value = {};
+    showCommand.value = false;
+};
+
+/**
+ * 直接发送快捷指令
+ */
+const handleSaveCommand = () => {
+    let { id, components, query_template } = getShortcutCommands.value;
+    let parameters: Record<string, string> = {};
+    components.forEach((item: any) => {
+        if (item.type === "file") {
+            query_template = query_template.replace(`{{${item.name}}}`, commandFile.value[item.name].url);
+            parameters[item.name] = commandFile.value[item.name].url;
+        } else {
+            query_template = query_template.replace(`{{${item.name}}}`, item.default_value);
+            parameters[item.name] = item.default_value;
+        }
+    });
+    extraData.value = {
+        command_id: id,
+        parameters,
+        text: query_template,
+    };
+    contentPost(query_template);
+    closeCommand();
+};
+
 /**
  * 发送消息
  */
@@ -636,6 +768,7 @@ const handleStreamResponse = async (userInput: string | undefined, result: BaseM
                 id: detail.id,
                 content: userInput || "",
                 conversation_id: conversationId.value,
+                ...extraData.value,
             },
             {
                 onstart(reader) {
@@ -667,6 +800,7 @@ const handlePollingResponse = async (userInput: string | undefined, result: Base
             id: detail.id,
             content: userInput || "",
             conversation_id: conversationId.value,
+            ...extraData.value,
         };
 
         const { conversation_id: newConvId, id: chatId } = await cozeAgentChat(cozeParams);
@@ -820,6 +954,7 @@ const addSession = () => {
     conversationId.value = "";
     chatContentList.value = [];
     resetChat();
+    handleChatClose();
 };
 
 /**
@@ -891,14 +1026,20 @@ const getDetail = async () => {
 };
 
 /**
+ * 获取机器人配置
+ */
+const getConfig = async () => {
+    const data = await cozeAgentGetConfig({ id: detail.id });
+    config.value = data;
+};
+/**
  * 初始化页面
  */
 const init = async () => {
     uni.showLoading({ title: "加载中" });
 
     try {
-        await getDetail();
-
+        await Promise.all([getDetail(), getConfig()]);
         if (conversationId.value) {
             await getChatList();
             setTimeout(() => scrollToBottom(), 500);
@@ -921,4 +1062,22 @@ onLoad((query?: Record<string, any>) => {
     agentType.value = type;
     init();
 });
+
+onUnload(() => {
+    chattingRef.value?.hideKeyboard();
+});
+
+onHide(() => {
+    chattingRef.value?.hideKeyboard();
+});
 </script>
+
+<style lang="scss" scoped>
+:deep(.uni-select) {
+    padding: 0;
+    border: none !important;
+}
+:deep(.file-upload-wrapper) {
+    border: none !important;
+}
+</style>

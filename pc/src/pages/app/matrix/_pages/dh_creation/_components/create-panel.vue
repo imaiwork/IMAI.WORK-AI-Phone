@@ -362,7 +362,7 @@ import { uploadImage, getClipConfig } from "@/api/app";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
-import { getDigitalHumanDetail, addDigitalHuman, updateDigitalHuman } from "@/api/redbook";
+import { getDigitalHumanDetail, addDigitalHuman, updateDigitalHuman } from "~/api/matrix";
 import { DigitalHumanModelVersionEnum } from "@/pages/app/digital_human/_enums";
 import { uploadLimit } from "@/pages/app/digital_human/_config";
 import VoiceMaterial from "@/pages/app/_components/choose-tone.vue";

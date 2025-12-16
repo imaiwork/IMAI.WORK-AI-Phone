@@ -25,8 +25,8 @@
         </view>
         <view
             v-if="showClose"
-            class="absolute left-0 w-[64rpx] h-[64rpx] z-[787]"
-            :style="{ top: statusBarHeight + 'px' }"
+            class="absolute left-2 w-[64rpx] h-[64rpx] z-[787]"
+            :style="{ top: isBar ? statusBarHeight + 'px' : '24rpx' }"
             @click="$emit('close')">
             <image src="/static/images/icons/close.svg" class="w-full h-full"></image>
         </view>
@@ -39,12 +39,12 @@
                 src="/static/images/common/video_play.png"
                 :style="{ width: `${playIconSize}rpx`, height: `${playIconSize}rpx` }"></image>
         </view>
-        <view class="absolute bottom-4 left-0 right-0 z-[888] px-[40rpx]">
+        <view class="absolute bottom-2 left-0 right-0 z-[888] px-[40rpx]">
             <view class="text-white text-[26rpx] flex items-center justify-center gap-x-1">
                 <text>{{ formatAudioTime(currDuration) }}</text> /
                 <text class="opacity-50">{{ formatAudioTime(videoDuration) }}</text>
             </view>
-            <view class="h-[60rpx] mt-[20rpx] relative">
+            <view class="h-[72rpx] mt-[20rpx] relative">
                 <view
                     class="h-full w-full backdrop-blur-sm rounded-[48rpx] absolute"
                     style="background-color: rgba(255, 255, 255, 0.1)"></view>
@@ -53,20 +53,20 @@
                         <image
                             v-if="!isPlaying || isEnded"
                             src="/static/images/icons/video_play.svg"
-                            class="w-[28rpx] h-[28rpx]"></image>
-                        <image v-else src="/static/images/icons/video_stop.svg" class="w-[28rpx] h-[28rpx]"></image>
+                            class="w-[48rpx] h-[48rpx]"></image>
+                        <image v-else src="/static/images/icons/video_stop.svg" class="w-[48rpx] h-[48rpx]"></image>
                     </view>
                     <view class="flex-1 py-1 progress-box" @click.stop="clickProgress">
-                        <view class="bg-white flex-1 relative h-[4rpx]">
+                        <view class="bg-white flex-1 relative h-[4rpx] rounded-full">
                             <view
-                                class="bg-primary h-full absolute left-0"
+                                class="bg-primary h-full absolute left-0 rounded-full"
                                 :style="{
                                     width: `${videoProgress}%`,
                                 }"></view>
                         </view>
                     </view>
                     <view class="leading-[0] flex-shrink-0" @click.stop="clickFullScreen()">
-                        <image src="/static/images/icons/video_full_screen.svg" class="w-[28rpx] h-[28rpx]"></image>
+                        <image src="/static/images/icons/video_full_screen.svg" class="w-[48rpx] h-[48rpx]"></image>
                     </view>
                 </view>
             </view>
@@ -84,6 +84,7 @@ const props = withDefaults(
         playIconSize?: number;
         borderRadius?: number;
         showClose?: boolean;
+        isBar?: boolean;
     }>(),
     {
         poster: "",
@@ -91,6 +92,7 @@ const props = withDefaults(
         playIconSize: 108,
         borderRadius: 48,
         showClose: false,
+        isBar: true,
     }
 );
 

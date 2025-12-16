@@ -1,12 +1,5 @@
 <template>
-    <view class="h-screen dh-bg flex flex-col">
-        <u-navbar
-            title="AI文案生成"
-            title-bold
-            :is-fixed="false"
-            :border-bottom="false"
-            :background="{ background: 'transparent' }"
-            :custom-back="back"></u-navbar>
+    <view class="h-screen flex flex-col">
         <view class="grow min-h-0">
             <scroll-view scroll-y class="h-full">
                 <view class="p-4">
@@ -17,6 +10,7 @@
                         </view>
                         <view class="mt-4 p-4 bg-white rounded-[16rpx]">
                             <textarea
+                                class="w-full"
                                 v-model="contentVal"
                                 focus
                                 type="textarea"
@@ -28,20 +22,23 @@
                                 {{ contentVal.length }} / {{ contentMaxLength }}
                             </view>
                         </view>
-                        <view class="flex items-center gap-1 font-bold mt-[48rpx]">
-                            <text class="text-[#FF3C26]">*</text>
-                            <text> 口播文案的字数</text>
-                        </view>
-                        <view class="flex items-center gap-[36rpx] mt-[28rpx]">
-                            <view
-                                v-for="item in getPromptList"
-                                :key="item.id"
-                                class="prompt-length-item"
-                                :class="{ active: currentPrompt?.id === item.id }"
-                                @click="currentPrompt = item">
-                                {{ item.name }}
+                        <template v-if="montageType != MontageTypeEnum.NEWS_BODY">
+                            <view class="flex items-center gap-1 font-bold mt-[48rpx]">
+                                <text class="text-[#FF3C26]">*</text>
+                                <text> 口播文案的字数</text>
                             </view>
-                        </view>
+                            <view class="flex items-center gap-[36rpx] mt-[28rpx]">
+                                <view
+                                    v-for="item in getPromptList"
+                                    :key="item.id"
+                                    class="prompt-length-item"
+                                    :class="{ active: currentPrompt?.id === item.id }"
+                                    @click="currentPrompt = item">
+                                    {{ item.name }}
+                                </view>
+                            </view>
+                        </template>
+
                         <view class="flex items-center gap-1 font-bold mt-[48rpx]">
                             <text class="text-[#FF3C26]">*</text>
                             <text> 生成的口播文案数量</text>
@@ -83,21 +80,40 @@
                                 </view>
                             </view>
                             <template v-else>
-                                <view class="text-[28rpx] font-bold mr-4">
-                                    <u-input
-                                        v-model="item.title"
-                                        placeholder-style="color: #7C7E80; "
-                                        maxlength="30"></u-input>
-                                </view>
-                                <view class="mt-[28rpx]">
-                                    <u-input
-                                        v-model="item.content"
-                                        type="textarea"
-                                        placeholder-style="color: #7C7E80; "
-                                        maxlength="500"
-                                        :auto-height="false"></u-input>
-                                    <view class="mt-2 text-[#B2B2B2] text-end"> {{ item.content.length }} / 500 </view>
-                                </view>
+                                <template v-if="!isNewsBody">
+                                    <view class="text-[28rpx] font-bold mr-4">
+                                        <u-input
+                                            v-model="item.title"
+                                            placeholder-style="color: #7C7E80; "
+                                            maxlength="50"></u-input>
+                                    </view>
+                                    <view class="mt-[28rpx]">
+                                        <u-input
+                                            v-model="item.content"
+                                            type="textarea"
+                                            placeholder-style="color: #7C7E80; "
+                                            maxlength="500"
+                                            :auto-height="false"></u-input>
+                                        <view class="mt-2 text-[#B2B2B2] text-end">
+                                            {{ item.content.length }} / 500
+                                        </view>
+                                    </view>
+                                </template>
+                                <template v-else>
+                                    <view
+                                        v-for="(val, valIndex) in item.content"
+                                        class="border-[0] border-b-[1rpx] border-solid border-[#F1F2F5] pb-2"
+                                        :key="valIndex"
+                                        :class="{
+                                            'mb-[28rpx] ': valIndex < item.content.length - 1,
+                                        }">
+                                        <view class="text-[28rpx] font-bold mb-2">标题{{ valIndex + 1 }}</view>
+                                        <u-input
+                                            v-model="chatContentList[index].content[valIndex]"
+                                            placeholder-style="color: #7C7E80; "
+                                            maxlength="100"></u-input>
+                                    </view>
+                                </template>
                                 <view
                                     class="absolute right-2 top-2 rounded-full flex item-center justify-center w-4 h-4 bg-[#0000004C]"
                                     @click="handleDeleteCopywriter(index)">
@@ -138,10 +154,13 @@
 </template>
 
 <script setup lang="ts">
-import { generateShanjianPrompt } from "@/api/digital_human";
+import { generateShanjianPrompt, generateNewsBodyPrompt } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
-import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
@@ -149,6 +168,7 @@ const { userTokens } = toRefs(userStore);
 const contentVal = ref<string>("");
 const contentMaxLength = 500;
 const textLimit = ref<number>(150);
+const montageType = ref<MontageTypeEnum>();
 const chatContentList = ref<any[]>([]);
 
 const promptList = [
@@ -159,6 +179,10 @@ const promptList = [
 
 const getPromptList = computed(() => {
     return promptList;
+});
+
+const isNewsBody = computed(() => {
+    return montageType.value == MontageTypeEnum.NEWS_BODY;
 });
 
 // 口播数量
@@ -177,7 +201,11 @@ const isGenerated = computed(() => {
 
 // 获取消耗的算力
 const getToken = computed(() => {
-    const token = userStore.getTokenByScene(TokensSceneEnum.SHANJIAN_COPYWRITING_CREATE)?.score;
+    const token = userStore.getTokenByScene(
+        montageType.value == MontageTypeEnum.NEWS_BODY
+            ? TokensSceneEnum.NEWS_MIX_CUT_TITLE
+            : TokensSceneEnum.SHANJIAN_COPYWRITING_CREATE
+    )?.score;
     return parseFloat(token) * currentPromptNum.value;
 });
 
@@ -200,6 +228,23 @@ const contentPost = async (userInput: string) => {
             content: "",
             status: "pending",
         }));
+        if (isNewsBody.value) {
+            const result = await generateNewsBodyPrompt({
+                keywords: userInput,
+                number: currentPromptNum.value,
+            });
+            if (result.content && result.content.length > 0) {
+                chatContentList.value = result.content.map((item: any) => ({
+                    content: JSON.parse(item),
+                    status: "success",
+                }));
+            } else {
+                uni.$u.toast("文案生成失败，请重新输入");
+                isGenerating.value = false;
+                chatContentList.value = [];
+            }
+            return;
+        }
         // 这里要根据生成数量来请求接口, 要并发请求
         const promises = [];
         for (let i = 0; i < currentPromptNum.value; i++) {
@@ -211,6 +256,7 @@ const contentPost = async (userInput: string) => {
             );
         }
         const results = await Promise.all(promises);
+
         chatContentList.value = results.map((item) => ({
             title: item.title,
             content: item.content,
@@ -238,55 +284,40 @@ const useContent = () => {
         uni.$u.toast("文案在生成中...");
         return;
     }
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.MONTAGE_AI_COPYWRITER,
-        data: chatContentList.value
-            .filter((item) => item.title)
-            .map((item) => ({ title: item.title, content: item.content })),
+        data: isNewsBody.value
+            ? chatContentList.value
+                  .filter((item) => item.content.some((content: string) => content.trim() !== ""))
+                  .map((item) => item.content)
+            : chatContentList.value
+                  .filter((item) => item.title)
+                  .map((item) => ({ title: item.title, content: item.content }))
+                  .filter((item: { title: string; content: string[] }) => item.title.trim() !== ""),
     });
     chatContentList.value = [];
     uni.navigateBack();
 };
 
-const back = () => {
-    if (chatContentList.value.length > 0) {
-        chatContentList.value = [];
-        isGenerating.value = false;
-    } else {
-        uni.navigateBack();
-    }
-};
-
 onLoad((options: any) => {
     textLimit.value = options.limit;
+    if (options.montageType) {
+        montageType.value = parseInt(options.montageType);
+    }
 });
 </script>
 
 <style scoped lang="scss">
-@mixin content-box {
-    @apply absolute top-[-4rpx] left-[-4rpx] w-[100%] h-[100%]  p-[4rpx] rounded-[16rpx] content-[''];
-    background: conic-gradient(#47d59f, #37cced);
-    -webkit-mask: linear-gradient(#47d59f 0 100%) content-box, linear-gradient(#37cced 0 100%);
-    -webkit-mask-composite: xor;
-}
-
 .prompt-length-item,
 .prompt-num-item {
-    @apply w-[84rpx] h-[72rpx] flex items-center justify-center  bg-white text-[26rpx]  relative rounded-[16rpx];
+    @apply w-[84rpx] h-[72rpx] flex items-center justify-center bg-white text-[26rpx] relative rounded-[16rpx];
     &.active {
-        @apply font-bold text-black;
-
-        &::before {
-            @include content-box;
-        }
+        @apply font-bold text-black shadow-[0rpx_0rpx_0rpx_2rpx_#0065FB];
     }
 }
 
 .copywriter-item {
-    @apply relative rounded-[16rpx] bg-white shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] p-4;
-    &::before {
-        @include content-box;
-    }
+    @apply relative rounded-[16rpx] bg-white p-4;
 }
 
 .send-btn {

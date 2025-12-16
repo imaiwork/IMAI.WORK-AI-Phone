@@ -74,9 +74,13 @@
 import { getRect } from "@/utils/util";
 import { generatePrompt } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
+import { TokensSceneEnum } from "@/enums/appEnums";
 import { aiTemplateCopywriter } from "../../config/copywriter";
 import { ListenerTypeEnum } from "../../enums";
-import { TokensSceneEnum } from "@/enums/appEnums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
+
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
 
@@ -151,7 +155,7 @@ const scrollToBottom = async () => {
 };
 
 const useContent = (content: string) => {
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.AI_COPYWRITER,
         data: { content },
     });

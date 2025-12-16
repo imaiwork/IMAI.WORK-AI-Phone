@@ -167,21 +167,21 @@
         :video-url="playItem.url"
         :poster="playItem.pic"
         @update:show="showVideoPreview = false"></video-preview-v2>
-    <u-popup v-model="shoeEditPopup" mode="center" width="90%" :border-radius="20">
+    <u-popup v-model="showEditPopup" mode="center" width="90%" :border-radius="20">
         <view class="p-4 bg-white rounded-[20rpx]">
             <view class="text-[30rpx] font-bold text-center mt-2">编辑名称</view>
             <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
                 <u-input
                     v-model="newName"
                     placeholder="请输入名称"
-                    maxlength="30"
+                    maxlength="50"
                     clearable
                     placeholder-style="color: #0000004d; font-size: 26rpx;" />
             </view>
             <view class="flex items-center gap-x-5 mt-[56rpx]">
                 <view
                     class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold text-[#000000b3]"
-                    @click="shoeEditPopup = false">
+                    @click="showEditPopup = false">
                     取消
                 </view>
                 <view
@@ -196,7 +196,6 @@
 
 <script setup lang="ts">
 import { getShanjianTaskRecord, deleteShanjianTaskRecord, updateShanjianTaskName } from "@/api/digital_human";
-import VideoPreviewV2 from "@/ai_modules/digital_human/components/video-preview-v2/video-preview-v2.vue";
 
 const dataLists = ref<any[]>([]);
 const dataCount = ref(0);
@@ -207,7 +206,7 @@ const isChoose = ref(false);
 
 const selectedLists = ref<any[]>([]);
 
-const shoeEditPopup = ref(false);
+const showEditPopup = ref(false);
 const editIndex = ref(-1);
 const newName = ref("");
 
@@ -320,7 +319,7 @@ const toPublishTask = () => {
 const handleEdit = (index: number) => {
     editIndex.value = index;
     newName.value = dataLists.value[index].name;
-    shoeEditPopup.value = true;
+    showEditPopup.value = true;
 };
 
 const handleEditConfirm = async () => {
@@ -328,7 +327,7 @@ const handleEditConfirm = async () => {
         uni.$u.toast("请输入名称");
         return;
     }
-    shoeEditPopup.value = false;
+    showEditPopup.value = false;
     uni.showLoading({
         title: "修改中...",
         mask: true,

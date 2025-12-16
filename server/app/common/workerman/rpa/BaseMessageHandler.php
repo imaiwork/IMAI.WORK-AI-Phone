@@ -32,6 +32,12 @@ abstract class BaseMessageHandler
         5 => 'ks',
     );
 
+    protected array $accountSource = array(
+        3 => 60,
+        4 => 70,
+        5 => 80
+    );
+
     public function __construct(RpaSocketService $service)
     {
         $this->service = $service;
@@ -47,6 +53,8 @@ abstract class BaseMessageHandler
             return $this->service->send($uid, $payload);
         } catch (\Exception $e) {
             $this->setLog('sendResponse' . $e, 'error');
+        } finally{
+            unset($payload);
         }
     }
 
@@ -102,6 +110,8 @@ abstract class BaseMessageHandler
             }
         } catch (\Exception $e) {
             $this->setLog('sendError' . $e, 'error');
+        } finally{
+            unset($payload);
         }
     }
 
@@ -119,7 +129,7 @@ abstract class BaseMessageHandler
                 return false;
             }
             return true;
-            
+
             if ($connection->isMsgRunning == 1) {
                 return false;
             } else {
@@ -129,7 +139,7 @@ abstract class BaseMessageHandler
             $this->setLog('checkDeviceStatus' . $e, 'error');
         }
     }
-    
+
     public function base64ToImage($item)
     {
         if (!trim($item['avatar'])) {
@@ -165,6 +175,8 @@ abstract class BaseMessageHandler
                 Log::channel('socket')->write($content, $level);
             } catch (\Exception  $e) {
                 Log::channel('socket')->write($e, $level);
+            } finally{
+                unset($content);
             }
         }
     }

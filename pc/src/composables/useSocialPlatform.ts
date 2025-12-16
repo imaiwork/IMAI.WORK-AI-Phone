@@ -9,7 +9,7 @@ export const useSocialPlatform = () => {
     // 社媒平台列表
     const socialPlatformList = [
         { name: "小红书", icon: RedBookIcon, type: AppTypeEnum.XHS, show: true },
-        { name: "视频号", icon: SphIcon, type: AppTypeEnum.SPH, show: true },
+        { name: "视频号", icon: SphIcon, type: AppTypeEnum.SPH, show: false },
         { name: "抖音", icon: DouyinIcon, type: AppTypeEnum.DOUYIN, show: true },
         { name: "快手", icon: KuaishouIcon, type: AppTypeEnum.KUAISHOU, show: true },
     ];

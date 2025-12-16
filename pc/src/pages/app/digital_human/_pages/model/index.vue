@@ -193,11 +193,14 @@ const handleRetry = async (id: number) => {
         theme: "dark",
         onConfirm: async () => {
             try {
+                feedback.loading("重试中...");
                 await retryAnchor({ anchor_id: id });
                 resetPage();
                 feedback.msgSuccess("重试成功");
             } catch (error) {
                 feedback.msgError(error || "重试失败");
+            } finally {
+                feedback.closeLoading();
             }
         },
     });

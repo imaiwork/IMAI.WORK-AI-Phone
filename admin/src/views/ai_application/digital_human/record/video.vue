@@ -54,6 +54,7 @@
                 @selection-change="handleSelectionChange">
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
                 <el-table-column label="ID" prop="id" min-width="60" />
+                <el-table-column label="任务ID" prop="task_id" width="160" show-overflow-tooltip />
                 <el-table-column label="头像" min-width="100">
                     <template #default="{ row }">
                         <el-avatar :src="row.avatar" :size="50" />
@@ -208,9 +209,7 @@ const handleSelectionChange = (val: any[]) => {
 const handlePlay = async (row: any) => {
     showVideo.value = true;
     videoData.url = row.result_url;
-    if (row.clip_result_url) {
-        videoData.ai_url = row.clip_result_url;
-    }
+    videoData.ai_url = row.clip_result_url || "";
 };
 
 const handleDelete = async (id: number | number[]) => {

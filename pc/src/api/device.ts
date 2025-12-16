@@ -3,6 +3,11 @@ export function getDeviceList(params: any) {
     return $request.get({ url: "/device.device/lists", params });
 }
 
+// 更新设备
+export function updateDevice(params: any) {
+    return $request.post({ url: "/device.device/update", params });
+}
+
 // 添加设备
 export function addDevice(params: any) {
     return $request.post({ url: "/sv.device/add", params });

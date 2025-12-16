@@ -66,8 +66,7 @@ class ShanjianVideoTaskController extends BaseApiController
             $key = md5(json_encode($data));
             $val = cache($key);
             if ($val) {
-                echo 1;
-               return false;
+               return $this->fail('重复请求');
             }
             cache($key, 1, 20);
 

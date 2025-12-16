@@ -1,226 +1,226 @@
 <template>
-    <div class="gap-4">
-        <div class="w-full flex flex-wrap gap-4">
-            <el-card class="!border-none flex-1" shadow="never">
+    <div class="space-y-5">
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+            <el-card class="!border-none !rounded-xl shadow-lg" shadow="never">
                 <template #header>
                     <div class="flex justify-between items-center">
                         <span class="card-title">版本信息</span>
-                        <!-- <el-popover width="200">
-                            <template #reference>
-                                <el-button type="primary">技术支持</el-button>
-                            </template>
-                            <div class="flex justify-center items-center">
-                                <img class="w-[150px] h-[150px]" src="@/assets/images/support.png" />
-                            </div>
-                        </el-popover> -->
-                    </div>
-                </template>
-                <div class="relative">
-                    <div class="absolute top-2 right-0">
                         <el-button link @click="refreshData">
-                            <Icon name="el-icon-Refresh" :size="20"></Icon>
-                            <span>刷新</span>
+                            <Icon name="el-icon-Refresh" :size="16" />
+                            <span class="ml-1">刷新</span>
                         </el-button>
                     </div>
+                </template>
+                <div>
                     <div class="flex leading-9 items-center">
-                        <div class="w-20">平台名称</div>
-                        <span> {{ getWebName }}</span>
+                        <div class="w-20 flex-shrink-0" style="color: #6b7280">平台名称</div>
+                        <span class="font-medium"> {{ getWebName }}</span>
                         <div class="ml-2 leading-[0]">
                             <router-link :to="getRoutePath('setting.web.web_setting/getWebsite')">
-                                <Icon name="el-icon-Edit"></Icon>
+                                <Icon name="el-icon-Edit" />
                             </router-link>
                         </div>
                     </div>
-                    <div class="flex leading-9">
-                        <div class="w-20">更新时间</div>
-                        <span> {{ workbenchData.version.update_time }}</span>
+                    <div class="flex leading-9 items-center">
+                        <div class="w-20 flex-shrink-0" style="color: #6b7280">当前版本</div>
+                        <span class="font-medium"> {{ workbenchData.version.version_name }}</span>
                     </div>
-                    <div class="flex leading-9">
-                        <div class="w-20">安装时间</div>
-                        <span> {{ workbenchData.version.install_time }}</span>
+                    <div class="flex leading-9 items-center">
+                        <div class="w-20 flex-shrink-0" style="color: #6b7280">更新时间</div>
+                        <span class="font-medium"> {{ workbenchData.version.update_time }}</span>
                     </div>
-                    <div class="flex leading-9">
-                        <div class="w-20">授权状态</div>
+                    <div class="flex leading-9 items-center">
+                        <div class="w-20 flex-shrink-0" style="color: #6b7280">安装时间</div>
+                        <span class="font-medium"> {{ workbenchData.version.install_time }}</span>
+                    </div>
+
+                    <div class="flex leading-9 items-center">
+                        <div class="w-20 flex-shrink-0" style="color: #6b7280">技术标识</div>
+                        <span class="font-medium"> {{ config.by_name }}</span>
+                        <div class="ml-2 leading-[0]">
+                            <router-link :to="getRoutePath('setting.setting/activate')">
+                                <Icon name="el-icon-Edit" />
+                            </router-link>
+                        </div>
+                    </div>
+                    <div class="flex leading-9 items-center">
+                        <div class="w-20 flex-shrink-0" style="color: #6b7280">授权状态</div>
                         <span>
                             <el-tag type="success" v-if="config.is_auth == '1'">已授权</el-tag>
                             <el-tag type="danger" v-else>未授权</el-tag>
                         </span>
                         <router-link to="/setting/system/update" v-if="workbenchData.is_update">
-                            <el-button class="ml-2" type="primary"> 有新版本更新 </el-button>
+                            <el-button class="ml-2" type="primary" size="small"> 有新版本更新 </el-button>
                         </router-link>
                     </div>
-                    <div class="flex leading-9">
-                        <div class="w-20">当前版本</div>
-                        <span> {{ workbenchData.version.version_name }}</span>
+                </div>
+            </el-card>
+            <el-card class="!border-none !rounded-xl shadow-lg" shadow="never">
+                <template #header>
+                    <span class="card-title">用户统计</span>
+                </template>
+                <div class="grid grid-cols-2 gap-4">
+                    <div
+                        class="relative p-4 rounded-xl overflow-hidden text-white"
+                        style="background: linear-gradient(to bottom right, #3b82f6, #1d4ed8)">
+                        <Icon name="el-icon-User" class="absolute -right-4 -bottom-4 opacity-20" :size="80" />
+                        <div class="text-sm">总用户</div>
+                        <div class="text-3xl font-bold mt-1">
+                            {{ workbenchData.members?.total_members || 0 }}
+                        </div>
                     </div>
-                    <div class="flex leading-9 items-center">
-                        <div class="w-20">技术标识</div>
-                        <span> {{ config.by_name }}</span>
-                        <div class="ml-2 leading-[0]">
-                            <router-link :to="getRoutePath('setting.setting/activate')">
-                                <Icon name="el-icon-Edit"></Icon>
-                            </router-link>
+                    <div
+                        class="relative p-4 rounded-xl overflow-hidden text-white"
+                        style="background: linear-gradient(to bottom right, #38bdf8, #0284c7)">
+                        <Icon name="el-icon-User" class="absolute -right-4 -bottom-4 opacity-20" :size="80" />
+                        <div class="text-sm">今日新增</div>
+                        <div class="text-3xl font-bold mt-1">
+                            {{ workbenchData.members?.today_members || 0 }}
+                        </div>
+                    </div>
+                    <div
+                        class="relative p-4 rounded-xl overflow-hidden text-white"
+                        style="background: linear-gradient(to bottom right, #8b5cf6, #6d28d9)">
+                        <Icon name="el-icon-User" class="absolute -right-4 -bottom-4 opacity-20" :size="80" />
+                        <div class="text-sm">充值用户</div>
+                        <div class="text-3xl font-bold mt-1">
+                            {{ workbenchData.members?.recharge_members || 0 }}
+                        </div>
+                    </div>
+                    <div
+                        class="relative p-4 rounded-xl overflow-hidden text-white"
+                        style="background: linear-gradient(to bottom right, #818cf8, #4f46e5)">
+                        <Icon name="el-icon-User" class="absolute -right-4 -bottom-4 opacity-20" :size="80" />
+                        <div class="text-sm">当前在线</div>
+                        <div class="text-3xl font-bold mt-1">
+                            {{ workbenchData.members?.active_members || 0 }}
                         </div>
                     </div>
                 </div>
             </el-card>
-            <el-card class="!border-none flex-1" shadow="never">
+            <el-card class="!border-none !rounded-xl shadow-lg" shadow="never">
                 <template #header>
-                    <span>用户统计</span>
+                    <span class="card-title">财务数据</span>
                 </template>
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-white p-4 rounded-lg shadow-lighter flex justify-between">
-                        <div
-                            class="w-[28px] h-[28px] flex justify-center items-center bg-[#F59B22] rounded-full flex-shrink-0">
-                            <Icon name="el-icon-User" color="#ffffff" :size="20"></Icon>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-2xl font-bold leading-6">
-                                <span class="text-5xl"> {{ workbenchData.members?.total_members || 0 }} </span>人
-                            </div>
-                            <div class="text-lg text-info mt-3">总用户</div>
+                    <div
+                        class="relative p-4 rounded-xl overflow-hidden text-white"
+                        style="background: linear-gradient(to bottom right, #10b981, #047857)">
+                        <Icon name="el-icon-Money" class="absolute -right-4 -bottom-4 opacity-20" :size="80" />
+                        <div class="text-sm">总收入</div>
+                        <div class="text-3xl font-bold mt-1">
+                            {{ workbenchData.finance?.total_income || 0 }}
                         </div>
                     </div>
-                    <div class="bg-white p-4 rounded-lg shadow-lighter flex justify-between">
-                        <div
-                            class="w-[28px] h-[28px] flex justify-center items-center bg-[#3D3CDD] rounded-full flex-shrink-0">
-                            <Icon name="el-icon-User" color="#ffffff" :size="20"></Icon>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-2xl font-bold leading-6">
-                                <span class="text-5xl"> {{ workbenchData.members?.today_members || 0 }} </span>人
-                            </div>
-                            <div class="text-lg text-info mt-3">今日新增用户数</div>
+                    <div
+                        class="relative p-4 rounded-xl overflow-hidden text-white"
+                        style="background: linear-gradient(to bottom right, #4ade80, #16a34a)">
+                        <Icon name="el-icon-Money" class="absolute -right-4 -bottom-4 opacity-20" :size="80" />
+                        <div class="text-sm">今日收入</div>
+                        <div class="text-3xl font-bold mt-1">
+                            {{ workbenchData.finance?.today_income || 0 }}
                         </div>
                     </div>
-                    <div class="bg-white p-4 rounded-lg shadow-lighter flex justify-between">
-                        <div
-                            class="w-[28px] h-[28px] flex justify-center items-center bg-[#38C66B] rounded-full flex-shrink-0">
-                            <Icon name="el-icon-User" color="#ffffff" :size="20"></Icon>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-2xl font-bold leading-6">
-                                <span class="text-5xl"> {{ workbenchData.members?.recharge_members || 0 }} </span>人
-                            </div>
-                            <div class="text-lg text-info mt-3">充值用户</div>
+                    <div
+                        class="relative p-4 rounded-xl overflow-hidden text-white"
+                        style="background: linear-gradient(to bottom right, #14b8a6, #0f766e)">
+                        <Icon name="el-icon-Tickets" class="absolute -right-4 -bottom-4 opacity-20" :size="80" />
+                        <div class="text-sm">总订单数</div>
+                        <div class="text-3xl font-bold mt-1">
+                            {{ workbenchData.finance?.total_orders || 0 }}
                         </div>
                     </div>
-                    <div class="bg-white p-4 rounded-lg shadow-lighter flex justify-between">
-                        <div
-                            class="w-[28px] h-[28px] flex justify-center items-center bg-[#E9E305] rounded-full flex-shrink-0">
-                            <Icon name="el-icon-User" color="#ffffff" :size="20"></Icon>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-2xl font-bold leading-6">
-                                <span class="text-5xl"> {{ workbenchData.members?.active_members || 0 }} </span>人
-                            </div>
-                            <div class="text-lg text-info mt-3">当前在线用户数</div>
-                        </div>
-                    </div>
-                </div>
-            </el-card>
-            <el-card class="!border-none w-full xl:flex-1" shadow="never">
-                <template #header>
-                    <span>财务数据</span>
-                </template>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="text-white bg-[#F59B22] p-4 rounded-lg flex justify-between gap-2">
-                        <Icon name="el-icon-Money" :size="20"></Icon>
-                        <div class="text-right">
-                            <div class="text-5xl font-bold leading-6">
-                                {{ workbenchData.finance?.total_income || 0 }}
-                            </div>
-                            <div class="text-lg mt-3">总收入</div>
-                        </div>
-                    </div>
-                    <div class="text-white bg-[#3D3CDD] p-4 rounded-lg flex justify-between gap-2">
-                        <Icon name="el-icon-Tickets" :size="20"></Icon>
-                        <div class="text-right">
-                            <div class="text-5xl font-bold leading-6">
-                                {{ workbenchData.finance?.total_orders || 0 }}
-                            </div>
-                            <div class="text-lg mt-3">订单数</div>
-                        </div>
-                    </div>
-                    <div class="text-white bg-[#38C66B] p-4 rounded-lg flex justify-between gap-2">
-                        <Icon name="el-icon-Money" :size="20"></Icon>
-                        <div class="text-right">
-                            <div class="text-5xl font-bold leading-6">
-                                {{ workbenchData.finance?.today_income || 0 }}
-                            </div>
-                            <div class="text-lg mt-3">今日收入</div>
-                        </div>
-                    </div>
-                    <div class="text-white bg-[#E9E305] p-4 rounded-lg flex justify-between gap-2">
-                        <Icon name="el-icon-Tickets" :size="20"></Icon>
-                        <div class="text-right">
-                            <div class="text-5xl font-bold leading-6">
-                                {{ workbenchData.finance?.today_orders || 0 }}
-                            </div>
-                            <div class="text-lg mt-3">今日订单数</div>
+                    <div
+                        class="relative p-4 rounded-xl overflow-hidden text-white"
+                        style="background: linear-gradient(to bottom right, #22d3ee, #0891b2)">
+                        <Icon name="el-icon-Tickets" class="absolute -right-4 -bottom-4 opacity-20" :size="80" />
+                        <div class="text-sm">今日订单数</div>
+                        <div class="text-3xl font-bold mt-1">
+                            {{ workbenchData.finance?.today_orders || 0 }}
                         </div>
                     </div>
                 </div>
             </el-card>
         </div>
-        <div class="grow min-h-0 flex flex-col gap-4 mt-4">
-            <el-card class="!border-none" shadow="never">
-                <template #header>
-                    <div class="flex justify-between items-center">
-                        <span class="card-title">算力信息</span>
-                        <el-button type="primary" @click="handleRecharge"> 充值算力 </el-button>
-                    </div>
-                </template>
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="text-center">
-                        <div class="leading-10">今日使用量</div>
-                        <div class="text-6xl">
-                            {{ workbenchData.tokens_info?.today_use || 0 }}
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <div class="leading-10">已使用算力</div>
-                        <div class="text-6xl">
-                            {{ workbenchData.tokens_info?.total_use || 0 }}
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <div class="leading-10">可用额度</div>
-                        <div class="text-6xl">
-                            {{ workbenchData.tokens_info?.total_balance || 0 }}
-                        </div>
+
+        <el-card class="!border-none !rounded-xl shadow-lg" shadow="never">
+            <template #header>
+                <div class="flex justify-between items-center">
+                    <span class="card-title">算力信息</span>
+                    <el-button type="primary" @click="handleRecharge"> 充值算力 </el-button>
+                </div>
+            </template>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-sm" style="color: #6b7280">今日使用量</div>
+                    <div class="text-4xl mt-2 font-semibold">
+                        {{ workbenchData.tokens_info?.today_use || 0 }}
                     </div>
                 </div>
-            </el-card>
-            <ConfigTable title="通用聊天" :data="getCommonConfig" />
-            <ConfigTable title="AI数字人" :data="getAiPersonConfig" />
-            <ConfigTable title="美工设计" :data="getAiDrawConfig" />
-            <ConfigTable title="思维导图" :data="getMindMapConfig" />
-            <ConfigTable title="会议纪要" :data="getMeetingConfig" />
-            <ConfigTable title="AI陪练" :data="getAiTrainConfig" />
-            <ConfigTable title="AI客服" :data="getServiceConfig" />
-            <ConfigTable title="AI面试" :data="getInterviewConfig" />
-            <ConfigTable title="知识库" :data="getKnbConfig" />
-            <ConfigTable title="AI视频获客" :data="getSphConfig" />
-            <ConfigTable title="小红书" :data="getRedbookConfig" />
-            <ConfigTable title="其他" :data="getOtherConfig" />
-        </div>
+                <div class="text-center">
+                    <div class="text-sm" style="color: #6b7280">已使用算力</div>
+                    <div class="text-4xl mt-2 font-semibold">
+                        {{ workbenchData.tokens_info?.total_use || 0 }}
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm" style="color: #6b7280">可用额度</div>
+                    <div class="text-4xl mt-2 font-semibold">
+                        {{ workbenchData.tokens_info?.total_balance || 0 }}
+                    </div>
+                </div>
+            </div>
+        </el-card>
+
+        <el-card class="!border-none !rounded-xl shadow-lg" shadow="never">
+            <template #header>
+                <span class="card-title">模型算力配置</span>
+            </template>
+            <el-tabs>
+                <el-tab-pane label="聊天">
+                    <ConfigTable :data="getCommonConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="AI数字人">
+                    <ConfigTable :data="getAiPersonConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="美工设计">
+                    <ConfigTable :data="getAiDrawConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="思维导图">
+                    <ConfigTable :data="getMindMapConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="会议纪要">
+                    <ConfigTable :data="getMeetingConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="AI陪练">
+                    <ConfigTable :data="getAiTrainConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="AI客服">
+                    <ConfigTable :data="getServiceConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="AI面试">
+                    <ConfigTable :data="getInterviewConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="知识库">
+                    <ConfigTable :data="getKnbConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="AI视频获客">
+                    <ConfigTable :data="getSphConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="小红书">
+                    <ConfigTable :data="getRedbookConfig" />
+                </el-tab-pane>
+                <el-tab-pane label="其他">
+                    <ConfigTable :data="getOtherConfig" />
+                </el-tab-pane>
+            </el-tabs>
+        </el-card>
     </div>
     <popup ref="rechargePopup" title="充值算力" width="500px" async cancel-button-text="" confirm-button-text="">
         <el-form :model="rechargeForm" :rules="rechargeRules" ref="rechargeFormRef">
             <el-form-item label="兑换CDK" prop="cdkey">
                 <div class="w-full">
                     <el-input v-model="rechargeForm.cdkey" placeholder="请输入兑换CDK" />
-                    <!-- <div class="text-primary flex justify-end">
-                        <el-popover trigger="click">
-                            <template #reference>
-                                <span class="cursor-pointer"> 未有CDK？点此前往购买 </span>
-                            </template>
-                            <div>
-                                <img src="@/assets/images/cdk_qrcode.jpg" />
-                            </div>
-                        </el-popover>
-                    </div> -->
                 </div>
             </el-form-item>
         </el-form>
@@ -292,7 +292,9 @@ const getData = () => {
 
 const getCommonConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) =>
-        ["common_chat", "scene_chat", "coze_agent_chat", "coze_workflow", "gemini_chat"].includes(item.scene)
+        ["common_chat", "scene_chat", "coze_agent_chat", "coze_workflow", "gemini_chat", "openai_chat"].includes(
+            item.scene
+        )
     );
 });
 
@@ -300,6 +302,10 @@ const getAiPersonConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) =>
         [
             "human_copywriting",
+            "human_avatar",
+            "human_voice",
+            "human_video",
+            "human_audio",
             "human_video_ym",
             "human_audio_ym",
             "human_avatar_ym",
@@ -313,6 +319,11 @@ const getAiPersonConfig = computed(() => {
             "human_voice_shanjian",
             "human_video_shanjian",
             "shanjian_copywriting_create",
+            "shanjian_realman_broadcast",
+            "shanjian_broadcast_mixcut",
+            "shanjian_news_mixcut",
+            "news_mixcut_title",
+            "sora_video_create",
         ].includes(item.scene)
     );
 });
@@ -336,6 +347,8 @@ const getAiDrawConfig = computed(() => {
             "doubao_txt_to_video",
             "doubao_img_to_video",
             "ai_draw_video_prompt",
+            "combined_picture_title",
+            "combined_picture",
         ].includes(item.scene)
     );
 });
@@ -358,7 +371,7 @@ const getInterviewConfig = computed(() => {
 
 const getServiceConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) =>
-        ["ai_wechat", "openai_chat", "ai_reply_like", "ai_xhs"].includes(item.scene)
+        ["ai_wechat", "ai_reply_like", "ai_xhs"].includes(item.scene)
     );
 });
 

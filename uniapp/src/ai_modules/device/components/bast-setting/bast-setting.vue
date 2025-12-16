@@ -25,7 +25,7 @@
                 <view class="mt-[12rpx]">
                     <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1">
                         <navigator
-                            :url="`/ai_modules/device/pages/account_choose/account_choose?account=${JSON.stringify(
+                            :url="`/ai_modules/device/pages/account_choose/account_choose?accounts=${JSON.stringify(
                                 formData.accounts
                             )}`"
                             class="flex items-center justify-between h-[70rpx]"
@@ -179,18 +179,10 @@ const handleStartTimeChange = (e: any, index: number) => {
     const { value } = e.detail;
     const data = formData.value.time_config[index];
     // 判断时间不能小于当前时间
-    const startTIme = new Date(`2000/01/01 ${new Date().toLocaleTimeString()}`);
     const endTime = new Date(`2000/01/01 ${value}`);
-    if (endTime.getTime() < startTIme.getTime()) {
-        uni.$u.toast("开始时间不能小于当前时间");
-        return;
-    }
     data.start_time = value;
     endTime.setMinutes(endTime.getMinutes() + 30);
     data.end_time = uni.$u.timeFormat(endTime, "hh:MM");
-    const { errors } = validateSchedule(formData.value.time_config);
-
-    timeErrors.value = errors;
 };
 
 const handleEndTimeChange = (e: any, index: number) => {

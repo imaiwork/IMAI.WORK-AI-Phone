@@ -41,6 +41,8 @@ class GetWechatDeviceCodeHandler extends BaseMessageHandler
             $this->payload['code'] =  WorkerEnum::DEVICE_ERROR_CODE;
             $this->payload['type'] = 'error';
             $this->sendError($this->connection,  $this->payload);
+        } finally{
+            unset($content);
         }
     }
 }

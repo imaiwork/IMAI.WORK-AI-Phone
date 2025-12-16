@@ -51,7 +51,7 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), {
     label: "",
-    maxSize: 10,
+    maxSize: 5,
     minSize: 0,
     ratioSize: () => [2, 1],
     limit: 1,

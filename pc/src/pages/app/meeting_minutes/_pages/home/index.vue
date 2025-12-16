@@ -174,7 +174,14 @@
                 <span class="text-[#B3B3B3] text-xs">免责声明：内容由AI大模型生成，请仔细甄别。</span>
             </div>
         </div>
-        <AddAudio v-if="showAdd" ref="addAudioRef" @close="showAdd = false" @success="loopLists" />
+        <AddAudio
+            v-if="showAdd"
+            ref="addAudioRef"
+            @close="showAdd = false"
+            @success="
+                clearTimeout(loopTimer);
+                loopLists;
+            " />
         <KnbBind v-if="showKnbBind" ref="knbBindRef" @close="showKnbBind = false" />
     </div>
 </template>
@@ -185,6 +192,7 @@ import { TurnStatus } from "../../_enums";
 import AddAudio from "./_components/add-audio.vue";
 import useHandleApi from "../../_hooks/useHandleApi";
 import KnbBind from "@/components/knb-bind/index.vue";
+import { clearTimeout } from "node:timers";
 const emit = defineEmits(["openRealTime"]);
 
 const router = useRouter();

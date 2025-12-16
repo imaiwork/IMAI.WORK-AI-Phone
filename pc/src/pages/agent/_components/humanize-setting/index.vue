@@ -34,7 +34,7 @@
                             </div>
                         </ElFormItem>
                         <!-- 词汇多样性 -->
-                        <ElFormItem label="词汇多样性">
+                        <ElFormItem label="词汇多样性" v-if="formData.model_id != ModelIdEnum.CLAUDE_SONNET_4_5">
                             <div class="flex items-center w-full gap-x-4">
                                 <div class="flex-1">
                                     <ElSlider v-model="formData.top_p" :min="0.01" :max="1" :step="0.1" />
@@ -48,7 +48,7 @@
                             </div>
                         </ElFormItem>
                         <!-- 重复词频率 -->
-                        <ElFormItem label="重复词频率" v-if="formData.model_id == ModelIdEnum.GPT_4O">
+                        <ElFormItem label="重复词频率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                             <div class="flex items-center w-full gap-x-4">
                                 <div class="flex-1">
                                     <ElSlider v-model="formData.frequency_penalty" :min="-2" :max="2" :step="0.1" />
@@ -62,7 +62,7 @@
                             </div>
                         </ElFormItem>
                         <!-- 特定词重复率 -->
-                        <ElFormItem label="特定词重复率" v-if="formData.model_id == ModelIdEnum.GPT_4O">
+                        <ElFormItem label="特定词重复率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                             <div class="flex items-center w-full gap-x-4">
                                 <div class="flex-1">
                                     <ElSlider v-model="formData.presence_penalty" :min="0" :max="1" :step="0.1" />
@@ -94,7 +94,7 @@
                             </div>
                         </ElFormItem>
                         <!-- 显示前几个候选词对数概率 -->
-                        <ElFormItem label="显示前几个候选词对数概率" v-if="formData.model_id == ModelIdEnum.GPT_4O">
+                        <ElFormItem label="显示前几个候选词对数概率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                             <div class="flex items-center w-full gap-x-4">
                                 <div class="flex-1">
                                     <ElSlider v-model="formData.top_logprobs" :min="0" :max="20" />
@@ -107,8 +107,21 @@
                             </div>
                         </ElFormItem>
                         <!-- 显示候选词 -->
-                        <ElFormItem label="显示候选词" v-if="formData.model_id == ModelIdEnum.GPT_4O">
+                        <ElFormItem label="显示候选词" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                             <ElSwitch v-model="formData.logprobs" :active-value="1" :inactive-value="0" />
+                        </ElFormItem>
+                        <!-- 返回长度 -->
+                        <ElFormItem label="返回长度">
+                            <div class="flex items-center w-full gap-x-4">
+                                <div class="flex-1">
+                                    <ElSlider v-model="formData.max_tokens" :min="1" :max="getMaxTokens" />
+                                </div>
+                                <ElInputNumber
+                                    v-model="formData.max_tokens"
+                                    controls-position="right"
+                                    :min="1"
+                                    :max="getMaxTokens" />
+                            </div>
                         </ElFormItem>
                     </ElForm>
                 </div>
@@ -133,10 +146,17 @@ const defaultTypes = [
 ];
 
 const getMaxTemperature = computed(() => {
-    if (formData.value.model_id == ModelIdEnum.GPT_4O) {
+    if (formData.value.model_id == ModelIdEnum.DEEPSEEK) {
         return 2;
     }
     return 1;
+});
+
+const getMaxTokens = computed(() => {
+    if (formData.value.model_id == ModelIdEnum.DEEPSEEK) {
+        return 4096;
+    }
+    return 10000;
 });
 
 const handleChangeType = (type: ModeTypeEnum) => {

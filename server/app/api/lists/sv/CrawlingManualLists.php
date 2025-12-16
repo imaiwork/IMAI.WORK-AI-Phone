@@ -35,7 +35,7 @@ class CrawlingManualLists extends BaseApiDataLists implements ListsSearchInterfa
                     $item->start_time = strtotime($item->create_time);
                 }
                 $item->end_time = SvCrawlingManualTaskRecord::where('task_id', $item->id)->max('update_time');
-                if(!isset($item->end_time) || is_null($item->end_time)){
+                if(!isset($item->end_time) || is_null($item->end_time) || $item->end_time == 0){
                     $item->end_time = time();
                 }
                 $item->save();

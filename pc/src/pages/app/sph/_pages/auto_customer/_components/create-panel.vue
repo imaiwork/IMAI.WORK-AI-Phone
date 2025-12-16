@@ -61,9 +61,11 @@
                                     :show-arrow="false">
                                     <ElOption
                                         v-for="item in deviceOptions.deviceLists"
-                                        :label="item.device_code"
+                                        :label="item.device_name"
                                         :value="item.device_code"
-                                        :key="item.device_code"></ElOption>
+                                        :key="item.device_code">
+                                        {{ item.device_name }} ({{ item.device_code }})
+                                    </ElOption>
                                 </ElSelect>
                             </div>
                         </div>
@@ -185,7 +187,7 @@
                                             </div>
                                             <div class="mt-5">
                                                 云端OCR识别（每条扣
-                                                {{ getOCRCloudToken }} 算力）使用云端OCR服务识别微信号，每条线索消耗{{
+                                                {{ getOCRCloudToken }} 算力）使用云端OCR服务识别微信号，每次识别消耗{{
                                                     getOCRCloudToken
                                                 }}算力，识别率更高，支持更复杂的图片和场景
                                             </div>

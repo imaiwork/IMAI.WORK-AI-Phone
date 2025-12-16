@@ -1,18 +1,44 @@
 <template>
-    <div>
-        <ConfigTable title="通用聊天" :data="getCommonConfig" />
-        <ConfigTable title="AI数字人" :data="getAiPersonConfig" />
-        <ConfigTable title="美工设计" :data="getAiDrawConfig" />
-        <ConfigTable title="思维导图" :data="getMindMapConfig" />
-        <ConfigTable title="会议纪要" :data="getMeetingConfig" />
-        <ConfigTable title="AI陪练" :data="getAiTrainConfig" />
-        <ConfigTable title="AI客服" :data="getServiceConfig" />
-        <ConfigTable title="AI面试" :data="getInterviewConfig" />
-        <ConfigTable title="知识库" :data="getKnbConfig" />
-        <ConfigTable title="AI视频获客" :data="getSphConfig" />
-        <ConfigTable title="小红书" :data="getRedbookConfig" />
-        <ConfigTable title="其他" :data="getOtherConfig" />
-    </div>
+    <el-card class="!border-none" shadow="never">
+        <el-tabs>
+            <el-tab-pane label="通用">
+                <ConfigTable :data="getCommonConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="AI数字人">
+                <ConfigTable :data="getAiPersonConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="美工设计">
+                <ConfigTable :data="getAiDrawConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="思维导图">
+                <ConfigTable :data="getMindMapConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="会议纪要">
+                <ConfigTable :data="getMeetingConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="AI陪练">
+                <ConfigTable :data="getAiTrainConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="AI客服">
+                <ConfigTable :data="getServiceConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="AI面试">
+                <ConfigTable :data="getInterviewConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="知识库">
+                <ConfigTable :data="getKnbConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="AI视频获客">
+                <ConfigTable :data="getSphConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="小红书">
+                <ConfigTable :data="getRedbookConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="其他">
+                <ConfigTable :data="getOtherConfig" />
+            </el-tab-pane>
+        </el-tabs>
+    </el-card>
     <footer-btns>
         <el-button
             v-perms="['finance.marketing.creditset/save']"
@@ -35,7 +61,9 @@ const tableData = ref<any[]>([]);
 
 const getCommonConfig = computed(() => {
     return tableData.value.filter((item) =>
-        ["common_chat", "scene_chat", "coze_agent_chat", "coze_workflow", "gemini_chat"].includes(item.scene)
+        ["common_chat", "scene_chat", "coze_agent_chat", "coze_workflow", "gemini_chat", "openai_chat"].includes(
+            item.scene
+        )
     );
 });
 
@@ -43,6 +71,10 @@ const getAiPersonConfig = computed(() => {
     return tableData.value.filter((item) =>
         [
             "human_copywriting",
+            "human_avatar",
+            "human_voice",
+            "human_video",
+            "human_audio",
             "human_video_ym",
             "human_avatar_ym",
             "human_audio_ym",
@@ -56,6 +88,11 @@ const getAiPersonConfig = computed(() => {
             "human_voice_shanjian",
             "human_video_shanjian",
             "shanjian_copywriting_create",
+            "shanjian_realman_broadcast",
+            "shanjian_broadcast_mixcut",
+            "shanjian_news_mixcut",
+            "news_mixcut_title",
+            "sora_video_create",
         ].includes(item.scene)
     );
 });
@@ -79,6 +116,8 @@ const getAiDrawConfig = computed(() => {
             "doubao_txt_to_video",
             "doubao_img_to_video",
             "ai_draw_video_prompt",
+            "combined_picture_title",
+            "combined_picture",
         ].includes(item.scene)
     );
 });
@@ -100,9 +139,7 @@ const getInterviewConfig = computed(() => {
 });
 
 const getServiceConfig = computed(() => {
-    return tableData.value.filter((item) =>
-        ["ai_wechat", "ai_xhs", "openai_chat", "ai_reply_like"].includes(item.scene)
-    );
+    return tableData.value.filter((item) => ["ai_wechat", "ai_xhs", "ai_reply_like"].includes(item.scene));
 });
 
 const getKnbConfig = computed(() => {

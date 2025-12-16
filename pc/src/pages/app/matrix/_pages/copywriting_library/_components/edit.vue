@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { updateCopywritingLibrary } from "@/api/redbook";
+import { updateCopywritingLibrary } from "~/api/matrix";
 import { ThemeEnum } from "@/enums/appEnums";
 
 const emit = defineEmits(["success", "close"]);

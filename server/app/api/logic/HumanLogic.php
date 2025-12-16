@@ -27,6 +27,7 @@ class HumanLogic extends ApiLogic
     const AUDIO_TRAINING = 'audioTraining'; //文字转音频
     const VIDEO_TRAINING = 'videoTraining'; //视频训练
     const COPYWRITING_CREATE = 'copywritingCreate'; //文案创作
+    const HUMAN_COPYWRITING = 'humanCopywriting';
     const AVATAR_TRAINING_PRO = 'avatarTrainingPro'; //形象训练
     const VOICE_TRAINING_PRO = 'voiceTrainingPro'; //音色训练
     const AUDIO_TRAINING_PRO = 'audioTrainingPro'; //文字转音频
@@ -546,6 +547,47 @@ class HumanLogic extends ApiLogic
                         throw new \Exception('字数不能超过2000');
                     }
 
+                    if ($model_version == 7) {
+                        $string = $msg;
+                        $result = '';
+                        $length = mb_strlen($string);
+
+                        for ($i = 0; $i < $length; $i++) {
+                            $char = mb_substr($string, $i, 1);
+                            $codePoint = mb_ord($char);
+
+                            // 定义各个范围
+                            if ($codePoint >= 0x1F600 && $codePoint <= 0x1F64F) { // 表情符号
+                                continue;
+                            }
+                            if ($codePoint >= 0x1F300 && $codePoint <= 0x1F5FF) { // 杂项符号和象形文字
+                                continue;
+                            }
+                            if ($codePoint >= 0x1F680 && $codePoint <= 0x1F6FF) { // 交通工具和地图符号
+                                continue;
+                            }
+                            if ($codePoint >= 0x1F700 && $codePoint <= 0x1F77F) { // Alchemical Symbols (炼金术符号)
+                                continue;
+                            }
+                            if ($codePoint >= 0x1F900 && $codePoint <= 0x1F9FF) { // 补充象形文字
+                                continue;
+                            }
+                            if ($codePoint >= 0x2600 && $codePoint <= 0x26FF) { // 杂项符号
+                                continue;
+                            }
+                            if ($codePoint >= 0x2700 && $codePoint <= 0x27BF) { // Dingbats
+                                continue;
+                            }
+                            if ($codePoint >= 0x1F1E6 && $codePoint <= 0x1F1FF) { // 区域标志符号
+                                continue;
+                            }
+                            if ($codePoint >= 0x1F3FB && $codePoint <= 0x1F3FF) { // Emoji 修饰符
+                                continue;
+                            }
+                            $result .= $char;
+                        }
+                        $msg = $result;
+                    }
                     break;
                 case 2: // 音频驱动
                     $msg = '';
@@ -773,7 +815,7 @@ class HumanLogic extends ApiLogic
             self::$returnData = $result;
             $addData = [
                 'user_id' => self::$uid,
-                'status' => 0,
+                'status' => $result['status'] == 'completed' ? 1 : 0,
                 'anchor_id' => $result['id'],
                 'name' => $name,
                 'gender' => $gender,
@@ -895,7 +937,7 @@ class HumanLogic extends ApiLogic
                 $query->where('name', 'like', '%' . $name . '%');
             })
             ->when($modelVersion, function ($query) use ($modelVersion) {
-                $query->where('model_version', $modelVersion);
+                $query->where('model_version', 'in', explode(',', $modelVersion));
             })
             ->when($type != "", function ($query) use ($type) {
                 $query->where('type', $type);
@@ -912,7 +954,7 @@ class HumanLogic extends ApiLogic
             'lists' => $result,
             'count' => HumanAnchor::where(['user_id' => self::$uid])
                 ->when($modelVersion, function ($query) use ($modelVersion) {
-                    $query->where('model_version', $modelVersion);
+                    $query->where('model_version', 'in', explode(',', $modelVersion));
                 })
                 ->when($name, function ($query) use ($name) {
                     $query->where('name', 'like', '%' . $name . '%');
@@ -1158,12 +1200,14 @@ class HumanLogic extends ApiLogic
         $pageSize = $data['page_size'];
         $name = $data['name'] ?? '';
 
-        if (empty($data['model_version'])){
-            $modelVersion = '';
-        }else{
-            $modelVersion = json_decode($data['model_version'],true);
-            $modelVersion = is_array($modelVersion) ? $modelVersion : [(int)$modelVersion];
-        }
+        // if (empty($data['model_version'])){
+        //     $modelVersion = '';
+        // }else{
+        //     $modelVersion = json_decode($data['model_version'],true);
+        //     $modelVersion = is_array($modelVersion) ? $modelVersion : [(int)$modelVersion];
+        // }
+
+        $modelVersion = $data['model_version'] ?? '';
 
         $status = $data['status'] ?? '';
 
@@ -1180,7 +1224,7 @@ class HumanLogic extends ApiLogic
                     $query->where('name', 'like', '%' . $name . '%');
                 })
                 ->when($modelVersion, function ($query) use ($modelVersion) {
-                    $query->where('model_version', 'in' ,$modelVersion);
+                    $query->where('model_version', 'in' , explode(',', $modelVersion));
                 })
                 ->when($type!= "", function ($query) use ($type) {
                     $query->where('type', $type);
@@ -1202,7 +1246,7 @@ class HumanLogic extends ApiLogic
                     $query->where('type', $type);
                 })
                 ->when($modelVersion, function ($query) use ($modelVersion) {
-                    $query->where('model_version', 'in' , $modelVersion);
+                    $query->where('model_version', 'in' ,  explode(',', $modelVersion));
                 })
                 ->when($status != "", function ($query) use ($status) {
                     $query->where('status', $status);
@@ -1745,6 +1789,108 @@ class HumanLogic extends ApiLogic
         }
     }
 
+    public static function videoWjInfoCron(): bool
+    {
+        try {
+            print_r("\n查询标准版数字人视频任务结果\n");
+            HumanVideoTask::where('status', 0)
+                ->where('result_id', '<>', '')
+                ->where('model_version', '=', 1)
+                ->order('tries', 'asc')
+                ->limit(3)
+                ->select()
+                ->each(function ($item) {
+                    try {
+                        $response = \app\common\service\ToolsService::Human()->getWjDetail([
+                            'id' => $item['result_id'],
+                            'model_version' => 1,
+                            'type' => 4,
+                        ]);
+                        $task_info = $response['data']['task_info'] ?? [];
+
+                        if(!isset($task_info['current_status'])){
+                            return true;
+                        }
+
+                        if($task_info['current_status'] === 'init'){
+                            return true;
+
+                        }
+                        if($task_info['current_status'] === 'fail'){
+                            $item->status = 2;
+                            $item->tries = $item['tries'] + 1;
+                            $item->save();
+                            //退费
+                            self::refundTokens($item->user_id, $item->result_id, $item->task_id, 'human_video');
+                            return true;
+                        }
+                        if($task_info['current_status'] === 'success'){
+                            $item->status = 1;
+                            $item->result_url = FileService::downloadFileBySource($task_info['result'], 'video');
+                            $item->save();
+                        }
+
+                        if($item->status == 1 && $item->automatic_clip == 1&& $item->clip_status == 1){
+                            $unit = TokenLogService::checkToken($item->user_id, 'video_clip');
+                            $result_url = FileService::getFileUrl($item->result_url);
+                            $params = [
+                                'video_id' => $item->id,
+                                'task_id' => $item->task_id,
+                                'clip_type' => $item->clip_type,
+                                'music_url' => $item->music_url,
+                                'music_type' => $item->music_type,
+                                'result_url' => $result_url,
+                                'msg' => $item->msg,
+                                'type' => 1,
+                            ];
+
+                            $response = \app\common\service\ToolsService::Sv()->clip($params);
+                            if (isset($response['code']) && $response['code'] == 10000) {
+
+                                $points = $unit;
+
+                                if ($points > 0) {
+                                    $extra = [
+                                        '场景' => '数字人 - 标准版'
+                                    ];
+                                    //token扣除
+                                    User::userTokensChange($item->user_id, $points);
+
+                                    //记录日志
+                                    AccountLogLogic::recordUserTokensLog(true, $item->user_id, AccountLogEnum::TOKENS_DEC_VIDEO_CLIP, $points,  $item->task_id, $extra);
+                                }
+                                $item->clip_status = 2;
+                            }
+                            $item->save();
+                        }
+                        return true;
+                    } catch (\think\exception\HttpResponseException $e) {
+                        Log::write('wj数字人视频保存失败' .$item['tries'].'----' . $e->getResponse()->getData()['msg']);
+                        $item->remark = $e->getResponse()->getData()['msg'] ?? '';
+                        $item->tries = $item['tries'] + 1;
+                        $item->status = 2;
+                        $item->save();
+                        //退费
+                        //查询是否已返还
+                        if (UserTokensLog::where('user_id', $item->user_id)->where('change_type', AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO)->where('action', 1)->where('task_id', $item->task_id)->count() == 0) {
+
+                            $points = UserTokensLog::where('user_id', $item->user_id)->where('change_type', AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO)->where('task_id', $item->task_id)->value('change_amount') ?? 0;
+
+                            AccountLogLogic::recordUserTokensLog(false, $item->user_id, AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO, $points, $item->task_id);
+                        }
+
+                        return true;
+                    }
+                    return true;
+                });
+            return true;
+        } catch (\Exception $e) {
+            Log::write('wj视频信息定时任务失败' . $e->getMessage());
+            return true;
+        }
+    }
+    
+
     /**
      * @desc 视频定时任务
      * @return bool|void
@@ -1778,7 +1924,6 @@ class HumanLogic extends ApiLogic
 
                 $taskModel = $taskModel->where('task_id', $taskId);
             }
-
             $modellist = HumanVoice::getModelList();
 
             //第二步遍历任务
@@ -1808,6 +1953,7 @@ class HumanLogic extends ApiLogic
                             'user_id' => $item['user_id']
                         ]);
                     }
+                    
                     if ($anchor->anchor_id == ""){
                         switch ($item->model_version) {
                             case 1:
@@ -1839,6 +1985,10 @@ class HumanLogic extends ApiLogic
                             $item->remark = $response['message'] ?? '形象创建失败';
                             $item->save();
                             message('形象创建失败');
+                        }
+
+                        if($item->model_version == 1 && $response['status'] == 'completed'){
+                            $anchor->status = 1;
                         }
 
                         if (in_array($item->model_version,[2,4,6])) {
@@ -1882,6 +2032,7 @@ class HumanLogic extends ApiLogic
                                 $voiceres = true;
                             }
                         }
+
 
                         // 如果没有训练，请求训练
                         if ($voice->voice_id == "" && !$voiceres) {
@@ -2466,7 +2617,7 @@ class HumanLogic extends ApiLogic
             self::AVATAR_TRAINING => ['human_avatar', AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR],
             self::VOICE_TRAINING => ['human_voice', AccountLogEnum::TOKENS_DEC_HUMAN_VOICE],
             self::VIDEO_TRAINING => ['human_video', AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO],
-            self::COPYWRITING_CREATE => ['copywriting_create', AccountLogEnum::TOKENS_DEC_HUMAN_COPYWRITING],
+            self::HUMAN_COPYWRITING => ['human_copywriting', AccountLogEnum::TOKENS_DEC_HUMAN_COPYWRITING],
             self::AUDIO_TRAINING_PRO => ['human_audio_pro', AccountLogEnum::TOKENS_DEC_HUMAN_AUDIO_PRO],
             self::AVATAR_TRAINING_PRO => ['human_avatar_pro', AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_PRO],
             self::VOICE_TRAINING_PRO => ['human_voice_pro', AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_PRO],
@@ -2513,7 +2664,7 @@ class HumanLogic extends ApiLogic
 
                 $response = $requestService->videoTraining($request);
                 break;
-            case self::COPYWRITING_CREATE:
+            case self::HUMAN_COPYWRITING:
 
                 $response = $requestService->copywritingCreate($request);
                 break;
@@ -2580,9 +2731,9 @@ class HumanLogic extends ApiLogic
 
             $points = $unit;
 
-            if ($points > 0) {
+            if ($points >= 0) {
 
-                $extra = [];
+                $extra = ['算力单价' => $unit, '实际消耗算力' => $points];
 
                 //合成视频按时长扣费
                 if (in_array($scene, [
@@ -2779,7 +2930,7 @@ class HumanLogic extends ApiLogic
             'keywords' => $keywords,
             'number' => $number,
         ];
-        $scene = self::COPYWRITING_CREATE;
+        $scene = self::HUMAN_COPYWRITING;
 
         $result = self::requestUrl($request, $scene, self::$uid, $taskId);
         if (!empty($result) && isset($result['content'])) {

@@ -9,8 +9,7 @@
                     <text class="text-[#787979] font-bold">{{ webSiteConfig.shop_name }}</text>
                 </view>
             </view>
-            <view
-                class="h-[84rpx] bg-[rgba(43,45,57,0.5)] flex-shrink-0 border-0 border-t-[1rpx] border-solid border-[#424353]">
+            <view class="h-[84rpx] bg-[#2b2d3980] flex-shrink-0 border-0 border-t-[1rpx] border-solid border-[#424353]">
                 <view class="grid grid-cols-3 h-full relative">
                     <view v-for="(item, index) in tabs" :key="index" class="flex items-center gap-x-2">
                         <view class="tab-item" :class="{ active: currTabKey == item.key }" @click="handleTab(item.key)">
@@ -344,7 +343,8 @@ import config from "@/config";
 import magicWandIcon from "@/static/images/icons/magic_wand.svg";
 import paintingIcon from "@/static/images/icons/painting.svg";
 import featherIcon from "@/static/images/icons/feather.svg";
-import starIcon from "@/static/images/icons/star.svg";
+import penStarIcon from "@/static/images/icons/pen_start.svg";
+import penIcon from "@/static/images/icons/pen.svg";
 
 enum TabKey {
     AI_CUSTOMER = "ai_customer",
@@ -370,7 +370,6 @@ enum AgentType {
     DY_TASK = "dy_task",
     VIDEO_TASK = "video_task",
     IMG_TASK = "img_task",
-    IMG_CREATION = "img_creation",
     COPYWRITING = "copywriting",
     AUTO_ACCOUNT = "auto_account",
     VIDEO_CREATION = "video_creation",
@@ -379,6 +378,8 @@ enum AgentType {
     FLOW_SETTING = "flow_setting",
     TAG_SETTING = "tag_setting",
     PRAISE_SETTING = "praise_setting",
+    CREATION = "creation",
+    MATERIAL = "material",
 }
 
 const appStore = useAppStore();
@@ -405,22 +406,26 @@ const utilsList = [
         title: "图文创作",
         desc: "一站式满足各种场景的图片设计需求",
         icon: paintingIcon,
-        disabled: true,
-        key: AgentType.IMG_CREATION,
+        key: AgentType.AI_DRAWING,
+    },
+    {
+        title: "创作库",
+        desc: "各种视频创作记录 / 图片创作记录",
+        icon: featherIcon,
+        key: AgentType.CREATION,
+    },
+    {
+        title: "素材库",
+        desc: "上传的素材 / 图片 / 视频",
+        icon: penStarIcon,
+        key: AgentType.MATERIAL,
     },
     {
         title: "文案创作",
         desc: "高效内容生产助手，提升创作效率",
-        icon: featherIcon,
+        icon: penIcon,
         disabled: true,
         key: AgentType.COPYWRITING,
-    },
-    {
-        title: "自动养号",
-        desc: "模拟真人操控，安全稳定提升账号权重",
-        icon: starIcon,
-        disabled: true,
-        key: AgentType.AUTO_ACCOUNT,
     },
 ];
 
@@ -609,6 +614,15 @@ const toPage = (type: AgentType) => {
             break;
         case AgentType.AI_DIGITAL_HUMAN:
             url = "/ai_modules/digital_human/pages/index/index";
+            break;
+        case AgentType.CREATION:
+            url = "/packages/pages/creation/creation";
+            break;
+        case AgentType.MATERIAL:
+            url = "/packages/pages/material_library/material_library";
+            break;
+        case AgentType.AI_DRAWING:
+            url = "/ai_modules/drawing/pages/index/index";
             break;
     }
     uni.navigateTo({

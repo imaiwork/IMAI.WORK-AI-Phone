@@ -128,6 +128,7 @@ const formData = reactive<Agent>({
     },
     threshold: 0.5,
     mode_type: ModeTypeEnum.CUSTOM,
+    max_tokens: 4096,
 });
 const formRef = ref();
 
@@ -147,6 +148,10 @@ const getDetail = async () => {
         formData.frequency_penalty = Number(formData.frequency_penalty);
         formData.top_p = Number(formData.top_p);
         formData.temperature = Number(formData.temperature);
+        // if (formData.kb_type == KnbTypeEnum.VECTOR) {
+        //     // @ts-ignore
+        //     formData.kb_ids = formData.kb_ids.map((item: string) => parseInt(item));
+        // }
     } catch (error) {
         console.error("获取智能体详情失败:", error);
     }

@@ -107,6 +107,9 @@ import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/sph/enums";
 import ClueEdit from "@/ai_modules/sph/components/clue-edit/clue-edit.vue";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
@@ -220,7 +223,7 @@ const useContent = () => {
         uni.$u.toast("文案在生成中...");
         return;
     }
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.TASK_AI_CLUE,
         data: chatContentList.value.map((item: any) => item.content),
     });

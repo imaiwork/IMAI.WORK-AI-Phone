@@ -59,6 +59,10 @@
 
 <script setup lang="ts">
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
+
 const dataLists = ref<any[]>([]);
 
 const chooseStyles = ref<any[]>([]);
@@ -80,7 +84,7 @@ const handleConfirm = () => {
         uni.$u.toast("请选择剪辑风格");
         return;
     }
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.CHOOSE_STYLES,
         data: chooseStyles.value,
     });

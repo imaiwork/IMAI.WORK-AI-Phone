@@ -78,17 +78,21 @@ class CozeChatLogic extends CozeLogic
         try {
             $agent = $this->findAccessibleAgent((int)$params['id']);
             $params = $this->enrichParamsWithAgent($params, $agent);
+            if (isset($params['content'])){
+                $params['additional_messages'][] = [
+                    'role' => 'user',
+                    'content' => $params['content'],
+                    'content_type' => 'text',
+                ];
+            }
 
-            // 追加用户消息
-            $params['additional_messages'][] = [
-                'role' => 'user',
-                'content' => $params['content'],
-                'content_type' => 'text',
-            ];
             if ((int)$agent['stream'] === 1){
                 throw new \Exception('该智能体是流式返回');
             }
             $resp = $this->cozechat($params);
+            if (!isset($params['content'])){
+                $params['content'] = $params['text']??'';
+            }
             $add = [];
             if (isset($resp['data'])) {
                 $logid = $resp['detail']['logid'] ?? '';
@@ -217,4 +221,30 @@ class CozeChatLogic extends CozeLogic
             throw new \Exception($e->getMessage());
         }
     }
+
+    public function bots($params)
+    {
+        try {
+            $agent = $this->findAccessibleAgent((int)$params['id']);
+            $params = $this->enrichParamsWithAgent($params, $agent);
+
+            $resp = $this->getbots($params);
+
+            if (isset($resp['data'])) {
+                foreach ($resp['data'] as $key => &$value) {
+                    if ( !in_array($key,['shortcut_commands', 'onboarding_info']) ){
+                        unset($resp['data'][$key]);
+                    }
+                }
+            }
+
+            $payload = $this->handleCozeResponse($resp);
+            self::$returnData = $payload;
+            return true;
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
+
+
 }

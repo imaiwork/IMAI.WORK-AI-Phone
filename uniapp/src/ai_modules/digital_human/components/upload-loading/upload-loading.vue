@@ -34,10 +34,6 @@ defineProps({
         type: String,
         default: "视频正在上传中...",
     },
-    showBack: {
-        type: Boolean,
-        default: true,
-    },
 });
 
 const emit = defineEmits(["cancel", "confirm", "back"]);

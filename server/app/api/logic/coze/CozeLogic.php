@@ -106,9 +106,16 @@ class CozeLogic extends ApiLogic
             'user_id'  => $params['user_id'],
             'auto_save_history'  => true,
             'stream'  => false,
-            'additional_messages'  => $params['additional_messages']
         ];
-
+        if (isset($params['additional_messages'])){
+            $body['additional_messages'] = $params['additional_messages'];
+        }
+        if (isset($params['command_id'])){
+            $body['shortcut_command'] = [
+                'command_id'=>$params['command_id'],
+                'parameters'=>$params['parameters']
+            ];
+        }
         $client = new Client(['timeout' => 6000, 'verify' => false]);
         $rsp    = $client->post($this->url . $url, [
             'headers' => [
@@ -424,6 +431,34 @@ class CozeLogic extends ApiLogic
         return $response['data'] ?? [];
     }
 
+    public function getbots(array $params)
+    {
+        $this->getconfig($params['source'], $params['source_id']);
+        unset($params['id'], $params['source'], $params['source_id']);
+        $url = '/v1/bots/'.$params['coze_id'];
+
+        $client = new Client(['timeout' => 6000, 'http_errors' => false]);
+
+        $response = $client->get($this->url . $url, [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $this->pat,
+            ],
+            'query'   => $params,
+        ]);
+
+        $contents = $response->getBody()->getContents();
+        $data     = json_decode($contents, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception('retrieve 解析失败：' . json_last_error_msg());
+        }
+
+        if (($data['code'] ?? -1) !== 0) {
+            $msg = $this->getmsg($data['code']);
+            throw new \Exception('message 业务错误：' . $msg);
+        }
+        return $data;
+    }
 
     public function getmsg($code){
         $code = (int)$code;

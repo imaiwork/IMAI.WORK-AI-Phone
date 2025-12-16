@@ -32,10 +32,11 @@ export function useCozeChat(detail: Ref<any>, agentId: any) {
     // 发送消息
     const sendMessage = async (
         content: string,
-        onConversationIdChange: (id: string) => void,
-        onNewConversation: (conv: any) => void
+        extraData?: any,
+        onConversationIdChange?: (id: string) => void,
+        onNewConversation?: (conv: any) => void
     ) => {
-        chatContentList.value.push({ type: 1, message: content, form_avatar: userInfo.value.avatar });
+        chatContentList.value.push({ type: 1, message: content, form_avatar: userInfo.value.avatar, ...extraData });
         const result: any = reactive({
             type: 2,
             loading: true,
@@ -46,7 +47,7 @@ export function useCozeChat(detail: Ref<any>, agentId: any) {
         chatContentList.value.push(result);
         isReceiving.value = true;
 
-        const cozeParams = { id: agentId, content, conversation_id: conversationId.value };
+        const cozeParams = { id: agentId, content, conversation_id: conversationId.value, ...extraData };
         const isNewConversation = !conversationId.value;
 
         if (isStream.value) {

@@ -3,9 +3,10 @@
 
 namespace app\common\command;
 
-use app\api\logic\sv\PublishLogic;
-use app\api\logic\shanjian\PublishLogic as ShanjianPublishLogic;
 use app\api\logic\device\PublishLogic as DevicePublishLogic;
+use app\api\logic\shanjian\PublishLogic as ShanjianPublishLogic;
+use app\api\logic\sora\PublishLogic as SoraPublishLogic;
+use app\api\logic\sv\PublishLogic;
 use think\console\Command;
 use think\console\Input;
 use think\console\Output;
@@ -26,6 +27,7 @@ class PublishDetailCron extends Command
         PublishLogic::setPublishDetail();
         DevicePublishLogic::setPublishDetail();
         ShanjianPublishLogic::setPublishDetail();
+        SoraPublishLogic::setPublishDetail();
         return true;
     }
 }

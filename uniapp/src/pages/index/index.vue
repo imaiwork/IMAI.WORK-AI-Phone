@@ -1,5 +1,5 @@
 <template>
-    <view class="h-screen flex flex-col page-bg">
+    <view class="h-screen flex flex-col bg-[#EEF0F6]">
         <u-navbar
             :border-bottom="false"
             :is-fixed="false"
@@ -12,18 +12,12 @@
             <template #custom-back-icon>
                 <u-icon name="arrow-left" :size="32"></u-icon>
             </template>
-            <view
-                class="font-bold text-xl"
-                :class="{
-                    'mx-4': chatContentList.length == 0,
-                }">
-                智能聊天
-            </view>
         </u-navbar>
         <view class="grow min-h-0 relative z-10">
             <chat-scroll-view
                 ref="chattingRef"
                 v-model:file-list="fileList"
+                placeholder="发送消息、输入@选择智能体"
                 :is-stop="isStopChat"
                 :content-list="chatContentList"
                 :send-disabled="isReceiving"
@@ -31,27 +25,91 @@
                 @close="handleChatClose"
                 @add-session="handleAddSession"
                 @update:network="handleUpdateNetwork"
-                @content-post="handleContentPost">
-                <template #content>
-                    <view
-                        v-if="chatContentList.length == 0"
-                        class="mb-[64rpx] flex flex-col items-center justify-center">
-                        <view>
+                @content-post="handleContentPost"
+                @show-history="showHistory = true">
+                <template #content v-if="!isAgent">
+                    <view v-if="chatContentList.length == 0" class="h-full w-full pb-4 px-[20rpx]">
+                        <view class="flex items-center justify-center">
                             <image :src="websiteConfig.shop_logo" class="w-[128rpx] h-[128rpx] rounded-full"></image>
                         </view>
-                        <view class="text-[40rpx] font-bold text-center mt-[48rpx]"> 有什么可以帮忙的？ </view>
+                        <view class="grid grid-cols-2 gap-4 mt-[40rpx]">
+                            <view class="bg-white rounded-[20rpx] px-[38rpx] h-[240rpx] flex flex-col">
+                                <view
+                                    class="flex items-center justify-center gap-x-2 py-[30rpx] flex-1"
+                                    @click="toPage(PageKeyEnum.CREATE_TASK)">
+                                    <image src="/static/images/icons/add.svg" class="w-[32rpx] h-[32rpx]"></image>
+                                    <text class="font-bold text-[30rpx]">创建任务</text>
+                                </view>
+                                <view class="h-[1rpx] bg-[rgba(0,0,0,0.05)] flex-shrink-0 my-1"></view>
+                                <view
+                                    class="flex items-center justify-center gap-x-2 py-[30rpx] flex-1"
+                                    @click="toPage(PageKeyEnum.VIEW_SCHEDULE)">
+                                    <image src="/static/images/icons/calendar.svg" class="w-[32rpx] h-[32rpx]"></image>
+                                    <text class="font-bold text-[30rpx]">查看日程</text>
+                                </view>
+                            </view>
+                            <view
+                                class="bg-white rounded-[20rpx] px-[38rpx] py-[30rpx] h-[240rpx] relative overflow-hidden"
+                                @click="toPage(PageKeyEnum.DIGITAL_PERSON_CLONE)">
+                                <view class="text-[30rpx] font-bold"> 数字人克隆 </view>
+                                <view class="flex items-center gap-x-1 mt-1">
+                                    <text class="text-[22rpx] text-[#0000004d]">立即定制</text>
+                                    <u-icon name="arrow-right" :size="20" color="#0000004d"></u-icon>
+                                </view>
+                                <view class="absolute right-2 bottom-0 leading-[0]">
+                                    <image
+                                        :src="`${config.baseUrl}static/images/index_img_15.png`"
+                                        class="w-[150rpx] h-[130rpx]"
+                                        mode="widthFix"></image>
+                                </view>
+                            </view>
+                        </view>
+                        <view class="bg-white rounded-[20rpx] mt-[20rpx] py-2">
+                            <view class="text-[30rpx] font-bold px-[34rpx] py-1">快速应用</view>
+                            <view class="grid grid-cols-4 gap-4 py-2 mt-1">
+                                <view
+                                    class="flex flex-col items-center justify-center"
+                                    v-for="item in quickApplicationList"
+                                    :key="item.key"
+                                    @click="toPage(item.key)">
+                                    <image
+                                        :src="`${config.baseUrl}static/images/${item.icon}`"
+                                        class="w-[68rpx] h-[68rpx]"
+                                        mode="widthFix"></image>
+                                    <view class="mt-1"> {{ item.name }} </view>
+                                </view>
+                            </view>
+                        </view>
+                        <view class="bg-white rounded-[20rpx] mt-[20rpx] py-2">
+                            <view class="flex items-center justify-between px-[34rpx] py-1">
+                                <view class="text-[30rpx] font-bold">AI创作视频</view>
+                                <navigator
+                                    url="/ai_modules/digital_human/pages/index/index"
+                                    hover-class="none"
+                                    class="flex items-center">
+                                    <text class="text-xs text-[#0000004d]">更多</text>
+                                    <u-icon name="arrow-right" :size="20" color="#0000004d"></u-icon>
+                                </navigator>
+                            </view>
+                            <view class="grid grid-cols-3 gap-2 px-[24rpx] mt-2">
+                                <view
+                                    class="flex flex-col items-center justify-between bg-[#F6F6F6] rounded-[20rpx] px-[36rpx] py-[30rpx] pb-0"
+                                    v-for="item in aiCreationVideoList"
+                                    :key="item.key"
+                                    @click="toPage(item.key)">
+                                    <view class="font-bold"> {{ item.name }} </view>
+                                    <view class="mt-4 leading-[0]">
+                                        <image
+                                            :src="`${config.baseUrl}static/images/${item.icon}`"
+                                            class="w-[140rpx] h-[140rpx]"></image>
+                                    </view>
+                                </view>
+                            </view>
+                        </view>
                     </view>
                 </template>
             </chat-scroll-view>
-            <view class="w-full flex justify-center mb-2 absolute bottom-0" v-if="chatContentList.length == 0">
-                <view
-                    class="flex items-center justify-center rounded-full px-[16rpx] h-[76rpx] w-[228rpx] border border-solid border-[#EDEDEE]"
-                    @click="showHistory = true">
-                    <text class="text-xs text-[#989898]">历史记录</text>
-                </view>
-            </view>
         </view>
-
         <tabbar v-if="chatContentList.length === 0" />
     </view>
     <popup-bottom
@@ -98,6 +156,7 @@ import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
 import { chatSendTextStream, getChatLog, getCreativeRecord } from "@/api/chat";
 import { TokensSceneEnum } from "@/enums/appEnums";
+import config from "@/config";
 
 // 类型定义
 interface ChatMessage {
@@ -120,12 +179,6 @@ interface FileInfo {
     type: string;
 }
 
-interface ChatConfig {
-    id: string | number;
-    avatar: string;
-    name: string;
-}
-
 interface ChatLogParams {
     page_no: number;
     page_size: number;
@@ -133,12 +186,139 @@ interface ChatLogParams {
     task_id?: string;
 }
 
+enum PageKeyEnum {
+    CREATE_TASK = "create_task",
+    VIEW_SCHEDULE = "view_schedule",
+    AI_CUSTOMER = "ai_customer",
+    DH = "dh",
+    DIGITAL_PERSON_CLONE = "digital_person_clone",
+    PUBLISH_IMG = "publish_img",
+    PUBLISH_VIDEO = "publish_video",
+    MY_CREATION = "my_creation",
+    AI_PUZZLE = "ai_puzzle",
+    AI_PRACTICE = "ladder_player",
+    MEETING_MINUTES = "meeting_minutes",
+    DIGITAL_PERSON_BROADCAST = "digital_person_broadcast",
+    ORAL_VIDEO_MIX = "oral_video_mix",
+    REAL_PERSON_BROADCAST = "real_person_broadcast",
+    MATERIAL_MIX = "material_mix",
+    ONE_SENTENCE_GENERATION = "one_sentence_generation",
+    NEWS_BODY_GENERATION = "news_body_generation",
+}
+
+// 快速应用列表
+const quickApplicationList = [
+    {
+        key: PageKeyEnum.AI_CUSTOMER,
+        name: "AI获客",
+        icon: "index_img_1.png",
+    },
+    {
+        key: PageKeyEnum.DH,
+        name: "数字人",
+        icon: "index_img_2.png",
+    },
+    {
+        key: PageKeyEnum.PUBLISH_IMG,
+        name: "发布图文",
+        icon: "index_img_3.png",
+    },
+    {
+        key: PageKeyEnum.PUBLISH_VIDEO,
+        name: "发布视频",
+        icon: "index_img_4.png",
+    },
+    {
+        key: PageKeyEnum.MY_CREATION,
+        name: "我的创作",
+        icon: "index_img_5.png",
+    },
+    {
+        key: PageKeyEnum.AI_PUZZLE,
+        name: "AI拼图",
+        icon: "index_img_6.png",
+    },
+    {
+        key: PageKeyEnum.AI_PRACTICE,
+        name: "AI陪练",
+        icon: "index_img_7.png",
+    },
+    {
+        key: PageKeyEnum.MEETING_MINUTES,
+        name: "会议助手",
+        icon: "index_img_8.png",
+    },
+];
+
+// AI创作视频
+const aiCreationVideoList = [
+    {
+        key: PageKeyEnum.DIGITAL_PERSON_BROADCAST,
+        name: "数字人口播",
+        icon: "index_img_9.png",
+    },
+    {
+        key: PageKeyEnum.ORAL_VIDEO_MIX,
+        name: "口播混剪",
+        icon: "index_img_10.png",
+    },
+    {
+        key: PageKeyEnum.REAL_PERSON_BROADCAST,
+        name: "真人口播",
+        icon: "index_img_11.png",
+    },
+    {
+        key: PageKeyEnum.MATERIAL_MIX,
+        name: "素材混剪",
+        icon: "index_img_12.png",
+    },
+    {
+        key: PageKeyEnum.ONE_SENTENCE_GENERATION,
+        name: "一句话生成",
+        icon: "index_img_13.png",
+    },
+    {
+        key: PageKeyEnum.NEWS_BODY_GENERATION,
+        name: "新闻体生成",
+        icon: "index_img_14.png",
+    },
+];
+
+/**
+ * 跳转页面
+ */
+const toPage = (key: PageKeyEnum) => {
+    const urls = {
+        [PageKeyEnum.CREATE_TASK]: "/ai_modules/device/pages/choose_task_type/choose_task_type",
+        [PageKeyEnum.VIEW_SCHEDULE]: "/ai_modules/device/pages/task_calendar_full/task_calendar_full",
+        [PageKeyEnum.DH]: "/ai_modules/digital_human/pages/index/index",
+        [PageKeyEnum.DIGITAL_PERSON_CLONE]: "/ai_modules/digital_human/pages/anchor_create/anchor_create",
+        [PageKeyEnum.PUBLISH_IMG]: "/ai_modules/device/pages/create_task/create_task?type=2",
+        [PageKeyEnum.PUBLISH_VIDEO]: "/ai_modules/device/pages/create_task/create_task?type=1",
+        [PageKeyEnum.MY_CREATION]: "/packages/pages/creation/creation",
+        [PageKeyEnum.AI_CUSTOMER]: "/ai_modules/sph/pages/create_task/create_task",
+        [PageKeyEnum.AI_PUZZLE]: "/ai_modules/drawing/pages/index/index",
+        [PageKeyEnum.AI_PRACTICE]: "/ai_modules/ladder_player/pages/index/index",
+        [PageKeyEnum.MEETING_MINUTES]: "/ai_modules/meeting_minutes/pages/index/index",
+        [PageKeyEnum.DIGITAL_PERSON_BROADCAST]: "/ai_modules/digital_human/pages/szr_create/szr_create",
+        [PageKeyEnum.ORAL_VIDEO_MIX]: "/ai_modules/digital_human/pages/montage_create/montage_create",
+        [PageKeyEnum.REAL_PERSON_BROADCAST]:
+            "/ai_modules/digital_human/pages/montage_person_create/montage_person_create",
+        [PageKeyEnum.MATERIAL_MIX]: "/ai_modules/digital_human/pages/montage_material_create/montage_material_create",
+        [PageKeyEnum.ONE_SENTENCE_GENERATION]: "/ai_modules/digital_human/pages/sora_create/sora_create",
+        [PageKeyEnum.NEWS_BODY_GENERATION]: "/ai_modules/digital_human/pages/montage_news_create/montage_news_create",
+    };
+    uni.navigateTo({
+        url: urls[key as keyof typeof urls],
+    });
+};
+
 // 状态管理
 const appStore = useAppStore();
 const userStore = useUserStore();
 const { chatConfig } = toRefs(appStore);
 const websiteConfig = computed(() => appStore.getWebsiteConfig);
-const { userTokens, isLogin } = toRefs(userStore);
+const { userTokens } = toRefs(userStore);
 const tokensValue = userStore.getTokenByScene(TokensSceneEnum.CHAT)?.score;
 
 // 组件引用
@@ -148,6 +328,7 @@ const pagingRef = shallowRef();
 
 // 页面状态
 const safeAreaTop = ref<number>(50);
+const isAgent = ref(false);
 const isNetwork = ref(false);
 const showHistory = ref(false);
 const isReceiving = ref(false);
@@ -425,6 +606,9 @@ const init = async (options?: Record<string, any>) => {
             id: options.agent_id,
             avatar: options.agent_logo,
         });
+        isAgent.value = true;
+        await nextTick();
+        chattingRef.value?.openKeyboard();
     }
 };
 
@@ -445,6 +629,11 @@ onLoad((options?: Record<string, any>) => {
 
 onUnload(() => {
     uni.$off("chooseFile");
+    chattingRef.value?.hideKeyboard();
+});
+
+onHide(() => {
+    chattingRef.value?.hideKeyboard();
 });
 
 onShow(() => {

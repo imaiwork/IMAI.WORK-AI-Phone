@@ -14,17 +14,17 @@
                 <view
                     v-for="item in steps"
                     :key="item.step"
-                    class="step-item"
+                    class="common-step-item"
                     :class="{ active: step == item.step }"
                     @click="handleStep(item.step)">
-                    <view v-if="step > item.step" class="step-item-success-icon">
+                    <view v-if="step > item.step" class="common-step-item-success-icon">
                         <u-icon name="checkmark" color="#ffffff" size="14"></u-icon>
                     </view>
-                    <view class="step-item-icon" v-else> </view>
-                    <text class="step-item-title">{{ item.title }}</text>
+                    <view class="common-step-item-icon" v-else> </view>
+                    <text class="common-step-item-title">{{ item.title }}</text>
                     <view
                         v-if="item.step !== steps.length"
-                        class="step-item-line"
+                        class="common-step-item-line"
                         :class="{ '!border-primary': step > item.step }"></view>
                 </view>
             </view>
@@ -44,10 +44,10 @@
                         >添加图组</view
                     >
                 </view>
-                <view class="grow min-h-0 mt-[38rpx]">
+                <view class="grow min-h-0">
                     <template v-if="taskType == TaskType.IMAGE">
                         <scroll-view scroll-y class="h-full" v-if="formData.materialLists.length > 0">
-                            <view class="px-4 flex flex-col gap-2">
+                            <view class="p-4 flex flex-col gap-2">
                                 <view
                                     v-for="(item, index) in formData.materialLists"
                                     :key="index"
@@ -79,7 +79,9 @@
                                     <view
                                         class="mt-[22rpx] flex items-center gap-x-1"
                                         @click="handleDeleteMaterial(index)">
-                                        <u-icon name="trash" size="28" color="#0000004d"></u-icon>
+                                        <image
+                                            src="/static/images/icons/delete.svg"
+                                            class="w-[28rpx] h-[28rpx]"></image>
                                         <text class="text-[#0000004d]">删除</text>
                                     </view>
                                 </view>
@@ -99,17 +101,7 @@
                     </template>
                     <template v-else>
                         <scroll-view scroll-y class="h-full">
-                            <view class="px-4 grid grid-cols-3 gap-2">
-                                <view
-                                    v-if="formData.materialLists.length < videoLimit"
-                                    class="bg-white rounded-[20rpx] h-[288rpx] flex flex-col items-center justify-center"
-                                    @click="openVideoUploadDialog">
-                                    <view
-                                        class="w-[32rpx] h-[32rpx] bg-[#00000066] flex items-center justify-center rounded-full">
-                                        <u-icon name="plus" size="24" color="#ffffff"></u-icon>
-                                    </view>
-                                    <text class="mt-3 font-bold text-[#00000066]">添加视频</text>
-                                </view>
+                            <view class="p-4 grid grid-cols-3 gap-2">
                                 <view
                                     v-for="(item, index) in formData.materialLists"
                                     :key="index"
@@ -127,13 +119,23 @@
                                         </view>
                                     </view>
                                     <view
-                                        class="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center bg-[#000000cc] z-[22]"
+                                        class="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center bg-[#000000cc] z-[22]"
                                         @click="handleDeleteVideo(index)">
                                         <u-icon name="close" size="20" color="#ffffff"></u-icon>
                                     </view>
                                     <div class="absolute bottom-2 w-full z-[33] flex justify-center">
                                         <view class="dh-version-name" @click="handleReplaceVideo(index)"> 替换 </view>
                                     </div>
+                                </view>
+                                <view
+                                    v-if="formData.materialLists.length < videoLimit"
+                                    class="bg-white rounded-[20rpx] h-[288rpx] flex flex-col items-center justify-center"
+                                    @click="chooseUploadType">
+                                    <view
+                                        class="w-[32rpx] h-[32rpx] bg-[#00000066] flex items-center justify-center rounded-full">
+                                        <u-icon name="plus" size="24" color="#ffffff"></u-icon>
+                                    </view>
+                                    <text class="mt-3 font-bold text-[#00000066]">添加视频</text>
                                 </view>
                             </view>
                         </scroll-view>
@@ -145,16 +147,15 @@
                     <navigator
                         url="/ai_modules/device/pages/task_copywriter/task_copywriter"
                         hover-class="none"
-                        class="flex-1 flex items-center justify-center gap-x-2 bg-primary h-[100rpx] rounded-[10rpx]">
-                        <image
-                            src="@/ai_modules/device/static/images/common/add_circle_white.png"
-                            class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="text-white font-bold text-[32rpx]">添加文案...</text>
+                        class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]">
+                        <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
+                        <text class="font-bold text-[32rpx]">添加文案...</text>
                     </navigator>
                     <navigator
                         url="/ai_modules/device/pages/task_ai_copywriter/task_ai_copywriter"
                         hover-class="none"
-                        class="w-[230rpx] h-[100rpx] flex items-center justify-center gap-x-2 bg-black rounded-[10rpx]">
+                        class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-black rounded-[10rpx]"
+                        @click="editCopywriterIndex = -1">
                         <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
                         <text class="text-white font-bold text-[32rpx]">AI生成</text>
                     </navigator>
@@ -164,7 +165,7 @@
                 >
                 <view class="grow min-h-0 mt-[24rpx]">
                     <scroll-view scroll-y class="h-full" v-if="formData.copywriterList.length > 0">
-                        <view class="px-4 flex flex-col gap-y-[30rpx]">
+                        <view class="px-4 flex flex-col gap-y-[30rpx] pb-[100rpx]">
                             <view
                                 v-for="(item, index) in formData.copywriterList"
                                 :key="index"
@@ -215,7 +216,7 @@
                     <view
                         v-if="step === 1"
                         class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
-                        :class="[formData.materialLists.length > 0 ? 'bg-primary' : 'bg-[#787878CC]']">
+                        :class="[formData.materialLists.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
                         <text class="font-bold text-[32rpx]">{{ formData.materialLists.length }}</text>
                         <text class="text-xs mt-1">已选</text>
                     </view>
@@ -228,7 +229,7 @@
                     </view>
                     <view
                         class="px-[48rpx] py-[20rpx] rounded-md text-white"
-                        :class="[canNext ? 'bg-primary' : 'bg-[#787878CC]']"
+                        :class="[canNext ? 'bg-black' : 'bg-[#787878CC]']"
                         @click="handleStep(step, 'next')">
                         下一步
                     </view>
@@ -260,21 +261,35 @@
         v-model="showVideoUploadTip"
         confirm-text="去上传"
         :content="getVideoTipsContent"
-        @confirm="handleVideoUpload" />
-    <upload-progress v-model="showVideoUploadProgress" :upload-list="uploadMaterialList" />
+        @close="
+            isVideoInitialOpen = false;
+            showVideoUploadTip = false;
+        "
+        @confirm="uploadAndProcessFiles('video')" />
+    <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <video-preview
-        v-model:show="showVideoPreview"
+        v-model="showVideoPreview"
         :video-url="playItem.url"
         :poster="playItem.pic"
         @update:show="showVideoPreview = false"></video-preview>
+    <choose-material
+        v-model="showVideoMaterial"
+        type="video"
+        :limit="videoLimit - formData.materialLists.length"
+        @select="handleSelectVideoMaterial" />
 </template>
 
 <script setup lang="ts">
+import { getVideoCreationRecord } from "@/api/app";
 import { addMatrixTask, publishDeviceTask } from "@/api/device";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
-import { uploadFile } from "@/api/app";
-import { chooseFile } from "@/components/file-upload/choose-file";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+import { getPuzzleTaskResultList } from "@/api/drawing";
+import useUpload from "@/hooks/useUpload";
 import BastSetting from "@/ai_modules/device/components/bast-setting/bast-setting.vue";
+import VideoPreview from "@/components/video-preview/video-preview.vue";
+
+const { on } = useEventBusManager();
 
 enum TaskType {
     IMAGE = 2,
@@ -337,18 +352,17 @@ const baseFormRef = shallowRef<InstanceType<typeof BastSetting>>();
 const deleteImgIndex = ref<number>(-1);
 // 编辑素材索引
 const editImgIndex = ref<number>(-1);
-
+const showVideoMaterial = ref<boolean>(false);
 const confirmDialogVisible = ref<boolean>(false);
 // 视频上传提示
 const showVideoUploadTip = ref<boolean>(false);
-// 视频上传进度
-const showVideoUploadProgress = ref<boolean>(false);
 // 视频上传限制
 const videoLimit = 99;
 // 视频上传大小
 const videoSize = 100;
 // 视频上传格式
 const videoFormat = ["mp4", "mov"];
+const uploadType = ref<"all" | "video">("video");
 // 视频上传是否初次打开
 const isVideoInitialOpen = ref<boolean>(true);
 // 替换视频索引
@@ -359,8 +373,6 @@ const playItem = reactive<any>({
     pic: "",
 });
 const showVideoPreview = ref(false);
-const uploadMaterialList = ref<any[]>([]);
-
 //错误提示
 const taskErrorMsg = ref<string>("");
 
@@ -435,6 +447,82 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
     }
 };
 
+const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
+    count: videoLimit,
+    imageSize: videoSize,
+    onSuccess: (res: any[]) => {
+        const diff = videoLimit - formData.materialLists.length;
+        formData.materialLists = formData.materialLists.concat(
+            res.slice(0, diff).map((item: any) => ({ url: [item.pic, item.url] }))
+        );
+    },
+});
+
+const chooseUploadType = () => {
+    showVideoUploadTip.value = false;
+    uni.showActionSheet({
+        itemList: ['从"微信聊天"中选择', '从"手机相册"中选择'],
+        success: (res) => {
+            if (res.tapIndex == 0 || res.tapIndex == 1) {
+                if (isVideoInitialOpen.value) {
+                    isVideoInitialOpen.value = false;
+                    showVideoUploadTip.value = true;
+                    return;
+                }
+                uploadType.value = res.tapIndex == 0 ? "all" : "video";
+                if (!isVideoInitialOpen.value) {
+                    uploadAndProcessFiles(uploadType.value);
+                }
+            }
+        },
+    });
+};
+
+const handleSelectVideoMaterial = async (res: any[]) => {
+    // 过滤不合符条件的视频
+    const videoCheckPromises = res.map(
+        (item: any, index: number) =>
+            new Promise((resolve) => {
+                wx.getVideoInfo({
+                    src: item.content,
+                    success: (info: any) => {
+                        const { type, width, height } = info;
+                        // 判断是否符合条件
+                        const isAccord =
+                            width <= videoFormat[0] &&
+                            height <= videoFormat[1] &&
+                            videoFormat.includes(type.toLowerCase()) &&
+                            parseInt(item.size) <= videoSize;
+                        console.log(item);
+
+                        if (isAccord) {
+                            resolve(item.content);
+                        } else {
+                            uni.showToast({
+                                title: `选择的视频包含不符合条件的视频，已自动过滤`,
+                                icon: "none",
+                            });
+                            resolve(null);
+                        }
+                    },
+                    fail: () => {
+                        resolve(null);
+                    },
+                });
+            })
+    );
+    uni.showLoading({
+        title: "素材检查中...",
+        mask: true,
+    });
+    try {
+        const filteredVideos = await Promise.all(videoCheckPromises);
+        console.log(filteredVideos);
+    } finally {
+        uni.hideLoading();
+    }
+};
+
 const handleEditMaterial = (index?: number) => {
     editImgIndex.value = index ?? -1;
     uni.$u.route({
@@ -458,70 +546,11 @@ const handleDeleteMaterialConfirm = () => {
 
 const openVideoUploadDialog = () => {
     if (!isVideoInitialOpen.value) {
-        handleVideoUpload();
+        uploadAndProcessFiles("video");
         return;
     }
     isVideoInitialOpen.value = false;
     showVideoUploadTip.value = true;
-};
-
-const handleVideoUpload = async () => {
-    uploadMaterialList.value = [];
-    try {
-        const { tempFiles } = await chooseFile({
-            type: "video",
-            count: videoLimit,
-            extension: videoFormat,
-        });
-        const fileList = [];
-        for (const file of tempFiles) {
-            if (file.size > videoSize * 1024 * 1024) {
-                uni.$u.toast(`视频大小不能超过${videoSize}M`);
-                continue;
-            }
-            fileList.push(file);
-        }
-        if (fileList.length === 0) {
-            uni.$u.toast(`所选视频素材均不符合条件，请重新上传`);
-            return;
-        }
-        uploadMaterialList.value = fileList;
-        showVideoUploadProgress.value = true;
-        for (const item of uploadMaterialList.value) {
-            const coverRes: any = await uploadFile("image", { filePath: item.thumbTempFilePath });
-            const fileRes: any = await uploadFile("video", { filePath: item.tempFilePath }, (progress) =>
-                progressCallback(progress, item)
-            );
-            if (replaceVideoIndex.value !== -1) {
-                formData.materialLists[replaceVideoIndex.value].url = [coverRes.uri, fileRes.uri];
-                replaceVideoIndex.value = -1;
-            } else {
-                formData.materialLists.push({
-                    url: [coverRes.uri, fileRes.uri],
-                });
-            }
-        }
-
-        if (uploadMaterialList.value.every((item) => item.progress === 100)) {
-            showVideoUploadProgress.value = false;
-        }
-    } catch (error) {
-        uni.$u.toast(error);
-        uploadMaterialList.value = [];
-        showVideoUploadProgress.value = false;
-    }
-};
-
-const progressCallback = (progress: number, options: { tempFilePath: string }) => {
-    const targetIndex = uploadMaterialList.value.findIndex(
-        (material) => material.tempFilePath === options.tempFilePath
-    );
-    if (targetIndex !== -1) {
-        uploadMaterialList.value[targetIndex] = {
-            ...uploadMaterialList.value[targetIndex],
-            progress: progress,
-        };
-    }
 };
 
 const handlePlay = (item: any) => {
@@ -536,7 +565,7 @@ const handleDeleteVideo = (index: number) => {
 
 const handleReplaceVideo = (index: number) => {
     replaceVideoIndex.value = index;
-    handleVideoUpload();
+    uploadAndProcessFiles("video");
 };
 
 const handleDeleteCopywriter = (index: number) => {
@@ -613,13 +642,67 @@ const handleCreateTask = async () => {
     }
 };
 
-onLoad((options: any) => {
+function selectRandomElements(sourceArray: any[], count: number) {
+    let result = [];
+    const maxIndex = sourceArray.length;
+
+    for (let i = 0; i < count; i++) {
+        const randomIndex = Math.floor(Math.random() * maxIndex);
+        result.push(sourceArray[randomIndex]);
+    }
+    return result;
+}
+
+function createRandomImageGroups(allImages: any[], numberOfGroups: number) {
+    if (numberOfGroups <= 0) {
+        console.error("组数必须大于0。");
+        return [];
+    }
+
+    let groupedResults = [];
+
+    for (let i = 0; i < numberOfGroups; i++) {
+        const minAllocation = 1;
+        const countToAllocate =
+            Math.floor(Math.random() * (Math.min(allImages.length, 9) - minAllocation + 1)) + minAllocation;
+        const groupUrls = selectRandomElements(allImages, countToAllocate);
+
+        groupedResults.push({ url: groupUrls });
+    }
+
+    return groupedResults;
+}
+
+onLoad(async (options: any) => {
     if (options.type) {
         taskType.value = options.type as TaskType;
         const taskNamePrefix = taskType.value == TaskType.IMAGE ? "图文" : "视频";
         formData.name = `${taskNamePrefix}矩阵任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`;
     }
-    uni.$on("confirm", (res: any) => {
+    if (options.source == "creation_video") {
+        const videoIds = JSON.parse(options.ids);
+        const { lists } = await getVideoCreationRecord({ page_size: 99999 });
+        if (lists && lists.length > 0) {
+            lists
+                .filter((item: any) => videoIds.includes(item.task_id))
+                .forEach((item: any) => {
+                    formData.materialLists.push({
+                        url: [item.pic, item.clip_result_url || item.video_result_url],
+                    });
+                });
+        }
+    } else if (options.source == "puzzle") {
+        const { id, count } = options;
+        const { lists } = await getPuzzleTaskResultList({ puzzle_setting_id: id, page_size: 999 });
+        if (lists && lists.length > 0) {
+            const allImages = lists.reduce((acc: any, curr: any) => {
+                acc.push(...curr.puzzle_url);
+                return acc;
+            }, []);
+            formData.materialLists = createRandomImageGroups(allImages, count);
+        }
+    }
+    on("confirm", (res: any) => {
         const { type, data } = res;
         if (type === ListenerTypeEnum.CHOOSE_IMG) {
             if (editImgIndex.value !== -1) {
@@ -650,41 +733,9 @@ onLoad((options: any) => {
         }
     });
 });
-
-onUnload(() => {
-    uni.$off("confirm");
-});
 </script>
 
 <style scoped lang="scss">
-.step-item {
-    @apply flex flex-col items-center justify-center relative;
-    &.active {
-        .step-item-icon {
-            @apply shadow-[0_0_0_2rpx_rgba(0,101,251,0.3)]  flex items-center justify-center;
-            &::before {
-                content: "";
-                @apply w-[60%] h-[60%] bg-primary rounded-full;
-            }
-        }
-        .step-item-title {
-            @apply text-[#00000099];
-        }
-    }
-    &-success-icon {
-        @apply bg-[#0065fb4d] rounded-full w-[28rpx] h-[28rpx] flex items-center justify-center;
-    }
-    &-icon {
-        @apply w-[28rpx] h-[28rpx] rounded-full shadow-[0_0_0_2rpx_rgba(0,0,0,0.1)];
-    }
-    &-title {
-        @apply mt-[20rpx] text-[rgba(0,0,0,0.2)] font-bold text-xs;
-    }
-    &-line {
-        @apply absolute right-[-18%] top-[15rpx] w-[40%] border-[0] border-b border-dashed border-[#D1D6D4];
-    }
-}
-
 .material-image-item {
     @apply rounded-[20rpx] bg-white p-[28rpx] relative;
     .image-item {

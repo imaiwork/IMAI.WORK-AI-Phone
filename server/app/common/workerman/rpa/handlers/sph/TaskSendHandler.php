@@ -28,6 +28,8 @@ class TaskSendHandler extends BaseMessageHandler
             $this->payload['code'] =  WorkerEnum::SPH_SEND_ERROR_CODE;
             $this->payload['type'] = 'error';
             $this->sendError($this->connection,  $this->payload);
+        } finally{
+            unset($content);
         }
     }
 

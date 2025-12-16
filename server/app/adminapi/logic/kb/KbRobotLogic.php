@@ -40,7 +40,7 @@ class KbRobotLogic extends BaseLogic
     {
         $modelKbRobot = new KbRobot();
         $detail = $modelKbRobot
-            ->field('id,user_id,cate_id,kb_type,kb_ids,icons,image,bg_image,name,intro,roles_prompt,model,model_id,model_sub_id,search_mode,search_tokens,search_similar,ranking_status,ranking_score,context_num,is_public,is_enable,optimize_ask,optimize_model,top_p,presence_penalty,frequency_penalty,logprobs,top_logprobs,search_empty_type,search_empty_text,welcome_introducer,copyright,threshold,mode_type')
+            ->field('id,user_id,cate_id,kb_type,kb_ids,icons,image,bg_image,name,intro,roles_prompt,model,model_id,model_sub_id,search_mode,search_tokens,search_similar,ranking_status,ranking_score,context_num,is_public,is_enable,optimize_ask,optimize_model,top_p,presence_penalty,frequency_penalty,logprobs,top_logprobs,search_empty_type,search_empty_text,welcome_introducer,copyright,threshold,mode_type,max_tokens,flow_config,flow_status')
             ->field('threshold')
             ->where(['id'=>$id])
             ->findOrEmpty()
@@ -343,6 +343,8 @@ class KbRobotLogic extends BaseLogic
                                 //模糊匹配阈值
                                 'threshold'          => floatval($post['threshold'] ?? 0.7),
                                 'mode_type'          => $post['mode_type'] ?? 1,
+                                //最大tokens
+                                'max_tokens'         => $post['max_tokens'] ?? 3000,
                             ], ['id' => intval($post['id'])]);
 
             // 自定义菜单

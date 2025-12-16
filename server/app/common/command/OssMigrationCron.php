@@ -8,6 +8,7 @@ use app\common\service\ConfigService;
 use think\console\Command;
 use think\console\Input;
 use think\console\Output;
+use think\facade\Log;
 
 /**
  * SunoStatus
@@ -24,16 +25,23 @@ class OssMigrationCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
-        $storage = ConfigService::get('storage', 'default', 'local');
-        $data = ConfigService::get('storage', $storage);
-        $key = 'oss_migration_cron' ;
-        if (isset($data['migration']) && in_array($data['migration'],[0,2]) ){
+        $key = 'oss_migration_cron';
+        try {
+            $storage = ConfigService::get('storage', 'default', 'local');
+            $data = ConfigService::get('storage', $storage);
+            if (isset($data['migration']) && in_array($data['migration'], [0, 2])) {
+                return true;
+            }
+            cache($key, 1);
+            OssLogic::migrationCron();
+            cache($key, 0);
             return true;
+        } catch (\Exception $e) {
+            Log::channel('crontab')->error('oss 处理失败 ' . $e->getMessage());
+            cache($key, 0);
+        } finally {
+            cache($key, 0);
         }
-        cache($key, 1);
-
-        OssLogic::migrationCron();
-        cache($key, 0);
         return true;
     }
 }

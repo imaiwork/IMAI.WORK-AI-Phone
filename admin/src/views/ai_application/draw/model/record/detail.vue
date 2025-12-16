@@ -9,9 +9,6 @@
                 <div class="text-lg font-bold mb-2">创作参数</div>
                 <div class="flex flex-wrap gap-2">
                     <el-tag> 生成数量：{{ detail.params?.img_count || 1 }} </el-tag>
-                    <el-tag>
-                        {{ getModelName(detail.model_type) }}
-                    </el-tag>
                     <el-tag v-if="detail.type_name">
                         {{ detail.type_name }}
                     </el-tag>
@@ -109,10 +106,6 @@ const modelList = computed(() => appStore.config.hd?.channel || []);
 const detail = ref<any>();
 
 const popupRef = ref();
-
-const getModelName = (modelId: string) => {
-    return modelList.value.find((item: any) => item.id == modelId)?.name;
-};
 
 const open = (row: any) => {
     detail.value = row;

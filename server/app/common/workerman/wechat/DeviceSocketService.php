@@ -95,6 +95,8 @@ class DeviceSocketService
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ])->log();
+        } finally{
+            unset($connection, $data);
         }
     }
 

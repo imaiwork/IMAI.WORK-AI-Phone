@@ -132,6 +132,10 @@ const transfer = (codeBlockData) => {
     ol {
         list-style-type: none !important;
     }
+    * {
+        line-height: 34px !important;
+        font-size: 15px !important;
+    }
 }
 .echarts-loading {
     position: absolute;

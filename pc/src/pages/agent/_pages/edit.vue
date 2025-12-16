@@ -135,6 +135,7 @@ const formData = reactive<Agent>({
     },
     threshold: 0.5,
     mode_type: ModeTypeEnum.BALANCE,
+    max_tokens: 4096,
 });
 
 const formRef = ref();

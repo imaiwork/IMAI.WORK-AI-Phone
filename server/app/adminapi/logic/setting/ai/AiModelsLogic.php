@@ -258,18 +258,17 @@ class AiModelsLogic extends BaseLogic
             }
 
             // 数字人模型的处理逻辑
-            if ($mainModel['type'] == ChatEnum::MODEL_TYPE_HUMAN && $mainModel['id'] != 9) {
+            if ($mainModel['type'] == ChatEnum::MODEL_TYPE_HUMAN) {
                 $models = ConfigService::get('model', 'list', []);
                 foreach ($models['channel'] as $key=>$item){
                     $models['channel'][$key]['name'] = $item['model_id'] == $mainModel['id'] ? $post['name'] : $item['name'];
                     $models['channel'][$key]['status'] = $item['model_id'] == $mainModel['id'] ? $post['is_enable'] : $item['status'];
                 }
                 ConfigService::set('model', 'list', $models);
-            }
-
-            // 闪剪处理
-            if ($mainModel['type'] == ChatEnum::MODEL_TYPE_HUMAN && $mainModel['id'] == 9) {
-                ConfigService::set('digital_human', 'shanjian_auth', $post['name']);
+                // 闪剪处理
+                if ($mainModel['id'] == 9) {
+                    ConfigService::set('digital_human', 'shanjian_auth', $post['name']);
+                }
             }
 
             $model->commit();

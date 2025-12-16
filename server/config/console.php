@@ -55,7 +55,9 @@ return [
         'task:scheduler' => 'app\common\command\DeviceTaskScheduler',
         //替换cron表达式
         'replace_cron' => 'app\common\command\ReplaceCron',
-
+        //验证微信用户
+        'wechat_verify' => 'app\common\command\WechatVerifyCron',
+        'hd_puzzle_cron' => 'app\common\command\HdPuzzleCron',
     ],
 
     

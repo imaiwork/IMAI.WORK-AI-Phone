@@ -6,7 +6,6 @@
                 <div class="message-contain message-contain--my" v-if="message">
                     <slot name="my"></slot>
                 </div>
-
                 <div
                     class="flex items-center justify-end cursor-pointer invisible group-hover:visible absolute bottom-0 right-0 translate-y-1/2"
                     v-if="message">
@@ -51,34 +50,29 @@
                 </div>
                 <div class="chat-loader mt-2" v-if="loading"></div>
                 <template v-else>
-                    <ElDivider class="!my-4" />
-                    <div class="flex items-center justify-between gap-2">
-                        <div>
-                            <ElTooltip v-if="Object.keys(consumeTokens).length > 0">
-                                <div
-                                    class="leading-[0] cursor-pointer p-1 hover:bg-token-sidebar-surface-secondary rounded-md">
-                                    <Icon name="el-icon-Warning" :size="16"></Icon>
+                    <div class="flex items-center gap-2 mt-1">
+                        <ElTooltip v-if="Object.keys(consumeTokens).length > 0">
+                            <div
+                                class="leading-[0] cursor-pointer p-1 hover:bg-token-sidebar-surface-secondary rounded-md">
+                                <Icon name="el-icon-Warning" :size="16"></Icon>
+                            </div>
+                            <template #content>
+                                <div>
+                                    消耗tokens：{{
+                                        (consumeTokens.total_tokens || 0) + (consumeTokens.knowledge_tokens || 0)
+                                    }}
                                 </div>
-                                <template #content>
-                                    <div>
-                                        消耗tokens：{{
-                                            (consumeTokens.total_tokens || 0) + (consumeTokens.knowledge_tokens || 0)
-                                        }}
-                                    </div>
-                                </template>
-                            </ElTooltip>
-                        </div>
-                        <div>
-                            <ElTooltip content="拷贝">
-                                <div
-                                    class="leading-[0] cursor-pointer p-1 hover:bg-token-sidebar-surface-secondary rounded-md"
-                                    @click="copyContent">
-                                    <Icon
-                                        :name="isCopying === 'his' ? 'el-icon-Check' : 'el-icon-CopyDocument'"
-                                        :size="16"></Icon>
-                                </div>
-                            </ElTooltip>
-                        </div>
+                            </template>
+                        </ElTooltip>
+                        <ElTooltip content="拷贝">
+                            <div
+                                class="leading-[0] cursor-pointer p-1 hover:bg-token-sidebar-surface-secondary rounded-md"
+                                @click="copyContent">
+                                <Icon
+                                    :name="isCopying === 'his' ? 'el-icon-Check' : 'el-icon-CopyDocument'"
+                                    :size="16"></Icon>
+                            </div>
+                        </ElTooltip>
                     </div>
                 </template>
             </div>
@@ -148,6 +142,7 @@ const copyContent = () => handleCopy("his");
     // display: flex;
     flex: 1;
     min-width: 0;
+    font-size: 15px;
     .message-avatar {
         min-width: 40px;
     }
@@ -157,7 +152,7 @@ const copyContent = () => handleCopy("his");
     }
 
     .message-contain--my {
-        @apply bg-primary text-white  ml-auto rounded-tl-2xl rounded-bl-2xl rounded-br-2xl px-4 py-3;
+        @apply bg-[#edf3fe]  ml-auto rounded-2xl px-4 py-3 w-fit;
     }
 
     .message-contain--his {

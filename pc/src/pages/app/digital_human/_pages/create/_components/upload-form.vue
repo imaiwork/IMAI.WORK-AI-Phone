@@ -12,7 +12,7 @@
         <div class="rounded-[24px] flex overflow-hidden container">
             <div class="absolute top-2 right-2">
                 <div class="w-6 h-6" @click="close">
-                    <close-btn />
+                    <close-btn :theme="ThemeEnum.DARK" />
                 </div>
             </div>
             <div class="w-[400px] bg-[#101010] py-[30px] px-[20px] flex-shrink-0">
@@ -31,9 +31,9 @@
                         </div>
                         <div class="flex flex-col gap-y-[6px]">
                             <div v-for="(item, index) in uploadTemplateContentLists" :key="index" class="text-[10px]">
-                                <span class="text-[rgba(255,255,255,0.8)] flex-shrink-0">{{ item.name }}</span>
-                                <span class="text-[rgba(255,255,255,0.3)]">·</span>
-                                <span class="text-[rgba(255,255,255,0.3)]">{{ item.value }}</span>
+                                <span class="text-[#ffffffcc] flex-shrink-0">{{ item.name }}</span>
+                                <span class="text-[#ffffff4d]">·</span>
+                                <span class="text-[#ffffff4d]">{{ item.value }}</span>
                             </div>
                         </div>
                     </div>
@@ -104,6 +104,8 @@
                         :max-duration="uploadLimit[formData.model_version].videoMaxDuration"
                         :video-min-width="uploadLimit[formData.model_version].minResolution"
                         :video-max-width="uploadLimit[formData.model_version].maxResolution"
+                        :video-min-height="uploadLimit[formData.model_version].minResolution"
+                        :video-max-height="uploadLimit[formData.model_version].maxResolution"
                         :accept="uploadVideoFormat"
                         @success="getVideo">
                         <div class="w-full rounded-lg h-[256px] bg-app-bg-1">
@@ -141,7 +143,7 @@
                                     </div>
                                     <div class="absolute top-2 right-2 z-[11]">
                                         <ElTooltip content="删除">
-                                            <ElButton circle color="rgba(255,255,255,0.1)" @click.stop="changeModel()">
+                                            <ElButton circle color="#ffffff0f" @click.stop="changeModel()">
                                                 <Icon name="el-icon-Delete" :size="14" color="#ffffff"></Icon>
                                             </ElButton>
                                         </ElTooltip>
@@ -185,7 +187,7 @@ import { uploadImage } from "@/api/app";
 import { createAnchor } from "@/api/digital_human";
 import { useAppStore } from "@/stores/app";
 import { dayjs } from "element-plus";
-import { TokensSceneEnum } from "@/enums/appEnums";
+import { TokensSceneEnum, ThemeEnum } from "@/enums/appEnums";
 import { useUserStore } from "@/stores/user";
 import { getVideoFirstFrame } from "@/utils/util";
 import Popup from "@/components/popup/index.vue";
@@ -209,7 +211,11 @@ const userStore = useUserStore();
 const modelChannel = computed(() => {
     const { channel } = appStore.getDigitalHumanConfig;
     if (channel && channel.length > 0) {
-        return channel.filter((item) => item.status == 1 && DigitalHumanModelVersionEnum.CHANJING == item.id);
+        return channel.filter(
+            (item) =>
+                item.status == 1 &&
+                (DigitalHumanModelVersionEnum.CHANJING == item.id || DigitalHumanModelVersionEnum.STANDARD == item.id)
+        );
     }
     return [];
 });
@@ -280,9 +286,6 @@ const modelUploadRequirements: any = {
     },
 };
 
-// 上传格式
-const extension = ["mp4", "mov"];
-
 const uploadTemplateContentLists = computed(() => {
     return [
         {
@@ -295,7 +298,7 @@ const uploadTemplateContentLists = computed(() => {
                 modelUploadRequirements[formData.model_version]?.videoMinDuration
             }秒-${modelUploadRequirements[formData.model_version]?.videoMaxDuration}秒`,
         },
-        { name: "文件格式", value: extension.join("、") },
+        { name: "文件格式", value: uploadVideoFormat },
         { name: "视频帧率", value: "15fps≤帧率≤60fps" },
         {
             name: "视频要求",

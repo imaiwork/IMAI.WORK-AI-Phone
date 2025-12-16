@@ -25,10 +25,12 @@
                         placeholder="请输入或粘贴文本内容"
                         type="textarea"
                         height="400"
-                        maxlength="500"
+                        :maxlength="maxContentLength"
                         placeholder-style="color: #C0C3C4;"
                         :auto-height="false" />
-                    <view class="text-right py-4 text-[#C0C3C4]"> {{ formData.content.length }}/2000 </view>
+                    <view class="text-right py-4 text-[#C0C3C4]">
+                        {{ formData.content.length }}/{{ maxContentLength }}
+                    </view>
                 </view>
             </view>
             <view class="mt-[66rpx]">
@@ -86,12 +88,17 @@
 
 <script setup lang="ts">
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const formData = reactive<any>({
     title: "",
     content: "",
     topic: [],
 });
+
+const maxContentLength = 2000;
 
 const showAddTagPopup = ref(false);
 const newTopic = ref("");
@@ -138,7 +145,7 @@ const back = () => {
         return;
     }
     uni.navigateBack();
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.TASK_COPYWRITER,
         data: formData.title ? [formData] : [],
     });

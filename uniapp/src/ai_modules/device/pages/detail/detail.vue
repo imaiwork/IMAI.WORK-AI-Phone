@@ -41,7 +41,8 @@
                         </navigator>
                     </view>
                     <navigator
-                        :class="{ 'flex-1 flex justify-end': detail.accounts?.length == 0 }"
+                        class=""
+                        :class="{ 'flex-1 flex justify-end h-full items-center': detail.accounts?.length == 0 }"
                         :url="`/ai_modules/device/pages/platform_detail/platform_detail?device_code=${deviceCode}`"
                         hover-class="none">
                         <u-icon name="arrow-right" color="#0000004d"></u-icon>
@@ -93,7 +94,7 @@
                 <u-input
                     v-model="editDeviceName"
                     placeholder="请输入设备名称"
-                    maxlength="30"
+                    maxlength="50"
                     placeholder-style="color: #0000004d; font-size: 26rpx;" />
             </view>
             <view class="flex items-center gap-x-5 mt-[56rpx]">

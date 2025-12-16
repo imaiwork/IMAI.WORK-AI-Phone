@@ -33,7 +33,7 @@ class VideoRecordLists extends BaseApiDataLists implements ListsSearchInterface
     {
         $where = [];
         $request = $this->request->get();
-        if (isset($request['type']) && $request['type'] !='') {
+        if (isset($request['type']) && $request['type'] !='' && $request['type'] != '6') {
             $where['dv.type'] = $request['type'];
         }
         $where['dv.user_id'] = $this->userId;
@@ -50,7 +50,7 @@ class VideoRecordLists extends BaseApiDataLists implements ListsSearchInterface
                             ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
                                 $query->whereBetween('dv.create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
                             })
-                            ->field('dv.*,u.nickname,u.avatar')
+                            ->field("dv.*,u.nickname,u.avatar,6 as draw_type")
                             ->where($where)
                             ->order('dv.id desc')
                             ->limit($this->limitOffset, $this->limitLength)

@@ -184,6 +184,14 @@ class IndexLogic extends BaseLogic
         foreach ($chatModels['channel'] as $key=>$value){
             $chatModels['channel'][$key]['logo'] = isset($value['logo']) ? FileService::getFileUrl($value['logo']) : '';
         }
+
+        //视频案例
+        $videoCases = ConfigService::get('digital_human', 'video_case', []);
+        foreach ($videoCases as $key=> $videoCase){
+            $videoCases[$key]['image'] = FileService::getFileUrl($videoCase['image']);
+            $videoCases[$key]['video_case_url'] = FileService::getFileUrl($videoCase['video_case_url']);
+        }
+
         $transcoding = true;
         $config = [
             'default' => ConfigService::get('storage', 'default', 'local'),
@@ -237,6 +245,7 @@ class IndexLogic extends BaseLogic
                 'voice' => $modelList['voice'] ?? [],
                 'shanjian_auth' => ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI'),
                 'banner' =>  FileService::getFileUrl(ConfigService::get('digital_human', 'banner', $banner)),
+                'video_case' => $videoCases,
             ],
             'draw' => [
                 'channel' => $hdList['channel'] ?? [],

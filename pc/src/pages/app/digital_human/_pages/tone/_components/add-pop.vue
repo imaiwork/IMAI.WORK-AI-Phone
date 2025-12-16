@@ -10,7 +10,7 @@
         @close="close">
         <div class="-my-4">
             <div class="w-6 h-6 absolute top-4 right-4" @click="close">
-                <close-btn />
+                <close-btn :theme="ThemeEnum.DARK" />
             </div>
             <div class="flex items-center gap-x-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -35,17 +35,6 @@
                 <ElFormItem label="音色名称" prop="name">
                     <ElInput v-model="formData.name" class="!h-11" placeholder="请输入音色名称" maxlength="30" />
                 </ElFormItem>
-                <ElFormItem label="性别" prop="gender">
-                    <ElSelect
-                        v-model="formData.gender"
-                        class="!h-11"
-                        placeholder="请选择性别"
-                        popper-class="dark-select-popper"
-                        :show-arrow="false">
-                        <ElOption value="male" label="男"></ElOption>
-                        <ElOption value="female" label="女"></ElOption>
-                    </ElSelect>
-                </ElFormItem>
                 <ElFormItem label="使用模型" prop="model_version">
                     <ElSelect
                         v-model="formData.model_version"
@@ -60,6 +49,20 @@
                             :label="item.name"></ElOption>
                     </ElSelect>
                 </ElFormItem>
+                <ElFormItem
+                    label="性别"
+                    prop="gender"
+                    v-if="formData.model_version != DigitalHumanModelVersionEnum.SHANJIAN">
+                    <ElSelect
+                        v-model="formData.gender"
+                        class="!h-11"
+                        placeholder="请选择性别"
+                        popper-class="dark-select-popper"
+                        :show-arrow="false">
+                        <ElOption value="male" label="男"></ElOption>
+                        <ElOption value="female" label="女"></ElOption>
+                    </ElSelect>
+                </ElFormItem>
                 <ElFormItem label="上传音频" prop="url">
                     <upload
                         class="w-full"
@@ -67,7 +70,7 @@
                         type="audio"
                         list-type="text"
                         :limit="1"
-                        :size="20"
+                        :max-size="10"
                         :accept="getAccept"
                         @success="handleFileSuccess">
                         <div class="h-[166px] bg-app-bg-1 rounded-lg flex flex-col justify-center items-center">
@@ -96,11 +99,11 @@
 
 <script setup lang="ts">
 import Popup from "@/components/popup/index.vue";
-import { voiceClone } from "@/api/digital_human";
+import { voiceClone, shanjianVoiceClone } from "@/api/digital_human";
 import type { FormInstance } from "element-plus";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
-import { TokensSceneEnum } from "@/enums/appEnums";
+import { TokensSceneEnum, ThemeEnum } from "@/enums/appEnums";
 import { DigitalHumanModelVersionEnum } from "../../../_enums";
 
 const emit = defineEmits<{
@@ -116,7 +119,12 @@ const modelChannel = computed(() => {
     if (channel && channel.length > 0) {
         const modelChannel = channel.filter((item) => {
             item.id = parseInt(item.id);
-            if (item.status == 1 && DigitalHumanModelVersionEnum.CHANJING == item.id) {
+            if (
+                item.status == 1 &&
+                (DigitalHumanModelVersionEnum.SHANJIAN == item.id ||
+                    DigitalHumanModelVersionEnum.CHANJING == item.id ||
+                    DigitalHumanModelVersionEnum.STANDARD == item.id)
+            ) {
                 return item;
             }
         });
@@ -128,10 +136,8 @@ const modelChannel = computed(() => {
 const tokensValue = computed(() => {
     return {
         [DigitalHumanModelVersionEnum.STANDARD]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE)?.score,
-        [DigitalHumanModelVersionEnum.SUPER]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_PRO)?.score,
-        [DigitalHumanModelVersionEnum.ADVANCED]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_ADVANCED)?.score,
-        [DigitalHumanModelVersionEnum.ELITE]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_ELITE)?.score,
         [DigitalHumanModelVersionEnum.CHANJING]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_CHANJING)?.score,
+        [DigitalHumanModelVersionEnum.SHANJIAN]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN)?.score,
     }[formData.model_version];
 });
 
@@ -172,12 +178,17 @@ const handleSubmit = async () => {
     }
     await formRef.value.validate();
     try {
-        await voiceClone(formData);
+        (await formData.model_version) == DigitalHumanModelVersionEnum.SHANJIAN
+            ? await shanjianVoiceClone({
+                  name: formData.name,
+                  audio_url: formData.url,
+              })
+            : await voiceClone(formData);
         popupRef.value?.close();
         userStore.getUser();
         emit("success");
     } catch (error) {
-        feedback.msgError(error || "转写失败!");
+        feedback.msgError(error || "克隆失败");
     }
 };
 

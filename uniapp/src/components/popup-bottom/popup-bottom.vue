@@ -7,7 +7,8 @@
         :closeable="false"
         :z-index="zIndex"
         @touchstart="handleTouchStart"
-        @touchend="handleTouchEnd">
+        @touchend="handleTouchEnd"
+        @close="closePopup">
         <view class="h-full flex flex-col" :class="customClass" :style="customStyle">
             <view
                 v-if="showCloseBtn"

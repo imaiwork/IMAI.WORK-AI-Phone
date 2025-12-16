@@ -113,25 +113,7 @@ trait AiCircleTrait
                 ])->log();
                 return;
             }
-            // $optLog = AiWechatLog::where('user_id', $device->user_id)
-            //     ->where('wechat_id', $wechatid)
-            //     ->where('friend_id', $circle['WeChatId'])
-            //     ->where('log_type', AiWechatLog::TYPE_REPLY_CIRCLE)
-            //     ->order('id desc')
-            //     ->findOrEmpty();
-            // if (!$optLog->isEmpty()) {
-            //     $difftime = (time() - strtotime($optLog->create_time)) / 60;
-            //     if ($difftime < $strategy->reply_interval_time) {
-            //         $this->withChannel('wechat_socket')->withLevel('notice')->withTitle('Reply Log')->withContext([
-            //             'msg' => '评论间隔时间太短了',
-            //             'CircleId' => $circle['CircleId'],
-            //             'wechat_id' => $wechatid,
-            //             'friend_id' => $circle['WeChatId'],
-            //         ])->log();
-            //         return;
-            //     }
-            // }
-
+            
             $optCount =  AiWechatLog::where('user_id', $device->user_id)
                 ->where('wechat_id', $wechatid)
                 ->where('friend_id', $circle['WeChatId'])
@@ -195,7 +177,6 @@ trait AiCircleTrait
     }
 
     private function createReplyContent(array $circle, int $user_id, AiWechatCircleReplyLikeStrategy $strategy): string
-
     {
         try {
             $replyContent = '';
@@ -387,25 +368,7 @@ trait AiCircleTrait
                 ])->log();
                 return;
             }
-            // $optLog = AiWechatLog::where('user_id', $device->user_id)
-            //     ->where('wechat_id', $wechatid)
-            //     ->where('friend_id', $circle['WeChatId'])
-            //     ->where('log_type', AiWechatLog::TYPE_LIKE_CIRCLE)
-            //     ->order('id desc')
-            //     ->findOrEmpty();
-            // if (!$optLog->isEmpty()) {
-            //     $difftime = (time() - strtotime($optLog->create_time)) / 60;
-            //     if ($difftime < $strategy->like_interval_time) {
-            //         $this->withChannel('wechat_socket')->withLevel('notice')->withTitle('Like Log')->withContext([
-            //             'msg' => '点赞间隔时间太短了',
-            //             'CircleId' => $circle['CircleId'],
-            //             'wechat_id' => $wechatid,
-            //             'friend_id' => $circle['WeChatId'],
-            //         ])->log();
-            //         return;
-            //     }
-            // }
-
+            
             $optCount =  AiWechatLog::where('user_id', $device->user_id)
                 ->where('wechat_id', $wechatid)
                 ->where('friend_id', $circle['WeChatId'])
@@ -415,6 +378,7 @@ trait AiCircleTrait
             if ($optCount >= $strategy->like_numbers) {
                 $this->withChannel('wechat_socket')->withLevel('notice')->withTitle('Like Log')->withContext([
                     'msg' => '每日点赞数超限了',
+                    'user_id' => $device->user_id,
                     'CircleId' => $circle['CircleId'],
                     'wechat_id' => $wechatid,
                     'friend_id' => $circle['WeChatId'],

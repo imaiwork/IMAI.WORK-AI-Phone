@@ -120,7 +120,7 @@
                             <template v-if="!payLoading">
                                 <template v-if="perCode">
                                     <div class="rounded-2xl border border-token-primary p-1">
-                                        <vue-qr :text="perCode" :size="180" class="rounded-[10px]" margin="12" />
+                                        <vue-qr :text="perCode" :size="180" class="rounded-[10px]" :margin="12" />
                                     </div>
                                 </template>
                                 <template v-else>

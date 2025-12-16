@@ -144,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { getMaterialLibraryList, getDigitalHumanVideo } from "@/api/redbook";
+import { getMaterialLibraryList, getDigitalHumanVideo } from "~/api/matrix";
 import { getVideoList as getDigitalHumanVideoList } from "@/api/digital_human";
 import { ThemeEnum } from "@/enums/appEnums";
 import Popup from "@/components/popup/index.vue";

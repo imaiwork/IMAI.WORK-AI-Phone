@@ -18,3 +18,19 @@ export function getDrawRecordVideoList(params: any) {
 export function delDrawRecordVideo(params: any) {
     return request.post({ url: "/draw.videoRecord/del", params });
 }
+// 拼图任务列表
+export function getPuzzleTaskList(params: any) {
+    return request.get({ url: "/hd.hdPuzzleSetting/lists", params });
+}
+// 删除拼图任务
+export function deletePuzzleTask(params: any) {
+    return request.post({ url: "/hd.hdPuzzleSetting/delete", params });
+}
+// 拼图任务记录列表
+export function getPuzzleTaskRecordList(params: any) {
+    return request.get({ url: "/hd.hdPuzzle/lists", params });
+}
+// 删除拼图任务记录
+export function deletePuzzleTaskRecord(params: any) {
+    return request.post({ url: "/hd.hdPuzzle/delete", params });
+}

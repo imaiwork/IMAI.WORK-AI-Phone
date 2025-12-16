@@ -55,7 +55,7 @@ class SvMediaMaterialLogic extends SvBaseLogic
         }
     }
 
-    public static function deleteSvMediaMaterial(int $id)
+    public static function deleteSvMediaMaterial($id)
     {
         // 删除素材逻辑
         try {

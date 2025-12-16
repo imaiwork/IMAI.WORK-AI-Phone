@@ -99,20 +99,24 @@ import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { DigitalHumanModelVersionEnum } from "../../enums";
 
-const props = defineProps({
-    show: {
-        type: Boolean,
-        default: false,
-    },
-});
-const emit = defineEmits(["update:show"]);
+const props = withDefaults(
+    defineProps<{
+        modelValue: boolean;
+        modelVersion: DigitalHumanModelVersionEnum;
+    }>(),
+    {
+        modelVersion: DigitalHumanModelVersionEnum.CHANJING,
+        modelValue: false,
+    }
+);
+const emit = defineEmits(["update:modelValue"]);
 
 const showPopup = computed({
     get() {
-        return props.show;
+        return props.modelValue;
     },
     set(val) {
-        emit("update:show", val);
+        emit("update:modelValue", val);
     },
 });
 const appStore = useAppStore();
@@ -125,17 +129,17 @@ const modelChannel = computed(() => {
     if (!channel?.length) return [];
 
     const modelConfigs = {
-        // [DigitalHumanModelVersionEnum.STANDARD]: {
-        //     video_create_model: "微聚V3",
-        //     tone_clone: "Fish Audio",
-        //     anchor_clone: "微聚V3",
-        //     tokens: {
-        //         voice: TokensSceneEnum.HUMAN_VOICE,
-        //         anchor: TokensSceneEnum.HUMAN_AVATAR,
-        //         audio: TokensSceneEnum.HUMAN_AUDIO,
-        //         video: TokensSceneEnum.HUMAN_VIDEO,
-        //     },
-        // },
+        [DigitalHumanModelVersionEnum.STANDARD]: {
+            video_create_model: "微聚V3",
+            tone_clone: "Fish Audio",
+            anchor_clone: "微聚V3",
+            tokens: {
+                voice: TokensSceneEnum.HUMAN_VOICE,
+                anchor: TokensSceneEnum.HUMAN_AVATAR,
+                audio: TokensSceneEnum.HUMAN_AUDIO,
+                video: TokensSceneEnum.HUMAN_VIDEO,
+            },
+        },
         // [DigitalHumanModelVersionEnum.SUPER]: {
         //     video_create_model: "阿里云",
         //     tone_clone: "Fish Audio",
@@ -183,7 +187,7 @@ const modelChannel = computed(() => {
     };
 
     return channel
-        .filter((item: any) => item.status == 1 && DigitalHumanModelVersionEnum.CHANJING == item.id)
+        .filter((item: any) => props.modelVersion == item.id)
         .map((item: any) => {
             // @ts-ignore
             const config = modelConfigs[item.id];
@@ -191,6 +195,7 @@ const modelChannel = computed(() => {
 
             const formatToken = (scene: string) => {
                 const value = getTokenByScene(scene);
+
                 return value.score ? `${value.score}${value.unit}` : 0;
             };
 

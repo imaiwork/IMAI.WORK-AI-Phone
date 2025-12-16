@@ -5,7 +5,7 @@ namespace app\api\controller\sv;
 use app\api\controller\BaseApiController;
 use app\api\lists\tools\ToolsLists;
 use app\api\lists\tools\ToolsLogLists;
-use app\api\logic\ToolsLogic;
+use app\api\logic\sv\ToolsLogic;
 use app\api\validate\ToolsValidate;
 use think\response\Json;
 
@@ -43,5 +43,12 @@ class ToolsController extends BaseApiController
     public function searchTranscoding(){
         $params = $this->request->post();
         return ToolsLogic::searchTranscoding($params) ? $this->success(data: ToolsLogic::getReturnData()) : $this->fail(ToolsLogic::getError());
+    }
+
+
+    public function getTitle(){
+        $params = $this->request->post();
+        $params['user_id'] =  $this->userId ;
+        return ToolsLogic::getCopywriting($params) ? $this->success(data: ToolsLogic::getReturnData()) : $this->fail(ToolsLogic::getError());
     }
 }

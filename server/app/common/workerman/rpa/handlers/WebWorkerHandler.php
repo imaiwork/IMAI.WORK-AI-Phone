@@ -59,6 +59,8 @@ class WebWorkerHandler extends BaseMessageHandler
             $this->payload['code'] =  WorkerEnum::WED_BIND_ERROR_CODE;
             $this->payload['type'] = 'error';
             $this->sendError($this->connection,  $this->payload);
+        } finally{
+            unset($content);
         }
     }
 }

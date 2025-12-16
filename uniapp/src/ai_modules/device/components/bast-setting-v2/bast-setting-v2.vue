@@ -46,7 +46,7 @@
                                 v-if="showAccounts"
                                 :url="`/ai_modules/device/pages/account_choose/account_choose?accounts=${JSON.stringify(
                                     formData.accounts
-                                )}&platformTypes=${JSON.stringify(platformTypes)}`"
+                                )}&platformTypes=${JSON.stringify(platformTypes)}&multiple=${multiple}`"
                                 class="flex items-center justify-between h-[70rpx]"
                                 hover-class="none">
                                 <text
@@ -169,12 +169,14 @@ const props = withDefaults(
         currentFrequency?: number;
         // 时间间隔
         timeInterval?: number;
+        multiple?: 0 | 1;
     }>(),
     {
         showDevice: true,
         showAccounts: false,
         currentFrequency: 0,
         timeInterval: 30,
+        multiple: 1,
     }
 );
 

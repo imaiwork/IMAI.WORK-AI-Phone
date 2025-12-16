@@ -1,12 +1,5 @@
 <template>
     <view class="h-screen flex flex-col">
-        <u-navbar
-            title="AI文案生成"
-            title-bold
-            :is-fixed="false"
-            :border-bottom="false"
-            :background="{ background: 'transparent' }"
-            :custom-back="back"></u-navbar>
         <view class="grow min-h-0">
             <scroll-view scroll-y class="h-full">
                 <view class="p-4">
@@ -108,7 +101,6 @@
                 </view>
             </scroll-view>
         </view>
-
         <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 pb-5 pt-2">
             <view class="flex items-center justify-between px-4 gap-[48rpx]">
                 <view
@@ -165,6 +157,9 @@ import { generateMatrixPrompt } from "@/api/device";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
@@ -279,8 +274,7 @@ const useContent = () => {
         return;
     }
     try {
-        console.log("1", 1);
-        uni.$emit("confirm", {
+        emit("confirm", {
             type: ListenerTypeEnum.TASK_AI_COPYWRITER,
             data: chatContentList.value
                 .filter((item) => item.title)
@@ -297,45 +291,22 @@ const useContent = () => {
     }
 };
 
-const back = () => {
-    if (chatContentList.value.length > 0) {
-        chatContentList.value = [];
-        isGenerating.value = false;
-    } else {
-        uni.navigateBack();
-    }
-};
-
 onLoad((options: any) => {
     textLimit.value = options.limit;
 });
 </script>
 
 <style scoped lang="scss">
-@mixin content-box {
-    @apply absolute top-[-4rpx] left-[-4rpx] w-[100%] h-[100%]  p-[4rpx] rounded-[16rpx] content-[''];
-    background: conic-gradient(#47d59f, #37cced);
-    -webkit-mask: linear-gradient(#47d59f 0 100%) content-box, linear-gradient(#37cced 0 100%);
-    -webkit-mask-composite: xor;
-}
-
 .prompt-length-item,
 .prompt-num-item {
-    @apply w-[84rpx] h-[72rpx] flex items-center justify-center  bg-white text-[26rpx]  relative rounded-[16rpx];
+    @apply w-[84rpx] h-[72rpx] flex items-center justify-center bg-white text-[26rpx] relative rounded-[16rpx];
     &.active {
-        @apply font-bold text-black;
-
-        &::before {
-            @include content-box;
-        }
+        @apply font-bold text-black shadow-[0rpx_0rpx_0rpx_2rpx_#0065FB];
     }
 }
 
 .copywriter-item {
-    @apply relative rounded-[16rpx] bg-white shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] p-4;
-    &::before {
-        @include content-box;
-    }
+    @apply relative rounded-[16rpx] bg-white p-4;
 }
 
 .topic-item {

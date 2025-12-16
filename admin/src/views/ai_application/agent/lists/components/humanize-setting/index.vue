@@ -17,7 +17,7 @@
                     </div>
                 </el-form-item>
                 <!-- 词汇多样性 -->
-                <el-form-item label="词汇多样性">
+                <el-form-item label="词汇多样性" v-if="formData.model_id != ModelIdEnum.CLAUDE_SONNET_4_5">
                     <div class="flex items-center w-full gap-x-4">
                         <div class="flex-1">
                             <el-slider v-model="formData.top_p" :min="0" :max="1" :step="0.1" />
@@ -31,7 +31,7 @@
                     </div>
                 </el-form-item>
                 <!-- 重复词频率 -->
-                <el-form-item label="重复词频率" v-if="formData.model_id != 4">
+                <el-form-item label="重复词频率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                     <div class="flex items-center w-full gap-x-4">
                         <div class="flex-1">
                             <el-slider v-model="formData.frequency_penalty" :min="-2" :max="2" :step="0.1" />
@@ -45,7 +45,7 @@
                     </div>
                 </el-form-item>
                 <!-- 特定词重复率 -->
-                <el-form-item label="特定词重复率" v-if="formData.model_id != 4">
+                <el-form-item label="特定词重复率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                     <div class="flex items-center w-full gap-x-4">
                         <div class="flex-1">
                             <el-slider v-model="formData.presence_penalty" :min="0" :max="1" :step="0.1" />
@@ -73,7 +73,7 @@
                     </div>
                 </el-form-item>
                 <!-- 显示前几个候选词对数概率 -->
-                <el-form-item label="显示前几个候选词对数概率" v-if="formData.model_id == 2">
+                <el-form-item label="显示前几个候选词对数概率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                     <div class="flex items-center w-full gap-x-4">
                         <div class="flex-1">
                             <el-slider v-model="formData.top_logprobs" :min="0" :max="20" />
@@ -81,8 +81,21 @@
                     </div>
                 </el-form-item>
                 <!-- 显示候选词 -->
-                <el-form-item label="显示候选词" v-if="formData.model_id == 2">
+                <el-form-item label="显示候选词" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                     <el-switch v-model="formData.logprobs" :active-value="1" :inactive-value="0" />
+                </el-form-item>
+                <!-- 返回长度 -->
+                <el-form-item label="返回长度">
+                    <div class="flex items-center w-full gap-x-4">
+                        <div class="flex-1">
+                            <el-slider v-model="formData.max_tokens" :min="1" :max="getMaxTokens" />
+                        </div>
+                    </div>
+                    <el-input-number
+                        v-model="formData.max_tokens"
+                        controls-position="right"
+                        :min="1"
+                        :max="getMaxTokens"></el-input-number>
                 </el-form-item>
             </el-form>
         </div>
@@ -90,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Agent } from "../enums";
+import { ModelIdEnum, type Agent } from "../enums";
 
 // 使用 defineModel 实现与父组件的双向绑定
 const formData = defineModel<Agent>("modelValue", {
@@ -104,14 +117,22 @@ const formData = defineModel<Agent>("modelValue", {
         temperature: 0,
         top_logprobs: 10,
         logprobs: 0,
+        max_tokens: 4096,
     }),
 });
 
 const getMaxTemperature = computed(() => {
-    if (formData.value.model_id == 2) {
+    if (formData.value.model_id == ModelIdEnum.DEEPSEEK) {
         return 2;
     }
     return 1;
+});
+
+const getMaxTokens = computed(() => {
+    if (formData.value.model_id == ModelIdEnum.DEEPSEEK) {
+        return 4096;
+    }
+    return 100000;
 });
 // 暴露 validate 方法，以符合父组件的统一接口
 // 此处没有实际的验证逻辑，仅作为占位符

@@ -474,7 +474,7 @@ trait DeviceTaskTrait
     {
         try {
             self::$logtitle = "自动加好友任务[{$dtask->device_code}]";
-            //self::checkOnline($dtask->device_code, 'wx');
+            self::checkOnline($dtask->device_code, 'ws');
 
             $records = SvCrawlingManualTaskRecord::alias('a')
                 ->field('a.*')
@@ -516,6 +516,10 @@ trait DeviceTaskTrait
                     $response = \app\common\service\ToolsService::Sv()->queryResult([
                         "string" => $record['clue_wechat'],
                     ]);
+                    if (isset($response['code']) && (int)$response['code'] === 10005) {
+                        self::setLog($response, 'add_wechat');
+                        continue;
+                    }
                     if (isset($response['code']) && (int)$response['code'] === 10000) {
                         if (is_null($response['data'])) {
                             self::setLog($record['clue_wechat'] . '该账号还未开始验证', 'add_wechat');
@@ -618,32 +622,34 @@ trait DeviceTaskTrait
                 }
             }
 
-            $data = array(
-                'type' => 50, // 接管任务启动
-                'appType' => 0,
-                'content' => json_encode(array(
-                    'task_id' => $dtask->id,
+            if ($dtask->status === 0) {
+                $data = array(
+                    'type' => 50, // 接管任务启动
+                    'appType' => 0,
+                    'content' => json_encode(array(
+                        'task_id' => $dtask->id,
+                        'deviceId' => $dtask->device_code,
+                        'account' => $dtask->account,
+                        'account_type' => $dtask->account_type,
+                        'start_time' => $dtask->start_time,
+                        'end_time' => $dtask->end_time,
+                        'time_interval' => ($dtask->end_time - $dtask->start_time) / 60,
+                        'msg' => '加微任务运行'
+                    ), JSON_UNESCAPED_UNICODE),
                     'deviceId' => $dtask->device_code,
-                    'account' => $dtask->account,
-                    'account_type' => $dtask->account_type,
-                    'start_time' => $dtask->start_time,
-                    'end_time' => $dtask->end_time,
-                    'time_interval' => ($dtask->end_time - $dtask->start_time) / 60,
-                    'msg' => '加微任务运行'
-                ), JSON_UNESCAPED_UNICODE),
-                'deviceId' => $dtask->device_code,
-                'appVersion' => '2.1.1',
-                'messageId' => 0,
-            );
-            self::setLog($data, 'add_wechat');
-            $output->writeln(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                    'appVersion' => '2.1.1',
+                    'messageId' => 0,
+                );
+                self::setLog($data, 'add_wechat');
+                $output->writeln(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
-            $channel = "device.{$dtask->device_code}.message";
-            ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
-            ChannelClient::publish($channel, [
-                'data' => json_encode($data)
-            ]);
-
+                $channel = "device.{$dtask->device_code}.message";
+                ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+                ChannelClient::publish($channel, [
+                    'data' => json_encode($data)
+                ]);
+            }
+            
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
@@ -683,8 +689,8 @@ trait DeviceTaskTrait
             // usleep(200 * 1000); //200毫秒
 
             $data = array(
-                'type' => 30, // 接管任务启动
-                'appType' => DeviceEnum::TASK_TYPE_TAKEOVER,
+                'type' => DeviceEnum::getTakeOverType($dtask->account_type), // 接管任务启动
+                'appType' => $dtask->account_type,
                 'content' => json_encode(array(
                     'task_id' => $dtask->id,
                     'deviceId' => $dtask->device_code,
@@ -751,30 +757,30 @@ trait DeviceTaskTrait
                 throw new \Exception('接管账号任务不存在');
             }
 
-            $data = array(
-                'type' => 31, // 接管任务执行结束
-                'appType' => DeviceEnum::TASK_TYPE_TAKEOVER,
-                'content' => json_encode(array(
-                    'task_id' => $dtask->id,
-                    'deviceId' => $dtask->device_code,
-                    'account' => $dtask->account,
-                    'account_type' => $dtask->account_type,
-                    'start_time' => $dtask->start_time,
-                    'end_time' => $dtask->end_time,
-                    'msg' => '接管任务执行结束'
-                ), JSON_UNESCAPED_UNICODE),
-                'deviceId' => $dtask->device_code,
-                'appVersion' => '2.1.1',
-                'messageId' => 0,
-            );
-            self::setLog($data, 'take_over');
-            $output->writeln(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            // $data = array(
+            //     'type' => 31, // 接管任务执行结束
+            //     'appType' => DeviceEnum::TASK_TYPE_TAKEOVER,
+            //     'content' => json_encode(array(
+            //         'task_id' => $dtask->id,
+            //         'deviceId' => $dtask->device_code,
+            //         'account' => $dtask->account,
+            //         'account_type' => $dtask->account_type,
+            //         'start_time' => $dtask->start_time,
+            //         'end_time' => $dtask->end_time,
+            //         'msg' => '接管任务执行结束'
+            //     ), JSON_UNESCAPED_UNICODE),
+            //     'deviceId' => $dtask->device_code,
+            //     'appVersion' => '2.1.1',
+            //     'messageId' => 0,
+            // );
+            // self::setLog($data, 'take_over');
+            // $output->writeln(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
-            $channel = "device.{$dtask->device_code}.message";
-            ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
-            ChannelClient::publish($channel, [
-                'data' => json_encode($data)
-            ]);
+            // $channel = "device.{$dtask->device_code}.message";
+            // ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+            // ChannelClient::publish($channel, [
+            //     'data' => json_encode($data)
+            // ]);
 
             $account->status = DeviceEnum::TASK_STATUS_FINISHED;
             $account->update_time = time();
@@ -815,8 +821,8 @@ trait DeviceTaskTrait
             // usleep(200 * 1000); //200毫秒
 
             $data = array(
-                'type' => 40, // 养号任务启动
-                'appType' => DeviceEnum::TASK_TYPE_ACTIVE,
+                'type' => DeviceEnum::getMaintainAccountType($dtask->account_type), // 养号任务启动
+                'appType' => $dtask->account_type,
                 'content' => json_encode(array(
                     'task_id' => $dtask->sub_task_id,
                     'deviceId' => $dtask->device_code,
@@ -883,30 +889,30 @@ trait DeviceTaskTrait
                 throw new \Exception('养号任务不存在');
             }
 
-            $data = array(
-                'type' => 41, // 养号任务执行结束
-                'appType' => DeviceEnum::TASK_TYPE_ACTIVE,
-                'content' => json_encode(array(
-                    'task_id' => $dtask->sub_task_id,
-                    'deviceId' => $dtask->device_code,
-                    'account' => $dtask->account,
-                    'account_type' => $dtask->account_type,
-                    'start_time' => $dtask->start_time,
-                    'end_time' => $dtask->end_time,
-                    'msg' => '养号任务执行结束'
-                ), JSON_UNESCAPED_UNICODE),
-                'deviceId' => $dtask->device_code,
-                'appVersion' => '2.1.1',
-                'messageId' => 0,
-            );
-            self::setLog($data, 'active');
-            $output->writeln(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            // $data = array(
+            //     'type' => 41, // 养号任务执行结束
+            //     'appType' => DeviceEnum::TASK_TYPE_ACTIVE,
+            //     'content' => json_encode(array(
+            //         'task_id' => $dtask->sub_task_id,
+            //         'deviceId' => $dtask->device_code,
+            //         'account' => $dtask->account,
+            //         'account_type' => $dtask->account_type,
+            //         'start_time' => $dtask->start_time,
+            //         'end_time' => $dtask->end_time,
+            //         'msg' => '养号任务执行结束'
+            //     ), JSON_UNESCAPED_UNICODE),
+            //     'deviceId' => $dtask->device_code,
+            //     'appVersion' => '2.1.1',
+            //     'messageId' => 0,
+            // );
+            // self::setLog($data, 'active');
+            // $output->writeln(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
-            $channel = "device.{$dtask->device_code}.message";
-            ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
-            ChannelClient::publish($channel, [
-                'data' => json_encode($data)
-            ]);
+            // $channel = "device.{$dtask->device_code}.message";
+            // ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+            // ChannelClient::publish($channel, [
+            //     'data' => json_encode($data)
+            // ]);
 
             $account->status = DeviceEnum::TASK_STATUS_FINISHED;
             $account->update_time = time();
@@ -1058,13 +1064,13 @@ trait DeviceTaskTrait
                 self::setWxSelect();
 
                 $isOnline = self::redis()->get("device:{$deviceCode}:status");
-                if (empty($isOnline)) {
+                if (empty($isOnline) || $isOnline !== 'online') {
                     throw new \Exception("设备:{$deviceCode} 不在线");
                 }
             } else {
                 self::setWsSelect();
                 $isOnline = self::redis()->get("xhs:device:{$deviceCode}:status");
-                if (empty($isOnline)) {
+                if (empty($isOnline) || $isOnline !== 'online') {
                     throw new \Exception("设备:{$deviceCode} 不在线");
                 }
             }

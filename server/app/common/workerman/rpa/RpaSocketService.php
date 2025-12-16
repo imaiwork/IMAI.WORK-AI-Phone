@@ -51,11 +51,13 @@ class RpaSocketService
         // 更新消息时间避免断开
         $connection->lastMessageTime = time();
         //客户端与后端消息链接唯一标识
-        $this->setLog('新消息:' . $data);
+        if(strpos($data , '"type":"ping"') === false){
+            $this->setLog('新消息:' . $data);
+        }
 
         try {
             $uid = $connection->uid;
-            $this->setLog('onMessage uid:' . $uid);
+            //$this->setLog('onMessage uid:' . $uid);
             $message = json_decode($data, true);
             // 验证请求
             [$type, $payload] = $this->verifyClientRequest($connection, $message);
@@ -128,6 +130,8 @@ class RpaSocketService
             $message['reply'] = $e->getMessage();
             $this->sendError($uid, $message);
             return;
+        } finally{
+            unset($message);
         }
     }
 
@@ -270,6 +274,8 @@ class RpaSocketService
             unset($connection->uid, $connection->lastMessageTime, $connection->deviceid, $connection->closeReason);
         } catch (\Exception $e) {
             $this->setLog('处理连接关闭时发生异常: ' . $e->getMessage(), 'error');
+        } finally{
+            unset($connection);
         }
     }
 
@@ -389,6 +395,8 @@ class RpaSocketService
             $this->send($uid, $payload);
         } catch (\Exception $e) {
             $this->setLog('sendSuccess:' . $e, 'error');
+        } finally{
+            unset($payload);
         }
     }
     public function sendError($uid, $payload)
@@ -413,6 +421,8 @@ class RpaSocketService
             $this->send($uid, $payload);
         } catch (\Exception $e) {
             $this->setLog('sendError:' . $e, 'error');
+        }finally{
+            unset($payload);
         }
     }
 
@@ -462,6 +472,8 @@ class RpaSocketService
             // }
         } catch (\Exception $e) {
             $this->setLog('sendWeb:' . $e, 'error');
+        } finally{
+            unset($content);
         }
     }
 
@@ -509,6 +521,8 @@ class RpaSocketService
             $this->setLog('send:' . $e, 'error');
             $this->setLog($payload, 'error');
             return false;
+        } finally{
+            unset($payload, $content);
         }
         $this->setLog("\n\n---------------------------");
         return true;

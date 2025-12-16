@@ -11,8 +11,10 @@
         :show-close="false">
         <div>
             <!-- 关闭按钮 -->
-            <div class="absolute w-6 h-6 right-4 top-4 z-10 cursor-pointer" @click="close">
-                <close-btn />
+            <div
+                class="absolute w-6 h-6 flex items-center justify-center rounded-full right-4 top-4 cursor-pointer bg-[#dfdfdf4d]"
+                @click="close">
+                <Icon name="el-icon-Close" color="#8B9199"></Icon>
             </div>
             <!-- 顶部背景和Logo -->
             <div

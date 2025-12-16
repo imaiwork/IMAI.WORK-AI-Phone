@@ -1,6 +1,6 @@
 <!-- uniapp vue3 markdown解析 -->
 <template>
-    <view class="ua__markdown text-[26rpx]">
+    <view class="ua__markdown">
         <rich-text
             class="break-all"
             space="nbsp"

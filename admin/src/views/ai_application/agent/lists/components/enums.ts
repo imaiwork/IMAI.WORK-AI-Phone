@@ -36,6 +36,7 @@ export interface Agent {
     frequency_penalty: number; // 重复词频率 (-2-2)
     top_logprobs: number; // 显示前几个候选词对数概率(0到20)
     logprobs: number; // 显示候选词 0关闭 1开启
+    max_tokens: number; // 返回长度(1到999999)
     // --- 界面配置 ---
     welcome_introducer: string; // 欢迎语
     copyright: string; // 底部标识
@@ -105,4 +106,14 @@ export enum FormFieldTypeEnum {
     VIDEO = "video",
     IMAGE = "image",
     FILE = "file",
+}
+
+export enum ModelIdEnum {
+    DEEPSEEK = 4,
+    GPT_4 = 15,
+    GPT_4o = 2,
+    GPT_4_MINI = 16,
+    GPT_3_5_TURBO = 17,
+    GEMINI_2_5_PRO = 11,
+    CLAUDE_SONNET_4_5 = 18,
 }

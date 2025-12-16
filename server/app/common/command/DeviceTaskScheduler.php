@@ -400,15 +400,13 @@ class DeviceTaskScheduler extends Command
         }
 
         // TODO: 实现具体的接管逻辑
-        if ($task->account_type == DeviceEnum::ACCOUNT_TYPE_XHS) {
-            self::rpaTakeoverTask($task, $output, function ($result) use ($task) {
-                $task->status = $result['status'];
-                $task->remark = $result['remark'];
-                $task->update_time = time();
-                $task->save();
-                $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
-            });
-        }
+        self::rpaTakeoverTask($task, $output, function ($result) use ($task) {
+            $task->status = $result['status'];
+            $task->remark = $result['remark'];
+            $task->update_time = time();
+            $task->save();
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        });
         $this->setTaskLog("接管任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
 

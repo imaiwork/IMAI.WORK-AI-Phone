@@ -115,6 +115,16 @@ export function cozeAgentDelete(params: any) {
     return $request.post({ url: "/coze.cozeAgent/delete", params });
 }
 
+// coze智能体获取配置
+export function cozeAgentGetConfig(params: any) {
+    return $request.get({ url: "/coze.cozeAgent/bots", params });
+}
+
+// coze智能体设置配置
+export function cozeAgentSetConfig(params: any) {
+    return $request.post({ url: "/coze.cozeAgent/setConfig", params });
+}
+
 // coze智能体聊天记录
 export function cozeAgentChatLog(params: any) {
     return $request.get({ url: "/coze.cozeChat/messagelist", params });

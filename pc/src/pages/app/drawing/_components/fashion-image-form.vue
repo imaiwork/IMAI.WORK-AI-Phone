@@ -8,6 +8,7 @@
                 :show-file-list="false"
                 :accept="accept"
                 :ratio-size="[ratioSize[0], ratioSize[1]]"
+                :image-resolution="[imageResolution[0], imageResolution[1]]"
                 :max-size="maxSize"
                 @success="getUploadImage($event, type)">
                 <div class="h-[164px] w-full flex flex-col items-center justify-center leading-[1.5] relative">
@@ -25,9 +26,7 @@
                         <Icon name="local-icon-file_add" :size="28" color="#ffffff"></Icon>
                         <div class="text-xs text-white mt-3">点此上传图片 支持拖拽上传</div>
                         <div class="text-xs text-[#ffffff4d] mt-3 mx-[50px]">
-                            单个文件不超过{{ maxSize }}MB，宽高比小于{{ ratioSize[0] }}/{{
-                                ratioSize[1]
-                            }}，请勿上传gif格式图片
+                            单个文件不超过{{ maxSize }}MB，（宽/高）范围：[1/3, 3]，请勿上传gif格式图片
                         </div>
                     </template>
                 </div>
@@ -160,8 +159,9 @@ const formData = reactive({
 // 图片上传 Start
 
 const accept = ".jpg,.jpeg,.png";
-const maxSize = 20;
-const ratioSize = [2, 1];
+const maxSize = 10;
+const ratioSize = [1 / 3, 3];
+const imageResolution = [4096, 4096];
 
 const getUploadImage = (result: any, type: string) => {
     const uri = result.data.uri;

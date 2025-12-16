@@ -128,6 +128,7 @@ export enum TokensSceneEnum {
     HUMAN_AUDIO_CHANJING = "human_audio_chanjing",
     HUMAN_VOICE_CHANJING = "human_voice_chanjing",
     HUMAN_AVATAR_CHANJING = "human_avatar_chanjing",
+    HUMAN_VOICE_SHANJIAN = "human_voice_shanjian",
     KNOWLEDGE_CREATE = "knowledge_create",
     AI_XHS = "ai_xhs",
     SPH_OCR = "sph_ocr",
@@ -303,7 +304,11 @@ export const appKeyNameMap = {
 
 // 模型ID
 export enum ModelIdEnum {
-    DEEPSEEK_R1 = 4,
-    GPT_4O = 2,
+    DEEPSEEK = 4,
+    GPT_4 = 15,
+    GPT_4o = 2,
+    GPT_4_MINI = 16,
+    GPT_3_5_TURBO = 17,
     GEMINI_2_5_PRO = 11,
+    CLAUDE_SONNET_4_5 = 18,
 }

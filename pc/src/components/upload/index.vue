@@ -119,12 +119,25 @@ export default defineComponent({
             type: Array as unknown as PropType<[number, number]>,
             default: () => [0, 0],
         },
+        // 图片分辨率
+        imageResolution: {
+            type: Array as unknown as PropType<[number, number]>,
+            default: () => [360, 4096],
+        },
         // 视频分辨率
         videoMaxWidth: {
             type: Number,
             default: Infinity,
         },
         videoMinWidth: {
+            type: Number,
+            default: 0,
+        },
+        videoMaxHeight: {
+            type: Number,
+            default: Infinity,
+        },
+        videoMinHeight: {
             type: Number,
             default: 0,
         },
@@ -151,7 +164,19 @@ export default defineComponent({
         const fileList = ref<any[]>([]);
 
         const beforeUpload: UploadProps["beforeUpload"] = async (rawFile) => {
-            const { type, ratioSize, videoMaxWidth, videoMinWidth, minDuration, maxDuration, minSize, maxSize } = props;
+            const {
+                type,
+                ratioSize,
+                imageResolution,
+                videoMaxWidth,
+                videoMinWidth,
+                videoMaxHeight,
+                videoMinHeight,
+                minDuration,
+                maxDuration,
+                minSize,
+                maxSize,
+            } = props;
             const sizeInMB = rawFile.size / 1024 / 1024;
 
             // 文件大小校验
@@ -174,14 +199,35 @@ export default defineComponent({
                 return new Promise<boolean>((resolve) => {
                     const img = new Image();
                     img.onload = () => {
-                        const isValid = img.height >= ratioSize[0] && img.width >= ratioSize[1];
-                        if (!isValid) {
-                            feedback.msgError(`上传图片尺寸不能小于 ${ratioSize[0]}*${ratioSize[1]}`);
+                        const isResolutionValid = img.height <= imageResolution[0] && img.width <= imageResolution[1];
+                        // 判断图片比例是否符合要求
+                        const isRatioValid = checkAspectRatio(img.width, img.height);
+                        // 判断图片分辨率是否符合要求
+                        if (!isResolutionValid) {
+                            feedback.msgError(`上传图片分辨率不能大于 ${imageResolution[0]}*${imageResolution[1]}`);
+                        } else if (!isRatioValid) {
+                            feedback.msgError(`上传图片尺寸不能大于 ${ratioSize[0]}*${ratioSize[1]}`);
                         }
-                        resolve(isValid);
+                        resolve(isResolutionValid && isRatioValid);
                     };
                     img.src = URL.createObjectURL(rawFile);
                 });
+            };
+
+            const checkAspectRatio = (width: number, height: number) => {
+                // 检查输入是否为有效的正数
+                if (typeof width !== "number" || typeof height !== "number" || width <= 0 || height <= 0) {
+                    return false;
+                }
+
+                const aspectRatio = width / height;
+
+                const MIN_RATIO = ratioSize[0];
+                const MAX_RATIO = ratioSize[1];
+
+                const isRatioValid = aspectRatio >= MIN_RATIO && aspectRatio <= MAX_RATIO;
+
+                return isRatioValid;
             };
 
             // 音频时长校验
@@ -214,18 +260,22 @@ export default defineComponent({
                     video.crossOrigin = "anonymous";
 
                     video.addEventListener("loadedmetadata", () => {
-                        const { videoWidth, duration } = video;
+                        const { videoWidth, videoHeight, duration } = video;
                         const fileDuration = Math.floor(duration);
-                        const isResolutionValid = videoWidth >= videoMinWidth && videoWidth <= videoMaxWidth;
-                        const isDurationValid = fileDuration >= minDuration && fileDuration <= maxDuration;
+                        const isWidthValid = videoWidth >= videoMinWidth && videoWidth <= videoMaxWidth;
+                        const isHeightValid = videoHeight >= videoMinHeight && videoHeight <= videoMaxHeight;
 
-                        if (!isResolutionValid) {
-                            feedback.msgError(`上传视频分辨率不能满足${videoMinWidth}*${videoMaxWidth}`);
+                        const isDurationValid = fileDuration >= minDuration && fileDuration <= maxDuration;
+                        if (!isHeightValid) {
+                            feedback.msgError(`上传视频高度不能小于${videoMinHeight}或大于${videoMaxHeight}`);
+                        }
+                        if (!isWidthValid) {
+                            feedback.msgError(`上传视频宽度不能小于${videoMinWidth}或大于${videoMaxWidth}`);
                         }
                         if (!isDurationValid) {
                             feedback.msgError(`上传视频时长不能小于${minDuration}秒或大于${maxDuration}秒`);
                         }
-                        resolve(isResolutionValid && isDurationValid);
+                        resolve(isHeightValid && isWidthValid && isDurationValid);
                     });
                 });
             };

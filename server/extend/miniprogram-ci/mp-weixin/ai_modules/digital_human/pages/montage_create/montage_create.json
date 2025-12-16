@@ -5,13 +5,14 @@
   "disableScroll": true,
   "usingComponents": {
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
-    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "empty": "../../../../components/empty/empty",
-    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
-    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
-    "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "upload-progress": "../../../../components/upload-progress/upload-progress",
-    "recharge-popup": "../../../../components/recharge-popup/recharge-popup"
+    "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
+    "upload-rule-pop": "../../components/upload-rule-pop/upload-rule-pop",
+    "choose-character": "../../components/choose-character/choose-character",
+    "create-success-pop": "../../components/create-success-pop/create-success-pop",
+    "video-preview": "../../../../components/video-preview/video-preview",
+    "tokens-cost": "../../components/tokens-cost/tokens-cost"
   }
 }

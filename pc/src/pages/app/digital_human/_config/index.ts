@@ -5,7 +5,7 @@ export const commonUploadLimit = {
     // 最小分辨率
     minResolution: 360,
     // 最大分辨率
-    maxResolution: 1080,
+    maxResolution: 2000,
     // 最小时长
     videoMinDuration: 5,
     // 最大时长
@@ -17,9 +17,9 @@ export const uploadLimit: Record<DigitalHumanModelVersionEnum, any> = {
     [DigitalHumanModelVersionEnum.STANDARD]: {
         size: 100,
         // 最小分辨率
-        minResolution: 480,
+        minResolution: 360,
         // 最大分辨率
-        maxResolution: 1080,
+        maxResolution: 2000,
         // 最小时长
         videoMinDuration: 15,
         // 最大时长
@@ -41,7 +41,7 @@ export const uploadLimit: Record<DigitalHumanModelVersionEnum, any> = {
     [DigitalHumanModelVersionEnum.CHANJING]: {
         size: 2000,
         minResolution: 360,
-        maxResolution: 2048,
+        maxResolution: 2000,
         videoMinDuration: 30,
         videoMaxDuration: 300,
     },

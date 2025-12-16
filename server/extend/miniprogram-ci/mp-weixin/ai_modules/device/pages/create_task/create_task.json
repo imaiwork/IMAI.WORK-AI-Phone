@@ -8,7 +8,8 @@
     "empty": "../../../../components/empty/empty",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
     "upload-progress": "../../../../components/upload-progress/upload-progress",
-    "video-preview": "../../../../components/video-preview/video-preview",
-    "bast-setting": "../../components/bast-setting/bast-setting"
+    "choose-material": "../../../../components/choose-material/choose-material",
+    "bast-setting": "../../components/bast-setting/bast-setting",
+    "video-preview": "../../../../components/video-preview/video-preview"
   }
 }

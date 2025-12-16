@@ -55,7 +55,6 @@ class OssLogic extends BaseLogic
         $filesToUpload = $this->scanLocalFiles($localDir, $ossDir);
         $totalFiles = count($filesToUpload);
 
-
         if ($totalFiles  == 0){
             $storage = ConfigService::get('storage', 'default', 'local');
             if (  $this->ossType == $storage){
@@ -66,7 +65,6 @@ class OssLogic extends BaseLogic
 
             $this->clearProgress();
         }
-       
         echo "开始上传文件，总计 {$totalFiles} 个文件没有上传\n";
         $batchFiles = array_slice($filesToUpload, 0, $batchSize);
         $this->uploadBatch($batchFiles);
@@ -99,6 +97,9 @@ class OssLogic extends BaseLogic
             // 设置最大递归深度，防止无限递归
             $iterator->setMaxDepth(3); // 设置最大递归深度为3层
 
+            // 需要跳过的目录列表
+            $skipDirs = ['images/xhs', 'images/sph'];
+            
             $totalFiles = 0;
             foreach ($iterator as $file) {
                 // 跳过目录
@@ -111,19 +112,36 @@ class OssLogic extends BaseLogic
                     continue;
                 }
 
-                // 获取文件信息
-                $fileInfo = $this->getFileInfo($file);
-
                 // 获取相对路径（相对于 uploads 目录）
                 $relativeFilePath = str_replace($localDir . DIRECTORY_SEPARATOR, '', $file->getPathname());
                 $relativeFilePath = str_replace('\\', '/', $relativeFilePath); // 统一使用正斜杠
                 
+                // 检查是否需要跳过该文件（位于指定的跳过目录中）
+                $shouldSkip = false;
+                foreach ($skipDirs as $skipDir) {
+                    if (strpos($relativeFilePath, $skipDir . '/') === 0 || $relativeFilePath === $skipDir) {
+                        $shouldSkip = true;
+                        break;
+                    }
+                }
+                
+                if ($shouldSkip) {
+                    continue;
+                }
+
+                // 获取文件信息
+                $fileInfo = $this->getFileInfo($file);
+
+                if($fileInfo['size'] == 0){
+                    continue;
+                }
+        
                 // 构建 OSS 路径
                 $ossFilePath = $ossDir . '/' . $relativeFilePath;
                 $totalFiles += 1;
+                
                 // 检查文件是否已上传
                 if (!$this->isFileUploaded($relativeFilePath)) {
-
                     $filesToUpload[] = [
                         'localPath' => $file->getPathname(),
                         'ossPath' => $ossFilePath,
@@ -132,15 +150,16 @@ class OssLogic extends BaseLogic
                         'fileMtime' => filemtime($file->getPathname()),
                         'fileInfo' => $fileInfo
                     ];
-                    // 记录找到的文件
                 }
             }
-            $key = 'oss_migration_total_files' ;
-            cache($key,$totalFiles,600);
+            
+            // 缓存统计信息
+            $key = 'oss_migration_total_files';
+            cache($key, $totalFiles, 600);
 
-            $key = 'oss_migration_upload_to_files' ;
+            $key = 'oss_migration_upload_to_files';
             $filesToUploadNum = count($filesToUpload);
-            cache($key,$filesToUploadNum,600);
+            cache($key, $filesToUploadNum, 600);
 
         } catch (Exception $e) {
             throw $e;
@@ -237,6 +256,7 @@ class OssLogic extends BaseLogic
                 if ($lastSlashPos !== false) {
                     $fileInfo['ossPath'] = substr($fileInfo['ossPath'], 0, $lastSlashPos);
                 }
+                echo "上传文件: " . $fileInfo['localPath']   . '文件名'.$fileInfo['fileInfo']['name']. "\n";
                 // 上传文件
                 $saveDir = $this->getUploadUrl($fileInfo['ossPath']);
                 if (!$this->storageDriver->upload($saveDir)) {

@@ -80,9 +80,12 @@ import { getPublishAccountList } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useDevice } from "@/ai_modules/device/hooks/useDevice";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const platformTypes = ref<any[]>([]);
-
+const multiple = ref(1);
 const { platformLogo } = useDevice();
 
 const tabs = ref<any[]>([
@@ -138,6 +141,10 @@ const isChoose = (item: any) => {
 };
 
 const handleChooseAccount = (item: any) => {
+    if (multiple.value === 0) {
+        chooseAccount.value = [item];
+        return;
+    }
     if (isChoose(item)) {
         chooseAccount.value = chooseAccount.value.filter((account) => account.id !== item.id);
     } else {
@@ -147,7 +154,7 @@ const handleChooseAccount = (item: any) => {
 
 const handleConfirmChoose = () => {
     if (chooseAccount.value.length === 0) return;
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.CHOOSE_ACCOUNT,
         data: chooseAccount.value,
     });
@@ -155,11 +162,14 @@ const handleConfirmChoose = () => {
 };
 
 onLoad((options: any) => {
-    if (options.account) {
-        chooseAccount.value = JSON.parse(options.account);
+    if (options.accounts) {
+        chooseAccount.value = JSON.parse(options.accounts);
     }
     if (options.platformTypes) {
         platformTypes.value = JSON.parse(options.platformTypes);
+    }
+    if (options.multiple) {
+        multiple.value = parseInt(options.multiple);
     }
 });
 

@@ -2,7 +2,7 @@
     <ElDrawer v-model="show" body-class="bg-app-bg-2 !p-0" size="450px" :with-header="false">
         <div class="h-full flex flex-col" ref="containerRef">
             <div class="absolute w-6 h-6 top-5 right-2" @click="close">
-                <close-btn />
+                <close-btn :theme="ThemeEnum.DARK" />
             </div>
             <div class="text-[15px] font-bold text-white pt-[23px] px-[26px]">任务详情</div>
             <div class="mt-[38px] px-[26px]">
@@ -105,6 +105,7 @@
 </template>
 
 <script setup lang="ts">
+import { ThemeEnum } from "@/enums/appEnums";
 import { getDeviceAccountTaskDetail, getDeviceTaskRecordList, deleteDeviceTaskRecord } from "@/api/device";
 
 const emit = defineEmits<{

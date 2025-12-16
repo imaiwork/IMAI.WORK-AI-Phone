@@ -66,7 +66,7 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                             $item['name'] = '';
                             break;
                         }
-                        $item['name'] = SvDeviceTakeOverTask::where('id', $item['take_over_id'])->value('task_name') ?? '';
+                        $item['name'] = SvDeviceTakeOverTask::where('id', $taskinfo['take_over_id'])->value('task_name') ?? '';
                         break;
 
                     case DeviceEnum::TASK_SOURCE_ACTIVE:

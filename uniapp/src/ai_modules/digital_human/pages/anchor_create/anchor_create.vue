@@ -16,7 +16,7 @@
                         <view class="flex items-center justify-between">
                             <view class="flex items-center gap-x-1">
                                 <text class="text-[#FF3C26]">*</text>
-                                <text class="font-bold">数字人形象</text>
+                                <text class="font-bold">上传视频</text>
                             </view>
                             <view v-if="anchorData.pic" class="text-primary" @click="handleUploadAnchorVideo">
                                 更换视频
@@ -30,35 +30,35 @@
                                 <image
                                     src="@/ai_modules/digital_human/static/icons/add2.svg"
                                     class="w-[56rpx] h-[56rpx]"></image>
-                                <text class="upload-text">点击上传视频</text>
+                                <text class="upload-text">上传训练视频</text>
                                 <view class="mt-[48rpx] flex flex-col gap-y-2">
                                     <view class="flex items-center gap-x-2">
-                                        <view class="bg-[#ACADB0] rounded-full w-[8rpx] h-[8rpx]"></view>
-                                        <view class="text-[#ACADB0] text-[24rpx]"
-                                            >视频长度为<text class="text-[#7E8085]"
-                                                >{{ commonUploadLimit.videoMinDuration }}-{{
-                                                    commonUploadLimit.videoMaxDuration
-                                                }}秒</text
-                                            ></view
+                                        <view class="bg-[#00000080] rounded-full w-[8rpx] h-[8rpx]"></view>
+                                        <view class="text-[#00000080] text-[24rpx]"
+                                            >视频时长：{{ commonUploadLimit.videoMinDuration }}-{{
+                                                commonUploadLimit.videoMaxDuration
+                                            }}秒，文件大小≤{{ commonUploadLimit.size }}MB</view
                                         >
                                     </view>
                                     <view class="flex items-center gap-x-2">
-                                        <view class="bg-[#ACADB0] rounded-full w-[8rpx] h-[8rpx]"></view>
-                                        <view class="text-[#ACADB0] text-[24rpx]"
-                                            >视频大小建议在<text class="text-[#7E8085]"
-                                                >{{ commonUploadLimit.size }}MB</text
-                                            >以内，上传速度更快</view
+                                        <view class="bg-[#00000080] rounded-full w-[8rpx] h-[8rpx]"></view>
+                                        <view class="text-[#00000080] text-[24rpx]"
+                                            >分辨率：最大支持{{
+                                                commonUploadLimit.maxWidthResolution / 1000
+                                            }}k(单边小于{{ commonUploadLimit.maxWidthResolution }}*{{
+                                                commonUploadLimit.maxHeightResolution
+                                            }})</view
                                         >
                                     </view>
                                     <view class="flex items-center gap-x-2">
-                                        <view class="bg-[#ACADB0] rounded-full w-[8rpx] h-[8rpx]"></view>
-                                        <view class="text-[#ACADB0] text-[24rpx]"
-                                            >保证声音清晰可听，尽量避免嘈杂背景</view
-                                        >
+                                        <view class="bg-[#00000080] rounded-full w-[8rpx] h-[8rpx]"></view>
+                                        <view class="text-[#00000080] text-[24rpx]">视频编码：h264，帧率：25fps</view>
                                     </view>
                                     <view class="flex items-center gap-x-2">
-                                        <view class="bg-[#ACADB0] rounded-full w-[8rpx] h-[8rpx]"></view>
-                                        <view class="text-[#ACADB0] text-[24rpx]">只支持H.264编码</view>
+                                        <view class="bg-[#00000080] rounded-full w-[8rpx] h-[8rpx]"></view>
+                                        <view class="text-[#00000080] text-[24rpx]"
+                                            >视频格式：{{ SUPPORTED_EXTENSIONS.join("、") }}</view
+                                        >
                                     </view>
                                 </view>
                             </view>
@@ -74,7 +74,7 @@
                         <view class="flex items-center justify-between">
                             <view class="flex items-center gap-x-1">
                                 <text class="text-[#FF3C26] text-[32rpx]">*</text>
-                                <text class="font-bold">授权视频</text>
+                                <text class="font-bold">上传授权视频</text>
                             </view>
                             <view v-if="authData.pic" class="text-primary" @click="handleUploadAuthVideo">
                                 更换视频
@@ -91,24 +91,20 @@
                                 <text class="upload-text">点击上传视频</text>
                                 <view class="mt-[48rpx] flex flex-col gap-y-2">
                                     <view class="flex items-center gap-x-2">
-                                        <view class="bg-[#ACADB0] rounded-full w-[8rpx] h-[8rpx]"></view>
-                                        <view class="text-[#ACADB0] text-[24rpx]"
-                                            >视频长度为小于<text>两分钟</text></view
+                                        <view class="bg-[#00000080] rounded-full w-[8rpx] h-[8rpx]"></view>
+                                        <view class="text-[#00000080] text-[24rpx]"
+                                            >视频时长：小于{{ AUTH_VIDEO_MAX_DURATION / 60 }}分钟</view
                                         >
                                     </view>
                                     <view class="flex items-center gap-x-2">
-                                        <view class="bg-[#ACADB0] rounded-full w-[8rpx] h-[8rpx]"></view>
-                                        <view class="text-[#ACADB0] text-[24rpx]"
-                                            >保证声音清晰可听，尽量避免嘈杂背景</view
+                                        <view class="bg-[#00000080] rounded-full w-[8rpx] h-[8rpx]"></view>
+                                        <view class="text-[#00000080] text-[24rpx]">视频编码：h264</view>
+                                    </view>
+                                    <view class="flex items-center gap-x-2">
+                                        <view class="bg-[#00000080] rounded-full w-[8rpx] h-[8rpx]"></view>
+                                        <view class="text-[#00000080] text-[24rpx]"
+                                            >确保本人出境授权，保证声音清晰</view
                                         >
-                                    </view>
-                                    <view class="flex items-center gap-x-2">
-                                        <view class="bg-[#ACADB0] rounded-full w-[8rpx] h-[8rpx]"></view>
-                                        <view class="text-[#ACADB0] text-[24rpx]">确保本人出镜授权</view>
-                                    </view>
-                                    <view class="flex items-center gap-x-2">
-                                        <view class="bg-[#ACADB0] rounded-full w-[8rpx] h-[8rpx]"></view>
-                                        <view class="text-[#ACADB0] text-[24rpx]">只支持H.264编码</view>
                                     </view>
                                 </view>
                             </view>
@@ -123,12 +119,17 @@
                 </view>
             </scroll-view>
         </view>
-        <view class="flex-shrink-0 px-4 pb-6">
+        <view class="flex-shrink-0 p-4 bg-white flex items-center gap-x-3">
             <view
-                class="h-[100rpx] text-white flex items-center justify-center rounded-[8rpx]"
+                class="h-[100rpx] w-[220rpx] bg-[#F3F3F3] rounded-[20px] flex items-center justify-center text-[30rpx] font-bold"
+                @click="showExample = true">
+                拍摄教程
+            </view>
+            <view
+                class="flex-1 h-[100rpx] text-white flex items-center justify-center rounded-[20rpx] font-bold"
                 :class="[isCreate ? 'bg-black' : 'bg-[#787878CC]']"
                 @click="handleCreateAnchor">
-                提交克隆（消耗{{ getToken }}算力）
+                开始克隆（消耗{{ getToken }}算力）
             </view>
         </view>
     </view>
@@ -145,6 +146,89 @@
             >
         </view>
     </u-popup>
+    <popup-bottom :show="showExample" title="拍摄教程" height="80%" @close="showExample = false">
+        <template #content>
+            <scroll-view scroll-y class="h-full">
+                <view class="p-4">
+                    <view>
+                        <view class="flex items-center gap-x-2">
+                            <image
+                                src="@/ai_modules/digital_human/static/icons/video_upload_tips_1.svg"
+                                class="w-[36rpx] h-[36rpx]"></image>
+                            <text class="text-[30rpx] font-bold text-[#000000cc]">视频教程</text>
+                        </view>
+                        <view class="mt-[36rpx]">
+                            <view class="h-[384rpx] rounded-[40rpx] relative">
+                                <view class="absolute top-[40rpx] left-0 w-full px-[40rpx] z-[788]">
+                                    <view class="text-white text-[26rpx]"> 快速了解操作流程 </view>
+                                </view>
+                                <video-player
+                                    :play-icon-size="88"
+                                    :poster="`${config.baseUrl}static/images/dh_example_bg2.png`"
+                                    :video-url="`${config.baseUrl}static/videos/dh_example2.mp4`"></video-player>
+                            </view>
+                        </view>
+                    </view>
+                    <view class="mt-[26rpx] grid grid-cols-2 gap-x-4">
+                        <view>
+                            <view class="flex items-center gap-x-2">
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/video_upload_tips_2.svg"
+                                    class="w-[36rpx] h-[36rpx]"></image>
+                                <text class="text-[30rpx] font-bold text-[#000000cc]">视频要求</text>
+                            </view>
+                            <view class="mt-[30rpx]">
+                                <image
+                                    class="w-[290rpx]"
+                                    mode="widthFix"
+                                    src="@/ai_modules/digital_human/static/images/common/video_upload_temp.png"></image>
+                            </view>
+                        </view>
+                        <view>
+                            <view class="flex items-center gap-x-2">
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/video_upload_tips_3.svg"
+                                    class="w-[36rpx] h-[36rpx]"></image>
+                                <text class="text-[30rpx] font-bold text-[#000000cc]">错误示例</text>
+                            </view>
+                            <view class="mt-[30rpx] grid grid-cols-2 gap-3">
+                                <view class="flex flex-col items-center justify-between">
+                                    <image
+                                        src="@/ai_modules/digital_human/static/images/common/example_error1.png"
+                                        class="w-[128rpx] h-[128rpx]"></image>
+                                    <text class="text-[#000000cc] mt-[12rpx]">遮挡面部</text>
+                                </view>
+                                <view class="flex flex-col items-center justify-between">
+                                    <image
+                                        src="@/ai_modules/digital_human/static/images/common/example_error2.png"
+                                        class="w-[128rpx] h-[128rpx]"></image>
+                                    <text class="text-[#000000cc] mt-[12rpx]">人脸出框</text>
+                                </view>
+                                <view class="flex flex-col items-center justify-between">
+                                    <image
+                                        src="@/ai_modules/digital_human/static/images/common/example_error3.png"
+                                        class="w-[128rpx] h-[128rpx]"></image>
+                                    <text class="text-[#000000cc] mt-[12rpx]">侧脸拍摄</text>
+                                </view>
+                                <view class="flex flex-col items-center justify-between">
+                                    <image
+                                        src="@/ai_modules/digital_human/static/images/common/example_error4.png"
+                                        class="w-[128rpx] h-[128rpx]"></image>
+                                    <text class="text-[#000000cc] mt-[12rpx]">多人出镜</text>
+                                </view>
+                            </view>
+                        </view>
+                    </view>
+                </view>
+            </scroll-view>
+        </template>
+    </popup-bottom>
+    <upload-loading
+        v-if="showUploadProgress"
+        :progress="uploadProgressNum"
+        :loading-text="loadingText"
+        :progress-type="uploadProgressType"
+        @cancel="handleUploadCancel"></upload-loading>
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
 </template>
 
@@ -152,18 +236,24 @@
 import { getVideoTranscodeResult, videoTranscode } from "@/api/app";
 import { createAnchor, createShanjianAnchor, getShanjianAnchorDetail } from "@/api/digital_human";
 import { DigitalHumanModelVersionEnum, ListenerTypeEnum, ModeTypeEnum } from "@/ai_modules/digital_human/enums";
+import requestCancel from "@/utils/request/cancel";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
-import { useUpload, commonUploadLimit } from "@/ai_modules/digital_human/hooks/useUpload";
+import config from "@/config";
 import { requestAuthorization } from "@/utils/file";
 import usePolling from "@/hooks/usePolling";
 import { TokensSceneEnum } from "@/enums/appEnums";
+import { useUpload, commonUploadLimit } from "@/ai_modules/digital_human/hooks/useUpload";
+import UploadLoading from "@/ai_modules/digital_human/components/upload-loading/upload-loading.vue";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit, on } = useEventBusManager();
 
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
 const appStore = useAppStore();
 
-const isOssTranscode = computed(() => appStore.config.is_oss_transcode);
+const isOssTranscode = computed(() => appStore.config?.is_oss_transcode);
 
 const anchorData = reactive<any>({
     name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM"),
@@ -184,12 +274,23 @@ const detail = ref<any>({});
 const showCreateStatus = ref(false);
 const activePollingEnds = ref<Array<() => void>>([]);
 
-const pageSource = ref<DigitalHumanModelVersionEnum>();
+const pageSource = ref<DigitalHumanModelVersionEnum | DigitalHumanModelVersionEnum[]>();
 
 const isSuccess = ref(false);
 
 // 支持的上传格式
 const SUPPORTED_EXTENSIONS = ["mp4", "mov"];
+// 授权视频最大时长
+const AUTH_VIDEO_MAX_DURATION = 120;
+
+// 显示拍摄教程弹框
+const showExample = ref(false);
+
+// 上传状态管理
+const showUploadProgress = ref(false);
+const uploadProgressNum = ref(0);
+const uploadProgressType = shallowRef<"video" | "image">();
+const loadingText = ref("");
 
 // 充值弹窗
 const rechargePopupRef = shallowRef();
@@ -201,20 +302,43 @@ const getToken = computed(() => {
     return parseFloat(token1) + parseFloat(token2);
 });
 
-// 是否是chanjing
-const isCJ = computed(() => pageSource.value == DigitalHumanModelVersionEnum.CHANJING);
-
 const isCreate = computed(() => {
-    return !isCJ.value ? authData.url && anchorData.url : anchorData.url;
+    return authData.url && anchorData.url;
 });
 
 const handleUploadAnchorVideo = () => {
-    uni.$u.route({
-        url: "/ai_modules/digital_human/pages/video_upload/video_upload",
-        params: {
-            type: ModeTypeEnum.ANCHOR,
+    const { upload } = useUpload({
+        size: commonUploadLimit.size,
+        widthResolution: [commonUploadLimit.minWidthResolution, commonUploadLimit.maxWidthResolution],
+        heightResolution: [commonUploadLimit.minHeightResolution, commonUploadLimit.maxHeightResolution],
+        duration: [commonUploadLimit.videoMinDuration, commonUploadLimit.videoMaxDuration],
+        extension: SUPPORTED_EXTENSIONS,
+        async onSuccess(res) {
+            const { url, pic, width, height } = res;
+            // 更新表单数据
+            anchorData.url = url;
+            anchorData.pic = pic;
+            anchorData.width = width;
+            anchorData.height = height;
+
+            anchorData.name = uni.$u.timeFormat(Date.now(), "yyyymmddhhMM");
+            showUploadProgress.value = false;
+        },
+        onProgress(res) {
+            // 更新进度
+            uploadProgressType.value = res.type;
+            uploadProgressNum.value = res.progress;
+            loadingText.value = uploadProgressType.value === "video" ? "视频正在上传中..." : "图片正在上传中...";
+            showUploadProgress.value = true;
+        },
+        onError(err) {
+            // 错误处理
+            showUploadProgress.value = false;
+            uploadProgressNum.value = 0;
+            resetNavigationBarColor();
         },
     });
+    upload();
 };
 
 const handleUploadAuthVideo = () => {
@@ -239,6 +363,33 @@ const handleUploadAuthVideo = () => {
             }
         },
     });
+};
+
+/**
+ * 处理上传取消
+ */
+const handleUploadCancel = () => {
+    // 取消请求
+    requestCancel.remove("/upload/video");
+    requestCancel.remove("/upload/image");
+
+    // 重置状态
+    showUploadProgress.value = false;
+    uploadProgressNum.value = 0;
+    loadingText.value = "";
+    resetNavigationBarColor();
+};
+
+/**
+ * 重置导航栏颜色
+ */
+const resetNavigationBarColor = () => {
+    // #ifndef H5
+    uni.setNavigationBarColor({
+        frontColor: "#000000",
+        backgroundColor: "#F9FAFB",
+    });
+    // #endif
 };
 
 // 视频转码
@@ -275,7 +426,7 @@ const handleVideoTranscode = async (url: string) => {
 
 const handleUploadAuthVideoAlbum = () => {
     const { upload } = useUpload({
-        duration: [1, 120],
+        duration: [1, AUTH_VIDEO_MAX_DURATION],
         extension: SUPPORTED_EXTENSIONS,
         onProgress: (res: any) => {
             uni.showLoading({
@@ -362,14 +513,13 @@ const handleCreateAnchor = async () => {
                 });
         });
     };
-    // chanjing形象创建
-    const chanjingCreateAnchor = () => {
+    const createOtherAnchor = (modelVersion: DigitalHumanModelVersionEnum) => {
         return new Promise(async (resolve: any, reject: any) => {
             await createAnchor({
                 name: anchorData.name,
                 url: anchorData.url,
                 pic: anchorData.pic,
-                model_version: DigitalHumanModelVersionEnum.CHANJING,
+                model_version: modelVersion,
                 width: anchorData.width,
                 height: anchorData.height,
             })
@@ -382,7 +532,11 @@ const handleCreateAnchor = async () => {
         });
     };
     try {
-        const [res1, res2]: any = await Promise.allSettled([shanjianCreateAnchor(), chanjingCreateAnchor()]);
+        const [res1, res2]: any = await Promise.allSettled([
+            shanjianCreateAnchor(),
+            createOtherAnchor(DigitalHumanModelVersionEnum.CHANJING),
+            createOtherAnchor(DigitalHumanModelVersionEnum.STANDARD),
+        ]);
         const isSJ = pageSource.value == DigitalHumanModelVersionEnum.SHANJIAN;
         if (!pageSource.value) {
             uni.hideLoading();
@@ -404,7 +558,7 @@ const handleCreateAnchor = async () => {
             });
             activePollingEnds.value.push(end);
             start();
-        } else if (isCJ.value) {
+        } else {
             uni.hideLoading();
             showCreateStatus.value = true;
             anchorData.anchor_id = res2.value.id;
@@ -419,7 +573,7 @@ const handleCreateAnchor = async () => {
 
 const handleConfirm = () => {
     if (isSuccess.value) {
-        uni.$emit("confirm", {
+        emit("confirm", {
             type: ListenerTypeEnum.CREATE_ANCHOR,
             data: DigitalHumanModelVersionEnum.SHANJIAN == pageSource.value ? detail.value : anchorData,
         });
@@ -452,7 +606,7 @@ const getAuthData = (data: any) => {
 
 onLoad((options: any) => {
     if (options.source) pageSource.value = options.source;
-    uni.$on("confirm", (result: any) => {
+    on("confirm", (result: any) => {
         const { type, data } = result;
         if (type === ListenerTypeEnum.VIDEO_UPLOAD) {
             getAnchorData(data);
@@ -467,7 +621,6 @@ onUnload(() => {
     uni.hideLoading();
     activePollingEnds.value.forEach((endFn) => endFn());
     activePollingEnds.value = [];
-    uni.$off("confirm");
 });
 </script>
 

@@ -18,19 +18,26 @@
                             </view>
                             <view class="text-[#000000b3] mt-[18rpx]">去克隆</view>
                         </view>
-                        <view v-for="(item, index) in dataLists" :key="index" @click.stop="chooseAnchor(item)">
+                        <view
+                            v-for="(item, index) in dataLists"
+                            :key="index"
+                            class="h-[288rpx] rounded-[24rpx] relative overflow-hidden card-gradient"
+                            @click.stop="chooseAnchor(item)">
+                            <image :src="item.pic" class="w-full h-full" mode="aspectFill"></image>
                             <view
-                                class="flex-shrink-0 h-[288rpx] rounded-[24rpx] bg-cover relative bg-black"
-                                :style="{ backgroundImage: `url(${item.pic})` }">
-                                <view class="absolute bottom-2 z-[77] w-full flex justify-center">
-                                    <view class="dh-version-name">
-                                        {{ modelVersionMap[item.model_version] }}
-                                    </view>
+                                v-if="item.status == 0"
+                                class="z-[222] absolute top-0 left-0 w-full h-full flex items-center justify-center bg-[#00000080]">
+                                <view class="bg-primary text-xs font-bold text-white rounded-[10rpx] px-2 py-1"
+                                    >克隆中</view
+                                >
+                            </view>
+                            <view
+                                class="absolute bottom-2 z-[77] w-full flex justify-center"
+                                v-if="modelVersionMap[item.model_version]">
+                                <view class="dh-version-name">
+                                    {{ modelVersionMap[item.model_version] }}
                                 </view>
                             </view>
-                            <!-- <view class="text-center mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs">
-                                {{ item.name }}
-                            </view> -->
                         </view>
                     </view>
                     <template #empty>
@@ -82,7 +89,7 @@ const pagingRef = shallowRef();
 const dataLists = ref<any[]>([]);
 const queryParams = reactive<any>({
     name: "",
-    model_version: DigitalHumanModelVersionEnum.CHANJING,
+    model_version: `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.STANDARD}`,
     status: "0,1",
     type: 0,
 });
@@ -108,7 +115,7 @@ const toClone = () => {
     uni.$u.route({
         url: "/ai_modules/digital_human/pages/anchor_create/anchor_create",
         params: {
-            source: DigitalHumanModelVersionEnum.CHANJING,
+            source: [DigitalHumanModelVersionEnum.CHANJING, DigitalHumanModelVersionEnum.STANDARD],
         },
     });
 };

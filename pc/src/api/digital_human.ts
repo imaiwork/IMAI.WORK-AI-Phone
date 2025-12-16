@@ -87,3 +87,8 @@ export const createTask = (params: Record<string, any>) => {
 export const generatePrompt = (params: Record<string, any>) => {
     return $request.post({ url: "/human/copywriting", params });
 };
+
+// 闪剪语音克隆
+export const shanjianVoiceClone = (params: Record<string, any>) => {
+    return $request.post({ url: "/shanjian.voice/add", params });
+};

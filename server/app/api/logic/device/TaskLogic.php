@@ -38,6 +38,27 @@ class TaskLogic extends ApiLogic
         }
     }
 
+    public static function checkAccounts(array $accounts)
+    {
+        $result = [];
+        foreach ($accounts as $account) {
+            $find = SvAccount::field('id, device_code')->where('account', $account['account'])->where('type', $account['type'])->findOrEmpty();
+            if ($find->isEmpty()) {
+                throw new \Exception( $account['account'] . '账号不存在');
+            }
+            if(array_key_exists($find->device_code, $result)){
+                $result[$find->device_code] +=  1;
+            }else{
+                $result[$find->device_code] = 1;
+            }
+        }
+
+        $values = array_sum(array_unique(array_values($result)));
+        if($values > 1){
+            throw new \Exception('该任务只能选择同一种平台的账号');
+        }
+    }
+
     public static function checkExecTime(string $date, int $taskType, array $times = [], array $devices = []): array
     {
         try {
@@ -255,7 +276,10 @@ class TaskLogic extends ApiLogic
                     }
                     $start_time = date('Y-m-d H:i:s', $task['start_time']);
                     $end_time = date('Y-m-d H:i:s', $task['end_time']);
-                    SvPublishSettingAccount::where('id', $taskinfo['id'])->where('user_id', self::$uid)->select()->delete();
+                    $count = SvPublishSettingDetail::where('publish_id', $taskinfo['publish_id'])->where('publish_account_id', $taskinfo['id'])->where('user_id', self::$uid)->count();
+                    if ($count == 1){
+                        SvPublishSettingAccount::where('id', $taskinfo['id'])->where('user_id', self::$uid)->select()->delete();
+                    }
                     SvPublishSettingDetail::where('publish_id', $taskinfo['publish_id'])->where('publish_account_id', $taskinfo['id'])->where('publish_time', 'between', [$start_time, $end_time])->where('user_id', self::$uid)->select()->delete();
                     break;
 
@@ -275,9 +299,8 @@ class TaskLogic extends ApiLogic
                     if (!$taskinfo) {
                         throw new \Exception('养号任务不存在');
                     }
-
-                    $count = SvDeviceActive::where('id', $taskinfo['active_id'])->where('user_id', self::$uid)->count();
-                    if ($count) {
+                    $count = SvDeviceActiveAccount::where('active_id', $taskinfo['active_id'])->where('user_id', self::$uid)->count();
+                    if ($count == 1) {
                         SvDeviceActive::where('id', $taskinfo['active_id'])->select()->delete();
                     }
                     SvDeviceActiveAccount::where('id', $taskinfo['id'])->select()->delete();
@@ -326,6 +349,7 @@ class TaskLogic extends ApiLogic
                     }
                     SvCrawlingTask::where('id', $params['sub_task_id'])->select()->delete();
                     SvCrawlingTaskDeviceBind::where('task_id', $params['sub_task_id'])->select()->delete();
+                    SvDeviceTask::Where('sub_task_id', $params['sub_task_id'])->where('user_id', self::$uid)->where('task_type', DeviceEnum::TASK_SOURCE_CLUES)->select()->delete();
                     break;
 
                 default:

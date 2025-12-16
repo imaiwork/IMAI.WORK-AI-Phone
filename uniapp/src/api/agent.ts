@@ -20,6 +20,11 @@ export function getAgentList(data: any) {
     return request.get({ url: "/kb.robot/lists", data });
 }
 
+// 删除智能体
+export function deleteAgent(data: any) {
+    return request.post({ url: "/kb.robot/del", data });
+}
+
 // 获取公共智能体列表
 export function getCommonAgentList(data: any) {
     return request.get({ url: "/kb.robot/commonLists", data });
@@ -28,6 +33,11 @@ export function getCommonAgentList(data: any) {
 // coze智能体列表
 export function getCozeAgentList(data: any) {
     return request.get({ url: "/coze.cozeAgent/lists", data });
+}
+
+// 删除coze智能体
+export function deleteCozeAgent(data: any) {
+    return request.post({ url: "/coze.cozeAgent/delete", data });
 }
 
 // 公共coze智能体列表
@@ -78,4 +88,9 @@ export function cozeAgentChatMsgList(data: any) {
 // 智能体分类
 export function getAgentCategoryList(data: any) {
     return request.get({ url: "/agent.agentCate/lists", data });
+}
+
+// coze智能体获取配置
+export function cozeAgentGetConfig(data: any) {
+    return request.get({ url: "/coze.cozeAgent/bots", data });
 }

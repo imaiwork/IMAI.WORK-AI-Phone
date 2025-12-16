@@ -108,10 +108,16 @@ export enum TokensSceneEnum {
     HUMAN_COPYWRITING_CREATE = "human_copywriting",
     AI_LADDER_PLAYER = "lianlian",
     SHANJIAN_COPYWRITING_CREATE = "shanjian_copywriting_create",
+    SHANJIAN_CLIP_VIDEO = "shanjian_realman_broadcast",
+    SHANJIAN_MATERIAL_VIDEO = "shanjian_broadcast_mixcut",
+    SHANJIAN_NEWS_VIDEO = "shanjian_news_mixcut",
     SPH_OCR = "sph_ocr",
     SPH_LOCAL_OCR = "sph_local_ocr",
     MATRIX_COPYWRITER = "matrix_copywriting",
     SPH_AI_CLUE = "sph_search_terms",
+    SORA_VIDEO = "sora_video_create",
+    NEWS_MIX_CUT_TITLE = "news_mixcut_title",
+    PUZZLE_AI_COPYWRITER = "combined_picture_title",
 }
 
 export enum KnbTypeEnum {
@@ -120,8 +126,13 @@ export enum KnbTypeEnum {
 }
 
 export enum ModelIdEnum {
-    DEEPSEEK_R1 = 4,
-    GPT_4O = 2,
+    DEEPSEEK = 4,
+    GPT_4 = 15,
+    GPT_4o = 2,
+    GPT_4_MINI = 16,
+    GPT_3_5_TURBO = 17,
+    GEMINI_2_5_PRO = 11,
+    CLAUDE_SONNET_4_5 = 18,
 }
 
 // 1微信视频号 3小红书 4抖音 5快手

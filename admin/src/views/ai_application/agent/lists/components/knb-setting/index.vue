@@ -27,7 +27,11 @@
                                 filterable
                                 :multiple="formData.kb_type == KnbTypeEnum.VECTOR"
                                 :remote-method="getKnLists">
-                                <el-option v-for="item in knLists" :key="item.id" :label="item.name" :value="item.id" />
+                                <el-option
+                                    v-for="item in knLists"
+                                    :key="item.id"
+                                    :label="item.name"
+                                    :value="`${item.id}`" />
                             </el-select>
                         </el-form-item>
                         <el-form-item label="引用上限" prop="search_tokens">
@@ -322,13 +326,15 @@ const knLists = ref<any[]>([]);
 
 const getKnLists = async (query?: string) => {
     const apiCall = formData.value.kb_type == KnbTypeEnum.VECTOR ? knowKnowledgeVectorList : knowKnowledgeList;
-    const { lists } = await apiCall({ page_size: 25000, name: query });
+    const { lists } = await apiCall({ page_size: 25000, name: query || "" });
     knLists.value = lists || [];
 };
 
 const handleKnChange = () => {
     formData.value.kb_ids = [];
 };
+
+getKnLists();
 
 defineExpose({
     validate: () => {

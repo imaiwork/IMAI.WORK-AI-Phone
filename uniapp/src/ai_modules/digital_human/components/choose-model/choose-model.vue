@@ -43,7 +43,13 @@ const appStore = useAppStore();
 const modelChannel = computed(() => {
     const { channel } = appStore.getDigitalHumanConfig;
     if (channel && channel.length > 0) {
-        return channel.filter((item: any) => item.status == 1 && DigitalHumanModelVersionEnum.CHANJING == item.id);
+        return channel.filter(
+            (item: any) =>
+                item.status == 1 &&
+                (DigitalHumanModelVersionEnum.SHANJIAN == item.id ||
+                    DigitalHumanModelVersionEnum.CHANJING == item.id ||
+                    DigitalHumanModelVersionEnum.STANDARD == item.id)
+        );
     }
     return [];
 });

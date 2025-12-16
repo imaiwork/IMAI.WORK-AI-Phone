@@ -12,14 +12,17 @@
             <div class="absolute w-6 h-6 right-4 top-4 cursor-pointer" @click="close">
                 <close-btn />
             </div>
-            <div class="text-2xl font-bold mb-5">工作流</div>
+            <div class="text-2xl font-bold mb-5">智能体ID</div>
             <!-- 表单 -->
             <ElForm ref="formRef" :model="formData" :rules="formRules" label-position="top">
-                <ElFormItem label="工作流ID" prop="workflow_id">
-                    <ElInput v-model="formData.workflow_id" placeholder="请输入工作流ID" />
+                <ElFormItem label="智能体ID" prop="bot_id">
+                    <ElInput v-model="formData.bot_id" placeholder="请输入智能体ID" />
                 </ElFormItem>
                 <ElFormItem label="授权Token" prop="api_token">
                     <ElInput v-model="formData.api_token" placeholder="请输入授权Token" />
+                </ElFormItem>
+                <ElFormItem label="appid" prop="app_id">
+                    <ElInput v-model="formData.app_id" placeholder="请输入appid" />
                 </ElFormItem>
             </ElForm>
             <!-- 操作按钮 -->
@@ -56,7 +59,6 @@ const formData = reactive({
 const formRules = {
     workflow_id: [{ required: true, message: "请输入工作流ID" }],
     bot_id: [{ required: true, message: "请输入智能体ID" }],
-    app_id: [{ required: true, message: "请输入应用ID" }],
     api_token: [{ required: true, message: "请输入授权Token" }],
 };
 

@@ -1,14 +1,11 @@
 <template>
-    <!-- 页面根元素，设置高度为屏幕高度，使用flex布局，列方向排列 -->
     <view class="h-screen flex flex-col page-bg">
-        <!-- 自定义导航栏 -->
         <u-navbar
             :border-bottom="false"
             :background="{
                 background: 'transparent',
             }"
             :is-back="false">
-            <!-- 当tab数量大于1时，显示tabs -->
             <view class="mx-4 w-full" v-if="tabList.length > 1">
                 <u-tabs
                     :list="tabList"
@@ -17,12 +14,9 @@
                     :current="currTab"
                     @change="handleTabChange"></u-tabs>
             </view>
-            <!-- 否则显示标题 -->
             <view class="mx-4 text-xl font-bold" v-else>AI智能体</view>
         </u-navbar>
-        <!-- AI助理 (类型1) -->
         <template v-if="currType == 1">
-            <!-- 搜索框 -->
             <view class="m-4 mt-2 relative z-10">
                 <u-search
                     v-model="queryParams.name"
@@ -32,15 +26,12 @@
                     @search="search"
                     @clear="clear"></u-search>
             </view>
-            <!-- 内容区域 -->
             <view class="grow min-h-0 relative z-10">
                 <view class="h-full flex">
-                    <!-- 左侧分类菜单 -->
                     <view
                         class="w-[248rpx] h-full flex flex-col overflow-hidden flex-shrink-0 rounded-tr-[36rpx] bg-white">
                         <view class="grow min-h-0">
                             <scroll-view scroll-y class="h-full">
-                                <!-- 一级分类 -->
                                 <view
                                     v-for="(item, index) in optionsData.robotCate"
                                     class="robot-cate"
@@ -75,7 +66,6 @@
                                             </view>
                                         </view>
                                     </view>
-                                    <!-- 二级分类 (展开时显示) -->
                                     <template v-if="robotCateActiveMenu == index">
                                         <view
                                             v-for="(subItem, subIndex) in item.sub_list"
@@ -100,7 +90,6 @@
                             </scroll-view>
                         </view>
                     </view>
-                    <!-- 右侧机器人列表 -->
                     <view class="flex-1 flex flex-col min-h-0 overflow-hidden">
                         <view class="text-[20rpx] font-bold text-[#6D6E70] mt-2 mx-[24rpx] mb-4">
                             {{ total }}个智能体
@@ -148,7 +137,6 @@
                 </view>
             </view>
         </template>
-        <!-- AI智能体 (类型2) -->
         <template v-if="currType == 2">
             <view class="mt-4">
                 <scroll-view scroll-x>
@@ -156,10 +144,10 @@
                         <view
                             v-for="item in agentCateLists"
                             class="text-[#959FAF] font-bold px-[24rpx] h-[64rpx] flex items-center rounded-full whitespace-nowrap"
-                            :class="{ 'bg-primary !text-white': currAgentCateId === item.id }"
-                            :key="item.id"
+                            :class="{ 'bg-primary !text-white': currAgentType == item.value }"
+                            :key="item.value"
                             @click="handleAgentCateClick(item)">
-                            <view>{{ item.name }}</view>
+                            <view>{{ item.label }}</view>
                         </view>
                     </view>
                 </scroll-view>
@@ -179,7 +167,11 @@
                             @click="handleSelectAgent(item)">
                             <view
                                 class="flex-shrink-0 h-[200rpx] w-full bg-no-repeat bg-center bg-cover relative"
-                                :style="{ backgroundImage: `url(${item.bg_image})` }">
+                                :style="{
+                                    backgroundImage: `url(${
+                                        item.bg_image || config.baseUrl + 'static/images/agent_bg.png'
+                                    })`,
+                                }">
                                 <view class="absolute -bottom-[40rpx] w-full flex justify-center">
                                     <view
                                         class="w-[108rpx] h-[108rpx] bg-white rounded-full p-[10rpx] flex justify-center">
@@ -190,10 +182,16 @@
                                     </view>
                                 </view>
                             </view>
-                            <view class="mt-10 w-full px-3">
+                            <view class="flex-1 w-full px-3 pt-8">
                                 <view class="text-center line-clamp-1 font-bold">{{ item.name }}</view>
-                                <view class="my-3 line-clamp-2 text-center text-[#737373] break-all">
+                                <view class="mt-1 line-clamp-2 text-center text-xs text-[#737373] break-all">
                                     {{ item.intro || item.introduced }}
+                                </view>
+                            </view>
+                            <view class="flex items-center justify-between px-2 my-2">
+                                <view class="text-[22rpx] text-[#999999]"> 创建人：{{ item.source_text }} </view>
+                                <view class="px-1" v-if="item.source == 1" @click.stop="handleMore(item)">
+                                    <u-icon name="more-dot-fill" :size="24" color="#999999"></u-icon>
                                 </view>
                             </view>
                         </view>
@@ -209,16 +207,11 @@
 </template>
 
 <script lang="ts" setup>
-import {
-    robotCategory,
-    robotLists,
-    getCommonCozeAgentList,
-    getCommonAgentList,
-    getAgentCategoryList,
-} from "@/api/agent";
+import { robotCategory, robotLists, getAgentList, getCozeAgentList, deleteAgent, deleteCozeAgent } from "@/api/agent";
 import { useDictOptions } from "@/hooks/useDictOptions";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
+import config from "@/config";
 
 // 实例化app状态
 const appStore = useAppStore();
@@ -257,9 +250,12 @@ const queryLoading = ref<boolean>(false); // 机器人列表加载状态
 
 // AI智能体部分
 const pagingCozeRef = shallowRef(); // 智能体列表分页组件的引用
-const agentCateLists = ref<any[]>([]); // 智能体分类列表
-const currAgentCateId = ref<any>(null); // 当前选中的智能体分类ID
-const currAgentType = ref<any>(null); // 当前选中的智能体分类类型
+const agentCateLists = [
+    { label: "智能体", value: 1 },
+    { label: "Coze智能体", value: 2 },
+    { label: "Coze工作流", value: 3 },
+]; // 智能体分类列表
+const currAgentType = ref<any>(1); // 当前选中的智能体分类类型
 const agentList = ref<any[]>([]); // 智能体列表数据
 
 // 使用自定义hook获取机器人分类数据
@@ -399,31 +395,11 @@ const handleRobot = (data: any) => {
 };
 
 /**
- * 获取智能体分类列表
- */
-const getAgentCategoryListData = async () => {
-    try {
-        const { lists } = await getAgentCategoryList({
-            page_size: 25000,
-        });
-        agentCateLists.value = lists || [];
-        // 默认选中第一个分类
-        if (agentCateLists.value.length > 0) {
-            currAgentCateId.value = agentCateLists.value[0].id;
-            currAgentType.value = agentCateLists.value[0].type;
-        }
-    } catch (error) {
-        console.error("获取智能体分类失败:", error);
-    }
-};
-
-/**
  * 点击智能体分类
  * @param {any} item - 分类项数据
  */
 const handleAgentCateClick = (item: any) => {
-    currAgentCateId.value = item.id;
-    currAgentType.value = item.type;
+    currAgentType.value = item.value;
     pagingCozeRef.value?.reload(); // 重新加载智能体列表
 };
 
@@ -461,6 +437,49 @@ const handleSelectAgent = (item: any) => {
 };
 
 /**
+ * 更多操作
+ */
+const handleMore = (item: any) => {
+    uni.showActionSheet({
+        itemList: ["删除"],
+        success: (res) => {
+            if (res.tapIndex == 0) {
+                uni.showModal({
+                    title: "提示",
+                    content: "确定删除该智能体吗？",
+                    success: async (res) => {
+                        if (res.confirm) {
+                            uni.showLoading({
+                                title: "删除中...",
+                                mask: true,
+                            });
+                            try {
+                                const api = currAgentType.value == 1 ? deleteAgent : deleteCozeAgent;
+                                await api({ id: item.id });
+                                uni.hideLoading();
+                                uni.showToast({
+                                    title: "删除成功",
+                                    icon: "none",
+                                    duration: 3000,
+                                });
+                                agentList.value = agentList.value.filter((value) => value.id != item.id);
+                            } catch (error: any) {
+                                uni.hideLoading();
+                                uni.showToast({
+                                    title: error,
+                                    icon: "none",
+                                    duration: 3000,
+                                });
+                            }
+                        }
+                    },
+                });
+            }
+        },
+    });
+};
+
+/**
  * 查询智能体列表（由z-paging调用）
  * @param {number} page_no - 页码
  * @param {number} page_size - 每页数量
@@ -469,14 +488,11 @@ const handleQueryAgentList = async (page_no: number, page_size: number) => {
     try {
         const isType1 = currAgentType.value === 1;
         // 根据类型选择不同的API和参数
-        const api = isType1 ? getCommonAgentList : getCommonCozeAgentList;
+        const api = isType1 ? getAgentList : getCozeAgentList;
         const params = {
             page_no,
             page_size,
-            source: 0,
-            ...(isType1
-                ? { cate_id: currAgentCateId.value }
-                : { agent_cate_id: currAgentCateId.value, type: currAgentType.value === 2 ? 1 : 2 }),
+            ...(isType1 ? {} : { type: currAgentType.value === 2 ? 1 : 2 }),
         };
         // @ts-ignore
         const response = await api(params);
@@ -514,11 +530,6 @@ onLoad(({ id }: any) => {
     if (id) {
         state.cate_id = id;
     }
-});
-
-// onMounted生命周期，组件挂载后执行
-onMounted(() => {
-    getAgentCategoryListData();
 });
 </script>
 
@@ -603,7 +614,7 @@ onMounted(() => {
     }
 }
 .agent-item {
-    @apply bg-white rounded-[32rpx] overflow-hidden h-[430rpx];
+    @apply bg-white rounded-[32rpx] overflow-hidden h-[430rpx] flex flex-col;
     box-shadow: 0rpx 12rpx 24rpx rgba(0, 0, 0, 0.12);
 }
 </style>

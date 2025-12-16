@@ -93,8 +93,12 @@
 <script setup lang="ts">
 import { getVoiceList, deleteVoice } from "@/api/digital_human";
 import { useAppStore } from "@/stores/app";
+import {
+    ToneTypeEnum,
+    DigitalHumanModelVersionEnum,
+    DigitalHumanModelVersionEnumMap,
+} from "@/pages/app/digital_human/_enums";
 import Empty from "@/pages/app/digital_human/_components/empty.vue";
-import { ToneTypeEnum, DigitalHumanModelVersionEnum } from "@/pages/app/digital_human/_enums";
 import AddPop from "./_components/add-pop.vue";
 
 const appStore = useAppStore();
@@ -102,7 +106,15 @@ const appStore = useAppStore();
 const modelChannel = computed(() => {
     const { channel } = appStore.getDigitalHumanConfig;
     if (channel && channel.length > 0) {
-        return channel.filter((item) => item.status == 1 && DigitalHumanModelVersionEnum.CHANJING == item.id);
+        return channel.filter(
+            (item) =>
+                item.status == 1 &&
+                [
+                    DigitalHumanModelVersionEnum.CHANJING,
+                    DigitalHumanModelVersionEnum.STANDARD,
+                    DigitalHumanModelVersionEnum.SHANJIAN,
+                ].includes(item.id)
+        );
     }
     return [];
 });
@@ -112,7 +124,7 @@ const addPopRef = shallowRef<InstanceType<typeof AddPop>>();
 
 const queryParams = reactive({
     name: "",
-    model_version: "",
+    model_version: `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.STANDARD},${DigitalHumanModelVersionEnum.SHANJIAN}`,
     builtin: ToneTypeEnum.USER,
 });
 

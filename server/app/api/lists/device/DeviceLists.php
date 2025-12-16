@@ -112,6 +112,13 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface
                 //$this->addDeviceRpa($item);
 
                 $item['device_name'] = is_null($item['device_name']) ? $item['device_model'] : $item['device_name'];
+
+                if($item['status'] !== 2){
+                    Cache::store('redis')->select(env('redis.WS_SELECT', 8));
+                    $status = Cache::store('redis')->get("xhs:device:{$item['device_code']}:status");
+                    $item['status'] = $status === 'online' ? 1 : 0;
+                    $item->save();
+                }
                 return $item;
             })
             ->toArray();

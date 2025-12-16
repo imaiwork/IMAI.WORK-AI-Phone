@@ -25,6 +25,7 @@ class HumanVideoTaskCron extends Command
     {
         HumanLogic::humanInfoCron();
         HumanLogic::videoInfoCron();
+        HumanLogic::videoWjInfoCron();
         HumanLogic::videoTaskCron();
         return true;
     }

@@ -8,8 +8,8 @@
     "u-search": "../../../../uni_modules/vk-uview-ui/components/u-search/u-search",
     "empty": "../../../../components/empty/empty",
     "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "video-preview-v2": "../../../../components/video-preview-v2/video-preview-v2",
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
-    "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
-    "video-preview-v2": "../../components/video-preview-v2/video-preview-v2"
+    "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup"
   }
 }

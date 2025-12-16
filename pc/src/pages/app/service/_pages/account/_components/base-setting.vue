@@ -56,12 +56,14 @@ const emit = defineEmits<{
 const route = useRoute();
 
 const account = computed(() => route.query.account);
+const accountType = computed(() => route.query.app_type);
 
 const formRef = ref<FormInstance>();
 const formData = reactive({
     account: account.value,
     takeover_mode: 0,
     robot_id: "",
+    account_type: accountType.value,
 });
 
 const rules = {
@@ -100,6 +102,7 @@ watch(
     (val) => {
         if (val) {
             formData.account = val;
+            formData.account_type = accountType.value;
             getDetail();
             getAgentFn();
         }

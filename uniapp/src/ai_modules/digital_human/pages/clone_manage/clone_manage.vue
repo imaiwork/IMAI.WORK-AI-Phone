@@ -55,6 +55,7 @@
                                 }"
                                 :show-play="false"
                                 :show-more="!isDelete"
+                                @retry="handleRetry"
                                 @delete="handleDelete"
                                 @play="handlePlay">
                             </video-item>
@@ -64,7 +65,7 @@
                         <view
                             v-for="(item, index) in dataLists"
                             :key="index"
-                            class="bg-white rounded-[16rpx] px-[26rpx] h-[170rpx] flex items-center gap-x-2 relative">
+                            class="bg-white rounded-[16rpx] px-[26rpx] h-[170rpx] flex items-center gap-x-1 relative">
                             <view class="flex items-center gap-x-3 flex-1">
                                 <image
                                     src="@/ai_modules/digital_human/static/images/common/audio_icon.png"
@@ -154,17 +155,18 @@
         </view>
     </view>
     <video-preview
-        v-model:show="showVideoPreview"
+        v-model="showVideoPreview"
         title="视频预览"
         :video-url="videoUrl"
         @confirm="showVideoPreview = false" />
 </template>
 
 <script setup lang="ts">
-import { getAnchorList, deleteAnchor, getVoiceList, deleteVoice } from "@/api/digital_human";
+import { getAnchorList, deleteAnchor, retryAnchor, getVoiceList, deleteVoice } from "@/api/digital_human";
 import VideoItem from "@/ai_modules/digital_human/components/video-item/video-item.vue";
-import { DigitalHumanModelVersionEnum, ListenerTypeEnum } from "../../enums";
 import { useAudio } from "@/hooks/useAudio";
+import VideoPreview from "@/components/video-preview/video-preview.vue";
+import { DigitalHumanModelVersionEnum } from "../../enums";
 
 const tabs = [
     {
@@ -181,24 +183,25 @@ const active = ref<number[]>([]);
 const dataCount = ref(0);
 
 // 音频播放hook
-const { setUrl, isPlaying, play, pause, pauseAll, destroy } = useAudio();
+const { isPlaying, play, pause, pauseAll, destroy } = useAudio();
 
 const pagingRef = shallowRef();
 const queryList = async (page_no: number, page_size: number) => {
     try {
+        const model_version = `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.STANDARD},${DigitalHumanModelVersionEnum.SHANJIAN}`;
         const { lists, count } =
             currentTab.value == 0
                 ? await getAnchorList({
                       page_no,
                       page_size,
                       type: 0,
-                      model_version: DigitalHumanModelVersionEnum.CHANJING,
+                      model_version,
                   })
                 : await getVoiceList({
                       page_no,
                       page_size,
                       builtin: 1,
-                      model_version: DigitalHumanModelVersionEnum.CHANJING,
+                      model_version,
                   });
         dataCount.value = count;
         pagingRef.value?.complete(lists);
@@ -260,6 +263,30 @@ const handleSelectAll = () => {
     }
 };
 
+const handleRetry = async (id: number) => {
+    uni.showLoading({
+        title: "重试中...",
+        mask: true,
+    });
+    try {
+        await retryAnchor({ anchor_id: id });
+        uni.hideLoading();
+        pagingRef.value?.reload();
+        uni.showToast({
+            title: "重试成功",
+            icon: "none",
+            duration: 3000,
+        });
+    } catch (error: any) {
+        uni.hideLoading();
+        uni.showToast({
+            title: error || "重试失败",
+            icon: "none",
+            duration: 3000,
+        });
+    }
+};
+
 const handleDelete = (id?: number) => {
     uni.showModal({
         title: "提示",
@@ -292,25 +319,6 @@ const handleDelete = (id?: number) => {
             }
             isDelete.value = false;
             active.value = [];
-        },
-    });
-};
-
-const handleCreate = (item: any) => {
-    const { pic, anchor_id, model_version, name, url, width, height } = item;
-    uni.$u.route({
-        url: "/ai_modules/digital_human/pages/video_create/video_create",
-        params: {
-            type: ListenerTypeEnum.CREATE_ANCHOR,
-            data: JSON.stringify({
-                pic,
-                anchor_id,
-                model_version,
-                name,
-                url,
-                width,
-                height,
-            }),
         },
     });
 };

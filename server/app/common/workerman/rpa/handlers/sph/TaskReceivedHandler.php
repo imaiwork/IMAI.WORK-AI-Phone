@@ -33,6 +33,8 @@ class TaskReceivedHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
+        } finally{
+            unset($content);
         }
     }
 

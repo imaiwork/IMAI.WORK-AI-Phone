@@ -63,24 +63,15 @@
                         <ElTableColumn prop="name" label="接管状态">
                             <template #default="{ row }">
                                 <ElSwitch
-                                    v-if="row.type == AppTypeEnum.XHS"
                                     v-model="row.open_ai"
                                     :active-value="1"
                                     :inactive-value="0"
                                     @change="changeOpenAi(row)" />
-                                <div v-else>-</div>
                             </template>
                         </ElTableColumn>
                         <ElTableColumn prop="name" label="操作" width="100px" fixed="right">
                             <template #default="{ row }">
-                                <ElButton
-                                    v-if="row.type == AppTypeEnum.XHS"
-                                    link
-                                    type="primary"
-                                    @click="handleEdit(row)">
-                                    配置
-                                </ElButton>
-                                <div v-else>-</div>
+                                <ElButton link type="primary" @click="handleEdit(row)"> 配置 </ElButton>
                             </template>
                         </ElTableColumn>
                         <template #empty>
@@ -130,6 +121,7 @@ const changeOpenAi = async (row: any) => {
         await changeAccountStatus({
             account: row.account,
             open_ai: row.open_ai, //AI总功能开关 0：关闭 1：开启
+            account_type: row.type,
         });
         feedback.msgSuccess("操作成功");
     } catch (error) {

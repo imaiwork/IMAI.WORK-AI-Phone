@@ -74,7 +74,7 @@
                                 type="textarea"
                                 show-word-limit
                                 placeholder="请输入相关提示词 ..."
-                                :maxlength="20000"
+                                :maxlength="100000"
                                 :rows="6" />
                         </ElFormItem>
                     </ElForm>

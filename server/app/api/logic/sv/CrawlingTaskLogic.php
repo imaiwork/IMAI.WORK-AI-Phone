@@ -51,7 +51,7 @@ class CrawlingTaskLogic extends SvBaseLogic
             $params['implementation_keywords_number'] = $keywordCount;
             $params['keywords'] = json_encode($params['keywords'], JSON_UNESCAPED_UNICODE);
             $params['device_codes'] = json_encode(array_values($device_codes), JSON_UNESCAPED_UNICODE);
-            $params['name'] =  $params['name'] ?? '视频号获客任务' . date('mdHis', time()) ;
+            $params['name'] =  $params['name'] ?? '视频号获客任务' . date('mdHis', time());
             $params['status'] = 0;
             $params['type'] = 1;
             $params['ocr_type'] = $params['ocr_type'] ?? 1;
@@ -75,6 +75,8 @@ class CrawlingTaskLogic extends SvBaseLogic
             if (!isset($params['time_config']) || empty($params['time_config'])) {
                 throw new \Exception('请配置任务执行时间区间');
             }
+
+            $params['custom_date'] = is_null($params['custom_date']) ? [] : $params['custom_date'];
 
             $devices = CrawlingTaskLogic::distributeKeywords($keywords, $device_codes, $keywordCount, $deviceCount);
             $times = \app\api\logic\device\TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
@@ -110,11 +112,11 @@ class CrawlingTaskLogic extends SvBaseLogic
                         'account_type' => 1,
                         'task_name' => '视频号自动获客任务',
                         'status' => 0,
-                        'day' => date('Y-m-d',$task->start_time),
+                        'day' => date('Y-m-d', $task->start_time),
                         'start_time' => $task->start_time,
                         'end_time' => $task->end_time,
                         'sub_task_id' => $task->id,
-                        'source' => DeviceEnum::TASK_SOURCE_CLUES,//sv_crawling_task
+                        'source' => DeviceEnum::TASK_SOURCE_CLUES, //sv_crawling_task
                         'create_time' => time(),
                     ]);
                 }
@@ -158,14 +160,14 @@ class CrawlingTaskLogic extends SvBaseLogic
 
     private static function getSphAccount(string $device_code)
     {
-        $find = AiWechat::where('device_code', '=', function($query) use ($device_code){
+        $find = AiWechat::where('device_code', '=', function ($query) use ($device_code) {
             $query->name('sv_device')->where('device_code', $device_code)->field('wechat_device_code');
         })->where('user_id', self::$uid)->findOrEmpty();
-        if( !$find->isEmpty()){
-            return $find->wechat_id ;
+        if (!$find->isEmpty()) {
+            return $find->wechat_id;
         }
 
-         $find = SvAccount::where('device_code',  $device_code)->where('type',1)->where('user_id', self::$uid)->findOrEmpty();
+        $find = SvAccount::where('device_code',  $device_code)->where('type', 1)->where('user_id', self::$uid)->findOrEmpty();
         return $find->isEmpty() ? '' : $find->account;
     }
     /**
@@ -200,15 +202,15 @@ class CrawlingTaskLogic extends SvBaseLogic
                 self::setError('爬取任务不存在');
                 return false;
             }
-             $info= $task;
+            $info = $task;
             $bind = SvCrawlingTaskDeviceBind::where('task_id', $params['id'])->where('device_code', $params['device_code'])->findOrEmpty()->toArray();
             if (!$bind) {
                 self::setError('子任务不存在');
                 return false;
             }
-            if ($info['type'] == 1){
+            if ($info['type'] == 1) {
                 $where = [
-                    'sd.device_code'=> $params['device_code'],
+                    'sd.device_code' => $params['device_code'],
                 ];
                 $info['account_info'] = SvDevice::alias('sd')->field('ai.*,sd.wechat_device_code,sd.device_name,sd.device_model')->where($where)
                     ->join('ai_wechat ai', 'ai.device_code = sd.wechat_device_code', 'LEFT')
@@ -217,20 +219,19 @@ class CrawlingTaskLogic extends SvBaseLogic
                     'device_name' => $info['account_info']['device_name'] ?? '',
                     'device_model' => $info['account_info']['device_model'] ?? '',
                 ];
-            }else{
+            } else {
                 $where = [
-                    'device_code'=> $info['device_code'],
+                    'device_code' => $info['device_code'],
                     'account' => $info['account']
                 ];
                 $info['account_info'] = SvAccount::where($where)->findOrEmpty()->toArray();
                 $info['device_info'] =  SvDevice::where('device_code', $params['device_code'])->field('sd.device_name,sd.device_model')->findOrEmpty()->toArray();
-
             }
             $info['task_name'] = $params['task_name'];
             $info['task_category'] = $params['task_category'];
             $bind['keywords'] = json_decode($bind['keywords'], JSON_UNESCAPED_UNICODE);
-            $info['start_time'] = date('H:i',$info['start_time']);
-            $info['end_time'] = date('H:i',$info['end_time']);
+            $info['start_time'] = date('H:i', $info['start_time']);
+            $info['end_time'] = date('H:i', $info['end_time']);
             $info['info'] = $bind;
             self::$returnData = $info;
             return true;
@@ -416,7 +417,7 @@ class CrawlingTaskLogic extends SvBaseLogic
     public static function ocr(array $params = [])
     {
         try {
-            \think\facade\Log::channel('device')->write("ocr " . json_encode($params, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
+            \think\facade\Log::channel('device')->write("ocr " . json_encode($params, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
             $find = SvDevice::where('device_code', $params['device_code'])->findOrEmpty();
             if ($find->isEmpty()) {
                 self::setError('设备不存在');
@@ -462,7 +463,7 @@ class CrawlingTaskLogic extends SvBaseLogic
     public static function localOcr(array $params = [])
     {
         try {
-            \think\facade\Log::channel('device')->write("localOcr " . json_encode($params, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
+            \think\facade\Log::channel('device')->write("localOcr " . json_encode($params, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
             $find = SvDevice::where('device_code', $params['device_code'])->findOrEmpty();
             if ($find->isEmpty()) {
                 self::setError('设备不存在');
@@ -607,7 +608,10 @@ class CrawlingTaskLogic extends SvBaseLogic
                     $response = \app\common\service\ToolsService::Sv()->queryResult([
                         "string" => $record['reg_wechat'],
                     ]);
-
+                    if(isset($response['code']) && (int)$response['code'] === 10005){
+                        continue;
+                    }
+                    
                     if (isset($response['code']) && (int)$response['code'] === 10000) {
                         if (is_null($response['data'])) {
                             self::setLog($record['reg_wechat'] . '该账号还未开始验证', 'add_wechat');
@@ -877,6 +881,164 @@ class CrawlingTaskLogic extends SvBaseLogic
             ]);
         } catch (\Throwable $e) {
             self::setLog('异常信息' . $e, 'add_wechat');
+        }
+    }
+
+
+
+    public static function verifyWeChatCron()
+    {
+        print_r("\n微信号验证\n");
+        $records = SvCrawlingRecord::field('*')
+            //->where('status', 0)
+            ->where('is_verify', 0)
+            ->where('reg_content', '<>', '')
+            ->order('id desc')
+            ->limit(50)
+            ->fetchSql(false)
+            ->select();
+        $wxPattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
+        foreach ($records as $record) {
+            $wechatNos = explode(',', $record->reg_content);
+            foreach ($wechatNos as $wechatNo) {
+                $error = [];
+                $wechatExist = SvAddWechatRecord::where('user_id', $record->user_id)
+                    ->where('device_code', $record->device_code)
+                    ->where('account_type', 1)
+                    ->where('channel', 1)
+                    ->where('crawling_task_id', $record->task_id)
+                    ->where('reg_wechat', $wechatNo)
+                    ->findOrEmpty();
+
+                if (preg_match($wxPattern, $wechatNo)) {
+                    //查询验证结果
+                    $response = \app\common\service\ToolsService::Sv()->queryResult([
+                        "string" => $wechatNo,
+                    ]);
+                    if(isset($response['code']) && (int)$response['code'] === 10005){
+                        continue;
+                    }
+                    if (isset($response['code']) && (int)$response['code'] === 10000) {
+                        if (is_null($response['data'])) {
+
+                            array_push($error, $wechatNo . '该账号还未开始验证');
+                            array_push($error, $response);
+
+                            $response = \app\common\service\ToolsService::Sv()->validateStrings([
+                                "strings" => [$wechatNo],
+                            ]);
+                            array_push($error, $response);
+
+                            \think\facade\Log::channel('device')->write(json_encode($error, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'verify_wechat');
+                            continue;
+                        }
+
+                        if (isset($response['data']['status']) && (int)$response['data']['status'] === 0) {
+                            array_push($error, $wechatNo . '该账号还未完成验证,稍后再试');
+                            array_push($error, $response);
+
+                            $response = \app\common\service\ToolsService::Sv()->validateStrings([
+                                "strings" => [$wechatNo],
+                            ]);
+                            array_push($error, $response);
+
+                            \think\facade\Log::channel('device')->write(json_encode($error, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'verify_wechat');
+                            continue;
+                        }
+
+                        if (isset($response['data']['valid']) && (bool)$response['data']['valid'] === false) {
+                            array_push($error, $wechatNo . '该账号不是有效的微信号,忽略');
+                            array_push($error, $response);
+
+                            if ($wechatExist->isEmpty()) {
+                                $res = SvAddWechatRecord::create([
+                                    'user_id' => $record->user_id,
+                                    'device_code' => $record->device_code,
+                                    'account' => $record->username,
+                                    'account_type'  => 1,
+                                    'user_account' => $record->username,
+                                    'original_message' => $record->crawl_content,
+                                    'reg_wechat' => $wechatNo,
+                                    'action' => 1,
+                                    'status' => 0,
+                                    'result' => '该线索经过校验为无效线索',
+                                    'channel' => 1,
+                                    'exec_type' => 2,
+                                    'task_id' => time() . rand(100, 999),
+                                    'crawling_task_id' => $record->task_id,
+                                    'create_time' => time()
+                                ]);
+                                array_push($error, $res->toArray());
+                            }
+
+                            $record->status = 2; //无效
+                            $record->is_verify = 1;
+                            $record->update_time = time();
+                            $record->save();
+                            array_push($error, $wechatNo . '无效');
+                        } else {
+                            if ($wechatExist->isEmpty()) {
+                                $res = SvAddWechatRecord::create([
+                                    'user_id' => $record->user_id,
+                                    'device_code' => $record->device_code,
+                                    'account' => $record->username,
+                                    'account_type'  => 1,
+                                    'user_account' => $record->username,
+                                    'original_message' => $record->crawl_content,
+                                    'reg_wechat' => $wechatNo,
+                                    'action' => 1,
+                                    'status' => 4,
+                                    'channel' => 1,
+                                    'exec_type' => 2,
+                                    'task_id' => time() . rand(100, 999),
+                                    'crawling_task_id' => $record->task_id,
+                                    'create_time' => time()
+                                ]);
+
+                                array_push($error, $res->toArray());
+                            }
+                            array_push($error, $wechatNo . '有效');
+                            $status = (count($wechatNos) > 1 && strpos($record->reg_content, $wechatNo) !== false) ? 3 : 1; //有效
+                            $record->status = $status;
+                            $record->is_verify = 1;
+                            $record->update_time = time();
+                            $record->save();
+                        }
+                    }
+                } else {
+
+                    if ($wechatExist->isEmpty()) {
+                        $res = SvAddWechatRecord::create([
+                            'user_id' => $record->user_id,
+                            'device_code' => $record->device_code,
+                            'account' => $record->username,
+                            'account_type'  => 1,
+                            'user_account' => $record->username,
+                            'original_message' => $record->crawl_content,
+                            'reg_wechat' => $wechatNo,
+                            'action' => 1,
+                            'status' => 4,
+                            'channel' => 1,
+                            'exec_type' => 2,
+                            'task_id' => time() . rand(100, 999),
+                            'crawling_task_id' => $record->task_id,
+                            'create_time' => time()
+                        ]);
+
+                        array_push($error, $res->toArray());
+                    }
+
+
+                    $record->is_verify = 1;
+                    $record->update_time = time();
+                    $record->save();
+                    array_push($error, $wechatNo . '微信号为手机号验证忽略，添加到待加微表');
+                }
+
+                if (!empty($error)) {
+                    \think\facade\Log::channel('device')->write(json_encode($error, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'verify_wechat');
+                }
+            }
         }
     }
 }

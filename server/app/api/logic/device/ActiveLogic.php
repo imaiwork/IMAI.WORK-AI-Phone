@@ -24,7 +24,8 @@ class ActiveLogic extends ApiLogic
     {
         Db::startTrans();
         try {
-
+            TaskLogic::checkAccounts($params['accounts']);
+            
             $times = TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
             $params['user_id'] = self::$uid;
             $accounts = $params['accounts'];

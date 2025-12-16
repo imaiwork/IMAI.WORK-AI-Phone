@@ -139,7 +139,7 @@ const handleRecord = (row: any) => {
     if (assistant_id == 0) {
         router.push(`/?task_id=${task_id}&agent_id=${robot_id}&agent_name=${robot_name}`);
     } else {
-        feedback.msgWarning("相关助理已经暂停使用啦~");
+        router.push(`/robot/chat?id=${assistant_id}&task_id=${task_id}`);
     }
 };
 

@@ -16,11 +16,13 @@
             <!-- 表单 -->
             <el-form ref="formRef" :model="formData" :rules="formRules" label-position="top">
                 <el-form-item label="工作流ID" prop="workflow_id">
-                    <ElInput v-model="formData.workflow_id" placeholder="请输入工作流ID" />
+                    <el-input v-model="formData.workflow_id" placeholder="请输入工作流ID" />
                 </el-form-item>
-
                 <el-form-item label="授权Token" prop="api_token">
-                    <ElInput v-model="formData.api_token" placeholder="请输入授权Token" />
+                    <el-input v-model="formData.api_token" placeholder="请输入授权Token" />
+                </el-form-item>
+                <el-form-item label="appid" prop="app_id">
+                    <el-input v-model="formData.app_id" placeholder="请输入appid" />
                 </el-form-item>
             </el-form>
             <!-- 操作按钮 -->
@@ -61,7 +63,6 @@ const formData = reactive({
 const formRules = {
     workflow_id: [{ required: true, message: "请输入工作流ID" }],
     bot_id: [{ required: true, message: "请输入智能体ID" }],
-    app_id: [{ required: true, message: "请输入应用ID" }],
     api_token: [{ required: true, message: "请输入授权Token" }],
 };
 

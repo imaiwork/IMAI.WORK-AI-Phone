@@ -166,7 +166,7 @@
 </template>
 
 <script setup lang="ts">
-import { getCopywritingLibraryList } from "@/api/redbook";
+import { getCopywritingLibraryList } from "~/api/matrix";
 import { CopywritingTypeEnum } from "@/pages/app/matrix/_enums";
 
 // 定义组件emit事件

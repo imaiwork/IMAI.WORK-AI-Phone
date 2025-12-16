@@ -3,7 +3,7 @@
         <div class="w-[220px] h-full fixed top-0 left-[var(--aside-width)] z-[888]" v-show="!hideSidebar">
             <chat-history ref="chatHistoryRef" />
         </div>
-        <div class="h-full flex-1" v-show="!isLoading" :class="{ 'ml-[220px]': !hideSidebar }">
+        <div class="h-full flex-1" :class="{ 'ml-[220px]': !hideSidebar }">
             <div class="h-full px-4 mx-auto">
                 <Chatting
                     ref="chattingRef"
@@ -22,7 +22,7 @@
                     <template #content>
                         <div class="w-full h-full pt-[100px]">
                             <div class="md:max-w-3xl lg:max-w-[42rem] xl:max-w-[48rem] 2xl:max-w-[52rem] mx-auto">
-                                <div class="font-bold text-[32px]">Halo, 今天心情不错哟?</div>
+                                <div class="font-bold text-[32px]">Hello, 今天心情不错哟?</div>
                                 <div class="mt-6 flex flex-col xl:flex-row gap-4">
                                     <div class="flex-1 border border-[#EBEBEB] rounded-2xl px-5 relative">
                                         <div class="flex items-center justify-between py-3">
@@ -135,7 +135,6 @@ import RedBookIcon from "@/assets/images/redbook_icon.png";
 import DouyinIcon from "@/assets/images/douyin_icon.png";
 import KuaishouIcon from "@/assets/images/kuaishou_icon.png";
 import SphIcon from "@/assets/images/sph_icon.png";
-import { useChatHistory } from "./_modules/composables/useChatHistory";
 
 // --- 1. 初始化 ---
 
@@ -164,8 +163,6 @@ const {
     stopStream,
 } = useChatManager();
 
-const { isLoading } = useChatHistory();
-
 const { chatAreaRef, agent, setup, dispose, clear, getAgentList, isAgent, setAgent } = useChatAreaManager({
     onEnter: (text) => {
         contentPost(text);
@@ -189,7 +186,8 @@ const socialPlatformList = [
 ];
 
 const toPage = (type: string) => {
-    const typeUrl = {
+    // 明确定义路由映射表，增强可读性
+    const typeUrl: { [key: string]: string } = {
         sales: "/app/person_wechat/chat",
         matrix: "/app/matrix?type=1",
         dh: "/app/digital_human?type=1",
@@ -197,7 +195,12 @@ const toPage = (type: string) => {
         staff: "/staff",
         device: "/device",
     };
-    router.push(typeUrl[type]);
+
+    const url = typeUrl[type];
+
+    if (url) {
+        router.push(url);
+    }
 };
 
 const contentPost = (text: string) => {
@@ -209,7 +212,7 @@ const contentPost = (text: string) => {
 };
 
 watch(
-    () => route.query,
+    () => route.fullPath,
     () => {
         initialize().then(async () => {
             await getAgentList();
@@ -222,7 +225,7 @@ watch(
             }
         });
     },
-    { immediate: true, deep: true }
+    { immediate: true }
 );
 
 onUnmounted(() => {
@@ -268,7 +271,6 @@ definePageMeta({
 </style>
 
 <style lang="scss">
-/* Global styles for chat dialogs */
 .chat-dialog {
     .call-user-dialog-header,
     .call-tag-dialog-header {

@@ -16,11 +16,12 @@ export enum DigitalHumanModelVersionEnum {
 
 // 数字人模型版本枚举映射
 export const DigitalHumanModelVersionEnumMap = {
-    [DigitalHumanModelVersionEnum.STANDARD]: "标准版",
-    [DigitalHumanModelVersionEnum.SUPER]: "极速版",
-    [DigitalHumanModelVersionEnum.ADVANCED]: "高级版",
-    [DigitalHumanModelVersionEnum.ELITE]: "尊享版",
-    [DigitalHumanModelVersionEnum.CHANJING]: "蝉镜版",
+    [DigitalHumanModelVersionEnum.STANDARD]: "标准",
+    [DigitalHumanModelVersionEnum.SUPER]: "极速",
+    [DigitalHumanModelVersionEnum.ADVANCED]: "高级",
+    [DigitalHumanModelVersionEnum.ELITE]: "尊享",
+    [DigitalHumanModelVersionEnum.CHANJING]: "蝉镜",
+    [DigitalHumanModelVersionEnum.SHANJIAN]: "闪剪",
 };
 
 // 模型类型
@@ -63,6 +64,10 @@ export enum ListenerTypeEnum {
     MONTAGE_AI_COPYWRITER = "montage-ai-copywriter",
     // 账号
     CHOOSE_ACCOUNT = "choose-account",
+    // Sora生成文案
+    SORA_COPYWRITER = "sora-ai-copywriter",
+    // 素材图组
+    MONTAGE_MATERIAL_GROUP = "montage-material-group",
 }
 
 // 剪辑风格
@@ -84,3 +89,17 @@ export const ClipStyleMap = {
     [ClipStyleEnum.KNOWLEDGE]: "知识科普风格",
     [ClipStyleEnum.VARIETY]: "综艺风格",
 };
+
+// 混剪发布类型
+export enum MontageTypeEnum {
+    // 真人口播混剪
+    REAL_PERSON_MIX = 1,
+    // 真人口播智剪
+    REAL_PERSON_AI = 2,
+    // 素材混剪
+    MATERIAL_MIX = 3,
+    // 新闻体
+    NEWS_BODY = 4,
+    // Sora生成视频
+    SORA_VIDEO = 5,
+}

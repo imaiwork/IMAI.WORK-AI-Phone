@@ -39,7 +39,7 @@
                                 </template>
                             </ElCollapseItem>
                             <!-- 工作流技能 -->
-                            <ElCollapseItem name="2" v-if="false">
+                            <ElCollapseItem name="2">
                                 <template #title>
                                     <div class="leading-5">
                                         <div class="flex items-center gap-x-2">
@@ -72,7 +72,7 @@
                                             <Icon name="local-icon-flow2" size="24"></Icon>
                                             <span>{{ formData.flow_config.bot_id }}</span>
                                             <span class="text-xs text-[#666976] bg-[#ECEDF3] px-3 py-1">
-                                                Workflow_id：{{ formData.flow_config.workflow_id }}
+                                                Token：{{ formData.flow_config.api_token }}
                                             </span>
                                         </div>
                                         <div>

@@ -101,3 +101,18 @@ export function getVideoTranscodeResult(data: any) {
         }
     );
 }
+
+// 获取视频创作记录
+export function getVideoCreationRecord(data?: any) {
+    return request.get({ url: "/video/creationRecord", data });
+}
+
+// 删除视频创作记录
+export function deleteVideoCreationRecord(data: any) {
+    return request.post({ url: "/video/creationRecordDelete", data });
+}
+
+// 更新视频创作记录
+export function updateVideoCreationRecord(data: any) {
+    return request.post({ url: "/video/creationRecordUpdate", data });
+}

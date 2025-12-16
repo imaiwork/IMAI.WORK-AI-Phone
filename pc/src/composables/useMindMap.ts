@@ -2,6 +2,7 @@ import { Transformer } from "markmap-lib";
 import { Markmap, type IMarkmapOptions } from "markmap-view";
 import { Toolbar } from "markmap-toolbar";
 import "markmap-toolbar/dist/style.css";
+import html2Canvas from "html2canvas";
 
 interface CustomMarkmapOptions extends Partial<IMarkmapOptions> {}
 
@@ -42,32 +43,29 @@ export function useMindMap() {
         }, 100);
     };
 
-    const mindMapExportAsPNG = (svgElement: SVGSVGElement) => {
+    const mindMapExportAsPNG = (el: HTMLElement) => {
         markmap.value?.fit().then(() => {
-            createCanvasPng(svgElement);
+            createCanvasPng(el);
         });
     };
 
-    const createCanvasPng = (svgElement: SVGSVGElement) => {
-        console.log(svgElement);
-        const svgData = new XMLSerializer().serializeToString(svgElement);
-        const canvas = document.createElement("canvas");
-        const svgSize = svgElement.getBoundingClientRect();
-        canvas.width = svgSize.width;
-        canvas.height = svgSize.height;
-        const ctx = canvas.getContext("2d");
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        const img = new Image();
-        img.onload = () => {
-            ctx.drawImage(img, 0, 0);
-            const pngFile = canvas.toDataURL("image/png");
-            const downloadLink = document.createElement("a");
-            downloadLink.href = pngFile;
-            downloadLink.download = "mindmap.png";
-            downloadLink.click();
-        };
-        img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    const createCanvasPng = async (el: HTMLElement) => {
+        try {
+            const canvas = await html2Canvas(el, {
+                useCORS: true,
+                backgroundColor: "transparent",
+            });
+            const dataURL = canvas.toDataURL(`image/png`);
+            const aTag = document.createElement("a");
+            document.body.appendChild(aTag);
+            aTag.href = dataURL;
+            aTag.download = "mindmap.png";
+            aTag.target = "_blank";
+            aTag.click();
+            aTag.remove();
+        } catch (error) {
+            feedback.msgError(error || "发生错误");
+        }
     };
 
     return {

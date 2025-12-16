@@ -14,17 +14,17 @@
                 <view
                     v-for="item in steps"
                     :key="item.step"
-                    class="step-item"
+                    class="common-step-item"
                     :class="{ active: step == item.step }"
                     @click="handleStep(item.step)">
-                    <view v-if="step > item.step" class="step-item-success-icon">
+                    <view v-if="step > item.step" class="common-step-item-success-icon">
                         <u-icon name="checkmark" color="#ffffff" size="14"></u-icon>
                     </view>
-                    <view class="step-item-icon" v-else> </view>
-                    <text class="step-item-title">{{ item.title }}</text>
+                    <view class="common-step-item-icon" v-else> </view>
+                    <text class="common-step-item-title">{{ item.title }}</text>
                     <view
                         v-if="item.step !== steps.length"
-                        class="step-item-line"
+                        class="common-step-item-line"
                         :class="{ '!border-primary': step > item.step }"></view>
                 </view>
             </view>
@@ -444,7 +444,7 @@
                     }}算力）使用系统内置识别逻辑完成，识别率较依赖本地环境，复杂图片可能不够精准
                 </view>
                 <view class="mt-3">
-                    云端OCR识别（每条扣 {{ getOCRCloudToken }} 算力）使用云端OCR服务识别微信号，每条线索消耗{{
+                    云端OCR识别（每条扣 {{ getOCRCloudToken }} 算力）使用云端OCR服务识别微信号，每次识别消耗{{
                         getOCRCloudToken
                     }}算力，识别率更高，支持更复杂的图片和场景
                 </view>
@@ -496,6 +496,7 @@ import { ListenerTypeEnum } from "@/ai_modules/sph/enums";
 import { AppTypeEnum, TokensSceneEnum } from "@/enums/appEnums";
 import { useDictOptions } from "@/hooks/useDictOptions";
 import ClueEdit from "@/ai_modules/sph/components/clue-edit/clue-edit.vue";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
 
 enum CrawlType {
     ACCOUNT = 1,
@@ -506,6 +507,8 @@ enum GreetingContentSettingTypeEnum {
     ADD_FRIEND = "add_friends_prompt",
     PRIVATE_CHAT = "private_message_prompt",
 }
+
+const { on } = useEventBusManager();
 
 const appStore = useAppStore();
 const userStore = useUserStore();
@@ -851,7 +854,7 @@ onLoad(({ type }: any) => {
     if (type) {
         formData.crawl_type = parseInt(type);
     }
-    uni.$on("confirm", (res: any) => {
+    on("confirm", (res: any) => {
         const { type, data } = res;
         if (type === ListenerTypeEnum.TASK_AI_CLUE) {
             if (data.length === 0) return;
@@ -868,41 +871,9 @@ onLoad(({ type }: any) => {
         }
     });
 });
-
-onUnload(() => {
-    uni.$off("confirm");
-});
 </script>
 
 <style scoped lang="scss">
-.step-item {
-    @apply flex flex-col items-center justify-center relative;
-    &.active {
-        .step-item-icon {
-            @apply shadow-[0_0_0_2rpx_rgba(0,101,251,0.3)]  flex items-center justify-center;
-            &::before {
-                content: "";
-                @apply w-[60%] h-[60%] bg-primary rounded-full;
-            }
-        }
-        .step-item-title {
-            @apply text-[#00000099];
-        }
-    }
-    &-success-icon {
-        @apply bg-[#0065fb4d] rounded-full w-[28rpx] h-[28rpx] flex items-center justify-center;
-    }
-    &-icon {
-        @apply w-[28rpx] h-[28rpx] rounded-full shadow-[0_0_0_2rpx_rgba(0,0,0,0.1)];
-    }
-    &-title {
-        @apply mt-[20rpx] text-[rgba(0,0,0,0.2)] font-bold text-xs;
-    }
-    &-line {
-        @apply absolute right-[-18%] top-[15rpx] w-[40%] border-[0] border-b border-dashed border-[#D1D6D4];
-    }
-}
-
 .keyword-item {
     @apply bg-white rounded-[20rpx] px-4 py-2 flex items-center gap-x-2 relative;
 }

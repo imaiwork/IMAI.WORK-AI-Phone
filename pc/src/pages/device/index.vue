@@ -40,13 +40,19 @@
                     stripe
                     :row-style="{ height: '60px' }"
                     :header-cell-style="{ height: '63px' }">
-                    <ElTableColumn prop="device_model" label="设备型号" show-overflow-tooltip>
+                    <ElTableColumn prop="device_name" label="设备名称" show-overflow-tooltip>
                         <template #default="{ row }">
-                            <ElButton type="primary" link @click="handleAccountDetail(row)">{{
-                                row.device_model
-                            }}</ElButton>
+                            <div class="flex items-center justify-center gap-x-1">
+                                <ElButton type="primary" link @click="handleAccountDetail(row)">{{
+                                    row.device_name
+                                }}</ElButton>
+                                <span class="cursor-pointer leading-[0]" @click="handleEditName(row)"
+                                    ><Icon name="el-icon-Edit" color="var(--color-primary)"></Icon
+                                ></span>
+                            </div>
                         </template>
                     </ElTableColumn>
+                    <ElTableColumn prop="device_model" label="设备型号" show-overflow-tooltip> </ElTableColumn>
                     <ElTableColumn prop="sdk_version" label="当前SDK版本" show-overflow-tooltip />
                     <ElTableColumn prop="device_code" label="设备码" show-overflow-tooltip />
                     <ElTableColumn label="设备状态">
@@ -133,10 +139,36 @@
         :step="deviceStep"
         @close="showProgress = false"
         @retry="retryAddDevice" />
+    <popup ref="editPopupRef" append-to-body :show-close="false" cancel-button-text="" confirm-button-text="">
+        <div class="-my-4">
+            <div class="absolute top-2 right-2 w-6 h-6" @click="closeEditPopup">
+                <close-btn :icon-size="12"></close-btn>
+            </div>
+            <div class="text-2xl font-bold">重命名</div>
+            <div class="mt-2">
+                <ElInput
+                    v-model="editValue.device_name"
+                    placeholder="请输入名称"
+                    class="!h-11"
+                    clearable
+                    maxlength="50" />
+            </div>
+            <div class="mt-6 flex justify-center text-white">
+                <ElButton
+                    type="primary"
+                    round
+                    class="!h-[50px] shadow-[0px_6px_12px_0px_rgba(0,101,251,0.20)] w-[70%] !rounded-full"
+                    :loading="isLock"
+                    @click="handleEditNameConfirm()">
+                    确定
+                </ElButton>
+            </div>
+        </div>
+    </popup>
 </template>
 
 <script setup lang="ts">
-import { getDeviceList, deleteDevice } from "@/api/device";
+import { getDeviceList, deleteDevice, updateDevice } from "@/api/device";
 import { AppTypeEnum, DeviceCmdCodeEnum, DeviceCmdEnum, ToolEnumMap, ToolEnum } from "@/enums/appEnums";
 import DeviceAdd from "./_components/device-add.vue";
 import DeviceProgress from "./_components/device-progress.vue";
@@ -150,6 +182,11 @@ const { pager, getLists } = usePaging({
 const showProgress = ref(false);
 const progressError = ref(false);
 const deviceStep = ref("");
+const editPopupRef = shallowRef();
+const editValue = ref<any>({
+    device_code: "",
+    device_name: "",
+});
 
 const { isConnected, onEvent, send } = useDeviceWs();
 
@@ -193,6 +230,29 @@ const { showAddDevice, addDeviceLoading, progressValue, refreshAccount, handleAd
 
 const addDeviceId = ref("");
 const currAppType = ref();
+
+const { isLock, lockFn: handleEditNameConfirm } = useLockFn(async () => {
+    try {
+        await updateDevice(editValue.value);
+        feedback.msgSuccess("更新成功");
+        closeEditPopup();
+        getLists();
+    } catch (error) {
+        feedback.msgError(error || "更新失败");
+    }
+});
+
+const handleEditName = (row: any) => {
+    editPopupRef.value?.open();
+    editValue.value = {
+        device_code: row.device_code,
+        device_name: row.device_name,
+    };
+};
+
+const closeEditPopup = () => {
+    editPopupRef.value?.close();
+};
 
 const retryAddDevice = () => {
     progressError.value = false;

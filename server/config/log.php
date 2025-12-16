@@ -102,7 +102,7 @@ return [
             'json'           => false,
             'time_format'    => 'Y-m-d H:i:s',
             'format'         => '[%s][%s] %s',
-            'apart_level'   =>  ['error', 'info', 'warning', 'publish', 'clues', 'add_wechat', 'active', 'take_over'],
+            'apart_level'   =>  ['error', 'info', 'warning', 'publish', 'clues', 'add_wechat', 'active', 'take_over', 'verify_wechat'],
         ],
         'clip' => [
             'type'           => 'File',
@@ -119,6 +119,18 @@ return [
         'publish' => [
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/publish/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'sora' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/sora/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'puzzle' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/puzzle/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],

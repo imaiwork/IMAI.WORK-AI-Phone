@@ -30,20 +30,21 @@
                                 v-for="(item, index) in tokensConfig"
                                 :key="index"
                                 class="border-b border-solid border-[#151924] border-0 h-[92rpx] flex items-center justify-between gap-x-2">
-                                <view class="text-white text-[26rpx] flex items-center gap-x-1 flex-shrink-0">
+                                <view class="text-white text-[26rpx] flex items-center gap-x-1 flex-1">
                                     <view
                                         class="rounded-full bg-[#1F222E] w-[32rpx] h-[32rpx] flex items-center justify-center"
                                         >{{ index + 1 }}</view
                                     >
-                                    <text class="text-white">{{ item.name }}</text>
+                                    <text class="text-white break-all">{{ item.name }}</text>
                                 </view>
-                                <view class="flex-1 flex items-center justify-end">
+                                <view class="flex-shrink-0 flex items-center justify-end">
                                     <view
                                         class="flex items-center h-[40rpx] rounded-full bg-[#16f49f1a] p-[4rpx] relative border border-solid border-[#16f49f33]">
                                         <image
                                             src="@/packages/static/icons/tokens.svg"
                                             class="w-[32rpx] h-[32rpx]"></image>
-                                        <view class="text-[#16F49F] text-[26rpx] flex-1 text-center mx-[4rpx]">
+                                        <view
+                                            class="text-[#16F49F] text-[26rpx] flex-1 text-center mx-[4rpx] break-all flex-shrink-0">
                                             {{ item.score }}{{ item.unit }}
                                         </view>
                                     </view>
@@ -97,7 +98,7 @@
                                         <view class="text-[26rpx] opacity-80">
                                             {{ item.change_amount_desc }}
                                         </view>
-                                        <view class="opacity-30 text-[22rpx] mt-1">
+                                        <view class="opacity-30 text-[22rpx] mt-1 break-all">
                                             剩余算力：{{ item.left_tokens }}
                                         </view>
                                     </view>

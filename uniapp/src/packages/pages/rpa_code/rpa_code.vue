@@ -6,7 +6,7 @@
             <view class="w-[500rpx] h-[500rpx] mt-[56rpx]">
                 <image :src="qrcode" class="w-full h-full rounded-[20rpx]"></image>
             </view>
-            <view class="font-bold mt-5"> 请前往RPA启用摄像头扫描此二维码 </view>
+            <view class="font-bold mt-5"> 请前往AI获客启用摄像头扫描此二维码 </view>
         </view>
     </view>
 </template>

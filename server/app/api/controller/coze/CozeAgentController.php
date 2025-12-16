@@ -5,6 +5,7 @@ namespace app\api\controller\coze;
 use app\api\controller\BaseApiController;
 use app\api\lists\coze\CozeAgentLists;
 use app\api\logic\coze\CozeAgentLogic;
+use app\api\logic\coze\CozeChatLogic;
 use app\api\validate\coze\CozeAgentValidate;
 use think\exception\HttpResponseException;
 
@@ -79,6 +80,21 @@ class CozeAgentController extends BaseApiController
             $request = $this->request->get();
             $result = CozeAgentLogic::commonLists($request);
             return $this->data($result);
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    public function bots()
+    {
+        try {
+            $params = $this->request->get();
+            $chat = new CozeChatLogic();
+            $result = $chat->bots($params);
+            if ($result) {
+                return $this->success(data: CozeChatLogic::getReturnData());
+            }
+            return $this->fail(CozeChatLogic::getError());
         } catch (HttpResponseException $e) {
             return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }

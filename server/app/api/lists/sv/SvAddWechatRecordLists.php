@@ -58,6 +58,7 @@ class SvAddWechatRecordLists extends BaseApiDataLists implements ListsSearchInte
                     ->find();
                 $item['device_model'] = SvDevice::where('device_code', $item['device_code'])->value('device_model');
                 $item['channel_name'] = $this->channel[$item['channel']] ?? '/';
+                $item['device_name'] = SvDevice::where('device_code', $item['device_code'])->value('device_name');
 
             })
             ->toArray();

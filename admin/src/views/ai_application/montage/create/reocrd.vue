@@ -57,6 +57,7 @@
                 @selection-change="handleSelectionChange">
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
                 <el-table-column label="ID" prop="id" min-width="60" />
+                <el-table-column label="任务ID" prop="task_id" width="160" show-overflow-tooltip />
                 <el-table-column label="创建用户" prop="nickname" min-width="140" show-overflow-tooltip />
                 <el-table-column label="任务名称" prop="name" min-width="180" show-overflow-tooltip />
                 <el-table-column label="任务状态" min-width="120">

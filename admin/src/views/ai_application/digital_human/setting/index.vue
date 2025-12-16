@@ -23,6 +23,36 @@
             </div>
         </el-card>
         <el-card class="!border-none mt-4" shadow="never">
+            <div class="text-xl font-medium mb-[20px] mt-4">案例设置</div>
+            <div class="mt-4 w-[400px]">
+                <div>
+                    <el-form-item
+                        :label="item.name"
+                        v-for="(item, index) in caseLists"
+                        :key="index"
+                        label-width="140px">
+                        <div>
+                            <div>封面图</div>
+                            <material-picker type="image" v-model="item.image" :limit="1"></material-picker>
+                        </div>
+                        <div>
+                            <div>视频</div>
+                            <material-picker type="video" v-model="item.video_case_url" :limit="1"></material-picker>
+                        </div>
+                    </el-form-item>
+                    <div class="">
+                        <el-button
+                            v-perms="['ai_application.digital_human/edit']"
+                            type="primary"
+                            @click="lockSaveCaseLists"
+                            :loading="isSaveCaseLists"
+                            >保存</el-button
+                        >
+                    </div>
+                </div>
+            </div>
+        </el-card>
+        <el-card class="!border-none mt-4" shadow="never">
             <div class="text-xl font-medium mb-[20px] mt-4">系统音色管理</div>
             <div class="mt-4 w-[400px]">
                 <el-alert title="提示：关闭后用户将无法选择对应音色" type="warning" />
@@ -164,6 +194,15 @@ const banner = computed({
     },
 });
 
+const caseLists = computed({
+    get() {
+        return config.value?.digital_human.video_case || [];
+    },
+    set(value: any) {
+        config.value.digital_human.video_case = value || [];
+    },
+});
+
 const shanjianAuth = computed({
     get() {
         return config.value?.digital_human.shanjian_auth;
@@ -201,6 +240,14 @@ const { lockFn: lockSaveBanner, isLock: isSaveBanner } = useLockFn(async () => {
         name: "banner",
     });
     appStore.getConfig();
+});
+
+const { lockFn: lockSaveCaseLists, isLock: isSaveCaseLists } = useLockFn(async () => {
+    await saveConfig({
+        data: caseLists.value,
+        type: "digital_human",
+        name: "video_case",
+    });
 });
 
 const { lockFn: lockSaveFlashClipConfig, isLock: isSaveFlashClipConfig } = useLockFn(async () => {

@@ -1,6 +1,7 @@
 import { getChatRecord, deleteChatRecord } from "@/api/chat";
 import { useChatStore } from "../stores/chat";
 import { useChatManager } from "./useChatManager";
+import { useChatEventBus } from "./useChatEventBus";
 
 /**
  * @description 聊天历史记录项的接口
@@ -24,12 +25,17 @@ export interface ChatHistoryItem {
 export function useChatHistory() {
     const chatStore = useChatStore();
     const { taskId, fetchChatHistory: loadChatHistory, resetScroll, chatScrollToBottom } = useChatManager();
+    const { onHistoryRefresh } = useChatEventBus();
 
     // --- State ---
     /**
      * @description 分页参数
      */
     const pagination = reactive({ page_no: 1, page_size: 40 });
+    /**
+     * @description 是否正在刷新中
+     */
+    const isRefreshing = ref<boolean>(true);
     /**
      * @description 是否正在加载中
      */
@@ -55,7 +61,7 @@ export function useChatHistory() {
     /**
      * @description 获取聊天历史记录列表
      */
-    const fetchChatHistory = async () => {
+    const fetchChatRecord = async () => {
         isLoading.value = true;
         try {
             // 这里应该调用实际的API获取历史记录
@@ -64,6 +70,7 @@ export function useChatHistory() {
             chatHistory.value = chatHistory.value.concat(lists);
         } finally {
             isLoading.value = false;
+            isRefreshing.value = false;
         }
     };
 
@@ -72,6 +79,7 @@ export function useChatHistory() {
      * @param initialMessage - 初始消息内容（可选）
      */
     const createNewSession = (initialMessage?: string) => {
+        if (!taskId.value) return;
         // 清空当前聊天状态
         chatStore.clearChat();
         chatStore.resetRoute();
@@ -147,22 +155,43 @@ export function useChatHistory() {
     const loadHistory = async () => {
         if (!isFinished.value || isLoading.value) return;
         pagination.page_no++;
-        fetchChatHistory();
+        fetchChatRecord();
     };
+
+    /**
+     * @description 重置
+     */
+    const reset = () => {
+        pagination.page_no = 1;
+        chatHistory.value = [];
+        isFinished.value = false;
+        isLoading.value = false;
+    };
+
+    onHistoryRefresh((payload: any) => {
+        chatHistory.value.unshift({
+            message: payload.message,
+            create_time: payload.createTime,
+            task_id: payload.taskId,
+            update_time: payload.createTime,
+        });
+    });
 
     return {
         // State
         chatHistory: chatHistory,
         currentSessionId,
+        isRefreshing,
         isLoading,
         isFinished,
 
         // Methods
-        fetchChatHistory,
+        fetchChatRecord,
         createNewSession,
         switchToSession,
         deleteSession,
         saveCurrentSession,
         loadHistory,
+        reset,
     };
 }

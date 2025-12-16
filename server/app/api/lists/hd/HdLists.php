@@ -45,7 +45,7 @@ class HdLists extends BaseApiDataLists implements ListsSearchInterface, ListsExt
         $result = HdImage::alias('hi')
             ->join('hd_log hl', 'hl.id = hi.log_id')
             ->where($where)
-            ->field('hi.*,hl.type')
+            ->field('hi.*,hl.type,hl.type as draw_type')
             ->order('hi.id desc')
             ->limit($this->limitOffset, $this->limitLength)
             ->select()

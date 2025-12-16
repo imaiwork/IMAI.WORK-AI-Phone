@@ -40,10 +40,10 @@
                             v-for="(item, index) in tokensConfig"
                             class="h-[46px] flex items-center justify-between border-[0] border-b-[1px] border-token-primary gap-x-2">
                             <div
-                                class="min-w-[18px] h-[18px] text-[10px] flex items-center justify-center rounded-full border border-[rgba(0,101,51,0.05)] bg-primary-light-9 text-primary">
+                                class="min-w-[18px] h-[18px] text-[10px] flex items-center justify-center rounded-full border border-[#0065330d] bg-primary-light-9 text-primary">
                                 {{ index + 1 }}
                             </div>
-                            <div class="flex-1">
+                            <div class="flex-1 break-all">
                                 {{ item.name }}
                             </div>
                             <div

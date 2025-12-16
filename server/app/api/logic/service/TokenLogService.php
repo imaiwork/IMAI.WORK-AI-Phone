@@ -36,7 +36,7 @@ class TokenLogService
      * @throws \Exception
      * @author dagouzi
      */
-    public static function checkToken(int $uid, string $scene = ""): float
+    public static function checkToken(int $uid, string $scene = "", $num = 0): float
     {
         $use_token   = self::getTypeScore($scene);
         $userInfo = User::findOrEmpty($uid)->toArray();
@@ -74,8 +74,9 @@ class TokenLogService
         } else if (in_array($scene, ['human_avatar', 'human_audio', 'human_voice'])) {
 
             $need_token = 20;
-        } else if (in_array($scene, ['human_video'])) {
-
+        } else if (in_array($scene, ['human_video_shanjian','combined_picture'])) {
+            $need_token = $use_token * $num;
+        }else if (in_array($scene, ['human_video'])) {
             $need_token = 50;
         } else if(in_array($scene, ['knowledge_create','create_vector_knowledge'])) {
             $need_token = 20;

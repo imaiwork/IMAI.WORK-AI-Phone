@@ -151,7 +151,16 @@ export const useUpload = (options: Options) => {
             await uploadImageFn(file.thumbTempFilePath);
             await uploadVideo(file.tempFilePath);
             onSuccess?.(uploadResult);
-        } catch (error) {
+        } catch (error: any) {
+            if (
+                error.errMsg &&
+                error.errMsg === "chooseMedia:fail api scope is not declared in the privacy agreement"
+            ) {
+                uni.$u.toast("请完善隐私协议，否则无法使用");
+            }
+            if (error.indexOf("abort") == -1) {
+                uni.$u.toast("上传失败");
+            }
             onError?.({
                 type: "video",
                 error: error,

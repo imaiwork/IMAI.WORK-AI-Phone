@@ -8,7 +8,7 @@
             <view
                 class="border-[4rpx] border-solid border-[#0065fb4d] rounded-[48rpx] h-[846rpx] mt-[40rpx] p-0.5 shadow-lg">
                 <video-player
-                    v-if="show"
+                    v-if="showPopup"
                     ref="videoPlayerRef"
                     :poster="poster || `${config.baseUrl}static/images/dh_example_bg1.png`"
                     :video-url="videoUrl"></video-player>
@@ -36,7 +36,7 @@ import VideoPlayer from "../video-player/video-player.vue";
 const props = withDefaults(
     defineProps<{
         title?: string;
-        show: boolean;
+        modelValue: boolean;
         videoUrl: string;
         confirmBtnText?: string;
         poster?: string;
@@ -44,36 +44,27 @@ const props = withDefaults(
     }>(),
     {
         title: "视频预览",
-        show: false,
+        modelValue: false,
         poster: "",
         confirmBtnText: "确定",
         zIndex: 1000,
     }
 );
 
-const emit = defineEmits(["update:show", "confirm"]);
+const emit = defineEmits(["update:modelValue", "confirm"]);
 
 const showPopup = computed({
     get() {
-        return props.show;
+        return props.modelValue;
     },
     set(val) {
-        emit("update:show", val);
+        emit("update:modelValue", val);
     },
 });
 
-const isShowVideo = ref(true);
-
 watch(
-    () => props.show,
+    () => props.modelValue,
     async (val) => {
-        if (!val) {
-            setTimeout(() => {
-                isShowVideo.value = false;
-            }, 300);
-            return;
-        }
-        isShowVideo.value = true;
         setTimeout(() => {
             videoPlayerRef.value?.toggleVideo();
         }, 300);

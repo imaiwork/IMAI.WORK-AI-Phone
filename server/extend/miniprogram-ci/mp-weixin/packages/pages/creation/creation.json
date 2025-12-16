@@ -1,0 +1,14 @@
+{
+  "navigationBarTitleText": "我的创作库",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-tabs": "../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../components/empty/empty",
+    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
+    "video-preview-v2": "../../../components/video-preview-v2/video-preview-v2",
+    "u-input": "../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "u-popup": "../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
+    "puzzle-card": "../../components/puzzle-card/puzzle-card"
+  }
+}

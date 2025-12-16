@@ -10,6 +10,7 @@ use app\common\model\wechat\sop\AiWechatSopPushContent;
 use app\common\model\wechat\sop\AiWechatSopPushLog;
 use app\common\model\wechat\sop\AiWechatSopPushMember;
 use app\common\model\wechat\sop\AiWechatSopPushTime;
+use app\common\model\wechat\sop\AiWechatSopSubFlowRemind;
 use app\common\service\FileService;
 use app\common\traits\WechatTrait;
 use think\facade\Log;
@@ -385,5 +386,76 @@ class PushContentLogic extends ApiLogic
                 $message = [];
         }
         return $message;
+    }
+
+    /**
+     * sop阶段跟进提醒
+     */
+    public static function sopSubFlowRemind(): bool
+    {
+        try {
+            $startTime = date('H:i:00', time());
+            $endTime = date('H:i:59', time());
+            $reminds = AiWechatSopSubFlowRemind::where([
+                                                           ['status', '=', 0],
+                                                           ['send_time', 'between', [$startTime, $endTime]]
+                                                       ])
+                                               ->select();
+            if ($reminds->isEmpty()) {
+                return false;
+            }
+            $reminds = $reminds->toArray();
+            foreach ($reminds as $remind) {
+                $members = AiWechatSopPushMember::where([
+                                                            ['flow_id', '=', $remind['flow_id']],
+                                                            ['stage_id', '=', $remind['stage_id']]
+                                                        ])->select();
+                if (!$members->isEmpty()) {
+                    $members = $members->toArray();
+                    foreach ($members as $member) {
+                        $day = floor((time() - $member['join_stage_time']) / 86400);
+                        if ($day == $remind['judgment']){
+                            $response = self::wxPush([
+                                                            'wechat_id'    => $member['wechat_id'],
+                                                            'friend_id'    => $member['friend_id'],
+                                                            'message'      => $remind['content'],
+                                                            'message_type' => 1,
+                                                            'device_code'  => AiWechat::where('user_id', $member['user_id'])
+                                                                                      ->where('wechat_id', $member['wechat_id'])
+                                                                                      ->value('device_code'),
+                                                            'opt_type'     => 'sop'
+                                                        ]);
+                            //微信消息响应结果
+                            if ($response['code'] == 10000) {
+                                $status = 1;
+                            } else {
+                                $status = 2;
+                            }
+
+                            //记录该成员本次成功的推送记录
+                            if ($status == 1) {
+                                $data = [
+                                    'member_id'      => $member['id'],
+                                    'user_id'        => $member['user_id'],
+                                    'push_id'        => 0,
+                                    'content_id'     => 0,
+                                    'content'        => $remind['content'],
+                                    'push_real_day'  => date('Y-m-d'),
+                                    'push_real_time' => date('H:i:s'),
+                                    'status'         => 1,
+                                    'create_time'    => time()
+                                ];
+                                AiWechatSopPushLog::create($data);
+                            }
+                        }
+
+                    }
+                }
+            }
+            return true;
+        } catch (\Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
     }
 } 

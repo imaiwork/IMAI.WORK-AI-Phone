@@ -24,7 +24,7 @@ export interface FileData {
     fileType: string;
     url: string;
     path: string;
-    size: string;
+    size: number;
     progress: number;
     status: "ready" | "success" | "error";
     errMsg: string;

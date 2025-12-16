@@ -24,7 +24,7 @@
                             <u-input
                                 v-model="formData.name"
                                 placeholder="请输入音色名称"
-                                maxlength="30"
+                                maxlength="50"
                                 clearable></u-input>
                         </view>
                     </view>
@@ -32,8 +32,21 @@
                     <!-- 音色性别和使用模型 -->
                     <view class="mt-[40rpx]">
                         <view class="flex flex-col gap-4">
+                            <!-- 使用模型 -->
+                            <view class="flex items-center gap-1">
+                                <text class="text-[#E33C64] text-xl font-bold">*</text>
+                                <text class="text-[30rpx] font-bold">使用模型</text>
+                            </view>
+                            <view
+                                class="bg-white rounded-[16rpx] px-[16rpx] py-[28rpx] flex items-center justify-between"
+                                @click="showChooseModel = true">
+                                <view class="ml-[16rpx]">
+                                    {{ selectedModel?.name || "请选择" }}
+                                </view>
+                                <u-icon name="arrow-right" color="#B2B2B2" :size="20"></u-icon>
+                            </view>
                             <!-- 音色性别 -->
-                            <view>
+                            <view v-if="formData.model_version != DigitalHumanModelVersionEnum.SHANJIAN">
                                 <view class="flex items-center gap-1">
                                     <text class="text-[#E33C64] text-xl font-bold">*</text>
                                     <text class="text-[30rpx] font-bold">音色性别</text>
@@ -59,20 +72,6 @@
                                         </view>
                                     </view>
                                 </view>
-                            </view>
-
-                            <!-- 使用模型 -->
-                            <view class="flex items-center gap-1">
-                                <text class="text-[#E33C64] text-xl font-bold">*</text>
-                                <text class="text-[30rpx] font-bold">使用模型</text>
-                            </view>
-                            <view
-                                class="bg-white rounded-[16rpx] px-[16rpx] py-[28rpx] flex items-center justify-between"
-                                @click="showChooseModel = true">
-                                <view class="ml-[16rpx]">
-                                    {{ selectedModel?.name || "请选择" }}
-                                </view>
-                                <u-icon name="arrow-right" color="#B2B2B2" :size="20"></u-icon>
                             </view>
                         </view>
                     </view>
@@ -273,7 +272,7 @@
 <script setup lang="ts">
 import { ChooseResult, chooseFile } from "@/components/file-upload/choose-file";
 import { uploadFile } from "@/api/app";
-import { voiceClone } from "@/api/digital_human";
+import { voiceClone, shanjianVoiceClone } from "@/api/digital_human";
 import { useAudio } from "@/hooks/useAudio";
 import { useRecorder } from "@/hooks/useRecorder";
 import { formatAudioTime } from "@/utils/util";
@@ -285,7 +284,7 @@ import ManIcon from "@/ai_modules/digital_human/static/icons/man.svg";
 import ManActiveIcon from "@/ai_modules/digital_human/static/icons/man_s.svg";
 import WomanIcon from "@/ai_modules/digital_human/static/icons/woman.svg";
 import WomanActiveIcon from "@/ai_modules/digital_human/static/icons/woman_s.svg";
-import { DigitalHumanModelVersionEnum } from "../../enums";
+import { DigitalHumanModelVersionEnum, DigitalHumanModelVersionEnumMap } from "../../enums";
 import { cratedVoiceCopywriter } from "../../config/copywriter";
 
 // Store
@@ -305,20 +304,23 @@ const selectedModel = computed(() => {
 const tokensRequired = computed(() => {
     const tokenMap: any = {
         [DigitalHumanModelVersionEnum.STANDARD]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE)?.score,
-        [DigitalHumanModelVersionEnum.SUPER]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_PRO)?.score,
-        [DigitalHumanModelVersionEnum.ADVANCED]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_ADVANCED)?.score,
-        [DigitalHumanModelVersionEnum.ELITE]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_ELITE)?.score,
         [DigitalHumanModelVersionEnum.CHANJING]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_CHANJING)?.score,
+        [DigitalHumanModelVersionEnum.SHANJIAN]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN)?.score,
     };
     return parseFloat(tokenMap[formData.model_version]);
 });
 
 // 表单数据
-const formData = reactive({
+const formData = reactive<{
+    url: string;
+    name: string;
+    gender: "male" | "female";
+    model_version: number;
+}>({
     url: "",
     name: "",
     gender: "male" as "male" | "female",
-    model_version: "",
+    model_version: DigitalHumanModelVersionEnum.STANDARD,
 });
 
 const fileName = ref("");
@@ -390,7 +392,7 @@ const uploadFromWeChat = async () => {
 };
 
 // 验证音频大小
-const maxFileSize = 20; // MB
+const maxFileSize = 10; // MB
 const validateAudioSize = (size: number): boolean => {
     if (size > maxFileSize * 1024 * 1024) {
         uni.$u.toast(`音频文件大小不能超过${maxFileSize}M`);
@@ -556,11 +558,18 @@ const startVoiceCloning = async () => {
             mask: true,
         });
 
-        await voiceClone(formData);
+        if (formData.model_version == DigitalHumanModelVersionEnum.SHANJIAN) {
+            await shanjianVoiceClone({
+                name: formData.name,
+                audio_url: formData.url,
+            });
+        } else {
+            await voiceClone(formData);
+        }
         userStore.getUser(); // 更新用户信息
+        uni.$u.toast("克隆成功，请在我的音色中查看");
 
         setTimeout(() => {
-            uni.$u.toast("克隆成功，请在我的音色中查看");
             navigateToHome();
         }, 300);
     } catch (error: any) {
@@ -579,17 +588,17 @@ const navigateToHome = () => {
 };
 
 // 监听模型配置变化
-watch(
-    () => appStore.getDigitalHumanConfig.channel,
-    (newVal) => {
-        if (newVal && newVal.length > 0) {
-            formData.model_version = newVal.find((item: any) => item.id == DigitalHumanModelVersionEnum.CHANJING)?.id;
-        }
-    },
-    {
-        immediate: true,
-    }
-);
+// watch(
+//     () => appStore.getDigitalHumanConfig.channel,
+//     (newVal) => {
+//         if (newVal && newVal.length > 0) {
+//             formData.model_version = newVal.find((item: any) => item.id == DigitalHumanModelVersionEnum.CHANJING)?.id;
+//         }
+//     },
+//     {
+//         immediate: true,
+//     }
+// );
 </script>
 
 <style scoped lang="scss">

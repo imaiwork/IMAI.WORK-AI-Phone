@@ -163,7 +163,6 @@ class UserController extends BaseApiController
     {
         $list = ModelConfig::where('status', 1)->select()->toArray();
         $del = [
-            'human_avatar',  'human_voice',  'human_audio',  'human_video',
             'human_avatar_pro',  'human_voice_pro',  'human_audio_pro',  'human_video_pro',
             'knowledge_chat'
         ];

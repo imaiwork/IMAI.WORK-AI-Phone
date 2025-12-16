@@ -84,3 +84,23 @@ export function getMontagePublishDetailRecord(params: any) {
 export function deleteMontagePublishDetailRecord(params: any) {
     return request.post({ url: "/shanjian.publish/recordDelete", params });
 }
+
+// sora任务列表
+export function getMontageSoraTaskList(params: any) {
+    return request.get({ url: "/sora.soraVideoSetting/lists", params });
+}
+
+// 删除sora任务
+export function deleteMontageSoraTask(params: any) {
+    return request.post({ url: "/sora.soraVideoSetting/delete", params });
+}
+
+// sora任务记录
+export function getMontageSoraTaskRecord(params: any) {
+    return request.get({ url: "/sora.soraVideoTask/lists", params });
+}
+
+// 删除sora任务记录
+export function deleteMontageSoraTaskDetail(params: any) {
+    return request.post({ url: "/sora.soraVideoTask/delete", params });
+}

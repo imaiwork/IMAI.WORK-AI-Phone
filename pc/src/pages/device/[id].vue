@@ -60,7 +60,7 @@
                         <div
                             v-for="(item, index) in getSocialPlatformList"
                             :key="index"
-                            class="flex items-center gap-x-3 px-4 hover:bg-primary-light-9 py-1.5 cursor-pointer"
+                            class="flex items-center gap-x-3 px-4 hover:bg-primary-light-9 py-1.5 cursor-pointer rounded-lg"
                             :class="{
                                 'bg-primary-light-9': currentSocialPlatform === item.type,
                             }"
@@ -140,13 +140,6 @@
                                                 <Icon name="el-icon-Refresh"></Icon>
                                             </span>
                                             <span>刷新数据</span>
-                                        </div>
-                                        <div
-                                            v-if="row.account_type == 1 && row.status == 1"
-                                            class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                            @click.stop="handleGetBusinessCard(row)">
-                                            <Icon name="el-icon-Postcard"></Icon>
-                                            <span>名片获取</span>
                                         </div>
                                         <div
                                             class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"

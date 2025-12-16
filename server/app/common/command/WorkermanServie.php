@@ -73,7 +73,9 @@ class WorkermanServie extends Command
 
             // //设备socket
             $tcpWorker = new Worker('tcp://0.0.0.0:'.env('WORKERMAN.DEVICE_PORT', 6489));
-            $tcpWorker->count = 4;
+            $tcpWorker->count = swoole_cpu_num() * 2;
+            $tcpWorker->transport = 'tcp';
+            $tcpWorker->reusePort = true;
             $tcpWorker->name = 'AiDeviceService';
             $deviceService = new \app\common\workerman\wechat\DeviceSocketService();
             $tcpWorker->onWorkerStart = array($deviceService, 'onWorkerStart');

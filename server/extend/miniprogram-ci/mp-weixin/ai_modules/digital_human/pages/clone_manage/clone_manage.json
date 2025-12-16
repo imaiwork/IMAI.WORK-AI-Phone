@@ -9,7 +9,7 @@
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "empty": "../../../../components/empty/empty",
     "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
-    "video-preview": "../../../../components/video-preview/video-preview",
-    "video-item": "../../components/video-item/video-item"
+    "video-item": "../../components/video-item/video-item",
+    "video-preview": "../../../../components/video-preview/video-preview"
   }
 }

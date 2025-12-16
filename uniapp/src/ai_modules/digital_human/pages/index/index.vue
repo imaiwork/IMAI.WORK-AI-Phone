@@ -10,7 +10,7 @@
         <view class="w-full h-[460rpx] absolute top-0 left-0">
             <image :src="banner" class="w-full h-full" mode="aspectFill"></image>
         </view>
-        <view class="px-[30rpx] pb-[100rpx] pt-[236rpx]">
+        <view class="px-[30rpx] pb-[100rpx] pt-[236rpx] relative">
             <view class="grid grid-cols-3 gap-[15rpx]">
                 <view class="create-card" @click="toPage(MenuKey.CHOOSE_CREATE_TYPE)">
                     <text class="relative z-[22]">创作6种视频</text>
@@ -25,6 +25,7 @@
                         <image :src="menu.icon" class="w-[48rpx] h-[48rpx]"></image>
                         <view class="text-[28rpx] text-white font-bold">{{ menu.label }}</view>
                     </view>
+                    <view v-if="menu.key == MenuKey.SORA" class="badge">全新体验</view>
                     <view v-if="menu.disabled" class="badge">待上线</view>
                 </view>
             </view>
@@ -120,7 +121,6 @@ import MeCreateIcon from "@/ai_modules/digital_human/static/icons/me_create.svg"
 import MontageRecordIcon from "@/ai_modules/digital_human/static/icons/montage_record.svg";
 import MontageBatchIcon from "@/ai_modules/digital_human/static/icons/montage_batch.svg";
 import VideoItem from "@/ai_modules/digital_human/components/video-item/video-item.vue";
-import VideoPreviewV2 from "@/ai_modules/digital_human/components/video-preview-v2/video-preview-v2.vue";
 
 enum MenuKey {
     CHOOSE_CREATE_TYPE = "choose_create_type",
@@ -132,6 +132,8 @@ enum MenuKey {
     ME_CREATE = "me_create",
     MONTAGE_RECORD = "montage_record",
     MONTAGE_BATCH = "montage_batch",
+    SORA = "sora",
+    MATERIAL_LIBRARY = "material_library",
 }
 
 const appStore = useAppStore();
@@ -148,7 +150,7 @@ const playItem = reactive<any>({
 const showVideoPreview = ref(false);
 
 const utils_1 = [
-    { label: "AI矩阵", key: MenuKey.VIDEO_MIX, icon: VideoMixIcon },
+    { label: "一句话生成", key: MenuKey.SORA, icon: VideoMixIcon },
     { label: "数字人克隆", key: MenuKey.ANCHOR_CLONE, icon: AnchorCloneIcon },
     { label: "音色克隆", key: MenuKey.TONE_CLONE, icon: ToneCloneIcon },
     { label: "文案提取", key: MenuKey.TEXT_EXTRACT, icon: TextExtractIcon, disabled: true },
@@ -157,7 +159,7 @@ const utils_1 = [
 const utils_2 = [
     { label: "我的克隆", key: MenuKey.ME_CLONE, icon: MeCloneIcon },
     { label: "我的创作", key: MenuKey.ME_CREATE, icon: MeCreateIcon },
-    { label: "混剪记录", key: MenuKey.MONTAGE_RECORD, icon: MontageRecordIcon },
+    { label: "素材库", key: MenuKey.MATERIAL_LIBRARY, icon: MontageRecordIcon },
     { label: "批量智剪", key: MenuKey.MONTAGE_BATCH, disabled: true, icon: MontageBatchIcon },
 ];
 
@@ -168,9 +170,11 @@ const pageMap: Record<string, string | (() => void)> = {
     [MenuKey.TONE_CLONE]: "/ai_modules/digital_human/pages/tone_clone/tone_clone",
     [MenuKey.TEXT_EXTRACT]: () => uni.$u.toast("开发中..."),
     [MenuKey.ME_CLONE]: "/ai_modules/digital_human/pages/clone_manage/clone_manage",
-    [MenuKey.ME_CREATE]: "/ai_modules/digital_human/pages/video_works/video_works",
-    [MenuKey.MONTAGE_RECORD]: "/ai_modules/digital_human/pages/montage_works/montage_works",
+    [MenuKey.ME_CREATE]: "/packages/pages/creation/creation",
+    [MenuKey.MONTAGE_RECORD]: "/packages/pages/creation/creation",
     [MenuKey.MONTAGE_BATCH]: () => uni.$u.toast("开发中..."),
+    [MenuKey.SORA]: "/ai_modules/digital_human/pages/sora_create/sora_create",
+    [MenuKey.MATERIAL_LIBRARY]: "/packages/pages/material_library/material_library",
 };
 
 const toPage = (key: string) => {
@@ -240,7 +244,7 @@ onLoad(() => {
 .create-card {
     grid-column-start: span 2;
     @include gradient-bg;
-    @apply h-[190rpx] rounded-[20rpx] text-[36rpx] flex items-center justify-center relative overflow-hidden;
+    @apply h-[190rpx] rounded-[20rpx] text-[40rpx] font-bold flex items-center justify-center relative overflow-hidden;
 }
 .menu-card {
     @apply bg-[#202328] rounded-[20rpx] flex flex-col gap-4 items-center justify-center h-[190rpx] relative;

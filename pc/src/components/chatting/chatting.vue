@@ -51,7 +51,8 @@
             <slot name="content" v-if="contentList.length == 0" class="mb-6"></slot>
             <div class="w-full">
                 <div class="md:max-w-3xl lg:max-w-[42rem] xl:max-w-[48rem] 2xl:max-w-[52rem] mx-auto mb-4 relative">
-                    <div class="flex flex-col">
+                    <slot name="customSendArea" v-if="$slots.customSendArea"></slot>
+                    <div class="flex flex-col" v-else>
                         <slot name="chat-area-top" />
                         <div class="flex items-center mb-3 relative h-10" v-if="isNewChat">
                             <div class="w-full h-full flex items-center justify-center absolute z-[9]" v-if="isNewChat">

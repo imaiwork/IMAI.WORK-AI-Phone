@@ -4,8 +4,7 @@
             <view @click="choose" class="w-full">
                 <slot name="trigger" v-if="$slots.trigger"> </slot>
                 <template v-else>
-                    <view
-                        class="flex flex-col items-center justify-center border border-solid border-[#efefef] rounded-[10rpx] bg-white px-2 py-4">
+                    <view class="file-upload-wrapper">
                         <u-icon name="/static/images/icons/upload.svg" :size="48"></u-icon>
                         <view class="ml-[10rpx] text-xs mt-2">
                             {{ getBtnText }}
@@ -133,6 +132,11 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    // 单个文件大小限制，单位字节，0表示不限制
+    fileSizeLimit: {
+        type: Number,
+        default: 0, // 0 means no limit
+    },
 });
 const emit = defineEmits<{
     (event: "update:modelValue", value: any): void;
@@ -146,23 +150,34 @@ const limitLength = computed(() => {
     if (props.returnType === "object") {
         return 1;
     }
-    if (!props.limit) {
-        return 1;
+    // If props.limit is 0, it means no limit, so we return a very large number
+    // to effectively disable the limit check for the count.
+    if (props.limit === 0) {
+        return Number.MAX_SAFE_INTEGER;
     }
-
     return props.limit;
 });
 
 const fileType = ref<"image" | "video" | "file" | "all">(props.fileType);
+
+// Helper function to format file size
+const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
 
 const choose = async () => {
     if (props.disabled) return;
 
     // 检查文件数量限制
     const remainingCount = limitLength.value - filesLists.value.length;
-    if (remainingCount <= 0 && props.returnType === "array" && limitLength.value > 1) {
+
+    if (props.limit > 0 && remainingCount <= 0) {
         uni.showToast({
-            title: `您最多选择 ${limitLength.value} 个文件`,
+            title: `您最多选择 ${props.limit} 个文件`,
             icon: "none",
         });
         return;
@@ -220,6 +235,16 @@ const chooseFileCallback = async (filesResult: ChooseResult) => {
     for (let i = 0; i < files.length; i++) {
         if (limitLength.value - filesLists.value.length <= 0) break;
         const filedata = normalizeFileData(files[i]);
+
+        if (props.fileSizeLimit > 0 && filedata.size && filedata.size > props.fileSizeLimit) {
+            uni.showToast({
+                title: `文件 "${filedata.name}" 大小超出限制 (${formatFileSize(props.fileSizeLimit)})`,
+                icon: "none",
+                duration: 3000,
+            });
+            continue;
+        }
+
         filesLists.value.push(filedata);
         currentData.push(filedata);
     }
@@ -289,7 +314,6 @@ const upload = (files: FileData[]): Promise<void> => {
                 filesLists.value[currentIndex].url = uri;
                 filesLists.value[currentIndex].id = id;
             } catch (error) {
-                console.log(error);
                 filesLists.value[currentIndex].errMsg = error as string;
                 filesLists.value[currentIndex].status = "error";
             }
@@ -374,6 +398,9 @@ defineExpose({
 <style lang="scss">
 .file-upload {
     // display: flex;
+    &-wrapper {
+        @apply flex flex-col items-center justify-center border border-solid border-[#efefef] rounded-[10rpx] bg-white px-2 py-4;
+    }
     &.file-upload--line {
         display: flex;
         align-items: center;

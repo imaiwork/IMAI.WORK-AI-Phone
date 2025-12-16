@@ -1,5 +1,6 @@
 import { getAgentDetail, getCozeAgentDetail, cozeAgentChatRecord, cozeAgentChatRecordClear } from "@/api/agent";
 import { getChatRecord, deleteChatRecord as clearChatRecord } from "@/api/chat";
+import { useUserStore } from "@/stores/user";
 import { AgentTypeEnum, CozeTypeEnum } from "../_enums";
 
 // 统一聊天记录Item的接口
@@ -13,6 +14,7 @@ interface ChatRecordItem {
  */
 export function useAgentManager() {
     const route = useRoute();
+    const router = useRouter();
     const nuxtApp = useNuxtApp();
 
     // 从路由获取参数
@@ -130,6 +132,10 @@ export function useAgentManager() {
 
     // --- 初始化 ---
     const init = async () => {
+        if (!useUserStore().isLogin) {
+            router.replace("/agent");
+            return;
+        }
         loading.value = true;
         try {
             await getDetail();

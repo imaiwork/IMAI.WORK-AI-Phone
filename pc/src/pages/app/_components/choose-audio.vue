@@ -100,7 +100,7 @@
 
 <script setup lang="ts">
 import { getMaterialMusicList } from "@/api/material";
-import { getMaterialLibraryList } from "@/api/redbook";
+import { getMaterialLibraryList } from "~/api/matrix";
 import Popup from "@/components/popup/index.vue";
 import { MaterialTypeEnum } from "~/pages/app/matrix/_enums/index";
 

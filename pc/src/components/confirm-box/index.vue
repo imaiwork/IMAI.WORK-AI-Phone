@@ -22,6 +22,7 @@
                     color: getTheme.textColor,
                 }">
                 <ElButton
+                    v-if="cancelButtonText"
                     class="!h-[50px] flex-1 !rounded-full"
                     :color="getTheme.cancelBgColor"
                     :style="{
@@ -31,6 +32,7 @@
                     {{ cancelButtonText }}
                 </ElButton>
                 <ElButton
+                    v-if="confirmButtonText"
                     type="primary"
                     round
                     class="!h-[50px] shadow-[0px_6px_12px_0px_rgba(0,101,251,0.20)] flex-1 !rounded-full"

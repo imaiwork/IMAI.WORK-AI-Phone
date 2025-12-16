@@ -123,6 +123,10 @@ class ConnectionService
         if (isset($this->connectionDevices[$connection->id])) {
             unset($this->connectionDevices[$connection->id]);
         }
+        if (isset($connection->timerId)) {
+            \Workerman\Timer::del($connection->timerId);
+            unset($connection->timerId);
+        }
     }
 
 

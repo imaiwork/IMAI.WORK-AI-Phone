@@ -695,116 +695,6 @@ class PublishLogic extends SvBaseLogic
         }
     }
 
-    public static function testPublish(array $params)
-    {
-        ini_set('max_execution_time', 0);
-        Db::startTrans();
-        try {
-            $publish = SvPublishSetting::create([
-                'user_id' => self::$uid,
-                'name' => date('YmdHis') . $params['name'],
-                'accounts' => json_encode($params['accounts'], JSON_UNESCAPED_UNICODE),
-                'video_setting_id' => 0,
-                'type' => 0,
-                'media_type' => 1,
-                'publish_start' => date('Y-m-d', time()),
-                'time_config' => json_encode($params['time_config'], JSON_UNESCAPED_UNICODE),
-                'data_type' => 1,
-                'create_time' => time(),
-                'update_time' => time(),
-                'date_type' => 0,
-                'task_type' => 2,
-                'publish_frep' => $params['publish_frep'] ?? 2,
-                'status' => 1
-            ]);
-            $video_urls = $params['video_url'];
-            $pics = $params['pic'];
-            $msgs = $params['msg'];
-            $accounts = $params['accounts'];
-
-            $times = [];
-            for ($i = 0; $i < $params['publish_frep']; $i++) {
-                $publishTime = date('Y-m-d H:i:s', time() + (($i + 1) * 1800));
-                if (strtotime($publishTime) <= time()) {
-                    continue;
-                }
-                $times[] = $publishTime;
-            }
-            $insertData = [];
-            foreach ($accounts as $akey => $account) {
-                if ($account['type'] == 1) {
-                    $find = AiWechat::where('wechat_id', $account['account'])->where('user_id', self::$uid)->limit(1)->find()->toArray();
-                    $account = array_merge($account, $find);
-                } elseif ($account['type'] == 3) {
-                    $find = SvAccount::where('account', $account['account'])->where('user_id', self::$uid)->limit(1)->find()->toArray();
-                    $account = array_merge($account, $find);
-                }
-                $publishAccount = SvPublishSettingAccount::create([
-                    'publish_id' => $publish->id,
-                    'user_id' => self::$uid,
-                    'task_type' => 2,
-                    'name' => $params['name'] . '_' . $akey,
-                    'account' => $account['account'],
-                    'account_type' => $account['type'],
-                    'device_code' => $account['device_code'],
-                    'video_setting_id' => 0,
-                    'publish_start' => date('Y-m-d', time()),
-                    'next_publish_time' => $times[0], //视频发布时间
-                    'count' => count($video_urls),
-                    'published_count' => 0,
-                    'status' => 1,
-
-                    'task_status' => 2,
-                    'data_type' => 1,
-                    'created_time' => time(),
-                ]);
-                foreach ($video_urls as $vkey => $video_url) {
-                    $task_id = generate_unique_task_id();
-                    $response = \app\common\service\ToolsService::Sv()->getPublishContent([
-                        'keywords' => $msgs[$vkey],
-                        'task_id' => $task_id,
-                        'user_id' => self::$uid,
-                    ]);
-                    $insertData[] = [
-                        'publish_id' => $publish->id,
-                        'publish_account_id' => $publishAccount->id,
-                        'video_task_id' => 0, //视频任务id，关联sv_video_tas
-                        'video_setting_id' => 0,
-                        'user_id' => self::$uid,
-                        'account' => $account['account'],
-                        'account_type' => $account['type'],
-                        'device_code' => $account['device_code'],
-                        'material_id' => 0,
-                        'material_type' => 1,
-                        'material_url' => FileService::getFileUrl($video_url),
-                        'material_title' => $response['data']['title'], // 循环匹配title
-                        'material_subtitle' => $response['data']['content'], //
-                        'pic' => FileService::getFileUrl($pics[$vkey]),
-                        'task_id' => $task_id,
-                        'sub_task_id' =>  time() . ($vkey + 100),
-                        'platform' => $account['type'],
-                        'status' => 0,
-                        'publish_time' => $times[$vkey],
-                        'create_time' => time(),
-                        'task_type' => 2
-                    ];
-                }
-            }
-            //print_r($insertData);die;
-            if (!empty($insertData)) {
-                $model = new SvPublishSettingDetail();
-                $model->saveAll($insertData);
-            }
-            Db::commit();
-            self::$returnData = [];
-            return true;
-        } catch (\Exception $e) {
-            Db::rollback();
-            self::setError($e->getMessage());
-            return false;
-        }
-    }
-
     public static function setPublishDetail()
     {
         print_r("\n执行发布记录拉取任务\n");
@@ -1076,18 +966,24 @@ class PublishLogic extends SvBaseLogic
                     'code' => 10000,
                 ];
                 if ($media['status'] === 3) {
-                    $response = \app\common\service\ToolsService::Sv()->getPublishContent([
-                        'keywords' => $media['msg'],
-                        'task_id' => $task_id,
-                        'user_id' => $account['user_id'],
-                    ]);
+                    if (trim($media['msg']) != '') {
+                        $response = \app\common\service\ToolsService::Sv()->getPublishContent([
+                            'keywords' => $media['msg'],
+                            'task_id' => $task_id,
+                            'source' => 'shanjian2',
+                            'user_id' => $account['user_id'],
+                        ]);
+                    }
+
                 }
 
                 if ((int)$response['code'] === 10000) {
+                    $title = $response['data']['title'] ?? '';
+                    $content = $response['data']['content'] ?? '';
                     $mergedArray[] = [
                         'material_url' => $media['status'] == 2 ? '' : FileService::getFileUrl($media['video_result_url']),
-                        'material_title' => $media['status'] == 2 ? '' : $response['data']['title'], // 循环匹配title
-                        'material_subtitle' => $media['status'] == 2 ? '' : $response['data']['content'],
+                        'material_title' => $media['status'] == 2 ? '' : $title, // 循环匹配title
+                        'material_subtitle' => $media['status'] == 2 ? '' :  $content,
                         'material_status' => $media['status'] == 2 ? 2 : 0, // 2失败 0待发布
                         'material_remark' => $media['remark'],
                         'pic' => $media['pic'],
@@ -1157,7 +1053,7 @@ class PublishLogic extends SvBaseLogic
                 $et = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[1]}")));
 
                 if ($st < time() || $et < time()) {
-                    $startDate = date('Y-m-d', strtotime("{$startDate} +" . ($i + 1) . " day"));
+                    $startDate = date('Y-m-d', strtotime("{$startDate} +" . ($i + 1) ." day"));
                     $st = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[0]}")));
                     $et = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[1]}")));
                 }

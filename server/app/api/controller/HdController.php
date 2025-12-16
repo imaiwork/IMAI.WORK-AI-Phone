@@ -3,10 +3,12 @@
 namespace app\api\controller;
 
 
+use app\api\lists\draw\VideoRecordLists;
 use app\api\lists\hd\HdImageCaseLists;
 use app\api\lists\hd\HdLists;
 use app\api\logic\HdCueLogic;
 use app\api\logic\HdLogic;
+use app\api\logic\VolcLogic;
 use app\api\validate\HdValidate;
 use think\exception\HttpResponseException;
 use think\response\Json;
@@ -21,6 +23,16 @@ class HdController extends BaseApiController
      */
     public function lists()
     {
+        $type = (int) $this->request->get('type', '');
+        $drawType = (int) $this->request->get('draw_type', '');
+        if ($drawType === 0){
+            $params = $this->request->get();
+            $result = HdLogic::totalLists($params);
+            return $this->data($result);
+        }
+        if ($drawType == 6){
+            return $this->dataLists(new VideoRecordLists());
+        }
         return $this->dataLists(new HdLists());
     }
 
@@ -147,7 +159,7 @@ class HdController extends BaseApiController
         if ($result) {
             return $this->data(HdLogic::getReturnData());
         }
-        return $this->data(HdLogic::getError());
+        return $this->fail(HdLogic::getError());
     }
 
     /**
@@ -283,6 +295,32 @@ class HdController extends BaseApiController
             return $this->data([HdLogic::getError()]);
         } catch (HttpResponseException $e) {
             return $this->data($e->getResponse()->getData() ?? []);
+        }
+    }
+
+    /**
+     * 删除
+     */
+    public function drawDelete()
+    {
+        try {
+            $params = $this->request->post();
+            $logIds = $params['log_id'];
+            $videoIds = $params['video_id'];
+            $result1 = true;
+            $result2 = true;
+            if (!empty($logIds)){
+                $result1 = HdLogic::deleteImage($params);
+            }
+            if (!empty($videoIds)){
+                $result2 = VolcLogic::deleteVideo(['id'=>$videoIds]);
+            }
+            if ($result1 && $result2) {
+                return $this->success('操作成功');
+            }
+            return $this->fail(HdLogic::getError() ?? '');
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }
     }
 }

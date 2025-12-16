@@ -29,7 +29,7 @@ const tabbarList = computed(() => {
         {
             iconPath: ChatIcon,
             selectedIconPath: ChatSelectedIcon,
-            text: "AI聊天",
+            text: "工作台",
             link: {
                 path: "/pages/index/index",
             },

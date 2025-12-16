@@ -6,7 +6,7 @@
         <view v-if="error" class="text-red-500">
             {{ error }}
         </view>
-        <text v-else user-select class="whitespace-pre-line leading-[40rpx] select-text">
+        <text v-else user-select class="break-all leading-[40rpx] select-text">
             {{ content }}
         </text>
     </template>

@@ -22,6 +22,7 @@ use app\common\model\sv\SvRobotKeyword;
 use app\common\model\user\User;
 use app\common\service\FileService;
 use app\common\service\WordsService;
+use GuzzleHttp\Client;
 
 class ChatLogic extends ApiLogic
 {
@@ -69,7 +70,43 @@ class ChatLogic extends ApiLogic
             $params['presence_penalty']  = (float)$robot['presence_penalty'];  //避免重复力度
             $params['frequency_penalty'] = (float)$robot['frequency_penalty']; //避免重复用词力度
             $params['context_num']       = $robot['context_num'];       //上下文数
-            $params['model']             = ModelsCost::where('id', $robot['model_sub_id'])->value('alias');             //模型
+            $params['model']             = ModelsCost::where('id', $robot['model_sub_id'])->value('alias');  //模型
+
+            //coze智能体回复
+            if ($robot['flow_status'] == 1) {
+                $flow_config = $robot['flow_config'];
+                $task_id = $params['task_id'] ?? uniqid('eq') . time();
+                $params['task_id'] = $task_id;
+                if (isset($params['unique_id'])) {
+                    // 发布聊天的task_id使用前端传过来的unique_id
+                    $task_id            = $params['unique_id'];
+                    $params['question'] = $params['message'];
+                    $params['messages'] = [];
+                }
+                $flow_reply = self::requestFlow($flow_config['bot_id'],$flow_config['api_token'],['user_id' => $_SERVER['HTTP_HOST'].self::$uid,'content'=>$params['message']]);
+                header('Content-type: text/event-stream');
+                header('Cache-Control: no-cache');
+                header('Connection: keep-alive');
+                header('X-Accel-Buffering: no');
+                $str1 = 'data:{"object":"loading","created":' . time() . ',"content":"' . $flow_reply . '","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
+                $str  = 'data:{"object":"finished","created":' . time() . ',"content":"","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
+                echo $str1;
+                ob_flush();
+                flush();
+                echo $str;
+                ob_flush();
+                flush();
+                //记录日志
+                ChatLogic::saveChatResponseLog($params, [
+                    'reply'             => $flow_reply ?? '',
+                    'reasoning_content' => null,
+                    'usage_tokens'      => 0,
+                    'extra'             => [
+                        'file' => [], //文件信息
+                    ]
+                ]);
+                exit;
+            }
 
             if (isset($params['unique_id'])) {
                 $publish_keywords = KbRobotInstruct::where('robot_id', $params['robot_id'])->select()->toArray();
@@ -83,8 +120,8 @@ class ChatLogic extends ApiLogic
                             header('Cache-Control: no-cache');
                             header('Connection: keep-alive');
                             header('X-Accel-Buffering: no');
-                            $str1 = 'data:{"object":"loading","created":' . time() . ',"content":"' . $publish_keyword['content'] . '","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
-                            $str = 'data:{"object":"finished","created":' . time() . ',"content":"' . $publish_keyword['content'] . '","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
+                            $str1 = 'data:{"object":"loading","created":' . time() . ',"content":"' . self::escapeSpecialChars($publish_keyword['content']) . '","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
+                            $str = 'data:{"object":"finished","created":' . time() . ',"content":"","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
                             echo $str1;
                             ob_flush();
                             flush();
@@ -122,8 +159,8 @@ class ChatLogic extends ApiLogic
                         header('Cache-Control: no-cache');
                         header('Connection: keep-alive');
                         header('X-Accel-Buffering: no');
-                        $str1 = 'data:{"object":"loading","created":' . time() . ',"content":"' . $robot_keyword['reply'][0]['content'] . '","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
-                        $str  = 'data:{"object":"finished","created":' . time() . ',"content":"' . $robot_keyword['reply'][0]['content'] . '","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
+                        $str1 = 'data:{"object":"loading","created":' . time() . ',"content":"' . self::escapeSpecialChars($robot_keyword['reply'][0]['content']) . '","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
+                        $str  = 'data:{"object":"finished","created":' . time() . ',"content":"","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
                         echo $str1;
                         ob_flush();
                         flush();
@@ -313,6 +350,7 @@ class ChatLogic extends ApiLogic
             'gpt-4o-mini',
             'gpt-4o-2024-08-06',
             'gpt-3.5-turbo',
+            'claude-sonnet-4-5'
         ];
         $geminiModels = [
             'gemini-2.5-pro',
@@ -1049,5 +1087,128 @@ class ChatLogic extends ApiLogic
             self::$error = $e->getMessage();
             return false;
         }
+    }
+
+    private static function requestFlow($bot_id, $token, $params): string
+    {
+        $url      = 'https://api.coze.cn/v3/chat';
+        $body     = [
+            'bot_id'              => $bot_id,
+            'user_id'             => $params['user_id'],
+            'stream'              => false,
+            'additional_messages' => [
+                [
+                    'role'         => 'user',
+                    'content'      => $params['content'],
+                    'content_type' => 'text'
+                ]
+            ]
+        ];
+        $request  = [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type'  => 'application/json',
+            ],
+            'json'    => $body
+        ];
+        $client   = new Client(['timeout' => 6000, 'verify' => false]);
+        $rsp      = $client->post($url, $request);
+        $contents = $rsp->getBody()->getContents();
+        $data     = json_decode($contents, true);
+//        Log::channel('sora')->write('发起对话'.$contents);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return 'coze返回异常';
+        }
+        if (($data['code'] ?? -1) !== 0) {
+            return 'coze返回异常';
+        }
+        if (isset($data['data']['id']) && isset($data['data']['conversation_id'])) {
+            $count = 0;
+            while ($count < 15) {
+                $res = self::requestFlowStatus($data['data']['conversation_id'], $data['data']['id'], $token);
+                if ($res) {
+                    break;
+                }
+                sleep(2);
+                $count++;
+            }
+            return self::requestFlowMessage($data['data']['conversation_id'], $data['data']['id'], $token);
+        }
+        return 'coze返回异常';
+    }
+
+    private static function escapeSpecialChars($str): string
+    {
+        // 清除零宽字符
+        $str = preg_replace('/[\x{200B}\x{200C}\x{200D}\x{FEFF}]/u', '', $str);
+        // 转义所有特殊字符（可扩展）
+        return addcslashes($str, "\0\n\r\t\v\\'\"");
+    }
+
+    private static function requestFlowStatus($conversation_id,$chat_id, $token): bool
+    {
+        $url      = 'https://api.coze.cn/v3/chat/retrieve';
+        $body     = [
+            'conversation_id'     => $conversation_id,
+            'chat_id'             => $chat_id,
+        ];
+        $request  = [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type'  => 'application/json',
+            ],
+            'query'    => $body
+        ];
+        $client   = new Client(['timeout' => 6000, 'verify' => false]);
+        $rsp      = $client->get($url, $request);
+        $contents = $rsp->getBody()->getContents();
+        $data     = json_decode($contents, true);
+//        Log::channel('sora')->write('聊天结果返回'.$contents);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return false;
+        }
+        if (($data['code'] ?? -1) !== 0) {
+            return false;
+        }
+        if (isset($data['data']['status']) && $data['data']['status'] == 'completed') {
+            return true;
+        }
+        return false;
+    }
+
+    private static function requestFlowMessage($conversation_id,$chat_id, $token): string
+    {
+        $url      = 'https://api.coze.cn/v3/chat/message/list';
+        $body     = [
+            'conversation_id'     => $conversation_id,
+            'chat_id'             => $chat_id,
+        ];
+        $request  = [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type'  => 'application/json',
+            ],
+            'query'    => $body
+        ];
+        $client   = new Client(['timeout' => 6000, 'verify' => false]);
+        $rsp      = $client->get($url, $request);
+        $contents = $rsp->getBody()->getContents();
+        $data     = json_decode($contents, true);
+//        Log::channel('sora')->write('聊天内容返回'.$contents);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return 'coze返回异常';
+        }
+        if (($data['code'] ?? -1) !== 0) {
+            return 'coze返回异常';
+        }
+
+        foreach ($data['data'] as $item){
+            if ($item['type'] == 'answer'){
+                return $item['content'];
+            }
+        }
+
+        return 'coze返回异常';
+
     }
 }

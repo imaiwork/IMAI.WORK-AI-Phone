@@ -105,6 +105,9 @@ import { uploadFile } from "@/api/app";
 import { useAudio } from "@/hooks/useAudio";
 import { ChooseResult, chooseFile } from "@/components/file-upload/choose-file";
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const tabs = [
     {
@@ -264,7 +267,7 @@ const handleConfirm = () => {
         uni.$u.toast("请选择背景音乐");
         return;
     }
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.CHOOSE_MUSIC,
         data: chooseAudio.value,
     });

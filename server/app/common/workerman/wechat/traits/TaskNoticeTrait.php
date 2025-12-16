@@ -23,6 +23,50 @@ trait TaskNoticeTrait
     use CacheTrait;
 
 
+    public function deviceAppUpgradeNoticeOpt(string $deviceId, array $response): void
+    {
+        $data = $response['Data'];
+        if ($data['MsgType'] == 'PostDeviceInfoNotice') {
+            // $this->withChannel('wechat_socket')->withLevel('notice')->withTitle('UpgradeDeviceAppNoticeMessage')->withContext([
+            //     'msg' => '设备应用升级通知',
+            //     'response' => $response
+            // ])->log();
+            $content = $data['Content'];
+            $appInfos = json_decode($content['AppInfos'], true);
+            $appInfo = $appInfos[1];
+            //查询是否有新版本
+            $response =  \app\common\service\ToolsService::Auth()->checkAiSalesVersion($appInfo['VerNumber']);
+            if ($response['code'] == 10000 && !empty($response['data'])) {
+                $newApp = array(
+                    'VerNumber' => $response['data']['version'],
+                    'PackageName' => $appInfo['PackageName'],
+                    'PackageUrl' => $response['data']['apk_url']
+                );
+
+                $content = \app\common\workerman\wechat\handlers\client\DeviceAppUpgradeHandler::handle([
+                    'WeChatId' => $content['WeChatId'],
+                    'IMEI' => $content['IMEI'],
+                    'AppInfos' => $newApp
+                ]);
+                // 4. 构建protobuf消息
+                $message = new \Jubo\JuLiao\IM\Wx\Proto\TransportMessage();
+                $message->setMsgType($content['MsgType']);
+                $any = new \Google\Protobuf\Any();
+                $any->pack($content['Content']);
+                $message->setContent($any);
+                $data = $message->serializeToString();
+
+                // 5. 发送到设备端
+                $channel = "socket.{$deviceId}.message";
+                \Channel\Client::connect('127.0.0.1', 2206);
+                \Channel\Client::publish($channel, [
+                    'data' => $data
+                ]);
+            }
+        }
+    }
+
+
     /**
      * 语音转文字
      *
@@ -32,8 +76,8 @@ trait TaskNoticeTrait
      */
     public function voiceToTextOpt(string $deviceId, array $response): void
     {
-        
-        if($response['Data']['MsgType'] == 'VoiceTransTextTask'){
+
+        if ($response['Data']['MsgType'] == 'VoiceTransTextTask') {
             $this->withChannel('wechat_socket')->withLevel('notice')->withTitle('VoiceTransTextTask')->withContext([
                 'msg' => '语音转文字任务已存在',
                 'data' => $response
@@ -170,7 +214,7 @@ trait TaskNoticeTrait
 
             $record = SvAddWechatRecord::where('task_id', $data['Content']['TaskId'])->limit(1)->findOrEmpty();
             $isSvAddWechat = true;
-            if($record->isEmpty()){
+            if ($record->isEmpty()) {
                 $record = SvCrawlingManualTaskRecord::where('exec_task_id', $data['Content']['TaskId'])->limit(1)->findOrEmpty();
                 $isSvAddWechat = false;
                 $this->withChannel('wechat_socket')->withLevel('notice')->withTitle('AddFriendsTaskOpt')->withContext([
@@ -201,7 +245,7 @@ trait TaskNoticeTrait
                         'handler' => function () use ($record, $isSvAddWechat) {
                             $record->status = 0;
                             $this->_setColingWechat($record);
-                            if($isSvAddWechat){
+                            if ($isSvAddWechat) {
                                 $this->_resetAddFriendWechat($record);
                             }
                         }
@@ -228,7 +272,7 @@ trait TaskNoticeTrait
                     $wechat->save();
                 }
 
-                if($record->status === 1){
+                if ($record->status === 1) {
                     AiWechatLog::create([
                         'user_id'   => $record['user_id'],
                         'wechat_id' => $record['wechat_id'],

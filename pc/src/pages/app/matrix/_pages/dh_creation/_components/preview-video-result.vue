@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import { AppTypeEnum } from "@/enums/appEnums";
-import { getDigitalHumanVideo, deleteDigitalHumanVideo } from "@/api/redbook";
+import { getDigitalHumanVideo, deleteDigitalHumanVideo } from "~/api/matrix";
 import Popup from "@/components/popup/index.vue";
 import VideoCard from "../../../_components/dh-video-card.vue";
 import EditPopup from "../../generate_video/_components/edit.vue";

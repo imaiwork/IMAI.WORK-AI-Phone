@@ -27,6 +27,8 @@ class AiWechatSopCron extends Command
         PushContentLogic::sopStagetriggerPushJob();
         //群发消息推送
         PushContentLogic::sopPushJob();
+        //跟进提醒消息推送
+        PushContentLogic::sopSubFlowRemind();
         return true;
     }
 }

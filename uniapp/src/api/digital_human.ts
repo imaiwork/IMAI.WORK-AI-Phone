@@ -2,12 +2,17 @@ import request from "@/utils/request";
 
 // 创建形象
 export const createAnchor = (data: Record<string, any>) => {
-    return request.post({ url: "/human/createAnchor", data });
+    return request.post({ url: "/human/createAnchor", data }, { ignoreCancel: true });
 };
 
 // 形象列表
 export const getAnchorList = (data: Record<string, any>) => {
     return request.get({ url: "/human/anchorLists", data });
+};
+
+// 重试形象
+export const retryAnchor = (data: Record<string, any>) => {
+    return request.post({ url: "/human/anchorRetry", data });
 };
 
 // 删除形象
@@ -178,4 +183,24 @@ export const deleteShanjianTaskRecord = (data: Record<string, any>) => {
 // 闪剪任务名称修改
 export const updateShanjianTaskName = (data: Record<string, any>) => {
     return request.post({ url: "/shanjian.shanjianVideoSetting/updateName", data });
+};
+
+// sora视频创建
+export const createSoraVideo = (data: Record<string, any>) => {
+    return request.post({ url: "/sora.soraVideoSetting/add", data });
+};
+
+// 新闻体文案生成
+export const generateNewsBodyPrompt = (data: Record<string, any>) => {
+    return request.post({ url: "/shanjian.tools/getNewsMixcutTittle", data }, { ignoreCancel: true });
+};
+
+// 闪剪音色克隆
+export const shanjianVoiceClone = (data: Record<string, any>) => {
+    return request.post({ url: "/shanjian.voice/add", data });
+};
+
+// sora发布任务创建
+export const createSoraPublishTask = (data: Record<string, any>) => {
+    return request.post({ url: "/sora.publish/add", data });
 };

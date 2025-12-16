@@ -10,15 +10,18 @@ export enum DigitalHumanModelVersionEnum {
     ELITE = 6,
     // 蝉镜
     CHANJING = 7,
+    // 闪剪
+    SHANJIAN = 8,
 }
 
 // 数字人模型版本枚举映射
 export const DigitalHumanModelVersionEnumMap = {
-    [DigitalHumanModelVersionEnum.STANDARD]: "标准版",
-    [DigitalHumanModelVersionEnum.SUPER]: "极速版",
-    [DigitalHumanModelVersionEnum.ADVANCED]: "高级版",
-    [DigitalHumanModelVersionEnum.ELITE]: "尊享版",
+    [DigitalHumanModelVersionEnum.STANDARD]: "标准",
+    [DigitalHumanModelVersionEnum.SUPER]: "极速",
+    [DigitalHumanModelVersionEnum.ADVANCED]: "高级",
+    [DigitalHumanModelVersionEnum.ELITE]: "尊享",
     [DigitalHumanModelVersionEnum.CHANJING]: "蝉镜",
+    [DigitalHumanModelVersionEnum.SHANJIAN]: "闪剪",
 };
 
 // 模型类型

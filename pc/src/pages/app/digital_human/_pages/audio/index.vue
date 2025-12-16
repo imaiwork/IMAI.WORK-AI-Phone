@@ -113,8 +113,9 @@ const audioControlRef = shallowRef<InstanceType<typeof AudioControl>>();
 const queryParams = reactive({
     name: "",
     model_version: "",
+    type: 0,
 });
-const { pager, getLists, resetPage } = usePaging({
+const { pager, getLists } = usePaging({
     fetchFun: getAudioList,
     params: queryParams,
 });

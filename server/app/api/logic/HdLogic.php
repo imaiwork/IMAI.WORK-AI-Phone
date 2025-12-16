@@ -10,6 +10,7 @@ use app\common\model\hd\HdImageCases;
 use app\common\model\hd\HdLog;
 use app\common\model\user\User;
 use app\common\service\FileService;
+use think\facade\Db;
 use think\facade\Log;
 
 
@@ -390,7 +391,7 @@ class HdLogic extends ApiLogic
     /**
      * @desc 获取任务状态
      * @param $request
-     * @return true
+     * @return bool
      * @date 2024/7/18 17:15
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @author dagouzi
@@ -400,6 +401,9 @@ class HdLogic extends ApiLogic
         $task_id = $request['task_id'];
         $type = $request['type'];
         $result = self::handleResult($task_id, $type);
+        if (!$result){
+            return false;
+        }
         self::$returnData = ['result' => $result];
         return true;
     }
@@ -473,15 +477,15 @@ class HdLogic extends ApiLogic
             };
             $unit = TokenLogService::getTypeScore($scene['scene']);
 
-            foreach ($sub_task_results as $item) {
+            foreach ($sub_task_results as $key => $item) {
                 // 循环每个图的生成进度
                 $sub_task = HdImage::where(['sub_task_id' => $item['sub_task_id']])->findOrEmpty();
 
                 $image = $item['image'] ?? '';
                 
                 if($image){
-                    
                     $image = FileService::downloadFileBySource($image, 'image');
+                    $sub_task_results[$key]['image'] = FileService::getFileUrl($image);
                 }
                 
                 if ($sub_task->isEmpty()) {
@@ -503,6 +507,7 @@ class HdLogic extends ApiLogic
                         $sub_task->save();
                     }
                 }
+
      
                 $task_status = $item['task_status'];
 
@@ -528,6 +533,7 @@ class HdLogic extends ApiLogic
         } catch (\Exception $e) {
 
             self::taskStatus($task, 5, $e->getMessage());
+            return false;
         }
         return ['result' => $result];
     }
@@ -668,6 +674,12 @@ class HdLogic extends ApiLogic
             AccountLogLogic::recordUserTokensLog(true, $userId, $tokenCode, $points, $taskId, $extra);
         }
 
+        //换衣报错
+        if ($response['code'] == 15011){
+            self::setError($response['message'] ?? '生成失败');
+            return [];
+        }
+
         return $response['data'] ?? [];
     }
 
@@ -766,6 +778,75 @@ class HdLogic extends ApiLogic
         }
     }
 
+    public static function totalLists($params)
+    {
+        $pageNo   = isset($params['page_no']) && $params['page_no'] > 0 ? (int)$params['page_no'] : 1;
+        $pageSize = isset($params['page_size']) && $params['page_size'] > 0 ? (int)$params['page_size'] : 10;
+        $offset   = ($pageNo - 1) * $pageSize;
+        $where = [['user_id', '=', self::$uid], ['delete_time','=', null]];
+        $query1 = Db::name('hd_image')
+                    ->alias('hd')
+                    ->join('hd_log hl', 'hd.log_id = hl.id', 'left')
+                    ->field([
+                                'hd.id',
+                                'hd.log_id',
+                                'hl.type as draw_type',
+                                'hl.type',
+                                'hd.sub_task_id as task_id',
+                                'hd.image as image_url',
+                                "null as video_url",
+                                'hd.task_status',
+                                'hd.create_time'
+                            ])
+                    ->where([['hl.user_id', '=', self::$uid], ['hd.delete_time','=', null],['hd.task_status', '=', 1],['image', '<>', '']])
+                    ->buildSql();
+        $query2 = Db::name('draw_video')
+                    ->field([
+                                'id',
+                                "'0' as log_id",
+                                "'6' as draw_type",
+                                'type',
+                                'task_id',
+                                'cover_url as image_url',
+                                'video_url',
+                                'task_status',
+                                'create_time'
+                            ])
+                    ->where($where)
+                    ->where([['task_status', '=', 1]])
+                    ->buildSql();
+        // 合并子查询sql
+        $unionSql = "({$query1} UNION ALL {$query2}) AS t";
+        $lists = Db::table($unionSql)
+                   ->order('create_time', 'desc')  // 按创建时间倒序
+                   ->limit($offset, $pageSize)      // 分页：偏移量, 每页条数
+                   ->select()
+                   ->toArray();
+        $total = self::getTotalCount($where);
+        foreach ($lists as &$item){
+            $item['image'] = !empty($item['image_url']) ? FileService::getFileUrl($item['image_url']) : '';
+            $item['image_url'] = !empty($item['image_url']) ? FileService::getFileUrl($item['image_url']) : '';
+            $item['video_url'] = !empty($item['video_url']) ? FileService::getFileUrl($item['video_url']) : '';
+            $item['create_time'] = date('Y-m-d H:i:s', $item['create_time']);
+        }
+        return [
+            'count'      => $total,
+            'lists'      => $lists,
+            'page_no'    => $pageNo,
+            'page_size'  => $pageSize,
+            'total_page' => (int)ceil($total / $pageSize)
+        ];
+    }
 
+    /**
+     * 计算4个表的总记录数
+     */
+    private static function getTotalCount(array $where): int
+    {
+        $count1 = Db::name('hd_image')->alias('hd')
+                    ->join('hd_log hl', 'hd.log_id = hl.id', 'left')->where([['hl.user_id', '=', self::$uid], ['hd.delete_time','=', null]])->count();
+        $count2 = Db::name('draw_video')->where($where)->count();
+        return $count1 + $count2;
+    }
 
 }

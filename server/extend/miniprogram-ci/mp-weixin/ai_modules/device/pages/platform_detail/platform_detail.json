@@ -12,7 +12,7 @@
     "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
     "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
     "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
-    "video-preview": "../../../../components/video-preview/video-preview",
-    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog"
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "video-preview": "../../../../components/video-preview/video-preview"
   }
 }

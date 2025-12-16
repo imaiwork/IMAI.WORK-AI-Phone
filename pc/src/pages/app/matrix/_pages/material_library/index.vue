@@ -47,8 +47,9 @@
                         </ElInput>
                         <upload
                             type="file"
-                            accept="video/*,image/*,.mp3,.wav,.m4a"
+                            :accept="accept"
                             show-progress
+                            :max-size="200"
                             :show-file-list="false"
                             @change="handleUploadSuccess">
                             <ElButton type="primary" class="!rounded-full !h-10 !px-4">
@@ -125,7 +126,7 @@
                 <div class="h-full flex items-center justify-center" v-else>
                     <upload
                         type="file"
-                        accept="video/*,image/*"
+                        :accept="accept"
                         show-progress
                         :show-file-list="false"
                         @change="handleUploadSuccess">
@@ -144,7 +145,7 @@
 import { uploadImage } from "@/api/app";
 import { AppTypeEnum, ThemeEnum } from "@/enums/appEnums";
 import { HandleMenuType } from "@/components/handle-menu/typings";
-import { getMaterialLibraryList, deleteMaterialLibrary, addMaterialLibrary } from "@/api/redbook";
+import { getMaterialLibraryList, deleteMaterialLibrary, addMaterialLibrary } from "@/api/matrix";
 import Empty from "@/pages/app/matrix/_components/empty.vue";
 import EditPopup from "./_components/edit.vue";
 import { MaterialTypeEnum } from "../../_enums";
@@ -159,6 +160,7 @@ const queryParams = reactive({
 });
 
 const fieldValue = ref("");
+const accept = "video/*,image/*,.mp3,.wav,.m4a";
 
 const changeField = (data: any) => {
     if (data == 1) {
@@ -230,9 +232,7 @@ const handleUploadSuccess = async (result: any) => {
             clearTimeout(uploadLockTimer.value);
             uploadLock.value = false;
         }, 500);
-    } catch (error) {
-        feedback.msgError(error);
-    }
+    } catch (error) {}
 };
 
 const showEditPopup = ref(false);

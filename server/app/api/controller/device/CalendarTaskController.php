@@ -38,7 +38,7 @@ class CalendarTaskController extends BaseApiController
             }
             return $this->fail(TaskLogic::getError());
         } catch (\Throwable $th) {
-            return $this->fail($th->getResponse()->getData()['msg'] ?? '');
+            return $this->fail($th->getMessage() ?? '');
         }
     }
 

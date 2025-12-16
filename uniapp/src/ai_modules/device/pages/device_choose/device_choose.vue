@@ -62,6 +62,9 @@
 <script setup lang="ts">
 import { getDeviceList } from "@/api/device";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const dataLists = ref<any[]>([]);
 const pagingRef = shallowRef();
@@ -98,7 +101,7 @@ const handleConfirmChoose = () => {
         uni.$u.toast("至少选择一台手机设备");
         return;
     }
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.CHOOSE_DEVICE,
         data: chooseDevice.value,
     });

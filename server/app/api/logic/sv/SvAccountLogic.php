@@ -193,7 +193,7 @@ class SvAccountLogic extends SvBaseLogic
                 ];
                 SvSetting::create($setting);
             }
-
+            unset($params['account_type']);
             // 更新设置
             SvSetting::where('account', $account->account)->update($params);
 

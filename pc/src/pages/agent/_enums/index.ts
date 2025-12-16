@@ -38,6 +38,7 @@ export interface Agent {
     frequency_penalty: number; // 重复词频率 (-2-2)
     logprobs: number; // 显示候选词 0关闭 1开启
     top_logprobs: number; // 显示前几个候选词对数概率(0到20)
+    max_tokens: number; // 返回长度(1到999999)
     // --- 界面配置 ---
     welcome_introducer: string; // 欢迎语
     copyright: string; // 底部标识

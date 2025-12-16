@@ -110,6 +110,8 @@ class CompletedHandler extends BaseMessageHandler
             $this->payload['code'] =  WorkerEnum::DEVICE_INIT_COMPLETED_ERROR;
             $this->payload['type'] = 'error';
             $this->sendError($this->connection,  $this->payload);
+        } finally{
+            unset($content);
         }
     }
 

@@ -23,7 +23,14 @@ class HumanController extends BaseApiController
     public function test() {
 
     }
-
+    public function  cron(){
+        try {
+            $taskid = '558f1bef5304b7bbbf90c8a551b49a15';
+            HumanLogic::videoTaskCron($taskid);
+        } catch (\Throwable $th) {
+            print_r($th->__toString());die;
+        }
+    }
     /**
      * @desc 生成视频
      * @return \think\response\Json

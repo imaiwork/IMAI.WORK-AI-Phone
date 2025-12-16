@@ -45,22 +45,23 @@ class MessageHandler extends BaseMessageHandler
 
     public function handle(TcpConnection $connection, string $uid, array $payload): void
     {
-
+        $this->setLog('新消息：' . json_encode($payload, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT), 'msg');
         $content = !is_array($payload['content']) ? json_decode($payload['content'], true) : $payload['content'];
         try {
             $this->msgType = WorkerEnum::DESC[$payload['type']] ?? $payload['type'];
             $this->uid = $uid;
             $this->payload = $payload;
+            $this->appType = $payload['appType'] ?? 3;
             $this->userId = $content['userId'] ?? 0;
 
-            $this->service->getRedis()->set("xhs:device:" . $this->payload['deviceId'] . ":taskStatus", json_encode([
-                'taskStatus' => 'running',
-                'taskType' => 'setMessage',
-                'duration' => 30,
-                'scene' => 'xhs',
-                'msg' => '小红书正在回复聊天信息',
-                'time' => date('Y-m-d H:i:s', time()),
-            ], JSON_UNESCAPED_UNICODE));
+            // $this->service->getRedis()->set("xhs:device:" . $this->payload['deviceId'] . ":taskStatus", json_encode([
+            //     'taskStatus' => 'running',
+            //     'taskType' => 'setMessage',
+            //     'duration' => 30,
+            //     'scene' => 'xhs',
+            //     'msg' => '小红书正在回复聊天信息',
+            //     'time' => date('Y-m-d H:i:s', time()),
+            // ], JSON_UNESCAPED_UNICODE));
 
 
             $worker = $this->service->getWorker();
@@ -97,6 +98,8 @@ class MessageHandler extends BaseMessageHandler
             $this->sendError($this->connection,  $this->payload);
 
             $this->sendErrorResponse($content, $this->payload['reply']);
+        } finally{
+            unset($content);
         }
     }
 
@@ -120,7 +123,7 @@ class MessageHandler extends BaseMessageHandler
                     $result = SvPrivateMessage::create([
                         'device_code' => $device,
                         'account' => $account['account'],
-                        'type' => 3,
+                        'type' => $this->appType,
                         'friend_id' => $friend['friend_id'],
                         'replay_type' => $content['type'] ?? '',
                         'author_name' => $content['targetRecipient'] ?? '',
@@ -183,7 +186,7 @@ class MessageHandler extends BaseMessageHandler
         $this->setLog('收到的私信消息:' . $this->payload['deviceId'], 'msg');
         $this->setLog($content, 'msg');
         try {
-            $platformType = $this->PlatformTypeEn[$this->payload['appType'] ?? 3] ?? 'xhs';
+            $platformType = $this->PlatformTypeEn[$this->appType ?? 3] ?? 'xhs';
             $accountNo = $this->service->getRedis()->get("xhs:{$this->payload['deviceId']}:{$platformType}:accountNo");
             if (empty($accountNo)) {
                 $this->setLog('设备未更新账号信息,请先更新账号信息', 'msg');
@@ -198,6 +201,7 @@ class MessageHandler extends BaseMessageHandler
             $account = SvAccount::alias('a')
                 ->field('*')
                 ->where($where)
+                ->where('a.type', $this->appType)
                 ->join('sv_setting s', 's.account = a.account and s.user_id = a.user_id')
                 ->order('a.update_time desc')
                 ->limit(1)->find();
@@ -205,6 +209,7 @@ class MessageHandler extends BaseMessageHandler
             if (empty($account)) {
                 $sql = SvAccount::alias('a')
                     ->where($where)
+                    ->where('a.type', $this->appType)
                     ->join('sv_setting s', 's.account = a.account and s.user_id = a.user_id')
                     ->fetchSql(true)->limit(1)->find();
                 $this->setLog($sql, 'msg');
@@ -237,7 +242,7 @@ class MessageHandler extends BaseMessageHandler
             //接收到的消息
             $content['type'] = WorkerEnum::WEB_RECEIVE_PRIVATE_MESSAGE_TEXT;
             $this->sendToWeb($account, $content);
-
+            $this->setLog('Account:' . json_encode($account, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'msg');
             //1 查询私信用户信息是否存在,不存在则创建,并讲私信消息记录
             $friend = $this->getFriendInfo($account, $content);
             $newMsgIds = $this->addMessage($account, $friend, $content);
@@ -399,6 +404,7 @@ class MessageHandler extends BaseMessageHandler
 
                 SvPrivateMessage::where('user_id', '=', $request['user_id'])
                     ->where('account', $request['account'])
+                    ->where('type', $this->appType)
                     ->where('friend_id', $request['friend_id'])
                     ->where('is_reply', 0)
                     ->where('create_time', '<', (time() - 600))->update([
@@ -409,6 +415,7 @@ class MessageHandler extends BaseMessageHandler
                     $this->connection->multipleType = true;
                     $messages = SvPrivateMessage::where('user_id', $request['user_id'])
                         ->where('account', $request['account'])
+                        ->where('type', $this->appType)
                         ->where('friend_id', $request['friend_id'])
                         ->where('id', 'in', $newMsgIds)
                         ->where('is_reply', 0)
@@ -457,7 +464,7 @@ class MessageHandler extends BaseMessageHandler
                         ]);
                     }
                     $this->setLog('回复消息数组', 'msg');
-                    $this->connection->replyMessage = array_values(array_filter($this->connection->replyMessage));
+                    $this->connection->replyMessage = array_values(array_unique(array_filter($this->connection->replyMessage)));
                     $this->setLog($this->connection->replyMessage, 'msg');
                     if (empty($this->connection->replyMessage)) {
                         $this->connection->replyMessage = array(
@@ -494,6 +501,7 @@ class MessageHandler extends BaseMessageHandler
 
                         $messages = SvPrivateMessage::where('user_id', $request['user_id'])
                             ->where('account', $request['account'])
+                            ->where('type', $this->appType)
                             ->where('friend_id', $request['friend_id'])
                             ->where('is_reply', 0)
                             ->limit("{$reply->number_chat_rounds}")
@@ -775,6 +783,7 @@ class MessageHandler extends BaseMessageHandler
         try {
             SvPrivateMessage::where('user_id', $account['user_id'])
                 ->where('account', $account['account'])
+                ->where('type', $account['type'])
                 ->where('friend_id', $friend['friend_id'])
                 ->where('is_reply', 0)
                 ->update([
@@ -812,7 +821,7 @@ class MessageHandler extends BaseMessageHandler
                         'user_id' => $account['user_id'],
                         'device_code' => $this->payload['deviceId'],
                         'account' => $account['account'],
-                        'type' => 3,
+                        'type' => $account['type'],
                         'friend_id' => $friend['friend_id'],
                         'replay_type' => $content['replyObject'] ?? '',
                         'author_name' => $content['replyName'] ?? '',
@@ -828,7 +837,7 @@ class MessageHandler extends BaseMessageHandler
                     'user_id' => $account['user_id'],
                     'device_code' => $this->payload['deviceId'],
                     'account' => $account['account'],
-                    'type' => 3,
+                    'type' => $account['type'],
                     'friend_id' => $friend['friend_id'],
                     'replay_type' => $content['replyObject'] ?? '',
                     'author_name' => $content['replyName'] ?? '',
@@ -859,7 +868,7 @@ class MessageHandler extends BaseMessageHandler
                     'friend_id' => $friendId,
                     'friend_no' => $friendId,
                     'nickname' => $nickname,
-                    'source' => 60, //小红书私信
+                    'source' => $this->accountSource[$this->appType] ?? 60,
                     'create_time' => time(),
                     'open_ai' => 1,
                     'takeover_mode' => 0
@@ -1193,6 +1202,7 @@ class MessageHandler extends BaseMessageHandler
             if (!empty($keywords)) {
                 SvPrivateMessage::where('user_id', '=', $request['user_id'])
                     ->where('account', $request['account'])
+                    ->where('type', $this->appType)
                     ->where('friend_id', $request['friend_id'])
                     ->where('is_reply', 0)
                     ->where('message_content', 'not in', $keywords)->update([
@@ -1425,7 +1435,9 @@ class MessageHandler extends BaseMessageHandler
     {
         try {
             //$content = json_encode($request['message_list'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            $messages = SvPrivateMessage::where('id', 'in', $request['newMsgIds'])->select();
+            $messages = SvPrivateMessage::where('id', 'in', $request['newMsgIds'])
+                ->where('type', $this->appType)
+                ->select();
             foreach ($messages as $mk => $message) {
                 $message->is_reply = 1;
                 $message->reply_content = $request['message_list'][$mk] ?? '';
@@ -1516,7 +1528,7 @@ class MessageHandler extends BaseMessageHandler
                     $message = array(
                         'messageId' => $uid,
                         'type' => $content['type'],
-                        'appType' => 3,
+                        'appType' => $this->appType,
                         'deviceId' => $account['device_code'],
                         'appVersion' => $this->payload['appVersion'] ?? WorkerEnum::APP_VERSION,
                         'code' => WorkerEnum::SUCCESS_CODE,

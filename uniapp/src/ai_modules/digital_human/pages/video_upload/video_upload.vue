@@ -97,11 +97,13 @@
 import config from "@/config";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { ModeTypeEnum, ListenerTypeEnum, DigitalHumanModelVersionEnum } from "@/ai_modules/digital_human/enums";
-import VideoPlayer from "@/ai_modules/digital_human/components/video-player/video-player.vue";
 import UploadLoading from "@/ai_modules/digital_human/components/upload-loading/upload-loading.vue";
 import { useUserStore } from "@/stores/user";
-import { useUpload, uploadLimit, commonUploadLimit } from "../../hooks/useUpload";
 import requestCancel from "@/utils/request/cancel";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+import { useUpload, uploadLimit, commonUploadLimit } from "../../hooks/useUpload";
+
+const { emit } = useEventBusManager();
 
 // 定义表单数据类型
 interface FormData {
@@ -148,7 +150,6 @@ const rechargePopupRef = ref();
 const showUploadProgress = ref(false);
 const uploadProgressNum = ref(0);
 const uploadProgressType = shallowRef<"video" | "image">();
-const isUploadSuccess = ref(false);
 const loadingText = ref("");
 
 // 通用上传要求
@@ -338,7 +339,7 @@ const handleUploadCancel = () => {
  * 处理上传确认
  */
 const handelUploadConfirm = async () => {
-    uni.$emit("confirm", {
+    emit("confirm", {
         type: ListenerTypeEnum.VIDEO_UPLOAD,
         data: formData,
     });

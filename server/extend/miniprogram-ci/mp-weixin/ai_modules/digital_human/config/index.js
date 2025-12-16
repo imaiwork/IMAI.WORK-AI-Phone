@@ -1,0 +1,1 @@
+"use strict";const e=["webp","jpg","png"],i=["mp4","mov"],o={count:9,imageAccept:e,videoAccept:i,imageSize:20,imageResolution:[2e3,2e3],videoSize:200,videoDuration:[1,60],videoResolution:[2e3,2e3],fileAccept:[...e,...i],fileSize:100,imageDuration:2,materialTotalDuration:5};exports.montageConfig=o;

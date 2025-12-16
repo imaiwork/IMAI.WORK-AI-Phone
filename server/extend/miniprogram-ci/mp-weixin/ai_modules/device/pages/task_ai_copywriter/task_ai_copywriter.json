@@ -1,8 +1,7 @@
 {
-  "navigationStyle": "custom",
+  "navigationBarTitleText": "AI生成文案",
   "disableScroll": true,
   "usingComponents": {
-    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup"

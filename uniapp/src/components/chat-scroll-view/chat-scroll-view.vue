@@ -1,5 +1,5 @@
 <template>
-    <view class="chat-scroll-view h-full flex flex-col min-h-0">
+    <view class="h-full flex flex-col min-h-0">
         <view class="flex flex-col flex-1 min-h-0 py-4 relative" v-if="contentList.length">
             <view class="scroll-view-content flex-1 flex min-h-0">
                 <scroll-view scroll-y ref="contentRef" :scroll-top="scrollTop">
@@ -32,66 +32,99 @@
                 </view>
             </view>
         </view>
-        <view
-            class="flex flex-col justify-center px-[20rpx] mb-[20rpx]"
-            :class="{
-                'flex-1': contentList.length == 0,
-            }">
-            <view
-                :class="{
-                    'flex-1 flex flex-col items-center justify-center': isCoze || isStaff,
-                }">
+        <view class="grow min-h-0 relative" v-if="contentList.length == 0">
+            <scroll-view class="h-full w-full" scroll-y>
                 <slot name="content"></slot>
+            </scroll-view>
+            <view
+                v-if="!isCoze && !isStaff"
+                class="absolute bottom-[-40rpx] left-0 right-0 h-20 z-10 pointer-events-none"
+                style="background: linear-gradient(360deg, #eef0f6, transparent)">
             </view>
-            <view class="relative z-[79] chatBottomBox">
+        </view>
+        <view
+            class="px-[20rpx] pt-1 mb-[20rpx] relative flex-shrink-0"
+            :class="[isCoze || isStaff ? 'mb-[40rpx]' : 'mb-[20rpx]']">
+            <view class="relative z-[79] chat-bottom-box">
                 <view class="flex flex-col">
-                    <view class="mb-2" v-if="currModel.id && !currAgent.id && !isCoze && !isStaff">
-                        <view
-                            class="text-xs text-[#808080] bg-[#f6f6f6] rounded-[100rpx] pl-2 pr-4 h-[66rpx] inline-flex items-center gap-x-1"
-                            @click="showModel = true">
-                            <image :src="currModel.logo" class="w-[32rpx] h-[32rpx] rounded-full"></image>
-                            {{ currModel.name }}
-                            <view class="ml-1 inline-block">
-                                <u-icon name="arrow-down" size="20" color="#a8abb2"></u-icon>
-                            </view>
-                        </view>
-                    </view>
-                    <view class="mb-2" v-if="currAgent.id && !isCoze && !isStaff">
-                        <view
-                            class="bg-white rounded-[100rpx] px-4 h-[66rpx] gap-x-1 border border-solid border-[#E9EBEC] inline-flex items-center relative"
-                            @click="showAgent = true">
-                            <image
-                                :src="currAgent.avatar"
-                                class="w-[32rpx] h-[32rpx] rounded-[24rpx]"
-                                mode="aspectFill" />
-                            <text class="max-w-[200rpx] text-ellipsis overflow-hidden whitespace-nowrap text-xs">
-                                {{ currAgent.name }}
-                            </text>
+                    <scroll-view v-if="!isCoze && !isStaff" scroll-x class="mb-1">
+                        <view class="flex items-center gap-x-2 whitespace-nowrap pt-1">
                             <view
-                                class="absolute right-[-10rpx] top-[-10rpx] flex items-center justify-center w-[32rpx] h-[32rpx] rounded-full bg-[#0000004C]"
-                                @click.stop="handleAgentClear">
-                                <u-icon name="close" color="#ffffff" :size="14"></u-icon>
+                                v-if="currModel.id && !currAgent.id"
+                                class="text-xs bg-white rounded-[16rpx] px-2 h-[60rpx] inline-flex items-center gap-x-1"
+                                @click="showModel = true">
+                                <image :src="currModel.logo" class="w-[28rpx] h-[28rpx] rounded-full"></image>
+                                <text class="whitespace-nowrap">{{ currModel.name }}</text>
+                                <view class="ml-1 inline-block">
+                                    <u-icon name="arrow-down" size="20" color="#a8abb2"></u-icon>
+                                </view>
+                            </view>
+                            <view
+                                v-if="currAgent.id"
+                                class="bg-white rounded-[16rpx] px-2 h-[60rpx] gap-x-1 border border-solid border-[#E9EBEC] inline-flex items-center relative"
+                                @click="showAgent = true">
+                                <image
+                                    :src="currAgent.avatar"
+                                    class="w-[28rpx] h-[28rpx] rounded-[24rpx]"
+                                    mode="aspectFill" />
+                                <text class="max-w-[200rpx] text-ellipsis overflow-hidden whitespace-nowrap text-xs">
+                                    {{ currAgent.name }}
+                                </text>
+                                <view
+                                    class="absolute right-[-10rpx] top-[-10rpx] flex items-center justify-center w-[32rpx] h-[32rpx] rounded-full bg-[#0000004C]"
+                                    @click.stop="handleAgentClear">
+                                    <u-icon name="close" color="#ffffff" :size="14"></u-icon>
+                                </view>
+                            </view>
+                            <view
+                                class="flex-shrink-0 flex items-center justify-center gap-x-1 text-xs bg-white rounded-[16rpx] h-[60rpx] px-2"
+                                :class="{
+                                    '!bg-primary !text-white': selectedNetwork,
+                                }"
+                                @click="handleNetwork">
+                                <u-icon
+                                    name="/static/images/icons/deep.svg"
+                                    :size="28"
+                                    v-if="!selectedNetwork"></u-icon>
+                                <u-icon name="/static/images/icons/deep_white.svg" :size="28" v-else></u-icon>
+                                <text class="text-xs">联网搜索</text>
+                            </view>
+                            <view
+                                class="flex-shrink-0 flex items-center justify-center gap-x-1 text-xs bg-white rounded-[16rpx] h-[60rpx] px-2"
+                                @click="emit('showHistory')">
+                                <u-icon name="/static/images/icons/history.svg" :size="28"></u-icon>
+                                <text class="text-xs">历史对话</text>
+                            </view>
+                            <view
+                                class="flex-shrink-0 leading-[0] h-[60rpx] w-[60rpx] flex items-center justify-center rounded-full bg-white"
+                                @click="handleSetting">
+                                <u-icon name="/static/images/icons/setting.svg" :size="28"></u-icon>
                             </view>
                         </view>
+                    </scroll-view>
+                    <view v-if="$slots.chatAreaTop" class="mb-2">
+                        <slot name="chatAreaTop"></slot>
                     </view>
                     <view class="flex-1 flex gap-x-2 items-center">
                         <slot name="sendLeft" v-if="$slots.sendLeft && !isInputFocus"></slot>
                         <view
-                            class="flex-1 bg-white rounded-tl-[48rpx] rounded-tr-[48rpx] border border-solid border-b-0 border-[#F1F1F2] overflow-hidden relative py-[6rpx]"
-                            :class="{
-                                'rounded-bl-[48rpx] rounded-br-[48rpx] !border-b': isCoze || isStaff,
-                            }">
+                            class="flex-1 bg-white rounded-[48rpx] rounded-tr-[48rpx] border border-solid border-[#F1F1F2] overflow-hidden relative py-[6rpx]">
                             <view v-if="fileList.length" class="p-2 flex">
                                 <view v-for="(item, index) in fileList" :key="index">
                                     <FileItem :item="item" :index="index" @on-delete="deleteFile" />
                                 </view>
                             </view>
                             <view class="flex">
+                                <view v-if="!isCoze && !isStaff" class="ml-3 mb-2 mt-2 flex flex-col justify-center">
+                                    <view
+                                        class="flex-shrink-0 w-[44rpx] h-[44rpx] flex items-center justify-center"
+                                        @click="handleFileUpload">
+                                        <image src="/static/images/icons/add2.svg" class="w-full h-full"></image>
+                                    </view>
+                                </view>
+
                                 <textarea
-                                    class="!w-full max-h-[300rpx] overflow-y-auto text-[26rpx] px-[36rpx] py-[24rpx] transition-all duration-300"
-                                    :style="{
-                                        minHeight: isInputFocus ? '120rpx' : '0',
-                                    }"
+                                    class="!w-full max-h-[300rpx] overflow-y-auto text-[26rpx] px-2 py-[24rpx]"
                                     ref="textareaRef"
                                     v-model="userInput"
                                     confirm-type="done"
@@ -99,6 +132,7 @@
                                     hold-keyboard
                                     placeholder-style="color: rgba(0, 0, 0, 0.2); font-size: 26rpx;"
                                     auto-height
+                                    :focus="isInputFocus"
                                     :adjust-position="false"
                                     :placeholder="placeholder"
                                     :show-confirm-bar="false"
@@ -125,35 +159,7 @@
                             </view>
                         </view>
                     </view>
-                    <view
-                        v-if="!isCoze && !isStaff"
-                        class="flex items-center justify-between gap-x-[12rpx] h-[100rpx] bg-[#F6F6F6] px-[12rpx] rounded-bl-[48rpx] rounded-br-[48rpx] border border-solid border-[#F1F1F2] border-t-0">
-                        <view class="flex items-center gap-x-[12rpx] flex-1">
-                            <view
-                                v-if="isNetwork"
-                                class="flex items-center justify-center gap-x-1 w-[168rpx] h-[60rpx] rounded-full text-[#323232]"
-                                :class="{
-                                    '!bg-[#1ba7991a] !text-[#1ba799]': selectedNetwork,
-                                }"
-                                @click="handleNetwork">
-                                <u-icon name="/static/images/icons/deep.svg" :size="28"></u-icon>
-                                <text class="text-xs">联网搜索</text>
-                            </view>
-                            <view class="h-[28rpx]">
-                                <u-line direction="vertical" color="#F1F1F2"></u-line>
-                            </view>
-                            <view
-                                class="flex items-center justify-center gap-x-1 w-[168rpx] h-[60rpx] rounded-full text-[#323232]"
-                                @click="handleFileUpload">
-                                <u-icon name="/static/images/icons/note_book.svg" :size="28"></u-icon>
-                                <text class="text-xs">文件上传</text>
-                            </view>
-                        </view>
-                        <view class="leading-[0] p-2" @click="handleSetting">
-                            <u-icon name="/static/images/icons/setting.svg" :size="36"></u-icon>
-                        </view>
-                    </view>
-                    <view class="flex justify-center mt-[40rpx]">
+                    <view class="flex justify-center mt-[20rpx]" v-if="contentList.length > 0">
                         <view class="flex items-center rounded-full bg-[#00000008] gap-x-1.5 p-[6rpx]">
                             <u-icon name="/static/images/icons/tips.svg" :size="32"></u-icon>
                             <view class="text-[rgba(0,0,0,0.3)] text-xs">
@@ -167,10 +173,7 @@
         <view
             class="flex-shrink-0"
             :style="{
-                height:
-                    contentList.length || isCoze || isStaff
-                        ? dynamicHeight + 'px'
-                        : dynamicHeight - chatBottomHeight + 'px',
+                height: spacerHeight + 'px',
             }"></view>
     </view>
     <popup-bottom
@@ -202,7 +205,7 @@
                                 >
                             </view>
                         </view>
-                        <view>
+                        <view v-if="currModel.model_id != ModelIdEnum.CLAUDE_SONNET_4_5">
                             <view class="mb-4">词汇多样性</view>
                             <view class="flex items-center gap-x-2">
                                 <view class="flex-1">
@@ -221,7 +224,7 @@
                                 }}</view>
                             </view>
                         </view>
-                        <view v-if="currModel.model_id == ModelIdEnum.GPT_4O">
+                        <view v-if="currModel.model_id != ModelIdEnum.DEEPSEEK">
                             <view class="mb-4">重复词频率</view>
                             <view class="flex items-center gap-x-2">
                                 <view class="flex-1">
@@ -240,7 +243,7 @@
                                 }}</view>
                             </view>
                         </view>
-                        <view v-if="currModel.model_id == ModelIdEnum.GPT_4O">
+                        <view v-if="currModel.model_id != ModelIdEnum.DEEPSEEK">
                             <view class="mb-4">特定词重复率</view>
                             <view class="flex items-center gap-x-2">
                                 <view class="flex-1">
@@ -278,7 +281,7 @@
                                 }}</view>
                             </view>
                         </view>
-                        <view v-if="currModel.model_id == ModelIdEnum.GPT_4O">
+                        <view v-if="currModel.model_id != ModelIdEnum.DEEPSEEK">
                             <view class="mb-4">显示前几个候选词对数概率</view>
                             <view class="flex items-center gap-x-2">
                                 <view class="flex-1">
@@ -297,7 +300,26 @@
                                 }}</view>
                             </view>
                         </view>
-                        <view v-if="currModel.model_id == ModelIdEnum.GPT_4O">
+                        <view>
+                            <view class="mb-4">返回长度</view>
+                            <view class="flex items-center gap-x-2">
+                                <view class="flex-1">
+                                    <slider
+                                        :value="humanizeParams.max_tokens"
+                                        active-color="#0065FB"
+                                        background-color="#e5e5e5"
+                                        :block-size="16"
+                                        :min="1"
+                                        :max="getMaxTokens"
+                                        :step="1"
+                                        @change="changeHumanizeParams($event, 'max_tokens', 1)" />
+                                </view>
+                                <view class="text-xs flex-shrink-0 w-[80rpx] text-center">{{
+                                    humanizeParams.max_tokens
+                                }}</view>
+                            </view>
+                        </view>
+                        <view v-if="currModel.model_id != ModelIdEnum.DEEPSEEK">
                             <view class="mb-4">显示候选词</view>
                             <view class="flex items-center gap-x-2">
                                 <u-switch
@@ -407,6 +429,7 @@ const props = withDefaults(
         isNetwork?: boolean;
         isCoze?: boolean;
         isStaff?: boolean;
+        isHome?: boolean;
     }>(),
     {
         contentList: () => [],
@@ -426,6 +449,7 @@ const emit = defineEmits<{
     (event: "add-session"): void;
     (event: "update:fileList", value: any): void;
     (event: "update:network", value: boolean): void;
+    (event: "showHistory"): void;
 }>();
 
 const appStore = useAppStore();
@@ -514,13 +538,21 @@ const humanizeParams = reactive({
     context_num: 3, //上下文数量（1-5）
     top_logprobs: 10, //显示前几个候选词对数概率(0到20)
     logprobs: 0, //显示候选词 0关闭 1开启
+    max_tokens: 4096, //返回长度(1到999999)
 });
 
 const getMaxTemperature = computed(() => {
-    if (currModel.value.model_id == ModelIdEnum.GPT_4O) {
+    if (currModel.value.model_id == ModelIdEnum.DEEPSEEK) {
         return 2;
     }
     return 1;
+});
+
+const getMaxTokens = computed(() => {
+    if (currModel.value.model_id == ModelIdEnum.DEEPSEEK) {
+        return 4096;
+    }
+    return 10000;
 });
 
 const changeHumanizeParams = (event: any, key: string, step: number) => {
@@ -576,7 +608,21 @@ const contentRef = shallowRef();
 const userInput = ref("");
 const scrollTop = ref<number>(0);
 
-const { dynamicHeight } = useKeyboardHeight();
+const { dynamicHeight, hideKeyboard } = useKeyboardHeight();
+const bottomOffset = computed(() => {
+    const { platform } = uni.getSystemInfoSync();
+    const isHome = props.contentList.length == 0;
+    if (platform === "android") {
+        return isHome ? 58 : 40;
+    }
+    return isHome ? 90 : 40;
+});
+
+const spacerHeight = computed(() => {
+    if (dynamicHeight.value <= 0) return 0;
+    const height = dynamicHeight.value - bottomOffset.value;
+    return height > 0 ? height : 0;
+});
 
 const handleInput = (e: any) => {
     if (userInput.value.indexOf("@") == 0 && userInput.value.length == 1) {
@@ -644,14 +690,6 @@ const inputBlur = () => {
     textareaRef.value?.blur && textareaRef.value?.blur();
     uni.hideKeyboard();
 };
-const chatBottomHeight = ref(0);
-const getChatBottomHeight = async () => {
-    await nextTick();
-    const { safeAreaInsets } = uni.$u.sys();
-    getRect(".chatBottomBox", false, proxy).then((res: any) => {
-        chatBottomHeight.value = res.height + safeAreaInsets.bottom + 100;
-    });
-};
 
 const getChatConfig = async () => {
     if (!currModel.value?.model_id) {
@@ -698,12 +736,9 @@ watch(
     }
 );
 
-onMounted(() => {
-    getChatBottomHeight();
-});
-
 onUnmounted(() => {
     chatClose();
+    hideKeyboard();
 });
 
 defineExpose({
@@ -720,14 +755,17 @@ defineExpose({
     setAgentConfig: (params: any) => {
         setFormData(params, currAgent);
     },
+    hideKeyboard,
+    // 弹起键盘
+    openKeyboard: () => {
+        handleInputFocus();
+    },
 });
 </script>
 
 <style lang="scss" scoped>
-.chat-scroll-view {
-    .send-btn {
-        @apply w-[60rpx] h-[60rpx] rounded-full flex items-center justify-center;
-    }
+.send-btn {
+    @apply w-[60rpx] h-[60rpx] rounded-full flex items-center justify-center;
 }
 .agent-item {
     @apply flex gap-x-4 items-center bg-white rounded-[24rpx] p-[24rpx] border border-solid border-[#EFEFEF];

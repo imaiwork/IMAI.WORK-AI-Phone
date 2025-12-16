@@ -33,7 +33,24 @@ class ShanjianVideoSettingController extends BaseApiController
         try {
             $params = (new ShanjianVideoSettingValidate())->post()->goCheck('add');
 
-            $result = ShanjianVideoSettingLogic::add($params);
+            $params['shanjian_type'] =  $params['shanjian_type'] ?? 1;
+
+            switch ( $params['shanjian_type']){
+                case 1:
+                    $result = ShanjianVideoSettingLogic::add($params);
+                    break;
+                case 2:
+                    $result = ShanjianVideoSettingLogic::addType2($params);
+                    break;
+                case 3:
+                    $result = ShanjianVideoSettingLogic::addType3($params);
+                    break;
+               case 4:
+                    $result = ShanjianVideoSettingLogic::addType4($params);
+                    break;
+                default:
+                    return $this->fail('不支持的闪剪类型');
+            }
 
             if ($result) {
                 return $this->data(ShanjianVideoSettingLogic::getReturnData());

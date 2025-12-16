@@ -156,7 +156,7 @@
         :z-index="1001"
         @confirm="handleDeleteTask" />
     <video-preview
-        v-model:show="showVideoPreview"
+        v-model="showVideoPreview"
         title="视频预览"
         :poster="detailData.detail?.pic"
         :video-url="detailData.detail?.material_url" />
@@ -165,6 +165,7 @@
 <script setup lang="ts">
 import { deleteDeviceTaskCalendar, getDeviceTaskSubtasks } from "@/api/device";
 import { useDevice } from "@/ai_modules/device/hooks/useDevice";
+import VideoPreview from "@/components/video-preview/video-preview.vue";
 
 enum TaskTypeEnum {
     UNKNOWN = 0,

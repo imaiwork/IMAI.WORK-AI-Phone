@@ -12,8 +12,7 @@
                             description: detail.description,
                         }"
                         :is-lock="isReceiving"
-                        @change-scene="changeScene"
-                        @success="getSliderParams" />
+                        @change-scene="changeScene" />
                 </div>
             </ElAside>
             <div class="grow h-full relative rounded-xl py-4">
@@ -90,7 +89,7 @@ const { userTokens, userInfo, isLogin } = toRefs(userStore);
 const getSceneTokens = userStore.getTokenByScene(TokensSceneEnum.SCENE_CHAT)?.score;
 
 const route = useRoute();
-
+const robotId = ref("");
 const detail = reactive<Record<string, any>>({
     id: "",
     name: "",
@@ -105,8 +104,10 @@ const sidebarConfigRef = shallowRef<InstanceType<typeof SidebarConfig>>();
 
 const loading = ref(false);
 
-const changeScene = () => {
+const changeScene = (data: any) => {
     chatContentList.value = [];
+    robotId.value = data.assistant_id;
+    getDetail();
 };
 
 //  聊天内容区 S
@@ -142,12 +143,6 @@ const handleConfirmKnb = (val: any) => {
         chatPostParams.indexid = undefined;
         chatPostParams.rerank_min_score = undefined;
     }
-};
-
-//
-const getSliderParams = (data: any) => {
-    fileLists.value = sidebarConfigRef.value.fileLists || [];
-    contentPost("", false, true);
 };
 
 // 获取聊天记录
@@ -318,7 +313,6 @@ const contentPost = async (userInput?: any, isNewChat: boolean = false, isSlider
         userStore.toggleShowLogin();
         return;
     }
-    await sidebarConfigRef.value?.formValidate();
     if (userTokens.value <= 0) {
         feedback.msgPowerInsufficient();
         return;
@@ -354,7 +348,6 @@ const contentPost = async (userInput?: any, isNewChat: boolean = false, isSlider
         await chatRobotSendTextStream(
             {
                 message: chat.getText() || userInput || "",
-                message_ext: JSON.stringify(sidebarConfigRef.value?.formData),
                 assistant_id: route.query.id,
                 task_id: taskId.value,
                 ...chatPostParams,
@@ -461,7 +454,7 @@ const chatClose = (index?: number) => {
 
 const getDetail = async () => {
     const data = await robotDetail({
-        assistant_id: route.query.id,
+        assistant_id: robotId.value || route.query.id,
     });
     Object.keys(detail).forEach((key) => {
         //@ts-ignore
@@ -470,6 +463,11 @@ const getDetail = async () => {
 };
 
 const init = async () => {
+    if (!isLogin.value) {
+        replaceState({
+            task_id: "",
+        });
+    }
     try {
         taskId.value = route.query.task_id;
         if (!isReceiving.value) {

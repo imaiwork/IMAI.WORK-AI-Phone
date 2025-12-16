@@ -62,7 +62,9 @@
                         }">
                         <div class="grow overflow-hidden relative">
                             <div ref="toolbarContainer"></div>
-                            <svg ref="mindMapContainer" class="w-full h-full"></svg>
+                            <div ref="mindMapContainer" class="w-full h-full">
+                                <svg ref="mindMapSvg" class="w-full h-full"></svg>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -100,7 +102,8 @@ const formData = reactive({
     prompt_id: ScenePromptEnum.AI_MIND_MAP,
 });
 
-const mindMapContainer = shallowRef(null);
+const mindMapContainer = shallowRef<HTMLDivElement>(null);
+const mindMapSvg = shallowRef<SVGSVGElement>(null);
 const { markmap, toolbarContainer, isFullscreen, mindMapInit, mindMapFit, mindMapExportAsPNG } = useMindMap();
 
 const handleExample = async () => {
@@ -158,7 +161,7 @@ const getDetail = async () => {
 };
 
 const initMindMap = async () => {
-    mindMapInit(mindMapContainer.value);
+    mindMapInit(mindMapSvg.value);
     await nextTick();
     // formData.reply 可能包含```markdown 和```，需要去除
     mindMapFit(formData.reply.replace(/```markdown/g, "").replace(/```/g, ""));

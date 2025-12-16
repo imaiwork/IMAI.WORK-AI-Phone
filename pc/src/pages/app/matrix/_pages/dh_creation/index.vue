@@ -113,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { getDigitalHumanList, deleteDigitalHuman } from "@/api/redbook";
+import { getDigitalHumanList, deleteDigitalHuman } from "~/api/matrix";
 import Empty from "@/pages/app/matrix/_components/empty.vue";
 import { ThemeEnum } from "@/enums/appEnums";
 import { SidebarTypeEnum } from "@/pages/app/matrix/_enums";

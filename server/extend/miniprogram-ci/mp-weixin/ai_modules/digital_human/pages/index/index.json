@@ -6,8 +6,8 @@
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "empty": "../../../../components/empty/empty",
+    "video-preview-v2": "../../../../components/video-preview-v2/video-preview-v2",
     "choose-model": "../../components/choose-model/choose-model",
-    "video-item": "../../components/video-item/video-item",
-    "video-preview-v2": "../../components/video-preview-v2/video-preview-v2"
+    "video-item": "../../components/video-item/video-item"
   }
 }

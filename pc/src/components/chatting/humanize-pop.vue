@@ -45,7 +45,7 @@
                             </ElInputNumber>
                         </div>
                     </ElFormItem>
-                    <ElFormItem label="词汇多样性">
+                    <ElFormItem label="词汇多样性" v-if="formData.model_id != ModelIdEnum.CLAUDE_SONNET_4_5">
                         <div class="flex items-center w-full gap-x-4">
                             <div class="flex-1">
                                 <ElSlider v-model="formData.top_p" :min="0" :max="1" :step="0.1" @change="saveConfig" />
@@ -60,7 +60,7 @@
                             </ElInputNumber>
                         </div>
                     </ElFormItem>
-                    <ElFormItem label="重复词频率" v-if="formData.model_id == ModelIdEnum.GPT_4O">
+                    <ElFormItem label="重复词频率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                         <div class="flex items-center w-full gap-x-4">
                             <div class="flex-1">
                                 <ElSlider
@@ -80,7 +80,7 @@
                             </ElInputNumber>
                         </div>
                     </ElFormItem>
-                    <ElFormItem label="特定词重复率" v-if="formData.model_id == ModelIdEnum.GPT_4O">
+                    <ElFormItem label="特定词重复率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                         <div class="flex items-center w-full gap-x-4">
                             <div class="flex-1">
                                 <ElSlider
@@ -121,7 +121,7 @@
                         </div>
                     </ElFormItem>
                     <!-- 显示前几个候选词对数概率 -->
-                    <ElFormItem label="显示前几个候选词对数概率" v-if="formData.model_id == ModelIdEnum.GPT_4O">
+                    <ElFormItem label="显示前几个候选词对数概率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                         <div class="flex items-center w-full gap-x-4">
                             <div class="flex-1">
                                 <ElSlider v-model="formData.top_logprobs" :min="0" :max="20" />
@@ -133,8 +133,21 @@
                                 :max="20"></ElInputNumber>
                         </div>
                     </ElFormItem>
+                    <!-- 返回长度 -->
+                    <ElFormItem label="返回长度">
+                        <div class="flex items-center w-full gap-x-4">
+                            <div class="flex-1">
+                                <ElSlider v-model="formData.max_tokens" :min="1" :max="getMaxTokens" />
+                            </div>
+                            <ElInputNumber
+                                v-model="formData.max_tokens"
+                                controls-position="right"
+                                :min="1"
+                                :max="getMaxTokens" />
+                        </div>
+                    </ElFormItem>
                     <!-- 显示候选词 -->
-                    <ElFormItem label="显示候选词" v-if="formData.model_id == ModelIdEnum.GPT_4O">
+                    <ElFormItem label="显示候选词" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
                         <ElSwitch v-model="formData.logprobs" :active-value="1" :inactive-value="0" />
                     </ElFormItem>
                 </ElForm>
@@ -159,7 +172,18 @@ const props = withDefaults(
     }
 );
 
-const formData = reactive<any>({
+const formData = reactive<{
+    top_p: number;
+    temperature: number;
+    presence_penalty: number;
+    frequency_penalty: number;
+    context_num: number;
+    top_logprobs: number;
+    logprobs: number;
+    model_id: ModelIdEnum;
+    model_sub_id: string;
+    max_tokens: number;
+}>({
     top_p: 0.5, //词汇多样性（0.01-1）
     temperature: 1, //结果相似性（0-2）
     presence_penalty: 0.1, //特定词重复率 (0-1)
@@ -167,15 +191,23 @@ const formData = reactive<any>({
     context_num: 3, //上下文数量（1-5）
     top_logprobs: 10, //显示前几个候选词对数概率(0到20)
     logprobs: 0, //显示候选词 0关闭 1开启
-    model_id: "",
+    model_id: ModelIdEnum.DEEPSEEK,
     model_sub_id: "",
+    max_tokens: 4096,
 });
 
 const getMaxTemperature = computed(() => {
-    if (formData.model_id == ModelIdEnum.DEEPSEEK_R1) {
+    if (formData.model_id == ModelIdEnum.DEEPSEEK) {
         return 2;
     }
     return 1;
+});
+
+const getMaxTokens = computed(() => {
+    if (formData.model_id == ModelIdEnum.DEEPSEEK) {
+        return 4096;
+    }
+    return 10000;
 });
 
 const getConfig = async () => {

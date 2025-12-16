@@ -35,11 +35,13 @@
 </template>
 
 <script setup lang="ts">
-import { getVideoTranscodeResult, videoTranscode } from "@/api/app";
 import { uploadFile } from "@/api/app";
 import { formatAudioTime } from "@/utils/util";
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
 import { useAppStore } from "@/stores/app";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+
+const { emit } = useEventBusManager();
 
 const appStore = useAppStore();
 const shanjianAuth = computed(() => appStore.getDigitalHumanConfig.shanjian_auth);
@@ -120,7 +122,7 @@ const stopCountdown = async () => {
                     duration: 3000,
                 });
                 uni.navigateBack();
-                uni.$emit("confirm", {
+                emit("confirm", {
                     type: ListenerTypeEnum.UPLOAD_AUTH_CAMERA,
                     data: {
                         ...res,

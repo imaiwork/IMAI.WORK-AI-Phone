@@ -505,7 +505,7 @@ const {
     params: {
         type: 0,
         status: "0,1",
-        model_version: DigitalHumanModelVersionEnum.CHANJING,
+        model_version: `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.STANDARD}`,
     },
 });
 

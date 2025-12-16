@@ -129,7 +129,11 @@ class CrawlingManualLogic extends SvBaseLogic
                     if (!$find->isEmpty()) {
                         continue;
                     }
-                    $recordData[] = [
+
+                    if(array_key_exists($tmp, $recordData)){
+                        continue;
+                    }
+                    $recordData[$tmp] = [
                         'user_id' => $task->user_id,
                         'task_id' => $task->id,
                         'clue_wechat' => $tmp,
@@ -139,7 +143,7 @@ class CrawlingManualLogic extends SvBaseLogic
                 }
             }
             unset($items);
-            return $recordData;
+            return array_values($recordData);
         } catch (\Exception $e) {
             throw new \Exception('读取失败: ' . $e->getMessage());
         }
@@ -193,7 +197,10 @@ class CrawlingManualLogic extends SvBaseLogic
             if (!$find->isEmpty()) {
                 continue;
             }
-            $recordData[] = [
+            if(array_key_exists($item['reg_wechat'], $recordData)){
+                continue;
+            }
+            $recordData[$item['reg_wechat']] = [
                 'user_id' => $task->user_id,
                 'task_id' => $task->id,
                 'clue_wechat' => $item['reg_wechat'],
@@ -202,7 +209,7 @@ class CrawlingManualLogic extends SvBaseLogic
             ];
         }
         unset($items);
-        return $recordData;
+        return array_values($recordData);
     }
 
 
@@ -327,6 +334,9 @@ class CrawlingManualLogic extends SvBaseLogic
                     $response = \app\common\service\ToolsService::Sv()->queryResult([
                         "string" => $record['clue_wechat'],
                     ]);
+                    if(isset($response['code']) && (int)$response['code'] === 10005){
+                        continue;
+                    }
                     if (isset($response['code']) && (int)$response['code'] === 10000) {
                         if (is_null($response['data'])) {
                             self::setLog($record['clue_wechat'] . '该账号还未开始验证');

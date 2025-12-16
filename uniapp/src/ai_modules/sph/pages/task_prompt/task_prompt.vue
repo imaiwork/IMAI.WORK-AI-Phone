@@ -38,11 +38,13 @@
 
 <script setup lang="ts">
 import { getScenePrompt as getScenePromptApi } from "@/api/app";
-
+import { useEventBusManager } from "@/hooks/useEventBusManager";
 enum GreetingContentSettingTypeEnum {
     ADD_FRIEND = "add_friends_prompt",
     PRIVATE_CHAT = "private_message_prompt",
 }
+
+const { emit } = useEventBusManager();
 
 const formData = reactive<any>({
     private_message_prompt: "",
@@ -62,7 +64,7 @@ const handleDefaultPrompt = () => {
 };
 
 const handleConfirm = () => {
-    uni.$emit("save", {
+    emit("save", {
         type: currentGreetingContentSettingType.value,
         prompt: formData[currentGreetingContentSettingType.value],
     });

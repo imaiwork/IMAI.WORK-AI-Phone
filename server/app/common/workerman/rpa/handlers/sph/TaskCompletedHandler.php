@@ -33,6 +33,8 @@ class TaskCompletedHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
+        } finally{
+            unset($content);
         }
     }
 
@@ -78,6 +80,8 @@ class TaskCompletedHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
+        } finally{
+            unset($content);
         }
     }
 }

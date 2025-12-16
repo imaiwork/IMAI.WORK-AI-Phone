@@ -77,6 +77,12 @@ class MnpSettingsLogic extends BaseLogic
         }else{
             ConfigService::set('mnp_setting', 'private_key', "");
         }
+
+        $path = 'ai_modules/ladder_player/pages/index/index';
+        $path = public_path() . 'uploads/images/' . md5($path) . '.png';
+        if (file_exists($path)) {
+            @unlink($path);
+        }
     }
 
     /**

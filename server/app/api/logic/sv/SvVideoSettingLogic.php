@@ -191,6 +191,49 @@ class SvVideoSettingLogic extends SvBaseLogic
                         }
                         $ai_type = $params['ai_type'] ?? 0;
                         $music_url = $musicItem['url'] ?? '';
+                        $content = $copywritingItem['content'] ?? '';
+                        if ($content != '' && $model_version == 7) {
+                            $string = $content;
+                            $result = '';
+                            $length = mb_strlen($string);
+
+                            for ($i = 0; $i < $length; $i++) {
+                                $char = mb_substr($string, $i, 1);
+                                $codePoint = mb_ord($char);
+
+                                // 定义各个范围
+                                if ($codePoint >= 0x1F600 && $codePoint <= 0x1F64F) { // 表情符号
+                                    continue;
+                                }
+                                if ($codePoint >= 0x1F300 && $codePoint <= 0x1F5FF) { // 杂项符号和象形文字
+                                    continue;
+                                }
+                                if ($codePoint >= 0x1F680 && $codePoint <= 0x1F6FF) { // 交通工具和地图符号
+                                    continue;
+                                }
+                                if ($codePoint >= 0x1F700 && $codePoint <= 0x1F77F) { // Alchemical Symbols (炼金术符号)
+                                    continue;
+                                }
+                                if ($codePoint >= 0x1F900 && $codePoint <= 0x1F9FF) { // 补充象形文字
+                                    continue;
+                                }
+                                if ($codePoint >= 0x2600 && $codePoint <= 0x26FF) { // 杂项符号
+                                    continue;
+                                }
+                                if ($codePoint >= 0x2700 && $codePoint <= 0x27BF) { // Dingbats
+                                    continue;
+                                }
+                                if ($codePoint >= 0x1F1E6 && $codePoint <= 0x1F1FF) { // 区域标志符号
+                                    continue;
+                                }
+                                if ($codePoint >= 0x1F3FB && $codePoint <= 0x1F3FF) { // Emoji 修饰符
+                                    continue;
+                                }
+                                $result .= $char;
+                            }
+                            $content = $result;
+                        }
+
                         $taskItem = [
                             'user_id' => self::$uid,
                             'video_setting_id' => $setting->id,
@@ -208,7 +251,7 @@ class SvVideoSettingLogic extends SvBaseLogic
                             'voice_id' => $voice_id,
                             'voice_name' => $voiceItem['name'] ?? '',
                             'voice_urls' => $voiceItem['voice_urls'] ?? '',
-                            'msg' => $copywritingItem['content'] ?? '',
+                            'msg' => $content,
                             'poi' => $params['poi'] ?? '',
                             'clip_type' => $clipItem['type'] ?? 1,
                             'ai_type' => $ai_type,

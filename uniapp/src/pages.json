@@ -235,6 +235,28 @@
 					"meta": {
 						"auth": true
 					}
+				},
+				{
+					"path": "pages/creation/creation",
+					"style": {
+						"navigationBarTitleText": "我的创作库",
+						"disableScroll": true
+					},
+					"meta": {
+						"share": true,
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/material_library/material_library",
+					"style": {
+						"navigationBarTitleText": "素材库",
+						"disableScroll": true
+					},
+					"meta": {
+						"share": true,
+						"auth": true
+					}
 				}
 			]
 		},
@@ -254,34 +276,23 @@
 					}
 				},
 				{
-					"path": "pages/video_works/video_works",
-					"style": {
-						"navigationBarTitleText": "我的作品",
-						"enablePullDownRefresh": false,
-						"navigationStyle": "custom",
-						"disableScroll": true
-					},
-					"meta": {
-						"share": true
-					}
-				},
-				{
 					"path": "pages/video_upload/video_upload",
 					"style": {
 						"navigationBarTitleText": "视频上传",
 						"navigationBarBackgroundColor": "#F9FAFB"
 					},
 					"meta": {
-						"share": true
+						"auth": true
 					}
 				},
 				{
-					"path": "pages/video_create/video_create",
+					"path": "pages/szr_create/szr_create",
 					"style": {
 						"navigationBarTitleText": "数字人纯口播视频"
 					},
 					"meta": {
-						"share": true
+						"share": true,
+						"auth": true
 					}
 				},
 				{
@@ -293,7 +304,7 @@
 						"disableScroll": true
 					},
 					"meta": {
-						"share": true
+						"auth": true
 					}
 				},
 				{
@@ -302,7 +313,7 @@
 						"navigationBarTitleText": "音频管理"
 					},
 					"meta": {
-						"share": true
+						"auth": true
 					}
 				},
 				{
@@ -311,7 +322,7 @@
 						"navigationBarTitleText": "选择音乐"
 					},
 					"meta": {
-						"share": true
+						"auth": true
 					}
 				},
 				{
@@ -323,17 +334,17 @@
 						"disableScroll": true
 					},
 					"meta": {
-						"share": true
+						"auth": true
 					}
 				},
 				{
 					"path": "pages/ai_copywriter/ai_copywriter",
 					"style": {
-						"navigationBarTitleText": "输入文案",
+						"navigationBarTitleText": "AI生成文案",
 						"navigationBarBackgroundColor": "#F9FAFB"
 					},
 					"meta": {
-						"share": true
+						"auth": true
 					}
 				},
 				{
@@ -342,7 +353,7 @@
 						"navigationBarTitleText": "剪辑风格选择"
 					},
 					"meta": {
-						"share": true
+						"auth": true
 					}
 				},
 				{
@@ -354,7 +365,7 @@
 						"disableScroll": true
 					},
 					"meta": {
-						"share": true
+						"auth": true
 					}
 				},
 				{
@@ -366,7 +377,7 @@
 						"disableScroll": true
 					},
 					"meta": {
-						"share": true
+						"auth": true
 					}
 				},
 				{
@@ -377,7 +388,7 @@
 						"disableScroll": true
 					},
 					"meta": {
-						"share": true
+						"auth": true
 					}
 				},
 				{
@@ -387,6 +398,9 @@
 						"enablePullDownRefresh": false,
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -395,14 +409,19 @@
 						"navigationBarTitleText": "输入文案",
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
 					"path": "pages/montage_ai_copywriter/montage_ai_copywriter",
 					"style": {
 						"navigationBarTitleText": "生成文案",
-						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -420,6 +439,9 @@
 						"enablePullDownRefresh": false,
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -438,6 +460,9 @@
 						"enablePullDownRefresh": false,
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -447,6 +472,76 @@
 						"enablePullDownRefresh": false,
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/sora_create/sora_create",
+					"style": {
+						"navigationBarTitleText": "一句话生成视频",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/sora_ai_copywriter/sora_ai_copywriter",
+					"style": {
+						"navigationBarTitleText": "生成视频介绍"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/montage_person_create/montage_person_create",
+					"style": {
+						"navigationBarTitleText": "真人口播视频智剪",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/montage_material_create/montage_material_create",
+					"style": {
+						"navigationBarTitleText": "素材混剪",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/montage_material_group/montage_material_group",
+					"style": {
+						"navigationBarTitleText": "编辑图组",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/montage_news_create/montage_news_create",
+					"style": {
+						"navigationBarTitleText": "新闻体视频",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				}
 			]
@@ -669,6 +764,9 @@
 						"navigationStyle": "custom",
 						"enablePullDownRefresh": false,
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -678,6 +776,9 @@
 						"navigationStyle": "custom",
 						"enablePullDownRefresh": false,
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -687,12 +788,18 @@
 						"navigationStyle": "custom",
 						"enablePullDownRefresh": false,
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
 					"path": "pages/task_prompt/task_prompt",
 					"style": {
 						"navigationBarTitleText": "AI提示词设置"
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -701,6 +808,9 @@
 						"navigationBarTitleText": "线索词",
 						"navigationStyle": "custom",
 						"enablePullDownRefresh": false
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -710,6 +820,9 @@
 						"navigationStyle": "custom",
 						"enablePullDownRefresh": false,
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -717,6 +830,9 @@
 					"style": {
 						"navigationBarTitleText": "AI生成线索词",
 						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
 					}
 				}
 			]
@@ -779,24 +895,36 @@
 						"navigationBarTitleText": "创建任务",
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
 					"path": "pages/create_private_take/create_private_take",
 					"style": {
 						"navigationBarTitleText": "私聊接管"
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
 					"path": "pages/create_account_building/create_account_building",
 					"style": {
 						"navigationBarTitleText": "养号"
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
 					"path": "pages/task_img_group/task_img_group",
 					"style": {
 						"navigationBarTitleText": "编辑图组"
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -804,31 +932,103 @@
 					"style": {
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
 					"path": "pages/task_ai_copywriter/task_ai_copywriter",
 					"style": {
-						"navigationStyle": "custom",
+						"navigationBarTitleText": "AI生成文案",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
 					"path": "pages/create_add_wechat/create_add_wechat",
 					"style": {
 						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
 					"path": "pages/wechat_clue/wechat_clue",
 					"style": {
 						"navigationBarTitleText": "获客线索"
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
 					"path": "pages/device_choose/device_choose",
 					"style": {
 						"navigationBarTitleText": "设备选择"
+					},
+					"meta": {
+						"auth": true
+					}
+				}
+			]
+		},
+		{
+			"root": "ai_modules/drawing",
+			"pages": [
+				{
+					"path": "pages/index/index",
+					"style": {
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true,
+						"share": true
+					}
+				},
+				{
+					"path": "pages/create_task/create_task",
+					"style": {
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/puzzle_detail/puzzle_detail",
+					"style": {
+						"navigationBarTitleText": "拼图详情",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/puzzle_ai_copywriter/puzzle_ai_copywriter",
+					"style": {
+						"navigationBarTitleText": "AI生成文案",
+						"navigationBarBackgroundColor": "#F9FAFB",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/puzzle_copywriter/puzzle_copywriter",
+					"style": {
+						"navigationBarTitleText": "输入文案",
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				}
 			]
