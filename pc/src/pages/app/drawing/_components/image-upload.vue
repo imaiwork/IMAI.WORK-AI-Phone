@@ -19,7 +19,7 @@
                     <div class="border border-primary rounded-md w-full h-full overflow-hidden relative" v-else>
                         <img :src="formData[imgKey]" class="w-full h-full object-contain" />
                         <div class="absolute top-1 right-1 cursor-pointer w-6 h-6" @click.stop="formData[imgKey] = ''">
-                            <close-btn />
+                            <close-btn :theme="ThemeEnum.DARK" />
                         </div>
                         <div class="absolute bottom-3 w-full flex justify-center">
                             <div
@@ -40,6 +40,8 @@
 </template>
 
 <script setup lang="ts">
+import { ThemeEnum } from "@/enums/appEnums";
+
 interface Props {
     maxSize?: number;
     minSize?: number;
@@ -53,7 +55,7 @@ const props = withDefaults(defineProps<Props>(), {
     label: "",
     maxSize: 5,
     minSize: 0,
-    ratioSize: () => [2, 1],
+    ratioSize: () => [0, 0],
     limit: 1,
     content: "上传图片",
     imgKey: "image",

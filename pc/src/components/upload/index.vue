@@ -122,7 +122,7 @@ export default defineComponent({
         // 图片分辨率
         imageResolution: {
             type: Array as unknown as PropType<[number, number]>,
-            default: () => [360, 4096],
+            default: () => [4096, 4096],
         },
         // 视频分辨率
         videoMaxWidth: {
@@ -194,8 +194,6 @@ export default defineComponent({
 
             // 图片尺寸校验
             const validateImageSize = async () => {
-                if (ratioSize[0] <= 0 || ratioSize[1] <= 0) return true;
-
                 return new Promise<boolean>((resolve) => {
                     const img = new Image();
                     img.onload = () => {
@@ -215,6 +213,7 @@ export default defineComponent({
             };
 
             const checkAspectRatio = (width: number, height: number) => {
+                if (ratioSize[0] <= 0 || ratioSize[1] <= 0) return true;
                 // 检查输入是否为有效的正数
                 if (typeof width !== "number" || typeof height !== "number" || width <= 0 || height <= 0) {
                     return false;
