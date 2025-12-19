@@ -188,7 +188,7 @@ https://yijianshi.feishu.cn/wiki/K4VdwEtb7ikiOnkmv2ScIX67nGf?from=from_copylink
 
 ## 📢 特别通知
 
-**`******FORK大于3次，可免费获得商业授权码******`**
+**`******提交Pull Requests大于1次，评审通过可免费获得商业授权码，如多次，每次可获得最少5000元-10万不等的二次开发合并******`**
 
 
 ### Commit 类型
