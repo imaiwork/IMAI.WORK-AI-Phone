@@ -4,11 +4,11 @@
         title="请选择音色"
         custom-class="bg-[#F9FAFB]"
         :is-disabled-touch="true"
-        show-close>
+        show-close-btn>
         <template #content>
             <view class="h-full flex flex-col">
                 <navigator
-                    url="/ai_modules/digital_human/pages/tone_clone/tone_clone"
+                    :url="`/ai_modules/digital_human/pages/tone_clone/tone_clone?model_version=${modelVersion}`"
                     hover-class="none"
                     class="flex items-center justify-center gap-x-2 mx-[32rpx] bg-white rounded-[24rpx] h-[140rpx] mt-2">
                     <image src="@/ai_modules/digital_human/static/icons/add.svg" class="w-[32rpx] h-[32rpx]"></image>

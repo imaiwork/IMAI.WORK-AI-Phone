@@ -1617,23 +1617,28 @@ class KnowledgeLogic extends ApiLogic
             $num = 0;
             $texts = '';
             $robotTexts = '';
+            $emb_setting = [];
             if (isset($params['robot_id']) && $params['robot_id'] != 0 && $params['robot_id'] != '0') {
-                $robot_set = KbRobot::where('id', $params['robot_id'])->value('roles_prompt');
-                if (!empty($robot_set)) {
-                    $robotTexts = "你的角色设定是：" . $robot_set . "\n";
+                $robot = KbRobot::where('id', $params['robot_id'])->findOrEmpty();
+                if (!$robot->isEmpty()) {
+                    $robot_set = $robot->roles_prompt;
+                    if (!empty($robot_set)) {
+                        $robotTexts = "你的角色设定是：" . $robot_set . "\n";
+                    }
+                    $emb_setting = ['search_mode' => $robot->search_mode, 'search_tokens' => $robot->search_tokens, 'search_similar' => $robot->search_similar];
                 }
             }
             if (is_array($params['kb_id']) && count($params['kb_id']) > 1) {
 
                 $num   = 1;
                 foreach ($params['kb_id'] as $kb_id) {
-                    $texts .= '知识库' . $num . '：' . \app\api\logic\kb\KbKnowLogic::embAiChatSearch($kb_id, $params['message']);
+                    $texts .= '知识库' . $num . '：' . \app\api\logic\kb\KbKnowLogic::embAiChatSearch($kb_id, $params['message'], $emb_setting);
                     $num++;
                 }
             } else if (is_array($params['kb_id']) && count($params['kb_id']) == 1) {
-                $texts = \app\api\logic\kb\KbKnowLogic::embAiChatSearch($params['kb_id'][0], $params['message']);
+                $texts = \app\api\logic\kb\KbKnowLogic::embAiChatSearch($params['kb_id'][0], $params['message'], $emb_setting);
             } else {
-                $texts = \app\api\logic\kb\KbKnowLogic::embAiChatSearch($params['kb_id'], $params['message']);
+                $texts = \app\api\logic\kb\KbKnowLogic::embAiChatSearch($params['kb_id'], $params['message'], $emb_setting);
             }
             $num = $num - 1;
             if (($texts == '未找到匹配内容' || substr_count($texts, '未找到匹配内容') == $num) && isset($params['robot_id'])) {

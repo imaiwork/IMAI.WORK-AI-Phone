@@ -62,9 +62,6 @@ class ToolsLogic extends BaseLogic
                     $task_id = generate_unique_task_id();
                     //记录日志
                     AccountLogLogic::recordUserTokensLog(true, $params['user_id'], $tokenCode, $points, $task_id);
-                } else {
-                    self::setError('扣费有问题');
-                    return false;
                 }
                 if (isset($res['data']['content']) && count($res['data']['content']) > 0) {
                     self::$returnData = $res['data']['content'];
@@ -106,12 +103,8 @@ class ToolsLogic extends BaseLogic
                     //token扣除
                     User::userTokensChange($params['user_id'], $points);
                     $extra = ['生成文案条数' => $num, '算力单价' => $unit, '实际消耗算力' => $points];
-
                     //记录日志
                     AccountLogLogic::recordUserTokensLog(true, $params['user_id'], $tokenCode, $points, $task_id, $extra);
-                } else {
-                    self::setError('扣费有问题');
-                    return false;
                 }
                 if (isset($res['data']) && count($res['data']) > 0) {
                     self::$returnData = $res['data'];
@@ -250,9 +243,6 @@ class ToolsLogic extends BaseLogic
 
                     //记录日志
                     AccountLogLogic::recordUserTokensLog(true, $params['user_id'], $tokenCode, $points, $task_id, $extra);
-                } else {
-                    self::setError('扣费有问题');
-                    return false;
                 }
                 if (isset($res['data']) && count($res['data']) > 0) {
                     self::$returnData = $res['data'];

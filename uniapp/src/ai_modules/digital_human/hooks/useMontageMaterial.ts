@@ -88,7 +88,6 @@ export default function useMontageMaterial(options: {
                 sourceType: ["album"],
                 extension,
             });
-
             const fileList = [];
             for (const file of tempFiles) {
                 const fileExt = file.name.split(".").pop();
@@ -139,7 +138,7 @@ export default function useMontageMaterial(options: {
                 }
             }
             if (fileList.length === 0) {
-                // uni.$u.toast(`所选${isImage ? "图片" : "视频"}素材均不符合条件，重新上传`);
+                uni.$u.toast(`所选${isImage ? "图片" : "视频"}素材均不符合条件，重新上传`);
                 return;
             }
 
@@ -161,6 +160,14 @@ export default function useMontageMaterial(options: {
             async function handleAddMaterial(result: any) {
                 try {
                     const { item, coverRes, fileRes } = result;
+
+                    addedMaterials.push({
+                        name: item.name,
+                        url: fileRes.uri,
+                        type: item.materialType,
+                        pic: coverRes.uri,
+                        duration: item.duration,
+                    });
                     const addRes = await addMaterialLibrary({
                         name: item.name,
                         size: item.size,
@@ -172,14 +179,9 @@ export default function useMontageMaterial(options: {
                         duration: item.duration || 0,
                     });
 
-                    addedMaterials.push({
-                        name: item.name,
-                        url: fileRes.uri,
-                        type: item.materialType,
-                        pic: coverRes.uri,
-                        duration: item.duration,
-                        id: addRes.id,
-                    });
+                    if (addRes.id) {
+                        addedMaterials[addedMaterials.length - 1].id = addRes.id;
+                    }
                 } catch (error) {
                     console.error("添加素材失败:", error);
                 }
@@ -201,12 +203,12 @@ export default function useMontageMaterial(options: {
                             showUploadProgress.value = false;
                         }
                     }
-                    await handleAddMaterial(data);
+                    handleAddMaterial(data);
                 }
                 uni.hideLoading();
             } else {
                 for (const data of uploadedFilesData) {
-                    await handleAddMaterial(data);
+                    handleAddMaterial(data);
                 }
             }
 

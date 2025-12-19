@@ -4,6 +4,7 @@
         title="素材选择"
         show-close-btn
         :is-disabled-touch="true"
+        height="70%"
         custom-class="bg-[#F9FAFB]">
         <template #content>
             <view class="h-full flex flex-col">
@@ -50,7 +51,7 @@
                     </z-paging>
                 </view>
                 <view class="flex items-center justify-between gap-2 mt-[20rpx] mb-4 px-4">
-                    <view class="flex items-center gap-x-2" @click="toggleSelect">
+                    <view class="flex items-center gap-x-2" @click="toggleSelect" v-if="props.multiple">
                         <view class="w-[32rpx] h-[32rpx]">
                             <image
                                 v-if="chooseLists.length > 0 && chooseLists.length == dataLists.length"
@@ -63,6 +64,7 @@
                     </view>
                     <view
                         class="text-white font-bold text-[30rpx] rounded-[20rpx] bg-primary h-[90rpx] w-[460rpx] flex items-center justify-center"
+                        :class="[!props.multiple ? 'w-full' : 'w-[460rpx]']"
                         @click="confirm">
                         确定选择
                     </view>
@@ -75,7 +77,12 @@
 <script setup lang="ts">
 import { getMaterialLibraryList } from "@/api/material";
 
-const props = defineProps<{ modelValue: boolean; limit: number; type: "video" | "image" }>();
+const props = withDefaults(
+    defineProps<{ modelValue: boolean; limit: number; type: "video" | "image"; multiple?: boolean }>(),
+    {
+        multiple: true,
+    }
+);
 
 const emit = defineEmits<{ (e: "update:modelValue", value: boolean): void; (e: "select", value: any[]): void }>();
 
@@ -109,14 +116,22 @@ const isChoose = (data: any) => {
 };
 
 const handleSelect = (data: any) => {
-    if (isChoose(data)) {
-        chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
-    } else {
-        if (chooseLists.value.length >= props.limit) {
-            uni.$u.toast(`最多选择${props.limit}个素材`);
-            return;
+    if (props.multiple === false) {
+        if (isChoose(data)) {
+            chooseLists.value = [];
+        } else {
+            chooseLists.value = [data];
         }
-        chooseLists.value.push(data);
+    } else {
+        if (isChoose(data)) {
+            chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
+        } else {
+            if (chooseLists.value.length >= props.limit) {
+                uni.$u.toast(`最多选择${props.limit}个素材`);
+                return;
+            }
+            chooseLists.value.push(data);
+        }
     }
 };
 
@@ -130,7 +145,7 @@ const toggleSelect = () => {
 
 const confirm = () => {
     if (chooseLists.value.length == 0) {
-        uni.$u.toast("至少选择一个视频");
+        uni.$u.toast(`至少选择一个${props.type === "video" ? "视频" : "图片"}`);
         return;
     }
     show.value = false;

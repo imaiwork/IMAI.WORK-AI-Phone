@@ -168,17 +168,16 @@
                                         :src="item.pic"
                                         class="w-full h-full rounded-[12rpx]"
                                         mode="aspectFill"></image>
-                                    <view
-                                        class="absolute bottom-0 h-[40rpx] w-full bg-[#00000080] flex items-center justify-center z-[88]">
-                                        <image
-                                            src="@/ai_modules/digital_human/static/icons/pic.svg"
-                                            class="w-[24rpx] h-[24rpx]"></image>
-                                    </view>
                                 </view>
                                 <view
                                     class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
                                     @click="handleDeleteMaterial(item.id)">
                                     <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                </view>
+                                <view class="absolute bottom-2 w-full z-[33] flex justify-center">
+                                    <view class="dh-version-name" @click.stop="handleReplaceMaterial(index)">
+                                        替换
+                                    </view>
                                 </view>
                             </view>
                             <view
@@ -231,8 +230,8 @@
                                     class="common-type-item"
                                     v-for="(item, index) in videoDurations"
                                     :key="index"
-                                    :class="{ active: formData.videoDuration == item.value }"
-                                    @click="formData.videoDuration = item.value">
+                                    :class="{ active: currVideoDurationIndex == index }"
+                                    @click="currVideoDurationIndex = index">
                                     {{ item.label }}
                                 </view>
                             </view>
@@ -491,7 +490,7 @@ const formData = reactive<{
     videoStyle: 1,
     videoResolution: 1,
     aspect_ratio: "16:9",
-    videoDuration: 1,
+    videoDuration: 10,
     videoSwitchFrequency: 1,
     video_count: 1,
     ai_type: 1,
@@ -580,7 +579,14 @@ const videoProportions = [
 ];
 
 // 视频时长
-const videoDurations = [{ label: "10s", value: 1 }];
+const videoDurations = [
+    { label: "10s（普通）", value: 10, model: "sora-2" },
+    { label: "15s（普通）", value: 15, model: "sora-2" },
+    { label: "10s（PRO）", value: 10, model: "sora-2-pro" },
+    { label: "15s（PRO）", value: 15, model: "sora-2-pro" },
+    { label: "25s（PRO）", value: 25, model: "sora-2-pro" },
+];
+const currVideoDurationIndex = ref<number>(0);
 
 // 镜头切换频率
 const videoSwitchFrequencies = [
@@ -595,6 +601,7 @@ const newVideoTypeVal = ref("");
 const maxDescLength = 500;
 // 是否使用素材
 const isMaterial = ref(0);
+const replaceMaterialIndex = ref(-1);
 const showCreateSuccess = ref(false);
 const showTokensCost = ref(false);
 // 创建结果
@@ -724,9 +731,19 @@ const handleCustomVideoTypeConfirm = () => {
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     count: 1,
     onSuccess: (materials: any[]) => {
-        formData.materialList = formData.materialList.concat(materials);
+        if (replaceMaterialIndex.value !== -1) {
+            formData.materialList[replaceMaterialIndex.value] = materials[0];
+        } else {
+            formData.materialList = formData.materialList.concat(materials);
+        }
+        replaceMaterialIndex.value = -1;
     },
 });
+
+const handleReplaceMaterial = (index: number) => {
+    replaceMaterialIndex.value = index;
+    uploadAndProcessFiles("image");
+};
 
 const previewMaterial = (item: any) => {
     const { pic } = item;
@@ -783,8 +800,9 @@ const handleCreateVideo = async () => {
             style: videoStyles.find((item) => item.value == formData.videoStyle)?.label,
             frequency: videoSwitchFrequencies.find((item) => item.value == formData.videoSwitchFrequency)?.label,
             aspect_ratio: formData.aspect_ratio,
-            duration: formData.videoDuration,
+            duration: videoDurations[currVideoDurationIndex.value].value,
             number: formData.video_count,
+            model: videoDurations[currVideoDurationIndex.value].model,
         });
         uni.hideLoading();
         createResult.value = res;

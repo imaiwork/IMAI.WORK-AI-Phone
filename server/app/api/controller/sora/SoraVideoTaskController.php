@@ -27,6 +27,7 @@ class SoraVideoTaskController extends BaseApiController
             $key = md5(json_encode($data));
             $val = cache($key);
             if ($val){
+                Log::channel('sora')->write('重复请求');
                 return $this->fail('重复请求');
             }
             cache($key, 1, 20);
@@ -71,18 +72,6 @@ class SoraVideoTaskController extends BaseApiController
             return $this->data(SoraVideoTaskLogic::getReturnData());
         }
         return $this->fail(SoraVideoTaskLogic::getError());
-    }
-
-    /**
-     * 文案
-     * @return Json
-     * @author L
-     * @data 2024/6/12 14:04
-     */
-    public function copywriting()
-    {
-        $params = $this->request->post();
-        return SoraVideoTaskLogic::copywriting($params) ? $this->data(SoraVideoTaskLogic::getReturnData()) : $this->fail(SoraVideoTaskLogic::getError());
     }
 
     /**

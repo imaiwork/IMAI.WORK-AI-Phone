@@ -70,6 +70,16 @@
                             </div>
                         </template>
                     </ElTableColumn>
+                    <ElTableColumn label="开始时间" width="120">
+                        <template #default="{ row }">
+                            {{ dayjs(row.start_time).format("YYYY-MM-DD") }}
+                        </template>
+                    </ElTableColumn>
+                    <ElTableColumn label="结束时间" width="120">
+                        <template #default="{ row }">
+                            {{ dayjs(row.end_time).format("YYYY-MM-DD") }}
+                        </template>
+                    </ElTableColumn>
                     <ElTableColumn prop="exec_day" label="已执行天数" min-width="120"> </ElTableColumn>
                     <ElTableColumn prop="create_time" label="创建时间" width="180"></ElTableColumn>
                     <ElTableColumn label="操作" width="120" fixed="right" align="right">
@@ -103,6 +113,7 @@
 </template>
 
 <script setup lang="ts">
+import dayjs from "dayjs";
 import { getManualAddWechatList, updateManualAddWechatStatus, deleteManualAddWechat } from "@/api/sph";
 import { SidebarTypeEnum } from "../../_enums/index";
 import CreatePanel from "./_components/create-panel.vue";

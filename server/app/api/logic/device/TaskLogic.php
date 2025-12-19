@@ -313,7 +313,10 @@ class TaskLogic extends ApiLogic
                     if (!$taskinfo) {
                         throw new \Exception('自动加好友任务不存在');
                     }
-                    SvCrawlingManualTask::where('id', $params['sub_task_id'])->select()->delete();
+                    $count = SvDeviceTask::where('sub_task_id', $params['sub_task_id'])->where('task_type',DeviceEnum::TASK_SOURCE_FRIENDS)->where('user_id', self::$uid)->count();
+                    if ($count == 1) {
+                        SvCrawlingManualTask::where('id', $params['sub_task_id'])->select()->delete();
+                    }
                     break;
 
                 case DeviceEnum::TASK_SOURCE_CLUES:

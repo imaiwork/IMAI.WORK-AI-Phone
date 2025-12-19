@@ -201,6 +201,11 @@
                                             src="@/ai_modules/digital_human/static/icons/video.svg"
                                             class="w-[24rpx] h-[24rpx]"></image>
                                     </view>
+                                    <view class="absolute bottom-4 w-full z-[89] flex justify-center">
+                                        <view class="dh-version-name" @click.stop="handleReplaceMaterial(index)">
+                                            替换
+                                        </view>
+                                    </view>
                                 </view>
                                 <view
                                     class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
@@ -304,14 +309,13 @@
                                 </view>
                                 <view class="flex items-center justify-between h-[106rpx]">
                                     <view class="text-[30rpx] font-bold">生成视频数量</view>
-                                    <view class="flex items-center gap-x-1" @click="handleStep(2)">
+                                    <view class="flex items-center gap-x-1">
                                         <view>
                                             共<text class="mx-1 text-primary font-bold">{{
                                                 formData.copywriterList.length
                                             }}</text
                                             >个
                                         </view>
-                                        <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
                                     </view>
                                 </view>
                             </view>
@@ -448,6 +452,9 @@ const isCharacter = ref(false);
 
 // 编辑文案索引
 const editCopywriterIndex = ref(-1);
+
+// 替换素材索引
+const replaceMaterialIndex = ref(-1);
 
 // 上传素材提示显示
 const showUploadTip = ref(false);
@@ -587,7 +594,12 @@ const {
     handleDeleteMaterial: handleDeleteMaterialFromHook,
 } = useMontageMaterial({
     onSuccess: (materials: any[]) => {
-        formData.materialList = formData.materialList.concat(materials);
+        if (replaceMaterialIndex.value !== -1) {
+            formData.materialList[replaceMaterialIndex.value] = materials[0];
+        } else {
+            formData.materialList = formData.materialList.concat(materials);
+        }
+        replaceMaterialIndex.value = -1;
     },
 });
 
@@ -620,6 +632,11 @@ const previewMaterial = (item: any) => {
         videoPreview.url = url;
         showVideoPreview.value = true;
     }
+};
+
+const handleReplaceMaterial = (index: number) => {
+    replaceMaterialIndex.value = index;
+    chooseUploadType();
 };
 
 const handleDeleteMaterial = (id: number) => {

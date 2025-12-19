@@ -119,7 +119,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="">
+                                <div class="" v-if="item.topic.length < 5">
                                     <ElButton type="primary" class="!h-[26px]" @click="handleAddTopic(index)"
                                         >添加话题</ElButton
                                     >

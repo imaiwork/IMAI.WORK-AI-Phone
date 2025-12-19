@@ -22,11 +22,11 @@
                             <div class="text-xs uppercase font-semibold" style="color: #6b7280">成本价/用户</div>
                             <div class="flex items-baseline mt-1">
                                 <span class="text-2xl font-bold" style="color: #f59e0b">{{
-                                    parsePrice(item.cast_unit).value
+                                    parsePrice(item.cast_price).value
                                 }}</span>
                                 <span class="mx-1" style="color: #6b7280">/</span>
                                 <span class="text-2xl font-bold" style="color: #0ea5e9">{{
-                                    parsePrice(item.unit).value
+                                    parsePrice(item.price).value
                                 }}</span>
                                 <span class="text-sm ml-1" style="color: #6b7280">{{
                                     parsePrice(item.unit).unit

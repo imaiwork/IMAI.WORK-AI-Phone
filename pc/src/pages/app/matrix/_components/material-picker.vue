@@ -49,7 +49,7 @@
                 :src="item.url"
                 class="w-full h-full object-cover rounded-md"
                 v-if="type == PublishTaskTypeEnum.VIDEO"
-                @click="handlePreviewVideo(item)"></video>
+                @click="handlePreviewVideo(item.url)"></video>
             <ElImage
                 v-else-if="type == PublishTaskTypeEnum.IMAGE"
                 :src="item.url"
@@ -211,7 +211,7 @@ const { DefineTemplate: DefineMaterialMenuTemplate, UseTemplate: MaterialTemplat
     @apply cursor-pointer rounded-md border border-app-border-1 flex flex-col items-center justify-center h-[150px] relative;
 }
 .change-material-btn {
-    @apply text-white text-[11px] mt-8 border border-[rgba(255,255,255,0.1)] shadow-[0_0_0_1px_rgba(0,0,0,0.24)] rounded-md w-full h-[26px] flex items-center justify-center;
+    @apply text-white text-[11px] border border-[rgba(255,255,255,0.1)] shadow-[0_0_0_1px_rgba(0,0,0,0.24)] rounded-md w-full h-[26px] flex items-center justify-center;
 }
 </style>
 <style lang="scss"></style>

@@ -174,14 +174,7 @@
                 <span class="text-[#B3B3B3] text-xs">免责声明：内容由AI大模型生成，请仔细甄别。</span>
             </div>
         </div>
-        <AddAudio
-            v-if="showAdd"
-            ref="addAudioRef"
-            @close="showAdd = false"
-            @success="
-                clearTimeout(loopTimer);
-                loopLists;
-            " />
+        <AddAudio v-if="showAdd" ref="addAudioRef" @close="showAdd = false" @success="resetLoop()" />
         <KnbBind v-if="showKnbBind" ref="knbBindRef" @close="showKnbBind = false" />
     </div>
 </template>
@@ -255,6 +248,11 @@ const loopLists = async () => {
         isLoop.value = false;
         clearTimeout(loopTimer.value);
     }
+};
+
+const resetLoop = () => {
+    clearTimeout(loopTimer.value);
+    loopLists();
 };
 
 const showKnbBind = ref(false);

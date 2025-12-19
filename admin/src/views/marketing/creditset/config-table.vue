@@ -28,9 +28,7 @@
                                 <span class="text-2xl font-bold" style="color: #0ea5e9">{{
                                     parsePrice(item.score).value
                                 }}</span>
-                                <span class="text-sm ml-1" style="color: #6b7280">{{
-                                    parsePrice(item.unit).unit
-                                }}</span>
+                                <span class="text-sm ml-1" style="color: #6b7280">{{ item.unit }}</span>
                             </div>
                         </div>
                         <div class="text-right">
@@ -43,6 +41,7 @@
                                     size="small"
                                     :step="2"
                                     v-input-number="{ decimal: 2, min: 0, max: 99999 }"></el-input>
+                                <div class="text-sm ml-1" style="color: #6b7280">{{ item.unit }}</div>
                             </p>
                         </div>
                     </div>

@@ -24,6 +24,8 @@
                         <el-option label="等待处理" value="1" />
                         <el-option label="生成中" value="2" />
                         <el-option label="已生成" value="3" />
+                        <el-option label="部分完成" value="4" />
+                        <el-option label="失败" value="5" />
                     </el-select>
                 </el-form-item>
                 <el-form-item label="创作时间">
@@ -70,6 +72,12 @@
                         </template>
                         <template v-else-if="row.status == 3">
                             <el-tag type="success">已生成</el-tag>
+                        </template>
+                        <template v-else-if="row.status == 4">
+                            <el-tag type="success">部分完成</el-tag>
+                        </template>
+                        <template v-else-if="row.status == 5">
+                            <el-tag type="danger">失败</el-tag>
                         </template>
                     </template>
                 </el-table-column>

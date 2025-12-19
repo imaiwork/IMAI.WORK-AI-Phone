@@ -9,7 +9,7 @@ export function useChatEventBus() {
         watch(refreshPayload, (payload) => {
             if (payload) {
                 callback(payload);
-                refreshPayload.value = null; // Reset after triggering
+                refreshPayload.value = null;
             }
         });
     };

@@ -24,7 +24,7 @@ export interface ChatHistoryItem {
  */
 export function useChatHistory() {
     const chatStore = useChatStore();
-    const { taskId, fetchChatHistory: loadChatHistory, resetScroll, chatScrollToBottom } = useChatManager();
+    const { taskId, fetchChatHistory: loadChatHistory, resetScroll, stopStream, chatScrollToBottom } = useChatManager();
     const { onHistoryRefresh } = useChatEventBus();
 
     // --- State ---
@@ -91,6 +91,8 @@ export function useChatHistory() {
      */
     const switchToSession = async (sessionId: string) => {
         if (currentSessionId.value === sessionId) return;
+        await stopStream();
+        chatStore.clearChat();
 
         // 设置当前会话ID
         chatStore.setTaskId(sessionId);

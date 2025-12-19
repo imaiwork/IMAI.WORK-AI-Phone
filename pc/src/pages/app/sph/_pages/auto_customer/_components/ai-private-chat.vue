@@ -15,7 +15,7 @@
         :show-close="false">
         <div class="-my-4">
             <div class="absolute w-6 h-6 top-[18px] right-[18px] z-[22]" @click="close">
-                <close-btn />
+                <close-btn :theme="ThemeEnum.DARK" />
             </div>
             <div class="text-[15px] text-white font-bold">AI提示词设置（私信内容）</div>
             <div class="mt-4">
@@ -41,6 +41,8 @@
 <script setup lang="ts">
 import { CopywritingTypeEnum } from "@/pages/app/_enums/chatEnum";
 import { useAppStore } from "@/stores/app";
+import { ThemeEnum } from "@/enums/appEnums";
+
 const emit = defineEmits(["close", "confirm"]);
 
 const appStore = useAppStore();

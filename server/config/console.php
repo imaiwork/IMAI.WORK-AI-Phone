@@ -58,6 +58,8 @@ return [
         //验证微信用户
         'wechat_verify' => 'app\common\command\WechatVerifyCron',
         'hd_puzzle_cron' => 'app\common\command\HdPuzzleCron',
+        //sora视频合成
+        'sora_video_task' => 'app\common\command\SoraVideoTaskCron',
     ],
 
     

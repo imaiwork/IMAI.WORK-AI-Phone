@@ -37,14 +37,16 @@
                                 <view
                                     class="flex items-center justify-center gap-x-2 py-[30rpx] flex-1"
                                     @click="toPage(PageKeyEnum.CREATE_TASK)">
-                                    <image src="/static/images/icons/add.svg" class="w-[32rpx] h-[32rpx]"></image>
+                                    <image src="/static/images/icons/add.svg" class="w-[32rpx] h-[32rpx] -ml-3"></image>
                                     <text class="font-bold text-[30rpx]">创建任务</text>
                                 </view>
                                 <view class="h-[1rpx] bg-[rgba(0,0,0,0.05)] flex-shrink-0 my-1"></view>
                                 <view
                                     class="flex items-center justify-center gap-x-2 py-[30rpx] flex-1"
                                     @click="toPage(PageKeyEnum.VIEW_SCHEDULE)">
-                                    <image src="/static/images/icons/calendar.svg" class="w-[32rpx] h-[32rpx]"></image>
+                                    <image
+                                        src="/static/images/icons/calendar.svg"
+                                        class="w-[32rpx] h-[32rpx] -ml-3"></image>
                                     <text class="font-bold text-[30rpx]">查看日程</text>
                                 </view>
                             </view>

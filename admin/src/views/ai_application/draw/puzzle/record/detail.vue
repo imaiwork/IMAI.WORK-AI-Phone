@@ -58,7 +58,6 @@
                 <el-table-column label="创建时间" prop="create_time" min-width="180" show-overflow-tooltip />
                 <el-table-column label="操作" width="120" fixed="right">
                     <template #default="{ row }">
-                        <el-button type="primary" link> 详情 </el-button>
                         <el-button
                             v-perms="['ai_application.draw.puzzle.record.detail/delete']"
                             type="danger"

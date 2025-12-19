@@ -119,13 +119,13 @@
                                         </view>
                                     </view>
                                     <view
-                                        class="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center bg-[#000000cc] z-[22]"
+                                        class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
                                         @click="handleDeleteVideo(index)">
                                         <u-icon name="close" size="20" color="#ffffff"></u-icon>
                                     </view>
-                                    <div class="absolute bottom-2 w-full z-[33] flex justify-center">
+                                    <view class="absolute bottom-2 w-full z-[33] flex justify-center">
                                         <view class="dh-version-name" @click="handleReplaceVideo(index)"> 替换 </view>
-                                    </div>
+                                    </view>
                                 </view>
                                 <view
                                     v-if="formData.materialLists.length < videoLimit"
@@ -275,6 +275,7 @@
     <choose-material
         v-model="showVideoMaterial"
         type="video"
+        :multiple="replaceVideoIndex == -1"
         :limit="videoLimit - formData.materialLists.length"
         @select="handleSelectVideoMaterial" />
 </template>
@@ -362,7 +363,6 @@ const videoLimit = 99;
 const videoSize = 100;
 // 视频上传格式
 const videoFormat = ["mp4", "mov"];
-const uploadType = ref<"all" | "video">("video");
 // 视频上传是否初次打开
 const isVideoInitialOpen = ref<boolean>(true);
 // 替换视频索引
@@ -450,28 +450,36 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     count: videoLimit,
     imageSize: videoSize,
+    fileAccept: videoFormat,
+    videoAccept: videoFormat,
+    fileSize: videoSize,
     onSuccess: (res: any[]) => {
-        const diff = videoLimit - formData.materialLists.length;
-        formData.materialLists = formData.materialLists.concat(
-            res.slice(0, diff).map((item: any) => ({ url: [item.pic, item.url] }))
-        );
+        const data = res.map((item: any) => ({ url: [item.pic, item.content] }));
+        if (replaceVideoIndex.value !== -1) {
+            formData.materialLists[replaceVideoIndex.value] = data[0];
+        } else {
+            formData.materialLists = formData.materialLists.concat(data);
+        }
+        replaceVideoIndex.value = -1;
     },
 });
 
 const chooseUploadType = () => {
     showVideoUploadTip.value = false;
     uni.showActionSheet({
-        itemList: ['从"微信聊天"中选择', '从"手机相册"中选择'],
+        itemList: ['从"素材库"中选择', '从"手机相册"中选择'],
         success: (res) => {
-            if (res.tapIndex == 0 || res.tapIndex == 1) {
+            if (res.tapIndex == 0) {
+                showVideoMaterial.value = true;
+            }
+            if (res.tapIndex == 1) {
                 if (isVideoInitialOpen.value) {
                     isVideoInitialOpen.value = false;
                     showVideoUploadTip.value = true;
                     return;
                 }
-                uploadType.value = res.tapIndex == 0 ? "all" : "video";
                 if (!isVideoInitialOpen.value) {
-                    uploadAndProcessFiles(uploadType.value);
+                    uploadAndProcessFiles("video");
                 }
             }
         },
@@ -480,47 +488,28 @@ const chooseUploadType = () => {
 
 const handleSelectVideoMaterial = async (res: any[]) => {
     // 过滤不合符条件的视频
-    const videoCheckPromises = res.map(
-        (item: any, index: number) =>
-            new Promise((resolve) => {
-                wx.getVideoInfo({
-                    src: item.content,
-                    success: (info: any) => {
-                        const { type, width, height } = info;
-                        // 判断是否符合条件
-                        const isAccord =
-                            width <= videoFormat[0] &&
-                            height <= videoFormat[1] &&
-                            videoFormat.includes(type.toLowerCase()) &&
-                            parseInt(item.size) <= videoSize;
-                        console.log(item);
-
-                        if (isAccord) {
-                            resolve(item.content);
-                        } else {
-                            uni.showToast({
-                                title: `选择的视频包含不符合条件的视频，已自动过滤`,
-                                icon: "none",
-                            });
-                            resolve(null);
-                        }
-                    },
-                    fail: () => {
-                        resolve(null);
-                    },
+    const data = res
+        .filter((item: any, index: number) => {
+            // 截取链接后缀
+            const suffix = item.content.substring(item.content.lastIndexOf(".") + 1);
+            const isAccord = videoFormat.includes(suffix) && parseInt(item.size) <= videoSize * 1024 * 1024;
+            if (isAccord) {
+                return true;
+            } else {
+                uni.showToast({
+                    title: `选择的视频包含不符合条件的视频，已自动过滤`,
+                    icon: "none",
                 });
-            })
-    );
-    uni.showLoading({
-        title: "素材检查中...",
-        mask: true,
-    });
-    try {
-        const filteredVideos = await Promise.all(videoCheckPromises);
-        console.log(filteredVideos);
-    } finally {
-        uni.hideLoading();
+                return false;
+            }
+        })
+        .map((item: any) => ({ url: [item.pic, item.content] }));
+    if (replaceVideoIndex.value !== -1) {
+        formData.materialLists[replaceVideoIndex.value] = data[0];
+    } else {
+        formData.materialLists = formData.materialLists.concat(data);
     }
+    replaceVideoIndex.value = -1;
 };
 
 const handleEditMaterial = (index?: number) => {
@@ -544,15 +533,6 @@ const handleDeleteMaterialConfirm = () => {
     deleteImgIndex.value = -1;
 };
 
-const openVideoUploadDialog = () => {
-    if (!isVideoInitialOpen.value) {
-        uploadAndProcessFiles("video");
-        return;
-    }
-    isVideoInitialOpen.value = false;
-    showVideoUploadTip.value = true;
-};
-
 const handlePlay = (item: any) => {
     playItem.pic = item[0];
     playItem.url = item[1];
@@ -565,7 +545,7 @@ const handleDeleteVideo = (index: number) => {
 
 const handleReplaceVideo = (index: number) => {
     replaceVideoIndex.value = index;
-    uploadAndProcessFiles("video");
+    chooseUploadType();
 };
 
 const handleDeleteCopywriter = (index: number) => {

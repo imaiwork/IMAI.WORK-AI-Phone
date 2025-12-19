@@ -118,13 +118,11 @@ const handleSelectionChange = (val: any[]) => {
 };
 
 const getStatus = (status: number) => {
-    //0草稿箱,1待处理,2生成中,3已完成,4失败,5部分完成
     const statusMap = {
-        1: "待处理",
-        2: "生成中",
-        3: "已完成",
-        4: "失败",
-        5: "部分完成",
+        0: "待处理",
+        1: "生成中",
+        2: "生成失败",
+        3: "生成成功",
     };
     return statusMap[status as keyof typeof statusMap];
 };

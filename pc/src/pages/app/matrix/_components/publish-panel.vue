@@ -342,11 +342,11 @@ const { type } = toRefs(props);
 const query = searchQueryToObject();
 const materialId = computed(() => query.material_id);
 
-const step = ref(1);
+const step = ref(2);
 
 // 表单数据
 const formData = reactive({
-    name: `${publishTypeMap[type.value]}矩阵任务${dayjs().format("YYYYMMDDHHmmss")}`,
+    name: `${publishTypeMap[type.value]}矩阵任务${dayjs().format("YYYYMMDDHHmm")}`,
     accounts: [],
     media_type: type.value,
     time_config: [],
@@ -573,8 +573,38 @@ const openCopywritingMaterial = async () => {
 
 const handleChooseCopywriting = (data: { titleList: any[]; contentList: any[] }) => {
     const { titleList, contentList } = data;
-    if (titleList.length > 0) materialFormData.title.push(...titleList);
-    if (contentList.length > 0) materialFormData.subtitle.push(...contentList);
+    const newTitles = [...titleList];
+    const newContents = [...contentList];
+
+    if (newTitles.length > 0) {
+        for (const title of materialFormData.title) {
+            if (!title.content && newTitles.length > 0) {
+                const newTitle = newTitles.shift();
+                if (newTitle) {
+                    title.content = newTitle.content;
+                }
+            }
+        }
+        if (newTitles.length > 0) {
+            materialFormData.title.push(...newTitles);
+        }
+    }
+
+    if (newContents.length > 0) {
+        for (const subtitle of materialFormData.subtitle) {
+            if (!subtitle.content && newContents.length > 0) {
+                const newContent = newContents.shift();
+                if (newContent) {
+                    subtitle.content = newContent.content;
+                    subtitle.topic = newContent.topic || [];
+                }
+            }
+        }
+        if (newContents.length > 0) {
+            materialFormData.subtitle.push(...newContents);
+        }
+    }
+
     if (titleList.length > 0 || contentList.length > 0) {
         updateCopywritingMaterial(materialFormData);
     }

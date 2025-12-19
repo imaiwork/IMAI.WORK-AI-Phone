@@ -115,7 +115,7 @@
     "quickapp": {},
     /* 小程序特有相关 */
     "mp-weixin": {
-        "appid": "wx240aed4afb266747",
+        "appid": "wx8793855d1e2d4208",
         "optimization": {
             "subPackages": true
         },

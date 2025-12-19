@@ -63,7 +63,7 @@
                             </div>
                         </template>
                     </ElTableColumn>
-                    <ElTableColumn label="发布账号" propas="account" min-width="200" show-overflow-tooltip>
+                    <ElTableColumn label="发布账号" props="account" min-width="200" show-overflow-tooltip>
                         <template #default="{ row }">
                             <div class="flex justify-center items-center gap-x-1">
                                 <img :src="getPlatform(row.account_type)?.icon" class="w-4 h-4" />
@@ -71,6 +71,7 @@
                             </div>
                         </template>
                     </ElTableColumn>
+
                     <ElTableColumn label="发布类型" width="80">
                         <template #default="{ row }">
                             {{ row.media_type == 1 ? "视频" : "图片" }}
@@ -91,6 +92,8 @@
                             </div>
                         </template>
                     </ElTableColumn>
+                    <ElTableColumn label="开始时间" prop="publish_start" width="120"> </ElTableColumn>
+                    <ElTableColumn label="结束时间" prop="publish_end" width="120"> </ElTableColumn>
                     <ElTableColumn label="发布周期" min-width="100">
                         <template #default="{ row }">
                             <div>{{ getPublishCycle(row) }}</div>

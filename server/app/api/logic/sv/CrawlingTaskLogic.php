@@ -562,7 +562,7 @@ class CrawlingTaskLogic extends SvBaseLogic
                 ->where('t.wechat_id', 'not in', ['', null]) // 过滤掉wechat_id为空的记录
                 //->where('t.status', 'in', [1, 2]) // 过滤掉已完成、已暂停、已删除的任务
                 ->whereRaw('t.exec_add_count > t.completed_add_count') // 过滤掉已执行加微次数大于等于注册类型的记录
-                ->limit(100)
+                ->limit(10)
                 ->order('r.id', 'desc')
                 ->select()
                 ->toArray();
@@ -608,10 +608,10 @@ class CrawlingTaskLogic extends SvBaseLogic
                     $response = \app\common\service\ToolsService::Sv()->queryResult([
                         "string" => $record['reg_wechat'],
                     ]);
-                    if(isset($response['code']) && (int)$response['code'] === 10005){
+                    if (isset($response['code']) && (int)$response['code'] === 10005) {
                         continue;
                     }
-                    
+
                     if (isset($response['code']) && (int)$response['code'] === 10000) {
                         if (is_null($response['data'])) {
                             self::setLog($record['reg_wechat'] . '该账号还未开始验证', 'add_wechat');
@@ -889,156 +889,160 @@ class CrawlingTaskLogic extends SvBaseLogic
     public static function verifyWeChatCron()
     {
         print_r("\n微信号验证\n");
-        $records = SvCrawlingRecord::field('*')
-            //->where('status', 0)
-            ->where('is_verify', 0)
-            ->where('reg_content', '<>', '')
-            ->order('id desc')
-            ->limit(50)
-            ->fetchSql(false)
-            ->select();
-        $wxPattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
-        foreach ($records as $record) {
-            $wechatNos = explode(',', $record->reg_content);
-            foreach ($wechatNos as $wechatNo) {
-                $error = [];
-                $wechatExist = SvAddWechatRecord::where('user_id', $record->user_id)
-                    ->where('device_code', $record->device_code)
-                    ->where('account_type', 1)
-                    ->where('channel', 1)
-                    ->where('crawling_task_id', $record->task_id)
-                    ->where('reg_wechat', $wechatNo)
-                    ->findOrEmpty();
+        try {
+            $records = SvCrawlingRecord::field('*')
+                //->where('status', 0)
+                ->where('is_verify', 0)
+                ->where('reg_content', '<>', '')
+                ->order('id desc')
+                ->limit(20)
+                ->fetchSql(false)
+                ->select();
+            $wxPattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
+            foreach ($records as $record) {
+                $wechatNos = explode(',', $record->reg_content);
+                foreach ($wechatNos as $wechatNo) {
+                    $error = [];
+                    $wechatExist = SvAddWechatRecord::where('user_id', $record->user_id)
+                        ->where('device_code', $record->device_code)
+                        ->where('account_type', 1)
+                        ->where('channel', 1)
+                        ->where('crawling_task_id', $record->task_id)
+                        ->where('reg_wechat', $wechatNo)
+                        ->findOrEmpty();
 
-                if (preg_match($wxPattern, $wechatNo)) {
-                    //查询验证结果
-                    $response = \app\common\service\ToolsService::Sv()->queryResult([
-                        "string" => $wechatNo,
-                    ]);
-                    if(isset($response['code']) && (int)$response['code'] === 10005){
-                        continue;
-                    }
-                    if (isset($response['code']) && (int)$response['code'] === 10000) {
-                        if (is_null($response['data'])) {
-
-                            array_push($error, $wechatNo . '该账号还未开始验证');
-                            array_push($error, $response);
-
-                            $response = \app\common\service\ToolsService::Sv()->validateStrings([
-                                "strings" => [$wechatNo],
-                            ]);
-                            array_push($error, $response);
-
-                            \think\facade\Log::channel('device')->write(json_encode($error, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'verify_wechat');
-                            continue;
-                        }
-
-                        if (isset($response['data']['status']) && (int)$response['data']['status'] === 0) {
-                            array_push($error, $wechatNo . '该账号还未完成验证,稍后再试');
-                            array_push($error, $response);
-
-                            $response = \app\common\service\ToolsService::Sv()->validateStrings([
-                                "strings" => [$wechatNo],
-                            ]);
-                            array_push($error, $response);
-
-                            \think\facade\Log::channel('device')->write(json_encode($error, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'verify_wechat');
-                            continue;
-                        }
-
-                        if (isset($response['data']['valid']) && (bool)$response['data']['valid'] === false) {
-                            array_push($error, $wechatNo . '该账号不是有效的微信号,忽略');
-                            array_push($error, $response);
-
-                            if ($wechatExist->isEmpty()) {
-                                $res = SvAddWechatRecord::create([
-                                    'user_id' => $record->user_id,
-                                    'device_code' => $record->device_code,
-                                    'account' => $record->username,
-                                    'account_type'  => 1,
-                                    'user_account' => $record->username,
-                                    'original_message' => $record->crawl_content,
-                                    'reg_wechat' => $wechatNo,
-                                    'action' => 1,
-                                    'status' => 0,
-                                    'result' => '该线索经过校验为无效线索',
-                                    'channel' => 1,
-                                    'exec_type' => 2,
-                                    'task_id' => time() . rand(100, 999),
-                                    'crawling_task_id' => $record->task_id,
-                                    'create_time' => time()
-                                ]);
-                                array_push($error, $res->toArray());
-                            }
-
-                            $record->status = 2; //无效
-                            $record->is_verify = 1;
-                            $record->update_time = time();
-                            $record->save();
-                            array_push($error, $wechatNo . '无效');
-                        } else {
-                            if ($wechatExist->isEmpty()) {
-                                $res = SvAddWechatRecord::create([
-                                    'user_id' => $record->user_id,
-                                    'device_code' => $record->device_code,
-                                    'account' => $record->username,
-                                    'account_type'  => 1,
-                                    'user_account' => $record->username,
-                                    'original_message' => $record->crawl_content,
-                                    'reg_wechat' => $wechatNo,
-                                    'action' => 1,
-                                    'status' => 4,
-                                    'channel' => 1,
-                                    'exec_type' => 2,
-                                    'task_id' => time() . rand(100, 999),
-                                    'crawling_task_id' => $record->task_id,
-                                    'create_time' => time()
-                                ]);
-
-                                array_push($error, $res->toArray());
-                            }
-                            array_push($error, $wechatNo . '有效');
-                            $status = (count($wechatNos) > 1 && strpos($record->reg_content, $wechatNo) !== false) ? 3 : 1; //有效
-                            $record->status = $status;
-                            $record->is_verify = 1;
-                            $record->update_time = time();
-                            $record->save();
-                        }
-                    }
-                } else {
-
-                    if ($wechatExist->isEmpty()) {
-                        $res = SvAddWechatRecord::create([
-                            'user_id' => $record->user_id,
-                            'device_code' => $record->device_code,
-                            'account' => $record->username,
-                            'account_type'  => 1,
-                            'user_account' => $record->username,
-                            'original_message' => $record->crawl_content,
-                            'reg_wechat' => $wechatNo,
-                            'action' => 1,
-                            'status' => 4,
-                            'channel' => 1,
-                            'exec_type' => 2,
-                            'task_id' => time() . rand(100, 999),
-                            'crawling_task_id' => $record->task_id,
-                            'create_time' => time()
+                    if (preg_match($wxPattern, $wechatNo)) {
+                        //查询验证结果
+                        $response = \app\common\service\ToolsService::Sv()->queryResult([
+                            "string" => $wechatNo,
                         ]);
+                        if (isset($response['code']) && (int)$response['code'] === 10005) {
+                            continue;
+                        }
+                        if (isset($response['code']) && (int)$response['code'] === 10000) {
+                            if (is_null($response['data'])) {
 
-                        array_push($error, $res->toArray());
+                                array_push($error, $wechatNo . '该账号还未开始验证');
+                                array_push($error, $response);
+
+                                $response = \app\common\service\ToolsService::Sv()->validateStrings([
+                                    "strings" => [$wechatNo],
+                                ]);
+                                array_push($error, $response);
+
+                                \think\facade\Log::channel('device')->write(json_encode($error, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'verify_wechat');
+                                continue;
+                            }
+
+                            if (isset($response['data']['status']) && (int)$response['data']['status'] === 0) {
+                                array_push($error, $wechatNo . '该账号还未完成验证,稍后再试');
+                                array_push($error, $response);
+
+                                $response = \app\common\service\ToolsService::Sv()->validateStrings([
+                                    "strings" => [$wechatNo],
+                                ]);
+                                array_push($error, $response);
+
+                                \think\facade\Log::channel('device')->write(json_encode($error, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'verify_wechat');
+                                continue;
+                            }
+
+                            if (isset($response['data']['valid']) && (bool)$response['data']['valid'] === false) {
+                                array_push($error, $wechatNo . '该账号不是有效的微信号,忽略');
+                                array_push($error, $response);
+
+                                if ($wechatExist->isEmpty()) {
+                                    $res = SvAddWechatRecord::create([
+                                        'user_id' => $record->user_id,
+                                        'device_code' => $record->device_code,
+                                        'account' => $record->username,
+                                        'account_type'  => 1,
+                                        'user_account' => $record->username,
+                                        'original_message' => $record->crawl_content,
+                                        'reg_wechat' => $wechatNo,
+                                        'action' => 1,
+                                        'status' => 0,
+                                        'result' => '该线索经过校验为无效线索',
+                                        'channel' => 1,
+                                        'exec_type' => 2,
+                                        'task_id' => time() . rand(100, 999),
+                                        'crawling_task_id' => $record->task_id,
+                                        'create_time' => time()
+                                    ]);
+                                    array_push($error, $res->toArray());
+                                }
+
+                                $record->status = 2; //无效
+                                $record->is_verify = 1;
+                                $record->update_time = time();
+                                $record->save();
+                                array_push($error, $wechatNo . '无效');
+                            } else {
+                                if ($wechatExist->isEmpty()) {
+                                    $res = SvAddWechatRecord::create([
+                                        'user_id' => $record->user_id,
+                                        'device_code' => $record->device_code,
+                                        'account' => $record->username,
+                                        'account_type'  => 1,
+                                        'user_account' => $record->username,
+                                        'original_message' => $record->crawl_content,
+                                        'reg_wechat' => $wechatNo,
+                                        'action' => 1,
+                                        'status' => 4,
+                                        'channel' => 1,
+                                        'exec_type' => 2,
+                                        'task_id' => time() . rand(100, 999),
+                                        'crawling_task_id' => $record->task_id,
+                                        'create_time' => time()
+                                    ]);
+
+                                    array_push($error, $res->toArray());
+                                }
+                                array_push($error, $wechatNo . '有效');
+                                $status = (count($wechatNos) > 1 && strpos($record->reg_content, $wechatNo) !== false) ? 3 : 1; //有效
+                                $record->status = $status;
+                                $record->is_verify = 1;
+                                $record->update_time = time();
+                                $record->save();
+                            }
+                        }
+                    } else {
+
+                        if ($wechatExist->isEmpty()) {
+                            $res = SvAddWechatRecord::create([
+                                'user_id' => $record->user_id,
+                                'device_code' => $record->device_code,
+                                'account' => $record->username,
+                                'account_type'  => 1,
+                                'user_account' => $record->username,
+                                'original_message' => $record->crawl_content,
+                                'reg_wechat' => $wechatNo,
+                                'action' => 1,
+                                'status' => 4,
+                                'channel' => 1,
+                                'exec_type' => 2,
+                                'task_id' => time() . rand(100, 999),
+                                'crawling_task_id' => $record->task_id,
+                                'create_time' => time()
+                            ]);
+
+                            array_push($error, $res->toArray());
+                        }
+
+
+                        $record->is_verify = 1;
+                        $record->update_time = time();
+                        $record->save();
+                        array_push($error, $wechatNo . '微信号为手机号验证忽略，添加到待加微表');
                     }
 
-
-                    $record->is_verify = 1;
-                    $record->update_time = time();
-                    $record->save();
-                    array_push($error, $wechatNo . '微信号为手机号验证忽略，添加到待加微表');
-                }
-
-                if (!empty($error)) {
-                    \think\facade\Log::channel('device')->write(json_encode($error, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'verify_wechat');
+                    if (!empty($error)) {
+                        \think\facade\Log::channel('device')->write(json_encode($error, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'verify_wechat');
+                    }
                 }
             }
+        } catch (\Throwable $th) {
+            \think\facade\Log::channel('device')->write($th->__toString(), 'verify_wechat');
         }
     }
 }

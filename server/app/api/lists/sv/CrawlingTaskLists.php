@@ -43,6 +43,8 @@ class CrawlingTaskLists extends BaseApiDataLists implements ListsSearchInterface
                     $item->save();
                     SvCrawlingTaskDeviceBind::where('task_id', $item['id'])->update(['status' => 4]);
                 }
+                $item->start_time = date('Y-m-d H:i:s', $item->start_time);
+                $item->end_time = date('Y-m-d H:i:s', $item->end_time);
             })
             ->toArray();
         return $list;

@@ -13,7 +13,7 @@
         :show-close="false">
         <div class="-my-4">
             <div class="absolute w-6 h-6 top-[18px] right-[18px] z-[22]" @click="close">
-                <close-btn />
+                <close-btn :theme="ThemeEnum.DARK" />
             </div>
             <div class="text-white text-lg font-bold">加好友备注文案</div>
             <div class="mt-6">
@@ -34,6 +34,8 @@
 </template>
 
 <script setup lang="ts">
+import { ThemeEnum } from "@/enums/appEnums";
+
 const emit = defineEmits(["close", "confirm"]);
 
 const popupRef = shallowRef();

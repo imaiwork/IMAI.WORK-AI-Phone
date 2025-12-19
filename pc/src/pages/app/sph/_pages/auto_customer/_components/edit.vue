@@ -15,7 +15,7 @@
         :show-close="false">
         <div class="-my-4">
             <div class="absolute w-6 h-6 top-[18px] right-[18px] z-[22]" @click="close">
-                <close-btn />
+                <close-btn :theme="ThemeEnum.DARK" />
             </div>
             <div class="text-[15px] text-white font-bold">任务名称设置</div>
             <div class="mt-4">
@@ -41,6 +41,7 @@
 
 <script setup lang="ts">
 import { updateTask } from "@/api/sph";
+import { ThemeEnum } from "@/enums/appEnums";
 
 const emit = defineEmits(["close", "success"]);
 

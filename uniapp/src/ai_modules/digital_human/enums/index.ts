@@ -38,6 +38,8 @@ export enum CreateTypeEnum {
 
 // 监听类型
 export enum ListenerTypeEnum {
+    // 数字人口播文案
+    SZR_COPYWRITER = "szr-copywriter",
     // AI文案
     AI_COPYWRITER = "ai-copywriter",
     // 音色

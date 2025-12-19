@@ -13,12 +13,15 @@
                 </template>
             </view>
         </view>
-
         <view class="file-list">
             <view class="file-item relative" v-for="item in filesLists" :key="item.url">
                 <view class="bg-primary mr-[10rpx] flex p-[6rpx] rounded-[10rpx]">
                     <u-icon v-if="fileType == 'file'" :size="30" name="file-text" color="#ffffff" />
-                    <image v-if="fileType == 'image'" :src="item.path || item.url" class="w-[32rpx] h-[32rpx]" />
+                    <image
+                        v-if="fileType == 'image'"
+                        :src="item.path || item.url"
+                        class="w-[32rpx] h-[32rpx]"
+                        mode="aspectFill" />
                     <u-icon v-if="fileType == 'video'" :size="30" name="camera" color="#ffffff" />
                 </view>
                 <view class="flex-1 min-w-0 mr-[20rpx] w-0">

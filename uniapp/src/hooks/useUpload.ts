@@ -1,6 +1,17 @@
 import { chooseFile } from "@/components/file-upload/choose-file";
 import { uploadFile } from "@/api/app";
 
+const defaultOptions = {
+    count: 9,
+    imageAccept: ["jpg", "png", "jpeg"],
+    imageSize: 20,
+    imageResolution: [4096, 4096],
+    videoAccept: ["mp4", "mov"],
+    videoSize: 200,
+    videoDuration: [1, 600],
+    fileAccept: ["jpg", "png", "jpeg", "mp4", "mov"],
+    fileSize: 200,
+};
 export default function useUpload(options: {
     count?: number;
     imageAccept?: string[];
@@ -14,15 +25,15 @@ export default function useUpload(options: {
     onSuccess?: (materials: any[]) => void;
 }) {
     const {
-        count = 9,
-        imageAccept = [],
-        imageSize = 20,
-        imageResolution = [],
-        videoAccept = [],
-        videoSize = 200,
-        videoDuration = [1, 600],
-        fileAccept = [],
-        fileSize = 200,
+        count = defaultOptions.count,
+        imageAccept = defaultOptions.imageAccept,
+        imageSize = defaultOptions.imageSize,
+        imageResolution = defaultOptions.imageResolution,
+        videoAccept = defaultOptions.videoAccept,
+        videoSize = defaultOptions.videoSize,
+        videoDuration = defaultOptions.videoDuration,
+        fileAccept = defaultOptions.fileAccept,
+        fileSize = defaultOptions.fileSize,
         onSuccess,
     } = options;
     const uploadMaterialList = ref<any[]>([]);

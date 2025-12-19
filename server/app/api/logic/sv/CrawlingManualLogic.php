@@ -301,7 +301,7 @@ class CrawlingManualLogic extends SvBaseLogic
                 ->join('sv_crawling_manual_task t', 'a.task_id = t.id')
                 ->where('t.status', 'in', [0, 1])
                 ->where('a.status', 4)
-                ->order('a.update_time', 'asc')
+                ->order('a.id', 'desc')
                 ->limit(50)
                 ->select()
                 ->toArray();

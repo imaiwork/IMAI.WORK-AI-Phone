@@ -15,7 +15,7 @@
                     <template v-if="formData[type]">
                         <img :src="formData[type]" class="w-full h-full object-contain" />
                         <div class="absolute top-1 right-1 cursor-pointer w-6 h-6" @click.stop="formData[type] = ''">
-                            <close-btn />
+                            <close-btn :theme="ThemeEnum.DARK" />
                         </div>
                         <div
                             class="absolute bottom-3 cursor-pointer px-[10px] text-white rounded-full border border-[#ffffff1a] bg-[#ffffff4d] shadow-[0px_6px_12px_0px_rgba(0,0,0,0.24)] h-[28px] flex items-center justify-center">
@@ -134,6 +134,7 @@
 
 <script setup lang="ts">
 import { getCaseLists, addModelCase, deleteModelCase } from "@/api/drawing";
+import { ThemeEnum } from "@/enums/appEnums";
 import { FashionImageTypeEnum } from "../_enums";
 import CaseImageV2 from "./case-image-v2.vue";
 

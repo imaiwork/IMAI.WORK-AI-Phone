@@ -8,7 +8,7 @@
         style="padding: 0; background-color: var(--app-bg-color-1)">
         <div class="py-[18px] -my-4">
             <div class="absolute top-[18px] right-[18px] w-6 h-6 cursor-pointer" @click="close">
-                <close-btn></close-btn>
+                <close-btn :theme="ThemeEnum.DARK"></close-btn>
             </div>
             <div class="font-bold text-[20px] text-white px-[18px]">优秀案例</div>
             <div class="mt-5">
@@ -55,6 +55,7 @@
 <script setup lang="ts" name="MaterialImage">
 import { getImagePromptList } from "@/api/drawing";
 import { chunkArray } from "@/utils/util";
+import { ThemeEnum } from "@/enums/appEnums";
 
 const emit = defineEmits<{
     (event: "close"): void;

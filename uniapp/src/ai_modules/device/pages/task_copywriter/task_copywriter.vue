@@ -36,7 +36,7 @@
             <view class="mt-[66rpx]">
                 <view class="flex items-center justify-between">
                     <text class="text-[30rpx] font-bold">标签</text>
-                    <view class="flex items-center gap-x-2" @click="handleAddTag">
+                    <view class="flex items-center gap-x-2" v-if="formData.topic.length < 5" @click="handleAddTag">
                         <image
                             src="@/ai_modules/device/static/images/common/add_circle.png"
                             class="w-[32rpx] h-[32rpx]"></image>

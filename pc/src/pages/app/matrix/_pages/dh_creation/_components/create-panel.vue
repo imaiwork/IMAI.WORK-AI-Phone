@@ -149,7 +149,7 @@
                                             </div>
                                             <div>
                                                 <div class="w-4 h-4" @click="handleCopywritingDelete(index)">
-                                                    <close-btn :icon-size="10"></close-btn>
+                                                    <close-btn :theme="ThemeEnum.DARK" :icon-size="10"></close-btn>
                                                 </div>
                                             </div>
                                         </div>
@@ -293,7 +293,9 @@
                                                                 <div
                                                                     class="w-4 h-4"
                                                                     @click.stop="handleDeleteVoice(index)">
-                                                                    <close-btn :icon-size="10"></close-btn>
+                                                                    <close-btn
+                                                                        :theme="ThemeEnum.DARK"
+                                                                        :icon-size="10"></close-btn>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -359,10 +361,10 @@
 <script setup lang="ts">
 import dayjs from "dayjs";
 import { uploadImage, getClipConfig } from "@/api/app";
-import { AppTypeEnum } from "@/enums/appEnums";
+import { getDigitalHumanDetail, addDigitalHuman, updateDigitalHuman } from "@/api/matrix";
+import { ThemeEnum, AppTypeEnum } from "@/enums/appEnums";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
-import { getDigitalHumanDetail, addDigitalHuman, updateDigitalHuman } from "~/api/matrix";
 import { DigitalHumanModelVersionEnum } from "@/pages/app/digital_human/_enums";
 import { uploadLimit } from "@/pages/app/digital_human/_config";
 import VoiceMaterial from "@/pages/app/_components/choose-tone.vue";
@@ -551,7 +553,7 @@ const getChooseVideo = async (lists: any[]) => {
                 handleCopywriting("add", false);
             });
         } else {
-            formData.anchor[replaceMaterialIndex.value] = validLists[0];
+            formData.anchor[replaceMaterialIndex.value] = { url: validLists[0] };
         }
         replaceMaterialIndex.value = -1;
         handleUpdateCreateTask();
@@ -870,7 +872,7 @@ const getTaskDetail = async (id: string) => {
         loading.value = true;
         const data = await getDigitalHumanDetail({ id });
         setFormData(data, formData);
-        formData.anchor = data.anchor.map((item) => item.anchor_url);
+        formData.anchor = data.anchor.map((item) => ({ url: item.anchor_url }));
         formData.extra = isJson(data.extra) ? JSON.parse(data.extra) : { currentVoiceType: VoiceType.Custom };
     } finally {
         loading.value = false;

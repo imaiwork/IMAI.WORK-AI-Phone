@@ -1,18 +1,15 @@
 <template>
-    <view class="h-screen bg-white flex flex-col">
-        <view class="fixed top-0 left-0 right-0 z-50">
-            <u-navbar
-                :is-fixed="false"
-                :border-bottom="false"
-                :background="{
-                    background: 'transparent',
-                }">
-            </u-navbar>
+    <view class="min-h-screen bg-[#EDF2FB7F]">
+        <u-navbar
+            :border-bottom="false"
+            :background="{
+                background: 'transparent',
+            }">
+        </u-navbar>
+        <view class="absolute top-0 left-0 w-full h-[642rpx]">
+            <image src="@/ai_modules/meeting_minutes/static/images/home/cover.png" class="w-full h-full"></image>
         </view>
-        <view class="">
-            <image src="@/ai_modules/meeting_minutes/static/images/home/cover.png" class="w-full h-[642rpx]"></image>
-        </view>
-        <view class="-mt-[120rpx] relative z-10 mx-[32rpx]">
+        <view class="relative z-10 mx-[32rpx] pt-[300rpx]">
             <view class="grid grid-cols-2 gap-4">
                 <navigator
                     v-for="(item, index) in mainLists"

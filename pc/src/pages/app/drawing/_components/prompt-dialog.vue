@@ -2,12 +2,11 @@
     <div
         class="absolute w-[350px] h-full bg-app-bg-3 rounded-tr-[20px] rounded-br-[20px] shadow-[0_0_0_1px_#333333] left-full flex flex-col py-[16px] z-20">
         <div class="absolute w-6 h-6 top-4 right-4 cursor-pointer" @click="emit('close')">
-            <close-btn />
+            <close-btn :theme="ThemeEnum.DARK" />
         </div>
         <div class="grow min-h-0 mt-[50px]">
             <ElScrollbar ref="scrollRef">
                 <div class="px-[16px] content-box">
-                    <div class="text-white">Deepseek- R1 灵感版</div>
                     <div v-for="(item, index) in prompts" :key="index" class="mt-4">
                         <div
                             class="rounded-md border border-app-border-2 bg-app-bg-3 mt-[11px] relative p-3"
@@ -76,6 +75,8 @@
 <script setup lang="ts">
 import { chatPrompt } from "@/api/chat";
 import { useUserStore } from "@/stores/user";
+import { ThemeEnum } from "@/enums/appEnums";
+
 const emit = defineEmits(["use", "close"]);
 
 const userStore = useUserStore();

@@ -2,7 +2,7 @@
     <ElDrawer v-model="show" body-class="bg-app-bg-2 !p-0" size="450px" :with-header="false">
         <div class="h-full flex flex-col">
             <div class="absolute w-6 h-6 top-6 right-6" @click="close">
-                <close-btn />
+                <close-btn :theme="ThemeEnum.DARK" />
             </div>
             <div class="flex-shrink-0 h-[80px] flex items-center px-4 text-white text-lg font-bold">高级设置</div>
             <div class="mx-4 border-b border-app-border-1 pb-4">
@@ -114,6 +114,7 @@
 <script setup lang="ts">
 import AudioMaterial from "@/pages/app/_components/choose-audio.vue";
 import { ClipStyleMap } from "@/pages/app/_enums/indexEnum";
+import { ThemeEnum } from "@/enums/appEnums";
 
 type Result = {
     music: Array<{ url: string; name: string }>;

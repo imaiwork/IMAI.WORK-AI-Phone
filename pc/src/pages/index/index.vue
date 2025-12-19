@@ -3,7 +3,7 @@
         <div class="w-[220px] h-full fixed top-0 left-[var(--aside-width)] z-[888]" v-show="!hideSidebar">
             <chat-history ref="chatHistoryRef" />
         </div>
-        <div class="h-full flex-1" :class="{ 'ml-[220px]': !hideSidebar }">
+        <div class="h-full flex-1 relative" :class="{ 'ml-[220px]': !hideSidebar }">
             <div class="h-full px-4 mx-auto">
                 <Chatting
                     ref="chattingRef"
@@ -119,6 +119,7 @@
                     </template>
                 </Chatting>
             </div>
+            <div v-if="chatStore.isLoading" class="absolute top-0 left-0 w-full h-full bg-white"></div>
         </div>
     </div>
 </template>

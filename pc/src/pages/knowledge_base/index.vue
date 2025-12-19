@@ -43,7 +43,7 @@
                                 </ElButton>
                             </div>
                         </div>
-                        <div class="mt-3 text-[#00000080] h-[50px]">
+                        <div class="mt-3 text-[#00000080] h-[40px]">
                             导入相关文件数据，知识库将被集成到各项应用中作为上下文,或可以创建为独立的调用库使用
                         </div>
                     </div>
@@ -253,7 +253,7 @@ onMounted(init);
                 height: 62px;
                 padding: 0 20px;
                 font-weight: bold;
-                color: rgba(0, 0, 0, 0.3);
+                color: #0000004d;
                 &.is-active {
                     color: var(--el-color-black);
                 }
@@ -273,6 +273,6 @@ onMounted(init);
 }
 
 .kb-item {
-    @apply rounded-xl bg-[#F6F6F6] p-[16px] border border-[#EFEFEF]  relative cursor-pointer flex flex-col hover:scale-[1.02] transition-all duration-300;
+    @apply rounded-xl h-[163px] bg-[#F6F6F6] p-[16px] border border-[#EFEFEF]  relative cursor-pointer flex flex-col hover:scale-[1.02] transition-all duration-300;
 }
 </style>

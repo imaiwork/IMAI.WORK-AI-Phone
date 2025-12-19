@@ -93,6 +93,8 @@ const getAiPersonConfig = computed(() => {
             "shanjian_news_mixcut",
             "news_mixcut_title",
             "sora_video_create",
+            "sora_pro_video_create",
+            "sora_copywriting_create",
         ].includes(item.scene)
     );
 });

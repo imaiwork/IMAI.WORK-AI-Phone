@@ -8,7 +8,7 @@
         :show-close="false">
         <div class="-my-4">
             <div class="absolute w-6 h-6 top-4 right-4" @click="close">
-                <close-btn></close-btn>
+                <close-btn :theme="ThemeEnum.DARK"></close-btn>
             </div>
             <div class="text-white text-[20px] font-bold">内容文案库</div>
             <div class="mt-[17px]">
@@ -131,7 +131,7 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="">
+                                            <div class="" v-if="item.topic.length < 5">
                                                 <ElButton
                                                     type="primary"
                                                     class="!h-[26px]"
@@ -166,8 +166,9 @@
 </template>
 
 <script setup lang="ts">
-import { getCopywritingLibraryList } from "~/api/matrix";
+import { getCopywritingLibraryList } from "@/api/matrix";
 import { CopywritingTypeEnum } from "@/pages/app/matrix/_enums";
+import { ThemeEnum } from "@/enums/appEnums";
 
 // 定义组件emit事件
 const emit = defineEmits<{

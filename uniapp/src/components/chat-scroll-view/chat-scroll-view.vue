@@ -611,11 +611,15 @@ const scrollTop = ref<number>(0);
 const { dynamicHeight, hideKeyboard } = useKeyboardHeight();
 const bottomOffset = computed(() => {
     const { platform } = uni.getSystemInfoSync();
-    const isHome = props.contentList.length == 0;
-    if (platform === "android") {
-        return isHome ? 58 : 40;
+    const isEmpty = props.contentList.length == 0;
+    if (props.isStaff || props.isCoze) {
+        return isEmpty ? 10 : 48;
+    } else {
+        if (platform === "android") {
+            return isEmpty ? 58 : 40;
+        }
+        return isEmpty ? 90 : 40;
     }
-    return isHome ? 90 : 40;
 });
 
 const spacerHeight = computed(() => {

@@ -57,6 +57,8 @@ class CrawlingManualLists extends BaseApiDataLists implements ListsSearchInterfa
                 ->where('user_id', $this->userId)
                 ->where('wechat_id', 'in', explode(',', $item->wechat_id))
                 ->select()->toArray();
+            $item->start_time = date('Y-m-d H:i:s', $item->start_time);
+            $item->end_time = date('Y-m-d H:i:s', $item->end_time);
             return $item;
         })->toArray();
     }

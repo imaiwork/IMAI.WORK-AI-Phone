@@ -271,7 +271,6 @@
 						"navigationStyle": "custom"
 					},
 					"meta": {
-						"auth": true,
 						"share": true
 					}
 				},
@@ -332,6 +331,17 @@
 						"enablePullDownRefresh": false,
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/szr_copywriter/szr_copywriter",
+					"style": {
+						"navigationBarTitleText": "数字人口播文案",
+						"disableScroll": true,
+						"navigationStyle": "custom"
 					},
 					"meta": {
 						"auth": true
@@ -472,9 +482,6 @@
 						"enablePullDownRefresh": false,
 						"navigationStyle": "custom",
 						"disableScroll": true
-					},
-					"meta": {
-						"auth": true
 					}
 				},
 				{
@@ -553,11 +560,9 @@
 					"path": "pages/index/index",
 					"style": {
 						"enablePullDownRefresh": false,
-						"navigationStyle": "custom",
-						"disableScroll": true
+						"navigationStyle": "custom"
 					},
 					"meta": {
-						"auth": true,
 						"share": true
 					}
 				},
@@ -618,7 +623,6 @@
 						"disableScroll": true
 					},
 					"meta": {
-						"auth": true,
 						"share": true
 					}
 				},
@@ -691,7 +695,6 @@
 						"disableScroll": true
 					},
 					"meta": {
-						"auth": true,
 						"share": true
 					}
 				},
@@ -753,7 +756,6 @@
 						"enablePullDownRefresh": false
 					},
 					"meta": {
-						"auth": true,
 						"share": true
 					}
 				},
@@ -985,7 +987,6 @@
 						"navigationStyle": "custom"
 					},
 					"meta": {
-						"auth": true,
 						"share": true
 					}
 				},

@@ -512,7 +512,7 @@ const updateAccountSteps = ref<any[]>([
         title: "正在切换到个人中心",
         status: 0,
         type: DeviceCmdEnum.OPEN_PERSON_CENTER,
-        errorCode: DeviceCmdCodeEnum.OPEN_APP_ERROR,
+        errorCode: DeviceCmdCodeEnum.OPEN_PERSON_CENTER_ERROR,
     },
     {
         title: "正在获取账号信息",

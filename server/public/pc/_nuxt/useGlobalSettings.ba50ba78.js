@@ -1,1 +1,0 @@
-import{u as a}from"./useDictOptions.c0bd6b2d.js";import{z as i}from"./person_wechat.703f63bb.js";import"./entry.563c232b.js";function p(){const{optionsData:t}=a({wechatLists:{api:i,params:{page_size:999},transformData:s=>s.lists}});return{optionsData:t}}export{p as default};

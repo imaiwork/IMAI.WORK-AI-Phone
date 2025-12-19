@@ -104,7 +104,11 @@
                             </view>
                             <view
                                 class="mt-[50rpx] text-center text-[26rpx] font-bold text-[#00000080]"
-                                @click="resetAudio"
+                                @click="
+                                    resetAudio;
+                                    formData.url = '';
+                                    fileName = '';
+                                "
                                 >重新录音</view
                             >
                         </view>
@@ -172,7 +176,7 @@
                                         <view class="font-bold text-[#00000080] py-2">文件格式</view>
                                         <view
                                             class="flex-1 text-[#00000080] border-[0] border-b-[1rpx] border-solid border-[#0000000d] py-2"
-                                            >mp3、m4a、wav</view
+                                            >{{ getUploadAudioFormat().join("、") }}</view
                                         >
                                     </view>
                                     <view class="flex gap-x-4">
@@ -325,6 +329,11 @@ const formData = reactive<{
 
 const fileName = ref("");
 
+// 上传音频格式
+const getUploadAudioFormat = () => {
+    return formData.model_version == DigitalHumanModelVersionEnum.SHANJIAN ? ["mp3", "wav"] : ["mp3", "wav", "m4a"];
+};
+
 // 音色选项
 const toneOptions: any[] = [
     { name: "男声", value: "male", icon: ManIcon, activeIcon: ManActiveIcon },
@@ -342,7 +351,13 @@ const recordDuration = ref<number>(0);
 const isCancel = ref(false);
 
 // 音频播放hook
-const { setUrl, isPlaying, play, pause, destroy } = useAudio();
+const { setUrl, isPlaying, play, pause, destroy } = useAudio({
+    onError: (error) => {
+        if (error.type == "error" && error.errMsg.includes("Unable to decode audio data")) {
+            uni.$u.toast("音频资源异常，建议请重新上传");
+        }
+    },
+});
 
 // 录音hook
 const { authorize, isRecording, start, stop, close } = useRecorder(
@@ -353,6 +368,7 @@ const { authorize, isRecording, start, stop, close } = useRecorder(
         onstop: async (result: any) => {
             if (isCancel.value) return;
             const { tempFilePath, fileSize } = result;
+            if (recordDuration.value < 15) return;
             if (!validateAudioSize(fileSize)) {
                 return;
             }
@@ -382,8 +398,13 @@ const handleModelSelection = (modelId: any) => {
 };
 
 const openRecorder = () => {
+    formData.url = "";
+    fileName.value = "";
     showRecorder.value = true;
     isCancel.value = false;
+    pause();
+    stop();
+    destroy();
 };
 
 const uploadFromWeChat = async () => {
@@ -406,7 +427,7 @@ const handleUploadAudio = async () => {
     try {
         const filesResult = await chooseFile({
             type: "file",
-            extension: ["mp3", "wav", "m4a"],
+            extension: getUploadAudioFormat(),
         });
         await processSelectedFile(filesResult);
     } catch (error) {
@@ -421,8 +442,8 @@ const processSelectedFile = async (filesResult: ChooseResult) => {
     const fileType = name.split(".").pop()?.toLowerCase();
 
     // 验证文件类型
-    if (!fileType || !["mp3", "m4a", "wav"].includes(fileType)) {
-        uni.$u.toast("请上传mp3、m4a、wav格式的音频文件");
+    if (!fileType || !getUploadAudioFormat().includes(fileType)) {
+        uni.$u.toast(`请上传${getUploadAudioFormat().join("、")}格式的音频文件`);
         return;
     }
 
@@ -446,17 +467,17 @@ const uploadAudio = async (filePath: string) => {
         const { uri, name }: any = await uploadFile("audio", {
             filePath: filePath,
         });
+        uni.hideLoading();
         formData.url = uri;
         fileName.value = name;
         showRecorder.value = false;
     } catch (error: any) {
+        uni.hideLoading();
         uni.showToast({
-            title: error.message || "上传失败",
+            title: error || "上传失败",
             icon: "none",
             duration: 3000,
         });
-    } finally {
-        uni.hideLoading();
     }
 };
 
@@ -495,8 +516,8 @@ const cancelRecording = () => {
     isCancel.value = true;
     stop();
     destroy();
-    resetRecordDuration();
     close();
+    resetRecordDuration();
 };
 
 // 音频播放控制
@@ -504,7 +525,7 @@ const toggleAudioPlayback = async () => {
     if (isPlaying.value) {
         pause();
     } else {
-        play();
+        play(formData.url);
     }
 };
 
@@ -513,8 +534,6 @@ const resetAudio = () => {
     isRecording.value = false;
     showRecorder.value = false;
     isCancel.value = false;
-    formData.url = "";
-    fileName.value = "";
     stop();
     destroy();
     resetRecordDuration();
@@ -566,16 +585,25 @@ const startVoiceCloning = async () => {
         } else {
             await voiceClone(formData);
         }
+        uni.hideLoading();
         userStore.getUser(); // 更新用户信息
-        uni.$u.toast("克隆成功，请在我的音色中查看");
+        uni.hideLoading();
+        uni.showToast({
+            title: "克隆成功，请在我的音色中查看",
+            icon: "none",
+            duration: 3000,
+        });
 
         setTimeout(() => {
             navigateToHome();
-        }, 300);
+        }, 1500);
     } catch (error: any) {
-        uni.$u.toast(error.message || "克隆失败");
-    } finally {
         uni.hideLoading();
+        uni.showToast({
+            title: error || "克隆失败",
+            icon: "none",
+            duration: 3000,
+        });
     }
 };
 
@@ -599,6 +627,12 @@ const navigateToHome = () => {
 //         immediate: true,
 //     }
 // );
+
+onLoad((options: any) => {
+    if (options.model_version) {
+        formData.model_version = parseInt(options.model_version);
+    }
+});
 </script>
 
 <style scoped lang="scss">

@@ -77,6 +77,16 @@
                             </div>
                         </template>
                     </ElTableColumn>
+                    <ElTableColumn label="开始时间" width="120">
+                        <template #default="{ row }">
+                            {{ dayjs(row.start_time).format("YYYY-MM-DD") }}
+                        </template>
+                    </ElTableColumn>
+                    <ElTableColumn label="结束时间" width="120">
+                        <template #default="{ row }">
+                            {{ dayjs(row.end_time).format("YYYY-MM-DD") }}
+                        </template>
+                    </ElTableColumn>
                     <ElTableColumn label="当前执行进度" min-width="120">
                         <template #default="{ row }">
                             {{ row.number_of_implemented_keywords || 0 }} /
@@ -151,6 +161,7 @@
 </template>
 
 <script setup lang="ts">
+import dayjs from "dayjs";
 import { getTaskList, deleteTask, changeTaskStatus, retryTask, getTaskClue } from "@/api/sph";
 import { SidebarTypeEnum } from "../../_enums";
 import CreatePanel from "./_components/create-panel.vue";

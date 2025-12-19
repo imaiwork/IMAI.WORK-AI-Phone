@@ -99,7 +99,7 @@ const promptList = [
     { id: 3, name: "长", length: 1000 },
 ];
 const getPromptList = computed(() => {
-    return promptList;
+    return promptList.filter((item) => item.length <= textLimit.value);
 });
 
 // 获取消耗的算力
@@ -157,7 +157,7 @@ const scrollToBottom = async () => {
 const useContent = (content: string) => {
     emit("confirm", {
         type: ListenerTypeEnum.AI_COPYWRITER,
-        data: { content },
+        data: content,
     });
     chatContentList.value = [];
     uni.navigateBack();

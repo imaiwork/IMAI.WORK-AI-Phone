@@ -23,7 +23,7 @@
                     <div class="text-[20px] text-white font-bold">从创建的历史形象中选择</div>
                 </div>
                 <div class="w-6 h-6" @click="close">
-                    <close-btn />
+                    <close-btn :theme="ThemeEnum.DARK" />
                 </div>
             </div>
             <div class="px-4 my-4">
@@ -81,6 +81,7 @@
 import { getAnchorList } from "@/api/digital_human";
 import Popup from "@/components/popup/index.vue";
 import VideoItem from "@/pages/app/_components/video-item.vue";
+import { ThemeEnum } from "@/enums/appEnums";
 
 const emit = defineEmits(["close", "confirm"]);
 

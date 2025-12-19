@@ -9,9 +9,7 @@
             background: 'transparent',
         }"
         @close="close">
-        <view
-            class="bg-white p-4 rounded-lg mx-2 flex flex-col overflow-hidden"
-            :style="{ height: `${getContentHeight}px` }">
+        <view class="bg-white p-4 rounded-lg mx-2" :style="{ height: `${getContentHeight}px` }">
             <view class="flex">
                 <view class="p-2" @click="close()">
                     <u-icon name="arrow-left" size=""></u-icon>
@@ -19,15 +17,17 @@
             </view>
             <view class="mt-2 grow min-h-0">
                 <view class="bg-[#F7FBFF] rounded-lg p-2">
-                    <textarea
-                        class="h-[300rpx] w-full"
+                    <u-input
+                        height="400"
+                        class="w-full"
                         v-model="inputValue"
+                        type="textarea"
                         placeholder="请输入或粘贴您的文案 ..."
-                        placeholder-style="color: #00000033; font-size: 26rpx;"
+                        placeholder-style="color: #00000033;"
                         confirm-type=""
                         :disable-default-padding="true"
-                        :show-confirm-bar="false"
-                        :maxlength="textLimit"></textarea>
+                        :adjust-position="false"
+                        :maxlength="textLimit"></u-input>
                     <view class="flex justify-end mt-2">
                         <u-button
                             type="primary"
@@ -44,19 +44,11 @@
                     <view class="text-[#B2B2B2] text-[26rpx]"> {{ inputValue.length }}/{{ textLimit }} </view>
                 </view>
             </view>
-            <view class="w-full mt-3">
-                <view v-if="dynamicHeight > 0" @click="hideKeyboard">
-                    <image src="/static/images/common/keyboard.png" class="w-[48rpx] h-[48rpx]"></image>
-                </view>
-            </view>
-            <view :style="{ height: `${dynamicHeight + 10}px` }"></view>
         </view>
     </u-popup>
 </template>
 
 <script setup lang="ts">
-import useKeyboardHeight from "@/hooks/useKeyboardHeight";
-
 const props = defineProps({
     modelValue: {
         type: String,
@@ -82,7 +74,6 @@ const inputValue = computed({
 const hideKeyboard = () => {
     uni.hideKeyboard();
 };
-const { dynamicHeight } = useKeyboardHeight();
 const show = ref(false);
 
 const open = () => {

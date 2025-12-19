@@ -21,7 +21,7 @@
                     <div class="text-[20px] text-white font-bold">从已有音色中选择</div>
                 </div>
                 <div class="w-6 h-6" @click="close">
-                    <close-btn />
+                    <close-btn :theme="ThemeEnum.DARK" />
                 </div>
             </div>
             <div class="px-4 my-4">
@@ -92,6 +92,7 @@
 <script setup lang="ts">
 import { DigitalHumanModelVersionEnum, ToneTypeEnum } from "@/pages/app/digital_human/_enums";
 import { getVoiceList } from "@/api/digital_human";
+import { ThemeEnum } from "@/enums/appEnums";
 import Popup from "@/components/popup/index.vue";
 import { useAppStore } from "@/stores/app";
 import cloneDeep from "lodash/cloneDeep";

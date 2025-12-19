@@ -41,7 +41,7 @@ class TokenLogService
         $use_token   = self::getTypeScore($scene);
         $userInfo = User::findOrEmpty($uid)->toArray();
         if (empty($userInfo)) {
-            throw new \Exception('用户查询失败11');
+            throw new \Exception('用户查询失败');
         }
         // AI聊天 - 1算力
         // AI美工 

@@ -376,7 +376,7 @@ class KbKnowLogic extends BaseLogic
         $pgKbEmbedding = new KbEmbedding();
         $lists = $pgKbEmbedding
             ->field(['uuid,model,question,answer,annex,tokens,error,status,update_time,create_time'])
-            ->where(['kb_id'=>$kid])
+//            ->where(['kb_id'=>$kid])
             ->where(['fd_id'=>$fid])
             ->where(['is_delete'=>0])
             ->where($where)

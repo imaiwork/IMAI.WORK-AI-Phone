@@ -20,7 +20,7 @@
                     <div class="text-[20px] text-white font-bold">视频列表</div>
                 </div>
                 <div class="w-6 h-6" @click="close">
-                    <close-btn />
+                    <close-btn :theme="ThemeEnum.DARK" />
                 </div>
             </div>
             <div
@@ -58,8 +58,8 @@
 </template>
 
 <script setup lang="ts">
-import { AppTypeEnum } from "@/enums/appEnums";
-import { getDigitalHumanVideo, deleteDigitalHumanVideo } from "~/api/matrix";
+import { AppTypeEnum, ThemeEnum } from "@/enums/appEnums";
+import { getDigitalHumanVideo, deleteDigitalHumanVideo } from "@/api/matrix";
 import Popup from "@/components/popup/index.vue";
 import VideoCard from "../../../_components/dh-video-card.vue";
 import EditPopup from "../../generate_video/_components/edit.vue";

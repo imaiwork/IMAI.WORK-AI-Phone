@@ -6,6 +6,7 @@
         :border-radius="borderRadius"
         :closeable="false"
         :z-index="zIndex"
+        :mask-close-able="maskCloseAble"
         @touchstart="handleTouchStart"
         @touchend="handleTouchEnd"
         @close="closePopup">
@@ -74,6 +75,10 @@ const props = defineProps({
     zIndex: {
         type: Number,
         default: 1000,
+    },
+    maskCloseAble: {
+        type: Boolean,
+        default: true,
     },
 });
 const emit = defineEmits(["update:show", "close"]);

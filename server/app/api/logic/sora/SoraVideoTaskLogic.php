@@ -17,11 +17,12 @@ use think\facade\Log;
 
 /**
  * SoraVideoTaskLogic
- * 闪剪视频任务逻辑处理
+ * sora视频任务逻辑处理
  */
 class SoraVideoTaskLogic extends ApiLogic
 {
     const SORA_VIDEO_CREATE = 'sora_video_create';
+    const SORA_PRO_VIDEO_CREATE = 'sora_pro_video_create';
     const COPYWRITING_CREATE = 'copywriting_create';
     const SORA_VIDEO_STATUS = 'sora_video_status';
 
@@ -46,8 +47,14 @@ class SoraVideoTaskLogic extends ApiLogic
                     throw new \Exception('关联的视频设置不存在');
                 }
                 $num = $SoraVideoSetting->video_count - $SoraVideoSetting->success_num - $SoraVideoSetting->error_num;
-                $typeID = AccountLogEnum::TOKENS_DEC_SORA_VIDEO;
-                $scene = 'sora_video_create';
+                if ($data['model_version'] == 2){
+                    $typeID = AccountLogEnum::TOKENS_DEC_SORA_PRO_VIDEO;
+                    $scene = 'sora_pro_video_create';
+                }else{
+                    $typeID = AccountLogEnum::TOKENS_DEC_SORA_VIDEO;
+                    $scene = 'sora_video_create';
+                }
+
                 $remark = '一句话生成视频';
                 switch ($data['state']) {
                     case 'error':
@@ -97,8 +104,7 @@ class SoraVideoTaskLogic extends ApiLogic
                         $SoraVideoSetting->success_num += 1;
                         $SoraVideoSetting->save();
                         $unit = ModelConfig::where('scene', $scene)->value('score', 0);
-                        $duration = $task['duration'] ?? 10;
-                        $points = round($duration * $unit, 2);
+                        $points = $unit;
                         $task->video_token = $points;
                         break;
                 }
@@ -169,9 +175,7 @@ class SoraVideoTaskLogic extends ApiLogic
         if (!$taskId){
             message('参数错误');
         }
-
         $scene   = self::SORA_VIDEO_STATUS;
-
         if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
             self::$returnData = $result;
         } else {
@@ -181,31 +185,80 @@ class SoraVideoTaskLogic extends ApiLogic
         return true;
     }
 
-    public static function copywriting(array $data)
-    {
-        $keywords = $data['keywords'] ?? '';
-        $number   = $data['number'] ?? '';
-        if (empty($keywords) || empty($number)) {
-            message('参数错误');
+    public static function checkStatus(){
+
+        $tasks = SoraVideoTask::where('status', '=',0)->where('create_time', '<', time() - 2400)->select()->toArray();
+        Log::channel('sora')->write('超过40分钟无回调的任务' . json_encode($tasks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $result = [];
+        $response = \app\common\service\ToolsService::sora();
+        foreach ($tasks as $task){
+            if (!empty($task['extra']['video_id'])){
+                $result = $response->status(['task_id' => $task['extra']['video_id']]);
+            }
+            Log::channel('sora')->write('超过40分钟无回调的任务处理' . json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            // 超过两小时无回调的任务处理
+            if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
+                if (isset($result['data']['videos'])){
+                    $video_result_url = FileService::downloadFileBySource($result['data']['videos'][0]['url'], 'video');
+                    $urldata = [
+                        'old' => '没有',
+                        'new' => $video_result_url
+                    ];
+                    Log::channel('sora')->write('定时任务查询获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                    $scene = $task['model_version'] == 2? self::SORA_PRO_VIDEO_CREATE : self::SORA_VIDEO_CREATE;
+                    $unit = ModelConfig::where('scene', '=', $scene )->value('score', 0);
+                    $update = [
+                        'video_result_url' => $video_result_url,
+                        'video_token' => (int)$unit,
+                        'status' => 3,
+                        'update_time' => time()
+                    ];
+                    SoraVideoTask::where('id', $task['id'])->update($update);
+                    $setting = SoraVideoSetting::where('id', $task['video_setting_id'])->findOrEmpty();
+                    if (!$setting->isEmpty()) {
+                        $setting->inc('success_num')->save();
+                    }
+                    continue;
+                }else{
+                    $errorUpdate = [
+                        'status' => 2,
+                        'remark' => $result['data']['message'] ?? '请求超时',
+                        'update_time' => time()
+                    ];
+                }
+            }else{
+                $errorUpdate = [
+                    'status' => 2,
+                    'remark' => '请求超时',
+                    'update_time' => time()
+                ];
+            }
+
+            //失败返还算力
+            $userId = $task['user_id'];
+            $taskId = $task['task_id'];
+            if ($task['model_version'] == 2){
+                $typeID = AccountLogEnum::TOKENS_DEC_SORA_PRO_VIDEO;
+            }else{
+                $typeID = AccountLogEnum::TOKENS_DEC_SORA_VIDEO;
+            }
+            $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
+            //查询是否已返还
+            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
+                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
+                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
+            }
+            SoraVideoTask::where('id', $task['id'])->update($errorUpdate);
+            $setting = SoraVideoSetting::where('id', $task['video_setting_id'])->findOrEmpty();
+            if (!$setting->isEmpty()) {
+                $setting->inc('error_num')->save();
+            }
+
         }
 
-        $taskId  = generate_unique_task_id();
-        $request = [
-            'keywords'       => $keywords,
-            'number'         => $number,
-            'channelVersion' => 5,
-        ];
-        $scene   = self::SORA_VIDEO_CREATE;
-
-        $result = self::requestUrl($request, $scene, self::$uid, $taskId);
-        if (!empty($result) && isset($result['content'])) {
-            self::$returnData = $result;
-        } else {
-            self::setError('生成失败');
-            return false;
-        }
         return true;
     }
+    
 
     private static function requestUrl(array $request, string $scene, int $userId, string $taskId)
     {
@@ -261,7 +314,7 @@ class SoraVideoTaskLogic extends ApiLogic
     }
 
     /**
-     * 删除闪剪视频任务
+     * 删除sora视频任务
      * @param int $id
      * @return bool
      */
@@ -299,7 +352,7 @@ class SoraVideoTaskLogic extends ApiLogic
     }
 
     /**
-     * 获取闪剪视频任务详情
+     * 获取sora视频任务详情
      * @param int $id
      * @return bool
      */

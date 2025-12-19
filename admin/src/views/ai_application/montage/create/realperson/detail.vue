@@ -134,9 +134,9 @@ const getStatus = (status: number) => {
     //状态-0待处理,1视频查询,2视频合成失败,3视频合成成功
     const statusMap = {
         0: "待处理",
-        1: "视频合成中",
-        2: "视频合成失败",
-        3: "视频合成成功",
+        1: "生成中",
+        2: "生成失败",
+        3: "生成成功",
     };
     return statusMap[status as keyof typeof statusMap];
 };

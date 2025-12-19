@@ -41,22 +41,16 @@
                             <view v-for="(item, index) in formData.materialList" :key="index" class="relative">
                                 <view
                                     class="h-[220rpx] rounded-[12rpx] relative overflow-hidden"
-                                    @click="previewMaterial(item.pic)">
-                                    <image
-                                        :src="item.pic"
-                                        class="w-full h-full rounded-[12rpx]"
-                                        mode="aspectFill"></image>
-                                    <view
-                                        class="absolute bottom-0 h-[40rpx] w-full bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[88]">
-                                        <image
-                                            src="@/ai_modules/digital_human/static/icons/pic.svg"
-                                            class="w-[24rpx] h-[24rpx]"></image>
-                                    </view>
+                                    @click="previewMaterial(item)">
+                                    <image :src="item" class="w-full h-full rounded-[12rpx]" mode="aspectFill"></image>
                                 </view>
                                 <view
                                     class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
                                     @click="handleDeleteMaterial(index)">
                                     <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                </view>
+                                <view class="absolute bottom-2 w-full z-[33] flex justify-center">
+                                    <view class="dh-version-name" @click="handleReplaceMaterial(index)"> 替换 </view>
                                 </view>
                             </view>
                             <view
@@ -155,7 +149,7 @@
                         <view class="flex items-center gap-x-2">
                             <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('minus')">
                                 <image
-                                    src="@/ai_modules/digital_human/static/icons/minus_circle.svg"
+                                    src="@/ai_modules/drawing/static/icons/minus_circle.svg"
                                     class="w-[36rpx] h-[36rpx]"></image>
                             </view>
                             <view
@@ -171,7 +165,7 @@
                             </view>
                             <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('add')">
                                 <image
-                                    src="@/ai_modules/digital_human/static/icons/add_circle.svg"
+                                    src="@/ai_modules/drawing/static/icons/add_circle.svg"
                                     class="w-[36rpx] h-[36rpx]"></image>
                             </view>
                         </view>
@@ -257,6 +251,7 @@
     <choose-material
         v-model="showMaterial"
         type="image"
+        :multiple="replaceMaterialIndex == -1"
         :limit="limit - formData.materialList.length"
         @select="handleSelectMaterial" />
     <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
@@ -314,14 +309,13 @@ const formData = reactive<{
 
 const showUploadTip = ref(false);
 const isFirstOpen = ref(true);
-const imageAccept = ["jpg", "png"];
+const imageAccept = ["jpg", "png", "jpeg"];
 const limit = 100;
 const imageSize = 5;
 const imageResolution = [2000, 2000];
 const showMaterial = ref(false);
-const uploadType = ref<"all" | "image">("image");
-
-// 编辑文案索引
+const uploadType = ref<"file" | "image">("image");
+const replaceMaterialIndex = ref(-1);
 const editCopywriterIndex = ref(-1);
 const showCreateSuccess = ref(false);
 
@@ -386,12 +380,12 @@ const chooseUploadType = () => {
         itemList: ['从"微信聊天"中选择', '从"素材库"中选择', '从"手机相册"中选择'],
         success: (res) => {
             if (res.tapIndex == 0 || res.tapIndex == 2) {
+                uploadType.value = res.tapIndex == 0 ? "file" : "image";
                 if (isFirstOpen.value) {
                     isFirstOpen.value = false;
                     showUploadTip.value = true;
                     return;
                 }
-                uploadType.value = res.tapIndex == 0 ? "all" : "image";
                 if (!isFirstOpen.value) {
                     uploadAndProcessFiles(uploadType.value);
                 }
@@ -410,7 +404,12 @@ const { uploadMaterialList, showUploadProgress, uploadAndProcessFiles } = useUpl
     fileAccept: imageAccept,
     fileSize: imageSize,
     onSuccess: (materials: any[]) => {
-        formData.materialList.push(...materials);
+        if (replaceMaterialIndex.value !== -1) {
+            formData.materialList[replaceMaterialIndex.value] = materials[0].url;
+        } else {
+            formData.materialList.push(...materials.map((item: any) => item.url));
+        }
+        replaceMaterialIndex.value = -1;
     },
 });
 
@@ -426,10 +425,10 @@ const handleSelectMaterial = async (lists: any[]) => {
                         const isAccord =
                             width <= imageResolution[0] &&
                             height <= imageResolution[1] &&
-                            imageAccept.includes(type.toLowerCase()) &&
+                            imageAccept.includes(type) &&
                             parseInt(item.size) <= imageSize * 1024 * 1024;
                         if (isAccord) {
-                            resolve(item);
+                            resolve(item.content);
                         } else {
                             uni.showToast({
                                 title: `选择的图片包含不符合条件的图片，已自动过滤`,
@@ -444,8 +443,18 @@ const handleSelectMaterial = async (lists: any[]) => {
                 });
             })
     );
-    const uploadImages = await Promise.all(imageCheckPromises);
-    formData.materialList.push(...uploadImages);
+    const uploadImages = (await Promise.all(imageCheckPromises)).filter((url: any) => url);
+    if (replaceMaterialIndex.value !== -1) {
+        formData.materialList[replaceMaterialIndex.value] = uploadImages[0];
+    } else {
+        formData.materialList.push(...uploadImages);
+    }
+    replaceMaterialIndex.value = -1;
+};
+
+const handleReplaceMaterial = (index: number) => {
+    replaceMaterialIndex.value = index;
+    chooseUploadType();
 };
 
 const handleDeleteMaterial = (index: number) => {
@@ -518,7 +527,7 @@ const handleCreateImage = async () => {
         await createPuzzleTask({
             name: formData.name,
             copywriting: formData.copywriterList.map((item: any) => ({ title: item })),
-            material: formData.materialList.map((item: any) => item.pic),
+            material: formData.materialList,
             result_count: formData.result_count,
         });
         showCreateSuccess.value = true;

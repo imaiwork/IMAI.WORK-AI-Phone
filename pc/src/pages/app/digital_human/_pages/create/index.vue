@@ -605,7 +605,10 @@ const chooseToneRef = shallowRef<InstanceType<typeof ChooseTone>>();
 const showChooseTone = ref<boolean>(false);
 
 const isShowOriginalTone = computed(() => {
-    return formData.model_version == DigitalHumanModelVersionEnum.CHANJING;
+    return (
+        formData.model_version == DigitalHumanModelVersionEnum.CHANJING ||
+        formData.model_version == DigitalHumanModelVersionEnum.STANDARD
+    );
 });
 
 const openChooseTone = async () => {
@@ -673,6 +676,7 @@ const showUpload = ref<boolean>(false);
 
 // 文本限制
 const textLimit = computed(() => {
+    //@ts-ignore
     const limits: Record<DigitalHumanModelVersionEnum, number> = {
         [DigitalHumanModelVersionEnum.STANDARD]: 150,
         [DigitalHumanModelVersionEnum.SUPER]: 300,
@@ -685,6 +689,7 @@ const textLimit = computed(() => {
 
 // 音频时长限制
 const getAudioDurationLimits = computed(() => {
+    //@ts-ignore
     const limits: Record<DigitalHumanModelVersionEnum, { min: number; max: number; size: number }> = {
         [DigitalHumanModelVersionEnum.STANDARD]: { min: 5, max: 100, size: 100 },
         [DigitalHumanModelVersionEnum.SUPER]: { min: 2, max: 120, size: 30 },

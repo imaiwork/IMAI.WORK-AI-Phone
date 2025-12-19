@@ -24,6 +24,7 @@
                         <el-option label="等待处理" value="1" />
                         <el-option label="生成中" value="2" />
                         <el-option label="已生成" value="3" />
+                        <el-option label="失败" value="4" />
                     </el-select>
                 </el-form-item>
                 <el-form-item label="创作时间">

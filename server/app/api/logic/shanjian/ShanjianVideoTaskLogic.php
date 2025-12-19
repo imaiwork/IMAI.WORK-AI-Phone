@@ -531,7 +531,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
                     switch ($task->shanjian_type) {
                         case 1:
-                            $duration = mb_strlen($task->msg, 'UTF-8');
+                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
                             $unit = TokenLogService::checkToken($task->user_id, 'human_video_shanjian', $duration);
                             // 更新状态为视频合成中
                             $scene = self::SHANJIAN_VIDEO;
@@ -550,7 +550,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
                                         "audioUrl" => $task->music_url,
-                                        "volume" => 0.5
+                                        "volume" => 0.3
                                     ],
                                 ],
                                 'processRules' => [
@@ -604,7 +604,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             break;
 
                         case 2:
-                            $duration = mb_strlen($task->msg, 'UTF-8');
+                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
                             $unit = TokenLogService::checkToken($task->user_id, 'shanjian_realman_broadcast', $duration);
                             // 更新状态为视频合成中
                             $scene = self::SHANJIAN_REALMAN_BROADCAST;
@@ -620,7 +620,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
                                         "audioUrl" => $task->music_url,
-                                        "volume" => 0.5
+                                        "volume" => 0.3
                                     ],
                                 ],
                                 'processRules' => [
@@ -669,7 +669,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             }
                             break;
                         case 3:
-                            $duration = mb_strlen($task->msg, 'UTF-8');
+                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
                             $unit = TokenLogService::checkToken($task->user_id, 'shanjian_broadcast_mixcut', $duration);
                             // 更新状态为视频合成中
                             $scene = self::SHANJIAN_BROADCAST_MIXCUT;
@@ -683,7 +683,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
                                         "audioUrl" => $task->music_url,
-                                        "volume" => 0.5
+                                        "volume" => 0.3
                                     ],
                                 ],
                                 'processRules' => [
@@ -732,8 +732,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             }
                             break;
                         case 4:
-                            $duration = mb_strlen($task->msg, 'UTF-8');
-                            Log::channel('shanjian')->write('新闻合成视频1');
+                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
                             $unit = TokenLogService::checkToken($task->user_id, 'shanjian_news_mixcut', $duration);
                             // 更新状态为视频合成中
                             $scene = self::SHANJIAN_NEWS_MIXCUT;
@@ -750,7 +749,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
                                         "audioUrl" => $task->music_url,
-                                        "volume" => 0.5
+                                        "volume" => 0.3
                                     ],
                                 ],
                                 'processRules' => [

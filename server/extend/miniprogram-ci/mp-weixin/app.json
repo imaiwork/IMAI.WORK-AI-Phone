@@ -40,6 +40,7 @@
         "pages/audio_manage/audio_manage",
         "pages/audio_choose/audio_choose",
         "pages/clone_manage/clone_manage",
+        "pages/szr_copywriter/szr_copywriter",
         "pages/ai_copywriter/ai_copywriter",
         "pages/styles_choose/styles_choose",
         "pages/montage_create/montage_create",

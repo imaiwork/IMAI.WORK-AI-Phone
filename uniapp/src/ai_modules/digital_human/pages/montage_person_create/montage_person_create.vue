@@ -1,7 +1,7 @@
 <template>
     <view class="h-screen flex flex-col device-bg">
         <u-navbar
-            title="真人口播视频智剪"
+            title="真人口播视频混剪"
             title-bold
             :is-fixed="false"
             :border-bottom="false"
@@ -49,6 +49,9 @@
                                     class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
                                     @click="handleDeleteAnchor(item.id)">
                                     <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                </view>
+                                <view class="absolute bottom-2 w-full z-[33] flex justify-center">
+                                    <view class="dh-version-name" @click="handleReplaceMaterial(index, 0)"> 替换 </view>
                                 </view>
                             </view>
                             <view
@@ -154,6 +157,11 @@
                                     @click="handleDeleteMaterial(item.id)">
                                     <u-icon name="close" color="#ffffff" size="16"></u-icon>
                                 </view>
+                                <div class="absolute bottom-4 w-full z-[89] flex justify-center">
+                                    <view class="dh-version-name" @click.stop="handleReplaceMaterial(index, 1)">
+                                        替换
+                                    </view>
+                                </div>
                             </view>
                             <view
                                 class="bg-white rounded-[12rpx] flex flex-col items-center justify-center h-[220rpx]"
@@ -373,6 +381,8 @@ const formData = reactive<{
 
 const isFirstOpen = ref(true);
 const showUploadTip = ref(false);
+// 替换素材索引
+const replaceMaterialIndex = ref(-1);
 const uploadType = ref<"image" | "video">("video");
 const uploadSource = ref<0 | 1>(0);
 const showHistory = ref(false);
@@ -476,9 +486,19 @@ const {
 } = useMontageMaterial({
     onSuccess: (materials: any[]) => {
         if (uploadSource.value == 0) {
-            formData.anchorLists = formData.anchorLists.concat(materials);
+            if (replaceMaterialIndex.value !== -1) {
+                formData.anchorLists[replaceMaterialIndex.value] = materials[0];
+            } else {
+                formData.anchorLists = formData.anchorLists.concat(materials);
+            }
+            replaceMaterialIndex.value = -1;
         } else {
-            formData.materialList = formData.materialList.concat(materials);
+            if (replaceMaterialIndex.value !== -1) {
+                formData.materialList[replaceMaterialIndex.value] = materials[0];
+            } else {
+                formData.materialList = formData.materialList.concat(materials);
+            }
+            replaceMaterialIndex.value = -1;
         }
     },
 });
@@ -507,12 +527,12 @@ const chooseUploadType = (type: 0 | 1) => {
         uni.showActionSheet({
             itemList: ["选择图片素材", "选择视频素材"],
             success: async (res) => {
+                uploadType.value = res.tapIndex == 0 ? "image" : "video";
                 if (isFirstOpen.value) {
                     isFirstOpen.value = false;
                     showUploadTip.value = true;
                     return;
                 }
-                uploadType.value = res.tapIndex == 0 ? "image" : "video";
                 uploadAndProcessFiles(uploadType.value);
             },
         });
@@ -520,14 +540,18 @@ const chooseUploadType = (type: 0 | 1) => {
 };
 
 const handleSelectHistory = (lists: any[]) => {
-    formData.anchorLists = formData.anchorLists.concat(
-        lists.map((item: any) => ({
-            pic: item.pic,
-            url: item.video_result_url,
-            name: item.name,
-            duration: item.duration,
-        }))
-    );
+    const data = lists.map((item: any) => ({
+        pic: item.pic,
+        url: item.video_result_url,
+        name: item.name,
+        duration: item.duration,
+    }));
+    if (replaceMaterialIndex.value !== -1) {
+        formData.anchorLists[replaceMaterialIndex.value] = data[0];
+    } else {
+        formData.anchorLists = formData.anchorLists.concat(data);
+    }
+    replaceMaterialIndex.value = -1;
     showHistory.value = false;
 };
 
@@ -535,6 +559,11 @@ const handleVideoPlay = (item: any) => {
     playItem.pic = item.pic;
     playItem.url = item.url;
     showVideoPreview.value = true;
+};
+
+const handleReplaceMaterial = (index: number, type: 0 | 1) => {
+    replaceMaterialIndex.value = index;
+    chooseUploadType(type);
 };
 
 const handleDeleteAnchor = (id: number) => {

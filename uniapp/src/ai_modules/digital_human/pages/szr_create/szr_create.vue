@@ -153,7 +153,8 @@
                             </view>
                             <view class="h-[20rpx] w-[1rpx] bg-[#EDEDED]"></view>
                             <navigator
-                                :url="`/ai_modules/digital_human/pages/ai_copywriter/ai_copywriter?limit=${textLimit}`">
+                                :url="`/ai_modules/digital_human/pages/ai_copywriter/ai_copywriter?limit=${textLimit}`"
+                                hover-class="none">
                                 <view class="util-item">
                                     <view class="w-[30rpx] h-[30rpx]">
                                         <image
@@ -164,24 +165,17 @@
                                 </view>
                             </navigator>
                         </view>
-                        <view
+                        <navigator
+                            :url="`/ai_modules/digital_human/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
+                            hover-class="none"
                             class="border-[1rpx] border-solid border-[#E5E5E5] border-l-0 border-r-0 border-b-0 py-[32rpx] relative">
-                            <view
-                                class="absolute top-0 left-0 w-full h-full z-[8]"
-                                @click.stop="openContentInput"></view>
-                            <u-input
-                                class="text-[26rpx]"
-                                v-model="formData.msg"
-                                type="textarea"
-                                height="364"
-                                placeholder="请输入或粘贴您的文案 ..."
-                                placeholder-style="color: #00000033; font-size: 26rpx;"
-                                disabled
-                                :maxlength="textLimit"></u-input>
+                            <view class="min-h-[364rpx] text-[#00000033">
+                                {{ formData.msg || "请输入您的文案" }}
+                            </view>
                             <view class="text-right text-[22rpx] text-[#999] mt-2" v-if="formData.msg">
                                 {{ formData.msg.length }}/{{ textLimit }}
                             </view>
-                        </view>
+                        </navigator>
                     </view>
                 </view>
             </scroll-view>
@@ -327,7 +321,7 @@ const modelVersionMap = computed(() => {
 });
 
 const canCreate = computed(() => {
-    return isModelVersion.value && (formData.voice_type == 1 || !!formData.voice_id) && !!formData.msg;
+    return isModelVersion.value && (formData.voice_type == 1 || !!formData.voice_id) && formData.msg?.length > 0;
 });
 
 const isOriginalTone = computed(() => {
@@ -349,7 +343,6 @@ const getClipConfigData = async () => {
 const chooseAnchor = (item: AnchorItem) => {
     const { name, model_version, anchor_id, url, pic, width, height } = item;
     if (formData.model_version !== model_version) {
-        formData.msg = "";
         formData.voice_id = "-1";
         formData.voice_name = "";
     }
@@ -467,6 +460,11 @@ const confirmCreate = async () => {
         showAgreement.value = true;
         return;
     }
+    // 判断文案是否超出限制
+    if (formData.msg?.length > textLimit.value) {
+        uni.$u.toast("文案超出限制，请重新输入");
+        return;
+    }
     showAgreement.value = false;
     try {
         uni.showLoading({
@@ -563,19 +561,22 @@ const onCreateAnchor = (data: any) => {
 };
 
 onShow(() => {
-    getModelLists();
     getClipConfigData();
 });
 
 // 生命周期钩子
 onLoad(async (options: any) => {
+    getModelLists();
     on("confirm", (result: any) => {
         const { type, data } = result;
         if (type === ListenerTypeEnum.CREATE_ANCHOR) {
-            onCreateAnchor(data);
+            getModelLists();
+        }
+        if (type === ListenerTypeEnum.SZR_COPYWRITER) {
+            formData.msg = data;
         }
         if (type === ListenerTypeEnum.AI_COPYWRITER) {
-            formData.msg = data.content;
+            formData.msg = data;
             if (formData.msg?.length > textLimit.value) {
                 formData.msg = formData.msg.slice(0, textLimit.value);
             }
@@ -592,10 +593,6 @@ onLoad(async (options: any) => {
 </script>
 
 <style scoped lang="scss">
-:deep(textarea) {
-    font-size: 26rpx !important;
-}
-
 .util-item {
     @apply flex  items-center gap-x-1   py-1 px-2 rounded transition-all duration-300 h-[80rpx];
 }

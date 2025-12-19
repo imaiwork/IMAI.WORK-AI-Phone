@@ -76,17 +76,22 @@ export function useChatManager() {
                     const { object, content, task_id: newTaskId, usage, reasoning_content } = JSON.parse(text);
                     if (newTaskId && !taskId.value) {
                         const firstMessage = chatContentList.value[0];
-                        triggerHistoryRefresh({
-                            taskId: newTaskId,
-                            message: firstMessage?.message,
-                            createTime: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                        });
+                        if (firstMessage) {
+                            triggerHistoryRefresh({
+                                taskId: newTaskId,
+                                message: firstMessage?.message,
+                                createTime: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                            });
+                        }
+
                         chatStore.setTaskId(newTaskId);
                         replaceState({
                             task_id: newTaskId,
                             agent_name: agentValue.value?.name,
                             agent_id: agentValue.value?.id,
                         });
+                    } else if (newTaskId && newTaskId !== taskId.value) {
+                        return;
                     }
                     const lastMessage = chatContentList.value[chatContentList.value.length - 1];
                     if (object === "loading") {
@@ -240,8 +245,11 @@ export function useChatManager() {
     /**
      * @description 手动停止正在进行的流式响应。
      */
-    const stopStream = () => {
-        streamReader.value?.cancel();
+    const stopStream = async () => {
+        if (streamReader.value) {
+            await streamReader.value.cancel();
+            streamReader.value = null;
+        }
         if (isReceiving.value) {
             const lastMessage = chatContentList.value[chatContentList.value.length - 1];
             chatStore.updateLastMessage({

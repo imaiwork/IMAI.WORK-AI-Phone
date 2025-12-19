@@ -121,7 +121,7 @@ export default defineComponent({
         },
         // 图片分辨率
         imageResolution: {
-            type: Array as unknown as PropType<[number, number]>,
+            type: Array as unknown as PropType<[number, number]>, // 0: width, 1: height
             default: () => [4096, 4096],
         },
         // 视频分辨率

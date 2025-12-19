@@ -178,36 +178,33 @@ class HdPuzzleLogic extends ApiLogic
 
         try {
             foreach ($tasks as $task) {
-                $puzzleSetting = HdPuzzleSetting::where('id', $task->puzzle_setting_id)->whereIn('status', [1, 2])->findOrEmpty();
-                if ($puzzleSetting->isEmpty()) {
-                    throw new \Exception('关联的设置不存在');
-                }
+                // 为每个任务单独开启事务
+                \think\facade\Db::startTrans();
+                
                 try {
+                    $puzzleSetting = HdPuzzleSetting::where('id', $task->puzzle_setting_id)->whereIn('status', [1, 2])->findOrEmpty();
+                    if ($puzzleSetting->isEmpty()) {
+                        throw new \Exception('关联的设置不存在');
+                    }
 
                     $task->tries++;
                     $input['images'] = $task['material'];
                     $input['titles'] = $task['title'];
                     $type = $task['type'];
-                    switch ($type) {
-                        case 1:
-                            $input['channelVersion'] = 9;
-                            break;
-                        case 2:
-                            $input['channelVersion'] = 10;
-                            break;
-                        case 3:
-                            $input['channelVersion'] = 11;
-                            break;
-                        case 4:
-                            $input['channelVersion'] = 12;
-                            break;
-                        case 5:
-                            $input['channelVersion'] = 13;
-                            break;
-                    }
+                    
+                    // 使用数组映射替代switch语句
+                    $channelVersionMap = [
+                        1 => 9,
+                        2 => 10,
+                        3 => 11,
+                        4 => 12,
+                        5 => 13
+                    ];
+                    $input['channelVersion'] = $channelVersionMap[$type] ?? 9;
+                    
                     $response = \app\common\service\ToolsService::Coze()->puzzle($input);
                     $puzzle_url = [];
-                    Log::channel('puzzle')->write('拼图结果' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                    Log::channel('puzzle')->write('拼图结果 ' . $task->task_id . ': ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                     
                     if (isset($response['code']) && $response['code'] == 10000) {
                         
@@ -223,11 +220,11 @@ class HdPuzzleLogic extends ApiLogic
                             $task->puzzle_url = json_encode($puzzle_url, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                             $extra = ['扣费项目' => '小红书图片自动合成', '算力单价' => $unit, '实际消耗算力' => $points];
                             $task->img_token = $points;
-                            $taskId = $task->task_id;
+                            $currentTaskId = $task->task_id;
                             //token扣除
                             User::userTokensChange($task->user_id, $points);
                             //记录日志
-                            AccountLogLogic::recordUserTokensLog(true, $task->user_id, AccountLogEnum::TOKENS_DEC_COMBINED_PICTURE, $points, $taskId, $extra);
+                            AccountLogLogic::recordUserTokensLog(true, $task->user_id, AccountLogEnum::TOKENS_DEC_COMBINED_PICTURE, $points, $currentTaskId, $extra);
                             $task->status = 1;
                             $puzzleSetting->status = 2;
                             $puzzleSetting->success_puzzle_count += $image_count;
@@ -237,34 +234,73 @@ class HdPuzzleLogic extends ApiLogic
                             $puzzleSetting->error_num += 1;
                             $puzzleSetting->status = 2;
                         }
-
-
                     }
+                    
+                    // 保存任务状态
+                    $task->save();
+                    
+                    // 更新设置状态
+                    $all = $puzzleSetting->success_num + $puzzleSetting->error_num;
+                    if ($all >= $puzzleSetting->task_count) {
+                        if ($puzzleSetting->success_num == 0) {
+                            $puzzleSetting->status = 5;
+                        } elseif ($puzzleSetting->error_num > 0) {
+                            $puzzleSetting->status = 4;
+                        } else {
+                            $puzzleSetting->status = 3;
+                        }
+                    }
+                    $puzzleSetting->save();
+                    
+                    // 提交事务
+                    \think\facade\Db::commit();
+                    
                 } catch (\Exception $e) {
-                    Log::channel('puzzle')->write('拼图是失败：' . $task->task_id.'，原因：'. $e->getMessage());
-                    $task->tries = $task->tries + 1;
-                    if ($task->tries == 5) {
-                        $task->status = 2;
-                        $puzzleSetting->error_num += 1;
+                    // 回滚事务
+                    \think\facade\Db::rollback();
+                    
+                    // 记录详细错误信息
+                    Log::channel('puzzle')->write('拼图失败：' . $task->task_id . '，原因：' . $e->getMessage());
+                    Log::channel('puzzle')->write('错误堆栈：' . $e->getTraceAsString());
+                    
+                    // 重新获取最新的任务和设置对象
+                    $task = HdPuzzle::find($task->id);
+                    $puzzleSetting = HdPuzzleSetting::find($task->puzzle_setting_id);
+                    
+                    if ($task && $puzzleSetting) {
+                        // 再次开启事务更新错误状态
+                        \think\facade\Db::startTrans();
+                        try {
+                            $task->tries++;
+                            if ($task->tries >= 10) {
+                                $task->status = 2;
+                                $puzzleSetting->error_num += 1;
+                            }
+                            $task->remark = $e->getMessage();
+                            $task->save();
+                            
+                            // 更新设置状态
+                            $all = $puzzleSetting->success_num + $puzzleSetting->error_num;
+                            if ($all >= $puzzleSetting->task_count) {
+                                if ($puzzleSetting->success_num == 0) {
+                                    $puzzleSetting->status = 5;
+                                } elseif ($puzzleSetting->error_num > 0) {
+                                    $puzzleSetting->status = 4;
+                                }
+                            }
+                            $puzzleSetting->save();
+                            
+                            \think\facade\Db::commit();
+                        } catch (\Exception $updateEx) {
+                            \think\facade\Db::rollback();
+                            Log::channel('puzzle')->write('更新失败状态出错：' . $task->task_id . '，原因：' . $updateEx->getMessage());
+                        }
                     }
-                    $task->remark = $e->getMessage();
                 }
-                $task->save();
-                $all = $puzzleSetting->success_num + $puzzleSetting->error_num;
-                if ($all >= $puzzleSetting->task_count) {
-                    if ($puzzleSetting->success_num == 0) {
-                        $puzzleSetting->status = 5;
-                    } elseif ($puzzleSetting->error_num > 0) {
-                        $puzzleSetting->status = 4;
-                    } else {
-                        $puzzleSetting->status = 3;
-                    }
-                }
-                $puzzleSetting->save();
-
             }
         } catch (\Exception $e) {
-
+            Log::channel('puzzle')->write('任务处理异常：' . $e->getMessage());
+            Log::channel('puzzle')->write('异常堆栈：' . $e->getTraceAsString());
         }
 
         return;

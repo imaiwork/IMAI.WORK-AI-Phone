@@ -118,6 +118,7 @@ export enum TokensSceneEnum {
     SORA_VIDEO = "sora_video_create",
     NEWS_MIX_CUT_TITLE = "news_mixcut_title",
     PUZZLE_AI_COPYWRITER = "combined_picture_title",
+    SORA_PRO_VIDEO = "sora_pro_video_create",
 }
 
 export enum KnbTypeEnum {

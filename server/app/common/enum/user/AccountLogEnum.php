@@ -242,6 +242,7 @@ class AccountLogEnum
     const TOKENS_DEC_MATRIX_COPYWRITING = 10104;
     const TOKENS_DEC_SORA_COPYWRITING = 10105;
     const TOKENS_DEC_SORA_VIDEO = 10106;
+    const TOKENS_DEC_SORA_PRO_VIDEO = 10107;
 
 
     const TOKENS_DEC_NEWS_MIXCUT_TITLE = 10200;
@@ -344,6 +345,8 @@ class AccountLogEnum
         self::TOKENS_DEC_COMBINED_PICTURE_TITLE,
         self::TOKENS_DEC_COMBINED_PICTURE,
         self::TOKENS_DEC_SORA_VIDEO,
+        self::TOKENS_DEC_SORA_PRO_VIDEO,
+        self::TOKENS_DEC_SORA_COPYWRITING,
     ];
 
 
@@ -517,6 +520,8 @@ class AccountLogEnum
             self::TOKENS_DEC_COMBINED_PICTURE_TITLE => '小红书图片合成封面标题内容生成减少算力',
             self::TOKENS_DEC_COMBINED_PICTURE => '小红书图片自动合成减少算力',
             self::TOKENS_DEC_SORA_VIDEO => '一句话生成视频减少算力',
+            self::TOKENS_DEC_SORA_PRO_VIDEO => '一句话生成视频(pro)减少算力',
+            self::TOKENS_DEC_SORA_COPYWRITING => '一句话生成视频AI优化文案减少算力',
         ];
         if ($flag) {
             return $desc;

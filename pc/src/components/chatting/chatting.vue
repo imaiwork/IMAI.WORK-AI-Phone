@@ -98,11 +98,11 @@
                                     <div
                                         class="flex items-center justify-center gap-x-1 rounded-full h-[34px] px-[12px] hover:bg-[#00000008] cursor-pointer border border-[#EBEBEB]"
                                         :class="{
-                                            '!bg-[#1ba7991a] !text-[#1BA799]': selectedNetwork,
+                                            '!bg-primary !text-white': selectedNetwork,
                                         }"
                                         v-if="isNetwork"
                                         @click="handleNetwork">
-                                        <Icon name="local-icon-network" color="#1BA799" :size="14"></Icon>
+                                        <Icon name="local-icon-network" :size="14"></Icon>
                                         <span class="text-xs">联网搜索</span>
                                     </div>
                                     <file-upload

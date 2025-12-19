@@ -14,10 +14,13 @@
                         @click="previewImage(index)">
                         <image :src="image" mode="aspectFill" class="w-full h-full rounded-[20rpx]"></image>
                         <view
-                            class="absolute -top-2 -right-2 flex items-center justify-center bg-black rounded-full w-5 h-5"
+                            class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
                             @click.stop="handleDeleteImage(index)">
                             <u-icon name="close" size="20" color="#ffffff"></u-icon>
                         </view>
+                        <div class="absolute bottom-2 w-full z-[33] flex justify-center">
+                            <view class="dh-version-name" @click.stop="handleReplaceImage(index)"> 替换 </view>
+                        </div>
                     </view>
                     <view
                         v-if="imageList.length < limit"
@@ -77,9 +80,11 @@ const imageList = ref<any[]>([]);
 // 是否显示上传提示
 const showUploadTip = ref(false);
 const isFirstOpen = ref(true);
-const uploadType = ref<"all" | "image">("image");
+const uploadType = ref<"file" | "image">("image");
 // 是否显示选择素材
 const showImgMaterial = ref(false);
+// 替换图片索引
+const replaceImageIndex = ref(-1);
 // 获取上传提示内容
 const getTipsContent = computed(() => {
     return `
@@ -96,11 +101,15 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
     imageAccept: uploadFormat,
     imageResolution: imageResolution,
     imageSize: imageSize,
+    fileAccept: uploadFormat,
+    fileSize: imageSize,
     onSuccess: (res: any[]) => {
-        // 这里要计算已有图片和上传图片的差值，然后上传差值数量的图片
-        const diff = limit - imageList.value.length;
-        const uploadImages = res.slice(0, diff);
-        imageList.value = imageList.value.concat(uploadImages.map((item: any) => item.url));
+        if (replaceImageIndex.value !== -1) {
+            imageList.value[replaceImageIndex.value] = res[0].url;
+        } else {
+            imageList.value = imageList.value.concat(res.map((item: any) => item.url));
+        }
+        replaceImageIndex.value = -1;
     },
 });
 
@@ -110,12 +119,12 @@ const chooseUploadType = () => {
         itemList: ['从"微信聊天"中选择', '从"素材库"中选择', '从"手机相册"中选择'],
         success: (res) => {
             if (res.tapIndex == 0 || res.tapIndex == 2) {
+                uploadType.value = res.tapIndex == 0 ? "file" : "image";
                 if (isFirstOpen.value) {
                     isFirstOpen.value = false;
                     showUploadTip.value = true;
                     return;
                 }
-                uploadType.value = res.tapIndex == 0 ? "all" : "image";
                 if (!isFirstOpen.value) {
                     uploadAndProcessFiles(uploadType.value);
                 }
@@ -155,7 +164,12 @@ const handleSelectImgMaterial = async (res: any[]) => {
             })
     );
     const uploadImages = (await Promise.all(imageCheckPromises)).filter((url) => url);
-    imageList.value = imageList.value.concat(uploadImages);
+    if (replaceImageIndex.value !== -1) {
+        imageList.value[replaceImageIndex.value] = uploadImages[0];
+    } else {
+        imageList.value = imageList.value.concat(uploadImages);
+    }
+    replaceImageIndex.value = -1;
 };
 
 const previewImage = (index: number) => {
@@ -169,6 +183,10 @@ const handleDeleteImage = (index: number) => {
     imageList.value.splice(index, 1);
 };
 
+const handleReplaceImage = (index: number) => {
+    replaceImageIndex.value = index;
+    chooseUploadType();
+};
 const handleConfirm = () => {
     if (imageList.value.length === 0) {
         uni.$u.toast(`至少需要上传1张图`);

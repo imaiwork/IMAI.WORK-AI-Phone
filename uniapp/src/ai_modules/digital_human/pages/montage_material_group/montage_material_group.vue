@@ -22,6 +22,20 @@
                             @click="handleDeleteMaterial(index)">
                             <u-icon name="close" color="#ffffff" size="16"></u-icon>
                         </view>
+                        <view
+                            class="absolute bottom-0 h-[40rpx] w-full bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[88]">
+                            <image
+                                v-if="item.type === 'image'"
+                                src="@/ai_modules/digital_human/static/icons/pic.svg"
+                                class="w-[24rpx] h-[24rpx]"></image>
+                            <image
+                                v-else
+                                src="@/ai_modules/digital_human/static/icons/video.svg"
+                                class="w-[24rpx] h-[24rpx]"></image>
+                        </view>
+                        <view class="absolute bottom-4 w-full z-[89] flex justify-center">
+                            <view class="dh-version-name" @click="handleReplaceMaterial(index)"> 替换 </view>
+                        </view>
                     </view>
                     <view
                         class="bg-white rounded-[12rpx] flex flex-col items-center justify-center h-[220rpx]"
@@ -58,6 +72,17 @@ const { emit } = useEventBusManager();
 
 const materialList = ref<any[]>([]);
 const showUploadTip = ref(false);
+const replaceMaterialIndex = ref(-1);
+
+// 获取当前素材总时长
+const getCurrentTotalDuration = computed(() => {
+    const imageCount = materialList.value.filter((item: any) => item.type === "image").length;
+    // 单张图片计算为 2秒 + 视频时长，所有素材总时长不能超过5分钟，
+    const totalDuration =
+        materialList.value.reduce((acc, item) => (item.type === "video" ? acc + item.duration : acc), 0) +
+        imageCount * montageConfig.imageDuration;
+    return totalDuration;
+});
 
 const chooseUploadType = () => {
     showUploadTip.value = false;
@@ -74,9 +99,19 @@ const chooseUploadType = () => {
 
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useMontageMaterial({
     onSuccess: (res: any[]) => {
-        materialList.value = materialList.value.concat(res);
+        if (replaceMaterialIndex.value !== -1) {
+            materialList.value[replaceMaterialIndex.value] = res[0];
+        } else {
+            materialList.value = materialList.value.concat(res);
+        }
+        replaceMaterialIndex.value = -1;
     },
 });
+
+const handleReplaceMaterial = (index: number) => {
+    replaceMaterialIndex.value = index;
+    chooseUploadType();
+};
 
 const handleUploadVideo = () => {};
 
@@ -96,10 +131,7 @@ const handleConfirm = () => {
         return;
     }
     // 单张图片计算为 2秒 + 视频时长，所有素材总时长不能超过5分钟，
-    const totalDuration =
-        materialList.value.reduce((acc, item) => (item.type === "video" ? acc + item.duration : acc), 0) +
-        imageCount * montageConfig.imageDuration;
-    if (totalDuration > montageConfig.materialTotalDuration * 60) {
+    if (getCurrentTotalDuration.value > montageConfig.materialTotalDuration * 60) {
         uni.$u.toast(`素材总时长不能超过${montageConfig.materialTotalDuration}分钟`);
         return;
     }

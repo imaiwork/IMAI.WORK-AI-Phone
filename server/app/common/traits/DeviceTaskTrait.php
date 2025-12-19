@@ -483,7 +483,7 @@ trait DeviceTaskTrait
                 ->where('t.status', 'in', [0, 1])
                 ->where('a.status', 4)
                 ->where('t.id', $dtask->sub_task_id)
-                ->order('a.update_time', 'asc')
+                ->order('a.id', 'desc')
                 ->limit(10)
                 ->select()
                 ->toArray();

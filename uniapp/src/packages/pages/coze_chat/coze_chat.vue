@@ -1077,7 +1077,4 @@ onHide(() => {
     padding: 0;
     border: none !important;
 }
-:deep(.file-upload-wrapper) {
-    border: none !important;
-}
 </style>

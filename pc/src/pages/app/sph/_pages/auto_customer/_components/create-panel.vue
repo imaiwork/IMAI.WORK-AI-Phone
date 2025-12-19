@@ -400,7 +400,7 @@
                                                 <div class="text-white text-xs">{{ item }}</div>
                                                 <div class="w-[1px] h-[8px] bg-app-border-2 mx-2"></div>
                                                 <div class="w-4 h-4" @click.stop="handleDeleteRemark(index)">
-                                                    <close-btn :icon-size="10"></close-btn>
+                                                    <close-btn :theme="ThemeEnum.DARK" :icon-size="10"></close-btn>
                                                 </div>
                                             </div>
                                         </div>

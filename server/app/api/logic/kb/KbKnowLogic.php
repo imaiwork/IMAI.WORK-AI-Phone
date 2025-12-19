@@ -908,7 +908,7 @@ class KbKnowLogic extends BaseLogic
      * @throws Exception
      * @author kb
      */
-    public static function embAiChatSearch($KbId,$content): string
+    public static function embAiChatSearch($KbId,$content,$emb_setting = []): string
     {
         $know = KbKnow::where('id', $KbId)->where('is_enable',1)->findOrEmpty();
         if ($know->isEmpty()){
@@ -918,9 +918,15 @@ class KbKnowLogic extends BaseLogic
         // 接收参数
         $kbIds = [$KbId];
         $question       = $content;
-        $searchMode     = 'similar';
-        $searchTokens   = 3000;
-        $searchSimilar  = 0.5;
+        if (!empty($emb_setting)){
+            $searchMode     = $emb_setting['search_mode'];
+            $searchTokens   = $emb_setting['search_tokens'];
+            $searchSimilar  = $emb_setting['search_similar'];
+        }else{
+            $searchMode     = 'similar';
+            $searchTokens   = 3000;
+            $searchSimilar  = 0.5;
+        }
         $rankingStatus  = 0;
         $rankingScore   = 0.5;
         $embModels      = '3:3';

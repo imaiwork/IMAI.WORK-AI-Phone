@@ -35,18 +35,6 @@ class SoraVideoSettingController extends BaseApiController
     }
 
     /**
-     * 文案
-     * @return Json
-     * @author L
-     * @data 2024/6/12 14:04
-     */
-    public function copywriting()
-    {
-        $params = $this->request->post();
-        return SoraVideoSettingLogic::copywriting($params) ? $this->data(SoraVideoSettingLogic::getReturnData()) : $this->fail(SoraVideoSettingLogic::getError());
-    }
-
-    /**
      * 获取视频设置详情
      */
     public function detail()

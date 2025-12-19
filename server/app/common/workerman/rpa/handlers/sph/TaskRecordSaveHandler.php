@@ -229,16 +229,16 @@ class TaskRecordSaveHandler extends BaseMessageHandler
     private function getRegContent(string $crawlContent)
     {
         try {
-            $strings = explode("\n", $crawlContent);
-            if (count($strings) > 2) {
-                $strings = array_values(array_slice($strings, 2));
-            } else {
-                $strings = [];
-            }
-            if (empty($strings)) {
-                return [];
-            }
-            $crawlContent = implode("\n", $strings);
+            // $strings = explode("\n", $crawlContent);
+            // if (count($strings) > 2) {
+            //     $strings = array_values(array_slice($strings, 2));
+            // } else {
+            //     $strings = [];
+            // }
+            // if (empty($strings)) {
+            //     return [];
+            // }
+            // $crawlContent = implode("\n", $strings);
             $crawlContent = str_replace(array_values($this->provinces), "", $crawlContent);
 
             $wechatPattern = '/[a-zA-Z][a-zA-Z0-9_-]{5,19}/';
@@ -301,16 +301,16 @@ class TaskRecordSaveHandler extends BaseMessageHandler
 
             $addWechat = array();
             $replyContent = $payload['crawl_content'];
-            $strings = explode("\n", $replyContent);
-            if (count($strings) > 2) {
-                $strings = array_values(array_slice($strings, 2));
-            } else {
-                $strings = [];
-            }
-            if (empty($strings)) {
-                return [false, []];
-            }
-            $replyContent = implode("\n", $strings);
+            // $strings = explode("\n", $replyContent);
+            // if (count($strings) > 2) {
+            //     $strings = array_values(array_slice($strings, 2));
+            // } else {
+            //     $strings = [];
+            // }
+            // if (empty($strings)) {
+            //     return [false, []];
+            // }
+            // $replyContent = implode("\n", $strings);
             $replyContent = str_replace(array_values($this->provinces), "", $replyContent);
 
             $wechatPattern = '/[a-zA-Z][a-zA-Z0-9_-]{5,19}/';
