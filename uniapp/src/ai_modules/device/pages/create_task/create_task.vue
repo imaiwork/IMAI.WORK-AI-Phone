@@ -454,7 +454,7 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
     videoAccept: videoFormat,
     fileSize: videoSize,
     onSuccess: (res: any[]) => {
-        const data = res.map((item: any) => ({ url: [item.pic, item.content] }));
+        const data = res.map((item: any) => ({ url: [item.pic, item.url] }));
         if (replaceVideoIndex.value !== -1) {
             formData.materialLists[replaceVideoIndex.value] = data[0];
         } else {

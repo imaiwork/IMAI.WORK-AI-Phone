@@ -1,6 +1,6 @@
 {
     "name": "uni-app",
-    "version": "2.6.1",
+    "version": "2.6.2",
     "scripts": {
         "init": "node initialize.js",
         "dev": "node scripts/develop.js",

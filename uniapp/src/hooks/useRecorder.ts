@@ -32,15 +32,25 @@ interface callbacks {
 }
 
 export const useRecorder = (callbacks?: callbacks, options?: Options) => {
-    options = options || {
-        type: "mp3",
-        sampleRate: 16000,
-        bitRate: 32,
-        duration: 5 * 60 * 1000,
-        numberOfChannels: 1, //录音通道数
-        encodeBitRate: 64000,
-        format: "mp3", //音频格式，有效值 aac/mp3 等
-        frameSize: 1200, //指定帧大小，单位 KB
+    const {
+        type = "mp3",
+        sampleRate = 16000,
+        bitRate = 32,
+        duration = 5 * 60 * 1000,
+        numberOfChannels = 1,
+        encodeBitRate = 64000,
+        format = "mp3",
+        frameSize = 1200,
+    } = options || {};
+    options = {
+        type,
+        sampleRate,
+        bitRate,
+        duration,
+        numberOfChannels,
+        encodeBitRate,
+        format,
+        frameSize,
     };
     const isRecording = ref(false);
     const mediaRecorder = shallowRef();
@@ -124,7 +134,7 @@ export const useRecorder = (callbacks?: callbacks, options?: Options) => {
             if (!mediaRecorder.value) {
                 createMediaRecorder();
             }
-
+            console.log("start", options);
             mediaRecorder.value.start(options);
             isRecording.value = true;
             callbacks?.onstart?.();

@@ -29,10 +29,22 @@
                                 :key="index"
                                 @click="handleSelect(item)">
                                 <image
-                                    :src="item.pic || item.content"
+                                    v-if="item.m_type == 1"
+                                    :src="item.pic"
                                     class="w-full h-full rounded-xl"
                                     lazy
                                     mode="aspectFill"></image>
+                                <video
+                                    v-else
+                                    :src="item.content"
+                                    class="w-full h-full"
+                                    object-fit="cover"
+                                    :autoplay="false"
+                                    :show-loading="false"
+                                    :controls="false"
+                                    :show-fullscreen-btn="false"
+                                    :show-center-play-btn="false"
+                                    :show-play-btn="false"></video>
                                 <view class="absolute top-0 left-0 w-full h-full bg-[#00000080]" v-if="isChoose(item)">
                                     <view class="absolute top-2 right-2">
                                         <image

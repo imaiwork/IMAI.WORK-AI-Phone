@@ -110,9 +110,9 @@
 
 <script setup lang="ts">
 import { ThemeEnum, AppTypeEnum } from "@/enums/appEnums";
-import { getCopywritingLibraryList, deleteCopywritingLibrary } from "~/api/matrix";
+import { getCopywritingLibraryList, deleteCopywritingLibrary } from "@/api/matrix";
 import { HandleMenuType } from "@/components/handle-menu/typings";
-import { CopywritingTypeEnum } from "~/pages/app/matrix/_enums";
+import { CopywritingTypeEnum, SidebarTypeEnum } from "@/pages/app/matrix/_enums";
 import Empty from "@/pages/app/matrix/_components/empty.vue";
 import CreatePanel from "./_components/create-panel.vue";
 import EditPopup from "./_components/edit.vue";
@@ -193,7 +193,7 @@ const handleEdit = (type: CopywritingTypeEnum, id?: string) => {
 
 const back = () => {
     isCreate.value = false;
-    window.history.replaceState(null, null, `?type=${AppTypeEnum.XHS}`);
+    window.history.replaceState(null, null, `?type=${SidebarTypeEnum.COPYWRITING_LIBRARY}`);
     resetPage();
 };
 

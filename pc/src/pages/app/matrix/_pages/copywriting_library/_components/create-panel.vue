@@ -222,7 +222,7 @@ const handleAiGen = async () => {
                 return item;
             });
             formData.title.push(...newTitle);
-            formData.described.push(...described);
+            formData.described.push(...described.map((item: any) => ({ content: item.content, topic: item?.topic || [] })));
         } else if (formData.copywriting_type === 2) {
             formData.oral_copy.push(...oral_copy);
         }
