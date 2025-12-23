@@ -1,1 +1,1 @@
-"use strict";let e="https://demo.imai.work/";const t={version:"2.6.2",baseUrl:e,urlPrefix:"api",timeout:3e5};exports.config=t;
+"use strict";let t="https://test.imai.work/";const e={version:"2.6.0",baseUrl:t,urlPrefix:"api",timeout:3e5};exports.config=e;

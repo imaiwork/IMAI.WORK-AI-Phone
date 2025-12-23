@@ -1,0 +1,36 @@
+{
+    "libVersion": "latest",
+    "projectname": "IMAI",
+    "condition": {
+        "miniprogram": {
+            "list": [
+                {
+                    "name": "ai_modules/sph/pages/keywords/keywords",
+                    "pathName": "ai_modules/sph/pages/keywords/keywords",
+                    "query": "type=1&keywords=%5B%2522",
+                    "launchMode": "default",
+                    "scene": null
+                }
+            ]
+        }
+    },
+    "setting": {
+        "urlCheck": false,
+        "coverView": false,
+        "lazyloadPlaceholderEnable": false,
+        "skylineRenderEnable": false,
+        "preloadBackgroundData": false,
+        "autoAudits": false,
+        "useApiHook": true,
+        "useApiHostProcess": true,
+        "showShadowRootInWxmlPanel": false,
+        "useStaticServer": false,
+        "useLanDebug": false,
+        "showES6CompileOption": false,
+        "compileHotReLoad": true,
+        "checkInvalidKey": true,
+        "ignoreDevUnusedFiles": true,
+        "bigPackageSizeSupport": true
+    },
+    "description": "项目私有配置文件。此文件中的内容将覆盖 project.config.json 中的相同字段。项目的改动优先同步到此文件中。详见文档：https://developers.weixin.qq.com/miniprogram/dev/devtools/projectconfig.html"
+}

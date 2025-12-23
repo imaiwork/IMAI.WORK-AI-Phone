@@ -4,11 +4,11 @@
   "enablePullDownRefresh": false,
   "disableScroll": true,
   "usingComponents": {
-    "u-navbar": "../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "circle-progress": "../../components/circle-progress/circle-progress",
     "u-icon": "../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "empty": "../../components/empty/empty",
     "z-paging": "../../node-modules/z-paging/components/z-paging/z-paging",
-    "tabbar": "../../components/tabbar/tabbar"
+    "tabbar": "../../components/tabbar/tabbar",
+    "confirm-dialog": "../../components/confirm-dialog/confirm-dialog"
   }
 }

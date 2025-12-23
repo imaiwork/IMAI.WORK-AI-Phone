@@ -212,7 +212,6 @@
         @confirm="handleChooseTone" />
     <choose-model v-model:show="showChooseModel" @confirm="handleChooseModel" />
     <model-rule v-model="showModelRule" :model-version="formData.model_version" />
-    <content-input ref="contentInputRef" v-model:model-value="formData.msg" :text-limit="textLimit" />
     <create-panel ref="createPanelRef" :formData="formData" @success="confirmCreate" @recharge="recharge" />
     <agreement :show-agreement="showAgreement" @agree="agreeCreate" @close="showAgreement = false" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
@@ -232,7 +231,6 @@ import SelectAnchor from "@/ai_modules/digital_human/components/choose-anchor/ch
 import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
 import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
 import ModelRule from "@/ai_modules/digital_human/components/model-rule/model-rule.vue";
-import ContentInput from "@/ai_modules/digital_human/components/content-input/content-input.vue";
 import Agreement from "@/ai_modules/digital_human/components/agreement/agreement.vue";
 import CreatePanel from "@/ai_modules/digital_human/components/create-panel/create-panel.vue";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
@@ -292,7 +290,6 @@ const showChooseTone = ref(false);
 const currCopywriterIndex = ref(-1);
 const showModelRule = ref(false);
 const showAgreement = ref(false);
-const contentInputRef = shallowRef<InstanceType<typeof ContentInput>>();
 const createPanelRef = shallowRef<InstanceType<typeof CreatePanel>>();
 const rechargePopupRef = ref();
 
@@ -407,10 +404,6 @@ const randomCopywriter = () => {
     formData.msg = createVideoCopywriter[currCopywriterIndex.value];
 };
 
-const openContentInput = () => {
-    contentInputRef.value?.open();
-};
-
 // 算力规则相关方法
 const openModelRule = () => {
     showModelRule.value = true;
@@ -444,7 +437,6 @@ const startCreate = () => {
             openChooseTone();
         } else if (!formData.msg) {
             uni.$u.toast("请先输入视频文案");
-            openContentInput();
         }
         // else if (formData.automatic_clip == 1 && !formData.music_url) {
         //     uni.$u.toast("请先选择音乐");
