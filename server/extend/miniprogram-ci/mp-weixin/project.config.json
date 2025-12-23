@@ -12,7 +12,6 @@
         "newFeature": true,
         "bigPackageSizeSupport": true,
         "ignoreUploadUnusedFiles": true,
-        "packNpmRelationList": [],
         "babelSetting": {
             "ignore": [],
             "disablePlugins": [],
@@ -23,24 +22,7 @@
     "libVersion": "latest",
     "appid": "wx240aed4afb266747",
     "projectname": "IMAI",
-    "condition": {
-        "search": {
-            "current": -1,
-            "list": []
-        },
-        "conversation": {
-            "current": -1,
-            "list": []
-        },
-        "game": {
-            "current": -1,
-            "list": []
-        },
-        "miniprogram": {
-            "current": -1,
-            "list": []
-        }
-    },
+    "condition": {},
     "editorSetting": {
         "tabIndent": "insertSpaces",
         "tabSize": 4
