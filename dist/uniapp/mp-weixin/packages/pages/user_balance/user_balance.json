@@ -1,0 +1,13 @@
+{
+  "navigationBarTitleText": "变化记录",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": false,
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-tabs": "../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "u-line": "../../../uni_modules/vk-uview-ui/components/u-line/u-line",
+    "empty": "../../../components/empty/empty",
+    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging"
+  }
+}

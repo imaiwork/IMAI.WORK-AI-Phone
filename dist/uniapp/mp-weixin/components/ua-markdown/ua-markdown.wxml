@@ -1,0 +1,1 @@
+<view class="ua__markdown"><rich-text class="break-all" space="nbsp" selectable user-select nodes="{{a}}" binditemclick="{{b}}"></rich-text></view>

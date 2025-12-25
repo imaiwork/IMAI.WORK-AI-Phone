@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "授权视频",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-loading": "../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading"
+  }
+}

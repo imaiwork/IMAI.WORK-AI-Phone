@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "线索词",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar"
+  }
+}

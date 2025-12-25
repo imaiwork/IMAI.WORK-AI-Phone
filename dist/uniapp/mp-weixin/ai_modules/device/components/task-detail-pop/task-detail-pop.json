@@ -1,0 +1,9 @@
+{
+  "component": true,
+  "usingComponents": {
+    "empty": "../../../../components/empty/empty",
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "video-preview": "../../../../components/video-preview/video-preview"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "navigationBarTitleText": "充值",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": false,
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-input": "../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "u-button": "../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "u-line": "../../../uni_modules/vk-uview-ui/components/u-line/u-line",
+    "u-popup": "../../../uni_modules/vk-uview-ui/components/u-popup/u-popup"
+  }
+}

@@ -1,0 +1,1 @@
+"use strict";exports.guid=function(t=32,e=!0,l=null){let n="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split(""),i=[];if(l=l||n.length,t)for(let o=0;o<t;o++)i[o]=n[0|Math.random()*l];else{let t;i[8]=i[13]=i[18]=i[23]="-",i[14]="4";for(let e=0;e<36;e++)i[e]||(t=0|16*Math.random(),i[e]=n[19==e?3&t|8:t])}return e?(i.shift(),"u"+i.join("")):i.join("")};

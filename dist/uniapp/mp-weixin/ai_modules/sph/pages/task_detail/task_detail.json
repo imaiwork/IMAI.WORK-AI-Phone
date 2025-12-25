@@ -1,0 +1,14 @@
+{
+  "navigationBarTitleText": "任务详情",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": false,
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "task-card": "../../components/task-card/task-card",
+    "clue-card": "../../components/clue-card/clue-card",
+    "task-edit": "../../components/task-edit/task-edit"
+  }
+}

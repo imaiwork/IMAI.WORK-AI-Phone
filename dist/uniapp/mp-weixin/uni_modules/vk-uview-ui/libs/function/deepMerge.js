@@ -1,0 +1,1 @@
+"use strict";const e=require("./deepClone.js");exports.deepMerge=function t(o={},c={}){if("object"!=typeof(o=e.deepClone(o))||"object"!=typeof c)return!1;for(var n in c)c.hasOwnProperty(n)&&(n in o?"object"!=typeof o[n]||"object"!=typeof c[n]?o[n]=c[n]:o[n].concat&&c[n].concat?o[n]=o[n].concat(c[n]):o[n]=t(o[n],c[n]):o[n]=c[n]);return o};

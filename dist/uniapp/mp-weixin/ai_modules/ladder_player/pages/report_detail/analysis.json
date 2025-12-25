@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-sticky": "../../../../uni_modules/vk-uview-ui/components/u-sticky/u-sticky",
+    "u-line": "../../../../uni_modules/vk-uview-ui/components/u-line/u-line",
+    "pie-chat": "../../components/pie-chat/pie-chat"
+  }
+}

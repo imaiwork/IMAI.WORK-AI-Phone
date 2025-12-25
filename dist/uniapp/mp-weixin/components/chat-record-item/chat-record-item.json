@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-icon": "../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "text-item": "./text-item",
+    "file-item": "../chat-scroll-view/components/file-item"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-form-item": "../../../uni_modules/vk-uview-ui/components/u-form-item/u-form-item",
+    "u-form": "../../../uni_modules/vk-uview-ui/components/u-form/u-form",
+    "widget-input": "./widgets/input",
+    "widget-textarea": "./widgets/textarea",
+    "widget-select": "./widgets/select",
+    "widget-file": "./widgets/file"
+  }
+}

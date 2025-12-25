@@ -1,0 +1,1 @@
+"use strict";const e=require("../../uni_modules/vk-uview-ui/index.js"),t=Object.freeze(Object.defineProperty({__proto__:null,default:t=>{t.use(e.uView)}},Symbol.toStringTag,{value:"Module"}));exports.__vite_glob_0_1=t;

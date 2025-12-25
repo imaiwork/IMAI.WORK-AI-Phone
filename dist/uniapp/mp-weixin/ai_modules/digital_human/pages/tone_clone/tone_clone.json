@@ -1,0 +1,14 @@
+{
+  "navigationBarTitleText": "音色克隆",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
+    "choose-model": "../../components/choose-model/choose-model"
+  }
+}

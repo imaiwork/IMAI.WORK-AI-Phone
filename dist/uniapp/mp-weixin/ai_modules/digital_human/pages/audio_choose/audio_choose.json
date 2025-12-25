@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "选择音乐",
+  "usingComponents": {
+    "u-tabs": "../../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button"
+  }
+}

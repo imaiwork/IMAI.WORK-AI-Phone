@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-line-progress": "../../uni_modules/vk-uview-ui/components/u-line-progress/u-line-progress",
+    "u-popup": "../../uni_modules/vk-uview-ui/components/u-popup/u-popup"
+  }
+}

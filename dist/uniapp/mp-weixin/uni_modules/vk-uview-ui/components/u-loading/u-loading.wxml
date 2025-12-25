@@ -1,0 +1,1 @@
+<view wx:if="{{a}}" class="{{['u-loading', 'data-v-19b245fc', b]}}" style="{{c}}"></view>
