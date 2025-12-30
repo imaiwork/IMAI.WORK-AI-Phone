@@ -1,0 +1,21 @@
+{
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
+    "clue-gen-pop": "../../components/clue-gen-pop/clue-gen-pop",
+    "keywords-edit": "../../components/keywords-edit/keywords-edit",
+    "comment-filter": "../../components/comment-filter/comment-filter",
+    "bast-setting-v2": "../../components/bast-setting-v2/bast-setting-v2",
+    "choose-region": "../../components/choose-region/choose-region",
+    "choose-age": "../../components/choose-age/choose-age",
+    "choose-comment-time": "../../components/choose-comment-time/choose-comment-time"
+  }
+}

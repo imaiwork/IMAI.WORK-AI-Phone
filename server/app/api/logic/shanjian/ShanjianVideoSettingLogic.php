@@ -65,7 +65,6 @@ class ShanjianVideoSettingLogic extends ApiLogic
             if ($duration > 0) {
                 $duration = $duration / 3;
             }
-
             $anchor = $decodedData['anchor'] ?? [];
             $params['status'] = 1;
             $params['video_count'] = count($copywriting);

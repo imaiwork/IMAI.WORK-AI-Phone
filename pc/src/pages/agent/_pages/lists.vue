@@ -118,6 +118,7 @@
 <script setup lang="ts">
 import { getAgentList, deleteAgent, addAgent, getCozeAgentList, cozeAgentDelete, cozeConfigDetail } from "@/api/agent";
 import { ToolEnumMap, ToolEnum } from "@/enums/appEnums";
+import { agentExamplePrompt } from "@/config/common";
 import { HandleMenuType } from "@/components/handle-menu/typings";
 import AgentBg from "@/assets/images/agent_bg.png";
 import { AgentTypeEnum } from "../_enums";
@@ -280,6 +281,7 @@ const handleAgentEdit = async (row?: AgentItem) => {
         try {
             const data = await addAgent({
                 context_num: 3,
+                roles_prompt: agentExamplePrompt,
             });
             router.push({ query: { type: "edit", id: String(data.id) } });
         } catch (error: any) {

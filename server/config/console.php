@@ -60,6 +60,12 @@ return [
         'hd_puzzle_cron' => 'app\common\command\HdPuzzleCron',
         //sora视频合成
         'sora_video_task' => 'app\common\command\SoraVideoTaskCron',
+        //设备自动线索词生成
+        'auto_device_create_cron' => 'app\common\command\AutoDeviceCreateCron',
+        //设备自动加微任务生成
+        'auto_device_frist_create_cron' => 'app\common\command\AutoDeviceFristCreateCron',
+        //设备自动任务调度
+        'auto_task:scheduler' => 'app\common\command\DeviceAutoTaskScheduler',
     ],
 
     

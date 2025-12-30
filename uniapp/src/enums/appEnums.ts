@@ -119,6 +119,8 @@ export enum TokensSceneEnum {
     NEWS_MIX_CUT_TITLE = "news_mixcut_title",
     PUZZLE_AI_COPYWRITER = "combined_picture_title",
     SORA_PRO_VIDEO = "sora_pro_video_create",
+    SORA_COPYWRITING = "sora_copywriting_create",
+    SORA_ROLE = "human_avatar_sora",
 }
 
 export enum KnbTypeEnum {
@@ -231,4 +233,28 @@ export const DeviceWsMessage = {
     [DeviceCmdCodeEnum.DEVICE_CMD_ERROR]: "设备指令异常",
     [DeviceCmdCodeEnum.DEVICE_NOT_EXIST]: "设备不存在",
     [DeviceCmdCodeEnum.DEVICE_ALREADY_BOUND]: "设备已绑定",
+};
+
+export enum DigitalHumanModelVersionEnum {
+    // 标准版
+    STANDARD = 1,
+    // 极速版
+    SUPER = 2,
+    // 高级版
+    ADVANCED = 4,
+    // 尊享版
+    ELITE = 6,
+    // 畅镜版
+    CHANJING = 7,
+    // 闪剪
+    SHANJIAN = 8,
+}
+
+export const DigitalHumanModelVersionEnumMap = {
+    [DigitalHumanModelVersionEnum.STANDARD]: "标准",
+    [DigitalHumanModelVersionEnum.SUPER]: "极速",
+    [DigitalHumanModelVersionEnum.ADVANCED]: "高级",
+    [DigitalHumanModelVersionEnum.ELITE]: "尊享",
+    [DigitalHumanModelVersionEnum.CHANJING]: "蝉镜",
+    [DigitalHumanModelVersionEnum.SHANJIAN]: "闪剪",
 };

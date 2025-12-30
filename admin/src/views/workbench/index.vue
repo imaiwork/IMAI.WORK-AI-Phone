@@ -210,6 +210,14 @@
                 <el-tab-pane label="小红书">
                     <ConfigTable :data="getRedbookConfig" />
                 </el-tab-pane>
+                <el-tab-pane label="AI手机">
+                    <div class="bg-danger px-10 py-1 rounded-lg mb-2 w-fit text-white text-center">
+                        限时内侧体验，暂不收费 <br />
+                        (2026-01-01至 2026-03-01)
+                    </div>
+                    <div class="text-[#F29A3B] my-3 font-bold text-lg">到期后暂定按以下标准执行</div>
+                    <ConfigTable :data="getPhoneAutoConfig" />
+                </el-tab-pane>
                 <el-tab-pane label="其他">
                     <ConfigTable :data="getOtherConfig" />
                 </el-tab-pane>
@@ -284,6 +292,98 @@ const getData = () => {
             workbenchData.finance = res.finance;
             workbenchData.tokens_info = res.tokens_info;
             workbenchData.tokens_lists = res.tokens_lists;
+            workbenchData.tokens_lists.push(
+                {
+                    scene: "auto_phone_sph_add_wechat",
+                    name: "视频号获客",
+                    description: " 按照识别执行线索数量进行扣费",
+                    cast_price: "1",
+                    price: "2",
+                    unit: "算力/次",
+                    times: 999,
+                },
+                {
+                    scene: "auto_phone_matrix_publish",
+                    name: "社媒平台发布",
+                    description: "按照内容的发布条数进行扣费",
+                    cast_price: "10",
+                    price: "20",
+                    unit: "算力/条",
+                    times: 999,
+                },
+                {
+                    scene: "auto_phone_intercept",
+                    name: "截流私信/评论",
+                    description: "按照主动私信/评论时产生的token进行扣费",
+                    cast_price: "1",
+                    price: "2",
+                    unit: "算力/1000token",
+                    times: 999,
+                },
+                {
+                    scene: "auto_phone_touch_reach",
+                    name: "截流触达",
+                    description: "按照找到的用户数进行扣费",
+                    cast_price: "1",
+                    price: "2",
+                    unit: "算力/个",
+                    times: 999,
+                },
+                {
+                    scene: "auto_phone_comment",
+                    name: "朋友圈评论",
+                    description: "按照评论朋友圈时产生的token进行扣费",
+                    cast_price: "1",
+                    price: "2",
+                    unit: "算力/1000token",
+                    times: 999,
+                },
+                {
+                    scene: "auto_phone_circle_publish",
+                    name: "朋友圈发布",
+                    description: "按照内容的发布条数进行扣费",
+                    cast_price: "1",
+                    price: "2",
+                    unit: "算力/条",
+                    times: 999,
+                },
+                {
+                    scene: "auto_phone_matrix_publish",
+                    name: "朋友圈点赞",
+                    description: "按点赞朋友圈的次数进行扣费",
+                    cast_price: "1",
+                    price: "2",
+                    unit: "算力/次",
+                    times: 999,
+                },
+                {
+                    scene: "auto_phone_add_wechat",
+                    name: "自动加微",
+                    description: "按发送好友申请的次数进行扣费",
+                    cast_price: "1",
+                    price: "2",
+                    unit: "算力/个",
+                    times: 999,
+                },
+                {
+                    scene: "auto_phone_reply",
+                    name: "私信接管(社媒平台)",
+                    description: "按照自动回复时产生的token进行扣费）",
+                    cast_price: "1",
+                    price: "2",
+                    unit: "算力/1000token",
+                    times: 999,
+                },
+                {
+                    scene: "auto_phone_matrix_publish",
+                    name: "自动养号(社媒平台)",
+                    description: "按照自动养号运行时长进行扣费",
+                    cast_price: "1",
+                    price: "2",
+                    unit: "算力/分钟",
+                    times: 999,
+                }
+            );
         })
         .catch((err: any) => {
             console.log("err", err);
@@ -326,6 +426,7 @@ const getAiPersonConfig = computed(() => {
             "sora_video_create",
             "sora_pro_video_create",
             "sora_copywriting_create",
+            "human_avatar_sora",
         ].includes(item.scene)
     );
 });
@@ -404,6 +505,22 @@ const getSphConfig = computed(() => {
 
 const getOtherConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) => ["video_clip", "matrix_copywriting"].includes(item.scene));
+});
+
+const getPhoneAutoConfig = computed(() => {
+    return workbenchData.tokens_lists.filter((item: any) =>
+        [
+            "auto_phone_sph_add_wechat",
+            "auto_phone_reply",
+            "auto_phone_matrix_publish",
+            "auto_phone_circle_publish",
+            "auto_phone_comment",
+            "auto_phone_add_wechat",
+            "auto_phone_intercept",
+            "auto_phone_touch_reach",
+            "auto_phone_circle_publish",
+        ].includes(item.scene)
+    );
 });
 
 const refreshData = async () => {

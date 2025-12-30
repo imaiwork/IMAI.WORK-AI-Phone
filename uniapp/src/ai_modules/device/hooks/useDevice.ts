@@ -12,22 +12,30 @@ import { AppTypeEnum } from "@/enums/appEnums";
 
 export function useDevice() {
     // 根据平台类型获取平台图标
-    const platformLogo = {
+    const platformLogo: Record<AppTypeEnum, { icon: string; activeIcon: string; type?: AppTypeEnum; name?: string }> = {
         [AppTypeEnum.WECHAT]: {
             icon: wechatWechatIcon,
             activeIcon: wechatWechatActiveIcon,
+            type: AppTypeEnum.WECHAT,
+            name: "微信",
         },
         [AppTypeEnum.XHS]: {
             icon: redbookIcon,
             activeIcon: redbookActiveIcon,
+            type: AppTypeEnum.XHS,
+            name: "小红书",
         },
         [AppTypeEnum.DOUYIN]: {
             icon: douyinIcon,
             activeIcon: douyinActiveIcon,
+            type: AppTypeEnum.DOUYIN,
+            name: "抖音",
         },
         [AppTypeEnum.KUAISHOU]: {
             icon: kuaishouIcon,
             activeIcon: kuaishouActiveIcon,
+            type: AppTypeEnum.KUAISHOU,
+            name: "快手",
         },
     };
 

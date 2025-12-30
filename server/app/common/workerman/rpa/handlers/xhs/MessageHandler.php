@@ -12,9 +12,8 @@ use app\common\model\ChatPrompt;
 use app\common\model\kb\KbRobot;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvAccountContact;
-use app\common\model\sv\SvAccountLog;
-
 use app\common\model\sv\SvAccountKeyword;
+use app\common\model\sv\SvAccountLog;
 use app\common\model\sv\SvAddWechatRecord;
 use app\common\model\sv\SvAddWechatStrategy;
 use app\common\model\sv\SvPrivateMessage;
@@ -952,7 +951,7 @@ class MessageHandler extends BaseMessageHandler
             $history = implode("\n", array_column($logs, 'content'));
             $keyword = str_replace(
                 ['角色设定', '用户发送的内容', '历史对话上下文', '相关知识库检索结果'],
-                [$robot->description, (is_array($request['message']) ? implode("\n", $request['message']) : $request['message']), $history, empty($knowledge) ? '' : '相关知识库检索结果'],
+                [$robot->roles_prompt, (is_array($request['message']) ? implode("\n", $request['message']) : $request['message']), $history, empty($knowledge) ? '' : '相关知识库检索结果'],
                 $keyword
             );
 

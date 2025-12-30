@@ -26,39 +26,36 @@
                     <view class="grid grid-cols-2 gap-2" v-if="currentTab == 0">
                         <view class="h-[486rpx] relative" v-for="(item, index) in dataLists" :key="index">
                             <view
-                                class="absolute z-[8888] w-full h-full bg-[rgba(0,0,0,0.5)] rounded-md"
+                                class="absolute z-[8889] w-full h-full bg-[#00000080] rounded-md"
                                 v-if="isDelete"
-                                @click="clickItem(item.id)">
+                                @click="clickItem(index)">
                                 <view class="absolute right-2 top-2">
                                     <view
                                         class="radio-wrap"
                                         :class="{
-                                            'radio-wrap-active': active.includes(item.id),
+                                            'radio-wrap-active': isChoose(index),
                                         }">
                                         <view
                                             class="h-full w-full flex items-center justify-center"
-                                            v-if="active.includes(item.id)">
+                                            v-if="isChoose(index)">
                                             <u-icon name="checkmark" color="#fff" :size="20"></u-icon>
                                         </view>
                                     </view>
                                 </view>
                             </view>
-                            <video-item
+                            <anchor-video
                                 :item="{
                                     id: item.id,
                                     name: item.name,
                                     pic: item.pic,
                                     status: item.status,
-                                    video_url: item.url,
-                                    model_version: item.model_version,
+                                    url: item.result_url,
                                     remark: item.remark,
+                                    source_type: item.source_type,
                                 }"
-                                :show-play="false"
-                                :show-more="!isDelete"
-                                @retry="handleRetry"
                                 @delete="handleDelete"
                                 @play="handlePlay">
-                            </video-item>
+                            </anchor-video>
                         </view>
                     </view>
                     <view class="flex flex-col gap-2" v-if="currentTab == 1">
@@ -108,16 +105,16 @@
                             <view
                                 class="absolute z-[8888] left-0 top-0 w-full h-full bg-[#00000080] rounded-md"
                                 v-if="isDelete"
-                                @click="clickItem(item.id)">
+                                @click="clickItem(index)">
                                 <view class="absolute right-2 top-2">
                                     <view
                                         class="radio-wrap"
                                         :class="{
-                                            'radio-wrap-active': active.includes(item.id),
+                                            'radio-wrap-active': isChoose(index),
                                         }">
                                         <view
                                             class="h-full w-full flex items-center justify-center"
-                                            v-if="active.includes(item.id)">
+                                            v-if="isChoose(index)">
                                             <u-icon name="checkmark" color="#fff" :size="20"></u-icon>
                                         </view>
                                     </view>
@@ -149,7 +146,7 @@
                 <view
                     class="w-[174rpx] h-[68rpx] flex items-center justify-center text-white bg-[#FF2442] rounded-md"
                     @click="handleDelete()">
-                    删除 ({{ active.length }})
+                    删除 ({{ chooseList.length }})
                 </view>
             </view>
         </view>
@@ -162,11 +159,19 @@
 </template>
 
 <script setup lang="ts">
-import { getAnchorList, deleteAnchor, retryAnchor, getVoiceList, deleteVoice } from "@/api/digital_human";
-import VideoItem from "@/ai_modules/digital_human/components/video-item/video-item.vue";
+import {
+    getPublicAnchorList,
+    deleteAnchor,
+    deleteShanjianAnchor,
+    deletePublicAnchor,
+    retryAnchor,
+    getVoiceList,
+    deleteVoice,
+} from "@/api/digital_human";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { useAudio } from "@/hooks/useAudio";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
-import { DigitalHumanModelVersionEnum } from "../../enums";
+import AnchorVideo from "@/ai_modules/digital_human/components/anchor-video/anchor-video.vue";
 
 const tabs = [
     {
@@ -179,7 +184,7 @@ const tabs = [
 const currentTab = ref(0);
 
 const dataLists = ref<any[]>([]);
-const active = ref<number[]>([]);
+const chooseList = ref<number[]>([]);
 const dataCount = ref(0);
 
 // 音频播放hook
@@ -191,11 +196,9 @@ const queryList = async (page_no: number, page_size: number) => {
         const model_version = `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.STANDARD},${DigitalHumanModelVersionEnum.SHANJIAN}`;
         const { lists, count } =
             currentTab.value == 0
-                ? await getAnchorList({
+                ? await getPublicAnchorList({
                       page_no,
                       page_size,
-                      type: 0,
-                      model_version,
                   })
                 : await getVoiceList({
                       page_no,
@@ -211,7 +214,7 @@ const queryList = async (page_no: number, page_size: number) => {
 };
 const changeTab = (index: number) => {
     currentTab.value = index;
-    active.value = [];
+    chooseList.value = [];
     pagingRef.value?.reload();
     if (currentTab.value == 1) {
         pauseAll();
@@ -240,11 +243,15 @@ const toggleAudioPlayback = async (item: any) => {
     }
 };
 
-const clickItem = (id: number) => {
-    if (active.value.includes(id)) {
-        active.value = active.value.filter((item) => item !== id);
+const isChoose = (index: number) => {
+    return chooseList.value.includes(index);
+};
+
+const clickItem = (index: number) => {
+    if (isChoose(index)) {
+        chooseList.value = chooseList.value.filter((item) => item !== index);
     } else {
-        active.value.push(id);
+        chooseList.value.push(index);
     }
 };
 
@@ -252,14 +259,14 @@ const isDelete = ref(false);
 
 const handleManage = () => {
     isDelete.value = !isDelete.value;
-    active.value = [];
+    chooseList.value = [];
 };
 
 const handleSelectAll = () => {
-    if (active.value.length === dataLists.value.length) {
-        active.value = [];
+    if (chooseList.value.length === dataLists.value.length) {
+        chooseList.value = [];
     } else {
-        active.value = dataLists.value.map((item) => item.id);
+        chooseList.value = dataLists.value.map((item, index) => index);
     }
 };
 
@@ -287,41 +294,66 @@ const handleRetry = async (id: number) => {
     }
 };
 
-const handleDelete = (id?: number) => {
-    uni.showModal({
-        title: "提示",
-        content: "确定要删除吗？",
-        success: async (res) => {
-            if (res.confirm) {
-                uni.showLoading({
-                    title: "删除中...",
-                    mask: true,
-                });
-                try {
-                    currentTab.value == 0
-                        ? await deleteAnchor({ id: id || active.value })
-                        : await deleteVoice({ id: id || active.value });
-                    pagingRef.value?.reload();
-                    uni.hideLoading();
-                    uni.showToast({
-                        title: "删除成功",
-                        icon: "none",
-                        duration: 3000,
-                    });
-                } catch (error: any) {
-                    uni.hideLoading();
-                    uni.showToast({
-                        title: error || "删除失败",
-                        icon: "none",
-                        duration: 3000,
-                    });
-                }
-            }
-            isDelete.value = false;
-            active.value = [];
-        },
+const handleDelete = async (id?: number, source_type?: string) => {
+    const confirmed = await showModal("提示", "确定要删除吗？");
+    if (!confirmed) return;
+
+    uni.showLoading({
+        title: "删除中...",
+        mask: true,
     });
+
+    try {
+        if (currentTab.value == 0) {
+            if (id) {
+                let deleteFunc =
+                    source_type === "human_anchor"
+                        ? deleteAnchor
+                        : source_type === "shanjian_anchor"
+                        ? deleteShanjianAnchor
+                        : deletePublicAnchor;
+                await deleteFunc({ id });
+            } else {
+                await deleteBySourceType("human_anchor", deleteAnchor);
+                await deleteBySourceType("shanjian_anchor", deleteShanjianAnchor);
+                await deleteBySourceType("public_anchor", deletePublicAnchor);
+            }
+        }
+        if (currentTab.value == 1) {
+            await deleteVoice({ id: id || chooseList.value.map((index) => dataLists.value[index].id) });
+        }
+        dataLists.value = dataLists.value.filter((item, index) => !chooseList.value.includes(index));
+        chooseList.value = [];
+        uni.showToast({ title: "删除成功", icon: "success", duration: 3000 });
+    } catch (error: any) {
+        uni.showToast({ title: error || "删除失败", icon: "error", duration: 3000 });
+    } finally {
+        uni.hideLoading();
+        isDelete.value = false;
+        chooseList.value = [];
+    }
 };
+
+async function showModal(title: string, content: string) {
+    return new Promise((resolve) =>
+        uni.showModal({
+            title,
+            content,
+            success: resolve,
+        })
+    ).then((res: any) => res.confirm);
+}
+
+async function deleteBySourceType(sourceType: string, deleteFunction: Function) {
+    const ids = dataLists.value
+        .filter((item, index) => chooseList.value.includes(index) && item.source_type == sourceType)
+        .map((item) => item.id);
+    if (ids.length === 0) return;
+
+    await deleteFunction({ id: ids });
+}
+
+const tryReloadPaging = () => pagingRef.value?.reload();
 
 onUnload(() => {
     destroy();

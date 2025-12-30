@@ -95,8 +95,8 @@
 
 <script setup lang="ts">
 import config from "@/config";
-import { TokensSceneEnum } from "@/enums/appEnums";
-import { ModeTypeEnum, ListenerTypeEnum, DigitalHumanModelVersionEnum } from "@/ai_modules/digital_human/enums";
+import { TokensSceneEnum, DigitalHumanModelVersionEnum } from "@/enums/appEnums";
+import { ModeTypeEnum, ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
 import UploadLoading from "@/ai_modules/digital_human/components/upload-loading/upload-loading.vue";
 import { useUserStore } from "@/stores/user";
 import requestCancel from "@/utils/request/cancel";

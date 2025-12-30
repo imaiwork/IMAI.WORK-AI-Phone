@@ -133,7 +133,6 @@ const transfer = (codeBlockData) => {
         list-style-type: none !important;
     }
     * {
-        line-height: 34px !important;
         font-size: 15px !important;
     }
 }

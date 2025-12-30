@@ -30,7 +30,7 @@ class HdPuzzleSettingLogic extends ApiLogic
                 if (!empty($params[$field])) {
                     if (is_array($params[$field])) {
                         $decodedData[$field] = $params[$field];
-                        $params[$field] = json_encode($params[$field], JSON_UNESCAPED_UNICODE);
+                        $params[$field] = json_encode($params[$field], JSON_UNESCAPED_UNICODE| JSON_UNESCAPED_SLASHES);
                     } else {
                         $decoded = json_decode($params[$field], true);
                         if (json_last_error() === JSON_ERROR_NONE) {
@@ -42,7 +42,7 @@ class HdPuzzleSettingLogic extends ApiLogic
                     }
                 } else {
                     $decodedData[$field] = [];
-                    $params[$field] = json_encode([], JSON_UNESCAPED_UNICODE);
+                    $params[$field] = json_encode([], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 }
             }
 
@@ -337,7 +337,7 @@ class HdPuzzleSettingLogic extends ApiLogic
                             'type' => $currentType,
                             'title' => json_encode($copyItem['title'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                             'material' => json_encode($selectedMaterial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                            'extra' => json_encode(['key' => $puzzleKey], JSON_UNESCAPED_UNICODE),
+                            'extra' => json_encode(['key' => $puzzleKey], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                             'create_time' => time(),
                             'update_time' => time()
                         ];

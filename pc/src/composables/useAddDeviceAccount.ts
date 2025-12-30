@@ -15,6 +15,8 @@ export enum EventAction {
     AddAccount = "addAccount",
     // 更新账号
     UpdateAccount = "updateAccount",
+    // 批量更新账号
+    BatchUpdateAccount = "batchUpdateAccount",
 }
 
 interface SuccessMsg {
@@ -109,58 +111,36 @@ export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
                         extra: JSON.stringify(extra),
                     };
 
-                    if (eventAction.value == EventAction.AddAccount) {
-                        // 添加设备
-                        if (addDeviceParams.value) {
-                            await addDeviceApi(addDeviceParams.value);
-                        }
-                        try {
-                            await addAccountApi(params);
-                            showAddDevice.value = false;
-                            eventAction.value = null;
-                            progressValue.value = 100;
-                            feedback.msgSuccess("添加账号成功");
-                            options.onSuccess?.({
-                                msg: "添加账号成功",
-                                type,
-                                data,
-                            });
-                        } catch (error) {
-                            options.onError?.({
-                                error,
-                                type,
-                                code: DeviceCmdCodeEnum.API_ERROR,
-                            });
-                        }
-                    }
-                    if (eventAction.value == EventAction.UpdateAccount) {
+                    const upsertAccount = async () => {
                         const currentAccount = refreshAccount.value
                             .filter((item: any) => item.type == params.type)
                             .find((item: any) => item.account == params.account);
-                        try {
-                            if (currentAccount) {
-                                await updateAccountApi({
-                                    id: currentAccount.id,
-                                    ...params,
-                                });
-                            } else {
-                                await addAccountApi(params);
-                            }
-                            eventAction.value = null;
+                        if (currentAccount) {
+                            await updateAccountApi({ id: currentAccount.id, ...params });
+                        } else {
+                            await addAccountApi(params);
+                        }
+                    };
+
+                    try {
+                        const action = eventAction.value;
+
+                        if (action === EventAction.AddAccount) {
+                            await addAccountApi(params);
+                            showAddDevice.value = false;
+                            feedback.msgSuccess("添加账号成功");
+                            options.onSuccess?.({ msg: "添加账号成功", type, data });
+                        } else if (action === EventAction.UpdateAccount) {
+                            await upsertAccount();
                             progressValue.value = 100;
                             feedback.msgSuccess("更新成功");
-                            options.onSuccess?.({
-                                msg: "更新成功",
-                                type,
-                                data,
-                            });
-                        } catch (error) {
-                            options.onError?.({
-                                error,
-                                type,
-                                code: DeviceCmdCodeEnum.API_ERROR,
-                            });
+                            options.onSuccess?.({ msg: "更新成功", type, data });
+                        } else if (action === EventAction.BatchUpdateAccount) {
+                            await upsertAccount();
+                            options.onSuccess?.({ msg: "批量更新成功", type, data });
                         }
+                    } catch (error) {
+                        options.onError?.({ error, type, code: DeviceCmdCodeEnum.API_ERROR });
                     }
                 } catch (error) {
                     options.onError?.({
@@ -169,7 +149,6 @@ export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
                         code: DeviceCmdCodeEnum.API_ERROR,
                     });
                 }
-                refreshAccount.value = null;
                 addDeviceLoading.value = false;
                 clearInterval(progressInterval.value);
                 break;
@@ -195,6 +174,12 @@ export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
         eventAction.value = EventAction.UpdateAccount;
         completeProgress();
         sendGetUserInfo(deviceId, type);
+    };
+
+    // 批量更新账号
+    const handleBatchUpdateAccount = (params: any) => {
+        eventAction.value = EventAction.BatchUpdateAccount;
+        sendGetUserInfo(params.device_code, params.type);
     };
 
     // 添加账号
@@ -240,9 +225,11 @@ export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
         progressValue,
         eventAction,
         refreshAccount,
+
         handleAddDeviceConfirm,
         handleAddAccount,
         handleRefreshAccount,
+        handleBatchUpdateAccount,
         completeProgress,
     };
 };

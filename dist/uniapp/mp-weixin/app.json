@@ -59,7 +59,9 @@
         "pages/montage_person_create/montage_person_create",
         "pages/montage_material_create/montage_material_create",
         "pages/montage_material_group/montage_material_group",
-        "pages/montage_news_create/montage_news_create"
+        "pages/montage_news_create/montage_news_create",
+        "pages/sora_create_role/sora_create_role",
+        "pages/sora_role_library/sora_role_library"
       ]
     },
     {
@@ -124,7 +126,22 @@
         "pages/task_ai_copywriter/task_ai_copywriter",
         "pages/create_add_wechat/create_add_wechat",
         "pages/wechat_clue/wechat_clue",
-        "pages/device_choose/device_choose"
+        "pages/device_choose/device_choose",
+        "pages/auto_task/auto_task",
+        "pages/create_auto_task/create_auto_task",
+        "pages/anchor_material/anchor_material",
+        "pages/video_material/video_material",
+        "pages/image_material/image_material",
+        "pages/setting_clue/setting_clue",
+        "pages/clue_edit/clue_edit",
+        "pages/setting_publish/setting_publish",
+        "pages/marketing_material/marketing_material",
+        "pages/setting_circle/setting_circle",
+        "pages/setting_add_wechat/setting_add_wechat",
+        "pages/setting_ca/setting_ca",
+        "pages/setting_private_take/setting_private_take",
+        "pages/task_statement/task_statement",
+        "pages/create_closure/create_closure"
       ]
     },
     {

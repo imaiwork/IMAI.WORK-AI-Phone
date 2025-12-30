@@ -89,6 +89,7 @@
                     </template>
                 </el-table-column>
                 <el-table-column label="消耗算力" prop="video_token" min-width="120" />
+                <el-table-column label="备注" prop="remark" min-width="120" />
                 <el-table-column label="创作时间" prop="create_time" min-width="180" />
                 <el-table-column label="操作" width="160" fixed="right">
                     <template #default="{ row }">

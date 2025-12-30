@@ -1,0 +1,1 @@
+<view class="{{['u-checkbox-group', 'u-clearfix', 'data-v-7e4086c2', a]}}"><slot></slot></view>

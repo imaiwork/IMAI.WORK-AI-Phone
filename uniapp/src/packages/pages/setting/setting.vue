@@ -55,7 +55,7 @@
         </view>
     </view>
     <popup-bottom
-        v-model:show="showPopup"
+        v-model="showPopup"
         :title="handleTypeMap[currHandleType]"
         :custom-class="{
             'bg-[#F9FAFB]': currHandleType == HandleType.EDIT_PROFILE,

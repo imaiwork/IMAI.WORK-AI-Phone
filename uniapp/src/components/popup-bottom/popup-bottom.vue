@@ -12,7 +12,7 @@
         @close="closePopup">
         <view class="h-full flex flex-col" :class="customClass" :style="customStyle">
             <view
-                v-if="showCloseBtn"
+                v-if="clearable"
                 class="w-4 h-4 flex items-center justify-center rounded-full absolute top-3 right-4 border border-solid border-[#8B9199]"
                 @click="closePopup">
                 <u-icon name="close" color="#8B9199" :size="16"></u-icon>
@@ -40,7 +40,7 @@
 
 <script setup lang="ts">
 const props = defineProps({
-    show: {
+    modelValue: {
         type: Boolean,
         default: false,
     },
@@ -68,9 +68,9 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
-    showCloseBtn: {
+    clearable: {
         type: Boolean,
-        default: false,
+        default: true,
     },
     zIndex: {
         type: Number,
@@ -81,14 +81,14 @@ const props = defineProps({
         default: true,
     },
 });
-const emit = defineEmits(["update:show", "close"]);
+const emit = defineEmits(["update:modelValue", "close"]);
 
 const showPopup = computed({
     get() {
-        return props.show;
+        return props.modelValue;
     },
     set(val) {
-        emit("update:show", val);
+        emit("update:modelValue", val);
     },
 });
 

@@ -138,7 +138,9 @@
             <view class="rounded-full w-[80rpx] h-[80rpx] mx-auto flex items-center justify-center bg-black mt-[40rpx]">
                 <u-icon :name="isSuccess ? 'checkmark' : 'error'" color="#ffffff" size="28"></u-icon>
             </view>
-            <view class="mt-[28rpx] text-center">{{ isSuccess ? "克隆成功" : detail.remark || "创建失败" }}</view>
+            <view class="mt-[28rpx] text-center">{{
+                isSuccess ? "创建任务成功" : detail.remark || "创建任务失败"
+            }}</view>
             <view
                 class="w-full h-[100rpx] text-white flex items-center justify-center rounded-[50rpx] bg-black mt-[66rpx] shadow-[0_12rpx_24rpx_0_rgba(0,101,251,0.2)]"
                 @click="handleConfirm">
@@ -146,7 +148,7 @@
             >
         </view>
     </u-popup>
-    <popup-bottom :show="showExample" title="拍摄教程" height="80%" @close="showExample = false">
+    <popup-bottom v-model="showExample" title="拍摄教程" height="80%" @close="showExample = false">
         <template #content>
             <scroll-view scroll-y class="h-full">
                 <view class="p-4">
@@ -235,7 +237,8 @@
 <script setup lang="ts">
 import { getVideoTranscodeResult, videoTranscode } from "@/api/app";
 import { createAnchor, createShanjianAnchor, getShanjianAnchorDetail } from "@/api/digital_human";
-import { DigitalHumanModelVersionEnum, ListenerTypeEnum, ModeTypeEnum } from "@/ai_modules/digital_human/enums";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
+import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
 import requestCancel from "@/utils/request/cancel";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
@@ -299,7 +302,8 @@ const rechargePopupRef = shallowRef();
 const getToken = computed(() => {
     const token1 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN)?.score;
     const token2 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_CHANJING)?.score;
-    return parseFloat(token1) + parseFloat(token2);
+    const token3 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR)?.score;
+    return parseFloat(token1) + parseFloat(token2) + parseFloat(token3);
 });
 
 const isCreate = computed(() => {
@@ -496,7 +500,7 @@ const handleCreateAnchor = async () => {
         } catch (error: any) {}
     }
     // shanjian形象创建
-    const shanjianCreateAnchor = () => {
+    const shanjianCreateAnchor = (): Promise<any> => {
         return new Promise(async (resolve: any, reject: any) => {
             await createShanjianAnchor({
                 name: anchorData.name,
@@ -513,7 +517,7 @@ const handleCreateAnchor = async () => {
                 });
         });
     };
-    const createOtherAnchor = (modelVersion: DigitalHumanModelVersionEnum) => {
+    const createOtherAnchor = (modelVersion: DigitalHumanModelVersionEnum, params: any) => {
         return new Promise(async (resolve: any, reject: any) => {
             await createAnchor({
                 name: anchorData.name,
@@ -522,6 +526,7 @@ const handleCreateAnchor = async () => {
                 model_version: modelVersion,
                 width: anchorData.width,
                 height: anchorData.height,
+                ...params,
             })
                 .then((res) => {
                     resolve(res);
@@ -532,10 +537,10 @@ const handleCreateAnchor = async () => {
         });
     };
     try {
-        const [res1, res2]: any = await Promise.allSettled([
-            shanjianCreateAnchor(),
-            createOtherAnchor(DigitalHumanModelVersionEnum.CHANJING),
-            createOtherAnchor(DigitalHumanModelVersionEnum.STANDARD),
+        const shanjianCreateAnchorRes = await shanjianCreateAnchor();
+        await Promise.allSettled([
+            createOtherAnchor(DigitalHumanModelVersionEnum.CHANJING, { dh_id: shanjianCreateAnchorRes.dh_id }),
+            createOtherAnchor(DigitalHumanModelVersionEnum.STANDARD, { dh_id: shanjianCreateAnchorRes.dh_id }),
         ]);
         const isSJ = pageSource.value == DigitalHumanModelVersionEnum.SHANJIAN;
         if (!pageSource.value) {
@@ -545,7 +550,7 @@ const handleCreateAnchor = async () => {
         } else if (isSJ) {
             const { start, end } = usePolling(async () => {
                 detail.value = await getShanjianAnchorDetail({
-                    id: res1.value.id,
+                    id: shanjianCreateAnchorRes.id,
                 });
                 const { status } = detail.value;
                 if (status == 2 || status == 3 || status == 5 || status == 6) {
@@ -561,9 +566,7 @@ const handleCreateAnchor = async () => {
         } else {
             uni.hideLoading();
             showCreateStatus.value = true;
-            anchorData.anchor_id = res2.value.id;
-            anchorData.model_version = DigitalHumanModelVersionEnum.CHANJING;
-            isSuccess.value = !!res2.value;
+            isSuccess.value = true;
         }
     } catch (error) {
         isSuccess.value = false;

@@ -280,6 +280,8 @@ class PcLogic extends BaseLogic
             'by_name'=>  self::getByName(),
             'ai_model' =>  $chatModels,
             'wechat_remarks' => ConfigService::get('add_remark', 'wechat', []),
+            'comment_screening' => ConfigService::get('touch_clue', 'comment_screening', []),
+            'touch_speech' => ConfigService::get('touch_clue',  'touch_speech',  []),
         ];
     }
 

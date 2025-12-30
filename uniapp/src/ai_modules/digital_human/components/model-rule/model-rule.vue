@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model:show="showPopup" title="算力消耗规则说明" custom-class="bg-[#F9FAFB]">
+    <popup-bottom v-model="showPopup" title="算力消耗规则说明" custom-class="bg-[#F9FAFB]">
         <template #content>
             <scroll-view class="h-full" scroll-y>
                 <view class="px-[32rpx] pt-[30rpx]">
@@ -97,7 +97,7 @@
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
-import { DigitalHumanModelVersionEnum } from "../../enums";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 
 const props = withDefaults(
     defineProps<{

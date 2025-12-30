@@ -3,6 +3,7 @@
 namespace app\api\logic\hd;
 
 use app\api\logic\ApiLogic;
+use app\api\logic\auto\PublishLogic;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\hd\HdPuzzle;
@@ -178,9 +179,11 @@ class HdPuzzleLogic extends ApiLogic
 
         try {
             foreach ($tasks as $task) {
+
                 // 为每个任务单独开启事务
                 \think\facade\Db::startTrans();
-                
+                $setPublish = false;
+
                 try {
                     $puzzleSetting = HdPuzzleSetting::where('id', $task->puzzle_setting_id)->whereIn('status', [1, 2])->findOrEmpty();
                     if ($puzzleSetting->isEmpty()) {
@@ -229,6 +232,7 @@ class HdPuzzleLogic extends ApiLogic
                             $puzzleSetting->status = 2;
                             $puzzleSetting->success_puzzle_count += $image_count;
                             $puzzleSetting->success_num += 1;
+
                         } elseif ($resultnum < 1) {
                             $task->status = 2;
                             $puzzleSetting->error_num += 1;
@@ -238,7 +242,6 @@ class HdPuzzleLogic extends ApiLogic
                     
                     // 保存任务状态
                     $task->save();
-                    
                     // 更新设置状态
                     $all = $puzzleSetting->success_num + $puzzleSetting->error_num;
                     if ($all >= $puzzleSetting->task_count) {
@@ -246,7 +249,9 @@ class HdPuzzleLogic extends ApiLogic
                             $puzzleSetting->status = 5;
                         } elseif ($puzzleSetting->error_num > 0) {
                             $puzzleSetting->status = 4;
+                            $setPublish = true;
                         } else {
+                            $setPublish = true;
                             $puzzleSetting->status = 3;
                         }
                     }
@@ -286,6 +291,7 @@ class HdPuzzleLogic extends ApiLogic
                                     $puzzleSetting->status = 5;
                                 } elseif ($puzzleSetting->error_num > 0) {
                                     $puzzleSetting->status = 4;
+                                    $setPublish = true;
                                 }
                             }
                             $puzzleSetting->save();
@@ -297,6 +303,15 @@ class HdPuzzleLogic extends ApiLogic
                         }
                     }
                 }
+
+               if ($setPublish && $task->auto_type == 1){
+                   sleep(3);
+                   $param = [
+                       'device_code' => $task->device_code,
+                   ];
+                   PublishLogic::setPuzzlePublish($param);
+               }
+
             }
         } catch (\Exception $e) {
             Log::channel('puzzle')->write('任务处理异常：' . $e->getMessage());

@@ -108,6 +108,9 @@ class RpaSocketService
                     WorkerEnum::RPA_GET_ACCOUNT_APP_DATA_SEND => new \app\common\workerman\rpa\handlers\device\AppDataSendHandler($this), #正在等待数据返回
                     WorkerEnum::RPA_GET_ACCOUNT_APP_COMPLETED => new \app\common\workerman\rpa\handlers\device\AppCompletedHandler($this), #应用执行完成
 
+                    WorkerEnum::RPA_COMMENT_TO_COMMENT => new \app\common\workerman\rpa\handlers\touch\CommentToCommentHandler($this), #评论区评论
+                    WorkerEnum::RPA_COMMENT_TO_MSG => new \app\common\workerman\rpa\handlers\touch\CommentToMsgHandler($this), #评论区私信
+                    WorkerEnum::RPA_COMMENT_TO_MARK_CLUE => new \app\common\workerman\rpa\handlers\touch\CommentToMarkClueHandler($this), #评论区留痕获客
 
 
                     WorkerEnum::RPA_TAKE_OVER_TASK_RESULT_SAVE => new \app\common\workerman\rpa\handlers\TakeOverTaskResultSaveHandler($this), #接管任务结果保存
@@ -165,6 +168,8 @@ class RpaSocketService
                 }
             }
 
+            
+
             //判断设备初始化是否完成,未完成禁止主动获取设备相关信息
             if (!in_array($type, $this->whitelist)) {
                 if (empty(trim($payload['deviceId']))) {
@@ -172,6 +177,11 @@ class RpaSocketService
                 }
                 // 检查设备是否在线
                 if (!isset($this->worker->devices[$payload['deviceId']])) {
+                    throw new \Exception('设备已离线,请重新连接', WorkerEnum::DEVICE_OFFLINE);
+                }
+
+                $isOnline = $this->redis->get("xhs:device:{$payload['deviceId']}:status");
+                if($isOnline !== 'online'){
                     throw new \Exception('设备已离线,请重新连接', WorkerEnum::DEVICE_OFFLINE);
                 }
 

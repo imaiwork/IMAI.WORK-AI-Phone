@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "私信接管配置",
+  "usingComponents": {
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging"
+  }
+}

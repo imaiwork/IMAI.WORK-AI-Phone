@@ -13,6 +13,14 @@
                 >查看线索词</navigator
             >
         </view>
+        <view class="px-[32rpx]">
+            <u-tabs
+                :list="tabList"
+                :current="currentTab"
+                bg-color="transparent"
+                font-size="26rpx"
+                @change="handleTabChange"></u-tabs>
+        </view>
         <view class="grow min-h-0">
             <z-paging
                 ref="pagingRef"
@@ -31,6 +39,13 @@
                 </template>
             </z-paging>
         </view>
+        <view class="fixed bottom-[5vh] left-0 flex justify-center w-full z-[888]">
+            <view
+                class="w-[280rpx] h-[80rpx] bg-[#FF4D4F] text-white text-[26rpx] font-bold rounded-[12rpx] flex items-center justify-center"
+                @click="handleDeleteClue"
+                >删除线索记录</view
+            >
+        </view>
     </view>
     <task-edit
         v-if="showEditPopup"
@@ -40,12 +55,31 @@
 </template>
 
 <script setup lang="ts">
-import { getTaskDetail, getTaskClue } from "@/api/sph";
+import { getTaskDetail, getTaskClue, deleteTask } from "@/api/sph";
 import TaskCard from "@/ai_modules/sph/components/task-card/task-card.vue";
 import ClueCard from "@/ai_modules/sph/components/clue-card/clue-card.vue";
 import TaskEdit from "@/ai_modules/sph/components/task-edit/task-edit.vue";
 const detail = ref<any>({});
 const loading = ref(true);
+const tabList = ref([
+    {
+        name: "全部",
+        value: null,
+    },
+    {
+        name: "有效线索",
+        value: 1,
+    },
+    {
+        name: "内含有效线索",
+        value: 3,
+    },
+    {
+        name: "无效线索",
+        value: 2,
+    },
+]);
+const currentTab = ref(0);
 
 const isCreate = ref(false);
 
@@ -58,11 +92,17 @@ const queryList = async (page_no: number, page_size: number) => {
             task_id: detail.value.id,
             page_no,
             page_size,
+            status: tabList.value[currentTab.value].value || "",
         });
         pagingRef.value?.complete(lists);
     } catch (error) {
         pagingRef.value?.complete([]);
     }
+};
+
+const handleTabChange = (index: number) => {
+    currentTab.value = index;
+    pagingRef.value?.reload();
 };
 
 const handleChangeStatus = async (item: any) => {
@@ -80,6 +120,38 @@ const handleEditTask = async (data: any) => {
         taskEditRef.value?.open();
         taskEditRef.value?.setFormData(data);
     }, 100);
+};
+
+const handleDeleteClue = async () => {
+    uni.showModal({
+        title: "提示",
+        content: "确定删除所有线索记录吗？",
+        success: async (res) => {
+            if (res.confirm) {
+                uni.showLoading({
+                    title: "删除中...",
+                    mask: true,
+                });
+                try {
+                    await deleteTask({ id: detail.value.id });
+                    uni.hideLoading();
+                    uni.showToast({
+                        title: "删除成功",
+                        icon: "none",
+                        duration: 3000,
+                    });
+                    uni.navigateBack();
+                } catch (error: any) {
+                    uni.hideLoading();
+                    uni.showToast({
+                        title: error,
+                        icon: "none",
+                        duration: 3000,
+                    });
+                }
+            }
+        },
+    });
 };
 
 const handleBack = () => {

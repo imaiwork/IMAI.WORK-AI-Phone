@@ -77,7 +77,7 @@
 import { autoFriendPassStrategy, autoFriendPassStrategyInfo, getWeChatLists } from "@/api/person_wechat";
 
 const formData = reactive({
-    is_enable: false, //是否开启
+    is_enable: 1, //是否开启
     accept_numbers: 0, //每日添加数量
     add_interval_time: 0, //每添加一个间隔时间
     wechat_ids: [], //执行微信号

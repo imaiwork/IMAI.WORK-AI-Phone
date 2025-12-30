@@ -32,7 +32,8 @@ export const useAppStore = defineStore({
         getCopyRightConfig: (state) => state.config.copyright || [],
         getByName: (state) => state.config.by_name || "",
         getAiModelConfig: (state) => state.config.ai_model || {},
-        getIsShowRobot: (state) => state.config.is_robot_show ,
+        getIsShowRobot: (state) => state.config.is_robot_show,
+        getCommentFilterConfig: (state) => state.config.comment_screening || [],
     },
     actions: {
         getImageUrl(url: string) {

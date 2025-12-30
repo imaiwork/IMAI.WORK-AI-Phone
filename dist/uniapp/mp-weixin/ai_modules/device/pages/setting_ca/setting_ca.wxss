@@ -1,0 +1,1 @@
+picker-view.data-v-227e84e9{height:100%;width:100%}.tab-slider.data-v-227e84e9{position:absolute;top:4rpx;left:0px;height:calc(100% - 10rpx);width:50%;border-radius:16rpx;background-color:var(--color-primary, #0065FB);transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.5s}

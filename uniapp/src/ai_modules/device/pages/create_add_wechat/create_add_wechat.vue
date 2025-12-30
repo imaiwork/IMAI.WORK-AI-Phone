@@ -172,16 +172,14 @@
                     </view>
                 </scroll-view>
             </view>
-            <view v-if="step === 3" class="h-full">
-                <scroll-view scroll-y class="h-full">
-                    <view class="px-4 pb-[100rpx]">
-                        <bast-setting-v2
-                            v-model="formData"
-                            :current-frequency="currentFrequency"
-                            @change-frequency="currentFrequency = $event" />
-                    </view>
-                </scroll-view>
-            </view>
+            <scroll-view v-if="step === 3" scroll-y class="h-full">
+                <view class="px-4 pb-[100rpx]">
+                    <bast-setting-v2
+                        v-model="formData"
+                        :current-frequency="currentFrequency"
+                        @change-frequency="currentFrequency = $event" />
+                </view>
+            </scroll-view>
         </view>
         <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 pb-5">
             <view class="flex items-center justify-between px-4 h-[140rpx]">

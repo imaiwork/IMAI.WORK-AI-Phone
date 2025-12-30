@@ -104,3 +104,18 @@ export function getMontageSoraTaskRecord(params: any) {
 export function deleteMontageSoraTaskDetail(params: any) {
     return request.post({ url: "/sora.soraVideoTask/delete", params });
 }
+
+// 获取sora角色列表
+export function getMontageSoraRoleList(params: any) {
+    return request.get({ url: "/sora.SoraAnchor/lists", params });
+}
+
+// 删除sora角色
+export function deleteMontageSoraRole(params: any) {
+    return request.post({ url: "/sora.SoraAnchor/delete", params });
+}
+
+// 更新sora角色
+export function updateMontageSoraRole(params: any) {
+    return request.post({ url: "/sora.SoraAnchor/update", params });
+}

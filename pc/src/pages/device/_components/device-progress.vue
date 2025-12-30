@@ -6,9 +6,11 @@
                 v-if="progressValue < 100">
                 <template v-if="!progressError">
                     <div class="text-primary text-lg mt-8">请耐心等待</div>
-                    <div class="text-primary text-[24px] font-bold mt-3">{{ step || "正在获取账号信息中..." }}</div>
+                    <div class="text-primary text-[24px] font-bold mt-3 text-center">
+                        {{ step || "正在获取账号信息中..." }}
+                    </div>
                     <div class="w-full mt-4">
-                        <ElProgress :percentage="progressValue" :stroke-width="10" striped striped-flow />
+                        <!-- <ElProgress :percentage="progressValue" :stroke-width="10" striped striped-flow /> -->
                     </div>
                     <div class="text-[#C4C4C4] mt-4 text-center text-xs">
                         请暂时不要关闭窗口，如果超过一分钟未响应，可以尝试刷新页面
@@ -20,7 +22,9 @@
                     </div>
                     <div class="text-lg mt-3 font-bold">账号信息获取失败</div>
                     <div class="text-center text-[#666666] mt-3">
-                        无法获取您的账号信息，请检查手机RPA软件连接是否正常后重试。如果问题持续存在，请联系客服支持。
+                        {{
+                            progressErrorMsg
+                        }}无法获取您的账号信息，请检查手机RPA软件连接是否正常后重试。如果问题持续存在，请联系客服支持。
                     </div>
                     <div class="mt-4">
                         <ElButton @click="handleClose">关闭</ElButton>
@@ -46,6 +50,7 @@
 const props = defineProps<{
     progressValue: number;
     progressError: boolean;
+    progressErrorMsg?: string;
     step: string;
 }>();
 

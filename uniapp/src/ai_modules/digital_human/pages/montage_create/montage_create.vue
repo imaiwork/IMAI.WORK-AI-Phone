@@ -388,9 +388,9 @@
 <script setup lang="ts">
 import { getShanjianAnchorList, createShanjianTask, addShanjianPerson } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
-import { DigitalHumanModelVersionEnum, ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
-import { montageConfig } from "@/ai_modules/digital_human/config";
-import useMontageMaterial from "@/ai_modules/digital_human/hooks/useMontageMaterial";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
+import { ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
+import useMontageMaterial, { montageConfig } from "@/hooks/useMontageMaterial";
 import UploadRulePop from "@/ai_modules/digital_human/components/upload-rule-pop/upload-rule-pop.vue";
 import ChooseCharacter from "@/ai_modules/digital_human/components/choose-character/choose-character.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";

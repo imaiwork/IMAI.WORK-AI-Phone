@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { addPrivateChatTask } from "@/api/device";
+import { createPrivateChatTask } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import BastSettingV2 from "@/ai_modules/device/components/bast-setting-v2/bast-setting-v2.vue";
@@ -90,7 +90,7 @@ const handleSubmit = async () => {
         mask: true,
     });
     try {
-        await addPrivateChatTask({
+        await createPrivateChatTask({
             task_name: formData.name,
             accounts: formData.accounts,
             task_frep: formData.task_frep,

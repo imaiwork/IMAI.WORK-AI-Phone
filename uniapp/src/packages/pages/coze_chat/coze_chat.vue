@@ -200,12 +200,7 @@
                 </view>
             </view>
         </view>
-        <popup-bottom
-            v-model:show="showHistory"
-            title="历史记录"
-            show-close-btn
-            :is-disabled-touch="true"
-            custom-class="bg-[#F9FAFB]">
+        <popup-bottom v-model="showHistory" title="历史记录" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
             <template #content>
                 <view class="h-full py-[30rpx]">
                     <z-paging
@@ -244,7 +239,7 @@
                 </view>
             </template>
         </popup-bottom>
-        <popup-bottom v-model:show="showCommand" :title="getShortcutCommands?.name" custom-class="bg-[#F6F6F6]">
+        <popup-bottom v-model="showCommand" :title="getShortcutCommands?.name" custom-class="bg-[#F6F6F6]">
             <template #content>
                 <view class="flex flex-col h-full">
                     <scroll-view scroll-y class="grow min-h-0">

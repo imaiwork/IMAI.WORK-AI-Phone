@@ -10,6 +10,21 @@ export const getAnchorList = (data: Record<string, any>) => {
     return request.get({ url: "/human/anchorLists", data });
 };
 
+// 数字人公共形象列表
+export const getPublicAnchorList = (data: Record<string, any>) => {
+    return request.get({ url: "/digitalHuman/anchorLists", data });
+};
+
+// 数字人公共形象列表
+export const getPublicAnchorListV2 = (data: Record<string, any>) => {
+    return request.get({ url: "/digitalHuman/anchorPublicLists", data });
+};
+
+// 删除公共形象
+export const deletePublicAnchor = (data: Record<string, any>) => {
+    return request.post({ url: "/digitalHuman/deletePublicAnchor", data });
+};
+
 // 重试形象
 export const retryAnchor = (data: Record<string, any>) => {
     return request.post({ url: "/human/anchorRetry", data });
@@ -203,4 +218,34 @@ export const shanjianVoiceClone = (data: Record<string, any>) => {
 // sora发布任务创建
 export const createSoraPublishTask = (data: Record<string, any>) => {
     return request.post({ url: "/sora.publish/add", data });
+};
+
+// sora 文案生成
+export const generateSoraPrompt = (data: Record<string, any>) => {
+    return request.post({ url: "/sora.SoraVideoSetting/copywriting", data }, { ignoreCancel: true });
+};
+
+// sora 角色创建
+export const createSoraRole = (data: Record<string, any>) => {
+    return request.post({ url: "/sora.SoraAnchor/add", data });
+};
+
+// sora 角色列表
+export const getSoraRoleList = (data: Record<string, any>) => {
+    return request.get({ url: "/sora.SoraAnchor/lists", data });
+};
+
+// sora 角色公共列表
+export const getSoraRolePublicList = (data: Record<string, any>) => {
+    return request.get({ url: "/sora.SoraAnchor/publicLists", data });
+};
+
+// sora 角色删除
+export const deleteSoraRole = (data: Record<string, any>) => {
+    return request.post({ url: "/sora.SoraAnchor/delete", data });
+};
+
+// sora 角色编辑
+export const editSoraRole = (data: Record<string, any>) => {
+    return request.post({ url: "/sora.SoraAnchor/update", data });
 };

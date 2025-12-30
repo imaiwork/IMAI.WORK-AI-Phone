@@ -354,16 +354,6 @@ const retryAddAccount = () => {
     }
 };
 
-const handleGetBusinessCard = async (row: any) => {
-    currAccount.value = row;
-    feedback.loading("获取名片中...", containerRef.value);
-    send({
-        type: DeviceCmdEnum.GET_BUSINESS_CARD,
-        deviceId: row.device_code,
-        appType: row.type,
-    });
-};
-
 const handleDelete = (row: any) => {
     nuxtApp.$confirm({
         message: "删除账号时，当前执行的任务将中断并无法继续，确定要删除该账号吗？",

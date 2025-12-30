@@ -60,8 +60,15 @@ class ToolsLogic extends BaseLogic
                     //token扣除
                     User::userTokensChange($params['user_id'], $points);
                     $task_id = generate_unique_task_id();
+
+                    if(isset($params['auto'])){
+                        $extra = ['自动化生成线索词' => $params['auto'] . '个'];
+                    }else{
+                        $extra = [];
+                    }
+
                     //记录日志
-                    AccountLogLogic::recordUserTokensLog(true, $params['user_id'], $tokenCode, $points, $task_id);
+                    AccountLogLogic::recordUserTokensLog(true, $params['user_id'], $tokenCode, $points, $task_id, $extra);
                 }
                 if (isset($res['data']['content']) && count($res['data']['content']) > 0) {
                     self::$returnData = $res['data']['content'];
@@ -103,6 +110,7 @@ class ToolsLogic extends BaseLogic
                     //token扣除
                     User::userTokensChange($params['user_id'], $points);
                     $extra = ['生成文案条数' => $num, '算力单价' => $unit, '实际消耗算力' => $points];
+
                     //记录日志
                     AccountLogLogic::recordUserTokensLog(true, $params['user_id'], $tokenCode, $points, $task_id, $extra);
                 }

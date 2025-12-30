@@ -1,6 +1,6 @@
 import { ChooseResult, chooseFile } from "@/components/file-upload/choose-file";
 import { uploadImage, uploadFile } from "@/api/app";
-import { DigitalHumanModelVersionEnum } from "../enums";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 
 interface Options {
     size?: number; // 单位M

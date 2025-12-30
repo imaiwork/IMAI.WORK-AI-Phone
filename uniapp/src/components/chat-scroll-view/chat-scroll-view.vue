@@ -176,13 +176,7 @@
                 height: spacerHeight + 'px',
             }"></view>
     </view>
-    <popup-bottom
-        v-model:show="showHumanize"
-        title="参数设置"
-        height="85%"
-        show-close-btn
-        custom-class="bg-white"
-        is-disabled-touch>
+    <popup-bottom v-model="showHumanize" title="参数设置" height="85%" custom-class="bg-white" is-disabled-touch>
         <template #content>
             <view class="h-[85%] p-4 flex flex-col gap-y-4">
                 <view class="grow min-h-0">
@@ -342,7 +336,7 @@
             </view>
         </template>
     </popup-bottom>
-    <popup-bottom v-model:show="showModel" title="选择模型" height="55%">
+    <popup-bottom v-model="showModel" title="选择模型" height="55%">
         <template #content>
             <scroll-view scroll-y class="h-full">
                 <view class="pb-[150rpx]">
@@ -366,7 +360,7 @@
             </scroll-view>
         </template>
     </popup-bottom>
-    <popup-bottom v-model:show="showAgent" title="选择智能体" height="85%" show-close-btn is-disabled-touch>
+    <popup-bottom v-model="showAgent" title="选择智能体" height="85%" is-disabled-touch>
         <template #content>
             <view class="h-full">
                 <z-paging
@@ -631,6 +625,8 @@ const spacerHeight = computed(() => {
 const handleInput = (e: any) => {
     if (userInput.value.indexOf("@") == 0 && userInput.value.length == 1) {
         showAgent.value = true;
+        // 隐藏键盘
+        uni.hideKeyboard();
     }
 };
 

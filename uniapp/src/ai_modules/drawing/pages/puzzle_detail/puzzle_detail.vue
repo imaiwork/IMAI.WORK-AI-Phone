@@ -73,7 +73,11 @@
             >
         </view>
     </view>
-    <popup-bottom :show="showPublishSetting" title="设置发布图组数量" height="40%" @close="showPublishSetting = false">
+    <popup-bottom
+        v-model="showPublishSetting"
+        title="设置发布图组数量"
+        height="40%"
+        @close="showPublishSetting = false">
         <template #content>
             <view class="h-full flex flex-col">
                 <view class="grow min-h-0 flex flex-col items-center justify-center">

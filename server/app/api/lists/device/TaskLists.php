@@ -4,17 +4,17 @@
 namespace app\api\lists\device;
 
 use app\api\lists\BaseApiDataLists;
+use app\common\enum\DeviceEnum;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\sv\SvCrawlingManualTask;
 use app\common\model\sv\SvCrawlingTask;
+use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceActive;
 use app\common\model\sv\SvDeviceActiveAccount;
 use app\common\model\sv\SvDeviceTakeOverTask;
 use app\common\model\sv\SvDeviceTakeOverTaskAccount;
 use app\common\model\sv\SvDeviceTask;
-use app\common\model\sv\SvDevice;
-
-use app\common\enum\DeviceEnum;
+use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSettingAccount;
 
 /**
@@ -41,9 +41,13 @@ class TaskLists extends BaseApiDataLists implements ListsSearchInterface
     {
         $this->searchWhere[] = ['dt.user_id', '=', $this->userId];
         $this->searchWhere[] = ['dt.day', '=', $this->request->get('date')];
+        //$this->searchWhere[] = ['dt.auto_type', '=', $this->request->get('auto_type', 0)];
         return SvDeviceTask::alias('dt')
             ->field('dt.*')
             ->where($this->searchWhere)
+            ->where('dt.auto_type', '=', function ($query) {
+                $query->name('sv_device')->where('device_code', $this->request->get('device_code'))->field('auto_type');
+            })
             // ->when($this->request->get('date'), function ($query) {
             //     $query->where('start_time', '<=', strtotime($this->request->get('date') . ' 23:59:59'))
             //         ->where('end_time', '>=', strtotime($this->request->get('date') . ' 00:00:00'));
@@ -62,7 +66,7 @@ class TaskLists extends BaseApiDataLists implements ListsSearchInterface
                     case DeviceEnum::TASK_SOURCE_PUBLISH:
                         //sv_publish_setting_account
                         $taskinfo = SvPublishSettingAccount::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
-                        $item['name'] = $taskinfo['name'] ?? '';
+                        $item['name'] = $taskinfo['name'] ?? $item['task_name'];
                         break;
 
                     case DeviceEnum::TASK_SOURCE_TAKEOVER:
@@ -72,7 +76,7 @@ class TaskLists extends BaseApiDataLists implements ListsSearchInterface
                             $item['name'] = '';
                             break;
                         }
-                        $item['name'] = SvDeviceTakeOverTask::where('id', $taskinfo['take_over_id'])->value('task_name') ?? '';
+                        $item['name'] = SvDeviceTakeOverTask::where('id', $taskinfo['take_over_id'])->value('task_name') ?? $item['task_name'];
                         break;
 
                     case DeviceEnum::TASK_SOURCE_ACTIVE:
@@ -83,18 +87,24 @@ class TaskLists extends BaseApiDataLists implements ListsSearchInterface
                             break;
                         }
                         $detail = SvDeviceActive::where('id', $taskinfo['active_id'])->findOrEmpty()->toArray();
-                        $item['name'] = $detail['task_name'] ?? '';
+                        $item['name'] = $detail['task_name'] ?? $item['task_name'];
                         break;
 
                     case DeviceEnum::TASK_SOURCE_FRIENDS:
                         //sv_crawling_manual_task
                         $taskinfo = SvCrawlingManualTask::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
-                        $item['name'] = $taskinfo['name'] ?? '';
+                        $item['name'] = $taskinfo['name'] ?? $item['task_name'];
                         break;
 
                     case DeviceEnum::TASK_SOURCE_CLUES:
                         //sv_crawling_task
                         $taskinfo = SvCrawlingTask::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['name'] ?? $item['task_name'];
+                        break;
+
+                    case DeviceEnum::TASK_SOURCE_TOUCH:
+                        //sv_lead_scraping_setting_account
+                        $taskinfo = SvLeadScrapingSettingAccount::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
                         $item['name'] = $taskinfo['name'] ?? '';
                         break;
 

@@ -142,7 +142,7 @@ class WorkbenchLogic extends BaseLogic
                 continue;
             }
 
-            $data[$key]['unit']         = $info['score'] . $info['unit'];
+            $data[$key]['unit']         = $info['unit'];
             $data[$key]['price']        = $info['score'];
             $data[$key]['name']         = $info['name'];
             $data[$key]['code']         = $info['code'];

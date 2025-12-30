@@ -139,7 +139,7 @@
         <tabbar />
     </view>
     <popup-bottom
-        v-model:show="showService"
+        v-model="showService"
         title="了解更多"
         height="80%"
         :custom-style="{

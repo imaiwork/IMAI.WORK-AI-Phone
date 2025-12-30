@@ -95,6 +95,7 @@ const getAiPersonConfig = computed(() => {
             "sora_video_create",
             "sora_pro_video_create",
             "sora_copywriting_create",
+            "human_avatar_sora",
         ].includes(item.scene)
     );
 });

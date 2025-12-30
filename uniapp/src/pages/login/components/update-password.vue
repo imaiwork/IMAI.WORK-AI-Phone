@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model:show="showPopup" title="找回密码" height="85%">
+    <popup-bottom v-model="showPopup" title="找回密码" height="85%">
         <template #content>
             <view class="h-full px-[64rpx]">
                 <view class="pt-[30rpx]">

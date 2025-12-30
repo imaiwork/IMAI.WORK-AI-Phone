@@ -160,9 +160,9 @@
     <video-preview v-model="showVideoPreview" :video-url="playItem.url" :poster="playItem.pic"></video-preview>
     <!-- 添加分组弹框 -->
     <popup-bottom
-        :show="showGroupPopup"
+        v-model="showGroupPopup"
         title="选择分组"
-        showCloseBtn
+        clearable
         :is-disabled-touch="true"
         @close="closeAddGroupPopup">
         <template #content>

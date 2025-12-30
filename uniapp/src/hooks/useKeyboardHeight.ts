@@ -38,7 +38,6 @@ export default function useKeyboardHeight() {
     const hideKeyboard = () => {
         dynamicHeight.value = 0;
         if (!isH5) {
-            console.log("隐藏键盘");
             uni.hideKeyboard();
         }
     };
@@ -47,7 +46,6 @@ export default function useKeyboardHeight() {
     const removeKeyboardListener = () => {
         dynamicHeight.value = 0;
         if (!isH5) {
-            console.log("移除键盘监听");
             // 隐藏键盘
             uni.hideKeyboard();
             uni.offKeyboardHeightChange(updateHeight); // 移除小程序键盘监听

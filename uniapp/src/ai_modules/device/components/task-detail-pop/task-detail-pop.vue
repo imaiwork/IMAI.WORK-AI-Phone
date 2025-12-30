@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model:show="show" title="任务详情" custom-class="bg-[#F6F6F6]" :show-footer="false" height="80%">
+    <popup-bottom v-model="show" title="任务详情" custom-class="bg-[#F6F6F6]" :show-footer="false" height="80%">
         <template #content>
             <view class="h-full flex flex-col">
                 <view class="grow min-h-0 pb-5">
@@ -18,7 +18,11 @@
                                 <view class="flex flex-col gap-y-2">
                                     <view class="">
                                         <text class="text-[#0000004d]">任务类型：</text>
-                                        <text>{{ detailData.task_category }}</text>
+                                        <text
+                                            >{{ detailData.task_category }}({{
+                                                detailData.auto_type === 0 ? "手动" : "24h任务"
+                                            }})</text
+                                        >
                                     </view>
                                     <view class="">
                                         <text class="text-[#0000004d]">执行设备：</text>
@@ -139,7 +143,7 @@
                         </view>
                     </scroll-view>
                 </view>
-                <view class="px-[26rpx] pb-5">
+                <view class="px-[26rpx] pb-5" v-if="detailData.auto_type === 0">
                     <view
                         class="h-[98rpx] flex items-center justify-center bg-error text-white font-bold rounded-[20rpx]"
                         @click="showConfirmDialog = true"
@@ -231,7 +235,6 @@ const handlePreviewImage = () => {
     const { material_url } = detailData.value.detail;
     if (!material_url) return;
     const pics = material_url.split(",");
-    console.log("pics", pics);
     uni.previewImage({
         urls: pics,
     });

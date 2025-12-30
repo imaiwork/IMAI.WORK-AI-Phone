@@ -8,6 +8,7 @@
     "empty": "../../../../components/empty/empty",
     "video-preview-v2": "../../../../components/video-preview-v2/video-preview-v2",
     "choose-model": "../../components/choose-model/choose-model",
-    "video-item": "../../components/video-item/video-item"
+    "video-item": "../../components/video-item/video-item",
+    "anchor-video": "../../components/anchor-video/anchor-video"
   }
 }

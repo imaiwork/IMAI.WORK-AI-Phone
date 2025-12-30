@@ -19,7 +19,9 @@
                 </view>
                 <view class="mt-[12rpx] flex items-center gap-x-1">
                     <image src="@/ai_modules/device/static/icons/task.svg" class="w-[32rpx] h-[32rpx]"></image>
-                    <text class="text-[#00000066] text-xs">{{ item.task_category }} </text>
+                    <text class="text-[#00000066] text-xs"
+                        >{{ item.task_category }}({{ item.auto_type === 0 ? "手动" : "24h任务" }})
+                    </text>
                 </view>
             </view>
             <view class="flex-shrink-0 text-right">

@@ -21,16 +21,10 @@
                         <div>
                             <div class="text-xs uppercase font-semibold" style="color: #6b7280">成本价/用户</div>
                             <div class="flex items-baseline mt-1">
-                                <span class="text-2xl font-bold" style="color: #f59e0b">{{
-                                    parsePrice(item.cast_price).value
-                                }}</span>
+                                <span class="text-2xl font-bold" style="color: #f59e0b">{{ item.cast_price }}</span>
                                 <span class="mx-1" style="color: #6b7280">/</span>
-                                <span class="text-2xl font-bold" style="color: #0ea5e9">{{
-                                    parsePrice(item.price).value
-                                }}</span>
-                                <span class="text-sm ml-1" style="color: #6b7280">{{
-                                    parsePrice(item.unit).unit
-                                }}</span>
+                                <span class="text-2xl font-bold" style="color: #0ea5e9">{{ item.price }}</span>
+                                <span class="text-sm ml-1" style="color: #6b7280">{{ item.unit }}</span>
                             </div>
                         </div>
                         <div class="text-right">
@@ -54,18 +48,6 @@ const props = defineProps<{
 }>();
 
 const topBorderColors = ["#88d4c5", "#b0a7d9", "#e0b0a8", "#a7cfb6", "#f0d9a6"];
-
-function parsePrice(priceString: string | undefined) {
-    if (!priceString) return { value: "N/A", unit: "" };
-    const match = priceString.match(/([\d,.-]+)(.*)/);
-    if (match) {
-        return {
-            value: match[1],
-            unit: match[2].trim(),
-        };
-    }
-    return { value: priceString, unit: "" };
-}
 </script>
 
 <style scoped></style>

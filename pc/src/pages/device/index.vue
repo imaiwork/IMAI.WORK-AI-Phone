@@ -106,6 +106,14 @@
                                     </div>
                                     <div
                                         class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
+                                        @click="handleUpdateAccount(row.device_code)">
+                                        <span class="flex items-center justify-center">
+                                            <Icon name="el-icon-Refresh"></Icon>
+                                        </span>
+                                        <span>一键更新账号</span>
+                                    </div>
+                                    <div
+                                        class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
                                         @click="handleDelete(row)">
                                         <Icon name="el-icon-Delete"></Icon>
                                         <span>删除</span>
@@ -131,14 +139,16 @@
         v-if="showAddDevice"
         :bind-loading="addDeviceLoading"
         @close="showAddDevice = false"
-        @confirm="getLists" />
+        @confirm="getLists"
+        @update:account="handleUpdateAccount" />
     <device-progress
         v-if="showProgress"
         :progress-value="progressValue"
         :progress-error="progressError"
+        :progress-error-msg="progressErrorMsg"
         :step="deviceStep"
         @close="showProgress = false"
-        @retry="retryAddDevice" />
+        @retry="retryRefreshAccount" />
     <popup ref="editPopupRef" append-to-body :show-close="false" cancel-button-text="" confirm-button-text="">
         <div class="-my-4">
             <div class="absolute top-2 right-2 w-6 h-6" @click="closeEditPopup">
@@ -179,8 +189,17 @@ const { pager, getLists } = usePaging({
     fetchFun: getDeviceList,
 });
 
+const sortedPlatformLogo = ref<any[]>([
+    { name: "微信", type: AppTypeEnum.WECHAT, status: 0 },
+    { name: "小红书", type: AppTypeEnum.XHS, status: 0 },
+    { name: "抖音", type: AppTypeEnum.DOUYIN, status: 0 },
+    { name: "快手", type: AppTypeEnum.KUAISHOU, status: 0 },
+]);
+const platformsToUpdate = ref<any[]>([]);
+const addDeviceRef = ref<InstanceType<typeof DeviceAdd>>();
 const showProgress = ref(false);
 const progressError = ref(false);
+const progressErrorMsg = ref("");
 const deviceStep = ref("");
 const editPopupRef = shallowRef();
 const editValue = ref<any>({
@@ -190,45 +209,95 @@ const editValue = ref<any>({
 
 const { isConnected, onEvent, send } = useDeviceWs();
 
-const { showAddDevice, addDeviceLoading, progressValue, refreshAccount, handleAddDeviceConfirm, handleRefreshAccount } =
-    useAddDeviceAccount({
-        send,
-        onEvent,
-        onSuccess: (res) => {
-            const { msg, type } = res;
-            switch (type) {
-                case DeviceCmdEnum.ADD_DEVICE:
-                case DeviceCmdEnum.DEVICE_ONLINE:
-                    getLists();
-                    break;
-                case DeviceCmdEnum.GET_USER_INFO:
-                    addDeviceId.value = "";
+const {
+    showAddDevice,
+    addDeviceLoading,
+    progressValue,
+    refreshAccount,
+    eventAction,
+    handleRefreshAccount,
+    handleBatchUpdateAccount,
+} = useAddDeviceAccount({
+    send,
+    onEvent,
+    onSuccess: (res) => {
+        const { msg, type } = res;
+        switch (type) {
+            case DeviceCmdEnum.ADD_DEVICE:
+            case DeviceCmdEnum.DEVICE_ONLINE:
+                getLists();
+                break;
+            case DeviceCmdEnum.GET_USER_INFO:
+                if (eventAction.value === "batchUpdateAccount") {
+                    const completedPlatform = sortedPlatformLogo.value.find((p) => p.status === 1);
+                    if (completedPlatform) {
+                        completedPlatform.status = 2;
+                    }
+
+                    const isFinished = !sortedPlatformLogo.value.some(
+                        (p) => platformsToUpdate.value.includes(p.type) && (p.status === 0 || p.status === 1)
+                    );
+
+                    if (!isFinished) {
+                        processNextAccount();
+                    } else {
+                        deviceId.value = "";
+                        progressError.value = false;
+                        currDevice.value = null;
+                        showProgress.value = false;
+                        getLists();
+                    }
+                } else {
                     progressError.value = false;
-                    currDevice.value = null;
                     showProgress.value = false;
                     getLists();
-                    break;
-                case DeviceCmdEnum.APP_EXEC:
-                case DeviceCmdEnum.OPEN_APP:
-                case DeviceCmdEnum.OPEN_PERSON_CENTER:
-                case DeviceCmdEnum.GET_ACCOUNT_INFO:
-                case DeviceCmdEnum.DATA_SEND:
-                case DeviceCmdEnum.GET_ACCOUNT_INFO_COMPLETE:
-                    deviceStep.value = msg;
-                    break;
-            }
-        },
-        onError: (err) => {
+                }
+                break;
+            case DeviceCmdEnum.APP_EXEC:
+            case DeviceCmdEnum.OPEN_APP:
+            case DeviceCmdEnum.OPEN_PERSON_CENTER:
+            case DeviceCmdEnum.GET_ACCOUNT_INFO:
+            case DeviceCmdEnum.DATA_SEND:
+            case DeviceCmdEnum.GET_ACCOUNT_INFO_COMPLETE:
+                if (eventAction.value == EventAction.BatchUpdateAccount) {
+                    const platformName = sortedPlatformLogo.value.find((p) => p.status == 1)?.name;
+                    deviceStep.value = `${platformName} ${msg}`;
+                } else {
+                    deviceStep.value = `${
+                        sortedPlatformLogo.value.find((p) => p.type == currAppType.value)?.name
+                    } ${msg}`;
+                }
+                break;
+        }
+    },
+    onError: (err) => {
+        const { code, error, content, type } = err;
+        if (content.ode == DeviceCmdCodeEnum.DEVICE_OFFLINE) {
+            feedback.msgError(error);
+            getLists();
+        }
+        if (
+            eventAction.value === EventAction.UpdateAccount ||
+            eventAction.value === EventAction.AddAccount ||
+            eventAction.value === EventAction.AddDevice
+        ) {
             progressError.value = true;
+            progressErrorMsg.value = error;
             progressValue.value = 0;
-            const { code, error, type } = err;
-            if (code == DeviceCmdCodeEnum.DEVICE_OFFLINE) {
-                getLists();
+        }
+        if (eventAction.value === EventAction.BatchUpdateAccount) {
+            const platformToReset = sortedPlatformLogo.value.find((p) => p.status === 1);
+            if (platformToReset) {
+                deviceStep.value = error;
+                feedback.msgError(error);
+                platformToReset.status = 3;
+                processNextAccount();
             }
-        },
-    });
+        }
+    },
+});
 
-const addDeviceId = ref("");
+const deviceId = ref("");
 const currAppType = ref();
 
 const { isLock, lockFn: handleEditNameConfirm } = useLockFn(async () => {
@@ -254,9 +323,17 @@ const closeEditPopup = () => {
     editPopupRef.value?.close();
 };
 
-const retryAddDevice = () => {
+const retryRefreshAccount = () => {
+    if (!isConnected.value) {
+        feedback.msgError("连接失败，请检查网络连接");
+        return;
+    }
     progressError.value = false;
-    handleRefreshAccount(currDevice.value, currAppType.value);
+    if (eventAction.value == EventAction.BatchUpdateAccount) {
+        processNextAccount();
+    } else {
+        handleRefreshAccount(currDevice.value, currAppType.value);
+    }
 };
 
 const currDevice = ref(null);
@@ -266,6 +343,44 @@ const handleRefreshData = (row: any, appType: AppTypeEnum) => {
     showProgress.value = true;
     currAppType.value = appType;
     handleRefreshAccount(currDevice.value, appType);
+};
+
+const handleUpdateAccount = (deviceCode: string) => {
+    deviceId.value = deviceCode;
+    refreshAccount.value = pager.lists.find((item: any) => item.device_code == deviceCode)?.accounts || [];
+    const forceRefetch = refreshAccount.value.length == 0;
+    if (forceRefetch) {
+        platformsToUpdate.value = sortedPlatformLogo.value.map((item) => item.type);
+    } else {
+        platformsToUpdate.value = sortedPlatformLogo.value.filter((item) => item.status == 0).map((item) => item.type);
+    }
+
+    // 重置状态
+    sortedPlatformLogo.value.forEach((p) => {
+        if (platformsToUpdate.value.includes(p.type)) {
+            p.status = 0; // 待处理
+        }
+    });
+
+    showProgress.value = true;
+    processNextAccount();
+};
+
+const processNextAccount = () => {
+    const platformToProcess = sortedPlatformLogo.value.find(
+        (p) => platformsToUpdate.value.includes(p.type) && p.status === 0
+    );
+    if (platformToProcess) {
+        platformToProcess.status = 1; // 进行中
+        sendGetAccountCmd(platformToProcess.type);
+    }
+};
+
+const sendGetAccountCmd = (type: AppTypeEnum) => {
+    handleBatchUpdateAccount({
+        device_code: deviceId.value,
+        type,
+    });
 };
 
 const handleAccountDetail = (row: any) => {
@@ -286,7 +401,6 @@ const handleAccountDetail = (row: any) => {
     }
 };
 
-const addDeviceRef = ref<InstanceType<typeof DeviceAdd>>();
 const handleAddDevice = async () => {
     if (!isConnected.value) {
         feedback.msgError("连接失败，请检查网络连接");

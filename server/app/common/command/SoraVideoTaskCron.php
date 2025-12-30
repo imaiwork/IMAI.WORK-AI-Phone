@@ -3,6 +3,7 @@
 
 namespace app\common\command;
 
+use app\api\logic\sora\SoraAnchorLogic;
 use app\api\logic\sora\SoraVideoSettingLogic;
 use app\api\logic\sora\SoraVideoTaskLogic;
 use think\console\Command;
@@ -26,6 +27,7 @@ class SoraVideoTaskCron extends Command
     {
         SoraVideoSettingLogic::checkStatus();
         SoraVideoTaskLogic::checkStatus();
+        SoraAnchorLogic::checkStatus();
         return true;
     }
 }

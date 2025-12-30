@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model:show="show" height="85%" :is-disabled-touch="true" show-close-btn custom-class="bg-[#F9FAFB]">
+    <popup-bottom v-model="show" height="85%" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
         <template #content>
             <view class="flex flex-col h-full">
                 <view class="px-4">

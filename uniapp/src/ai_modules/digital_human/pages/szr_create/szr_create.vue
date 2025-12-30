@@ -7,7 +7,7 @@
                     <view
                         class="bg-white px-[44rpx]"
                         :class="{
-                            'grow min-h-0 flex flex-col': !isModelVersion,
+                            'grow min-h-0 flex flex-col': anchorLists.length == 0,
                         }">
                         <view class="h-[100rpx] flex items-center justify-between">
                             <view class="font-bold text-[32rpx]">选择数字人</view>
@@ -22,32 +22,32 @@
                         <view
                             class="py-4"
                             :class="[
-                                !isModelVersion
+                                anchorLists.length == 0
                                     ? 'grow min-h-0 flex flex-col items-center justify-center'
                                     : 'border-[0rpx] border-t-[1rpx] border-b-[1rpx] border-solid border-[#E5E5E5]',
                             ]">
-                            <view v-if="anchorLists.length" class="anchor-list">
-                                <scroll-view scroll-x show-scrollbar="false">
+                            <view v-if="anchorLists.length > 0">
+                                <scroll-view scroll-x>
                                     <view class="flex gap-x-2 whitespace-nowrap">
                                         <view
                                             v-for="(item, index) in anchorLists"
                                             class="flex-shrink-0 w-[164rpx] h-[224rpx] rounded-[24rpx] relative overflow-hidden card-gradient"
                                             :key="item.anchor_id || index"
-                                            @click="chooseAnchor(item)">
+                                            @click="chooseAnchor(index)">
                                             <image :src="item.pic" class="w-full h-full" mode="aspectFill"></image>
                                             <view
                                                 class="absolute top-2 right-2 z-[223]"
-                                                v-if="formData.anchor_id == item.anchor_id">
+                                                v-if="currAnchorIndex == index">
                                                 <image
                                                     src="/static/images/icons/success.svg"
                                                     class="w-[28rpx] h-[28rpx]"></image>
                                             </view>
                                             <view
                                                 class="absolute bottom-1 right-0 z-[224]"
-                                                @click.stop="previewVideo(item.url)">
+                                                @click.stop="previewVideo(item.result_url)">
                                                 <image
                                                     src="@/ai_modules/digital_human/static/icons/play.svg"
-                                                    class="w-[38rpx] h-[38rpx]"></image>
+                                                    class="w-[48rpx] h-[48rpx]"></image>
                                             </view>
                                             <view
                                                 v-if="item.status == 0"
@@ -56,13 +56,6 @@
                                                     class="bg-primary text-xs font-bold text-white rounded-[10rpx] px-2 py-1"
                                                     >克隆中</view
                                                 >
-                                            </view>
-                                            <view
-                                                class="absolute bottom-2 z-[77] w-full flex justify-center"
-                                                v-if="modelVersionMap[item.model_version]">
-                                                <view class="dh-version-name !px-2 !py-[4rpx] !text-[20rpx]">
-                                                    {{ modelVersionMap[item.model_version] }}
-                                                </view>
                                             </view>
                                         </view>
                                     </view>
@@ -83,6 +76,17 @@
                             </view>
                         </view>
                         <view class="mb-2">
+                            <view class="flex items-center justify-between h-[80rpx] gap-x-2">
+                                <text class="font-bold flex-shrink-0">选择模型</text>
+                                <view class="flex items-center gap-x-2" @click="openChooseModel()">
+                                    <text
+                                        class="text-xs font-bold line-clamp-1"
+                                        :class="[formData.model_version ? 'text-primary' : 'text-[#0000004d]']"
+                                        >{{ modelVersionMap[formData.model_version] || "请选择" }}</text
+                                    >
+                                    <u-icon name="arrow-right" color="#00000020" size="22"></u-icon>
+                                </view>
+                            </view>
                             <!-- 音色选择区域 -->
                             <view class="flex items-center justify-between h-[80rpx] gap-x-2">
                                 <text class="font-bold flex-shrink-0">选择声音</text>
@@ -172,7 +176,7 @@
                             <view class="min-h-[364rpx] text-[#00000033">
                                 {{ formData.msg || "请输入您的文案" }}
                             </view>
-                            <view class="text-right text-[22rpx] text-[#999] mt-2" v-if="formData.msg">
+                            <view class="text-right text-[22rpx] text-[#999] mt-2">
                                 {{ formData.msg.length }}/{{ textLimit }}
                             </view>
                         </navigator>
@@ -203,14 +207,14 @@
         title="视频预览"
         :video-url="previewVideoUrl"
         @confirm="showVideoPreview = false" />
-    <select-anchor v-model:show="showChooseAnchor" @confirm="handleChooseAnchor" />
+    <select-anchor v-model="showChooseAnchor" @confirm="handleChooseAnchor" />
     <choose-tone
         v-model="showChooseTone"
         :model-version="formData.model_version"
         :active-tone="formData.voice_id"
         :show-original-tone="showOriginalTone"
         @confirm="handleChooseTone" />
-    <choose-model v-model:show="showChooseModel" @confirm="handleChooseModel" />
+    <choose-model v-model="showChooseModel" @confirm="handleChooseModel" />
     <model-rule v-model="showModelRule" :model-version="formData.model_version" />
     <create-panel ref="createPanelRef" :formData="formData" @success="confirmCreate" @recharge="recharge" />
     <agreement :show-agreement="showAgreement" @agree="agreeCreate" @close="showAgreement = false" />
@@ -218,14 +222,14 @@
 </template>
 
 <script setup lang="ts">
-import { createTask, getAnchorList } from "@/api/digital_human";
+import { createTask, getPublicAnchorList } from "@/api/digital_human";
 import { getClipConfig } from "@/api/app";
-import { getMaterialMusicList } from "@/api/material";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import Cache from "@/utils/cache";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { ModeTypeEnum, CreateTypeEnum, ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
-import { DigitalHumanModelVersionEnum, ClipStyleEnum } from "../../enums";
+import { ClipStyleEnum } from "../../enums";
 import { createVideoCopywriter } from "../../config/copywriter";
 import SelectAnchor from "@/ai_modules/digital_human/components/choose-anchor/choose-anchor.vue";
 import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
@@ -238,13 +242,21 @@ import { useEventBusManager } from "@/hooks/useEventBusManager";
 // 定义锚点数据接口
 interface AnchorItem {
     name: string;
-    model_version: DigitalHumanModelVersionEnum;
+    model_version: DigitalHumanModelVersionEnum & 0;
     anchor_id: string;
-    url: string;
+    anchor_ids: {
+        chanjing_anchor_id: string;
+        weiju_anchor_id: string;
+    };
+    result_url: string;
     pic: string;
     width: number;
     height: number;
     status: number;
+    extra_info: {
+        width: number;
+        height: number;
+    };
 }
 
 const { on } = useEventBusManager();
@@ -266,7 +278,7 @@ const formData = reactive<any>({
     anchor_id: "",
     anchor_name: "",
     gender: "male",
-    model_version: DigitalHumanModelVersionEnum.CHANJING as unknown as DigitalHumanModelVersionEnum,
+    model_version: "" as unknown as DigitalHumanModelVersionEnum,
     audio_type: CreateTypeEnum.TEXT,
     voice_id: "-1",
     voice_type: 1,
@@ -282,6 +294,7 @@ const formData = reactive<any>({
 
 // 状态变量
 const anchorLists = ref<AnchorItem[]>([]);
+const currAnchorIndex = ref(-1);
 const showChooseAnchor = ref(false);
 const showChooseModel = ref(false);
 const previewVideoUrl = ref<string>("");
@@ -308,7 +321,10 @@ const textLimit = computed(() => {
 
 const modelChannel = computed(() => appStore.getDigitalHumanConfig?.channel || []);
 
-const isModelVersion = computed(() => !!formData.model_version);
+const isPublicAnchor = computed(() => {
+    const { model_version } = anchorLists.value[currAnchorIndex.value];
+    return model_version === 0;
+});
 
 const modelVersionMap = computed(() => {
     return modelChannel.value.reduce((acc: Record<string, any>, item: any) => {
@@ -318,7 +334,7 @@ const modelVersionMap = computed(() => {
 });
 
 const canCreate = computed(() => {
-    return isModelVersion.value && (formData.voice_type == 1 || !!formData.voice_id) && formData.msg?.length > 0;
+    return (formData.voice_type == 1 || !!formData.voice_id) && formData.msg?.length > 0;
 });
 
 const isOriginalTone = computed(() => {
@@ -336,28 +352,43 @@ const getClipConfigData = async () => {
     const { code } = await getClipConfig();
     clipConfig.is_open = code == 10000;
 };
+
+const openChooseModel = () => {
+    if (isPublicAnchor.value) {
+        showChooseModel.value = true;
+    } else {
+        uni.$u.toast("该形象无法更改模型哦~");
+    }
+};
+
 // 形象相关方法
-const chooseAnchor = (item: AnchorItem) => {
-    const { name, model_version, anchor_id, url, pic, width, height } = item;
-    if (formData.model_version !== model_version) {
+const chooseAnchor = (index: number) => {
+    const { status, model_version } = anchorLists.value[index];
+
+    if (status != 2 && model_version === 0) {
+        uni.$u.toast("该形象正在制作中，请稍后再来选择");
+        return;
+    }
+    if (model_version !== model_version) {
         formData.voice_id = "-1";
         formData.voice_name = "";
     }
-    formData.anchor_id = anchor_id;
-    formData.anchor_name = name;
-    formData.model_version = model_version;
-    formData.video_url = url;
-    formData.pic = pic;
-    formData.width = width;
-    formData.height = height;
+    if (model_version === 0) {
+        formData.model_version = DigitalHumanModelVersionEnum.CHANJING;
+    } else {
+        formData.model_version = model_version;
+    }
+    currAnchorIndex.value = index;
 };
 
 const handleChooseAnchor = (data: AnchorItem) => {
-    chooseAnchor(data);
     // 检查是否已存在相同anchor_id的项目
-    const exists = anchorLists.value.some((item) => item.anchor_id === data.anchor_id);
-    if (!exists) {
+    const exists = anchorLists.value.findIndex((item) => item.anchor_id === data.anchor_id);
+    if (exists === -1) {
         anchorLists.value = [data, ...anchorLists.value];
+        chooseAnchor(0);
+    } else {
+        chooseAnchor(exists);
     }
     showChooseAnchor.value = false;
 };
@@ -370,10 +401,7 @@ const openModel = () => {
 };
 
 const handleChooseModel = (id: string) => {
-    showChooseModel.value = false;
-    uni.$u.route({
-        url: `/ai_modules/digital_human/pages/video_upload/video_upload?model_version=${id}&type=${ModeTypeEnum.ANCHOR}`,
-    });
+    formData.model_version = id;
 };
 
 // 视频预览相关方法
@@ -413,13 +441,6 @@ const openModelRule = () => {
 const agreeCreate = () => {
     Cache.set(DH_CREATE_AGREEMENT_KEY, "1");
     confirmCreate();
-};
-
-// 数据清理方法
-const clearData = () => {
-    formData.voice_id = "";
-    formData.voice_name = "";
-    formData.msg = "";
 };
 
 // 充值相关方法
@@ -464,20 +485,40 @@ const confirmCreate = async () => {
             mask: true,
         });
         const voice_id = formData.voice_id == "-1" ? undefined : formData.voice_id;
+        const {
+            name,
+            extra_info: { width, height },
+            model_version,
+            anchor_id,
+            anchor_ids: { chanjing_anchor_id, weiju_anchor_id },
+            pic,
+            result_url,
+        } = anchorLists.value[currAnchorIndex.value];
+
+        let anchorId = anchor_id;
+        if (model_version === 0) {
+            if (formData.model_version === DigitalHumanModelVersionEnum.CHANJING) {
+                anchorId = chanjing_anchor_id;
+            }
+            if (formData.model_version === DigitalHumanModelVersionEnum.STANDARD) {
+                anchorId = weiju_anchor_id;
+            }
+        }
+
         await createTask({
             name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "数字人口播",
-            msg: formData.msg,
-            pic: formData.pic,
-            video_url: formData.video_url,
-            anchor_id: formData.anchor_id,
-            anchor_name: formData.anchor_name,
+            width,
+            height,
+            pic,
             voice_id,
+            anchor_id: anchorId,
+            msg: formData.msg,
+            video_url: result_url,
+            anchor_name: name,
             voice_name: formData.voice_name,
             voice_type: formData.voice_type,
             audio_type: formData.audio_type,
             model_version: formData.model_version,
-            width: formData.width,
-            height: formData.height,
             automatic_clip: formData.automatic_clip,
             clip_type: formData.clip_type,
             music_url: formData.music_url,
@@ -506,16 +547,20 @@ const confirmCreate = async () => {
 
 const getModelLists = async () => {
     try {
-        const { lists } = await getAnchorList({
+        const { lists } = await getPublicAnchorList({
             page_size: 10,
             page_no: 1,
-            type: 0,
-            status: "0,1",
-            model_version: `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.STANDARD}`,
+            status: 1,
+            filter: 2,
         });
         if (lists && lists.length) {
             anchorLists.value = lists;
-            chooseAnchor(lists[0]);
+            const index = lists.findIndex((item: any) =>
+                item.source_type == "public_anchor" ? item.status == 2 : item.status == 1
+            );
+            if (index !== -1) {
+                chooseAnchor(index);
+            }
         }
     } finally {
         loading.value = false;
@@ -527,29 +572,6 @@ const goHome = () => {
         url: "/ai_modules/digital_human/pages/index/index",
         type: "redirect",
     });
-};
-
-const onCreateAnchor = (data: any) => {
-    const { name, url, anchor_id, pic, width, height, model_version } = data;
-    // if (!formData.model_version && formData.model_version !== anchor_id) {
-    //     clearData();
-    // }
-
-    // if (model_version == DigitalHumanModelVersionEnum.CHANJING) {
-    //     formData.voice_id = "-1";
-    // }
-
-    Object.assign(formData, {
-        anchor_name: name,
-        video_url: url,
-        anchor_id,
-        model_version,
-        pic,
-        width,
-        height,
-    });
-    // 检查是否已存在相同anchor_id的项目
-    anchorLists.value = [data, ...anchorLists.value];
 };
 
 onShow(() => {

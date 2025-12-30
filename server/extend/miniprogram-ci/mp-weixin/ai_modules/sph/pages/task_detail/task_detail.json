@@ -5,6 +5,7 @@
   "disableScroll": true,
   "usingComponents": {
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-tabs": "../../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
     "empty": "../../../../components/empty/empty",
     "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
     "task-card": "../../components/task-card/task-card",

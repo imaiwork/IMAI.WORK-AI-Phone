@@ -81,4 +81,17 @@ class SoraVideoSettingController extends BaseApiController
             return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }
     }
+
+    public function copywriting(){
+        try {
+            $params = $this->request->post();
+            $result = SoraVideoSettingLogic::copywriting($params);
+            if ($result) {
+                return $this->data(SoraVideoSettingLogic::getReturnData());
+            }
+            return $this->fail(SoraVideoSettingLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
 }

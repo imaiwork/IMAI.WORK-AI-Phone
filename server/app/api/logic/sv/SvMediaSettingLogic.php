@@ -21,7 +21,6 @@ class SvMediaSettingLogic extends SvBaseLogic
     {
         try {
             $params['user_id'] = self::$uid;
-
             // 预处理JSON字段
             $jsonFields = ['media_url', 'title', 'subtitle'];
             $decodedData = [];

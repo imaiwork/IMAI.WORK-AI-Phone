@@ -1,7 +1,8 @@
 // useEventListener.js
+import { onBeforeUnmount } from "vue";
 
 // 核心存储：Map<eventName: string, handlers: Set<Function>>
-const eventRegistry = new Map();
+const eventRegistry = new Map<string, Set<(payload: any) => void>>();
 
 /**
  * @description 全局事件触发方法 (emit)。
@@ -13,7 +14,7 @@ export const emit = (eventName: string, payload: any) => {
 
     if (handlers) {
         // 遍历所有注册的监听器并执行
-        handlers.forEach((handler: (payload: any) => void) => {
+        handlers.forEach((handler) => {
             try {
                 handler(payload);
             } catch (error) {
@@ -29,8 +30,8 @@ export const emit = (eventName: string, payload: any) => {
  */
 export const useEventBusManager = () => {
     // 存储当前组件实例通过此 Hook 注册的所有监听器
-    // Map<eventName: string, callback: Function>
-    const registeredHandlers = new Map();
+    // Map<eventName: string, Set<callback: Function>>
+    const registeredHandlers = new Map<string, Set<(payload: any) => void>>();
 
     /**
      * 注册事件监听器。
@@ -47,10 +48,13 @@ export const useEventBusManager = () => {
         if (!eventRegistry.has(eventName)) {
             eventRegistry.set(eventName, new Set());
         }
-        eventRegistry.get(eventName).add(callback);
+        eventRegistry.get(eventName)!.add(callback);
 
         // 2. 记录到组件的注册列表，以便卸载时清理
-        registeredHandlers.set(callback, eventName);
+        if (!registeredHandlers.has(eventName)) {
+            registeredHandlers.set(eventName, new Set());
+        }
+        registeredHandlers.get(eventName)!.add(callback);
     };
 
     /**
@@ -59,16 +63,22 @@ export const useEventBusManager = () => {
      * @param {Function} callback 事件触发时的回调函数。
      */
     const off = (eventName: string, callback: (payload: any) => void) => {
+        // 移除全局监听器
         const handlers = eventRegistry.get(eventName);
         if (handlers) {
             handlers.delete(callback);
 
-            // 从组件的注册列表中移除记录
-            registeredHandlers.delete(callback);
-
-            // 清理全局 Map
             if (handlers.size === 0) {
                 eventRegistry.delete(eventName);
+            }
+        }
+
+        // 移除当前 hook 实例的记录
+        const locallyRegistered = registeredHandlers.get(eventName);
+        if (locallyRegistered) {
+            locallyRegistered.delete(callback);
+            if (locallyRegistered.size === 0) {
+                registeredHandlers.delete(eventName);
             }
         }
     };
@@ -76,11 +86,14 @@ export const useEventBusManager = () => {
     // --- 自动清理逻辑 ---
     onBeforeUnmount(() => {
         // 遍历所有记录的监听器，进行批量清理
-        registeredHandlers.forEach((eventName: string, callback: (payload: any) => void) => {
-            const handlers = eventRegistry.get(eventName);
-            if (handlers) {
-                handlers.delete(callback);
-                if (handlers.size === 0) {
+        registeredHandlers.forEach((callbacks, eventName) => {
+            const globalHandlers = eventRegistry.get(eventName);
+            if (globalHandlers) {
+                callbacks.forEach((callback) => {
+                    globalHandlers.delete(callback);
+                });
+
+                if (globalHandlers.size === 0) {
                     eventRegistry.delete(eventName);
                 }
             }

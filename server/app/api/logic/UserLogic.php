@@ -288,7 +288,7 @@ class UserLogic extends BaseLogic
             $deviceBindCode = User::where('id', '=', $params['user_id'])->value('device_bind_qrcode');
             $host           = env('app.host');
             $domain         = parse_url($host)['host'] ?? $_SERVER['HTTP_HOST'];
-            if (empty($deviceBindCode)) {
+            if (empty($deviceBindCode) || !file_exists(public_path() . $deviceBindCode)) {
                 $uuid       = (Uuid::uuid4())->toString();
                 $writer     = new PngWriter();
                 $publicPath = '/qrcode/user/' . $uuid . '.png';
@@ -364,14 +364,15 @@ class UserLogic extends BaseLogic
             ];
             $res    = self::getDeviceBindRequest($params);
 
-            if (!$res) {
+            if (empty($res)) {
                 $status  = 0;
                 $message = '绑定失败';
             }
 
             self::$returnData = [
                 'status'  => $status,
-                'message' => $message
+                'message' => $message,
+                'device_code' => User::where('id', '=', $params['user_id'])->value('last_bind_device_code')??''
             ];
             return true;
         } catch (GuzzleException $e) {
@@ -383,7 +384,7 @@ class UserLogic extends BaseLogic
     /**
      * @throws GuzzleException
      */
-    public static function getDeviceBindRequest($params): bool
+    public static function getDeviceBindRequest($params): array
     {
         $auth     = \app\common\service\ToolsService::Auth();
         $url      = $auth::CODE_REQUEST_URL;
@@ -406,11 +407,11 @@ class UserLogic extends BaseLogic
         $data     = json_decode($contents, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            return false;
+            return [];
         }
         if (($data['code'] ?? 0) === 1) {
-            return true;
+            return $data;
         }
-        return false;
+        return [];
     }
 }

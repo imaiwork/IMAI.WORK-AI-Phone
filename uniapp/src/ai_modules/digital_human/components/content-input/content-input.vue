@@ -16,7 +16,7 @@
                 </view>
             </view>
             <view class="mt-2 grow min-h-0">
-                <view class="bg-[#F7FBFF] rounded-lg p-2">
+                <view class="bg-[#F7FBFF] rounded-lg p-2" v-if="show">
                     <u-input
                         height="400"
                         class="w-full"

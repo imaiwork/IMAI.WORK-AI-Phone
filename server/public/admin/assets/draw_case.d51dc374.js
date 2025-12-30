@@ -1,1 +1,0 @@
-import{r as a}from"./index.1585f49f.js";function t(e){return a.get({url:"/hd.HdImageCase/lists",params:e})}function s(e){return a.post({url:"/hd.HdImageCase/add",params:e})}function d(e){return a.post({url:"/hd.HdImageCase/delete",params:e})}function u(e){return a.post({url:"/hd.HdImageCase/edit",params:e})}export{s as a,d,u as e,t as g};

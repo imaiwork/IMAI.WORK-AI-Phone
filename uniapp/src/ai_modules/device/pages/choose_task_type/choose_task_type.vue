@@ -21,68 +21,87 @@
 </template>
 
 <script setup lang="ts">
-import taskImgIcon from "@/ai_modules/device/static/images/common/task_type_img.png";
-import taskVideoIcon from "@/ai_modules/device/static/images/common/task_type_video.png";
-import taskClueIcon from "@/ai_modules/device/static/images/common/task_type_clue.png";
-import taskMsgIcon from "@/ai_modules/device/static/images/common/task_type_msg.png";
-import taskFriendIcon from "@/ai_modules/device/static/images/common/task_type_friend.png";
-import taskYhIcon from "@/ai_modules/device/static/images/common/task_type_yh.png";
-import taskCircleIcon from "@/ai_modules/device/static/images/common/task_type_circle.png";
-import taskXhsNoIcon from "@/ai_modules/device/static/images/common/task_type_xhsno.png";
+import { CreateTypeEnum } from "@/ai_modules/device/enums";
+import TaskImgIcon from "@/ai_modules/device/static/images/common/task_type_img.png";
+import TaskVideoIcon from "@/ai_modules/device/static/images/common/task_type_video.png";
+import TaskClueIcon from "@/ai_modules/device/static/images/common/task_type_clue.png";
+import TaskMsgIcon from "@/ai_modules/device/static/images/common/task_type_msg.png";
+import TaskFriendIcon from "@/ai_modules/device/static/images/common/task_type_friend.png";
+import TaskYhIcon from "@/ai_modules/device/static/images/common/task_type_yh.png";
+import TaskCircleIcon from "@/ai_modules/device/static/images/common/task_type_circle.png";
+import TaskXhsNoIcon from "@/ai_modules/device/static/images/common/task_type_xhsno.png";
+import TaskPrivateIcon from "@/ai_modules/device/static/images/common/task_type_private.png";
+import TaskCommentIcon from "@/ai_modules/device/static/images/common/task_type_comment.png";
+
+// 创建类型
 
 const taskTypeList = [
     {
         title: "发布图文",
         desc: "自动/定时发布",
-        icon: taskImgIcon,
+        icon: TaskImgIcon,
         disabled: false,
-        type: "img",
+        type: CreateTypeEnum.IMG,
     },
     {
         title: "发布视频",
         desc: "自动/定时发布",
-        icon: taskVideoIcon,
+        icon: TaskVideoIcon,
         disabled: false,
-        type: "video",
+        type: CreateTypeEnum.VIDEO,
     },
     {
         title: "自动获线索",
         desc: "无人工Ai获客",
-        icon: taskClueIcon,
+        icon: TaskClueIcon,
         disabled: false,
-        type: "clue",
+        type: CreateTypeEnum.CLUE,
     },
     {
         title: "私聊接管",
         desc: "自动处理信息",
-        icon: taskMsgIcon,
+        icon: TaskMsgIcon,
         disabled: false,
-        type: "msg",
+        type: CreateTypeEnum.MSG,
+    },
+    {
+        title: "评论获客",
+        desc: "评论区截流获客",
+        icon: TaskCommentIcon,
+        disabled: false,
+        type: CreateTypeEnum.COMMENT,
+    },
+    {
+        title: "私信获客",
+        desc: "从评论区私信获客",
+        icon: TaskPrivateIcon,
+        disabled: false,
+        type: CreateTypeEnum.PRIVATE_MESSAGE,
     },
     {
         title: "自动加好友",
         desc: "聚焦省心省力",
-        icon: taskFriendIcon,
+        icon: TaskFriendIcon,
         disabled: false,
-        type: "friend",
+        type: CreateTypeEnum.FRIEND,
     },
     {
         title: "自动养号",
         desc: "模拟真人养",
-        icon: taskYhIcon,
+        icon: TaskYhIcon,
         disabled: false,
-        type: "yh",
+        type: CreateTypeEnum.YH,
     },
     {
         title: "发朋友圈",
         desc: "即将解锁",
-        icon: taskCircleIcon,
+        icon: TaskCircleIcon,
         disabled: true,
     },
     {
         title: "小红书起号",
         desc: "即将解锁",
-        icon: taskXhsNoIcon,
+        icon: TaskXhsNoIcon,
         disabled: true,
     },
 ];
@@ -92,39 +111,20 @@ const handleClick = (item: any) => {
         uni.$u.toast("敬请期待~");
         return;
     }
+    const urls = {
+        [CreateTypeEnum.IMG]: "/ai_modules/device/pages/create_task/create_task?type=2",
+        [CreateTypeEnum.VIDEO]: "/ai_modules/device/pages/create_task/create_task?type=1",
+        [CreateTypeEnum.CLUE]: "/ai_modules/sph/pages/create_task/create_task",
+        [CreateTypeEnum.MSG]: "/ai_modules/device/pages/create_private_take/create_private_take",
+        [CreateTypeEnum.COMMENT]: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.COMMENT}`,
+        [CreateTypeEnum.PRIVATE_MESSAGE]: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.PRIVATE_MESSAGE}`,
+        [CreateTypeEnum.FRIEND]: "/ai_modules/device/pages/create_add_wechat/create_add_wechat",
+        [CreateTypeEnum.YH]: "/ai_modules/device/pages/create_account_building/create_account_building",
+    };
 
-    switch (item.type) {
-        case "img":
-            uni.navigateTo({
-                url: `/ai_modules/device/pages/create_task/create_task?type=2`,
-            });
-            break;
-        case "video":
-            uni.navigateTo({
-                url: `/ai_modules/device/pages/create_task/create_task?type=1`,
-            });
-            break;
-        case "clue":
-            uni.navigateTo({
-                url: `/ai_modules/sph/pages/create_task/create_task`,
-            });
-            break;
-        case "msg":
-            uni.navigateTo({
-                url: `/ai_modules/device/pages/create_private_take/create_private_take`,
-            });
-            break;
-        case "friend":
-            uni.navigateTo({
-                url: `/ai_modules/device/pages/create_add_wechat/create_add_wechat`,
-            });
-            break;
-        case "yh":
-            uni.navigateTo({
-                url: `/ai_modules/device/pages/create_account_building/create_account_building`,
-            });
-            break;
-    }
+    uni.navigateTo({
+        url: urls[item.type as CreateTypeEnum],
+    });
 };
 </script>
 

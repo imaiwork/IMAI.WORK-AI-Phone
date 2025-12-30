@@ -1,10 +1,5 @@
 <template>
-    <popup-bottom
-        v-model:show="show"
-        title="历史人设"
-        show-close-btn
-        :is-disabled-touch="true"
-        custom-class="bg-[#F9FAFB]">
+    <popup-bottom v-model="show" title="历史人设" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
         <template #content>
             <view class="h-full">
                 <z-paging

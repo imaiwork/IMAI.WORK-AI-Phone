@@ -46,7 +46,7 @@
                                 <u-icon name="arrow-right" color="#B2B2B2" :size="20"></u-icon>
                             </view>
                             <!-- 音色性别 -->
-                            <view v-if="formData.model_version != DigitalHumanModelVersionEnum.SHANJIAN">
+                            <!-- <view v-if="formData.model_version != DigitalHumanModelVersionEnum.SHANJIAN">
                                 <view class="flex items-center gap-1">
                                     <text class="text-[#E33C64] text-xl font-bold">*</text>
                                     <text class="text-[30rpx] font-bold">音色性别</text>
@@ -72,7 +72,7 @@
                                         </view>
                                     </view>
                                 </view>
-                            </view>
+                            </view> -->
                         </view>
                     </view>
 
@@ -206,9 +206,9 @@
 
     <!-- 弹窗组件 -->
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
-    <choose-model v-model:show="showChooseModel" @confirm="handleModelSelection" />
+    <choose-model v-model="showChooseModel" @confirm="handleModelSelection" />
     <popup-bottom
-        v-model:show="showRecorder"
+        v-model="showRecorder"
         title="录制声音"
         custom-class="bg-[#F6F6F6]"
         :show-footer="false"
@@ -283,13 +283,13 @@ import { formatAudioTime } from "@/utils/util";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
-import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
 import ManIcon from "@/ai_modules/digital_human/static/icons/man.svg";
 import ManActiveIcon from "@/ai_modules/digital_human/static/icons/man_s.svg";
 import WomanIcon from "@/ai_modules/digital_human/static/icons/woman.svg";
 import WomanActiveIcon from "@/ai_modules/digital_human/static/icons/woman_s.svg";
-import { DigitalHumanModelVersionEnum, DigitalHumanModelVersionEnumMap } from "../../enums";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { cratedVoiceCopywriter } from "../../config/copywriter";
+import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
 
 // Store
 const appStore = useAppStore();
@@ -318,12 +318,10 @@ const tokensRequired = computed(() => {
 const formData = reactive<{
     url: string;
     name: string;
-    gender: "male" | "female";
     model_version: number;
 }>({
     url: "",
     name: "",
-    gender: "male" as "male" | "female",
     model_version: DigitalHumanModelVersionEnum.STANDARD,
 });
 
@@ -389,9 +387,9 @@ const { authorize, isRecording, start, stop, close } = useRecorder(
 const rechargePopupRef = ref();
 
 // 方法定义
-const selectGender = (gender: "male" | "female") => {
-    formData.gender = gender;
-};
+// const selectGender = (gender: "male" | "female") => {
+//     formData.gender = gender;
+// };
 
 const handleModelSelection = (modelId: any) => {
     formData.model_version = modelId;

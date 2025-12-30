@@ -6,6 +6,7 @@ use app\api\logic\ApiLogic;
 use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
+use app\common\model\digitalHuman\DigitalHumanAnchor;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
@@ -35,20 +36,31 @@ class ShanjianAnchorLogic extends ApiLogic
             $response = self::requestUrl($param, $scene, self::$uid, $task_id);
             Log::channel('shanjian')->write('闪剪形象'.json_encode($response,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             if (isset($response['code']) && $response['code'] == 10000) {
+                //闪剪返回成功时，创建公共形象id
+                $dhInsert = [
+                    'user_id'    => self::$uid,
+                    'name'       => $name,
+                    'image'      => $params['pic'] ?? '',
+                    'task_ids'   => json_encode(['shanjian'=>['task_id'=>$task_id,'status'=>0],'weiju'=>['task_id'=>'','status'=>0],'chanjing'=>['task_id'=>'','status'=>0]]),
+                    'status'     => 0,
+                    'result_url' => $params['anchor_url'] ?? ''
+                ];
+                $dh = DigitalHumanAnchor::create($dhInsert);
 
-                $data = [
-                    'user_id' => self::$uid,
-                    'task_id' => $task_id,
-                    'pic' => $params['pic'] ?? '',
-                    'name' => $name,
-                    'anchor_url' => $params['anchor_url'] ?? '',
+                $data  = [
+                    'user_id'        => self::$uid,
+                    'task_id'        => $task_id,
+                    'pic'            => $params['pic'] ?? '',
+                    'name'           => $name,
+                    'anchor_url'     => $params['anchor_url'] ?? '',
                     'authorized_pic' => $params['authorized_pic'] ?? '',
                     'authorized_url' => $params['authorized_url'] ?? '',
-                    'create_time' => time(),
+                    'create_time'    => time(),
+                    'dh_id'          => $dh->id,
                 ];
                 $model = new ShanjianAnchor();
                 $model->save($data);
-                $data['id'] = $model->id;
+                $data['id']       = $model->id;
                 self::$returnData = $data;
                 return true;
             }else{
@@ -162,11 +174,18 @@ class ShanjianAnchorLogic extends ApiLogic
     {
         $model = ShanjianAnchor::where('task_id', $data['task_id'])->where('user_id', $data['user_id'])->where('status', 1)->select()
             ->each(function ($item) use ($data) {
-
+                // 公共数字人形象
+                $digitalHuman = DigitalHumanAnchor::where('id', $item->dh_id)->find();
+                $task_ids = json_decode($digitalHuman->task_ids,true);
                 if (in_array($data['status'], ['failed', 'succeed'])) {
                     $item->status = ($data['status'] == 'succeed') ? 3 : 2;
                     // TODO 失败退费
                     if ($item->status == 2) {
+                        $task_ids['shanjian']['status'] = 2;
+                        $digitalHuman->task_ids = json_encode($task_ids);
+                        $digitalHuman->status = 3;
+                        $digitalHuman->remark .= '闪剪形象生成失败：'.$data['errorMessage'].' ';
+
                         self::refundTokens($item->user_id, $data['taskId'], $data['task_id'], 'human_avatar_shanjian');
                         $item->remark = $data['errorMessage'];
                     }else{
@@ -181,26 +200,45 @@ class ShanjianAnchorLogic extends ApiLogic
                             $response = self::requestUrl($param, $scene, $item->user_id, $item->task_id);
                             Log::channel('shanjian')->write('闪剪音色结果返回'.json_encode($response,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                             if (isset($response['code']) && $response['code'] == 10000) {
+                                $task_ids['shanjian']['status'] = 1;
+                                $digitalHuman->task_ids = json_encode($task_ids);
+                                $digitalHuman->status = 1;
+
                                 $item->status = 4;
                             }else{
+                                $task_ids['shanjian']['status'] = 2;
+                                $digitalHuman->task_ids = json_encode($task_ids);
+                                $digitalHuman->status = 3;
                                 $item->status = 5;
                                 $item->remark = $response['message'] ?? '';
+                                $digitalHuman->remark .= '闪剪形象生成失败：'.$item->remark.' ';
                             }
                         } catch (HttpResponseException $e) {
+                            $task_ids['shanjian']['status'] = 2;
+                            $digitalHuman->task_ids = json_encode($task_ids);
+                            $digitalHuman->status = 3;
+
                             $item->status = 5;
                             $response = $e->getResponse();   // 先拿到 Response 对象
                             $responsedata     = $response->getData(); // 返回的就是数组
                             Log::channel('shanjian')->write('闪剪音色结果返回2'.json_encode($responsedata,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
                             $item->remark = $responsedata['msg'] ?? '';
+                            $digitalHuman->remark .= '闪剪形象生成失败：'.$item->remark.' ';
                         }catch (\Exception $e) {
+                            $task_ids['shanjian']['status'] = 2;
+                            $digitalHuman->task_ids = json_encode($task_ids);
+                            $digitalHuman->status = 3;
+
                             $item->status = 5;
                             $item->remark = $e->getMessage() ?? '';
+                            $digitalHuman->remark .= '闪剪形象生成失败：'.$item->remark.' ';
                         }
                     }
 
 
                 }
+                $digitalHuman->save();
                 $item->save();
             });
 

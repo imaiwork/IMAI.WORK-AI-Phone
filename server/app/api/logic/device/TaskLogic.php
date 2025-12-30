@@ -15,6 +15,7 @@ use app\common\model\sv\SvDeviceActiveAccount;
 use app\common\model\sv\SvDeviceTakeOverTask;
 use app\common\model\sv\SvDeviceTakeOverTaskAccount;
 use app\common\model\sv\SvDeviceTask;
+use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSettingAccount;
 use app\common\model\sv\SvPublishSettingDetail;
 use app\common\model\wechat\AiWechat;
@@ -114,7 +115,7 @@ class TaskLogic extends ApiLogic
      */
     public static function isTaskTimeOverlapping(string $deviceCode, int $taskType, int $startTime, int $endTime, int $userId): array
     {
-        $query = SvDeviceTask::where('device_code', $deviceCode)->where('user_id', $userId)->where('start_time', '<', $endTime)->where('end_time', '>', $startTime);
+        $query = SvDeviceTask::where('device_code', $deviceCode)->where('auto_type', 0)->where('user_id', $userId)->where('start_time', '<', $endTime)->where('end_time', '>', $startTime);
 
         $find = $query->findOrEmpty();
 
@@ -354,6 +355,17 @@ class TaskLogic extends ApiLogic
                     SvCrawlingTaskDeviceBind::where('task_id', $params['sub_task_id'])->select()->delete();
                     SvDeviceTask::Where('sub_task_id', $params['sub_task_id'])->where('user_id', self::$uid)->where('task_type', DeviceEnum::TASK_SOURCE_CLUES)->select()->delete();
                     break;
+                case DeviceEnum::TASK_SOURCE_TOUCH:
+
+                    $taskinfo = SvLeadScrapingSettingAccount::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('自动截流任务不存在');
+                    }
+                    $count = SvLeadScrapingSettingAccount::where('sub_task_id', $params['sub_task_id'])->where('task_type',DeviceEnum::TASK_SOURCE_FRIENDS)->where('user_id', self::$uid)->count();
+                    if ($count == 1) {
+                        SvLeadScrapingSettingAccount::where('id', $params['sub_task_id'])->delete();
+                    }
+                    break;
 
                 default:
 
@@ -457,6 +469,13 @@ class TaskLogic extends ApiLogic
                     }
                     break;
 
+                case DeviceEnum::TASK_SOURCE_TOUCH:
+                    $taskinfo = SvLeadScrapingSettingAccount::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('截流任务不存在');
+                    }
+                    $task['detail'] = $taskinfo;
+                    break;
                 default:
 
                     throw new \Exception('参数错误');
@@ -488,6 +507,7 @@ class TaskLogic extends ApiLogic
             $task['task_category'] = DeviceEnum::getAccountTypeDesc($task['account_type']) . DeviceEnum::getTaskTypeDesc($task['task_type']);
             $task['start_time'] = date('H:i', $task['start_time']);
             $task['end_time'] = date('H:i', $task['end_time']);
+            $task['task_type'] = DeviceEnum::getTaskTypeByAuto($task['task_type']);
             self::$returnData = $task;
             return true;
         } catch (\Exception $e) {
@@ -530,7 +550,7 @@ class TaskLogic extends ApiLogic
                         throw new \Exception('接管任务不存在');
                     }
                     $name =  $params['name'] ?? '接管任务';
-                    SvDeviceTakeOverTask::where('id', $taskinfo['take_over_id'])->update(['name' => $name]);
+                    SvDeviceTakeOverTask::where('id', $taskinfo['take_over_id'])->update(['task_name' => $name]);
                     break;
 
                 case DeviceEnum::TASK_SOURCE_ACTIVE:
@@ -565,6 +585,16 @@ class TaskLogic extends ApiLogic
                     }
                     $name =  $params['name'] ?? $taskinfo['name'];
                     SvCrawlingTask::where('id', $taskinfo['id'])->update(['name' => $name]);
+                    break;
+
+                case DeviceEnum::TASK_SOURCE_TOUCH:
+                    //sv_lead_scraping_setting_account
+                    $taskinfo = SvLeadScrapingSettingAccount::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('截流任务不存在');
+                    }
+                    $name =  $params['name'] ?? $taskinfo['name'];
+                    SvLeadScrapingSettingAccount::where('id', $taskinfo['id'])->update(['name' => $name]);
                     break;
 
                 default:

@@ -183,7 +183,7 @@
             </scroll-view>
         </view>
     </view>
-    <popup-bottom v-model:show="showRecord" title="订阅记录" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
+    <popup-bottom v-model="showRecord" title="订阅记录" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
         <template #content>
             <view class="h-full flex flex-col">
                 <view class="grow min-h-0 rounded-[24rpx] mt-4">

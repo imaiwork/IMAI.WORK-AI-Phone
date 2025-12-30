@@ -26,17 +26,17 @@
                             <navigator
                                 v-if="showDevice"
                                 :url="`/ai_modules/device/pages/device_choose/device_choose?device=${JSON.stringify(
-                                    formData.device_codes
+                                    formData?.device_codes
                                 )}`"
                                 class="flex items-center justify-between h-[70rpx]"
                                 hover-class="none">
                                 <text
                                     :class="[
-                                        formData.device_codes.length ? 'text-primary font-bold' : 'text-[#00000033]',
+                                        formData?.device_codes?.length ? 'text-primary font-bold' : 'text-[#00000033]',
                                     ]"
                                     >{{
-                                        formData.device_codes.length
-                                            ? `${formData.device_codes.length}个设备`
+                                        formData?.device_codes?.length
+                                            ? `${formData?.device_codes?.length}个设备`
                                             : "选择设备"
                                     }}</text
                                 >
@@ -50,9 +50,11 @@
                                 class="flex items-center justify-between h-[70rpx]"
                                 hover-class="none">
                                 <text
-                                    :class="[formData.accounts.length ? 'text-primary font-bold' : 'text-[#00000033]']"
+                                    :class="[
+                                        formData?.accounts?.length ? 'text-primary font-bold' : 'text-[#00000033]',
+                                    ]"
                                     >{{
-                                        formData.accounts.length ? `${formData.accounts.length}个账号` : "选择账号"
+                                        formData?.accounts?.length ? `${formData?.accounts?.length}个账号` : "选择账号"
                                     }}</text
                                 >
                                 <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
@@ -162,7 +164,14 @@
 import { AppTypeEnum } from "@/enums/appEnums";
 const props = withDefaults(
     defineProps<{
-        modelValue: any;
+        modelValue: {
+            name: string;
+            device_codes?: string[];
+            accounts?: string[];
+            task_frep: number;
+            custom_date: string[];
+            time_config: string[];
+        } & any;
         showDevice: boolean;
         showAccounts: boolean;
         platformTypes?: AppTypeEnum[];

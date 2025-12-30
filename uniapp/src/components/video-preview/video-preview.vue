@@ -1,5 +1,5 @@
 <template>
-    <u-popup v-model="showPopup" mode="center" width="90%" border-radius="48">
+    <u-popup v-model="showPopup" mode="center" width="90%" border-radius="48" @close="close">
         <view class="container relative p-[24rpx]">
             <view class="absolute right-4 top-5" @click="showPopup = false">
                 <image src="/static/images/icons/close.svg" class="w-[48rpx] h-[48rpx]"></image>
@@ -51,7 +51,7 @@ const props = withDefaults(
     }
 );
 
-const emit = defineEmits(["update:modelValue", "confirm"]);
+const emit = defineEmits(["update:modelValue", "confirm", "close"]);
 
 const showPopup = computed({
     get() {
@@ -75,7 +75,12 @@ const videoPlayerRef = ref<InstanceType<typeof VideoPlayer>>();
 
 const confirm = () => {
     emit("confirm");
+    close();
+};
+
+const close = () => {
     showPopup.value = false;
+    emit("close");
 };
 
 defineExpose({

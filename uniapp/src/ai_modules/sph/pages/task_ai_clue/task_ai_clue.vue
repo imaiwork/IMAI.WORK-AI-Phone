@@ -20,7 +20,7 @@
                                 v-model="contentVal"
                                 focus
                                 height="364"
-                                placeholder="请输入的您的行业，如：家庭用品"
+                                placeholder="请输入您想获取客户的行业，如：家居用品"
                                 placeholder-style="color: #7C7E80; "
                                 :maxlength="contentMaxLength" />
                             <view class="text-[#B2B2B2] text-[26rpx] text-end">
@@ -106,8 +106,8 @@ import { getAiKeywords } from "@/api/sph";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/sph/enums";
-import ClueEdit from "@/ai_modules/sph/components/clue-edit/clue-edit.vue";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
+import ClueEdit from "@/ai_modules/sph/components/clue-edit/clue-edit.vue";
 
 const { emit } = useEventBusManager();
 
@@ -247,13 +247,6 @@ onLoad((options: any) => {
 </script>
 
 <style scoped lang="scss">
-@mixin content-box {
-    @apply absolute top-[-4rpx] left-[-4rpx] w-[100%] h-[100%]  p-[4rpx] rounded-[16rpx] content-[''];
-    background: conic-gradient(#47d59f, #37cced);
-    -webkit-mask: linear-gradient(#47d59f 0 100%) content-box, linear-gradient(#37cced 0 100%);
-    -webkit-mask-composite: xor;
-}
-
 .prompt-length-item,
 .prompt-num-item {
     @apply w-[84rpx] h-[72rpx] flex items-center justify-center  bg-white text-[26rpx]  relative rounded-[16rpx];

@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model:show="show" title="算力消耗说明" height="70%">
+    <popup-bottom v-model="show" title="算力消耗说明" height="70%">
         <template #content>
             <view class="h-full pt-4">
                 <scroll-view class="h-full" scroll-y>

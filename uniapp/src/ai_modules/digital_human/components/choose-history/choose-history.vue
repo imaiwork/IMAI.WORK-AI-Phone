@@ -1,11 +1,5 @@
 <template>
-    <popup-bottom
-        v-model:show="show"
-        title="创作历史"
-        show-close-btn
-        height="80%"
-        :is-disabled-touch="true"
-        custom-class="bg-[#F9FAFB]">
+    <popup-bottom v-model="show" title="创作历史" height="80%" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
         <template #content>
             <view class="h-full flex flex-col">
                 <view class="text-xs text-[#00000080] mt-2 px-[30rpx]"> 已选：{{ chooseLists.length }} </view>

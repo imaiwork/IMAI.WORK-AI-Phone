@@ -282,7 +282,7 @@
 
 <script setup lang="ts">
 import { getVideoCreationRecord } from "@/api/app";
-import { addMatrixTask, publishDeviceTask } from "@/api/device";
+import { createMatrixTask, publishDeviceTask } from "@/api/device";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { getPuzzleTaskResultList } from "@/api/drawing";
@@ -592,7 +592,7 @@ const handleCreateTask = async () => {
         mask: true,
     });
     try {
-        const { id } = await addMatrixTask({
+        const { id } = await createMatrixTask({
             name: formData.name,
             media_type: taskType.value,
             media_url: formData.materialLists,

@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model:show="showPopup" title="请选择版本" custom-class="bg-[#F9FAFB]">
+    <popup-bottom v-model="show" title="请选择版本" custom-class="bg-[#F9FAFB]" @close="close">
         <template #content>
             <view class="px-[32rpx] pt-[30rpx]">
                 <view
@@ -22,21 +22,21 @@
 
 <script setup lang="ts">
 import { useAppStore } from "@/stores/app";
-import { DigitalHumanModelVersionEnum } from "@/ai_modules/digital_human/enums";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 const props = defineProps({
-    show: {
+    modelValue: {
         type: Boolean,
         default: false,
     },
 });
-const emit = defineEmits(["update:show", "confirm"]);
+const emit = defineEmits(["update:modelValue", "confirm", "close"]);
 
-const showPopup = computed({
+const show = computed({
     get() {
-        return props.show;
+        return props.modelValue;
     },
     set(val) {
-        emit("update:show", val);
+        emit("update:modelValue", val);
     },
 });
 const appStore = useAppStore();
@@ -46,9 +46,7 @@ const modelChannel = computed(() => {
         return channel.filter(
             (item: any) =>
                 item.status == 1 &&
-                (DigitalHumanModelVersionEnum.SHANJIAN == item.id ||
-                    DigitalHumanModelVersionEnum.CHANJING == item.id ||
-                    DigitalHumanModelVersionEnum.STANDARD == item.id)
+                (DigitalHumanModelVersionEnum.CHANJING == item.id || DigitalHumanModelVersionEnum.STANDARD == item.id)
         );
     }
     return [];
@@ -58,8 +56,13 @@ const currModel = ref();
 
 const chooseModel = (id: string | number) => {
     currModel.value = id;
+    show.value = false;
     emit("confirm", id);
-    showPopup.value = false;
+};
+
+const close = () => {
+    show.value = false;
+    emit("close");
 };
 </script>
 

@@ -113,7 +113,9 @@
                                                 :rows="6" />
                                         </div>
                                         <div class="relative mt-4 flex gap-x-2 items-end">
-                                            <div class="flex-1 flex flex-wrap gap-2">
+                                            <div
+                                                class="flex-1 flex flex-wrap gap-2"
+                                                v-if="item.topic && item.topic.length > 0">
                                                 <div
                                                     v-for="(topic, t_index) in item.topic"
                                                     :key="t_index"
@@ -131,7 +133,7 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="" v-if="item.topic.length < 5">
+                                            <div class="" v-if="item.topic?.length < 5">
                                                 <ElButton
                                                     type="primary"
                                                     class="!h-[26px]"

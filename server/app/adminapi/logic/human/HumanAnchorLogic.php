@@ -2,6 +2,7 @@
 
 namespace app\adminapi\logic\human;
 
+use app\api\logic\DigitalHumanLogic;
 use app\common\logic\BaseLogic;
 use app\common\model\human\HumanAnchor;
 
@@ -25,9 +26,29 @@ class HumanAnchorLogic extends BaseLogic
         try {
 
             if (is_string($data['id'])) {
-                HumanAnchor::destroy(['id' => $data['id']]);
+                $humanAnchor = HumanAnchor::findOrEmpty($data['id']);
+                if ($humanAnchor->isEmpty()) {
+                    throw new \Exception('数据不存在');
+                }
+                if ($humanAnchor['dh_id'] !== 0){
+                    DigitalHumanLogic::deletePublicAnchor(['id'=>$humanAnchor['dh_id']]);
+                }else{
+                    HumanAnchor::destroy(['id' => $data['id']]);
+                }
             } else {
-                HumanAnchor::destroy($data['id']);
+                $humanAnchors = HumanAnchor::where('id','in', $data['id'])->select();
+                if ($humanAnchors->isEmpty()) {
+                    throw new \Exception('数据不存在');
+                }
+
+                foreach ($humanAnchors as $humanAnchor){
+                    if ($humanAnchor['dh_id'] !== 0){
+                        DigitalHumanLogic::deletePublicAnchor(['id'=>$humanAnchor['dh_id']]);
+                    }else{
+                        HumanAnchor::destroy($data['id']);
+                    }
+                }
+
             }
 
             return true;

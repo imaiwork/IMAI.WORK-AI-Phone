@@ -46,8 +46,8 @@
                     :max-size="imageSize"
                     @success="handleUploadSuccess">
                     <div class="h-[111px] rounded-md flex flex-col items-center justify-center relative leading-5">
-                        <template v-if="formData.cover">
-                            <img :src="formData.cover" class="h-full object-cover" />
+                        <template v-if="formData.cover || KnDefaultCover">
+                            <img :src="formData.cover || KnDefaultCover" class="h-full object-cover" />
                             <ElTooltip content="删除" placement="right">
                                 <div
                                     class="absolute top-1 right-1 cursor-pointer w-6 h-6"
@@ -80,6 +80,7 @@
 import { ElForm } from "element-plus";
 import type { CreateFormData } from "./type";
 import { KnTypeEnum } from "../_enums";
+import KnDefaultCover from "@/assets/images/kn_default_cover.png";
 
 const props = withDefaults(
     defineProps<{
@@ -112,8 +113,6 @@ const formRef = shallowRef<InstanceType<typeof ElForm>>();
 
 const rules = {
     name: [{ required: true, message: "请输入知识库名称", trigger: "blur" }],
-    description: [{ required: true, message: "请输入知识库描述", trigger: "blur" }],
-    cover: [{ required: true, message: "请上传知识库封面", trigger: "blur" }],
 };
 
 const imageSize = 5;

@@ -23,6 +23,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     (e: "close"): void;
     (e: "confirm"): void;
+    (e: "update:account", value: string): void;
 }>();
 
 const loading = ref(false);
@@ -32,11 +33,26 @@ const qrcode = ref<string>("");
 
 const { start, end } = usePolling(
     async () => {
-        const data = await getRpaQrcodeStatus();
-        if (data.status == 1) {
+        try {
+            const data = await getRpaQrcodeStatus();
+            if (data.status == 1) {
+                emit("confirm");
+                end();
+                useNuxtApp().$confirm({
+                    title: "提示",
+                    message: "是否一键拉去平台账号，注意：设备必须在线才能拉取账号",
+                    onConfirm: () => {
+                        emit("update:account", data.device_code);
+                        close();
+                    },
+                    onCancel: () => {
+                        close();
+                    },
+                });
+            }
+        } catch (error) {
             end();
-            emit("confirm");
-            feedback.msgSuccess("绑定成功");
+            feedback.msgError(error);
         }
     },
     {

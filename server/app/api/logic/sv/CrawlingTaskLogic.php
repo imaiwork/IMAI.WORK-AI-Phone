@@ -557,6 +557,7 @@ class CrawlingTaskLogic extends SvBaseLogic
                 ->field('r.*, t.add_number, t.add_interval_time, t.add_friends_prompt, t.add_remark_enable, t.remarks, t.wechat_id, t.wechat_reg_type')
                 ->join('sv_crawling_task t', 'r.crawling_task_id = t.id and t.delete_time is null')
                 ->where('t.add_type', 1)
+                ->where('t.auto_type', 0)
                 ->where('r.channel', 1)
                 ->where('r.status', 'in', [3, 4, 5])
                 ->where('t.wechat_id', 'not in', ['', null]) // 过滤掉wechat_id为空的记录

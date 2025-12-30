@@ -82,6 +82,7 @@ class DeviceTaskScheduler extends Command
         $currentTime = time();
 
         try {
+            //获取手动模式的设备
              // 3. 检查超时未开始的任务 (status=0 且当前时间超过end_time)
             $this->checkTimeoutTasks($currentTime, $output);
             
@@ -108,6 +109,10 @@ class DeviceTaskScheduler extends Command
         $pendingTasks = SvDeviceTask::alias('t')
             ->field('t.*, FROM_UNIXTIME(t.start_time) as start_time_str, FROM_UNIXTIME(t.end_time) as end_time_str')
             ->where('t.status', '=', 0) // 只处理已标记为执行中的任务
+             ->where('t.device_code', 'in', function($query){
+                $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
+            })
+            ->where('t.auto_type', '=', 0) // 只处理手动任务
             ->where('t.start_time', '<=', $currentTime)
             ->where('t.end_time', '>', $currentTime)
             ->order('t.start_time', 'asc')
@@ -142,6 +147,10 @@ class DeviceTaskScheduler extends Command
     {
         $runningTasks = SvDeviceTask::field('*')
             ->where('status', 1)
+            ->where('device_code', 'in', function($query){
+                $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
+            })
+            ->where('auto_type', '=', 0) // 只处理手动任务
             ->select();
 
         foreach ($runningTasks as $task) {
@@ -167,7 +176,11 @@ class DeviceTaskScheduler extends Command
     protected function checkTimeoutTasks($currentTime, Output $output)
     {
         $timeoutTasks = SvDeviceTask::field('*')
+            ->where('device_code', 'in', function($query){
+                $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
+            })
             ->where('status', 0)
+            ->where('auto_type', '=', 0)
             ->where('end_time', '<', $currentTime)
             ->select();
 
@@ -216,6 +229,9 @@ class DeviceTaskScheduler extends Command
                 case DeviceEnum::TASK_TYPE_FRIENDS: // 加好友任务
                     $this->executeAddWechatTask($task, $output);
                     break;
+                case DeviceEnum::TASK_TYPE_TOUCH: // 截流获客任务
+                    $this->executeCommentClueTask($task, $output);
+                    break;
                 default:
                     throw new \Exception("未知的任务类型: {$task->task_type}");
             }
@@ -257,6 +273,9 @@ class DeviceTaskScheduler extends Command
                     break;
                 case DeviceEnum::TASK_TYPE_FRIENDS: // 加好友任务
                     $this->executeAddWechatCompletedTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_TOUCH: // 截流获客任务
+                    $this->executeCommentClueCompletedTask($task, $output);
                     break;
                 default:
                     throw new \Exception("未知的任务类型: {$task->task_type}");
@@ -352,7 +371,7 @@ class DeviceTaskScheduler extends Command
                 }
             }
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
-            $this->setTaskLog("加微任务完成: ID={$task->id}, 设备={$task->device_code}");
+            $this->setTaskLog("执行发布任务完成: ID={$task->id}, 设备={$task->device_code}");
         } else {
 
             if ($this->isDev) {
@@ -446,6 +465,8 @@ class DeviceTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("接管任务完成: ID={$task->id}, 设备={$task->device_code}");
+        }else{
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
 
@@ -506,6 +527,8 @@ class DeviceTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("养号任务完成: ID={$task->id}, 设备={$task->device_code}");
+        }else{
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
 
@@ -552,6 +575,8 @@ class DeviceTaskScheduler extends Command
                 $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
             });
             $this->setTaskLog("获客任务完成: ID={$task->id}, 设备={$task->device_code}");
+        }else{
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
 
@@ -615,6 +640,244 @@ class DeviceTaskScheduler extends Command
                 $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
             });
             $this->setTaskLog("加微任务执行中: ID={$task->id}, 设备={$task->device_code}");
+        }
+    }
+
+
+    /**
+     * 执行评论区获客任务
+     */
+    protected function executeCommentClueTask(SvDeviceTask $task, Output $output) {
+        if ($this->isDev) {
+            $output->writeln("执行截流获客任务 - 设备: {$task->device_code}");
+        }
+
+        try {
+            switch ((int)$task->task_scene) {
+                case DeviceEnum::AUTO_TASK_SCENE_COMMENT_COMMENT: // 评论区评论
+                    $this->executeCommentToCommentTask($task, $output);
+                    break;
+                case DeviceEnum::AUTO_TASK_SCENE_COMMENT_MSG: // 评论区私信
+                    $this->executeCommentToMsgTask($task, $output);
+                    break;
+                case DeviceEnum::AUTO_TASK_SCENE_MARK_CLUE: // 留痕获客
+                    $this->executeCommentToMarkClueTask($task, $output);
+                    break;
+                default:
+                    throw new \Exception("未知的截流获客任务场景: {$task->task_scene}");
+            }
+        } catch (\Throwable $th) {
+            $task->remark = '任务执行失败：' . $th->getMessage();
+            $task->status = 3;
+            $task->update_time = time();
+            $task->save();
+
+            $this->setTaskLog("设备任务执行失败 ID: {$task->id} - " . $th->getMessage(), 'error');
+            if ($this->isDev) {
+                $output->writeln("<error>任务执行失败 ID: {$task->id} - " . $th->getMessage() . "</error>");
+            }
+
+            throw $th; // 重新抛出异常，让上层捕获
+        }
+        $this->setTaskLog("截流获客任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
+
+    protected function executeCommentToCommentTask(SvDeviceTask $task, Output $output) {
+        if ($this->isDev) {
+            $output->writeln("执行评论区评论任务 - 设备: {$task->device_code}");
+        }
+
+        self::touchCommentToCommentTask($task, $output, function ($result) use ($task) {
+            $task->status = $result['status'];
+            $task->remark = $result['remark'];
+            $task->update_time = time();
+            $task->save();
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        });
+
+    }
+
+    protected function executeCommentToMsgTask(SvDeviceTask $task, Output $output) {
+        if ($this->isDev) {
+            $output->writeln("执行评论区私信任务 - 设备: {$task->device_code}");
+        }
+
+        self::touchCommentToMsgTask($task, $output, function ($result) use ($task) {
+            $task->status = $result['status'];
+            $task->remark = $result['remark'];
+            $task->update_time = time();
+            $task->save();
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        });
+
+        $this->setTaskLog("评论区私信任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
+
+    protected function executeCommentToMarkClueTask(SvDeviceTask $task, Output $output) {
+        if ($this->isDev) {
+            $output->writeln("执行留痕获客任务 - 设备: {$task->device_code}");
+        }
+
+        self::touchCommentToMarkClueTask($task, $output, function ($result) use ($task) {
+            $task->status = $result['status'];
+            $task->remark = $result['remark'];
+            $task->update_time = time();
+            $task->save();
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        });
+
+        $this->setTaskLog("留痕获客任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
+    /**
+     * 执行评论区获客任务完成逻辑
+     */
+    protected function executeCommentClueCompletedTask(SvDeviceTask $task, Output $output) {
+        if ($this->isDev) {
+            $output->writeln("执行评论区评论任务 - 设备: {$task->device_code}");
+        }
+
+        try {
+            switch ((int)$task->task_scene) {
+                case DeviceEnum::AUTO_TASK_SCENE_COMMENT_COMMENT: // 评论区评论
+                    $this->executeCommentToCommentCompletedTask($task, $output);
+                    break;
+                case DeviceEnum::AUTO_TASK_SCENE_COMMENT_MSG: // 评论区私信
+                    $this->executeCommentToMsgCompletedTask($task, $output);
+                    break;
+                case DeviceEnum::AUTO_TASK_SCENE_MARK_CLUE: // 留痕获客
+                    $this->executeCommentToMarkClueCompletedTask($task, $output);
+                    break;
+                default:
+                    throw new \Exception("未知的评论区评论任务场景: {$task->task_scene}");
+            }
+        } catch (\Throwable $th) {
+            $task->remark = '任务执行失败：' . $th->getMessage();
+            $task->status = 3;
+            $task->update_time = time();
+            $task->save();
+
+            $this->setTaskLog("设备任务执行失败 ID: {$task->id} - " . $th->getMessage(), 'error');
+            if ($this->isDev) {
+                $output->writeln("<error>任务执行失败 ID: {$task->id} - " . $th->getMessage() . "</error>");
+            }
+
+            throw $th; // 重新抛出异常，让上层捕获
+        }
+
+        $this->setTaskLog("评论区评论任务执行完成: ID={$task->id}, 设备={$task->device_code}");
+    }
+
+    protected function executeCommentToCommentCompletedTask(SvDeviceTask $task, Output $output)
+    {
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行评论区评论任务完成 - 设备: {$task->device_code}");
+            }
+            // TODO: 实现具体的养号完成逻辑
+            //self::rpaMaintainAccountEndTask($task, $output, function ($result) use ($task) {});
+
+            $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+            $task->remark = '评论区评论任务完成';
+            $task->update_time = time();
+            $task->save();
+
+            // $find = SvDeviceTask::where('sub_task_id', $task->sub_task_id)
+            //     ->where('id', '<>', $task->id)
+            //     ->where('task_type', DeviceEnum::TASK_TYPE_TOUCH)
+            //     ->where('task_scene', DeviceEnum::TASK_SOURCE_TOUCH)
+            //     ->where('status', DeviceEnum::TASK_STATUS_RUNNING)
+            //     ->findOrEmpty();
+            // if ($find->isEmpty()) {
+            //     //截流子任务处理
+            //     $account = \app\common\model\sv\SvDeviceActiveAccount::where('id', $task->sub_task_id)->findOrEmpty();
+            //     if ($account->isEmpty()) {
+            //         \app\common\model\sv\SvDeviceActive::where('id', $account->active_id)->update([
+            //             'status' => DeviceEnum::TASK_STATUS_FINISHED,
+            //             'update_time' => time(),
+            //         ]);
+            //     }
+            // }
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+
+            $this->setTaskLog("评论区评论任务完成: ID={$task->id}, 设备={$task->device_code}");
+        }else{
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        }
+    }
+
+
+    protected function executeCommentToMsgCompletedTask(SvDeviceTask $task, Output $output)
+    {
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行评论区私信任务完成 - 设备: {$task->device_code}");
+            }
+            // TODO: 实现具体的养号完成逻辑
+            //self::rpaMaintainAccountEndTask($task, $output, function ($result) use ($task) {});
+
+            $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+            $task->remark = '评论区私信任务完成';
+            $task->update_time = time();
+            $task->save();
+
+            // $find = SvDeviceTask::where('sub_task_id', $task->sub_task_id)
+            //     ->where('id', '<>', $task->id)
+            //     ->where('task_type', DeviceEnum::AUTO_TYPE_COMMENT_CLUE)
+            //     ->where('task_scene', DeviceEnum::AUTO_TASK_SCENE_COMMENT_MSG)
+            //     ->where('status', DeviceEnum::TASK_STATUS_RUNNING)
+            //     ->findOrEmpty();
+            // if ($find->isEmpty()) {
+            //     $account = \app\common\model\sv\SvDeviceActiveAccount::where('id', $task->sub_task_id)->findOrEmpty();
+            //     if ($account->isEmpty()) {
+            //         \app\common\model\sv\SvDeviceActive::where('id', $account->active_id)->update([
+            //             'status' => DeviceEnum::TASK_STATUS_FINISHED,
+            //             'update_time' => time(),
+            //         ]);
+            //     }
+            // }
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+
+            $this->setTaskLog("评论区私信任务完成: ID={$task->id}, 设备={$task->device_code}");
+        }else{
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        }
+    }
+
+
+    protected function executeCommentToMarkClueCompletedTask(SvDeviceTask $task, Output $output)
+    {
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行留痕获客任务完成 - 设备: {$task->device_code}");
+            }
+            // TODO: 实现具体的养号完成逻辑
+            //self::rpaMaintainAccountEndTask($task, $output, function ($result) use ($task) {});
+
+            $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+            $task->remark = '留痕获客任务完成';
+            $task->update_time = time();
+            $task->save();
+
+            // $find = SvDeviceTask::where('sub_task_id', $task->sub_task_id)
+            //     ->where('id', '<>', $task->id)
+            //     ->where('task_type', DeviceEnum::AUTO_TYPE_COMMENT_CLUE)
+            //     ->where('task_scene', DeviceEnum::AUTO_TASK_SCENE_MARK_CLUE)
+            //     ->where('status', DeviceEnum::TASK_STATUS_RUNNING)
+            //     ->findOrEmpty();
+            // if ($find->isEmpty()) {
+            //     $account = \app\common\model\sv\SvDeviceActiveAccount::where('id', $task->sub_task_id)->findOrEmpty();
+            //     if ($account->isEmpty()) {
+            //         \app\common\model\sv\SvDeviceActive::where('id', $account->active_id)->update([
+            //             'status' => DeviceEnum::TASK_STATUS_FINISHED,
+            //             'update_time' => time(),
+            //         ]);
+            //     }
+            // }
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+
+            $this->setTaskLog("留痕获客任务完成: ID={$task->id}, 设备={$task->device_code}");
+        }else{
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
 

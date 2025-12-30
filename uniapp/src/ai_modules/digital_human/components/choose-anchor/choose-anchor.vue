@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model:show="showPopup" title="请选择形象" custom-class="bg-[#F9FAFB]" :is-disabled-touch="true">
+    <popup-bottom v-model="show" title="请选择形象" custom-class="bg-[#F9FAFB]" :is-disabled-touch="true">
         <template #content>
             <view class="h-full">
                 <z-paging
@@ -31,13 +31,6 @@
                                     >克隆中</view
                                 >
                             </view>
-                            <view
-                                class="absolute bottom-2 z-[77] w-full flex justify-center"
-                                v-if="modelVersionMap[item.model_version]">
-                                <view class="dh-version-name">
-                                    {{ modelVersionMap[item.model_version] }}
-                                </view>
-                            </view>
                         </view>
                     </view>
                     <template #empty>
@@ -50,12 +43,12 @@
 </template>
 
 <script setup lang="ts">
-import { getAnchorList } from "@/api/digital_human";
+import { getPublicAnchorList } from "@/api/digital_human";
 import { useAppStore } from "@/stores/app";
-import { DigitalHumanModelVersionEnum, ModeTypeEnum } from "../../enums";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 
 const props = defineProps({
-    show: {
+    modelValue: {
         type: Boolean,
         default: false,
     },
@@ -64,14 +57,14 @@ const props = defineProps({
         default: [],
     },
 });
-const emit = defineEmits(["update:show", "confirm"]);
+const emit = defineEmits(["update:modelValue", "confirm"]);
 
-const showPopup = computed({
+const show = computed({
     get() {
-        return props.show;
+        return props.modelValue;
     },
     set(val) {
-        emit("update:show", val);
+        emit("update:modelValue", val);
     },
 });
 
@@ -87,18 +80,14 @@ const modelVersionMap = computed(() => {
 
 const pagingRef = shallowRef();
 const dataLists = ref<any[]>([]);
-const queryParams = reactive<any>({
-    name: "",
-    model_version: `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.STANDARD}`,
-    status: "0,1",
-    type: 0,
-});
+
 const queryList = async (page_no: number, page_size: number) => {
     try {
-        const { lists } = await getAnchorList({
+        const { lists } = await getPublicAnchorList({
             page_no,
             page_size,
-            ...queryParams,
+            status: 1,
+            filter: 2,
         });
         pagingRef.value?.complete(lists);
     } catch (error) {
@@ -111,7 +100,7 @@ const chooseAnchor = (item: any) => {
 };
 
 const toClone = () => {
-    showPopup.value = false;
+    show.value = false;
     uni.$u.route({
         url: "/ai_modules/digital_human/pages/anchor_create/anchor_create",
         params: {
@@ -119,15 +108,6 @@ const toClone = () => {
         },
     });
 };
-
-watch(
-    () => props.show,
-    (val) => {
-        if (val) {
-            pagingRef.value?.reload();
-        }
-    }
-);
 </script>
 
 <style scoped></style>

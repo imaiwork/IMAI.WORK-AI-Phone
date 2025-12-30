@@ -49,7 +49,7 @@
                             :label="item.name"></ElOption>
                     </ElSelect>
                 </ElFormItem>
-                <ElFormItem
+                <!-- <ElFormItem
                     label="性别"
                     prop="gender"
                     v-if="formData.model_version != DigitalHumanModelVersionEnum.SHANJIAN">
@@ -62,7 +62,7 @@
                         <ElOption value="male" label="男"></ElOption>
                         <ElOption value="female" label="女"></ElOption>
                     </ElSelect>
-                </ElFormItem>
+                </ElFormItem> -->
                 <ElFormItem label="上传音频" prop="url">
                     <upload
                         class="w-full"

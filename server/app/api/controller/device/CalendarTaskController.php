@@ -4,9 +4,9 @@
 namespace app\api\controller\device;
 
 use app\api\controller\BaseApiController;
-use think\exception\HttpResponseException;
-use app\api\logic\device\TaskLogic;
 use app\api\lists\device\CalendarTaskLists;
+use app\api\logic\device\TaskLogic;
+use think\exception\HttpResponseException;
 
 /**
  * TaskController
@@ -27,7 +27,7 @@ class CalendarTaskController extends BaseApiController
     }
 
 
-    public function  statistics()
+    public function statistics()
     {
         try {
             $day = $this->request->get('day',date('Y-m-d'));

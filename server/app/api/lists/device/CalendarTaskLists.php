@@ -4,18 +4,17 @@
 namespace app\api\lists\device;
 
 use app\api\lists\BaseApiDataLists;
+use app\common\enum\DeviceEnum;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\sv\SvCrawlingManualTask;
 use app\common\model\sv\SvCrawlingTask;
-use app\common\model\sv\SvCrawlingTaskDeviceBind;
 use app\common\model\sv\SvDeviceActive;
 use app\common\model\sv\SvDeviceActiveAccount;
 use app\common\model\sv\SvDeviceTakeOverTask;
 use app\common\model\sv\SvDeviceTakeOverTaskAccount;
 use app\common\model\sv\SvDeviceTask;
-use app\common\enum\DeviceEnum;
+use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSettingAccount;
-use app\common\model\sv\SvPublishSettingDetail;
 
 /**
  * 设备任务列表
@@ -90,6 +89,11 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                     case DeviceEnum::TASK_SOURCE_CLUES:
                         //sv_crawling_task
                         $taskinfo = SvCrawlingTask::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['name'] ?? '';
+                        break;
+                    case DeviceEnum::TASK_SOURCE_TOUCH:
+                        //sv_lead_scraping_setting_account
+                        $taskinfo = SvLeadScrapingSettingAccount::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
                         $item['name'] = $taskinfo['name'] ?? '';
                         break;
 

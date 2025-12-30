@@ -59,11 +59,6 @@
                         {{ getModelName(row.model_version) }}
                     </template>
                 </el-table-column>
-                <el-table-column label="模型性别" min-width="120" show-overflow-tooltip>
-                    <template #default="{ row }">
-                        {{ row.gender == "male" ? "男" : "女" }}
-                    </template>
-                </el-table-column>
                 <el-table-column label="消耗算力" prop="points" min-width="100">
                     <template #default="{ row }"> {{ row.status == 2 ? 0 : row.points || 0 }}算力 </template>
                 </el-table-column>

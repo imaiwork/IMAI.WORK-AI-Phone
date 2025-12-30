@@ -626,7 +626,6 @@ class SvVideoSettingLogic extends SvBaseLogic
                         $update['error_num'] = $item->video_count;
                         $update['status'] = 4;
                     };
-
                     SvVideoSetting::where('id',$item->id)->update($update);
 
                 });

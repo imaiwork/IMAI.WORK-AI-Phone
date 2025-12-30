@@ -76,10 +76,7 @@
 		{
 			"path": "pages/phone/phone",
 			"style": {
-				"navigationBarTitleText": "AI手机",
-				"navigationStyle": "custom",
-				"enablePullDownRefresh": false,
-				"disableScroll": true
+				"navigationBarBackgroundColor": "#F9FAFB"
 			}
 		},
 		{
@@ -550,6 +547,27 @@
 					"meta": {
 						"auth": true
 					}
+				},
+				{
+					"path": "pages/sora_create_role/sora_create_role",
+					"style": {
+						"navigationBarTitleText": "创建角色",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/sora_role_library/sora_role_library",
+					"style": {
+						"navigationBarTitleText": "角色库"
+					},
+					"meta": {
+						"auth": true
+					}
 				}
 			]
 		},
@@ -971,6 +989,142 @@
 					"path": "pages/device_choose/device_choose",
 					"style": {
 						"navigationBarTitleText": "设备选择"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/auto_task/auto_task",
+					"style": {
+						"navigationBarTitleText": "24h自动任务配置",
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/create_auto_task/create_auto_task",
+					"style": {
+						"navigationBarTitleText": "自动任务配置",
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/anchor_material/anchor_material",
+					"style": {
+						"navigationBarTitleText": "选择数字人形象"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/video_material/video_material",
+					"style": {
+						"navigationBarTitleText": "上传视频素材"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/image_material/image_material",
+					"style": {
+						"navigationBarTitleText": "上传图片素材"
+					}
+				},
+				{
+					"path": "pages/setting_clue/setting_clue",
+					"style": {
+						"navigationBarTitleText": "线索词获客配置"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/clue_edit/clue_edit",
+					"style": {
+						"navigationBarTitleText": "编辑线索词组"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/setting_publish/setting_publish",
+					"style": {
+						"navigationBarTitleText": "社媒平台发布配置"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/marketing_material/marketing_material",
+					"style": {
+						"navigationBarTitleText": "营销主题"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/setting_circle/setting_circle",
+					"style": {
+						"navigationBarTitleText": "朋友圈互动设置"
+					}
+				},
+				{
+					"path": "pages/setting_add_wechat/setting_add_wechat",
+					"style": {
+						"navigationBarTitleText": "自动加微配置"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/setting_ca/setting_ca",
+					"style": {
+						"navigationBarTitleText": "评论区获客配置"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/setting_private_take/setting_private_take",
+					"style": {
+						"navigationBarTitleText": "私信接管配置"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/task_statement/task_statement",
+					"style": {
+						"navigationBarTitleText": "任务报表",
+						"disableScroll": true,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/create_closure/create_closure",
+					"style": {
+						"navigationStyle": "custom",
+						"disableScroll": true
 					},
 					"meta": {
 						"auth": true

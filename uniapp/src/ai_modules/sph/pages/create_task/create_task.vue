@@ -54,7 +54,7 @@
                 <view class="flex items-center gap-x-2 px-4">
                     <view
                         class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
-                        @click="handleEditClue()">
+                        @click="handleEditClue(-1)">
                         <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
                         <text class="font-bold text-[32rpx]">手动输入</text>
                     </view>
@@ -692,11 +692,12 @@ const { optionsData } = useDictOptions<{
     },
 });
 
-const handleEditClue = async (index?: number) => {
+const handleEditClue = async (index: number) => {
     showClueEdit.value = true;
     await nextTick();
-    if (index) {
-        editClueIndex.value = index || -1;
+
+    if (index >= 0) {
+        editClueIndex.value = index;
         clueEditRef.value.setFormData(formData.keywords[index]);
     }
 };
@@ -707,7 +708,6 @@ const handleClueConfirm = (val: string) => {
     } else {
         formData.keywords[editClueIndex.value] = val;
     }
-    editClueIndex.value = -1;
     showClueEdit.value = false;
 };
 

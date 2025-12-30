@@ -79,7 +79,7 @@
                 <view class="mt-[22rpx]">
                     <view class="grid grid-cols-3 gap-x-[20rpx]" v-if="anchorLists.length > 0">
                         <view v-for="(item, index) in anchorLists" :key="index" class="h-[288rpx] rounded-[20rpx]">
-                            <video-item
+                            <anchor-video
                                 :show-name="false"
                                 :item="{
                                     name: item.name,
@@ -88,8 +88,9 @@
                                     video_url: item.url,
                                     model_version: item.model_version,
                                     remark: item.remark,
+                                    source_type: item.source_type,
                                 }"
-                                @play="handlePlay($event, item.pic)"></video-item>
+                                @play="handlePlay($event, item.pic)"></anchor-video>
                         </view>
                     </view>
                     <view v-else class="my-4">
@@ -99,7 +100,7 @@
             </view>
         </view>
     </view>
-    <choose-model v-model:show="showChooseModel" @confirm="handleChooseModel" />
+    <choose-model v-model="showChooseModel" @confirm="handleChooseModel" />
     <video-preview-v2
         v-model:show="showVideoPreview"
         :video-url="playItem.url"
@@ -109,8 +110,9 @@
 
 <script setup lang="ts">
 import { useAppStore } from "@/stores/app";
-import { digitalHumanLists, getAnchorList } from "@/api/digital_human";
-import { DigitalHumanModelVersionEnum, ModeTypeEnum } from "@/ai_modules/digital_human/enums";
+import { digitalHumanLists, getPublicAnchorList } from "@/api/digital_human";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
+import { ModeTypeEnum } from "@/ai_modules/digital_human/enums";
 import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
 import VideoMixIcon from "@/ai_modules/digital_human/static/icons/video_mix.svg";
 import AnchorCloneIcon from "@/ai_modules/digital_human/static/icons/anchor_clone.svg";
@@ -121,6 +123,7 @@ import MeCreateIcon from "@/ai_modules/digital_human/static/icons/me_create.svg"
 import MontageRecordIcon from "@/ai_modules/digital_human/static/icons/montage_record.svg";
 import MontageBatchIcon from "@/ai_modules/digital_human/static/icons/montage_batch.svg";
 import VideoItem from "@/ai_modules/digital_human/components/video-item/video-item.vue";
+import AnchorVideo from "@/ai_modules/digital_human/components/anchor-video/anchor-video.vue";
 
 enum MenuKey {
     CHOOSE_CREATE_TYPE = "choose_create_type",
@@ -152,7 +155,7 @@ const showVideoPreview = ref(false);
 const utils_1 = [
     { label: "一句话生成", key: MenuKey.SORA, icon: VideoMixIcon },
     { label: "数字人克隆", key: MenuKey.ANCHOR_CLONE, icon: AnchorCloneIcon },
-    { label: "音色克隆", key: MenuKey.TONE_CLONE, icon: ToneCloneIcon },
+    { label: "我的克隆", key: MenuKey.TONE_CLONE, icon: ToneCloneIcon },
     { label: "文案提取", key: MenuKey.TEXT_EXTRACT, icon: TextExtractIcon, disabled: true },
 ];
 
@@ -208,11 +211,9 @@ const getWorksLists = async () => {
 };
 
 const getAnchorLists = async () => {
-    const { lists } = await getAnchorList({
+    const { lists } = await getPublicAnchorList({
         page_size: 3,
         page_no: 1,
-        type: 0,
-        model_version: DigitalHumanModelVersionEnum.CHANJING,
     });
     anchorLists.value = lists;
 };

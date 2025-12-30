@@ -134,6 +134,12 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
+        'auto' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/auto/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
         // 其它日志通道配置
     ],
 

@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "任务报表",
+  "disableScroll": true,
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-tabs": "../../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom"
+  }
+}

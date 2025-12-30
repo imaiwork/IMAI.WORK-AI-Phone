@@ -13,7 +13,6 @@
 </template>
 
 <script setup lang="ts">
-import { setFormData } from "@/utils/util";
 import TaskCard from "../task-card/task-card.vue";
 
 const props = defineProps<{
@@ -23,14 +22,6 @@ const emit = defineEmits<{
     (e: "handle-detail", data: any): void;
     (e: "update-name", data: any): void;
 }>();
-
-const editData = reactive({
-    id: "",
-    sub_task_id: "",
-    source: "",
-    name: "",
-});
-const shoeEditNamePop = ref(false);
 
 const taskGroupByDate = computed(() => {
     const periodMap = { morning: "上午", afternoon: "下午" };

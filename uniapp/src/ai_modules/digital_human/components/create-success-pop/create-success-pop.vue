@@ -6,18 +6,20 @@
         width="85%"
         :custom-style="{ backgroundColor: 'transparent' }"
         :mask-close-able="false">
-        <view class="w-full bg-white rounded-[20rpx] py-[94rpx] px-[62rpx]">
+        <view class="w-full bg-white rounded-[20rpx] pt-[94rpx] px-[62rpx] pb-[60rpx]">
             <view class="text-[40rpx] font-bold text-center">{{ title }}</view>
-            <view class="text-[30rpx] mt-[80rpx]"> {{ desc }} </view>
+            <view class="text-[30rpx] mt-[40rpx]"> {{ desc }} </view>
             <view
-                @click="emit('to')"
-                class="mt-[98rpx] bg-black text-white text-[30rpx] font-bold rounded-[20rpx] h-[90rpx] flex items-center justify-center">
-                {{ toText }}
-            </view>
-            <view
-                class="mt-[30rpx] bg-[#F3F3F3] text-[30rpx] font-bold rounded-[20rpx] h-[90rpx] flex items-center justify-center"
+                v-if="seekText"
+                class="mt-[50rpx] bg-black text-white text-[30rpx] font-bold rounded-[20rpx] h-[90rpx] flex items-center justify-center"
                 @click="emit('seek')">
                 {{ seekText }}
+            </view>
+            <view
+                v-if="toText"
+                class="mt-[30rpx] bg-[#F3F3F3] text-[30rpx] font-bold rounded-[20rpx] h-[90rpx] flex items-center justify-center"
+                @click="emit('to')">
+                {{ toText }}
             </view>
         </view>
     </u-popup>

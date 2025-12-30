@@ -278,13 +278,13 @@
 <script setup lang="ts">
 import { createShanjianTask } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
-import { DigitalHumanModelVersionEnum, ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
-import ChooseHistory from "@/ai_modules/digital_human/components/choose-history/choose-history.vue";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
+import { ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
 import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
-import { useEventBusManager } from "@/hooks/useEventBusManager";
 
 const { on } = useEventBusManager();
 

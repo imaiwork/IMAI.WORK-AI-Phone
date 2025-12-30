@@ -31,7 +31,7 @@
                     {{ item }}
                 </view>
             </view>
-            <view class="py-[26rpx] h-[90rpx]">
+            <view class="py-[26rpx]">
                 <view class="flex">
                     <view
                         v-for="day in currentWeekDays"
@@ -57,8 +57,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-
 interface Day {
     date: string;
     day: number;

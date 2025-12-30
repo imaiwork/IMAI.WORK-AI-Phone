@@ -5,6 +5,7 @@ namespace app\api\logic;
 use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
+use app\common\model\digitalHuman\DigitalHumanAnchor;
 use app\common\model\human\HumanAnchor;
 use app\common\model\human\HumanAudio;
 use app\common\model\human\HumanTask;
@@ -76,13 +77,30 @@ class HumanLogic extends ApiLogic
 
         $model->select()
             ->each(function ($item) use ($data) {
+                // 公共数字人形象
+                if (!empty($item->dh_id)){
+                    $digitalHuman = DigitalHumanAnchor::where('id', $item->dh_id)->find();
+                    $task_ids = json_decode($digitalHuman->task_ids,true);
+                }
+
                 if ($item->model_version === 1) { //标准版
 
                     if (in_array($data['current_status'], ['completed', 'failed'])) {
+
                         $item->status = ($data['current_status'] == 'completed') ? 1 : 2;
+                        if (!empty($item->dh_id)){
+                            $task_ids['weiju']['status'] = 1;
+                            $digitalHuman->task_ids = json_encode($task_ids);
+                            $digitalHuman->status = 1;
+                        }
 
                         // TODO 失败退费
                         if ($item->status == 2) {
+                            if (!empty($item->dh_id)){
+                                $task_ids['weiju']['status'] = 2;
+                                $digitalHuman->task_ids = json_encode($task_ids);
+                                $digitalHuman->status = 3;
+                            }
                             self::refundTokens($item->user_id, $item->anchor_id, $item->task_id, 'human_anchor');
                         }
                     } else {
@@ -96,6 +114,11 @@ class HumanLogic extends ApiLogic
                         $item->status = ($data['status'] == 2) ? 1 : 2;
                         // TODO 失败退费
                         if ($item->status == 2) {
+                            if (!empty($item->dh_id)){
+                                $task_ids['chanjing']['status'] = 2;
+                                $digitalHuman->task_ids = json_encode($task_ids);
+                                $digitalHuman->status = 3;
+                            }
                             self::refundTokens($item->user_id, $item->anchor_id, $item->task_id, 'human_anchor_chanjing');
                         }else{
                             $voice_id = HumanVideoTask::where('task_id', $item->task_id)->value('voice_id') ?? '';
@@ -729,12 +752,14 @@ class HumanLogic extends ApiLogic
         }else {
             TokenLogService::checkToken(self::$uid, 'human_anchor_pro');
         }
-        $name = $data['name'] ?? '';
-        $width = $data['width'] ?? '';
-        $height = $data['height'] ?? '';
-        $gender = $data['gender'] ?? 'male';
-        $anchor_url = $data['url'] ?? '';
+        $name          = $data['name'] ?? '';
+        $width         = $data['width'] ?? '';
+        $height        = $data['height'] ?? '';
+        $gender        = $data['gender'] ?? 'male';
+        $anchor_url    = $data['url'] ?? '';
         $model_version = $data['model_version'] ?? '';
+        $dh_id         = $data['dh_id'] ?? 0;
+
         if (empty($name) || !in_array($model_version, [1, 2, 4, 6, 7]) || !in_array($gender, ['male', 'female']) || empty($anchor_url)) {
             message('参数错误');
         }
@@ -756,24 +781,24 @@ class HumanLogic extends ApiLogic
         }
         $taskId = generate_unique_task_id();
 
-        if (in_array($data['model_version'] ,[2, 4, 6])) {
+        if (in_array($data['model_version'], [2, 4, 6])) {
 
             $addData = [
-                'user_id' => self::$uid,
-                'status' => 1,
-                'anchor_id' => uniqid(),
-                'name' => $name,
-                'gender' => $gender,
-                'url' => $anchor_url,
-                'task_id' => $taskId,
+                'user_id'       => self::$uid,
+                'status'        => 1,
+                'anchor_id'     => uniqid(),
+                'name'          => $name,
+                'gender'        => $gender,
+                'url'           => $anchor_url,
+                'task_id'       => $taskId,
                 'model_version' => $model_version,
-                'pic' => $pic,
+                'pic'           => $pic,
             ];
-            $anchor = HumanAnchor::create($addData);
+            $anchor  = HumanAnchor::create($addData);
 
             self::$returnData = [
-                'id' => $anchor->anchor_id,
-                'pic' => $pic,
+                'id'     => $anchor->anchor_id,
+                'pic'    => $pic,
                 'picurl' => FileService::getFileUrl($pic),
             ];
             return true;
@@ -784,10 +809,18 @@ class HumanLogic extends ApiLogic
             'name' => $name,
             'gender' => $gender,
         ];
+
+        //数字人公共形象
+        if (!empty($dh_id)){
+            $digitalHuman = DigitalHumanAnchor::where('id', $dh_id)->find();
+            $task_ids     = json_decode($digitalHuman->task_ids, true);
+        }
+
         switch ($model_version)
         {
             case  1:
                 $scene = self::AVATAR_TRAINING;
+                $task_ids['weiju'] = ['task_id' => $taskId, 'status' => 0];
                 break;
             case  2:
                 $scene = self::AVATAR_TRAINING_PRO;
@@ -800,6 +833,7 @@ class HumanLogic extends ApiLogic
                 break;
             case 7:
                 $scene = self::AVATAR_TRAINING_CHANJING;
+                $task_ids['chanjing'] = ['task_id' => $taskId, 'status' => 0];
                 break;
             default:
                 $scene = self::AVATAR_TRAINING;
@@ -809,25 +843,35 @@ class HumanLogic extends ApiLogic
         $result = self::requestUrl($request, $scene, self::$uid, $taskId);
 
         if (!empty($result) && isset($result['id'])) {
-
-            $result['pic'] = $pic;
+            // 更新数字人公共形象
+            if (!empty($dh_id)) {
+                $digitalHuman->task_ids = json_encode($task_ids);
+                $digitalHuman->save();
+            }
+            $result['pic']    = $pic;
             $result['picurl'] = FileService::getFileUrl($pic);
             self::$returnData = $result;
-            $addData = [
-                'user_id' => self::$uid,
-                'status' => $result['status'] == 'completed' ? 1 : 0,
-                'anchor_id' => $result['id'],
-                'name' => $name,
-                'gender' => $gender,
-                'width' => $width,
-                'height' => $height,
-                'url' => $anchor_url,
-                'task_id' => $taskId,
+            $addData          = [
+                'user_id'       => self::$uid,
+                'status'        => $result['status'] == 'completed' ? 1 : 0,
+                'anchor_id'     => $result['id'],
+                'name'          => $name,
+                'gender'        => $gender,
+                'width'         => $width,
+                'height'        => $height,
+                'url'           => $anchor_url,
+                'task_id'       => $taskId,
                 'model_version' => $model_version,
-                'pic' => $pic
+                'pic'           => $pic,
+                'dh_id'         => $dh_id,
             ];
             HumanAnchor::create($addData);
         } else {
+            if (!empty($dh_id)) {
+                $digitalHuman->task_ids = json_encode($task_ids);
+                $digitalHuman->status = 3;
+                $digitalHuman->save();
+            }
             self::setError('合成失败');
             return false;
         }
@@ -1825,8 +1869,12 @@ class HumanLogic extends ApiLogic
                             return true;
                         }
                         if($task_info['current_status'] === 'success'){
+                            if($item->download_tries < 3){
+                                $item->download_tries = $item['download_tries'] + 1;
+                                $item->save();
+                            }
                             $item->status = 1;
-                            $item->result_url = FileService::downloadFileBySource($task_info['result'], 'video');
+                            $item->result_url = $item->download_tries >= 3 ? $task_info['result'] : FileService::downloadFileBySource($task_info['result'], 'video');
                             $item->save();
                         }
 
@@ -1889,7 +1937,7 @@ class HumanLogic extends ApiLogic
             return true;
         }
     }
-    
+
 
     /**
      * @desc 视频定时任务
@@ -1953,7 +2001,7 @@ class HumanLogic extends ApiLogic
                             'user_id' => $item['user_id']
                         ]);
                     }
-                    
+
                     if ($anchor->anchor_id == ""){
                         switch ($item->model_version) {
                             case 1:
@@ -2999,7 +3047,7 @@ class HumanLogic extends ApiLogic
             'clip_status' => $data['status'],
             'clip_result_url'=>$url
         ]);
-        
+
         return true;
     }
 

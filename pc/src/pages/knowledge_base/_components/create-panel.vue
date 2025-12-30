@@ -34,11 +34,13 @@
 
 <script setup lang="ts">
 import { knowledgeBaseAdd, vectorKnowledgeBaseAdd } from "@/api/knowledge_base";
+import { uploadImage } from "@/api/app";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import type { CreateFormData } from "./type";
 import { KnTypeEnum } from "../_enums";
 import BaseForm from "./base-form.vue";
+import KnDefaultCover from "@/assets/images/kn_default_cover.png";
 
 const emit = defineEmits(["success", "back"]);
 const route = useRoute();
@@ -68,16 +70,23 @@ const handleNext = async () => {
     await baseFormRef.value.validateForm();
     try {
         const { name, description, cover } = formData;
+        // 判断cover链接是不是https。 如果是说明是默认封面，需要上传图片
+        let coverUrl = cover;
+        if (!cover) {
+            const file = await urlToFile(KnDefaultCover, "kn_default_cover.png");
+            const res = await uploadImage({ file });
+            coverUrl = res.uri;
+        }
         const data = isRag.value
             ? await knowledgeBaseAdd({
                   name,
                   description,
-                  image: cover,
+                  image: coverUrl,
               })
             : await vectorKnowledgeBaseAdd({
                   name,
                   intro: description,
-                  image: cover,
+                  image: coverUrl,
                   documents_model_id: 2,
                   documents_model_sub_id: 2,
                   embedding_model_id: 3,

@@ -87,6 +87,9 @@ class VoiceLists extends BaseAdminDataLists implements ListsSearchInterface
                     case 7:
                         $change_type = AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_CHANJING;
                         break;
+                    case 8:
+                        $change_type = AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN;
+                        break;
                 }
 
                 // 消耗情况

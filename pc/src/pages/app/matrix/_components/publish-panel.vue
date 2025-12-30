@@ -342,7 +342,7 @@ const { type } = toRefs(props);
 const query = searchQueryToObject();
 const materialId = computed(() => query.material_id);
 
-const step = ref(2);
+const step = ref(1);
 
 // 表单数据
 const formData = reactive({

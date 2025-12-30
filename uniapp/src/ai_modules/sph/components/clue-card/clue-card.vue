@@ -3,7 +3,16 @@
         <view
             class="flex justify-between items-center h-[100rpx] border-solid border-[0] border-b-[1rpx] border-[#0000000d] gap-x-2">
             <view class="flex-1 flex items-center gap-x-[24rpx]">
-                <view class="line-clamp-1 font-bold">{{ item.username }}</view>
+                <view>
+                    <view class="line-clamp-1 font-bold">{{ item.username }}</view>
+                    <view
+                        class="rounded-[12rpx] text-[20rpx] px-1 py-[4rpx] mt-[4rpx] w-fit"
+                        :class="
+                            [1, 3].includes(item.status) ? 'bg-[#E1FFF6] text-[#25C5AA]' : 'bg-[#FFF1F0] text-[#FF4D4F]'
+                        "
+                        >{{ item.status == 1 ? "线索有效" : item.status == 2 ? "线索无效" : "内含有效线索" }}</view
+                    >
+                </view>
                 <view
                     class="px-[28rpx] py-[10rpx] rounded text-[22rpx] bg-[#E1FFF6] text-[#25C5AA] font-bold whitespace-nowrap"
                     >#{{ item.exec_keyword }}</view
@@ -20,7 +29,7 @@
         <view class="mt-[34rpx]">
             <view class="text-[#00000080]">地址: {{ item.address || "-" }}</view>
             <view class="flex items-center justify-between gap-x-[24rpx] mt-[12rpx]">
-                <view class="text-[#00000080]">执行设备: {{ item.device_model }}</view>
+                <view class="text-[#00000080]">执行账号: {{ item.exec_account_name }}({{ item.exec_account }})</view>
                 <view class="text-[#00000080]"> {{ item.exec_time }} </view>
             </view>
         </view>

@@ -127,7 +127,8 @@
 import { useUserStore } from "@/stores/user";
 import { formatAudioTime } from "@/utils/util";
 import { TokensSceneEnum } from "@/enums/appEnums";
-import { CreateTypeEnum, DigitalHumanModelVersionEnum } from "@/ai_modules/digital_human/enums";
+import { CreateTypeEnum } from "@/ai_modules/digital_human/enums";
+import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);

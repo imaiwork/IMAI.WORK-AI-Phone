@@ -531,13 +531,13 @@ class SvVideoTaskLogic extends SvBaseLogic
                             'notify_url' => '/api/sv.videoTask/notify'
                         ], $scene, $task->user_id, $task->task_id);
                     }
-                    
 
                     if (!isset($response['id']) || empty($response['id'])) {
                         $task->tries = $task->tries + 1;
                         if ( $task->tries == 5){
+                            $remark = $response['message'] ?? '视频合成5次失败';
                             $task->status = 5;
-                            $task->remark = '视频合成5次失败';
+                            $task->remark = $remark;
                         }
                         $task->save();
                         return;
@@ -554,7 +554,7 @@ class SvVideoTaskLogic extends SvBaseLogic
                   //  Log::channel('sv')->info('视频合成成功'. 'task_id' .$task->task_id.$task->result_id);
 
                 } catch (\Exception $e) {
-                   // Log::channel('sv')->info('视频任务处理失败'.'task_id'.$task->task_id.$e->getMessage());
+                    Log::channel('sv')->info('视频任务处理失败'.'task_id'.$task->task_id.$e->getMessage());
                     $task->tries = $task->tries + 1;
                     if ( $task->tries == 5){
                         $task->status = 5;
@@ -920,6 +920,10 @@ class SvVideoTaskLogic extends SvBaseLogic
             }
         }
 
+        if (in_array($scene, [self::VIDEO_TRAINING_CHANJING]) && isset( $response['code']) && $response['code'] == 22901) {
+            return $response;
+        }
+
         return $response['data'] ?? [];
     }
 
@@ -1035,9 +1039,9 @@ class SvVideoTaskLogic extends SvBaseLogic
                 if ($item->model_version === 7) {
 
                     if (in_array($data['status'], [2, 3, 4])) {
-                        $item->status = ($data['status'] == 2) ? 1 : 2;
+                        $item->status = ($data['status'] == 2) ? 13 : 12;
                         // TODO 失败退费
-                        if ($item->status == 2) {
+                        if ($item->status == 12) {
                             self::refundTokens($item->user_id, $item->voice_id, $item->task_id, 'human_voice_chanjing');
                         }
                     } else {
@@ -1123,7 +1127,6 @@ class SvVideoTaskLogic extends SvBaseLogic
                         if ($videoSetting->error_num == $videoSetting->video_count){
                             $videoSetting->status = 4;
                         }
-
                         $videoSetting->save();
                 }
 
@@ -1349,7 +1352,14 @@ class SvVideoTaskLogic extends SvBaseLogic
         $update['clip_status'] = $data['status'];
         $update['clip_result_url'] = $url;
         SvVideoTask::update($update);
-        
+        if ($data['status'] == 3 && $model['auto_type'] == 1 ){
+            $param = [
+                'device_code' => $model['device_code'],
+                'sv_video_id' => $model['id']
+            ];
+            \app\api\logic\auto\PublishLogic::setShanjianPublish($param);
+            Log::channel('auto')->write('自动化闪剪视频合成：' . json_encode($param));
+        }
         return true;
     }
 

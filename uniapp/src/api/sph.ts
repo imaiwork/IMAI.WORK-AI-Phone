@@ -25,6 +25,11 @@ export const updateTask = (data: any) => {
     return request.post({ url: "/sv.crawlingTask/update", data });
 };
 
+// 删除任务
+export const deleteTask = (data: any) => {
+    return request.post({ url: "/sv.crawlingTask/delete", data });
+};
+
 // 任务详情
 export const getTaskDetail = (data: any) => {
     return request.get({ url: "/sv.crawlingTask/detail", data });

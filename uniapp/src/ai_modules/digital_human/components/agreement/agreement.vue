@@ -57,6 +57,7 @@ const getPrivacy = computed(() => {
 });
 
 const closeAgreement = () => {
+    show.value = false;
     emit("close");
 };
 

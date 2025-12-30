@@ -17,8 +17,8 @@
                     </view>
                 </view>
             </view>
-            <view class="absolute top-2 right-2 z-[8888]" v-if="showMore">
-                <view class="" style="transform: rotate(90deg)" @click="handleMore">
+            <view class="absolute top-1 right-1 z-[8888]" v-if="showMore">
+                <view class="p-2" style="transform: rotate(90deg)" @click="handleMore">
                     <u-icon name="more-dot-fill" color="#fff"></u-icon>
                 </view>
             </view>
@@ -27,7 +27,7 @@
                     <view class="w-full h-full flex items-center justify-center gap-1 text-center px-2 text-white">
                         <view
                             v-if="showPlay"
-                            class="rounded-full bg-[#ffffff33] w-[68rpx] h-[68rpx]"
+                            class="rounded-full bg-[#ffffff33] w-[48rpx] h-[48rpx]"
                             @click="handlePlay(item.clip_video_url || item.video_url)">
                             <image src="/static/images/icons/play.svg" class="w-full h-full"></image>
                         </view>

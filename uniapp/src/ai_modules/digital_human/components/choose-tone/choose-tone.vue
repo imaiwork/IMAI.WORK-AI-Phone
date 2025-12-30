@@ -1,10 +1,5 @@
 <template>
-    <popup-bottom
-        v-model:show="showPopup"
-        title="请选择音色"
-        custom-class="bg-[#F9FAFB]"
-        :is-disabled-touch="true"
-        show-close-btn>
+    <popup-bottom v-model="showPopup" title="请选择音色" custom-class="bg-[#F9FAFB]" :is-disabled-touch="true">
         <template #content>
             <view class="h-full flex flex-col">
                 <navigator

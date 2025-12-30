@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "设备绑定码",
-  "usingComponents": {}
+  "usingComponents": {
+    "confirm-dialog": "../../../components/confirm-dialog/confirm-dialog"
+  }
 }

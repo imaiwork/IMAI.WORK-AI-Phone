@@ -61,7 +61,7 @@ export const getPublishAccountList = (data?: Record<string, any>) => {
 };
 
 // 矩阵任务新增
-export const addMatrixTask = (data: any) => {
+export const createMatrixTask = (data: any) => {
     return request.post({ url: "/sv.matrixMediaSetting/add", data });
 };
 
@@ -136,13 +136,18 @@ export const deleteDeviceTaskCalendar = (data: any) => {
 };
 
 // 私聊接管添加
-export const addPrivateChatTask = (data: any) => {
+export const createPrivateChatTask = (data: any) => {
     return request.post({ url: "/device.takeOver/add", data });
+};
+
+// 私聊接管更新
+export const updatePrivateChatTask = (data: any) => {
+    return request.post({ url: "/device.takeOver/update", data });
 };
 
 // 私聊接管详情
 export const getPrivateChatTaskDetail = (data: any) => {
-    return request.get({ url: "/device.privateChatTask/detail", data });
+    return request.get({ url: "/device.takeOver/detail", data });
 };
 
 // 私聊接管删除
@@ -168,4 +173,79 @@ export const deleteGrowthAccountTask = (data: any) => {
 // 手动加微任务新增
 export const createManualAddWechat = (data: any) => {
     return request.post({ url: "/sv.crawlingManual/add", data });
+};
+
+// 截流任务新增
+export const createClosureTask = (data: any) => {
+    return request.post({ url: "/sv.leadScraping/add", data });
+};
+
+// 获取自动任务详情
+export const getAutoTaskDetail = (data: any) => {
+    return request.get({ url: "/auto.device/detail", data });
+};
+
+// 自动任务配置新增
+export const createAutoTask = (data: any) => {
+    return request.post({ url: "/auto.device/add", data });
+};
+
+// 自动任务线索词获客配置更新
+export const createAutoTaskClueConfig = (data: any) => {
+    return request.post({ url: "/auto.clue/update", data });
+};
+
+// 获取自动任务线索词获客配置
+export const getAutoTaskClueConfigDetail = (data: any) => {
+    return request.get({ url: "/auto.clue/detail", data });
+};
+
+// 自动任务截流配置更新
+export const createAutoTaskClosureConfig = (data: any) => {
+    return request.post({ url: "/auto.touch/update", data });
+};
+
+// 获取自动任务截流配置
+export const getAutoTaskClosureConfigDetail = (data: any) => {
+    return request.get({ url: "/auto.touch/detail", data });
+};
+
+// 自动任务加微配置更新
+export const createAutoTaskAddWechatConfig = (data: any) => {
+    return request.post({ url: "/auto.addWechat/update", data });
+};
+
+// 自动任务加微配置详情
+export const getAutoTaskAddWechatConfigDetail = (data: any) => {
+    return request.get({ url: "/auto.addWechat/detail", data });
+};
+
+// 自动任务发布配置新增
+export const createAutoTaskPublishConfig = (data: any) => {
+    return request.post({ url: "/auto.autoDeviceSetting/add", data });
+};
+
+// 自动任务发布配置详情
+export const getAutoTaskPublishConfigDetail = (data: any) => {
+    return request.get({ url: "/auto.autoDeviceSetting/detail", data });
+};
+
+// 自动任务私聊接管配置
+export const createAutoTaskPrivateTakeConfig = (data: any) => {
+    return request.post({ url: "/auto.takeOver/update", data });
+};
+
+// 获取自动任务私聊接管配置
+export const getAutoTaskPrivateTakeConfigDetail = (data: any) => {
+    return request.get({ url: "/auto.takeOver/detail", data });
+};
+
+// 获取截流行业历史记录
+export const getClosureIndustryHistory = (data: any) => {
+    return request.get({ url: "/sv.leadScraping/getIndustryLog", data });
+};
+
+// 删除截流行业历史记录
+export const deleteClosureIndustryHistory = (data: any) => {
+    return request.post({ url: "/sv.leadScraping/deleteIndustryLog", data });
 };

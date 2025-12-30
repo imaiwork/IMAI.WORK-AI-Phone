@@ -22,4 +22,20 @@ export enum ListenerTypeEnum {
     CHOOSE_DEVICE = "choose-device",
     // 选择时间
     CHOOSE_DATE = "choose-date",
+    // 选择数字人形象
+    CHOOSE_ANCHOR_MATERIAL = "choose-anchor-material",
+    // 线索词组
+    CLUE_LIST = "clue-list",
+}
+
+// 创建类型
+export enum CreateTypeEnum {
+    IMG = "img",
+    VIDEO = "video",
+    CLUE = "clue",
+    MSG = "msg",
+    FRIEND = "friend",
+    YH = "yh",
+    COMMENT = "comment",
+    PRIVATE_MESSAGE = "private_message",
 }

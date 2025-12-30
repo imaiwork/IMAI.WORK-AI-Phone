@@ -299,7 +299,7 @@
                 <u-button
                     v-if="isExecuteComplete"
                     type="primary"
-                    :custom-style="{ height: '90rpx', fontWeight: 'bold', borderRadius: '20rpx' }"
+                    :custom-style="{ height: '90rpx', width: '100%', fontWeight: 'bold', borderRadius: '20rpx' }"
                     @click="showUpdateProgress = false"
                     >确认</u-button
                 >
@@ -312,10 +312,9 @@
         </view>
     </u-popup>
     <popup-bottom
-        :show="showRobotPopup"
+        v-model="showRobotPopup"
         title="选择智能体"
         custom-class="bg-[#F9FAFB]"
-        :show-close-btn="true"
         :is-disabled-touch="true"
         @close="showRobotPopup = false">
         <template #content>
@@ -553,6 +552,7 @@ const getPrivateChatRecordList = computed(() => {
     const groupList: any = [];
     const weekList = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
     dataList.value.forEach((item: any) => {
+        if (!item.message_time) return;
         const date = item.message_time.split(" ")[0];
         const group = groupList.find((group: any) => group.date === date);
         if (!group) {

@@ -23,7 +23,7 @@
                             <u-icon name="close" color="#ffffff" size="16"></u-icon>
                         </view>
                         <view
-                            class="absolute bottom-0 h-[40rpx] w-full bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[88]">
+                            class="absolute bottom-0 h-[40rpx] w-full bg-[#00000080] flex items-center justify-center z-[88]">
                             <image
                                 v-if="item.type === 'image'"
                                 src="@/ai_modules/digital_human/static/icons/pic.svg"
@@ -57,20 +57,20 @@
             >
         </view>
     </view>
-    <upload-rule-pop v-model="showUploadTip" @handle-upload="handleUploadVideo" />
+    <upload-rule-pop v-model="showUploadTip" @handle-upload="chooseUploadType" />
     <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
 </template>
 
 <script setup lang="ts">
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
 import UploadRulePop from "@/ai_modules/digital_human/components/upload-rule-pop/upload-rule-pop.vue";
-import useMontageMaterial from "@/ai_modules/digital_human/hooks/useMontageMaterial";
-import { montageConfig } from "@/ai_modules/digital_human/config";
+import useMontageMaterial, { montageConfig } from "@/hooks/useMontageMaterial";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 
 const { emit } = useEventBusManager();
 
 const materialList = ref<any[]>([]);
+const isFirstUpload = ref(true);
 const showUploadTip = ref(false);
 const replaceMaterialIndex = ref(-1);
 
@@ -85,7 +85,11 @@ const getCurrentTotalDuration = computed(() => {
 });
 
 const chooseUploadType = () => {
-    showUploadTip.value = false;
+    if (isFirstUpload.value) {
+        isFirstUpload.value = false;
+        showUploadTip.value = true;
+        return;
+    }
     uni.showActionSheet({
         itemList: ["选择图片素材", "选择视频素材"],
         success: (res) => {
@@ -112,8 +116,6 @@ const handleReplaceMaterial = (index: number) => {
     replaceMaterialIndex.value = index;
     chooseUploadType();
 };
-
-const handleUploadVideo = () => {};
 
 const handleDeleteMaterial = (index: number) => {
     materialList.value.splice(index, 1);

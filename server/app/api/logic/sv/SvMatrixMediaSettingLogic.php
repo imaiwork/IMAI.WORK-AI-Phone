@@ -26,6 +26,13 @@ class SvMatrixMediaSettingLogic extends ApiLogic
             $params['update_time'] = time();
             $params['name'] = $params['name'] ?? '矩阵媒体设置'.date('YmdHi');
             
+            $media_url = is_array($params['media_url']) ? json_encode($params['media_url'], JSON_UNESCAPED_UNICODE) : $params['media_url'];
+            if(strpos($media_url, 'null') !== false){
+                \think\facade\Log::channel('device')->write(json_encode($params, JSON_UNESCAPED_UNICODE), 'publish');
+                self::setError("媒体参数集合中不能包含null");
+                return false;
+            }
+
             // 预处理JSON字段
             $jsonFields = ['media_url', 'copywriting', 'extra'];
             foreach ($jsonFields as $field) {

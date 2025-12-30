@@ -111,10 +111,12 @@ export default function useDeviceWs(options?: WebSocketOptions) {
                     break;
             }
         } else {
+            if (type == "pong") return;
             triggerEvent("error", {
                 error: content.msg,
                 type,
                 code,
+                content,
                 deviceCode: deviceId,
             });
         }

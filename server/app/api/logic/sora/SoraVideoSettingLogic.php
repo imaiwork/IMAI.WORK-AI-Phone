@@ -6,6 +6,7 @@ use app\api\logic\ApiLogic;
 use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
+use app\common\model\sora\SoraAnchor;
 use app\common\model\sora\SoraVideoSetting;
 use app\common\model\sora\SoraVideoTask;
 use app\common\model\user\User;
@@ -32,35 +33,49 @@ class SoraVideoSettingLogic extends ApiLogic
         $content      = $params['content'] ?? '无';
         $gender       = $params['gender'] ?? '无';
         $image_urls   = $params['image_urls'] ?? [];
-        $frequency    = $params['frequency'] ?? '';                         //镜头切换频率
-        $aspect_ratio = $params['aspect_ratio'] == '9:16' ? '9:16' : '16:9';//输出比例
+        $frequency    = $params['frequency'] ?? '';                             //镜头切换频率
+        $aspect_ratio = $params['aspect_ratio'] == '9:16' ? '9:16' : '16:9';    //输出比例
         $duration     = !empty($params['duration']) ? $params['duration'] : 10; //输出时长
-        $style        = $params['style'] ?? '';                             //视频风格
-        $number       = $params['number'] ?? 1;                             //生成视频数量
+        $style        = $params['style'] ?? '';                                 //视频风格
+        $number       = $params['number'] ?? 1;                                 //生成视频数量
         $taskId       = generate_unique_task_id();
         $ai_type      = $params['ai_type'] ?? 0;
         $model        = $params['model'] == 'sora-2-pro' ? 2 : 1;
-
-        $keywords = '视频类型：【' . $theme . '】
-        视频细节：【' . $content . '】
-        人物性别：【' . $gender . '】
-        视频风格：【' . $style . '】
+        $anchor_ids   = $params['anchor_ids'] ?? [];
+        $keywords = '视频细节：【' . $content . '】
         镜头切换频率：【' . $frequency . '】
         输出比例：【' . $aspect_ratio . '】
         输出时长：【' . $duration . 's】';
-        if (empty($name) || empty($number) || empty($theme) || empty($style)) {
+        if (!empty($anchor_ids)){
+            foreach ($anchor_ids as $anchor_id){
+                $anchor = SoraAnchor::where('anchor_id','=', $anchor_id)->where('status', '=', 1)->findOrEmpty();
+                if ($anchor->isEmpty()){
+                    message('角色不存在');
+                }
+                $keywords = str_replace($anchor['name'],' @'.$anchor['anchor_id'].' ',$keywords);
+            }
+        }
+
+//        $keywords = '视频类型：【' . $theme . '】
+//        视频细节：【' . $content . '】
+//        人物性别：【' . $gender . '】
+//        视频风格：【' . $style . '】
+//        镜头切换频率：【' . $frequency . '】
+//        输出比例：【' . $aspect_ratio . '】
+//        输出时长：【' . $duration . 's】';
+        if (empty($name) || empty($number)) {
             message('参数错误');
         }
 
         // AI 优化文案
-        if ($ai_type == 1){
-            $message = self::copywriting(['keywords' => $keywords, 'number' => 1]);
-            $keywords = !empty($message) ? $message : $keywords;
-        }
+//        if ($ai_type == 1){
+//            $message = self::copywriting(['keywords' => $keywords, 'number' => 1]);
+//            $keywords = !empty($message) ? $message : $keywords;
+//        }
 
         try {
             Db::startTrans();
-            $insert = [
+            $insert  = [
                 'user_id'       => self::$uid,
                 'name'          => $name,
                 'task_id'       => $taskId,
@@ -112,30 +127,31 @@ class SoraVideoSettingLogic extends ApiLogic
                     'update_time'      => time(),
                     'model_version'    => $model,
                 ];
-                $result = self::requestUrl($request, $scene, self::$uid, $videoTaskId);
+                $result      = self::requestUrl($request, $scene, self::$uid, $videoTaskId);
                 if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
                     self::$returnData['id'][] = $result['data']['id'] ?? '';
-                    $insertTask['extra'] = json_encode([
-                                                           'copywriting' => $keywords,
-                                                           'image_urls'  => $image_urls,
-                                                           'video_id'    => $result['data']['id'] ?? ''
-                                                       ], JSON_UNESCAPED_UNICODE);
+                    $insertTask['extra']      = json_encode([
+                                                                'copywriting' => $keywords,
+                                                                'image_urls'  => $image_urls,
+                                                                'video_id'    => $result['data']['id'] ?? '',
+                                                                'anchor_ids'  => $anchor_ids,
+                                                            ], JSON_UNESCAPED_UNICODE);
                     SoraVideoTask::create($insertTask);
                 } else {
                     $errorNum += 1;
                 }
                 usleep(100000);
             }
-            self::$returnData = $setting->toArray();
+            self::$returnData                = $setting->toArray();
             self::$returnData['success_num'] = $successNum;
             self::$returnData['error_num']   = $errorNum;
             self::$returnData['task_id']     = $taskId;
             self::$returnData['total_num']   = $number;
             $update                          = [
                 'extra'       => json_encode([
-                                                'image_urls' => $image_urls,
-                                                'image_counts' => count($image_urls)
-                                            ], JSON_UNESCAPED_UNICODE),
+                                                 'image_urls' => $image_urls,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    'image_counts' => count($image_urls)
+                                             ], JSON_UNESCAPED_UNICODE),
                 'status'      => $errorNum == 0 ? 2 : ($errorNum == $number ? 4 : 5),
                 'success_num' => $successNum,
                 'error_num'   => $errorNum
@@ -170,8 +186,8 @@ class SoraVideoSettingLogic extends ApiLogic
 
     public static function copywriting(array $params)
     {
-        $message = '帮我创作一段适合SORA生成视频的文案，视频参数如下：'.$params['keywords'];
-        $number   = $params['number'] ?? 1;
+        $message = '帮我创作一段适合SORA生成视频的文案，视频描述如下：' . $params['keywords'];
+        $number  = $params['number'] ?? 1;
         if (empty($message) || empty($number)) {
             message('参数错误');
         }
@@ -184,11 +200,14 @@ class SoraVideoSettingLogic extends ApiLogic
         $scene   = self::SORA_COPYWRITING_CREATE;
 
         $result = self::requestUrl($request, $scene, self::$uid, $taskId);
-        Log::channel('sora')->write('扣费请求返回'.json_encode($result));
+        Log::channel('sora')->write('扣费请求返回' . json_encode($result));
         if (!empty($result) && isset($result['data']['message'])) {
-            return $result['data']['message'];
+            self::$returnData = ['message' => $result['data']['message']];
+            return true;
         }
-        return '';
+        Log::channel('sora')->write('生成文案失败' . json_encode($result));
+        self::setError('生成文案失败');
+        return false;
     }
 
     private static function requestUrl(array $request, string $scene, int $userId, string $taskId)
@@ -218,11 +237,11 @@ class SoraVideoSettingLogic extends ApiLogic
                     break;
                 default:
             }
-            Log::channel('sora')->write('扣费请求返回'.json_encode($response));
+            Log::channel('sora')->write('扣费请求返回' . json_encode($response));
             //成功响应，需要扣费
             if (isset($response['code']) && $response['code'] == 10000) {
                 $points = $unit;
-                Log::channel('sora')->write('扣费数量'.$points);
+                Log::channel('sora')->write('扣费数量' . $points);
                 if ($points > 0) {
                     $extra = [];
                     switch ($scene) {
@@ -328,16 +347,17 @@ class SoraVideoSettingLogic extends ApiLogic
         }
     }
 
-    public static function checkStatus(){
-        $settings = SoraVideoSetting::where('status', 'in',[2,5])->where('create_time', '<=', strtotime('-40 minutes'))->select()->toArray();
-        foreach ($settings as $setting){
+    public static function checkStatus()
+    {
+        $settings = SoraVideoSetting::where('status', 'in', [2, 5])->where('create_time', '<=', strtotime('-40 minutes'))->select()->toArray();
+        foreach ($settings as $setting) {
             $num = $setting['success_num'] + $setting['error_num'];
-            if ($setting['video_count'] == $num){
-                if ($setting['error_num'] > 0 && $setting['error_num'] < $num){
+            if ($setting['video_count'] == $num) {
+                if ($setting['error_num'] > 0 && $setting['error_num'] < $num) {
                     SoraVideoSetting::where('id', $setting['id'])->update(['status' => 5]);
-                }else if ($setting['error_num'] > 0 && $setting['error_num'] == $num){
+                } else if ($setting['error_num'] > 0 && $setting['error_num'] == $num) {
                     SoraVideoSetting::where('id', $setting['id'])->update(['status' => 4]);
-                }else{
+                } else {
                     SoraVideoSetting::where('id', $setting['id'])->update(['status' => 3]);
                 }
             }

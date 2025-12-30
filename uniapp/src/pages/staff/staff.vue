@@ -45,19 +45,19 @@
                                     </view>
                                 </navigator>
                             </view>
-                            <view class="redbook-card" @click="toPage(AgentType.REDBOOK_TASK)">
-                                <view class="text-[#734207] font-bold text-[34rpx]">'小红书'获客</view>
-                                <view class="text-[#73420766] font-bold text-xs mt-1"> 即将解锁 </view>
+                            <view class="redbook-card" @click="toPage(AgentType.COMMENT_TASK)">
+                                <view class="text-[#734207] font-bold text-[34rpx]">评论获客</view>
+                                <view class="text-[#73420766] font-bold text-xs mt-1"> 评论区截流获客 </view>
                                 <image
-                                    src="/static/images/common/redbook_icon.png"
-                                    class="w-[48rpx] h-[48rpx] absolute right-3 bottom-2"></image>
+                                    src="/static/images/common/platform_icon.png"
+                                    class="w-[178rpx] h-[40rpx] absolute right-1 bottom-1"></image>
                             </view>
-                            <view class="dy-card" @click="toPage(AgentType.DY_TASK)">
-                                <view class="text-[#734207] font-bold text-[34rpx]">'抖音'获客</view>
-                                <view class="text-[#73420766] font-bold text-xs mt-1"> 即将解锁 </view>
+                            <view class="dy-card" @click="toPage(AgentType.PRIVATE_MESSAGE_TASK)">
+                                <view class="text-[#734207] font-bold text-[34rpx]">私信获客</view>
+                                <view class="text-[#73420766] font-bold text-xs mt-1"> 从评论区私信获客 </view>
                                 <image
-                                    src="/static/images/common/dy_icon.png"
-                                    class="w-[48rpx] h-[48rpx] absolute right-3 bottom-2"></image>
+                                    src="/static/images/common/platform_icon.png"
+                                    class="w-[178rpx] h-[40rpx] absolute right-1 bottom-1"></image>
                             </view>
                         </view>
                         <view class="mt-[50rpx]">
@@ -366,8 +366,6 @@ enum AgentType {
     AI_MIND_MAP = "mind_map",
     AI_WORD = "word",
     AI_SERVICE = "service",
-    REDBOOK_TASK = "redbook_task",
-    DY_TASK = "dy_task",
     VIDEO_TASK = "video_task",
     IMG_TASK = "img_task",
     COPYWRITING = "copywriting",
@@ -380,6 +378,8 @@ enum AgentType {
     PRAISE_SETTING = "praise_setting",
     CREATION = "creation",
     MATERIAL = "material",
+    COMMENT_TASK = "comment_task",
+    PRIVATE_MESSAGE_TASK = "private_message_task",
 }
 
 const appStore = useAppStore();
@@ -593,8 +593,6 @@ const handleAgent = (key: AgentType) => {
 
 const toPage = (type: AgentType) => {
     if (
-        type === AgentType.REDBOOK_TASK ||
-        type === AgentType.DY_TASK ||
         type === AgentType.SEND_CONTENT ||
         type === AgentType.SEND_CIRCLE ||
         type === AgentType.FLOW_SETTING ||
@@ -604,29 +602,21 @@ const toPage = (type: AgentType) => {
         uni.$u.toast("开发中");
         return;
     }
-    let url = "";
-    switch (type) {
-        case AgentType.VIDEO_TASK:
-            url = "/ai_modules/device/pages/create_task/create_task?type=1";
-            break;
-        case AgentType.IMG_TASK:
-            url = "/ai_modules/device/pages/create_task/create_task?type=2";
-            break;
-        case AgentType.AI_DIGITAL_HUMAN:
-            url = "/ai_modules/digital_human/pages/index/index";
-            break;
-        case AgentType.CREATION:
-            url = "/packages/pages/creation/creation";
-            break;
-        case AgentType.MATERIAL:
-            url = "/packages/pages/material_library/material_library";
-            break;
-        case AgentType.AI_DRAWING:
-            url = "/ai_modules/drawing/pages/index/index";
-            break;
+    let urls: Partial<Record<AgentType, string>> = {
+        [AgentType.VIDEO_TASK]: "/ai_modules/device/pages/create_task/create_task?type=1",
+        [AgentType.IMG_TASK]: "/ai_modules/device/pages/create_task/create_task?type=2",
+        [AgentType.AI_DIGITAL_HUMAN]: "/ai_modules/digital_human/pages/index/index",
+        [AgentType.CREATION]: "/packages/pages/creation/creation",
+        [AgentType.MATERIAL]: "/packages/pages/material_library/material_library",
+        [AgentType.AI_DRAWING]: "/ai_modules/drawing/pages/index/index",
+        [AgentType.COMMENT_TASK]: "/ai_modules/device/pages/create_closure/create_closure?type=comment",
+        [AgentType.PRIVATE_MESSAGE_TASK]: "/ai_modules/device/pages/create_closure/create_closure?type=private_message",
+    };
+    if (!urls[type]) {
+        return;
     }
     uni.navigateTo({
-        url,
+        url: urls[type],
     });
 };
 
@@ -678,13 +668,13 @@ const getDeviceStatisticsFn = async () => {
 .redbook-card {
     background: linear-gradient(90deg, #faede6 0%, #f5e2d7 100%);
     grid-area: 1 / 2 / 3 / 3;
-    @apply h-[170rpx] rounded-[20rpx] relative px-[36rpx] py-[28rpx];
+    @apply h-[170rpx] rounded-[20rpx] relative px-[36rpx] py-[20rpx];
 }
 
 .dy-card {
     background: linear-gradient(90deg, #faede6 0%, #f5e2d7 100%);
     grid-area: 3 / 2 / 5 / 3;
-    @apply h-[170rpx] rounded-[20rpx] relative px-[36rpx] py-[28rpx];
+    @apply h-[170rpx] rounded-[20rpx] relative px-[36rpx] py-[20rpx];
 }
 
 .publish-video-card {

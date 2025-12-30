@@ -6,7 +6,9 @@ use app\api\lists\BaseApiDataLists;
 use app\common\lists\ListsSearchInterface;
 use app\common\lists\ListsExcelInterface;
 use app\common\model\sv\SvCrawlingRecord;
+use app\common\model\sv\SvAddWechatRecord;
 use app\common\model\sv\SvDevice;
+use app\common\model\wechat\AiWechat;
 use app\common\service\FileService;
 
 
@@ -37,7 +39,6 @@ class CrawlingRecordLists extends BaseApiDataLists implements ListsSearchInterfa
 
         $this->searchWhere[] = ['task_id', '=', $this->request->get('task_id', 0)];
         $this->searchWhere[] = ['hash', 'not in', ['', null]];
-        
         // print_r(SvCrawlingRecord::field('*, max(exec_time) as exec_time')->where($this->searchWhere)
         //     ->order('exec_time', 'desc')
         //     ->limit($this->limitOffset, $this->limitLength)
@@ -48,14 +49,27 @@ class CrawlingRecordLists extends BaseApiDataLists implements ListsSearchInterfa
         $list = SvCrawlingRecord::field('*, max(exec_time) as exectime')->withoutField('exec_time')->where($this->searchWhere)
             ->order('exectime', 'desc')
             ->limit($this->limitOffset, $this->limitLength)
-            ->group('task_id, exec_keyword,reg_content')
+            ->group('task_id,reg_content')
             ->select()
             ->each(function ($item) {
+                $phonePattern = '/1[3-9]\d{9}/';
+                if(preg_match($phonePattern, $item['reg_content']) && $item['status'] == 0){
+                    $item['status'] = 1;
+                    $item->save();
+                }
+                $exec_account = AiWechat::field('wechat_no, wechat_nickname')->where('user_id', $item['user_id'])
+                    ->where('device_code', function($query) use($item){
+                        $query->name('sv_device')->where('device_code', $item['device_code'])->field('wechat_device_code');
+                    })
+                    ->findOrEmpty();
+
                 $item['device_model'] = SvDevice::where('device_code', $item['device_code'])->value('device_model');
                 $item['clue_type_name'] = $this->clueType[$item['clue_type']];
                 $item['image'] = FileService::getFileUrl($item['image']);
                 $item['exec_time'] = $item['exectime'];
                 $item['create_time'] = $item['exectime'];
+                $item['exec_account'] = $exec_account->isEmpty() ? '' : $exec_account->wechat_no;
+                $item['exec_account_name'] = $exec_account->isEmpty() ? '' : $exec_account->wechat_nickname;
             })
             ->toArray();
         return $list;
@@ -65,7 +79,7 @@ class CrawlingRecordLists extends BaseApiDataLists implements ListsSearchInterfa
     {
         $this->searchWhere[] = ['task_id', '=', $this->request->get('task_id', 0)];
         $this->searchWhere[] = ['reg_content', 'not in', ['', null]];
-        return SvCrawlingRecord::where($this->searchWhere)->group('reg_content')->count();
+        return SvCrawlingRecord::where($this->searchWhere)->group('task_id,reg_content')->count();
     }
 
     /**

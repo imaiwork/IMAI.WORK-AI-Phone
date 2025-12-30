@@ -9,11 +9,15 @@
             }"
             is-custom-back-icon
             :custom-back="backChat">
-            <template #custom-back-icon>
+            <template #custom-back-icon v-if="chatContentList.length > 0">
                 <u-icon name="arrow-left" :size="32"></u-icon>
             </template>
+            <view class="flex items-center gap-x-2 px-4" v-if="chatContentList.length == 0">
+                <image :src="websiteConfig.shop_logo" class="w-[60rpx] h-[60rpx] rounded-full"></image>
+                <text class="text-[30rpx] font-bold break-all line-clamp-1">{{ websiteConfig.shop_name }}</text>
+            </view>
         </u-navbar>
-        <view class="grow min-h-0 relative z-10">
+        <view class="grow min-h-0 relative z-10 pt-2">
             <chat-scroll-view
                 ref="chattingRef"
                 v-model:file-list="fileList"
@@ -29,10 +33,32 @@
                 @show-history="showHistory = true">
                 <template #content v-if="!isAgent">
                     <view v-if="chatContentList.length == 0" class="h-full w-full pb-4 px-[20rpx]">
-                        <view class="flex items-center justify-center">
-                            <image :src="websiteConfig.shop_logo" class="w-[128rpx] h-[128rpx] rounded-full"></image>
+                        <view
+                            class="h-[200rpx] rounded-[20rpx] overflow-hidden bg-cover bg-center"
+                            :style="{
+                                backgroundImage: `url(${config.baseUrl}static/images/home_banner_bg.png)`,
+                            }">
+                            <view
+                                class="px-4 h-full flex items-center justify-between"
+                                @click="toPage(isDevice == 1 ? PageKeyEnum.DEVICE_BIND : PageKeyEnum.DEVICE_CONFIG)">
+                                <view>
+                                    <view class="text-[34rpx] text-white font-bold">24h全自动工作 省心托管</view>
+                                    <view
+                                        class="rounded-full bg-white text-xs font-bold h-[56rpx] w-[220rpx] mt-2 flex items-center justify-center gap-x-1">
+                                        <template v-if="isDevice != 1">
+                                            {{ isDevice == 2 ? "一键开启托管" : "请先绑定设备"
+                                            }}<u-icon name="arrow-right" :size="16"></u-icon>
+                                        </template>
+                                    </view>
+                                </view>
+                                <view class="mr-3 mt-4">
+                                    <image
+                                        :src="`${config.baseUrl}static/images/robot.webp`"
+                                        class="w-[160rpx] h-[160rpx]"></image>
+                                </view>
+                            </view>
                         </view>
-                        <view class="grid grid-cols-2 gap-4 mt-[40rpx]">
+                        <view class="grid grid-cols-2 gap-[20rpx] mt-[20rpx]">
                             <view class="bg-white rounded-[20rpx] px-[38rpx] h-[240rpx] flex flex-col">
                                 <view
                                     class="flex items-center justify-center gap-x-2 py-[30rpx] flex-1"
@@ -40,7 +66,7 @@
                                     <image src="/static/images/icons/add.svg" class="w-[32rpx] h-[32rpx] -ml-3"></image>
                                     <text class="font-bold text-[30rpx]">创建任务</text>
                                 </view>
-                                <view class="h-[1rpx] bg-[rgba(0,0,0,0.05)] flex-shrink-0 my-1"></view>
+                                <view class="h-[1rpx] bg-[#0000000d] flex-shrink-0 my-1"></view>
                                 <view
                                     class="flex items-center justify-center gap-x-2 py-[30rpx] flex-1"
                                     @click="toPage(PageKeyEnum.VIEW_SCHEDULE)">
@@ -52,8 +78,8 @@
                             </view>
                             <view
                                 class="bg-white rounded-[20rpx] px-[38rpx] py-[30rpx] h-[240rpx] relative overflow-hidden"
-                                @click="toPage(PageKeyEnum.DIGITAL_PERSON_CLONE)">
-                                <view class="text-[30rpx] font-bold"> 数字人克隆 </view>
+                                @click="toPage(PageKeyEnum.DIGITAL_CREATION)">
+                                <view class="text-[30rpx] font-bold"> 数字人创作 </view>
                                 <view class="flex items-center gap-x-1 mt-1">
                                     <text class="text-[22rpx] text-[#0000004d]">立即定制</text>
                                     <u-icon name="arrow-right" :size="20" color="#0000004d"></u-icon>
@@ -114,12 +140,7 @@
         </view>
         <tabbar v-if="chatContentList.length === 0" />
     </view>
-    <popup-bottom
-        v-model:show="showHistory"
-        title="历史记录"
-        show-close-btn
-        :is-disabled-touch="true"
-        custom-class="bg-[#F9FAFB]">
+    <popup-bottom v-model="showHistory" title="历史记录" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
         <template #content>
             <view class="h-full py-[30rpx]">
                 <z-paging
@@ -158,6 +179,7 @@ import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
 import { chatSendTextStream, getChatLog, getCreativeRecord } from "@/api/chat";
 import { TokensSceneEnum } from "@/enums/appEnums";
+import { getDeviceList } from "@/api/device";
 import config from "@/config";
 
 // 类型定义
@@ -193,12 +215,13 @@ enum PageKeyEnum {
     VIEW_SCHEDULE = "view_schedule",
     AI_CUSTOMER = "ai_customer",
     DH = "dh",
+    DIGITAL_CREATION = "dh_creation",
     DIGITAL_PERSON_CLONE = "digital_person_clone",
     PUBLISH_IMG = "publish_img",
     PUBLISH_VIDEO = "publish_video",
     MY_CREATION = "my_creation",
     AI_PUZZLE = "ai_puzzle",
-    AI_PRACTICE = "ladder_player",
+    MATERIAL_LIBRARY = "material_library",
     MEETING_MINUTES = "meeting_minutes",
     DIGITAL_PERSON_BROADCAST = "digital_person_broadcast",
     ORAL_VIDEO_MIX = "oral_video_mix",
@@ -206,6 +229,8 @@ enum PageKeyEnum {
     MATERIAL_MIX = "material_mix",
     ONE_SENTENCE_GENERATION = "one_sentence_generation",
     NEWS_BODY_GENERATION = "news_body_generation",
+    DEVICE_BIND = "device_bind",
+    DEVICE_CONFIG = "device_config",
 }
 
 // 快速应用列表
@@ -216,8 +241,8 @@ const quickApplicationList = [
         icon: "index_img_1.png",
     },
     {
-        key: PageKeyEnum.DH,
-        name: "数字人",
+        key: PageKeyEnum.DIGITAL_PERSON_CLONE,
+        name: "数字人克隆",
         icon: "index_img_2.png",
     },
     {
@@ -241,8 +266,8 @@ const quickApplicationList = [
         icon: "index_img_6.png",
     },
     {
-        key: PageKeyEnum.AI_PRACTICE,
-        name: "AI陪练",
+        key: PageKeyEnum.MATERIAL_LIBRARY,
+        name: "素材库",
         icon: "index_img_7.png",
     },
     {
@@ -295,12 +320,13 @@ const toPage = (key: PageKeyEnum) => {
         [PageKeyEnum.VIEW_SCHEDULE]: "/ai_modules/device/pages/task_calendar_full/task_calendar_full",
         [PageKeyEnum.DH]: "/ai_modules/digital_human/pages/index/index",
         [PageKeyEnum.DIGITAL_PERSON_CLONE]: "/ai_modules/digital_human/pages/anchor_create/anchor_create",
+        [PageKeyEnum.DIGITAL_CREATION]: "/ai_modules/digital_human/pages/choose_create_type/choose_create_type",
         [PageKeyEnum.PUBLISH_IMG]: "/ai_modules/device/pages/create_task/create_task?type=2",
         [PageKeyEnum.PUBLISH_VIDEO]: "/ai_modules/device/pages/create_task/create_task?type=1",
         [PageKeyEnum.MY_CREATION]: "/packages/pages/creation/creation",
         [PageKeyEnum.AI_CUSTOMER]: "/ai_modules/sph/pages/create_task/create_task",
         [PageKeyEnum.AI_PUZZLE]: "/ai_modules/drawing/pages/index/index",
-        [PageKeyEnum.AI_PRACTICE]: "/ai_modules/ladder_player/pages/index/index",
+        [PageKeyEnum.MATERIAL_LIBRARY]: "/packages/pages/material_library/material_library",
         [PageKeyEnum.MEETING_MINUTES]: "/ai_modules/meeting_minutes/pages/index/index",
         [PageKeyEnum.DIGITAL_PERSON_BROADCAST]: "/ai_modules/digital_human/pages/szr_create/szr_create",
         [PageKeyEnum.ORAL_VIDEO_MIX]: "/ai_modules/digital_human/pages/montage_create/montage_create",
@@ -309,6 +335,8 @@ const toPage = (key: PageKeyEnum) => {
         [PageKeyEnum.MATERIAL_MIX]: "/ai_modules/digital_human/pages/montage_material_create/montage_material_create",
         [PageKeyEnum.ONE_SENTENCE_GENERATION]: "/ai_modules/digital_human/pages/sora_create/sora_create",
         [PageKeyEnum.NEWS_BODY_GENERATION]: "/ai_modules/digital_human/pages/montage_news_create/montage_news_create",
+        [PageKeyEnum.DEVICE_CONFIG]: "/pages/phone/phone",
+        [PageKeyEnum.DEVICE_BIND]: "/packages/pages/rpa_code/rpa_code",
     };
     uni.navigateTo({
         url: urls[key as keyof typeof urls],
@@ -339,6 +367,8 @@ const fileList = ref<FileInfo[]>([]);
 const chatContentList = ref<ChatMessage[]>([]);
 const taskId = ref<string>("");
 const recordLists = ref<any[]>([]);
+
+const isDevice = ref(1);
 
 // 流式请求读取器
 let streamReader: any = null;
@@ -611,6 +641,12 @@ const init = async (options?: Record<string, any>) => {
         isAgent.value = true;
         await nextTick();
         chattingRef.value?.openKeyboard();
+    }
+    try {
+        const { count } = await getDeviceList({ page_no: 1, page_size: 1 });
+        isDevice.value = count > 0 ? 2 : 3;
+    } catch (error) {
+        isDevice.value = 3;
     }
 };
 

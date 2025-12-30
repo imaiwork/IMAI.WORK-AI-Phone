@@ -1,11 +1,5 @@
 <template>
-    <popup-bottom
-        v-model:show="show"
-        title="素材选择"
-        show-close-btn
-        :is-disabled-touch="true"
-        height="70%"
-        custom-class="bg-[#F9FAFB]">
+    <popup-bottom v-model="show" title="素材选择" :is-disabled-touch="true" height="70%" custom-class="bg-[#F9FAFB]">
         <template #content>
             <view class="h-full flex flex-col">
                 <view class="text-xs text-[#00000080] mt-2 px-4"> 已选：{{ chooseLists.length }} </view>
@@ -90,7 +84,7 @@
 import { getMaterialLibraryList } from "@/api/material";
 
 const props = withDefaults(
-    defineProps<{ modelValue: boolean; limit: number; type: "video" | "image"; multiple?: boolean }>(),
+    defineProps<{ modelValue: boolean; limit?: number; type: "video" | "image" | "all"; multiple?: boolean }>(),
     {
         multiple: true,
     }
@@ -115,7 +109,7 @@ const queryList = async (page_no: number, page_size: number) => {
         const { lists } = await getMaterialLibraryList({
             page_no,
             page_size,
-            m_type: props.type == "video" ? 2 : 1,
+            m_type: props.type == "all" ? undefined : props.type == "video" ? 2 : 1,
         });
         pagingRef.value?.complete(lists);
     } catch (error) {
@@ -128,9 +122,9 @@ const isChoose = (data: any) => {
 };
 
 const handleSelect = (data: any) => {
-    if (props.multiple === false) {
+    if (props.multiple === false || (props.multiple === true && props.limit === 1)) {
         if (isChoose(data)) {
-            chooseLists.value = [];
+            chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
         } else {
             chooseLists.value = [data];
         }
@@ -138,7 +132,7 @@ const handleSelect = (data: any) => {
         if (isChoose(data)) {
             chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
         } else {
-            if (chooseLists.value.length >= props.limit) {
+            if (props.limit && chooseLists.value.length >= props.limit) {
                 uni.$u.toast(`最多选择${props.limit}个素材`);
                 return;
             }
@@ -151,7 +145,7 @@ const toggleSelect = () => {
     if (chooseLists.value.length == dataLists.value.length) {
         chooseLists.value = [];
     } else {
-        chooseLists.value = dataLists.value.slice(0, props.limit);
+        chooseLists.value = dataLists.value.slice(0, props.limit || dataLists.value.length);
     }
 };
 

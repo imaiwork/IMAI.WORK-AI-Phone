@@ -65,7 +65,7 @@
             >
         </view>
     </view>
-    <popup-bottom v-model:show="showBill" title="查看账单" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
+    <popup-bottom v-model="showBill" title="查看账单" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
         <template #content>
             <view class="h-full flex flex-col">
                 <u-tabs

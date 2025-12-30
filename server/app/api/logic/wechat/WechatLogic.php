@@ -77,14 +77,25 @@ class WechatLogic extends WechatBaseLogic
                     'user_id' => self::$uid,
                 ]);
             }
-
+            $wechat_ids = AiWechat::where('user_id', self::$uid)->order('id', 'asc')->column('wechat_id');
             // 自动接受好友策略
             $accept = AiWechatAcceptFriendStrategy::where('user_id', self::$uid)->findOrEmpty();
             if ($accept->isEmpty())
             {
                 AiWechatAcceptFriendStrategy::create([
                     'user_id' => self::$uid,
+                    'is_enable' => 1,
+                    'accept_numbers' => 15,
+                    'wechat_ids' => $wechat_ids,
                 ]);
+            }else
+            {
+                if(empty($accept->wechat_ids))
+                {
+                    $accept->wechat_ids = $wechat_ids;
+                }
+                $accept->is_enable = 1;
+                $accept->save();
             }
 
             // 自动朋友圈评论点赞策略
