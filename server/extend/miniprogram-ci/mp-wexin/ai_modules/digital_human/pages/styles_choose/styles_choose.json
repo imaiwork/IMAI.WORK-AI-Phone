@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "剪辑风格选择",
+  "usingComponents": {
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button"
+  }
+}

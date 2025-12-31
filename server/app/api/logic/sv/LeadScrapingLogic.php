@@ -29,6 +29,7 @@ class LeadScrapingLogic extends SvBaseLogic
 
         Db::startTrans();
         try {
+            TaskLogic::checkAccounts($params['accounts']);
             $insertData        = [
                 'user_id'   => self::$uid,
                 'task_type' => $params['task_type'] ?? 1,
@@ -38,11 +39,11 @@ class LeadScrapingLogic extends SvBaseLogic
             $leadScraping = SvLeadScrapingSetting::create($insertData);
             $leadScraping = $leadScraping->refresh();
             //查询任务明细是否存在
-//            $leadScrapingRecord = SvLeadScrapingRecord::where('scraping_id', $params['id'])->where('user_id', self::$uid)->findOrEmpty();
-//            if (!$leadScrapingRecord->isEmpty() && $leadScrapingRecord['status'] !== 0) {
-//                self::setError('任务正在执行中，不能修改');
-//                return false;
-//            }
+            //            $leadScrapingRecord = SvLeadScrapingRecord::where('scraping_id', $params['id'])->where('user_id', self::$uid)->findOrEmpty();
+            //            if (!$leadScrapingRecord->isEmpty() && $leadScrapingRecord['status'] !== 0) {
+            //                self::setError('任务正在执行中，不能修改');
+            //                return false;
+            //            }
 
             if (isset($params['filter']) && is_array($params['filter'])) {
                 $params['filter'] = json_encode($params['filter'], JSON_UNESCAPED_UNICODE);
@@ -107,15 +108,15 @@ class LeadScrapingLogic extends SvBaseLogic
                 $industries = json_decode($result['industry'], true);
                 foreach ($industries as $industry) {
                     $log = SvLeadScrapingIndustryLog::where('user_id', self::$uid)->where('keyword', $industry)->findOrEmpty();
-                    if (!$log->isEmpty()){
+                    if (!$log->isEmpty()) {
                         continue;
                     }
                     SvLeadScrapingIndustryLog::create([
-                                                          'scraping_id' => $result['id'],
-                                                          'task_type' => $params['task_type'],
-                                                          'keyword' => $industry,
-                                                          'user_id' => self::$uid,
-                                                      ]);
+                        'scraping_id' => $result['id'],
+                        'task_type' => $params['task_type'],
+                        'keyword' => $industry,
+                        'user_id' => self::$uid,
+                    ]);
                 }
                 $times = [];
                 foreach (json_decode($result['task_date'], true) as $date) {
@@ -129,16 +130,16 @@ class LeadScrapingLogic extends SvBaseLogic
                         ];
                     }
                 }
-//                switch ($result['task_type']) {
-//                    case 1:
-//                        $taskType = DeviceEnum::TASK_COMMENT_TO_COMMENT;
-//                        break;
-//                    case 2:
-//                        $taskType = DeviceEnum::TASK_COMMENT_TO_MSG;
-//                        break;
-//                    default:
-//                        $taskType = DeviceEnum::TASK_COMMENT_TO_MARK_CLUE;
-//                }
+                //                switch ($result['task_type']) {
+                //                    case 1:
+                //                        $taskType = DeviceEnum::TASK_COMMENT_TO_COMMENT;
+                //                        break;
+                //                    case 2:
+                //                        $taskType = DeviceEnum::TASK_COMMENT_TO_MSG;
+                //                        break;
+                //                    default:
+                //                        $taskType = DeviceEnum::TASK_COMMENT_TO_MARK_CLUE;
+                //                }
                 foreach (json_decode($result['accounts'], true) as $account) {
                     foreach ($times as $time) {
                         //判断时间是否冲突
@@ -151,19 +152,19 @@ class LeadScrapingLogic extends SvBaseLogic
                         $startTime        = $time['start_time'];
                         $endTime          = $time['end_time'];
                         $subTask          = SvLeadScrapingSettingAccount::create([
-                                                                                     'scraping_id'     => $result['id'],
-                                                                                     'user_id'         => self::$uid,
-                                                                                     'task_type'       => $result['task_type'],
-                                                                                     'status'          => 0,
-                                                                                     'name'            => $result['name'] . ' - ' . self::formatType($account['type']),
-                                                                                     'account'         => $account['account'],
-                                                                                     'account_type'    => $account['type'],
-                                                                                     'device_code'     => $account['device_code'],
-                                                                                     'send_start_time' => $startTime,
-                                                                                     'send_end_time'   => $endTime,
-                                                                                     'count'           => 0,
-                                                                                     'published_count' => 0,
-                                                                                 ]);
+                            'scraping_id'     => $result['id'],
+                            'user_id'         => self::$uid,
+                            'task_type'       => $result['task_type'],
+                            'status'          => 0,
+                            'name'            => $result['name'] . ' - ' . self::formatType((int)$account['type']),
+                            'account'         => $account['account'],
+                            'account_type'    => $account['type'],
+                            'device_code'     => $account['device_code'],
+                            'send_start_time' => $startTime,
+                            'send_end_time'   => $endTime,
+                            'count'           => 0,
+                            'published_count' => 0,
+                        ]);
                         $allTaskInstall[] = [
                             'user_id'      => self::$uid,
                             'device_code'  => $account['device_code'],
@@ -171,7 +172,7 @@ class LeadScrapingLogic extends SvBaseLogic
                             'task_scene'   => $result['task_type'],
                             'account'      => $account['account'],
                             'account_type' => $account['type'],
-                            'task_name'    => $result['name'] . ' - ' . self::formatType($account['type']),
+                            'task_name'    => $result['name'] . ' - ' . self::formatType((int)$account['type']),
                             'status'       => 0,
                             'day'          => date('Y-m-d', $startTime),
                             'start_time'   => $startTime,
@@ -210,9 +211,9 @@ class LeadScrapingLogic extends SvBaseLogic
         try {
             // 检查截流任务设置是否存在
             $leadScraping = SvLeadScrapingSetting::field('*')
-                                                 ->where('id', $params['id'])
-                                                 ->where('user_id', self::$uid)
-                                                 ->findOrEmpty();
+                ->where('id', $params['id'])
+                ->where('user_id', self::$uid)
+                ->findOrEmpty();
             if ($leadScraping->isEmpty()) {
                 self::setError('截流任务设置不存在');
                 return false;
@@ -266,9 +267,9 @@ class LeadScrapingLogic extends SvBaseLogic
         try {
             // 检查截流任务是否存在
             $record = SvLeadScrapingRecord::field('*')
-                                          ->where('id', $params['id'])
-                                          ->where('user_id', self::$uid)
-                                          ->findOrEmpty();
+                ->where('id', $params['id'])
+                ->where('user_id', self::$uid)
+                ->findOrEmpty();
             if ($record->isEmpty()) {
                 self::setError('任务记录不存在');
                 return false;
@@ -286,9 +287,9 @@ class LeadScrapingLogic extends SvBaseLogic
     public static function recordDelete(array $params)
     {
         $record = SvLeadScrapingRecord::field('*')
-                                      ->where('id', $params['id'])
-                                      ->where('user_id', self::$uid)
-                                      ->findOrEmpty();
+            ->where('id', $params['id'])
+            ->where('user_id', self::$uid)
+            ->findOrEmpty();
         if ($record->isEmpty()) {
             self::setError('任务记录不存在');
             return false;
@@ -304,14 +305,14 @@ class LeadScrapingLogic extends SvBaseLogic
         $limit  = $params['page_size'] ?? 10;
         $offset = max(($page - 1), 0) * $limit;
         $logs   = SvLeadScrapingIndustryLog::field('*')
-                                           ->where('user_id', self::$uid)
-                                           ->where('task_type', $params['task_type'])
-                                           ->limit($offset, $limit)
-                                           ->select();
+            ->where('user_id', self::$uid)
+            ->where('task_type', $params['task_type'])
+            ->limit($offset, $limit)
+            ->select();
         $count  = SvLeadScrapingIndustryLog::where('user_id', self::$uid)->where('task_type', $params['task_type'])->count();
         if ($logs->isEmpty()) {
             $logs = [];
-        }else{
+        } else {
             $logs = $logs->toArray();
         }
 

@@ -75,7 +75,7 @@ const agentLists = ref<any[]>([]);
 const agentLoading = ref(false);
 const getAgentFn = async (query?: string) => {
     agentLoading.value = true;
-    const data = await getAgentList({ keyword: query, source: 1 });
+    const data = await getAgentList({ keyword: query });
     agentLists.value = data.lists;
     agentLoading.value = false;
 };
@@ -83,7 +83,10 @@ const getAgentFn = async (query?: string) => {
 const handleSubmit = async () => {
     await formRef.value.validate();
     try {
-        await changeAccountStatus(formData);
+        await changeAccountStatus({
+            ...formData,
+            account_type: accountType.value,
+        });
         emit("success");
         feedback.msgSuccess("保存成功");
     } catch (error) {

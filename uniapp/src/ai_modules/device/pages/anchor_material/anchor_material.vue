@@ -37,7 +37,7 @@
         </view>
     </view>
 
-    <choose-anchor v-model="showChooseAnchor" @confirm="handleChooseAnchor" />
+    <choose-anchor ref="chooseAnchorRef" v-model="showChooseAnchor" @confirm="handleChooseAnchor" />
     <video-preview v-model="showVideoPreview" :video-url="playData.url" :poster="playData.pic"></video-preview>
 </template>
 
@@ -47,6 +47,8 @@ import useMaterialStore from "@/ai_modules/device/stores/material";
 
 const materialStore = useMaterialStore();
 const { anchorList } = storeToRefs(materialStore);
+
+const chooseAnchorRef = shallowRef<InstanceType<typeof ChooseAnchor>>();
 
 const dataList = ref<any[]>(JSON.parse(JSON.stringify(anchorList.value)));
 const showChooseAnchor = ref(false);
@@ -74,6 +76,10 @@ const handleConfirm = () => {
     materialStore.setList("anchorList", dataList.value);
     uni.navigateBack();
 };
+
+onShow(() => {
+    chooseAnchorRef.value?.queryList();
+});
 </script>
 
 <style scoped></style>

@@ -1,0 +1,15 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../../components/empty/empty",
+    "data-select": "../../../../components/data-select/data-select",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "upload-progress": "../../../../components/upload-progress/upload-progress",
+    "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "clue-card": "../../components/clue-card/clue-card",
+    "bast-setting-v2": "../../components/bast-setting-v2/bast-setting-v2"
+  }
+}

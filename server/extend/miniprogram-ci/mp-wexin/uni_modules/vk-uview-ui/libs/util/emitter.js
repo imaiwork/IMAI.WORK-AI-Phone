@@ -1,0 +1,1 @@
+"use strict";function t(t,o,s){}const o={methods:{dispatch(t,o,s){let e=this.$parent||this.$root,i=e.$options.name;for(;e&&(!i||i!==t);)e=e.$parent,e&&(i=e.$options.name);e&&e[o](s)},broadcast(o,s,e){t.call(this,o,s,e)}}};exports.Emitter=o;

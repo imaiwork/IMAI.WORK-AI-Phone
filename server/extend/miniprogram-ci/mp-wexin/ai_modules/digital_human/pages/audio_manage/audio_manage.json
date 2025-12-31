@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "音频管理",
+  "usingComponents": {
+    "u-search": "../../../../uni_modules/vk-uview-ui/components/u-search/u-search",
+    "u-swipe-action": "../../../../uni_modules/vk-uview-ui/components/u-swipe-action/u-swipe-action",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "生成视频介绍",
+  "usingComponents": {
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button"
+  }
+}

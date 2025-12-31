@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "video-player": "../video-player/video-player"
+  }
+}

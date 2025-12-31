@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "消耗规则",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": false,
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-button": "../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "u-tabs": "../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "u-line": "../../../uni_modules/vk-uview-ui/components/u-line/u-line",
+    "empty": "../../../components/empty/empty",
+    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
+    "popup-bottom": "../../../components/popup-bottom/popup-bottom"
+  }
+}

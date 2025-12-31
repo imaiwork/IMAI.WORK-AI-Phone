@@ -66,6 +66,8 @@
                             </div>
                         </template>
                     </ElTableColumn>
+                    <ElTableColumn prop="result" label="加好友结果" min-width="120" show-overflow-tooltip>
+                    </ElTableColumn>
                     <ElTableColumn prop="exec_time" label="执行时间" width="180"></ElTableColumn>
                     <ElTableColumn label="操作" width="80" fixed="right" align="right">
                         <template #default="{ row }">

@@ -103,7 +103,7 @@ const contentPost = async () => {
     if (isGenerating.value) {
         uni.$u.toast("文案在生成中...");
         return;
-    };
+    }
     if (userTokens.value < getToken.value) {
         uni.$u.toast("算力不足，请充值！");
         return;
@@ -143,7 +143,6 @@ const useContent = (item: any) => {
         type: ListenerTypeEnum.SORA_AI_COPYWRITER,
         data: content,
     });
-    chatContentList.value = [];
     uni.navigateBack();
 };
 </script>

@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "404",
+  "usingComponents": {
+    "u-empty": "../../../uni_modules/vk-uview-ui/components/u-empty/u-empty",
+    "router-navigate": "../../../node-modules/uniapp-router-next/components/router-navigate/router-navigate"
+  }
+}

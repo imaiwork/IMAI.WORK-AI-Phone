@@ -28,6 +28,11 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    // 过滤显示的模型id
+    filter: {
+        type: Array,
+        default: () => [],
+    },
 });
 const emit = defineEmits(["update:modelValue", "confirm", "close"]);
 
@@ -43,11 +48,19 @@ const appStore = useAppStore();
 const modelChannel = computed(() => {
     const { channel } = appStore.getDigitalHumanConfig;
     if (channel && channel.length > 0) {
-        return channel.filter(
+        const list = channel.filter(
             (item: any) =>
                 item.status == 1 &&
-                (DigitalHumanModelVersionEnum.CHANJING == item.id || DigitalHumanModelVersionEnum.STANDARD == item.id)
+                [
+                    DigitalHumanModelVersionEnum.CHANJING,
+                    DigitalHumanModelVersionEnum.STANDARD,
+                    DigitalHumanModelVersionEnum.SHANJIAN,
+                ].includes(parseInt(item.id))
         );
+        if (props.filter.length) {
+            return list.filter((item: any) => !props.filter.includes(parseInt(item.id)));
+        }
+        return list;
     }
     return [];
 });

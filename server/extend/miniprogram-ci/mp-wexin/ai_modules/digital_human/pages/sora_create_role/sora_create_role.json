@@ -1,0 +1,14 @@
+{
+  "navigationBarTitleText": "创建角色",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "upload-progress": "../../../../components/upload-progress/upload-progress",
+    "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
+    "create-success-pop": "../../components/create-success-pop/create-success-pop",
+    "range-slider": "../../components/range-slider/range-slider"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "empty": "../../components/empty/empty",
+    "record-card": "../../components/record-card/record-card"
+  }
+}

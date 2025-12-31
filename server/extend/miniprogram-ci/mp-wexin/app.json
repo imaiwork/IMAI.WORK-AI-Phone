@@ -1,0 +1,167 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/staff/staff",
+    "pages/agent/agent",
+    "pages/user/user",
+    "pages/login/login",
+    "pages/login/mobile",
+    "pages/phone/phone",
+    "uni_modules/vk-uview-ui/components/u-avatar-cropper/u-avatar-cropper"
+  ],
+  "subPackages": [
+    {
+      "root": "packages",
+      "pages": [
+        "pages/robot_chat/robot_chat",
+        "pages/coze_chat/coze_chat",
+        "pages/recharge/recharge",
+        "pages/creation_record/creation_record",
+        "pages/user_balance/user_balance",
+        "pages/recharge_record/recharge_record",
+        "pages/tokens_rule/tokens_rule",
+        "pages/agreement/agreement",
+        "pages/redeem/redeem",
+        "pages/setting/setting",
+        "pages/404/404",
+        "pages/choose_file/choose_file",
+        "pages/rpa_code/rpa_code",
+        "pages/creation/creation",
+        "pages/material_library/material_library"
+      ]
+    },
+    {
+      "root": "ai_modules/digital_human",
+      "pages": [
+        "pages/index/index",
+        "pages/video_upload/video_upload",
+        "pages/szr_create/szr_create",
+        "pages/tone_clone/tone_clone",
+        "pages/audio_manage/audio_manage",
+        "pages/audio_choose/audio_choose",
+        "pages/clone_manage/clone_manage",
+        "pages/szr_copywriter/szr_copywriter",
+        "pages/ai_copywriter/ai_copywriter",
+        "pages/styles_choose/styles_choose",
+        "pages/montage_create/montage_create",
+        "pages/anchor_create/anchor_create",
+        "pages/anchor_auth_video/anchor_auth_video",
+        "pages/anchor_auth_camera/anchor_auth_camera",
+        "pages/montage_copywriter/montage_copywriter",
+        "pages/montage_ai_copywriter/montage_ai_copywriter",
+        "pages/montage_publish/montage_publish",
+        "pages/montage_publish_record/montage_publish_record",
+        "pages/montage_publish_video/montage_publish_video",
+        "pages/montage_works/montage_works",
+        "pages/choose_create_type/choose_create_type",
+        "pages/sora_create/sora_create",
+        "pages/sora_ai_copywriter/sora_ai_copywriter",
+        "pages/montage_person_create/montage_person_create",
+        "pages/montage_material_create/montage_material_create",
+        "pages/montage_material_group/montage_material_group",
+        "pages/montage_news_create/montage_news_create",
+        "pages/sora_create_role/sora_create_role",
+        "pages/sora_role_library/sora_role_library"
+      ]
+    },
+    {
+      "root": "ai_modules/meeting_minutes",
+      "pages": [
+        "pages/index/index",
+        "pages/record/record",
+        "pages/detail/detail",
+        "pages/audio_upload/audio_upload",
+        "pages/recorder/recorder"
+      ]
+    },
+    {
+      "root": "ai_modules/ladder_player",
+      "pages": [
+        "pages/index/index",
+        "pages/report/report",
+        "pages/report_detail/report_detail",
+        "pages/scene_create/scene_create",
+        "pages/scene_intro/scene_intro",
+        "pages/chat/chat"
+      ]
+    },
+    {
+      "root": "ai_modules/interview",
+      "pages": [
+        "pages/index/index",
+        "pages/interview_detail/interview_detail",
+        "pages/resume_form/resume_form",
+        "pages/chat/chat",
+        "pages/full_screen/full_screen"
+      ]
+    },
+    {
+      "root": "ai_modules/sph",
+      "pages": [
+        "pages/index/index",
+        "pages/task_list/task_list",
+        "pages/task_detail/task_detail",
+        "pages/create_task/create_task",
+        "pages/task_prompt/task_prompt",
+        "pages/clue_list/clue_list",
+        "pages/clue_detail/clue_detail",
+        "pages/task_ai_clue/task_ai_clue"
+      ]
+    },
+    {
+      "root": "ai_modules/device",
+      "pages": [
+        "pages/task_calendar/task_calendar",
+        "pages/task_calendar_full/task_calendar_full",
+        "pages/detail/detail",
+        "pages/platform_detail/platform_detail",
+        "pages/choose_task_type/choose_task_type",
+        "pages/account_choose/account_choose",
+        "pages/custom_date/custom_date",
+        "pages/create_task/create_task",
+        "pages/create_private_take/create_private_take",
+        "pages/create_account_building/create_account_building",
+        "pages/task_img_group/task_img_group",
+        "pages/task_copywriter/task_copywriter",
+        "pages/task_ai_copywriter/task_ai_copywriter",
+        "pages/create_add_wechat/create_add_wechat",
+        "pages/wechat_clue/wechat_clue",
+        "pages/device_choose/device_choose",
+        "pages/auto_task/auto_task",
+        "pages/create_auto_task/create_auto_task",
+        "pages/anchor_material/anchor_material",
+        "pages/video_material/video_material",
+        "pages/image_material/image_material",
+        "pages/setting_clue/setting_clue",
+        "pages/clue_edit/clue_edit",
+        "pages/setting_publish/setting_publish",
+        "pages/marketing_material/marketing_material",
+        "pages/setting_circle/setting_circle",
+        "pages/setting_add_wechat/setting_add_wechat",
+        "pages/setting_ca/setting_ca",
+        "pages/setting_private_take/setting_private_take",
+        "pages/task_statement/task_statement",
+        "pages/create_closure/create_closure"
+      ]
+    },
+    {
+      "root": "ai_modules/drawing",
+      "pages": [
+        "pages/index/index",
+        "pages/create_task/create_task",
+        "pages/puzzle_detail/puzzle_detail",
+        "pages/puzzle_ai_copywriter/puzzle_ai_copywriter",
+        "pages/puzzle_copywriter/puzzle_copywriter"
+      ]
+    }
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#F8F8F8"
+  },
+  "__usePrivacyCheck__": true,
+  "plugins": {},
+  "usingComponents": {}
+}

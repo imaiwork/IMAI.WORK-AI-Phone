@@ -20,7 +20,7 @@
                                         <text class="text-[#0000004d]">任务类型：</text>
                                         <text
                                             >{{ detailData.task_category }}({{
-                                                detailData.auto_type === 0 ? "手动" : "24h任务"
+                                                detailData.auto_type === 1 ? "24h" : "手动"
                                             }})</text
                                         >
                                     </view>
@@ -143,7 +143,7 @@
                         </view>
                     </scroll-view>
                 </view>
-                <view class="px-[26rpx] pb-5" v-if="detailData.auto_type === 0">
+                <view class="px-[26rpx] pb-5" v-if="detailData.auto_type != 1">
                     <view
                         class="h-[98rpx] flex items-center justify-center bg-error text-white font-bold rounded-[20rpx]"
                         @click="showConfirmDialog = true"

@@ -361,10 +361,7 @@ class TaskLogic extends ApiLogic
                     if (!$taskinfo) {
                         throw new \Exception('自动截流任务不存在');
                     }
-                    $count = SvLeadScrapingSettingAccount::where('sub_task_id', $params['sub_task_id'])->where('task_type',DeviceEnum::TASK_SOURCE_FRIENDS)->where('user_id', self::$uid)->count();
-                    if ($count == 1) {
-                        SvLeadScrapingSettingAccount::where('id', $params['sub_task_id'])->delete();
-                    }
+                    SvLeadScrapingSettingAccount::where('id', $params['sub_task_id'])->delete();
                     break;
 
                 default:
@@ -388,10 +385,11 @@ class TaskLogic extends ApiLogic
         try {
 
             $source = $params['source'] ?? 0;
-            $task = SvDeviceTask::field('start_time,end_time,account_type,account,status,device_code,task_name,task_type')
+            $task = SvDeviceTask::field('start_time,end_time,account_type,account,status,device_code,task_name,task_type,auto_type')
                 ->where('id', $params['id'])
                 ->where('user_id', self::$uid)
                 ->findOrEmpty()->toArray();
+                //print_r($task);die;
             if (!$task) {
                 self::setError('数据不存在');
                 return false;
@@ -445,14 +443,17 @@ class TaskLogic extends ApiLogic
                     //sv_crawling_manual_task
                     $taskinfo = SvCrawlingManualTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
                     if (!$taskinfo) {
-                        throw new \Exception('自动加好友任务不存在');
+                        $detail['name'] = $task['task_name'] ?? '';
+                        $task['detail'] = $detail;
+                    }else{
+                        $detail = SvCrawlingManualTask::where('id', $params['sub_task_id'])->findOrEmpty()->toArray();
+                        if ($detail) {
+                            $detail['name'] =  $taskinfo['name'] ?? '';
+                            $task['detail'] = $detail;
+                        }
                     }
 
-                    $detail = SvCrawlingManualTask::where('id', $params['sub_task_id'])->findOrEmpty()->toArray();
-                    if ($detail) {
-                        $detail['name'] =  $taskinfo['name'] ?? '';
-                        $task['detail'] = $detail;
-                    }
+                    
                     break;
 
                 case DeviceEnum::TASK_SOURCE_CLUES:

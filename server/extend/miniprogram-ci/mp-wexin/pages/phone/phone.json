@@ -1,0 +1,12 @@
+{
+  "navigationBarBackgroundColor": "#F9FAFB",
+  "usingComponents": {
+    "u-icon": "../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "circle-progress": "../../components/circle-progress/circle-progress",
+    "u-line-progress": "../../uni_modules/vk-uview-ui/components/u-line-progress/u-line-progress",
+    "z-paging": "../../node-modules/z-paging/components/z-paging/z-paging",
+    "tabbar": "../../components/tabbar/tabbar",
+    "confirm-dialog": "../../components/confirm-dialog/confirm-dialog",
+    "popup-bottom": "../../components/popup-bottom/popup-bottom"
+  }
+}

@@ -1,0 +1,1 @@
+"use strict";let t=[],e=[];exports.throttle=function(o,u=500,n=!0,f="default"){t[f]||(t[f]=null),n?e[f]||(e[f]=!0,"function"==typeof o&&o(),t[f]=setTimeout((()=>{e[f]=!1}),u)):e[f]||(e[f]=!0,t[f]=setTimeout((()=>{e[f]=!1,"function"==typeof o&&o()}),u))};

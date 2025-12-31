@@ -1,0 +1,1 @@
+.data-v-f5e52056 .uni-scroll-view::-webkit-scrollbar{display:none;width:0;height:0;background-color:transparent}.data-v-f5e52056 .u-button{transition:transform .2s ease,box-shadow .2s ease}.data-v-f5e52056 .u-button:active{transform:translateY(2rpx);box-shadow:0 1px 6px rgba(0,0,0,.08)}

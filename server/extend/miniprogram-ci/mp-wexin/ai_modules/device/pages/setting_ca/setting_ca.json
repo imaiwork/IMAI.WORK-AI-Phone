@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "评论区获客配置",
+  "usingComponents": {
+    "u-radio": "../../../../uni_modules/vk-uview-ui/components/u-radio/u-radio",
+    "u-radio-group": "../../../../uni_modules/vk-uview-ui/components/u-radio-group/u-radio-group",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "keywords-edit": "../../components/keywords-edit/keywords-edit",
+    "comment-filter": "../../components/comment-filter/comment-filter",
+    "choose-region": "../../components/choose-region/choose-region",
+    "choose-age": "../../components/choose-age/choose-age",
+    "choose-comment-time": "../../components/choose-comment-time/choose-comment-time"
+  }
+}

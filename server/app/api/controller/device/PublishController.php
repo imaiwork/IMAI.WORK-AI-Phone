@@ -234,18 +234,18 @@ class PublishController extends BaseApiController
         }
     }
 
-    public function testPublish(){
-        try {
-            $params = $this->request->post();
-            $result = PublishLogic::testPublish($params);
-            if ($result) {
-                return $this->success(data: PublishLogic::getReturnData());
-            }
-            return $this->fail(PublishLogic::getError());
-        } catch (HttpResponseException $e) {
-            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
-        }
-    }
+    // public function testPublish(){
+    //     try {
+    //         $params = $this->request->post();
+    //         $result = PublishLogic::testPublish($params);
+    //         if ($result) {
+    //             return $this->success(data: PublishLogic::getReturnData());
+    //         }
+    //         return $this->fail(PublishLogic::getError());
+    //     } catch (HttpResponseException $e) {
+    //         return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+    //     }
+    // }
 
     
     public function setPublishDetail(){

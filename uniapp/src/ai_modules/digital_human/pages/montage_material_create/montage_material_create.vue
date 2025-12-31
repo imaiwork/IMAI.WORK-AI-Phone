@@ -178,7 +178,7 @@
                             </view>
                         </view>
                         <view class="flex items-center justify-between h-[106rpx]">
-                            <view class="text-[30rpx] font-bold">视频原生</view>
+                            <view class="text-[30rpx] font-bold">视频原声音</view>
                             <u-switch v-model="formData.extra" inactive-color="#E5E5E5" :size="40" />
                         </view>
                         <view

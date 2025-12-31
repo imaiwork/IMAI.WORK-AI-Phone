@@ -106,7 +106,7 @@
                                         {{ item.keyword }}
                                         <view
                                             class="absolute right-[-14rpx] top-[-14rpx] w-[32rpx] h-[32rpx] flex items-center justify-center rounded-full bg-[#0000004d]"
-                                            @click="handleDeleteHistoryIndustry(index)">
+                                            @click.stop="handleDeleteHistoryIndustry(index)">
                                             <u-icon name="close" color="#ffffff" size="16"></u-icon>
                                         </view>
                                     </view>
@@ -268,8 +268,7 @@
                             <text class="font-bold">{{ isComment ? "评论附带点赞" : "私信附带点赞" }}</text>
                             <u-switch v-model="formData.comment_like" active-value="1" inactive-value="0" :size="40" />
                         </view>
-                        <view
-                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2]">
+                        <view class="flex items-center justify-between py-[28rpx]" v-if="!isComment">
                             <text class="font-bold">{{ isComment ? "评论附带关注" : "私信附带关注" }}</text>
                             <u-switch
                                 v-model="formData.comment_follow"
@@ -277,67 +276,71 @@
                                 inactive-value="0"
                                 :size="40" />
                         </view>
-                        <view
-                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                            @click="showCommentTimePopup = true">
-                            <text class="font-bold flex-shrink-0">{{ isComment ? "评论时间" : "私信时间" }}</text>
-                            <view class="flex items-center gap-x-1">
-                                <text
-                                    class="line-clamp-1 break-all"
-                                    :class="formData.comment_time > -1 ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
-                                    >{{ getCommentTimeLabel || "请选择" }}</text
-                                >
-                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                        <template v-if="false">
+                            <view
+                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                                @click="showCommentTimePopup = true">
+                                <text class="font-bold flex-shrink-0">{{ isComment ? "评论时间" : "私信时间" }}</text>
+                                <view class="flex items-center gap-x-1">
+                                    <text
+                                        class="line-clamp-1 break-all"
+                                        :class="
+                                            formData.comment_time > -1 ? 'text-primary font-bold' : 'text-[#B2B2B2]'
+                                        "
+                                        >{{ getCommentTimeLabel || "请选择" }}</text
+                                    >
+                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                </view>
                             </view>
-                        </view>
-                        <view
-                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                            @click="showChooseRegionPopup = true">
-                            <text class="font-bold flex-shrink-0">地区筛选</text>
-                            <view class="flex items-center gap-x-1">
-                                <text
-                                    class="line-clamp-1 break-all"
-                                    :class="formData.comment_region ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
-                                    >{{ formData.comment_region || "请选择" }}</text
-                                >
-                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                            <view
+                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                                @click="showChooseRegionPopup = true">
+                                <text class="font-bold flex-shrink-0">地区筛选</text>
+                                <view class="flex items-center gap-x-1">
+                                    <text
+                                        class="line-clamp-1 break-all"
+                                        :class="formData.comment_region ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
+                                        >{{ formData.comment_region || "请选择" }}</text
+                                    >
+                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                </view>
                             </view>
-                        </view>
-                        <view
-                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                            @click="handleEditCommentGender">
-                            <text class="font-bold flex-shrink-0">用户性别</text>
-                            <view class="flex items-center gap-x-1">
-                                <text
-                                    class="font-bold line-clamp-1 break-all"
-                                    :class="formData.comment_gender ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
-                                    >{{ formData.comment_gender || "请选择" }}</text
-                                >
-                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                            <view
+                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                                @click="handleEditCommentGender">
+                                <text class="font-bold flex-shrink-0">用户性别</text>
+                                <view class="flex items-center gap-x-1">
+                                    <text
+                                        class="font-bold line-clamp-1 break-all"
+                                        :class="formData.comment_gender ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
+                                        >{{ formData.comment_gender || "请选择" }}</text
+                                    >
+                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                </view>
                             </view>
-                        </view>
-                        <view
-                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                            @click="handleEditCommentAge">
-                            <text class="font-bold flex-shrink-0">用户年龄</text>
-                            <view class="flex items-center gap-x-1">
-                                <text class="line-clamp-1 break-all text-primary font-bold">{{
-                                    formData.comment_age
-                                }}</text>
-                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                            <view
+                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                                @click="handleEditCommentAge">
+                                <text class="font-bold flex-shrink-0">用户年龄</text>
+                                <view class="flex items-center gap-x-1">
+                                    <text class="line-clamp-1 break-all text-primary font-bold">{{
+                                        formData.comment_age
+                                    }}</text>
+                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                </view>
                             </view>
-                        </view>
-                        <view
-                            class="flex items-center justify-between py-[28rpx] gap-2"
-                            @click="handleEditCommentAccountFeature">
-                            <text class="font-bold flex-shrink-0">账号特征</text>
-                            <view class="flex items-center gap-x-1">
-                                <text class="line-clamp-1 break-all text-primary font-bold">{{
-                                    formData.comment_account_feature == "0" ? "全部" : "跳过认证号"
-                                }}</text>
-                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                            <view
+                                class="flex items-center justify-between py-[28rpx] gap-2"
+                                @click="handleEditCommentAccountFeature">
+                                <text class="font-bold flex-shrink-0">账号特征</text>
+                                <view class="flex items-center gap-x-1">
+                                    <text class="line-clamp-1 break-all text-primary font-bold">{{
+                                        formData.comment_account_feature == "0" ? "全部" : "跳过认证号"
+                                    }}</text>
+                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                </view>
                             </view>
-                        </view>
+                        </template>
                     </view>
                 </view>
             </scroll-view>
@@ -468,6 +471,7 @@
 <script setup lang="ts">
 import { createClosureTask, getClosureIndustryHistory, deleteClosureIndustryHistory } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
+import { useAppStore } from "@/stores/app";
 import { ListenerTypeEnum, CreateTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import ClueGenPop from "@/ai_modules/device/components/clue-gen-pop/clue-gen-pop.vue";
@@ -479,7 +483,7 @@ import ChooseAge from "@/ai_modules/device/components/choose-age/choose-age.vue"
 import ChooseCommentTime from "@/ai_modules/device/components/choose-comment-time/choose-comment-time.vue";
 
 const { on } = useEventBusManager();
-
+const appStore = useAppStore();
 const createType = ref<CreateTypeEnum>(CreateTypeEnum.COMMENT);
 
 // 步骤
@@ -929,6 +933,21 @@ const getIndustryHistory = async (page_no: number, page_size: number) => {
         industryHistoryPagingRef.value?.complete([]);
     }
 };
+
+watch(
+    () => [appStore.getCommentFilterConfig, appStore.getCommentContentConfig],
+    (newVal) => {
+        if (newVal[0] && newVal[0].length > 0) {
+            formData.comment_filter_list = newVal[0].map((item: string) => ({ value: item, checked: true }));
+        }
+        if (newVal[1] && newVal[1].length > 0) {
+            formData.comment_content_list = newVal[1];
+        }
+    },
+    {
+        immediate: true,
+    }
+);
 
 onLoad((options: any) => {
     createType.value = options.type as CreateTypeEnum;

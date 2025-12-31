@@ -181,8 +181,7 @@
                     <view class="mt-[50rpx]" v-if="modelIndex === 1">
                         <view class="font-bold text-[30rpx]"> 附加动作设置 </view>
                         <view class="mt-[20rpx] rounded-[20rpx] bg-white px-[36rpx]">
-                            <view
-                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2]">
+                            <view class="flex items-center justify-between py-[28rpx]">
                                 <text class="font-bold">评论附带点赞</text>
                                 <u-switch
                                     v-model="formData.comment_like"
@@ -190,78 +189,84 @@
                                     inactive-value="0"
                                     :size="40" />
                             </view>
-                            <view
-                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2]">
-                                <text class="font-bold">评论附带关注</text>
-                                <u-switch
-                                    v-model="formData.comment_follow"
-                                    active-value="1"
-                                    inactive-value="0"
-                                    :size="40" />
-                            </view>
-                            <view
-                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                                @click="showCommentTimePopup = true">
-                                <text class="font-bold flex-shrink-0">评论时间</text>
-                                <view class="flex items-center gap-x-1">
-                                    <text
-                                        class="line-clamp-1 break-all"
-                                        :class="
-                                            formData.comment_time > -1 ? 'text-primary font-bold' : 'text-[#B2B2B2]'
-                                        "
-                                        >{{ getCommentTimeLabel || "请选择" }}</text
-                                    >
-                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+
+                            <template v-if="false">
+                                <view class="flex items-center justify-between py-[28rpx]">
+                                    <text class="font-bold">评论附带关注</text>
+                                    <u-switch
+                                        v-model="formData.comment_follow"
+                                        active-value="1"
+                                        inactive-value="0"
+                                        :size="40" />
                                 </view>
-                            </view>
-                            <view
-                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                                @click="showChooseRegionPopup = true">
-                                <text class="font-bold flex-shrink-0">地区筛选</text>
-                                <view class="flex items-center gap-x-1">
-                                    <text
-                                        class="line-clamp-1 break-all"
-                                        :class="formData.comment_region ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
-                                        >{{ formData.comment_region || "请选择" }}</text
-                                    >
-                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                <view
+                                    class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                                    @click="showCommentTimePopup = true">
+                                    <text class="font-bold flex-shrink-0">评论时间</text>
+                                    <view class="flex items-center gap-x-1">
+                                        <text
+                                            class="line-clamp-1 break-all"
+                                            :class="
+                                                formData.comment_time > -1 ? 'text-primary font-bold' : 'text-[#B2B2B2]'
+                                            "
+                                            >{{ getCommentTimeLabel || "请选择" }}</text
+                                        >
+                                        <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                    </view>
                                 </view>
-                            </view>
-                            <view
-                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                                @click="handleEditCommentGender">
-                                <text class="font-bold flex-shrink-0">用户性别</text>
-                                <view class="flex items-center gap-x-1">
-                                    <text
-                                        class="font-bold line-clamp-1 break-all"
-                                        :class="formData.comment_gender ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
-                                        >{{ formData.comment_gender || "请选择" }}</text
-                                    >
-                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                <view
+                                    class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                                    @click="showChooseRegionPopup = true">
+                                    <text class="font-bold flex-shrink-0">地区筛选</text>
+                                    <view class="flex items-center gap-x-1">
+                                        <text
+                                            class="line-clamp-1 break-all"
+                                            :class="
+                                                formData.comment_region ? 'text-primary font-bold' : 'text-[#B2B2B2]'
+                                            "
+                                            >{{ formData.comment_region || "请选择" }}</text
+                                        >
+                                        <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                    </view>
                                 </view>
-                            </view>
-                            <view
-                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                                @click="handleEditCommentAge">
-                                <text class="font-bold flex-shrink-0">用户年龄</text>
-                                <view class="flex items-center gap-x-1">
-                                    <text class="line-clamp-1 break-all text-primary font-bold">{{
-                                        formData.comment_age
-                                    }}</text>
-                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                <view
+                                    class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                                    @click="handleEditCommentGender">
+                                    <text class="font-bold flex-shrink-0">用户性别</text>
+                                    <view class="flex items-center gap-x-1">
+                                        <text
+                                            class="font-bold line-clamp-1 break-all"
+                                            :class="
+                                                formData.comment_gender ? 'text-primary font-bold' : 'text-[#B2B2B2]'
+                                            "
+                                            >{{ formData.comment_gender || "请选择" }}</text
+                                        >
+                                        <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                    </view>
                                 </view>
-                            </view>
-                            <view
-                                class="flex items-center justify-between py-[28rpx] gap-2"
-                                @click="handleEditCommentAccountFeature">
-                                <text class="font-bold flex-shrink-0">账号特征</text>
-                                <view class="flex items-center gap-x-1">
-                                    <text class="line-clamp-1 break-all text-primary font-bold">{{
-                                        formData.comment_account_feature == "0" ? "全部" : "跳过认证号"
-                                    }}</text>
-                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                <view
+                                    class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                                    @click="handleEditCommentAge">
+                                    <text class="font-bold flex-shrink-0">用户年龄</text>
+                                    <view class="flex items-center gap-x-1">
+                                        <text class="line-clamp-1 break-all text-primary font-bold">{{
+                                            formData.comment_age
+                                        }}</text>
+                                        <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                    </view>
                                 </view>
-                            </view>
+                                <view
+                                    class="flex items-center justify-between py-[28rpx] gap-2"
+                                    @click="handleEditCommentAccountFeature">
+                                    <text class="font-bold flex-shrink-0">账号特征</text>
+                                    <view class="flex items-center gap-x-1">
+                                        <text class="line-clamp-1 break-all text-primary font-bold">{{
+                                            formData.comment_account_feature == "0" ? "全部" : "跳过认证号"
+                                        }}</text>
+                                        <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                                    </view>
+                                </view>
+                            </template>
                         </view>
                     </view>
                 </view>

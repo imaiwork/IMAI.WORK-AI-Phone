@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "自动加微配置",
+  "usingComponents": {
+    "u-radio": "../../../../uni_modules/vk-uview-ui/components/u-radio/u-radio",
+    "u-radio-group": "../../../../uni_modules/vk-uview-ui/components/u-radio-group/u-radio-group",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "keywords-edit": "../../components/keywords-edit/keywords-edit"
+  }
+}

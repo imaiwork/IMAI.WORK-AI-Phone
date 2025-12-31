@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "AI提示词设置",
+  "usingComponents": {
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button"
+  }
+}

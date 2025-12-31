@@ -29,7 +29,7 @@ class TaskController extends BaseApiController
     public function cron()
     {
         try {
-            TaskLogic::execDeviceTaskCron();
+            //TaskLogic::execDeviceTaskCron();
 
         } catch (\Throwable $th) {
             //throw $th;

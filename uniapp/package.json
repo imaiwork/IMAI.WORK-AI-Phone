@@ -1,6 +1,6 @@
 {
     "name": "uni-app",
-    "version": "2.7.0",
+    "version": "2.7.1",
     "scripts": {
         "init": "node initialize.js",
         "dev": "node scripts/develop.js",
@@ -29,7 +29,7 @@
         "build:mp-lark": "uni build -p mp-lark",
         "build:mp-qq": "uni build -p mp-qq",
         "build:mp-toutiao": "uni build -p mp-toutiao",
-        "build:mp-weixin": "uni build -p mp-weixin && node scripts/release.mjs -t mp-weixin -o weapp",
+        "build:mp-weixin": "uni build -p mp-weixin && node scripts/release.mjs -t mp-weixin -o mp-wexin",
         "build:quickapp-webview": "uni build -p quickapp-webview",
         "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
         "build:quickapp-webview-union": "uni build -p quickapp-webview-union",

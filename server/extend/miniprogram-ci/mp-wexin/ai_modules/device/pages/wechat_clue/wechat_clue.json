@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "获客线索",
+  "usingComponents": {
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "clue-card": "../../components/clue-card/clue-card"
+  }
+}

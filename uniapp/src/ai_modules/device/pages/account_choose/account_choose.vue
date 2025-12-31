@@ -153,7 +153,6 @@ const handleChooseAccount = (item: any) => {
 };
 
 const handleConfirmChoose = () => {
-    if (chooseAccount.value.length === 0) return;
     emit("confirm", {
         type: ListenerTypeEnum.CHOOSE_ACCOUNT,
         data: chooseAccount.value,

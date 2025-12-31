@@ -34,6 +34,7 @@ export const useAppStore = defineStore({
         getAiModelConfig: (state) => state.config.ai_model || {},
         getIsShowRobot: (state) => state.config.is_robot_show,
         getCommentFilterConfig: (state) => state.config.comment_screening || [],
+        getCommentContentConfig: (state) => state.config.touch_speech || [],
     },
     actions: {
         getImageUrl(url: string) {

@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "编辑线索词组",
+  "usingComponents": {
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "clue-edit": "../../components/keywords-edit/keywords-edit",
+    "clue-gen-pop": "../../components/clue-gen-pop/clue-gen-pop"
+  }
+}

@@ -1,0 +1,1 @@
+"use strict";const t=require("../common/vendor.js");exports.useCopy=function(){return{copy:e=>{try{t.index.setClipboardData({data:String(e),success(){t.index.showToast({title:"复制成功",icon:"success",duration:2e3})}})}catch(o){t.index.showToast({title:"复制失败",icon:"none",duration:2e3})}}}};

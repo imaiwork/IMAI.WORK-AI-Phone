@@ -214,7 +214,10 @@
         :active-tone="formData.voice_id"
         :show-original-tone="showOriginalTone"
         @confirm="handleChooseTone" />
-    <choose-model v-model="showChooseModel" @confirm="handleChooseModel" />
+    <choose-model
+        v-model="showChooseModel"
+        :filter="[DigitalHumanModelVersionEnum.SHANJIAN]"
+        @confirm="handleChooseModel" />
     <model-rule v-model="showModelRule" :model-version="formData.model_version" />
     <create-panel ref="createPanelRef" :formData="formData" @success="confirmCreate" @recharge="recharge" />
     <agreement :show-agreement="showAgreement" @agree="agreeCreate" @close="showAgreement = false" />

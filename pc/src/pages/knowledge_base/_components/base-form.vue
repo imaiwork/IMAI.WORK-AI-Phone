@@ -6,7 +6,8 @@
                     class="!h-11"
                     v-model="formData.name"
                     show-word-limit
-                    maxlength="20"
+                    :maxlength="KnTypeEnum.VECTOR == formData.type ? 20 : 12"
+                    clearable
                     placeholder="请输入知识库名称" />
             </ElFormItem>
             <ElFormItem label="知识库描述" prop="description">
@@ -112,7 +113,19 @@ const formData = computed({
 const formRef = shallowRef<InstanceType<typeof ElForm>>();
 
 const rules = {
-    name: [{ required: true, message: "请输入知识库名称", trigger: "blur" }],
+    name: [
+        { required: true, message: "请输入知识库名称", trigger: "blur" },
+        {
+            validator: (rule: any, value: string, callback: any) => {
+                if (KnTypeEnum.RAG == formData.value.type && value.length > 12) {
+                    callback(new Error("知识库名称长度不能超过12个字符"));
+                } else {
+                    callback();
+                }
+            },
+            trigger: "blur",
+        },
+    ],
 };
 
 const imageSize = 5;

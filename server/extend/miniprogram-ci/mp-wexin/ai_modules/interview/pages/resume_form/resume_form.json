@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "岗位详情",
+  "usingComponents": {
+    "data-select": "../../../../components/data-select/data-select"
+  }
+}

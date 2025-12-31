@@ -71,7 +71,11 @@
                             </div>
                         </template>
                     </ElTableColumn>
-
+                    <ElTableColumn label="任务类型" width="120">
+                        <template #default="{ row }">
+                            {{ row.auto_type == 0 ? "手动" : "24h任务" }}
+                        </template>
+                    </ElTableColumn>
                     <ElTableColumn label="发布类型" width="80">
                         <template #default="{ row }">
                             {{ row.media_type == 1 ? "视频" : "图片" }}
@@ -113,7 +117,14 @@
                                     @click="handleDetail(row)"
                                     >详情</ElButton
                                 >
-                                <ElButton type="danger" link size="small" @click="handleDelete(row.id)">删除</ElButton>
+                                <ElButton
+                                    type="danger"
+                                    link
+                                    size="small"
+                                    @click="handleDelete(row.id)"
+                                    v-if="row.auto_type == 0"
+                                    >删除</ElButton
+                                >
                             </div>
                         </template>
                     </ElTableColumn>

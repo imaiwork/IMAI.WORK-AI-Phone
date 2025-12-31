@@ -51,6 +51,11 @@
                             </div>
                         </template>
                     </ElTableColumn>
+                    <ElTableColumn label="任务类型" width="120">
+                        <template #default="{ row }">
+                            {{ row.auto_type == 0 ? "手动" : "24h任务" }}
+                        </template>
+                    </ElTableColumn>
                     <ElTableColumn label="线索词" min-width="200" show-overflow-tooltip>
                         <template #default="{ row }">
                             {{ row.keywords.join("；") }}
@@ -136,7 +141,14 @@
                                     @click="handleDetail(row)"
                                     >详情</ElButton
                                 >
-                                <ElButton type="danger" link size="small" @click="handleDelete(row.id)">删除</ElButton>
+                                <ElButton
+                                    type="danger"
+                                    link
+                                    size="small"
+                                    @click="handleDelete(row.id)"
+                                    v-if="row.auto_type == 0">
+                                    删除</ElButton
+                                >
                             </div>
                         </template>
                     </ElTableColumn>

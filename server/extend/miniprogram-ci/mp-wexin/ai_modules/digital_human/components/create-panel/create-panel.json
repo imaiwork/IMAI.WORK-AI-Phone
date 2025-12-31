@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-line": "../../../../uni_modules/vk-uview-ui/components/u-line/u-line",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup"
+  }
+}

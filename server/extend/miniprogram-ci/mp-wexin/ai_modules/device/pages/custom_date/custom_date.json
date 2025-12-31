@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "自定义日期",
+  "usingComponents": {
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "calendar": "../../components/calendar/calendar"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "ua-markdown": "../ua-markdown/ua-markdown",
+    "u-line": "../../uni_modules/vk-uview-ui/components/u-line/u-line"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "navigationBarTitleText": "素材混剪",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../../components/empty/empty",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
+    "choose-tone": "../../components/choose-tone/choose-tone",
+    "video-preview": "../../../../components/video-preview/video-preview",
+    "create-success-pop": "../../components/create-success-pop/create-success-pop",
+    "tokens-cost": "../../components/tokens-cost/tokens-cost"
+  }
+}

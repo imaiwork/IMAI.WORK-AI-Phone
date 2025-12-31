@@ -38,9 +38,7 @@
                                     <view class="text-xs text-white">正在生成中</view>
                                     <view class="text-[22rpx] text-white mt-2">几分钟即可生成形象</view>
                                 </view>
-                                <view
-                                    class="absolute top-0 left-0 w-full h-full bg-[#00000080]"
-                                    v-if="isChoose(item) && item.status == 2">
+                                <view class="absolute top-0 left-0 w-full h-full bg-[#00000080]" v-if="isChoose(item)">
                                     <view class="absolute top-2 right-2">
                                         <image
                                             src="/static/images/icons/success.svg"
@@ -106,7 +104,7 @@ const pagingRef = shallowRef();
 const dataLists = ref<any[]>([]);
 const chooseLists = ref<any[]>([]);
 
-const queryList = async (page_no: number, page_size: number) => {
+const queryList = async (page_no: number = 1, page_size: number = 10) => {
     try {
         const { lists } = await getPublicAnchorListV2({
             page_no,
@@ -143,6 +141,7 @@ const toggleSelect = () => {
     if (chooseLists.value.length == dataLists.value.length) {
         chooseLists.value = [];
     } else {
+        // 要过滤掉正在生成中的形象
         chooseLists.value = dataLists.value.slice(0, props.limit || dataLists.value.length);
     }
 };
@@ -175,6 +174,10 @@ watch(
         }
     }
 );
+
+defineExpose({
+    queryList,
+});
 </script>
 
 <style scoped></style>

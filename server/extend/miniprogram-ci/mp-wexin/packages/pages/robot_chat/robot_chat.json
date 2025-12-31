@@ -1,0 +1,14 @@
+{
+  "navigationBarTitleText": "",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "chat-scroll-view": "../../../components/chat-scroll-view/chat-scroll-view",
+    "dragon-button": "../../../components/dragon-button/dragon-button",
+    "recharge-popup": "../../../components/recharge-popup/recharge-popup",
+    "sidebar": "./components/sidebar"
+  }
+}

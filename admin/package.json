@@ -1,12 +1,12 @@
 {
     "name": "admin",
-    "version": "2.7.0",
+    "version": "2.7.1",
     "license": "MIT",
     "scripts": {
         "init": "node initialize.js",
         "dev": "vite",
         "preview": "vite preview --port 4173",
-        "build": "vite build",
+        "build": "vite build && node scripts/release.mjs",
         "build:test": "vite build --mode development",
         "type-check": "vue-tsc --noEmit",
         "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"

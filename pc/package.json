@@ -1,11 +1,11 @@
 {
     "name": "pc",
-    "version": "2.7.0",
+    "version": "2.7.1",
     "private": true,
     "license": "MIT",
     "scripts": {
         "init": "node initialize.js",
-        "build": "nuxt generate",
+        "build": "nuxt generate && node scripts/build.mjs",
         "dev": "nuxt dev",
         "dev:max": "cross-env NODE_OPTIONS=\"--max-old-space-size=10240\" nuxt dev",
         "test": "nuxt dev --dotenv .env.test",

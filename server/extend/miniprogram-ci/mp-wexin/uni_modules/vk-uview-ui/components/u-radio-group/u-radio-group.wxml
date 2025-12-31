@@ -1,0 +1,1 @@
+<view class="{{['u-radio-group', 'u-clearfix', 'data-v-07cb2670', a]}}"><slot></slot></view>

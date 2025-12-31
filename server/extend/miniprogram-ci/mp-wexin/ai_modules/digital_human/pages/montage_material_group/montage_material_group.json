@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "编辑图组",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "upload-progress": "../../../../components/upload-progress/upload-progress",
+    "upload-rule-pop": "../../components/upload-rule-pop/upload-rule-pop"
+  }
+}

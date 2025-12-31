@@ -65,6 +65,11 @@
                     </template>
                 </el-table-column>
                 <el-table-column label="任务名称" prop="name" min-width="180" show-overflow-tooltip />
+                <el-table-column label="任务类型" width="120">
+                    <template #default="{ row }">
+                        {{ row.auto_type == 0 ? "手动" : "24h任务" }}
+                    </template>
+                </el-table-column>
                 <el-table-column label="任务状态" min-width="120">
                     <template #default="{ row }">
                         <template v-if="row.status == 1 || row.status == 2">
@@ -99,7 +104,7 @@
                             </router-link>
                         </el-button>
                         <el-button
-                            v-if="row.status || 1 || row.status == 2 || row.status == 4"
+                            v-if="row.auto_type == 0 && (row.status == 1 || row.status == 2 || row.status == 4)"
                             v-perms="['ai_application.montage.publish_record/start:pause']"
                             type="primary"
                             link
@@ -107,6 +112,7 @@
                             {{ row.status == 2 || row.status == 1 ? "暂停" : "开始" }}
                         </el-button>
                         <el-button
+                            v-if="row.auto_type == 0"
                             v-perms="['ai_application.montage.publish_record/delete']"
                             type="danger"
                             link

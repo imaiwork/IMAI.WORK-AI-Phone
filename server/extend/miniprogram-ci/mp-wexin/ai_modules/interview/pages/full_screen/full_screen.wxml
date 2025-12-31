@@ -1,0 +1,1 @@
+<view class="w-full h-full bg-_rgba_0b0b0b0d5__" style="{{'padding-top:' + b}}" bindtap="{{c}}"><image src="{{a}}" class="w-full" mode="widthFix"></image></view>

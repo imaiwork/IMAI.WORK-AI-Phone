@@ -1,0 +1,1 @@
+"use strict";const t=require("../../../common/vendor.js").defineStore("material",{state:()=>({anchorList:[],videoList:[],imageList:[],marketingList:[],clueList:[]}),actions:{setList(t,e){this[t]=e},addToList(t,e){this[t].push(...e)},removeFromList(t,e){this[t].splice(e,1)},clearMaterial(){this.$reset()}}});exports.useMaterialStore=t;

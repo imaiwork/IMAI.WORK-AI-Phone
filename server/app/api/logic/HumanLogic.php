@@ -1065,7 +1065,7 @@ class HumanLogic extends ApiLogic
             TokenLogService::checkToken(self::$uid, 'human_voice_pro');
         }
         $name = $data['name'] ?? '';
-        $gender = $data['gender'] ?? '';
+        $gender = $data['gender'] ?? 'male';
         $voice_url = $data['url'] ?? '';
         $model_version = $data['model_version'] ?? '';
         if (empty($name) || !in_array($model_version, [1, 2, 4, 6, 7]) || !in_array($gender, ['male', 'female']) || empty($voice_url)) {

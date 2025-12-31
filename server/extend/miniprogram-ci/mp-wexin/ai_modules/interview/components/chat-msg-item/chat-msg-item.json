@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "ua-markdown": "../../../../components/ua-markdown/ua-markdown"
+  }
+}

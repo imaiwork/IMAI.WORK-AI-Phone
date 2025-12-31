@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "data-select": "../../../../components/data-select/data-select"
+  }
+}
