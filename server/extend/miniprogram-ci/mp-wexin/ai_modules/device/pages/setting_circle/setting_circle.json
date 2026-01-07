@@ -1,9 +1,0 @@
-{
-  "navigationBarTitleText": "朋友圈互动设置",
-  "usingComponents": {
-    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "u-radio": "../../../../uni_modules/vk-uview-ui/components/u-radio/u-radio",
-    "u-radio-group": "../../../../uni_modules/vk-uview-ui/components/u-radio-group/u-radio-group",
-    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input"
-  }
-}

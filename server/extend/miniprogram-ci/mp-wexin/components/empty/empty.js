@@ -1,1 +1,0 @@
-"use strict";const e=require("../../common/vendor.js"),t=e.defineComponent({__name:"empty",props:{text:{type:String,default:"暂无数据"},size:{type:Number,default:400}},setup:t=>(n,p)=>({a:t.size+"rpx",b:t.size+"rpx",c:e.t(t.text)})});wx.createComponent(t);

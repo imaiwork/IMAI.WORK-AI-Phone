@@ -1,1 +1,0 @@
-<view hover-stop-propagation style="{{a + ';' + b + ';' + c}}" bindtap="{{d}}" catchtouchmove="{{e}}" class="{{['u-mask', 'data-v-5bb6a44f', f && 'u-mask-zoom', g && 'u-mask-show']}}"><slot/></view>

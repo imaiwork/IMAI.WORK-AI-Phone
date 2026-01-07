@@ -1,7 +1,0 @@
-{
-  "navigationBarTitleText": "社媒平台发布配置",
-  "usingComponents": {
-    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "video-preview": "../../../../components/video-preview/video-preview"
-  }
-}

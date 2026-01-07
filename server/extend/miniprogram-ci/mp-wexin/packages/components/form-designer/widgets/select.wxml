@@ -1,1 +1,0 @@
-<view class="widget-select data-v-febcbc5b"><data-select wx:if="{{b}}" class="w-full select-box data-v-febcbc5b" u-i="febcbc5b-0" bind:__l="__l" bindupdateModelValue="{{a}}" u-p="{{b}}"></data-select></view>

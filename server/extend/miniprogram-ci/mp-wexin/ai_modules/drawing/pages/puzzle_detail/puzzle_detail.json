@@ -1,7 +1,0 @@
-{
-  "navigationBarTitleText": "拼图详情",
-  "disableScroll": true,
-  "usingComponents": {
-    "popup-bottom": "../../../../components/popup-bottom/popup-bottom"
-  }
-}

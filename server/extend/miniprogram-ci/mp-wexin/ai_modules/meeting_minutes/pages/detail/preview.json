@@ -1,6 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "u-read-more": "../../../../uni_modules/vk-uview-ui/components/u-read-more/u-read-more"
-  }
-}

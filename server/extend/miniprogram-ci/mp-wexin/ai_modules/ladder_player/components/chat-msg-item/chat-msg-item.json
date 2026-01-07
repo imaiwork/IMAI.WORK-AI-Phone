@@ -1,6 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "u-line": "../../../../uni_modules/vk-uview-ui/components/u-line/u-line"
-  }
-}

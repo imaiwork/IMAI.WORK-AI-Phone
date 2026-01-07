@@ -1,1 +1,0 @@
-<view><lechart wx:if="{{b}}" class="r" u-r="chartRef" u-i="3403fe4c-0" bind:__l="__l" u-p="{{b}}"></lechart></view>

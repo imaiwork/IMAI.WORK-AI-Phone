@@ -1,7 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "u-button": "../../../uni_modules/vk-uview-ui/components/u-button/u-button",
-    "agreement": "../../../components/agreement/agreement"
-  }
-}

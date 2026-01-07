@@ -1,8 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "empty": "../empty/empty",
-    "z-paging": "../../node-modules/z-paging/components/z-paging/z-paging",
-    "popup-bottom": "../popup-bottom/popup-bottom"
-  }
-}
