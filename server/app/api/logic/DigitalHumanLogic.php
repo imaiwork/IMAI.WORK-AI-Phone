@@ -184,28 +184,33 @@ class DigitalHumanLogic extends ApiLogic
         }
     }
 
-    public static function getDigitalHumanAnchorStatusCron(){
-        $lists = DigitalHumanAnchor::where('status','in',[0,1])->select();
-        if ($lists->isEmpty()){
+    public static function getDigitalHumanAnchorStatusCron()
+    {
+        $lists = DigitalHumanAnchor::where('status', 'in', [0, 1])->select();
+        if ($lists->isEmpty()) {
             return true;
         }
         $lists = $lists->toArray();
-        foreach ($lists as $item){
-            $task_ids = json_decode($item['task_ids'],true);
-            $shanjian = ShanjianAnchor::where('dh_id',$item['id'])->find();
-            $weiju = HumanAnchor::where('model_version',1)->where('dh_id',$item['id'])->find();
-            $chanjing = HumanAnchor::where('model_version',7)->where('dh_id',$item['id'])->find();
-            $task_ids['shanjian']['status'] = $shanjian['status'];
-            $task_ids['weiju']['task_id'] = $weiju['task_id'] ?? '';
-            $task_ids['weiju']['status'] = $weiju['status'];
+        foreach ($lists as $item) {
+            $task_ids = json_decode($item['task_ids'], true) ?? [];
+            if (empty($task_ids)) {
+                continue;
+            }
+            $shanjian                        = ShanjianAnchor::where('dh_id', $item['id'])->find();
+            $weiju                           = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->find();
+            $chanjing                        = HumanAnchor::where('model_version', 7)->where('dh_id', $item['id'])->find();
+            $task_ids['shanjian']['task_id'] = $shanjian['task_id'] ?? '';
+            $task_ids['shanjian']['status']  = $shanjian['status'] ?? 0;
+            $task_ids['weiju']['task_id']    = $weiju['task_id'] ?? '';
+            $task_ids['weiju']['status']     = $weiju['status'] ?? 0;
             $task_ids['chanjing']['task_id'] = $chanjing['task_id'] ?? '';
-            $task_ids['chanjing']['status'] = $chanjing['status'];
+            $task_ids['chanjing']['status']  = $chanjing['status'] ?? 0;
 
             $update['task_ids'] = json_encode($task_ids);
-            if ($task_ids['shanjian']['status'] == 6 && $weiju['status'] == 1 && $chanjing['status'] == 1){
+            if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 1) {
                 $update['status'] = 2;
             }
-            DigitalHumanAnchor::where('id',$item['id'])->update($update);
+            DigitalHumanAnchor::where('id', $item['id'])->update($update);
         }
         return true;
     }
