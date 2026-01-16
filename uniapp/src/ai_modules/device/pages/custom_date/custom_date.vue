@@ -1,6 +1,7 @@
 <template>
     <view>
         <Calendar
+            v-model="date"
             ref="calendarRef"
             multi-select
             :is-today="false"

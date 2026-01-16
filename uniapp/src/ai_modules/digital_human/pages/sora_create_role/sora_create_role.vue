@@ -13,24 +13,6 @@
         <view class="grow min-h-0 mt-[20rpx]">
             <scroll-view class="h-full" scroll-y>
                 <view class="px-4 pb-[100rpx]">
-                    <view v-if="false">
-                        <view class="text-[30rpx] font-bold"><text class="text-[#FF0000]">*</text>参考角色图片</view>
-                        <view class="bg-white rounded-[20rpx] px-[8rpx] mt-[20rpx]">
-                            <view class="grid grid-cols-2 gap-x-1 h-[100rpx] relative">
-                                <view
-                                    v-for="(item, index) in themeTypes"
-                                    :key="index"
-                                    class="theme-type-item"
-                                    :class="{ active: index == themeTypeIndex }"
-                                    @click="themeTypeIndex = index">
-                                    {{ item.label }}
-                                </view>
-                                <view
-                                    class="tab-slider"
-                                    :style="{ transform: `translateX(${themeTypeIndex * 100}%)` }"></view>
-                            </view>
-                        </view>
-                    </view>
                     <view class="mt-[50rpx]">
                         <view class="text-[30rpx] font-bold"><text class="text-[#FF0000]">*</text>角色名称</view>
                         <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4 flex items-center h-[100rpx]">
@@ -46,31 +28,72 @@
                     <view class="mt-[50rpx]">
                         <view class="flex items-center justify-between">
                             <view class="text-[30rpx] font-bold"
-                                ><text class="text-[#FF0000]">*</text>参考角色视频</view
-                            >
-                            <view
-                                v-if="formData.anchor_url"
-                                class="text-primary"
-                                @click="uploadAndProcessFiles('video')"
-                                >重新上传</view
-                            >
+                                ><text class="text-[#FF0000]">*</text>角色生成方式
+                            </view>
+                            <view v-if="isUploadSuccess" class="text-primary" @click="handleUpload()">重新上传</view>
+                        </view>
+                        <view class="bg-white rounded-[20rpx] px-[8rpx] mt-[20rpx]">
+                            <view class="grid grid-cols-2 gap-x-1 h-[130rpx] relative">
+                                <view
+                                    v-for="(item, index) in roleGenerationTypes"
+                                    :key="index"
+                                    class="theme-type-item"
+                                    :class="{ active: index == themeTypeIndex }"
+                                    @click="
+                                        themeTypeIndex = index;
+                                        formData.upload_type = item.value;
+                                    ">
+                                    <view>
+                                        {{ item.label }}
+                                    </view>
+                                    <view class="text-primary text-[22rpx] font-bold">
+                                        {{ item.desc }}
+                                    </view>
+                                </view>
+                                <view
+                                    class="tab-slider"
+                                    :style="{ transform: `translateX(${themeTypeIndex * 100}%)` }"></view>
+                            </view>
                         </view>
                         <view class="mt-[20rpx] bg-white rounded-[16rpx]">
-                            <view v-if="!formData.anchor_url" class="p-[30rpx]" @click="uploadAndProcessFiles('video')">
+                            <view v-if="!isUploadSuccess" class="p-[30rpx]" @click="handleUpload()">
                                 <view class="flex flex-col items-center justify-center py-4">
                                     <image
                                         src="@/ai_modules/digital_human/static/images/common/image_add.png"
                                         class="w-[60rpx] h-[60rpx]"></image>
-                                    <text class="text-[28rpx] font-bold mt-[12rpx]">上传视频</text>
+                                    <text class="text-[28rpx] font-bold mt-[12rpx]">{{
+                                        formData.upload_type === RoleGenerationType.VIDEO ? "上传视频" : "上传图片"
+                                    }}</text>
                                 </view>
-                                <view class="mt-4 px-[60rpx] text-[22rpx] flex flex-col gap-y-2 text-primary">
-                                    <view>· 视频不可出现真人或人物肖像</view>
-                                    <view>· 视频必须是有声视频，声音不可包含歌曲(带歌词演唱的歌词等) </view>
-                                    <view>· 支持 {{ accept.join("、") }}，最大{{ maxSize }}MB </view>
+                                <view class="mt-4 px-[60rpx]">
+                                    <view
+                                        v-if="formData.upload_type === RoleGenerationType.VIDEO"
+                                        class="text-primary flex flex-col gap-y-2 text-[22rpx]">
+                                        <view>· 视频不可出现真人或商业版权肖像</view>
+                                        <view>· 视频必须是有声视频，声音不可包含歌曲(带歌词，演唱的歌词等) </view>
+                                        <view>· 支持 {{ videoAccept.join("、") }}，最大{{ videoMaxSize }}MB </view>
+                                    </view>
+                                    <view
+                                        v-if="formData.upload_type === RoleGenerationType.IMAGE"
+                                        class="flex flex-col gap-y-2 text-[22rpx]">
+                                        <view class="text-primary"
+                                            >· 不可上传他人照片，如侵犯他人肖像权或商业版权，需您自行承担法律责任</view
+                                        >
+                                        <view>· 上传清晰的正面半身照，五官清晰，背景干净 </view>
+                                        <view>· 支持 {{ imageAccept.join("、") }}，最大{{ imageMaxSize }}MB </view>
+                                    </view>
                                 </view>
                             </view>
                             <view class="h-[400rpx] relative" v-else>
-                                <video :src="formData.anchor_url" class="w-full h-full rounded-[16rpx]"></video>
+                                <image
+                                    v-if="formData.upload_type === RoleGenerationType.IMAGE"
+                                    :src="formData.image_url"
+                                    class="w-full h-full rounded-[16rpx]"
+                                    mode="aspectFill"></image>
+                                <video
+                                    v-if="formData.upload_type === RoleGenerationType.VIDEO"
+                                    :src="formData.anchor_url"
+                                    class="w-full h-full rounded-[16rpx]"></video>
                             </view>
                         </view>
                         <!-- <view class="bg-white rounded-[20rpx] p-[30rpx]" v-if="themeTypeIndex === 1">
@@ -105,7 +128,7 @@
                             </view>
                         </view> -->
                     </view>
-                    <view class="mt-[50rpx]">
+                    <view class="mt-[50rpx]" v-if="formData.upload_type === RoleGenerationType.VIDEO">
                         <view class="flex items-center justify-between">
                             <view class="text-[30rpx] font-bold"><text class="text-[#FF0000]">*</text>抽取范围</view>
                         </view>
@@ -224,9 +247,9 @@ import { TokensSceneEnum } from "@/enums/appEnums";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
 import RangeSlider from "@/ai_modules/digital_human/components/range-slider/range-slider.vue";
 
-enum ThemeType {
-    LOCAL = "local",
-    AI = "ai",
+enum RoleGenerationType {
+    IMAGE = 1,
+    VIDEO = 2,
 }
 
 const userStore = useUserStore();
@@ -234,17 +257,27 @@ const { userTokens } = toRefs(userStore);
 
 // 获取消耗的算力
 const getToken = computed(() => {
-    const token = userStore.getTokenByScene(TokensSceneEnum.SORA_ROLE)?.score;
-    return parseFloat(token);
+    const getScore = (scene: TokensSceneEnum, key: string = "score") => {
+        return parseFloat(userStore.getTokenByScene(scene)?.[key] || "0");
+    };
+    const token =
+        formData.upload_type === RoleGenerationType.IMAGE
+            ? getScore(TokensSceneEnum.SORA_DRAW_AVATAR) +
+              getScore(TokensSceneEnum.SORA_ROLE) +
+              getScore(TokensSceneEnum.SORA_VIDEO)
+            : getScore(TokensSceneEnum.SORA_ROLE);
+    return parseFloat(token.toFixed(2));
 });
 
-const themeTypes = [
+const roleGenerationTypes = [
     {
-        label: "本地上传图片",
-        value: ThemeType.LOCAL,
+        label: "上传参考图片",
+        desc: "可生成真人形象",
+        value: RoleGenerationType.IMAGE,
     },
-    { label: "AI生成图片", value: ThemeType.AI },
+    { label: "上传参考视频", desc: "可生成动漫/动物形象", value: RoleGenerationType.VIDEO },
 ];
+
 const themeTypeIndex = ref(0);
 
 const formData = reactive({
@@ -253,15 +286,22 @@ const formData = reactive({
     anchor_url: "",
     start: 0,
     end: 2,
+    upload_type: RoleGenerationType.IMAGE,
+    image_url: "",
 });
 
-const startTime = ref(0);
-const endTime = ref(2);
 const videoDuration = ref(10);
 
-const accept = ["mp4", "mov"];
+const videoAccept = ["mp4", "mov"];
+const videoMaxSize = 200;
+const imageAccept = ["jpg", "jpeg", "png", "webp"];
+const imageMaxSize = 50;
 const maxSize = 200;
 const maxDescLength = 500;
+
+const isUploadSuccess = computed(() => {
+    return formData.upload_type === RoleGenerationType.VIDEO ? formData.anchor_url : formData.image_url;
+});
 
 const showChooseMaterial = ref(false);
 const rechargePopupRef = shallowRef();
@@ -333,15 +373,29 @@ const showRoleStylePopup = ref(false);
 const showCreateSuccess = ref(false);
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     count: 1,
-    videoAccept: accept,
-    videoSize: maxSize,
+    imageAccept: imageAccept,
+    imageSize: imageMaxSize,
+    videoAccept: videoAccept,
+    videoSize: videoMaxSize,
     videoDuration: [2, 600],
     onSuccess: (materials: any[]) => {
-        formData.anchor_url = materials[0].url;
         formData.pic = materials[0].pic;
-        videoDuration.value = Math.floor(materials[0].duration);
+
+        if (formData.upload_type === RoleGenerationType.VIDEO) {
+            formData.anchor_url = materials[0].url;
+            videoDuration.value = Math.floor(materials[0].duration);
+        }
+        if (formData.upload_type === RoleGenerationType.IMAGE) {
+            formData.image_url = materials[0].url;
+            formData.end = 2;
+            formData.start = 0;
+        }
     },
 });
+
+const handleUpload = () => {
+    uploadAndProcessFiles(formData.upload_type === RoleGenerationType.VIDEO ? "video" : "image");
+};
 
 const handleRangeChange = (e: any) => {
     formData.start = e.start;
@@ -416,13 +470,12 @@ const handleCreateRole = async () => {
         uni.$u.toast("请输入角色名称");
         return;
     }
-    if (!formData.anchor_url) {
-        uni.$u.toast("请上传角色视频");
+    if (formData.upload_type === RoleGenerationType.IMAGE && !formData.image_url) {
+        uni.$u.toast("请上传角色图片");
         return;
     }
-
-    if (endTime.value - startTime.value >= 3) {
-        uni.$u.toast("范围差值需在1-3秒之间");
+    if (formData.upload_type === RoleGenerationType.VIDEO && !formData.anchor_url) {
+        uni.$u.toast("请上传角色视频");
         return;
     }
 
@@ -435,8 +488,10 @@ const handleCreateRole = async () => {
             name: formData.name,
             pic: formData.pic,
             anchor_url: formData.anchor_url,
-            start: startTime.value,
-            end: endTime.value,
+            start: formData.start,
+            end: formData.end,
+            upload_type: formData.upload_type,
+            image_url: formData.image_url,
         });
         uni.hideLoading();
         showCreateSuccess.value = true;
@@ -464,7 +519,7 @@ picker-view {
     height: 100%;
 }
 .theme-type-item {
-    @apply flex items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500;
+    @apply flex flex-col items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500;
     &.active {
         @apply text-black font-bold relative;
     }

@@ -244,6 +244,26 @@ class AccountLogEnum
     const TOKENS_DEC_SORA_VIDEO = 10106;
     const TOKENS_DEC_SORA_PRO_VIDEO = 10107;
     const TOKENS_DEC_HUMAN_AVATAR_SORA = 10108;
+    const TOKENS_DEC_SORA_DRAW_AVATAR = 10109;
+
+    // 自动化功能
+    // 社媒平台
+    const TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED = 10301;  // 自动化社媒平台发布
+    const TOKENS_DEC_AUTOMATION_SHUT_OFF_COMMENTS = 10302;      // 自动化截流评论
+    const TOKENS_DEC_AUTOMATION_SHUT_OFF_OBTAIN = 10303;        // 自动化截流私信
+    const TOKENS_DEC_AUTOMATION_SHUT_OFF_PRIVATE_LETTER = 10304; // 自动化截流触达
+    const TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN = 10309;    // 自动化社媒平台私信接管
+    const TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_NURSING = 10310;   // 自动化社媒平台自动养号
+    
+    // 朋友圈
+    const TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS = 10305;    // 自动化朋友圈评论
+    const TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_RELEASED = 10306;   // 自动化朋友圈发布
+    const TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_PRAISE = 10307;     // 自动化朋友圈点赞
+    const TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND = 10308;         // 自动化自动加微
+    
+    // OCR功能
+    const TOKENS_DEC_AUTOMATION_OCR_LOCAL = 10311;  // 自动化获客视频号OCR
+    const TOKENS_DEC_AUTOMATION_OCR_IMG = 10312;   // 自动化获客本地OCR
 
 
     const TOKENS_DEC_NEWS_MIXCUT_TITLE = 10200;
@@ -349,6 +369,25 @@ class AccountLogEnum
         self::TOKENS_DEC_SORA_PRO_VIDEO,
         self::TOKENS_DEC_SORA_COPYWRITING,
         self::TOKENS_DEC_HUMAN_AVATAR_SORA,
+        self::TOKENS_DEC_SORA_DRAW_AVATAR,
+
+        // 自动化功能
+        self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED,
+        self::TOKENS_DEC_AUTOMATION_SHUT_OFF_COMMENTS,
+        self::TOKENS_DEC_AUTOMATION_SHUT_OFF_OBTAIN,
+        self::TOKENS_DEC_AUTOMATION_SHUT_OFF_PRIVATE_LETTER,
+        self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN,
+        self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_NURSING,
+        self::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS,
+        self::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_RELEASED,
+        self::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_PRAISE,
+        self::TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND,
+        self::TOKENS_DEC_AUTOMATION_OCR_LOCAL,
+        self::TOKENS_DEC_AUTOMATION_OCR_IMG,
+
+
+        
+       
     ];
 
 
@@ -525,6 +564,21 @@ class AccountLogEnum
             self::TOKENS_DEC_SORA_PRO_VIDEO => '一句话生成视频(pro)减少算力',
             self::TOKENS_DEC_SORA_COPYWRITING => '一句话生成视频AI优化文案减少算力',
             self::TOKENS_DEC_HUMAN_AVATAR_SORA => '一句话生成视频角色创建减少算力',
+            self::TOKENS_DEC_SORA_DRAW_AVATAR => '一句话生成视频真人角色转绘减少算力',
+
+            // 自动化功能描述
+            self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED => '自动化社媒平台发布减少算力',
+            self::TOKENS_DEC_AUTOMATION_SHUT_OFF_COMMENTS => '自动化截流评论减少算力',
+            self::TOKENS_DEC_AUTOMATION_SHUT_OFF_OBTAIN => '自动化截流私信减少算力',
+            self::TOKENS_DEC_AUTOMATION_SHUT_OFF_PRIVATE_LETTER => '自动化截流触达减少算力',
+            self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN => '自动化社媒平台私信接管减少算力',
+            self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_NURSING => '自动化社媒平台自动养号减少算力',
+            self::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS => '自动化朋友圈评论减少算力',
+            self::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_RELEASED => '自动化朋友圈发布减少算力',
+            self::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_PRAISE => '自动化朋友圈点赞减少算力',
+            self::TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND => '自动化自动加微减少算力',
+            self::TOKENS_DEC_AUTOMATION_OCR_LOCAL => '自动化获客视频号OCR减少算力',
+            self::TOKENS_DEC_AUTOMATION_OCR_IMG => '自动化获客本地OCR减少算力',
         ];
         if ($flag) {
             return $desc;

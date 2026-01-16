@@ -1,163 +1,190 @@
 <template>
-    <div class="h-full flex flex-col py-6">
+    <div class="h-full flex flex-col bg-white">
         <div class="grow min-h-0">
             <ElScrollbar>
-                <div class="px-[30px] flex flex-col gap-4">
-                    <!-- 多条信息回复策略 -->
-                    <div class="flex flex-col">
-                        <div>短时间内多条信息回复策略</div>
-                        <div class="mt-2">
-                            <ElRadioGroup v-model="formData.multiple_type">
-                                <ElRadio :value="0">逐条回复</ElRadio>
-                                <ElRadio :value="1">
-                                    <ElTooltip content="当用户在两分钟以外，没有继续发送消息，则将多条信息合并回复">
-                                        <div class="flex items-center gap-2">
-                                            <span>合并回复</span>
-                                            <Icon name="el-icon-WarningFilled" color="#9E9E9E" />
-                                        </div>
-                                    </ElTooltip>
+                <div class="px-[30px] py-[24px] flex flex-col gap-[20px]">
+                    <div class="strategy-card">
+                        <div class="card-header">
+                            <span class="title">多条信息回复策略</span>
+                            <span class="desc">设置短时间内连续收到多条消息的处理方式</span>
+                        </div>
+                        <div class="mt-[16px]">
+                            <ElRadioGroup v-model="formData.multiple_type" class="custom-radio-group">
+                                <ElRadio :value="0" border>逐条回复</ElRadio>
+                                <ElRadio :value="1" border>
+                                    <div class="flex items-center gap-1">
+                                        <span>合并回复</span>
+                                        <ElTooltip content="2分钟内未继续发送则合并回复">
+                                            <div class="text-gray-400 leading-[0]">
+                                                <Icon name="el-icon-QuestionFilled" :size="14" />
+                                            </div>
+                                        </ElTooltip>
+                                    </div>
                                 </ElRadio>
-                                <ElRadio :value="2">
-                                    <ElTooltip content="当用户在两分钟以外，没有继续发送消息，只回复最后一条信息">
-                                        <div class="flex items-center gap-2">
-                                            <span> 只回复最后一条 </span>
-                                            <Icon name="el-icon-WarningFilled" color="#9E9E9E" />
-                                        </div>
-                                    </ElTooltip>
+                                <ElRadio :value="2" border>
+                                    <div class="flex items-center gap-1">
+                                        <span>仅回复最后一条</span>
+                                        <ElTooltip content="2分钟内未继续发送则仅回复最后一条">
+                                            <div class="text-gray-400 leading-[0]">
+                                                <Icon name="el-icon-QuestionFilled" :size="14" />
+                                            </div>
+                                        </ElTooltip>
+                                    </div>
                                 </ElRadio>
                             </ElRadioGroup>
                         </div>
                     </div>
-                    <!-- 语音消息回复策略 -->
-                    <div class="flex flex-col">
-                        <div>语音消息回复策略（目前只支持微信）</div>
-                        <div class="mt-2">
+
+                    <div class="grid grid-cols-2 gap-[20px]">
+                        <div class="strategy-card-mini">
+                            <div class="flex flex-col">
+                                <span class="font-[900] text-tx-primary text-[14px]">语音回复 (WeChat)</span>
+                                <span class="text-[12px] text-tx-secondary mt-[4px]">支持将语音转文字后回复</span>
+                            </div>
                             <ElSwitch v-model="formData.voice_enable" :active-value="1" :inactive-value="0" />
                         </div>
-                    </div>
-                    <!-- 图片固定回复策略 -->
-                    <div class="flex flex-col">
-                        <div>智能体被调用时，接收到图片进行固定回复</div>
-                        <div class="mt-2">
-                            <ElSwitch v-model="formData.image_enable" :active-value="1" :inactive-value="0" />
-                        </div>
-                        <div class="mt-2" v-if="formData.image_enable == 1">
-                            <ElInput
-                                v-model="formData.image_reply"
-                                type="textarea"
-                                placeholder="点击输入您要回复的内容"
-                                resize="none"
-                                :rows="4" />
-                        </div>
-                    </div>
-                    <!-- 停止回复策略 -->
-                    <div class="flex flex-col">
-                        <div class="">智能体被调用时，接收到某些信息后停止对该条信息进行回复</div>
-                        <div class="mt-2">
-                            <ElSwitch v-model="formData.stop_enable" :active-value="1" :inactive-value="0" />
-                        </div>
-                        <div class="mt-2" v-if="formData.stop_enable == 1">
-                            <ElInput
-                                v-model="formData.stop_keywords"
-                                type="textarea"
-                                placeholder="点击输入您要检测的词语"
-                                resize="none"
-                                :rows="4" />
-                        </div>
-                    </div>
-                    <div class="flex flex-col">
-                        <div>
-                            <div>分段回复</div>
-                        </div>
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="text-xs">
-                                用户在聊天界面看到的 AI 回复 不是一次性的大段话，而是按段落逐条展示
+                        <div class="strategy-card-mini">
+                            <div class="flex flex-col">
+                                <span class="font-[900] text-tx-primary text-[14px]">分段展示回复</span>
+                                <span class="text-[12px] text-tx-secondary mt-[4px]">按段落逐条展示，模拟真人输入</span>
                             </div>
                             <ElSwitch v-model="formData.paragraph_enable" :active-value="1" :inactive-value="0" />
                         </div>
                     </div>
-                    <div class="flex flex-col">
-                        <div>接管时间(AI回复)</div>
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="text-xs text-error">
-                                提醒：用户可以设置 AI
-                                在指定的时间段内接管对话，超出接管时间的消息，则会自动发送用户预先设定的固定回复。<span
-                                    class="font-bold"
-                                    >（一小时内仅剩生效一次）</span
-                                >
+
+                    <div class="strategy-card" :class="{ 'is-active': formData.image_enable == 1 }">
+                        <div class="flex items-center justify-between mb-[12px]">
+                            <div class="flex flex-col">
+                                <span class="title">图片回复策略</span>
+                                <span class="desc">接收到图片时发送的固定引导或说明</span>
+                            </div>
+                            <ElSwitch v-model="formData.image_enable" :active-value="1" :inactive-value="0" />
+                        </div>
+                        <div class="mt-[12px] transition-all" v-if="formData.image_enable == 1">
+                            <ElInput
+                                v-model="formData.image_reply"
+                                type="textarea"
+                                placeholder="请输入图片场景下的自动回复内容..."
+                                resize="none"
+                                :rows="3"
+                                class="custom-textarea" />
+                        </div>
+                    </div>
+
+                    <div class="strategy-card" :class="{ 'is-active': formData.stop_enable == 1 }">
+                        <div class="flex items-center justify-between mb-[12px]">
+                            <div class="flex flex-col">
+                                <span class="title">敏感词停止策略</span>
+                                <span class="desc">命中特定关键词时停止回复该条信息</span>
+                            </div>
+                            <ElSwitch v-model="formData.stop_enable" :active-value="1" :inactive-value="0" />
+                        </div>
+                        <div class="mt-[12px]" v-if="formData.stop_enable == 1">
+                            <ElInput
+                                v-model="formData.stop_keywords"
+                                type="textarea"
+                                placeholder="输入停用词，用英文分号 (;) 分隔"
+                                resize="none"
+                                :rows="3"
+                                class="custom-textarea" />
+                        </div>
+                    </div>
+
+                    <div class="strategy-card" :class="{ 'is-active': formData.working_enable == 1 }">
+                        <div class="flex items-center justify-between mb-[16px]">
+                            <div class="flex flex-col">
+                                <span class="title">AI 自动接管时间段</span>
+                                <ElTooltip
+                                    popper-class="!w-[300px]"
+                                    content="提醒：用户可以设置 AI 在指定的时间段内接管对话，超出接管时间的消息，则会自动发送用户预先设定的固定回复。">
+                                    <div class="flex items-center gap-[6px] mt-[4px]">
+                                        <span class="desc text-error font-bold">一小时内仅生效一次</span>
+                                        <span class="text-error opacity-70 cursor-pointer leading-[0]">
+                                            <Icon name="el-icon-InfoFilled" :size="14" />
+                                        </span>
+                                    </div>
+                                </ElTooltip>
                             </div>
                             <ElSwitch v-model="formData.working_enable" :active-value="1" :inactive-value="0" />
                         </div>
-                        <div class="mt-2" v-if="formData.working_enable == 1">
-                            <ElCheckboxGroup v-model="weekList">
-                                <ElCheckbox :value="1">周一</ElCheckbox>
-                                <ElCheckbox :value="2">周二</ElCheckbox>
-                                <ElCheckbox :value="3">周三</ElCheckbox>
-                                <ElCheckbox :value="4">周四</ElCheckbox>
-                                <ElCheckbox :value="5">周五</ElCheckbox>
-                                <ElCheckbox :value="6">周六</ElCheckbox>
-                                <ElCheckbox :value="7">周日</ElCheckbox>
-                            </ElCheckboxGroup>
-                            <div class="flex flex-wrap items-center gap-3 mt-3">
-                                <div v-for="(item, index) in workingTime" :key="index">
-                                    <div
-                                        class="time-select-wrapper"
-                                        :class="{
-                                            '!border-error': workTimeErrorIndex.includes(index),
-                                        }">
-                                        <ElTimeSelect
-                                            v-model="item.start_time"
-                                            class="!w-[80px]"
-                                            prefix-icon=""
-                                            start="00:00"
-                                            step="00:15"
-                                            end="23:59"
-                                            :max-time="item.end_time" />
-                                        <div class="">至</div>
-                                        <ElTimeSelect
-                                            v-model="item.end_time"
-                                            class="!w-[80px]"
-                                            prefix-icon=""
-                                            start="00:00"
-                                            step="00:15"
-                                            end="23:59"
-                                            :min-time="item.start_time" />
+
+                        <div
+                            v-if="formData.working_enable == 1"
+                            class="space-y-[20px] pt-[12px] border-t border-br-extra-light">
+                            <div>
+                                <div class="text-[13px] font-bold text-tx-primary mb-[10px]">生效日期</div>
+                                <ElCheckboxGroup v-model="weekList" class="custom-checkbox-group">
+                                    <ElCheckbox v-for="i in 7" :key="i" :value="i" border class="!mr-0">
+                                        {{ ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][i - 1] }}
+                                    </ElCheckbox>
+                                </ElCheckboxGroup>
+                            </div>
+
+                            <div>
+                                <div class="flex items-center justify-between mb-[10px]">
+                                    <span class="text-[13px] font-bold text-tx-primary">生效时间段</span>
+                                    <ElButton type="primary" link @click="addWorkingTime" class="font-bold">
+                                        <Icon name="el-icon-Plus" />
+                                        <span class="ml-[2px]">新增时段</span>
+                                    </ElButton>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-3 mt-3">
+                                    <div v-for="(item, index) in workingTime" :key="index">
                                         <div
-                                            class="ml-2 w-4 h-4 flex-shrink-0 bg-app-bg-1 rounded-full flex items-center justify-center cursor-pointer"
-                                            @click="deleteWorkingTime(index)">
-                                            <Icon name="el-icon-Close" color="#ffffff" :size="10"></Icon>
+                                            class="time-select-wrapper"
+                                            :class="{
+                                                '!border-error': workTimeErrorIndex.includes(index),
+                                            }">
+                                            <ElTimeSelect
+                                                v-model="item.start_time"
+                                                class="!w-[80px]"
+                                                prefix-icon=""
+                                                start="00:00"
+                                                step="00:15"
+                                                end="23:59"
+                                                :max-time="item.end_time" />
+                                            <div class="">至</div>
+                                            <ElTimeSelect
+                                                v-model="item.end_time"
+                                                class="!w-[80px]"
+                                                prefix-icon=""
+                                                start="00:00"
+                                                step="00:15"
+                                                end="23:59"
+                                                :min-time="item.start_time" />
+                                            <div
+                                                class="ml-2 w-4 h-4 flex-shrink-0 bg-app-bg-1 rounded-full flex items-center justify-center cursor-pointer"
+                                                @click="deleteWorkingTime(index)">
+                                                <Icon name="el-icon-Close" color="#ffffff" :size="10"></Icon>
+                                            </div>
                                         </div>
                                     </div>
+                                    <ElButton type="primary" size="small" @click="addWorkingTime">新增时间段</ElButton>
                                 </div>
-                                <ElButton type="primary" size="small" @click="addWorkingTime">新增时间段</ElButton>
                             </div>
-                            <div class="mt-3">
-                                <div class="mb-3">固定回复内容</div>
+
+                            <div>
+                                <div class="text-[13px] font-bold text-tx-primary mb-[10px]">接管时间外的自动回复</div>
                                 <ElInput
                                     v-model="formData.non_working_reply"
                                     type="textarea"
-                                    placeholder="请输入在接管时间外的自动回复内容"
-                                    resize="none"
-                                    :rows="5" />
+                                    placeholder="抱歉，当前不在 AI 接管时间，请留下您的联系方式..."
+                                    :rows="4"
+                                    class="custom-textarea" />
                             </div>
                         </div>
                     </div>
                 </div>
             </ElScrollbar>
         </div>
-        <!-- 保存按钮 -->
-        <div class="flex items-center justify-center mt-4">
-            <ElButton
-                type="primary"
-                class="w-[318px] !rounded-full !h-[50px]"
-                :loading="isLockSubmit"
-                @click="lockSubmit">
-                保存
+
+        <div class="p-[20px] border-t border-br flex justify-center bg-white shrink-0">
+            <ElButton type="primary" class="save-btn" :loading="isLockSubmit" @click="lockSubmit">
+                保存策略配置
             </ElButton>
         </div>
     </div>
 </template>
-
 <script setup lang="ts">
 import { saveReplyStrategy, getReplyStrategy } from "@/api/agent";
 import dayjs from "dayjs";
@@ -359,11 +386,79 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+/* 卡片基础样式 */
+.strategy-card {
+    @apply p-[20px] bg-white border border-br rounded-lg transition-all;
+
+    .card-header {
+        @apply flex flex-col;
+        .title {
+            @apply text-[15px] font-[900] text-tx-primary;
+        }
+        .desc {
+            @apply text-[12px] text-tx-secondary mt-[2px];
+        }
+    }
+
+    &.is-active {
+        @apply border-primary-light-8 shadow-[0_8px_24px_-10px_rgba(0,101,251,0.1)];
+    }
+}
+
+.strategy-card-mini {
+    @apply flex items-center justify-between p-[16px] bg-gray-50 border border-[transparent] rounded-lg;
+}
+
+/* 时间段选择框 */
+.time-range-box {
+    @apply flex items-center gap-[8px] px-[12px] py-[6px] bg-white border border-br rounded-[10px] relative transition-all;
+
+    &:hover {
+        @apply border-primary-light-5;
+    }
+    &.is-error {
+        @apply border-error bg-red-50;
+    }
+
+    .close-btn {
+        @apply w-[18px] h-[18px] flex items-center justify-center rounded-full bg-gray-100 text-gray-400 cursor-pointer hover:bg-error hover:text-white transition-all ml-[4px];
+        font-size: 10px;
+    }
+}
+
+:deep(.custom-radio-group) {
+    @apply flex gap-[12px];
+    .el-radio {
+        @apply mr-0 flex-1 h-[44px] rounded-[10px] bg-gray-50 border-[transparent] transition-all;
+        &.is-bordered.is-checked {
+            @apply bg-blue-50 border-primary-light-7;
+        }
+    }
+}
+
+:deep(.custom-checkbox-group) {
+    @apply grid grid-cols-7 gap-[8px];
+    .el-checkbox {
+        @apply mr-0 h-[40px] flex items-center justify-center rounded-[8px] bg-gray-50 border-[transparent] transition-all;
+        &.is-bordered.is-checked {
+            @apply bg-blue-50 border-primary-light-7;
+        }
+        .el-checkbox__label {
+            @apply pl-0 text-[12px] font-bold;
+        }
+        .el-checkbox__input {
+            @apply hidden;
+        }
+    }
+}
 .time-select-wrapper {
     @apply flex items-center gap-x-2  rounded-md px-2 border border-[var(--el-border-color)];
     :deep(.el-select .el-select__wrapper) {
         padding: 0;
         box-shadow: none;
     }
+}
+.save-btn {
+    @apply w-[360px] !h-[48px] !rounded-xl font-[900] shadow-[0_10px_20px_-5px_rgba(0,101,251,0.2)];
 }
 </style>

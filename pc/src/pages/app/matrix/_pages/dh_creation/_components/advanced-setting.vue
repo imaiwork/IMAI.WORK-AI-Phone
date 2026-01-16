@@ -1,105 +1,118 @@
 <template>
-    <ElDrawer v-model="show" body-class="bg-app-bg-2 !p-0" size="450px" :with-header="false">
-        <div class="h-full flex flex-col">
-            <div class="absolute w-6 h-6 top-6 right-6" @click="close">
-                <close-btn :theme="ThemeEnum.DARK" />
-            </div>
-            <div class="flex-shrink-0 h-[80px] flex items-center px-4 text-white text-lg font-bold">高级设置</div>
-            <div class="mx-4 border-b border-app-border-1 pb-4">
-                <div class="flex justify-between items-center">
-                    <div class="text-xs text-white">AI智能剪辑</div>
-                    <ElSwitch
-                        v-model="formData.automatic_clip"
-                        style="--el-switch-off-color: #333333"
-                        :active-value="1"
-                        :inactive-value="0" />
-                </div>
-                <template v-if="formData.automatic_clip == 1">
-                    <div class="mt-3">
-                        <div class="text-xs text-white mb-3">剪辑风格选择：</div>
-                        <div>
-                            <ElSelect
-                                v-model="clipStyle"
-                                class="!h-11"
-                                popper-class="dark-select-popper"
-                                multiple
-                                collapse-tags
-                                collapse-tags-tooltip
-                                placeholder="请选择剪辑风格"
-                                :show-arrow="false"
-                                @change="handleChangeClipStyle">
-                                <ElOption v-for="(label, key) in ClipStyleMap" :key="key" :label="label" :value="key">
-                                </ElOption>
-                            </ElSelect>
-                        </div>
-                    </div>
-                    <div class="mt-3" v-if="false">
-                        <div class="text-xs text-white mb-3">背景音乐上传：</div>
-                        <ElPopover
-                            width="264"
-                            popper-class="!rounded-xl !bg-app-bg-2 !border-app-border-2 !p-2 choose-type-popover"
-                            :show-arrow="false">
-                            <template #reference>
-                                <div
-                                    class="w-full h-11 rounded-md shadow-[0_0_0_1px_var(--app-border-color-1)] flex items-center justify-center gap-x-2 text-white hover:bg-[#ffffff0d] cursor-pointer">
-                                    <Icon name="local-icon-upload3"></Icon>
-                                    <div class="text-xs">添加音乐</div>
-                                </div>
-                            </template>
-                            <div class="flex flex-col gap-y-2">
-                                <div class="type-menu-item" @click="handleSelectAudio">
-                                    <span class="flex items-center justify-center rounded p-1 bg-[#ffffff0d]">
-                                        <Icon name="local-icon-import" color="#ffffff"></Icon>
-                                    </span>
-                                    <span class="text-[#ffffffcc]"> 从素材库选择 </span>
-                                </div>
-                                <upload
-                                    class="w-full"
-                                    type="audio"
-                                    show-progress
-                                    :show-file-list="false"
-                                    :limit="99 - formData.music.length"
-                                    @success="getUploadBgMusic">
-                                    <div class="type-menu-item">
-                                        <span class="flex items-center justify-center rounded p-1 bg-[#ffffff0d]">
-                                            <Icon name="local-icon-upload" color="#ffffff"></Icon>
-                                        </span>
-                                        <span class="text-[#ffffffcc]"> 从本地上传</span>
-                                    </div>
-                                </upload>
-                            </div>
-                        </ElPopover>
-                    </div>
-                </template>
-            </div>
-            <div class="grow min-h-0 pb-[100px]" v-if="formData.automatic_clip">
-                <ElScrollbar>
-                    <div class="flex flex-col gap-y-2 px-4">
-                        <div
-                            v-for="(item, index) in formData.music"
-                            :key="index"
-                            class="rounded-md h-11 px-3 border border-app-border-1 bg-app-bg-2 flex items-center justify-between gap-x-2 cursor-pointer hover:bg-[#ffffff0d]">
-                            <div class="flex-1 flex items-center gap-x-2">
-                                <div class="w-5 h-5 flex items-center justify-center rounded bg-[#ffffff0d]">
-                                    <Icon name="local-icon-music" :size="14" color="#ffffff"></Icon>
-                                </div>
-                                <div class="text-white text-base line-clamp-1">
-                                    {{ item.name }}
-                                </div>
-                            </div>
-                            <div class="w-[1px] h-[12px] bg-[#ffffff1a]"></div>
-                            <div>
-                                <div class="w-4 h-4" @click="handleDeleteMusic(index)">
-                                    <close-btn :icon-size="10"></close-btn>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </ElScrollbar>
-            </div>
+    <ElDrawer v-model="show" body-class="!p-0" size="480px" :with-header="false" class="advanced-setting-drawer">
+        <div class="h-full flex flex-col bg-white overflow-hidden">
             <div
-                class="absolute bottom-0 left-0 right-0 h-[80px] flex items-center px-4 shadow-[0_-1px_0_0_var(--app-border-color-1)] bg-app-bg-2">
-                <ElButton type="primary" class="w-full !h-[50px] !rounded-full" @click="handleConfirm">确定</ElButton>
+                class="flex items-center justify-between h-[72px] px-6 border-b border-[#F1F5F9] bg-white flex-shrink-0">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary">
+                        <Icon name="el-icon-Operation" :size="20"></Icon>
+                    </div>
+                    <div>
+                        <div class="text-[18px] text-[#1E293B] font-black tracking-tight">高级设置</div>
+                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                            Advanced Configurations
+                        </div>
+                    </div>
+                </div>
+                <div class="w-8 h-8" @click="close">
+                    <close-btn :icon-size="10" />
+                </div>
+            </div>
+
+            <div class="grow overflow-y-auto px-6 py-6 custom-scrollbar">
+                <div class="p-5 rounded-[24px] bg-[#F8FAFC] border border-[#F1F5F9]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex flex-col">
+                            <span class="text-[14px] font-black text-[#1E293B]">AI 智能剪辑</span>
+                            <span class="text-[11px] text-[#94A3B8] font-medium mt-0.5"
+                                >自动为生成的视频匹配转场与特效</span
+                            >
+                        </div>
+                        <ElSwitch
+                            v-model="formData.automatic_clip"
+                            active-color="#0065fb"
+                            inactive-color="#E2E8F0"
+                            :active-value="1"
+                            :inactive-value="0" />
+                    </div>
+
+                    <Transition name="fade-slide" v-if="false">
+                        <div v-if="formData.automatic_clip == 1" class="mt-6 pt-6 border-t border-br/50">
+                            <div class="mb-6">
+                                <label class="block text-[12px] font-black text-[#64748B] uppercase mb-3 ml-1"
+                                    >剪辑风格选择</label
+                                >
+                                <ElSelect
+                                    v-model="clipStyle"
+                                    class="w-full custom-select-pill"
+                                    multiple
+                                    collapse-tags
+                                    collapse-tags-tooltip
+                                    :show-arrow="false"
+                                    placeholder="请选择剪辑风格"
+                                    @change="handleChangeClipStyle">
+                                    <ElOption
+                                        v-for="(label, key) in ClipStyleMap"
+                                        :key="key"
+                                        :label="label"
+                                        :value="key">
+                                    </ElOption>
+                                </ElSelect>
+                            </div>
+
+                            <div>
+                                <label class="block text-[12px] font-black text-[#64748B] uppercase mb-3 ml-1"
+                                    >背景音乐库</label
+                                >
+
+                                <div class="flex flex-col gap-2 mb-4" v-if="formData.music.length > 0">
+                                    <div
+                                        v-for="(item, index) in formData.music"
+                                        :key="index"
+                                        class="flex items-center justify-between p-3 bg-white border border-br rounded-xl hover: transition-all group">
+                                        <div class="flex items-center gap-3 overflow-hidden">
+                                            <div
+                                                class="w-7 h-7 flex items-center justify-center rounded-lg bg-[#F1F5F9] text-[#64748B]">
+                                                <Icon name="el-icon-Headset" :size="14"></Icon>
+                                            </div>
+                                            <span class="text-[13px] font-bold text-[#475569] truncate">{{
+                                                item.name
+                                            }}</span>
+                                        </div>
+                                        <div class="w-6 h-6" @click="handleDeleteMusic(index)">
+                                            <close-btn :icon-size="10" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <upload class="w-full" type="audio" @success="getUploadBgMusic">
+                                        <div
+                                            class="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-white border-2 border-dashed border-br text-[#64748B] hover:border-[#0065fb] hover:text-primary transition-all cursor-pointer">
+                                            <Icon name="el-icon-Upload" :size="16"></Icon>
+                                            <span class="text-[13px] font-bold">本地上传</span>
+                                        </div>
+                                    </upload>
+                                    <div
+                                        class="flex items-center justify-center gap-2 h-11 rounded-xl bg-[#0065fb]/10 text-primary border border-transparent hover:bg-[#0065fb]/10 transition-all cursor-pointer"
+                                        @click="handleSelectAudio">
+                                        <Icon name="el-icon-FolderOpened" :size="16"></Icon>
+                                        <span class="text-[13px] font-bold">音乐库选择</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Transition>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-[#F1F5F9] bg-white flex-shrink-0">
+                <ElButton
+                    type="primary"
+                    class="!w-full !h-[52px] !rounded-full !text-[15px] !font-black !shadow-xl !shadow-[#0065fb]/20 active:scale-95 transition-all"
+                    @click="handleConfirm">
+                    保存高级配置
+                </ElButton>
             </div>
         </div>
     </ElDrawer>
@@ -114,7 +127,6 @@
 <script setup lang="ts">
 import AudioMaterial from "@/pages/app/_components/choose-audio.vue";
 import { ClipStyleMap } from "@/pages/app/_enums/indexEnum";
-import { ThemeEnum } from "@/enums/appEnums";
 
 type Result = {
     music: Array<{ url: string; name: string }>;
@@ -203,4 +215,44 @@ defineExpose({
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+/* 抽屉全局样式覆盖 */
+:deep(.advanced-setting-drawer) {
+    .el-drawer__body {
+        background-color: #ffffff !important;
+    }
+}
+
+/* Select 控件样式美化 */
+:deep(.custom-select-pill) {
+    .el-select__wrapper {
+        border-radius: 12px !important;
+        height: 48px !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 0 0 1px #e2e8f0 inset !important;
+        &.is-focus {
+            box-shadow: 0 0 0 1px #4f46e5 inset !important;
+        }
+    }
+}
+
+/* 动画效果 */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+    transition: all 0.3s ease;
+}
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+/* 自定义滚动条 */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+</style>

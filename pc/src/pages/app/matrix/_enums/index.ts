@@ -17,8 +17,8 @@ export enum SidebarTypeEnum {
     MIX_TASK_CREATION = 7,
     // 素材库
     MATERIAL_LIBRARY = 8,
-    // 生成视频
-    GENERATE_VIDEO = 9,
+    // 视频作品
+    VIDEO_WORKS = 9,
     // 文案库
     COPYWRITING_LIBRARY = 10,
 }

@@ -1213,13 +1213,33 @@ class KnowledgeLogic extends ApiLogic
                 $response = $requestService->retrievePrompt($request);
                 break;
             case self::KNOELEDGE_CHAT:
-                $response = $requestService->promptChat($request);
+                if (isset($request['qf']) && $request['qf'] == 'knowledge') {
+                    $tokenCode =  AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN;
+                    $unit = TokenLogService::checkToken($userId, 'automation_social_media_obtain');
+                    $response = \app\common\service\ToolsService::Automation()->socialMediaObtain($request);
+                }else{
+                    $response = $requestService->promptChat($request);
+                }
                 break;
             case self::OPENAI_CHAT:
-                $response = $requestService->openaiChat($request);
+                if (isset($request['qf']) && $request['qf'] == 'openai') {
+                    $tokenCode =  AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN;
+                    $unit = TokenLogService::checkToken($userId, 'automation_social_media_obtain');
+                    $response = \app\common\service\ToolsService::Automation()->socialMediaObtain($request);
+                }else{
+                    $response = $requestService->openaiChat($request);
+                }
+
                 break;
             case self::GEMINI_CHAT:
-                $response = $requestService->geminiChat($request);
+                if (isset($request['qf']) && $request['qf'] == 'gemini') {
+                    $tokenCode =  AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN;
+                    $unit = TokenLogService::checkToken($userId, 'automation_social_media_obtain');
+                    $response = \app\common\service\ToolsService::Automation()->socialMediaObtain($request);
+                }else{
+                    $response = $requestService->geminiChat($request);
+
+                }
                 break;
             default:
         }
@@ -1895,6 +1915,7 @@ class KnowledgeLogic extends ApiLogic
                     ];
                     //return [false, '知识库检索为空'];
                 }
+                $request['qf'] = 'chat';
 
                 $request['user_id'] = $uid; // 替换为实际的用户ID
                 $request['prompt'] = $prompt;
@@ -1903,13 +1924,23 @@ class KnowledgeLogic extends ApiLogic
                 $request['now'] = time();
                 $request['knowledge_record'] = $record;
                 $request['messages'] = $messages;
+                $params['auto_type'] = $params['auto_type'] ?? 0;
 
                 if (in_array($request['model'],self::GPT_MODELS)){
                     $scene = self::OPENAI_CHAT;
+                    if ($params['auto_type'] == 1) {
+                        $request['qf'] = 'openai';
+                    }
                 } else if (in_array($request['model'],self::GEMINI_MODELS)){
                     $scene = self::GEMINI_CHAT;
+                    if ($params['auto_type'] == 1) {
+                        $request['qf'] = 'gemini';
+                    }
                 } else {
                     $scene = self::KNOELEDGE_CHAT;
+                    if ($params['auto_type'] == 1) {
+                        $request['qf'] = 'knowledge';
+                    }
                 }
                 //clogger(json_encode($request, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
                 $result = self::requestUrl($request, $scene, $uid, $record, true);

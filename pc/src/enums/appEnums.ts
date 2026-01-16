@@ -129,6 +129,7 @@ export enum TokensSceneEnum {
     HUMAN_VOICE_CHANJING = "human_voice_chanjing",
     HUMAN_AVATAR_CHANJING = "human_avatar_chanjing",
     HUMAN_VOICE_SHANJIAN = "human_voice_shanjian",
+    HUMAN_AVATAR_SHANJIAN = "human_avatar_shanjian",
     KNOWLEDGE_CREATE = "knowledge_create",
     AI_XHS = "ai_xhs",
     SPH_OCR = "sph_ocr",

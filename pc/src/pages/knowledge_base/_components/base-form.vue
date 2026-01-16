@@ -3,7 +3,7 @@
         <ElForm ref="formRef" :model="formData" label-position="top" :rules="rules">
             <ElFormItem label="知识库名称" prop="name">
                 <ElInput
-                    class="!h-11"
+                    class="!h-11 custom-input"
                     v-model="formData.name"
                     show-word-limit
                     :maxlength="KnTypeEnum.VECTOR == formData.type ? 20 : 12"
@@ -15,6 +15,7 @@
                     v-model="formData.description"
                     show-word-limit
                     maxlength="200"
+                    class="custom-textarea"
                     type="textarea"
                     resize="none"
                     :rows="6"
@@ -22,7 +23,7 @@
             </ElFormItem>
             <ElFormItem label="知识库类型" prop="type" v-if="!isEdit">
                 <ElSelect
-                    class="!h-11"
+                    class="!h-11 custom-input"
                     v-model="formData.type"
                     placeholder="请选择知识库类型"
                     popper-class="kb-type-select"
@@ -136,11 +137,11 @@ const kbTypeLists = [
         name: "向量知识库",
         icon: "local-icon-kb_type1",
     },
-    {
-        id: KnTypeEnum.RAG,
-        name: "RAG知识库",
-        icon: "local-icon-kb_type2",
-    },
+    // {
+    //     id: KnTypeEnum.RAG,
+    //     name: "RAG知识库",
+    //     icon: "local-icon-kb_type2",
+    // },
 ];
 
 const handleUploadSuccess = (res: any) => {

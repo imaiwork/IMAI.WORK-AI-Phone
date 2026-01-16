@@ -178,7 +178,7 @@
                             </view>
                         </view>
                         <view class="flex items-center justify-between h-[106rpx]">
-                            <view class="text-[30rpx] font-bold">视频原声音</view>
+                            <view class="text-[30rpx] font-bold">素材视频原声</view>
                             <u-switch v-model="formData.extra" inactive-color="#E5E5E5" :size="40" />
                         </view>
                         <view
@@ -208,6 +208,24 @@
                                 </view>
                             </view>
                         </view>
+                    </view>
+                    <view class="mt-[20rpx] flex items-center justify-between h-[110rpx] bg-white rounded-[20rpx] px-4">
+                        <view class="text-[30rpx] font-bold">背景音乐</view>
+                        <navigator
+                            :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
+                                formData.music
+                            )}&volume=${formData.extra.volume}`"
+                            hover-class="none"
+                            class="flex items-center gap-x-1">
+                            <view>
+                                <template v-if="formData.music.length > 0">
+                                    共<text class="mx-1 text-primary font-bold">{{ formData.music.length }}</text
+                                    >个
+                                </template>
+                                <text class="text-[#000000]/70" v-else>AI音乐库</text>
+                            </view>
+                            <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
+                        </navigator>
                     </view>
                 </view>
             </scroll-view>
@@ -306,8 +324,11 @@ const formData = reactive<{
     name: string;
     video_count: number;
     shanjian_type: MontageTypeEnum;
-    extra: boolean;
     voice: string;
+    music: any[];
+    extra: {
+        volume: number;
+    };
 }>({
     anchorLists: [],
     copywriterList: [],
@@ -315,8 +336,11 @@ const formData = reactive<{
     name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "素材混剪",
     video_count: 1,
     shanjian_type: MontageTypeEnum.MATERIAL_MIX,
-    extra: false,
     voice: "",
+    music: [],
+    extra: {
+        volume: 0.5,
+    },
 });
 const confirmDialogVisible = ref(false);
 const editMaterialIndex = ref(-1);
@@ -482,7 +506,6 @@ const handleCreateVideo = async () => {
         const res = await createShanjianTask({
             name: formData.name,
             copywriting: formData.copywriterList,
-            extra: formData.extra,
             material: formData.materialList.map((group: any) =>
                 group.map((item: any) => ({
                     fileUrl: item.url,
@@ -490,10 +513,13 @@ const handleCreateVideo = async () => {
                     cover: item.pic,
                 }))
             ),
-
             shanjian_type: formData.shanjian_type,
             video_count: formData.video_count,
             voice: formData.voice,
+            music: formData.music.map((item: any) => item.content),
+            extra: {
+                volume: formData.extra.volume,
+            },
         });
         uni.hideLoading();
         createResult.value = res;
@@ -545,8 +571,13 @@ onLoad(() => {
                 }
                 formData.materialList[editMaterialIndex.value] = data;
             } else {
+                if (data.length == 0) return;
                 formData.materialList.push(data);
             }
+        }
+        if (type == ListenerTypeEnum.CHOOSE_MUSIC) {
+            formData.music = data.music;
+            formData.extra.volume = data.volume;
         }
     });
 });

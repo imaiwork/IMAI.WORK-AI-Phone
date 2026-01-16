@@ -175,6 +175,8 @@ class UserController extends BaseApiController
         return $this->success(data: $list, show: 0);
     }
 
+
+
     /**
      * 获取用户设备绑定二维码
      * @return Json

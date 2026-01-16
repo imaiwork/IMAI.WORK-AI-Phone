@@ -254,6 +254,16 @@
 						"share": true,
 						"auth": true
 					}
+				},
+				{
+					"path": "pages/task_tutorial/task_tutorial",
+					"style": {
+						"navigationBarTitleText": "任务操作教程",
+						"navigationBarBackgroundColor": "#F8FAFD"
+					},
+					"meta": {
+						"share": true
+					}
 				}
 			]
 		},
@@ -568,6 +578,15 @@
 					"meta": {
 						"auth": true
 					}
+				},
+				{
+					"path": "pages/music_choose/music_choose",
+					"style": {
+						"navigationBarTitleText": "背景音乐"
+					},
+					"meta": {
+						"auth": true
+					}
 				}
 			]
 		},
@@ -713,7 +732,8 @@
 						"disableScroll": true
 					},
 					"meta": {
-						"share": true
+						"share": true,
+						"auth": true
 					}
 				},
 				{
@@ -1008,7 +1028,7 @@
 				{
 					"path": "pages/create_auto_task/create_auto_task",
 					"style": {
-						"navigationBarTitleText": "自动任务配置",
+						"navigationBarTitleText": "AI运营顾问",
 						"navigationStyle": "custom",
 						"disableScroll": true
 					},
@@ -1125,6 +1145,35 @@
 					"style": {
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/create_circle/create_circle",
+					"style": {
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/create_circle_interact/create_circle_interact",
+					"style": {
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/setting_circle_interact/setting_circle_interact",
+					"style": {
+						"navigationBarTitleText": "设置发布朋友圈"
 					},
 					"meta": {
 						"auth": true

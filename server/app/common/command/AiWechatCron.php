@@ -26,7 +26,7 @@ class AiWechatCron extends Command
     protected function execute(Input $input, Output $output)
     {
         TodoLogic::pushMessageCron();
-        CircleLogic::sendCircleCron();
+        //CircleLogic::sendCircleCron();
         //PublishLogic::SphPublishCron();
         return true;
     }

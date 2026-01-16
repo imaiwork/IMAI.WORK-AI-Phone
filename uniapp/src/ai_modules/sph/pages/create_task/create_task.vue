@@ -109,7 +109,12 @@
                             </view>
                             <view class="mt-[24rpx]">
                                 <view class="flex items-center justify-between">
-                                    <view class="text-[#00000080]"> 自动添加好友 </view>
+                                    <view>
+                                        <view class="text-[#00000080]"> 自动添加好友 </view>
+                                        <view class="text-[20rpx] text-[#000000]/50 mt-1">
+                                            线索采集后，将生成加好友任务，根据您所设置的加微任务时间执行
+                                        </view>
+                                    </view>
                                     <view>
                                         <u-switch
                                             :model-value="formData.add_type == '1'"
@@ -240,12 +245,8 @@
                 <scroll-view class="h-full" scroll-y>
                     <view class="px-4 pb-[100rpx]">
                         <view>
-                            <view class="flex items-center gap-x-1">
-                                <text class="text-[#FF3C26] text-[32rpx]">*</text>
-                                <text class="font-bold">基础设置</text>
-                            </view>
-                            <view
-                                class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx] shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.03)]">
+                            <view class="text-[30rpx] font-bold"> 基础设置 </view>
+                            <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
                                 <view>
                                     <view class="text-[#7C7E80]">任务名称</view>
                                     <view class="mt-[12rpx]">
@@ -288,12 +289,8 @@
                             </view>
                         </view>
                         <view class="mt-[32rpx]">
-                            <view class="flex items-center gap-x-1">
-                                <text class="text-[#FF3C26] text-[32rpx]">*</text>
-                                <text class="font-bold">时间设置</text>
-                            </view>
-                            <view
-                                class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx] shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.03)]">
+                            <view class="text-[30rpx] font-bold"> 时间设置 </view>
+                            <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
                                 <view>
                                     <view class="text-[#7C7E80]">任务频率</view>
                                     <view class="mt-[22rpx]">
@@ -309,7 +306,7 @@
                                             <view
                                                 class="frequency-item"
                                                 :class="{ active: currentFrequency == 5 }"
-                                                @click="handleCustomDate">
+                                                @click="handleCustomDate(1)">
                                                 自定义
                                             </view>
                                         </view>
@@ -393,11 +390,122 @@
                                     </view>
                                 </view>
                             </view>
-                            <view class="mt-[50rpx]" v-if="taskErrorMsg">
-                                <view class="font-bold">任务冲突</view>
-                                <view class="text-[#ff2442] mt-[20rpx]">
-                                    {{ taskErrorMsg }}
+                        </view>
+                        <view class="mt-[32rpx]">
+                            <view class="text-[30rpx] font-bold"> 【加微任务】时间设置 </view>
+                            <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
+                                <u-radio-group v-model="formData.wechat_time_type">
+                                    <u-radio :name="0" :size="28" label-size="26"> 当日获客任务完成后执行 </u-radio>
+                                    <u-radio :name="1" :size="28" label-size="26"> 自定义 </u-radio>
+                                </u-radio-group>
+                                <view class="mt-[38rpx]" v-if="formData.wechat_time_type == 1">
+                                    <view>
+                                        <view class="text-xs text-[#000000]/30">任务频率</view>
+                                        <view class="mt-[22rpx]">
+                                            <view class="flex flex-wrap gap-x-2 gap-y-3">
+                                                <view
+                                                    v-for="(item, index) in [1, 3, 5, 10, 30]"
+                                                    :key="index"
+                                                    :class="{
+                                                        active:
+                                                            formData.wechat_task_frep == item &&
+                                                            currentWechatFrequency != 5,
+                                                    }"
+                                                    class="frequency-item"
+                                                    @click="handleWechatFrequency(item, index)">
+                                                    {{ item }}天
+                                                </view>
+                                                <view
+                                                    class="frequency-item"
+                                                    :class="{ active: currentWechatFrequency == 5 }"
+                                                    @click="handleCustomDate(2)">
+                                                    自定义
+                                                </view>
+                                            </view>
+                                        </view>
+                                    </view>
+                                    <view class="mt-[30rpx]" v-if="formData.wechat_custom_date.length">
+                                        <view class="] text-xs text-[#000000]/30">任务日期</view>
+                                        <view
+                                            class="mt-[22rpx] border-[0] border-b-[1rpx] border-solid border-[#000000]/[0.03] pb-2">
+                                            <view :class="{ 'max-h-[120rpx] overflow-hidden': !isWechatExpandDate }">
+                                                <view class="flex flex-wrap gap-2">
+                                                    <view
+                                                        v-for="(item, index) in formData.wechat_custom_date"
+                                                        :key="index"
+                                                        class="date-item">
+                                                        {{ formatDate(item) }}
+                                                    </view>
+                                                </view>
+                                            </view>
+                                        </view>
+                                    </view>
+                                    <view class="mt-[30rpx]">
+                                        <view class="text-xs text-[#000000]/30">每日加微执行时间</view>
+                                        <view class="text-xs text-[#000000]/30"
+                                            >设定的时间小于获客任务时间时，将在次日执行</view
+                                        >
+                                        <view class="mt-[28rpx]">
+                                            <view class="flex items-center gap-x-4">
+                                                <view
+                                                    class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
+                                                    <picker
+                                                        mode="time"
+                                                        class="w-full"
+                                                        :value="formData.time_config[0]"
+                                                        @change="handleStartTimeChange">
+                                                        <view class="flex items-center justify-between h-[70rpx]">
+                                                            <text
+                                                                :class="[
+                                                                    formData.time_config[0]
+                                                                        ? 'text-primary font-bold'
+                                                                        : 'text-[#00000033]',
+                                                                ]"
+                                                                >{{ formData.time_config[0] || "开始时间" }}</text
+                                                            >
+                                                            <u-icon
+                                                                name="arrow-right"
+                                                                size="24"
+                                                                color="#00000033"></u-icon>
+                                                        </view>
+                                                    </picker>
+                                                </view>
+                                                <view class="text-[#7C7E80]">至</view>
+                                                <view
+                                                    class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
+                                                    <picker
+                                                        mode="time"
+                                                        class="w-full"
+                                                        :value="formData.time_config[1]"
+                                                        :disabled="!formData.time_config[0]"
+                                                        @click="handleWechatEndTimeClick"
+                                                        @change="handleWechatEndTimeChange">
+                                                        <view class="flex items-center justify-between h-[70rpx]">
+                                                            <text
+                                                                :class="[
+                                                                    formData.time_config[1]
+                                                                        ? 'text-primary font-bold'
+                                                                        : 'text-[#00000033]',
+                                                                ]"
+                                                                >{{ formData.time_config[1] || "结束时间" }}</text
+                                                            >
+                                                            <u-icon
+                                                                name="arrow-right"
+                                                                size="24"
+                                                                color="#00000033"></u-icon>
+                                                        </view>
+                                                    </picker>
+                                                </view>
+                                            </view>
+                                        </view>
+                                    </view>
                                 </view>
+                            </view>
+                        </view>
+                        <view class="mt-[50rpx]" v-if="taskErrorMsg">
+                            <view class="font-bold">任务冲突</view>
+                            <view class="text-[#ff2442] mt-[20rpx]">
+                                {{ taskErrorMsg }}
                             </view>
                         </view>
                     </view>
@@ -561,6 +669,10 @@ const formData = reactive<{
     task_frep: number;
     time_config: [string, string];
     custom_date: string[];
+    wechat_time_type: 0 | 1;
+    wechat_task_frep: number;
+    wechat_time_config: [string, string];
+    wechat_custom_date: string[];
 }>({
     name: `视频号获客任务${uni.$u.timeFormat(Date.now(), "yyyymmddhhMM")}`,
     crawl_type: 1,
@@ -584,6 +696,10 @@ const formData = reactive<{
     task_frep: 1,
     time_config: ["09:00", "09:15"],
     custom_date: [],
+    wechat_time_type: 0,
+    wechat_task_frep: 1,
+    wechat_time_config: ["09:00", "09:15"],
+    wechat_custom_date: [],
 });
 
 const showClueEdit = ref(false);
@@ -595,10 +711,15 @@ const showOCRTip = ref(false);
 const showAddRemark = ref(false);
 const editRemarkIndex = ref(-1);
 const addRemarkContent = ref("");
+const customDateType = ref<1 | 2>(1);
 // 当前任务频率
 const currentFrequency = ref(0);
+// 当前加微任务频率
+const currentWechatFrequency = ref(0);
 // 是否展开任务时间
 const isExpandDate = ref(false);
+// 是否展开加微任务时间
+const isWechatExpandDate = ref(false);
 // 任务冲突
 const taskErrorMsg = ref("");
 
@@ -614,30 +735,16 @@ const currentGreetingContentSettingType = ref<GreetingContentSettingTypeEnum>(
 const canNext = computed(() => canStepProceed(step.value));
 
 //判断是否可以下一步
-const canStepProceed = (stepNumber: number) => {
-    switch (stepNumber) {
-        case 1:
-            return true;
-        case 2:
-            if (formData.keywords.length == 0) {
-                return false;
-            }
-            return true;
-        case 3:
-            if (formData.add_type == "1") {
-                if (formData.wechat_id.length == 0) {
-                    return false;
-                } else if (formData.add_remark_enable == 1 && !formData.remarks.length) {
-                    return false;
-                }
-                return true;
-            }
-            return true;
-        case 4:
-            return true;
-        default:
-            return false;
-    }
+const canStepProceed = (s: number) => {
+    const strategy: Record<number, () => boolean> = {
+        1: () => true,
+        2: () => formData.keywords.length > 0,
+        3: () =>
+            formData.add_type === "0" ||
+            (formData.wechat_id.length > 0 && (formData.add_remark_enable === 0 || formData.remarks.length > 0)),
+        4: () => formData.device_codes.length > 0 && !!formData.time_config[0],
+    };
+    return strategy[s]?.() ?? false;
 };
 
 const handleStep = (targetStep: number, type?: "next" | "prev") => {
@@ -756,15 +863,28 @@ const handleFrequency = (item: number, index: number) => {
     formData.task_frep = item;
 };
 
+const handleWechatFrequency = (item: number, index: number) => {
+    currentWechatFrequency.value = index;
+    formData.wechat_task_frep = item;
+};
+
 const formatDate = (date: string) => {
     return uni.$u.timeFormat(new Date(date), "mm月dd日");
 };
 
-const handleCustomDate = () => {
+const handleCustomDate = (type: 1 | 2) => {
+    customDateType.value = type;
     uni.$u.route({
         url: "/ai_modules/device/pages/custom_date/custom_date",
         params: {
-            date: formData.custom_date.length > 0 ? JSON.stringify(formData.custom_date) : null,
+            date:
+                type == 1
+                    ? formData.custom_date.length > 0
+                        ? JSON.stringify(formData.custom_date)
+                        : null
+                    : formData.wechat_custom_date.length > 0
+                    ? JSON.stringify(formData.wechat_custom_date)
+                    : null,
         },
     });
 };
@@ -801,6 +921,29 @@ const handleEndTimeClick = () => {
     }
 };
 
+const handleWechatEndTimeChange = (e: any) => {
+    const { value } = e.detail;
+    // 这里需要判断结束时间是否大于开始时间，并且要大于开始
+    if (value <= formData.wechat_time_config[0]) {
+        uni.$u.toast("结束时间不能小于开始时间");
+        return;
+    }
+    const startTIme = new Date(`2000/01/01 ${formData.wechat_time_config[0]}`);
+    const endTime = new Date(`2000/01/01 ${value}`);
+    if (endTime.getTime() - startTIme.getTime() < timeInterval * 60 * 1000) {
+        uni.$u.toast(`结束时间不能小于开始时间${timeInterval}分钟`);
+        return;
+    }
+    formData.wechat_time_config[1] = value;
+};
+
+const handleWechatEndTimeClick = () => {
+    if (!formData.wechat_time_config[0]) {
+        uni.$u.toast("请先选择每日加微执行开始时间");
+        return;
+    }
+};
+
 const handleCreateTaskSuccess = () => {
     showCreateTaskSuccessDialog.value = false;
     uni.$u.route({
@@ -828,6 +971,7 @@ const handleCreateTask = async () => {
         await createTask({
             ...formData,
             time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
+            wechat_time_config: [`${formData.wechat_time_config[0]}-${formData.wechat_time_config[1]}`],
             type: [AppTypeEnum.SPH],
         });
         uni.hideLoading();
@@ -866,7 +1010,13 @@ onLoad(({ type }: any) => {
         }
         if (type === ListenerTypeEnum.CHOOSE_DATE) {
             if (data.length === 0) return;
-            currentFrequency.value = 5;
+            if (customDateType.value == 1) {
+                currentFrequency.value = 5;
+                formData.custom_date = data;
+            } else {
+                currentWechatFrequency.value = 5;
+                formData.wechat_custom_date = data;
+            }
             formData.custom_date = data;
         }
     });

@@ -69,8 +69,11 @@ class SoraVideoTaskLogic extends ApiLogic
                         if (str_contains($task->remark,'system error')){
                             $task->remark = '系统错误生成失败，请重新生成';
                         }
-                        if (str_contains($task->remark,'third-party')){
+                        if (str_contains($task->remark,'third-party') || str_contains($task->remark,'content policies')){
                             $task->remark = '此内容违反第三方肖像权、内容相似性的防护规定，请重新生成';
+                        }
+                        if (str_contains($task->remark,'please try again') || str_contains($task->remark,'task timeout') || str_contains($task->remark,'You already have')){
+                            $task->remark = '任务超时，请稍后再试';
                         }
                         $SoraVideoSetting->error_num += 1;
                         $SoraVideoSetting->save();
@@ -196,7 +199,7 @@ class SoraVideoTaskLogic extends ApiLogic
                 $result = $response->status(['task_id' => $task['extra']['video_id']]);
             }
             Log::channel('sora')->write('超过40分钟无回调的任务处理' . json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-            // 超过两小时无回调的任务处理
+            // 超过40分钟无回调的任务处理
             if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
                 if (isset($result['data']['videos'])){
                     $video_result_url = FileService::downloadFileBySource($result['data']['videos'][0]['url'], 'video');

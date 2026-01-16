@@ -16,7 +16,7 @@ class HdPuzzleLists extends BaseApiDataLists implements ListsSearchInterface, Li
     public function setSearch(): array
     {
         return [
-            '=' => ['status', 'type', 'puzzle_setting_id'],
+            '=' => ['status', 'type', 'puzzle_setting_id', 'auto_type'],
             '%like%' => ['name'],
             'between' => ['create_time'],
         ];
@@ -35,6 +35,7 @@ class HdPuzzleLists extends BaseApiDataLists implements ListsSearchInterface, Li
     public function lists(): array
     {
         $this->searchWhere[] = ['user_id', '=', $this->userId];
+        $this->searchWhere[] = ['auto_type', '=', $this->request->get('auto_type', 0)];
         $list = HdPuzzle::where($this->searchWhere)
             ->order($this->sortOrder)
             ->limit($this->limitOffset, $this->limitLength)
@@ -66,6 +67,7 @@ class HdPuzzleLists extends BaseApiDataLists implements ListsSearchInterface, Li
 
     public function count(): int
     {
+        $this->searchWhere[] = ['auto_type', '=', $this->request->get('auto_type', 0)];
         return HdPuzzle::where($this->searchWhere)->count();
     }
 }

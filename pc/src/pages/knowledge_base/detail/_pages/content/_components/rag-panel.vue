@@ -1,6 +1,6 @@
 <template>
-    <div class="h-full bg-white rounded-[20px] overflow-x-auto dynamic-scroller">
-        <div class="h-full flex flex-col min-w-[1000px]">
+    <div class="h-full bg-white rounded-[20px] min-w-[1000px]">
+        <div class="h-full flex flex-col">
             <!-- 头部导航 -->
             <div class="flex-shrink-0 flex items-center justify-between px-[14px] h-[88px] border-b border-[#0000000d]">
                 <div class="flex items-center gap-2 cursor-pointer" @click="handleBack">

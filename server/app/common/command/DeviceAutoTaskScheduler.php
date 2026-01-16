@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace app\common\command;
 
+use app\api\logic\service\TokenLogService;
+use app\common\enum\AutomationEnum;
+use app\common\enum\user\AccountLogEnum;
+use app\common\logic\AccountLogLogic;
+use app\common\model\user\User;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Option;
@@ -471,6 +476,18 @@ class DeviceAutoTaskScheduler extends Command
         if ($this->isDev) {
             $output->writeln("执行客户互动任务 - 设备: {$task->device_code}");
         }
+
+        self::wechatCirclePublishTask($task, $output, function ($result) use ($task) {
+            if ($result['status'] !== -1) {
+                $task->status = $result['status'];
+                $task->remark = $result['remark'];
+                $task->update_time = time();
+                $task->save();
+                $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            }
+        });
+
+        $this->setTaskLog("发布任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
     /**
      * 执行3客户互动任务完成逻辑
@@ -479,7 +496,19 @@ class DeviceAutoTaskScheduler extends Command
         if ($this->isDev) {
             $output->writeln("执行客户互动任务 - 设备: {$task->device_code}");
         }
-        
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行发布任务完成 - 设备: {$task->device_code}");
+            }
+
+            $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+            $task->remark = '发布任务完成';
+            $task->update_time = time();
+            $task->save();
+            
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+            $this->setTaskLog("执行发布任务完成: ID={$task->id}, 设备={$task->device_code}");
+        } 
     }
 
 
@@ -816,7 +845,31 @@ class DeviceAutoTaskScheduler extends Command
             }
             // TODO: 实现具体的养号完成逻辑
             //self::rpaMaintainAccountEndTask($task, $output, function ($result) use ($task) {});
-
+            if($task->auto_type == 1){
+                $taskId = generate_unique_task_id();
+                $start_time = $task->start_time;
+                $end_time = $task->end_time;
+                // 计算时间差（秒）
+                $time_difference_seconds = $end_time - $start_time;
+                // 将时间差转换为分钟，并向下取整
+                $time_difference_minutes = ceil($time_difference_seconds / 60);
+                $unit = TokenLogService::checkToken($task->user_id, 'automation_social_media_nursing');
+                $points = $unit * $time_difference_minutes;
+                // 添加辅助参数
+                $request['task_id'] = $taskId;
+                $request['user_id'] = $task->user_id;
+                $request['time_difference_minutes'] = $time_difference_minutes;
+                $response = \app\common\service\ToolsService::Automation()->socialMediaNursing($request);
+                $extra = [ '执行时长（分钟）' => $request['time_difference_minutes'],'算力单价' => $unit, '实际消耗算力' => $points];
+                if (isset($response['code']) && $response['code'] == 10000) {
+                    if ($points > 0) {
+                        //token扣除
+                        User::userTokensChange( $task->user_id, $points);
+                        //记录日志
+                        AccountLogLogic::recordUserTokensLog(true, $task->user_id, AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_NURSING, $points, $taskId, $extra);
+                    }
+                }
+            }
             $task->status = DeviceEnum::TASK_STATUS_FINISHED;
             $task->remark = '养号任务完成';
             $task->update_time = time();

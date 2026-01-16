@@ -12,7 +12,9 @@
     <confirm-dialog
         v-model="showConfirmDialog"
         center
-        :content="content"
+        cancel-text="稍后配置"
+        confirm-text="前往配置"
+        content="检测到您有一台新的手机，是否马上设置24H任务"
         @close="handleClose"
         @confirm="handleTaskConfirm" />
 </template>
@@ -24,8 +26,6 @@ import usePolling from "@/hooks/usePolling";
 const qrcode = ref<string>("");
 const deviceCode = ref<string>("");
 const showConfirmDialog = ref(false);
-
-const content = `<div>您已添加新的设备，是否需要为该设备设置24小时自动任务？注意：设备必须在线才能拉取账号</div>`;
 
 const { start, end } = usePolling(
     async () => {

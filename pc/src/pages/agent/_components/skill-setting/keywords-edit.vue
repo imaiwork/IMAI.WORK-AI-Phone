@@ -6,8 +6,7 @@
         confirm-button-text=""
         cancel-button-text=""
         header-class="!p-0"
-        :show-close="false"
-    >
+        :show-close="false">
         <div>
             <!-- 关闭按钮 -->
             <div class="absolute w-6 h-6 right-4 top-4 cursor-pointer" @click="close">
@@ -25,8 +24,8 @@
                 <ElFormItem label="匹配内容" prop="keyword">
                     <ElInput
                         v-model="formData.keyword"
-                        placeholder="回复内容支持多词组匹配，以分号相隔; 例如：你好;你好啊;你好呀"
-                    />
+                        class="custom-input"
+                        placeholder="回复内容支持多词组匹配，以分号相隔; 例如：你好;你好啊;你好呀" />
                 </ElFormItem>
                 <ElFormItem label="回复内容" prop="reply">
                     <!-- 富文本内容编辑器 -->
@@ -70,20 +69,20 @@ const formData = reactive({
     id: "",
     match_type: 0, // 0-模糊匹配 1-精确匹配
     keyword: "",
-    reply: [] as any[] // 回复内容，由AddContent组件管理
+    reply: [] as any[], // 回复内容，由AddContent组件管理
 });
 
 // 表单验证规则
 const formRules = {
     keyword: [{ required: true, message: "请输入匹配内容" }],
-    reply: [{ required: true, message: "请输入回复内容" }]
+    reply: [{ required: true, message: "请输入回复内容" }],
 };
 
 /**
  * @description 打开弹窗
  * @param type - 模式 ('add' or 'edit')
  */
-const open = (type?: 'add' | 'edit') => {
+const open = (type?: "add" | "edit") => {
     mode.value = type || "add";
     popupRef.value?.open();
 };
@@ -102,7 +101,7 @@ const handleConfirm = async () => {
         const apiCall = formData.id ? updateRobotKeywords : addRobotKeywords;
         const params = {
             ...formData,
-            robot_id: route.query.id
+            robot_id: route.query.id,
         };
         await apiCall(params);
 
@@ -127,7 +126,7 @@ const setFormDataForEdit = (data: any) => {
     if (Array.isArray(formData.reply)) {
         formData.reply = formData.reply.map((item: any) => ({
             ...item,
-            type: parseInt(item.type, 10)
+            type: parseInt(item.type, 10),
         }));
     }
 };
@@ -135,7 +134,7 @@ const setFormDataForEdit = (data: any) => {
 // 暴露方法
 defineExpose({
     open,
-    setFormData: setFormDataForEdit
+    setFormData: setFormDataForEdit,
 });
 </script>
 

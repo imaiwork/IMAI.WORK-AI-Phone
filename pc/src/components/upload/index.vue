@@ -22,38 +22,22 @@
             :accept="getAccept">
             <slot></slot>
         </el-upload>
-        <el-dialog
-            v-if="showProgress && fileList.length"
-            v-model="visible"
-            title="上传进度"
-            append-to-body
-            :close-on-click-modal="false"
-            :close-on-press-escape="false"
-            :show-close="false"
-            width="500px"
-            :modal="false"
-            @close="handleClose">
-            <div class="file-list p-4">
-                <template v-for="(item, index) in fileList" :key="index">
-                    <div class="mb-5">
-                        <div>{{ item.name }}</div>
-                        <div class="flex-1">
-                            <el-progress :percentage="parseInt(item.percentage)"></el-progress>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </el-dialog>
+        <progress-dialog
+            v-if="showProgress && visible"
+            ref="progressDialogRef"
+            :show-confirm-button="false"
+            :percentage="fileList.map((item) => item.percentage)"
+            @close="handleClose" />
     </div>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, ref, shallowRef } from "vue";
 import { useUserStore } from "@/stores/user";
 import { getApiPrefix, getApiUrl, getVersion } from "@/utils/env";
 import feedback from "@/utils/feedback";
 import { genFileId, type ElUpload, type UploadRawFile, type UploadProps } from "element-plus";
 import { RequestCodeEnum } from "@/enums/requestEnums";
+import ProgressDialog from "@/components/progress-dialog/index.vue";
 export default defineComponent({
     components: {},
     props: {
@@ -131,7 +115,7 @@ export default defineComponent({
         },
         videoMinWidth: {
             type: Number,
-            default: 0,
+            default: 360,
         },
         videoMaxHeight: {
             type: Number,
@@ -139,7 +123,7 @@ export default defineComponent({
         },
         videoMinHeight: {
             type: Number,
-            default: 0,
+            default: 360,
         },
         // 视频时长
         minDuration: {
@@ -155,6 +139,7 @@ export default defineComponent({
     setup(props, { emit, expose }) {
         const userStore = useUserStore();
         const uploadRefs = shallowRef<InstanceType<typeof ElUpload>>();
+        const progressDialogRef = shallowRef<InstanceType<typeof ProgressDialog>>();
         const action = ref(props.action || `${getApiUrl()}${getApiPrefix()}/upload/${props.type}`);
         const headers = computed(() => ({
             token: userStore.token,
@@ -294,9 +279,11 @@ export default defineComponent({
             }
         };
 
-        const handleProgress = (event: any, file: any, fileLists: any[]) => {
+        const handleProgress = async (event: any, file: any, fileLists: any[]) => {
             visible.value = true;
             fileList.value = toRaw(fileLists);
+            await nextTick();
+            progressDialogRef.value?.open();
             emit("on-progress", event.percent);
         };
 
@@ -385,6 +372,7 @@ export default defineComponent({
 
         return {
             uploadRefs,
+            progressDialogRef,
             action,
             headers,
             visible,
@@ -407,6 +395,62 @@ export default defineComponent({
 .upload {
     :deep(.el-upload) {
         width: inherit;
+    }
+}
+.progress-container {
+    width: 100%;
+    max-width: 400px;
+    font-family: sans-serif;
+    margin-bottom: 20px;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #374151;
+    font-weight: 600;
+}
+
+.progress-track {
+    height: 12px;
+    background-color: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden; /* 确保进度条不超出圆角 */
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); /* 带有回弹效果的动画 */
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 扫光动画，增加高级感 */
+.progress-shimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
     }
 }
 </style>

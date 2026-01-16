@@ -1,102 +1,129 @@
 <template>
-    <div class="flex flex-col gap-4">
-        <div class="flex items-center gap-2">
-            <img src="@/assets/images/date.png" class="w-6 h-6" />
-            <span class="text-primary font-bold">第{{ item.day }}天</span>
+    <div class="flex flex-col gap-6">
+        <div class="flex items-center gap-3 px-2">
+            <div class="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <img src="@/assets/images/date.png" class="w-6 h-6" />
+            </div>
+            <div class="flex flex-col">
+                <span class="text-primary font-[1000] text-lg tracking-tight">第 {{ item.day }} 天</span>
+                <span class="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Push Schedule</span>
+            </div>
         </div>
-        <div
-            v-for="(data, vIndex) in item.list"
-            :key="vIndex"
-            class="border border-solid border-primary-light-9 rounded-xl p-4 min-h-[100px] relative pt-10">
-            <div class="absolute top-0 left-0 bg-primary rounded-tl-xl rounded-br-xl">
-                <div class="flex items-center gap-2 px-3 py-1">
-                    <Icon name="local-icon-send_plane_fill" color="#fff"></Icon>
-                    <span class="text-white text-xs">{{ data.push_time }}</span>
+
+        <div v-for="(data, vIndex) in item.list" :key="vIndex" class="push-card group">
+            <div
+                class="absolute top-0 left-0 right-0 h-10 bg-slate-50 border-b border-slate-100 flex items-center justify-between px-4 rounded-t-[20px]">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                    <span class="text-slate-600 font-black text-xs tracking-wider">{{ data.push_time }} 推送</span>
+                </div>
+
+                <div class="flex items-center gap-1">
+                    <button
+                        class="icon-btn hover:bg-[#0065fb]/10 hover:text-primary"
+                        @click="handleFoldContent(data.push_time_id, vIndex)">
+                        <Icon
+                            :name="
+                                foldIndex.includes(`${data.push_time_id}-${vIndex}`)
+                                    ? 'el-icon-ArrowDown'
+                                    : 'el-icon-ArrowUp'
+                            "
+                            :size="14"></Icon>
+                    </button>
+                    <button
+                        v-if="canEdit(data)"
+                        class="icon-btn hover:bg-[#0065fb]/10 hover:text-primary"
+                        @click="emit('edit', data.content_id)">
+                        <Icon name="el-icon-Edit" :size="14"></Icon>
+                    </button>
+                    <button
+                        class="icon-btn hover:bg-red-50 hover:text-red-500"
+                        @click="emit('delete', data.content_id)">
+                        <Icon name="el-icon-Delete" :size="14"></Icon>
+                    </button>
                 </div>
             </div>
-            <div class="absolute right-2 top-2 z-20">
-                <ElButton type="danger" size="small" @click="emit('delete', data.content_id)">
-                    <Icon name="el-icon-Delete" color="#fff"></Icon>
-                    <span class="text-white text-xs">删除</span>
-                </ElButton>
-                <ElButton v-if="canEdit(data)" type="primary" size="small" @click="emit('edit', data.content_id)">
-                    <Icon name="el-icon-Edit" color="#fff"></Icon>
-                    <span class="text-white text-xs">编辑</span>
-                </ElButton>
-                <ElButton type="primary" size="small" @click="handleFoldContent(data.push_time_id, vIndex)">
-                    <Icon name="el-icon-Fold" color="#fff"></Icon>
-                    <span class="text-white text-xs">折叠/展开</span>
-                </ElButton>
-            </div>
+
             <div
-                class="h-full flex flex-col gap-2 transition-all duration-500 ease-in-out transform origin-top"
+                class="mt-10 p-5 transition-all duration-500 ease-in-out overflow-hidden"
                 :class="[
                     foldIndex.includes(`${data.push_time_id}-${vIndex}`)
-                        ? 'opacity-0 max-h-0 scale-y-95'
-                        : 'opacity-100 max-h-[2000px] scale-y-100',
+                        ? 'max-h-0 opacity-0 py-0'
+                        : 'max-h-[2000px] opacity-100',
                 ]"
                 v-if="data.content_list.length">
-                <div v-for="({ content, type }, cIndex) in data.content_list" :key="cIndex">
-                    <div
-                        class="text-xs text-[#8A8C99] line-clamp-2 content-wrapper"
-                        v-if="type == MaterialTypeEnum.TEXT">
-                        <div class="w-[80px] flex-shrink-0">
-                            <ElTag>【文本】</ElTag>
+                <div class="flex flex-col gap-4">
+                    <div v-for="({ content, type }, cIndex) in data.content_list" :key="cIndex" class="content-row">
+                        <div class="type-badge">
+                            <span class="relative z-10">{{ getTypeName(type) }}</span>
+                            <div class="absolute inset-0 bg-[#0065fb]/5 rounded-md"></div>
                         </div>
-                        <span class="mt-[3px]">{{ content }}</span>
-                    </div>
-                    <div v-if="type == MaterialTypeEnum.IMAGE" class="content-wrapper">
-                        <div class="w-[80px] flex-shrink-0">
-                            <ElTag>【图片】</ElTag>
-                        </div>
-                        <ElImage
-                            :src="content"
-                            :preview-src-list="[content]"
-                            preview-teleported
-                            class="max-w-[128px] rounded-xl"
-                            lazy />
-                    </div>
-                    <div v-if="type == MaterialTypeEnum.VIDEO" class="content-wrapper">
-                        <div class="w-[80px] flex-shrink-0">
-                            <ElTag>【视频】</ElTag>
-                        </div>
-                        <div class="flex-1 relative">
-                            <video :src="content" class="w-full rounded-lg"></video>
+
+                        <div class="flex-1 min-w-0">
                             <div
-                                class="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]"
-                                @click="handlePlayVideo(content)">
-                                <play-btn />
+                                v-if="type == MaterialTypeEnum.TEXT"
+                                class="text-slate-700 text-[14px] leading-relaxed font-medium">
+                                {{ content }}
+                            </div>
+
+                            <div v-if="type == MaterialTypeEnum.IMAGE" class="flex">
+                                <ElImage
+                                    :src="content"
+                                    :preview-src-list="[content]"
+                                    preview-teleported
+                                    class="max-w-[160px] rounded-xl border border-slate-100 transition-shadow"
+                                    lazy />
+                            </div>
+
+                            <div
+                                v-if="type == MaterialTypeEnum.VIDEO"
+                                class="max-w-[240px] relative rounded-xl overflow-hidden shadow-sm group">
+                                <video :src="content" class="w-full h-full object-cover"></video>
+                                <div
+                                    class="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                    @click="handlePlayVideo(content)">
+                                    <div
+                                        class="w-10 h-10 rounded-full bg-[#ffffff]/20 backdrop-blur-md border border-[#ffffff]/40 flex items-center justify-center">
+                                        <play-btn :icon-size="24" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                v-if="
+                                    [
+                                        MaterialTypeEnum.MINI_PROGRAM,
+                                        MaterialTypeEnum.LINK,
+                                        MaterialTypeEnum.FILE,
+                                    ].includes(type)
+                                "
+                                class="max-w-md">
+                                <MiniProgramCard
+                                    v-if="type == MaterialTypeEnum.MINI_PROGRAM"
+                                    :title="content.name"
+                                    :pic="content.pic"
+                                    :link="content.link" />
+                                <LinkCard
+                                    v-if="type == MaterialTypeEnum.LINK"
+                                    :title="content.name"
+                                    :desc="content.desc"
+                                    :img="content.img" />
+                                <FileCard
+                                    v-if="type == MaterialTypeEnum.FILE"
+                                    :name="content.name"
+                                    :url="content.url"
+                                    :icon-size="32" />
                             </div>
                         </div>
                     </div>
-                    <div v-if="type == MaterialTypeEnum.MINI_PROGRAM" class="content-wrapper">
-                        <div class="w-[80px] flex-shrink-0">
-                            <ElTag>【小程序】</ElTag>
-                        </div>
-                        <div class="w-[50%] h-[300px]">
-                            <MiniProgramCard :title="content.name" :pic="content.pic" :link="content.link" />
-                        </div>
-                    </div>
-                    <div v-if="type == MaterialTypeEnum.LINK" class="content-wrapper">
-                        <div class="w-[80px] flex-shrink-0">
-                            <ElTag>【链接】</ElTag>
-                        </div>
-                        <div class="w-[50%]">
-                            <LinkCard :title="content.name" :desc="content.desc" :img="content.img" />
-                        </div>
-                    </div>
-                    <div v-if="type == MaterialTypeEnum.FILE" class="content-wrapper">
-                        <div class="w-[80px] flex-shrink-0">
-                            <ElTag>【文件】</ElTag>
-                        </div>
-                        <FileCard :name="content.name" :url="content.url" :icon-size="32" />
-                    </div>
                 </div>
             </div>
+
             <div
-                class="h-full flex items-center justify-center mt-8 text-gray-500"
+                class="py-4 text-center text-slate-400 text-[12px] font-bold tracking-widest flex items-center justify-center gap-2"
                 v-if="foldIndex.includes(`${data.push_time_id}-${vIndex}`)">
-                内容被折叠
+                <Icon name="el-icon-Loading" class="animate-spin" v-if="false" />
+                CONTENT FOLDED
             </div>
         </div>
     </div>
@@ -117,6 +144,18 @@ const emit = defineEmits<{
     (e: "edit", id: string | number): void;
     (e: "delete", id: string | number): void;
 }>();
+
+const getTypeName = (type: number) => {
+    const map: any = {
+        [MaterialTypeEnum.TEXT]: "文本",
+        [MaterialTypeEnum.IMAGE]: "图片",
+        [MaterialTypeEnum.VIDEO]: "视频",
+        [MaterialTypeEnum.MINI_PROGRAM]: "小程序",
+        [MaterialTypeEnum.LINK]: "链接",
+        [MaterialTypeEnum.FILE]: "文件",
+    };
+    return map[type] || "素材";
+};
 
 // 根据当前时间判断是否可以编辑, 如果当前时间大于推送时间, 则可以不可以编辑
 const canEdit = (data: any) => {
@@ -145,8 +184,23 @@ const handlePlayVideo = async (url: string) => {
 };
 </script>
 
-<style scoped>
-.content-wrapper {
-    @apply h-full bg-primary-light-9 flex p-2 rounded-lg;
+<style scoped lang="scss">
+.push-card {
+    @apply border border-slate-100 rounded-[20px] bg-white relative transition-all duration-300;
+    &:hover {
+        @apply shadow-light shadow-[#0065fb]/5 border-[#0065fb]/20;
+    }
+}
+
+.content-row {
+    @apply flex gap-4 p-3 rounded-2xl bg-slate-50 border border-[transparent] hover:border-slate-200 hover:bg-white transition-all;
+}
+
+.type-badge {
+    @apply w-16 h-7 flex-shrink-0 flex items-center justify-center text-[11px] font-black text-primary relative;
+}
+
+.icon-btn {
+    @apply w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 transition-all;
 }
 </style>

@@ -83,16 +83,14 @@ class DeviceTaskScheduler extends Command
 
         try {
             //获取手动模式的设备
-             // 3. 检查超时未开始的任务 (status=0 且当前时间超过end_time)
+            // 3. 检查超时未开始的任务 (status=0 且当前时间超过end_time)
             $this->checkTimeoutTasks($currentTime, $output);
-            
+
             // 1. 检查需要开始执行的任务 (status=0 且当前时间在区间内)
             $this->checkPendingTasks($currentTime, $output);
 
             // 2. 检查需要结束的任务 (status=1 且当前时间超过end_time)
             $this->checkRunningTasks($currentTime, $output);
-
-           
         } catch (\Exception $e) {
             $this->setTaskLog("设备任务调度器执行异常: " . $e->getTraceAsString(), 'error');
             if ($this->isDev) {
@@ -109,7 +107,7 @@ class DeviceTaskScheduler extends Command
         $pendingTasks = SvDeviceTask::alias('t')
             ->field('t.*, FROM_UNIXTIME(t.start_time) as start_time_str, FROM_UNIXTIME(t.end_time) as end_time_str')
             ->where('t.status', '=', 0) // 只处理已标记为执行中的任务
-             ->where('t.device_code', 'in', function($query){
+            ->where('t.device_code', 'in', function ($query) {
                 $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
             })
             ->where('t.auto_type', '=', 0) // 只处理手动任务
@@ -147,7 +145,7 @@ class DeviceTaskScheduler extends Command
     {
         $runningTasks = SvDeviceTask::field('*')
             ->where('status', 1)
-            ->where('device_code', 'in', function($query){
+            ->where('device_code', 'in', function ($query) {
                 $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
             })
             ->where('auto_type', '=', 0) // 只处理手动任务
@@ -176,7 +174,7 @@ class DeviceTaskScheduler extends Command
     protected function checkTimeoutTasks($currentTime, Output $output)
     {
         $timeoutTasks = SvDeviceTask::field('*')
-            ->where('device_code', 'in', function($query){
+            ->where('device_code', 'in', function ($query) {
                 $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
             })
             ->where('status', 0)
@@ -232,6 +230,15 @@ class DeviceTaskScheduler extends Command
                 case DeviceEnum::TASK_TYPE_TOUCH: // 截流获客任务
                     $this->executeCommentClueTask($task, $output);
                     break;
+                case DeviceEnum::TASK_TYPE_WECHAT_CIRCLE: //朋友圈发布
+                    $this->executeWechatCircleTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_WECHAT_CIRCLE_THUMB_COMMENT: // 点赞评论任务
+                    $this->executeWechatCircleThumbCommentTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_CLUES_WECHAT: // 获客加微任务
+                    $this->executeCluesWechatTask($task, $output);
+                    break;
                 default:
                     throw new \Exception("未知的任务类型: {$task->task_type}");
             }
@@ -277,6 +284,15 @@ class DeviceTaskScheduler extends Command
                 case DeviceEnum::TASK_TYPE_TOUCH: // 截流获客任务
                     $this->executeCommentClueCompletedTask($task, $output);
                     break;
+                case DeviceEnum::TASK_TYPE_WECHAT_CIRCLE: // 朋友圈发布任务
+                    $this->executeWechatCircleCompletedTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_WECHAT_CIRCLE_THUMB_COMMENT: // 点赞评论任务
+                    $this->executeWechatCircleThumbCommentCompletedTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_CLUES_WECHAT:
+                    $this->executeCluesWechatCompletedTask($task, $output);
+                    break;
                 default:
                     throw new \Exception("未知的任务类型: {$task->task_type}");
             }
@@ -293,6 +309,62 @@ class DeviceTaskScheduler extends Command
             }
 
             throw $e; // 重新抛出异常，让上层捕获
+        }
+    }
+
+    protected function executeCluesWechatTask(SvDeviceTask $task, Output $output)
+    {
+        if ($this->isDev) {
+            $output->writeln("执行获客加微任务 - 设备: {$task->device_code}");
+        }
+
+        // TODO: 实现具体的加微逻辑
+        self::cluesWechatTask($task, $output, true, function ($result) use ($task) {
+            $task->status = $result['status'];
+            $task->remark = $result['remark'];
+            $task->update_time = time();
+            $task->save();
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        });
+        $this->setTaskLog("获客加微任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
+
+    protected function executeCluesWechatCompletedTask(SvDeviceTask $task, Output $output)
+    {
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行加微任务完成 - 设备: {$task->device_code}");
+            }
+            $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+            $task->remark = '加微任务完成';
+            $task->update_time = time();
+            $task->save();
+
+            $find = SvDeviceTask::where('sub_task_id', $task->sub_task_id)
+                ->where('id', '<>', $task->id)
+                ->where('task_type', DeviceEnum::TASK_TYPE_FRIENDS)
+                ->where('status', DeviceEnum::TASK_STATUS_WAIT)
+                ->where('source', DeviceEnum::TASK_SOURCE_FRIENDS)
+                ->findOrEmpty();
+            if ($find->isEmpty()) {
+                \app\common\model\sv\SvCrawlingManualTask::where('id', $task->sub_task_id)->update(['status' => 3, 'update_time' => time()]);
+            }
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+
+            $this->setTaskLog("加微任务完成: ID={$task->id}, 设备={$task->device_code}");
+        } else {
+            if ($this->isDev) {
+                $output->writeln("执行加微任务 - 设备: {$task->device_code}");
+            }
+            // TODO: 实现具体的加好友完成逻辑
+            self::cluesWechatTask($task, $output, false, function ($result) use ($task) {
+                $task->status = $result['status'];
+                $task->remark = $result['remark'];
+                $task->update_time = time();
+                $task->save();
+                $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            });
+            $this->setTaskLog("加微任务执行中: ID={$task->id}, 设备={$task->device_code}");
         }
     }
 
@@ -465,7 +537,7 @@ class DeviceTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("接管任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
@@ -527,7 +599,7 @@ class DeviceTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("养号任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
@@ -575,7 +647,7 @@ class DeviceTaskScheduler extends Command
                 $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
             });
             $this->setTaskLog("获客任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
@@ -590,7 +662,7 @@ class DeviceTaskScheduler extends Command
         }
 
         // TODO: 实现具体的加微逻辑
-        self::cluesAddWechatFriendTask($task, $output, function ($result) use ($task) {
+        self::cluesAddWechatFriendTask($task, $output, true, function ($result) use ($task) {
             $task->status = $result['status'];
             $task->remark = $result['remark'];
             $task->update_time = time();
@@ -632,7 +704,7 @@ class DeviceTaskScheduler extends Command
                 $output->writeln("执行加微任务 - 设备: {$task->device_code}");
             }
             // TODO: 实现具体的加好友完成逻辑
-            self::cluesAddWechatFriendTask($task, $output, function ($result) use ($task) {
+            self::cluesAddWechatFriendTask($task, $output, false, function ($result) use ($task) {
                 $task->status = $result['status'];
                 $task->remark = $result['remark'];
                 $task->update_time = time();
@@ -643,11 +715,91 @@ class DeviceTaskScheduler extends Command
         }
     }
 
+    /**
+     * 执行微圈任务
+     */
+    protected function executeWechatCircleTask(SvDeviceTask $task, Output $output)
+    {
+        if ($this->isDev) {
+            $output->writeln("执行发布任务 - 设备: {$task->device_code}");
+        }
+
+        self::wechatCirclePublishTask($task, $output, function ($result) use ($task) {
+            if ($result['status'] !== -1) {
+                $task->status = $result['status'];
+                $task->remark = $result['remark'];
+                $task->update_time = time();
+                $task->save();
+                $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            }
+        });
+
+        $this->setTaskLog("发布任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
+
+    /**
+     * 执行微圈任务完成逻辑
+     */
+    protected function executeWechatCircleCompletedTask(SvDeviceTask $task, Output $output) 
+    {
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行发布任务完成 - 设备: {$task->device_code}");
+            }
+            self::wechatCirclePublishCompletedTask($task, $output);
+            $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+            $task->remark = '发布任务完成';
+            $task->update_time = time();
+            $task->save();
+            
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+            $this->setTaskLog("执行发布任务完成: ID={$task->id}, 设备={$task->device_code}");
+        } 
+    }
+
+
+    protected function executeWechatCircleThumbCommentTask(SvDeviceTask $task, Output $output)
+    {
+        if ($this->isDev) {
+            $output->writeln("执行点赞评论任务 - 设备: {$task->device_code}");
+        }
+
+        self::wechatCircleThumbCommentTask($task, $output, function ($result) use ($task) {
+            if ($result['status'] !== -1) {
+                $task->status = $result['status'];
+                $task->remark = $result['remark'];
+                $task->update_time = time();
+                $task->save();
+                $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            }
+        });
+
+        $this->setTaskLog("点赞评论任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
+
+    protected function executeWechatCircleThumbCommentCompletedTask(SvDeviceTask $task, Output $output)
+    {
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行点赞评论任务完成 - 设备: {$task->device_code}");
+            }
+            self::wechatCircleThumbCommentCompletedTask($task, $output);
+            $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+            $task->remark = '点赞评论任务完成';
+            $task->update_time = time();
+            $task->save();
+            
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+            $this->setTaskLog("执行点赞评论任务完成: ID={$task->id}, 设备={$task->device_code}");
+        }
+    }
+
 
     /**
      * 执行评论区获客任务
      */
-    protected function executeCommentClueTask(SvDeviceTask $task, Output $output) {
+    protected function executeCommentClueTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行截流获客任务 - 设备: {$task->device_code}");
         }
@@ -682,7 +834,8 @@ class DeviceTaskScheduler extends Command
         $this->setTaskLog("截流获客任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
 
-    protected function executeCommentToCommentTask(SvDeviceTask $task, Output $output) {
+    protected function executeCommentToCommentTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行评论区评论任务 - 设备: {$task->device_code}");
         }
@@ -694,10 +847,10 @@ class DeviceTaskScheduler extends Command
             $task->save();
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         });
-
     }
 
-    protected function executeCommentToMsgTask(SvDeviceTask $task, Output $output) {
+    protected function executeCommentToMsgTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行评论区私信任务 - 设备: {$task->device_code}");
         }
@@ -713,7 +866,8 @@ class DeviceTaskScheduler extends Command
         $this->setTaskLog("评论区私信任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
 
-    protected function executeCommentToMarkClueTask(SvDeviceTask $task, Output $output) {
+    protected function executeCommentToMarkClueTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行留痕获客任务 - 设备: {$task->device_code}");
         }
@@ -731,7 +885,8 @@ class DeviceTaskScheduler extends Command
     /**
      * 执行评论区获客任务完成逻辑
      */
-    protected function executeCommentClueCompletedTask(SvDeviceTask $task, Output $output) {
+    protected function executeCommentClueCompletedTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行评论区评论任务 - 设备: {$task->device_code}");
         }
@@ -800,7 +955,7 @@ class DeviceTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("评论区评论任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
@@ -838,7 +993,7 @@ class DeviceTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("评论区私信任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
@@ -876,7 +1031,7 @@ class DeviceTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("留痕获客任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }

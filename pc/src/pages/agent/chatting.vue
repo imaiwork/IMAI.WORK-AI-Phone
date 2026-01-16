@@ -1,6 +1,6 @@
 <template>
-    <div class="h-full p-5">
-        <div class="h-full flex rounded-[20px] bg-white" v-show="!loading">
+    <div class="h-full w-[1200px] mx-auto overflow-hidden rounded-[20px] bg-white">
+        <div class="h-full flex rounded-[20px] bg-white">
             <!-- 左侧聊天记录 -->
             <ChatHistory
                 :pager="chatRecordPager"

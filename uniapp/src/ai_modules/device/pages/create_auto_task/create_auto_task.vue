@@ -543,6 +543,7 @@ const getDetail = async () => {
         uni.hideLoading();
     }
 };
+3;
 
 const getAutoTaskDetail = async () => {
     const data = await getAutoTaskDetailApi({ device_code: deviceCode.value });

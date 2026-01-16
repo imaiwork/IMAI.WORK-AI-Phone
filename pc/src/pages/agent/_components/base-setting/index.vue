@@ -1,38 +1,49 @@
 <template>
-    <div class="h-full flex flex-col">
-        <div class="grow min-h-0">
+    <div class="h-[full] flex flex-col bg-[#FFFFFF]">
+        <div class="grow min-h-[0]">
             <ElScrollbar>
-                <div class="px-[30px]">
-                    <ElForm :model="formData" :rules="formRules" ref="formRef" label-position="top">
-                        <!-- 背景和Logo设置 -->
+                <div class="px-[30px] pb-[40px]">
+                    <ElForm
+                        :model="formData"
+                        :rules="formRules"
+                        ref="formRef"
+                        label-position="top"
+                        class="custom-agent-form">
                         <div
-                            class="mt-3 w-full h-[180px] bg-no-repeat bg-cover rounded-tl-[20px] rounded-tr-[20px] flex flex-col justify-center items-center"
+                            class="mt-[12px] w-[full] h-[200px] bg-no-repeat bg-cover rounded-[24px] flex flex-col justify-center items-center relative overflow-hidden group transition-all"
                             :style="{ backgroundImage: `url(${formData.bg_image || AgentBg})` }">
-                            <div class="mt-4">
+                            <div
+                                class="absolute inset-[0] bg-[rgba(0,0,0,0.2)] group-hover:bg-[rgba(0,0,0,0.3)] transition-all border-[transparent]"></div>
+
+                            <div class="relative z-[10] flex flex-col items-center">
                                 <agent-logo v-model="formData.image" />
-                            </div>
-                            <div class="mt-[10px]">
-                                <upload :limit="1" show-progress :show-file-list="false" @success="getBgSuccessImage">
-                                    <div
-                                        class="w-[72px] h-[29px] flex items-center justify-center rounded-[32px] bg-[#00000066] text-white">
-                                        更换背景
-                                    </div>
-                                </upload>
+                                <div class="mt-4">
+                                    <upload :limit="1" @success="getBgSuccessImage">
+                                        <div class="glass-action-btn">
+                                            <Icon name="el-icon-Picture" />
+                                            <span class="ml-1">更换背景封面</span>
+                                        </div>
+                                    </upload>
+                                </div>
                             </div>
                         </div>
-                        <!-- 基础信息表单 -->
-                        <div class="flex mt-6 w-full gap-8">
-                            <div>
+
+                        <div class="flex mt-[32px] w-[full] gap-[32px]">
+                            <div class="w-[320px] flex-shrink-0 space-y-[12px]">
                                 <ElFormItem label="智能体名称" prop="name">
-                                    <ElInput v-model="formData.name" class="!h-11" placeholder="请输入智能体名称" />
+                                    <ElInput
+                                        v-model="formData.name"
+                                        class="custom-input"
+                                        placeholder="为你的 AI 起个名字" />
                                 </ElFormItem>
 
                                 <ElFormItem label="智能体模型" prop="model_id">
                                     <ElSelect
                                         v-model="formData.model_id"
-                                        class="!h-11"
-                                        placeholder="请选择智能体模型"
+                                        class="custom-select"
+                                        placeholder="选择底层模型架构"
                                         filterable
+                                        :show-arrow="false"
                                         @change="handleModelChange">
                                         <ElOption
                                             v-for="item in aiModelChannel"
@@ -42,48 +53,56 @@
                                     </ElSelect>
                                 </ElFormItem>
                             </div>
+
                             <div class="flex-1">
                                 <ElFormItem label="相关介绍" prop="intro">
                                     <ElInput
                                         v-model="formData.intro"
+                                        class="custom-textarea w-full"
                                         type="textarea"
                                         show-word-limit
                                         resize="none"
-                                        placeholder="请输入相关介绍 ..."
+                                        placeholder="简单的描述一下这个智能体的核心能力或定位..."
                                         :maxlength="500"
-                                        :rows="6" />
+                                        :rows="5" />
                                 </ElFormItem>
                             </div>
                         </div>
-                        <ElDivider class="!border-[#0000000d] !mt-2"></ElDivider>
-                        <!-- 提示词设置 -->
-                        <ElFormItem>
-                            <template #label>
-                                <div class="flex justify-between">
-                                    <div>
-                                        <span class="font-bold">提示词</span>
-                                        <span class="ml-2 text-[#00000080]"
-                                            >角色、背景、职责、工作流程、沟通方式、目的</span
-                                        >
+
+                        <div class="h-[1px] bg-[#F1F5F9] my-[24px] border-[transparent] w-[full]"></div>
+
+                        <div class="prompt-section">
+                            <ElFormItem prop="roles_prompt">
+                                <template #label>
+                                    <div class="flex items-center justify-between w-[full] mb-[8px]">
+                                        <div class="flex items-center gap-[8px]">
+                                            <span class="text-[15px] font-[900] text-[#0F172A]"
+                                                >提示词 (System Prompt)</span
+                                            >
+                                        </div>
+                                        <ElButton link @click="handleWriteExample()">
+                                            <Icon name="el-icon-MagicStick" />
+                                            <span class="ml-1">一键填入标准示例</span>
+                                        </ElButton>
                                     </div>
-                                    <ElButton link type="primary" @click="handleWriteExample()">一键填入示例</ElButton>
+                                </template>
+                                <div class="w-full">
+                                    <ElInput
+                                        v-model="formData.roles_prompt"
+                                        type="textarea"
+                                        show-word-limit
+                                        placeholder="请输入详细的提示词..."
+                                        :maxlength="100000"
+                                        :rows="12" />
                                 </div>
-                            </template>
-                            <ElInput
-                                v-model="formData.roles_prompt"
-                                type="textarea"
-                                show-word-limit
-                                placeholder="请输入相关提示词 ..."
-                                :maxlength="100000"
-                                :rows="6" />
-                        </ElFormItem>
+                            </ElFormItem>
+                        </div>
                     </ElForm>
                 </div>
             </ElScrollbar>
         </div>
     </div>
 </template>
-
 <script setup lang="ts">
 import { type FormInstance } from "element-plus";
 import { useAppStore } from "@/stores/app";
@@ -162,4 +181,16 @@ defineExpose({
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.avatar-container {
+    @apply bg-[#FFFFFF] p-[4px] rounded-[20px] border-[4px] border-[rgba(255,255,255,0.4)];
+}
+
+.glass-action-btn {
+    @apply flex items-center justify-center h-[32px] px-[16px] rounded-[32px] bg-[rgba(0,0,0,0.3)] backdrop-blur-[8px] border-[1px] border-[rgba(255,255,255,0.2)] text-[#FFFFFF] text-[12px] font-[900] cursor-pointer transition-all;
+
+    &:hover {
+        @apply bg-[rgba(0,0,0,0.5)];
+    }
+}
+</style>

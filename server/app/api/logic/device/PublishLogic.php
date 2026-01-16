@@ -90,6 +90,8 @@ class PublishLogic extends SvBaseLogic
         } catch (\Exception $e) {
             // 回滚事务
             Db::rollback();
+            // print_r($e->__toString());
+            // die;
             self::setError($e->getMessage());
             return false;
         }
@@ -145,6 +147,15 @@ class PublishLogic extends SvBaseLogic
     private static function checkPublishTime($params)
     {
         try {
+            if (isset($params['custom_date']) && !empty($params['custom_date'])) {
+                foreach ($params['time_config'] as $config) {
+                    if (count($config['times']) != (int)$params['publish_frep']) {
+                        throw new \Exception('任务执行时间区间数量与发布频率不一致');
+                    }
+                }
+            }
+
+
             $accounts = $params['accounts'] ?? [];
             $mediaSettings = SvMatrixMediaSetting::where('id',  $params['matrix_media_setting_id'])->where('user_id', self::$uid)->select()->toArray();
             if (empty($mediaSettings)) {
@@ -159,7 +170,8 @@ class PublishLogic extends SvBaseLogic
                     continue;
                 }
                 $days = ceil($account['count'] / $params['publish_frep']);
-                $times = \app\api\logic\device\TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $days);
+                $times = \app\api\logic\device\TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $days, $params['custom_date'] ?? [], 1);
+                //print_r($times);die;
                 $find = SvAccount::where('account', $account['account'])->where('user_id', self::$uid)->limit(1)->find()->toArray();
                 $account = array_merge($account, $find);
                 foreach ($times as $time) {
@@ -178,6 +190,7 @@ class PublishLogic extends SvBaseLogic
     private static function batchPushlishAccount($publish, $params)
     {
         try {
+            //print_r($params);die;
             $time_config = json_decode($params['time_config'], true);
             $accounts = json_decode($params['accounts'], true);
             $accountTypes = array_count_values(array_column($accounts, 'type'));
@@ -189,8 +202,21 @@ class PublishLogic extends SvBaseLogic
             // 实现媒体分配逻辑
             $allocatedAccounts = self::allocateMediaToAccounts($accounts, $accountTypes, $mediaCount);
 
-            $tmpTime = strpos($time_config[0], '-') !== false ? explode('-', $time_config[0])[0] : $time_config[0];
-            $nextPublishTime = date('Y-m-d H:i:s', strtotime($params['publish_start'] . ' ' . $tmpTime));
+            // if (isset($params['custom_date']) && !empty($params['custom_date'])) {
+
+            // } else {
+            //     $tmpTime = strpos($time_config[0], '-') !== false ? explode('-', $time_config[0])[0] : $time_config[0];
+            //     $nextPublishTime = date('Y-m-d H:i:s', strtotime($params['publish_start'] . ' ' . $tmpTime));
+            // }
+
+            $tmp = $time_config[0];
+            $stDate = $tmp['date'] ?? date('Y-m-d', time());
+            $stTime = explode('-', $tmp['times'][0]);
+            $nextPublishTime = date('Y-m-d H:i:s', strtotime($stDate . ' ' . $stTime[0]));
+
+
+
+
             $allTaskInstall = [];
             foreach ($allocatedAccounts as $key => $account) {
                 if ($account['count'] == 0) {
@@ -198,7 +224,7 @@ class PublishLogic extends SvBaseLogic
                 }
 
                 $days = ceil($account['count'] / $params['publish_frep']);
-                $times = \app\api\logic\device\TaskLogic::getTimes($time_config, date('Y-m-d', time()), $days);
+                $times = \app\api\logic\device\TaskLogic::getTimes($time_config, date('Y-m-d', time()), $days, $params['custom_date'] ?? [], 1);
 
                 $find = SvAccount::where('account', $account['account'])->where('type', $account['type'])->where('user_id', self::$uid)->limit(1)->findOrEmpty();
                 if ($find->isEmpty()) {
@@ -251,6 +277,7 @@ class PublishLogic extends SvBaseLogic
                         'task_name' => $task_name,
                         'status' => 0,
                         'day' => date('Y-m-d', $time['start_time']),
+                        'time_config' => json_encode(array(date('H:i', $time['start_time']) . "-" . date('H:i', $time['end_time'])), JSON_UNESCAPED_UNICODE),
                         'start_time' => $time['start_time'],
                         'end_time' => $time['end_time'],
                         'sub_task_id' => $pubAccount->id,
@@ -262,6 +289,8 @@ class PublishLogic extends SvBaseLogic
             //print_r($allTaskInstall);die;
             \app\api\logic\device\TaskLogic::add($allTaskInstall);
         } catch (\Throwable $th) {
+            // print_r($th->__toString());
+            // die;
             throw new \Exception($th->getMessage(), $th->getCode());
         }
     }
@@ -758,7 +787,7 @@ class PublishLogic extends SvBaseLogic
         try {
 
             $accounts = SvPublishSettingAccount::alias('pa')
-                ->field('pa.*, ps.time_config, ps.publish_frep,pa.device_code as devicecode')
+                ->field('pa.*, ps.time_config, ps.publish_frep,pa.device_code as devicecode, ps.custom_date')
                 ->field('vs.id as matrix_media_setting_id, vs.media_count, vs.media_url, vs.media_type, vs.copywriting as media_copywriting')
                 ->join('sv_matrix_media_setting vs', 'vs.id = pa.matrix_media_setting_id and vs.user_id = pa.user_id and vs.media_type = pa.media_type')
                 ->join('sv_publish_setting ps', 'ps.id = pa.publish_id and ps.user_id = pa.user_id')
@@ -780,6 +809,7 @@ class PublishLogic extends SvBaseLogic
             foreach ($accounts as $key => $account) {
 
                 $medias = self::_getMedias($account);
+                //print_r($medias);die;
                 if (empty($medias)) {
                     array_push($insertData, [
                         'publish_id' => $account['publish_id'],
@@ -870,8 +900,8 @@ class PublishLogic extends SvBaseLogic
             self::$returnData = $insertData;
             return true;
         } catch (\Exception $e) {
-            print_r($e->__toString());
-            die;
+            // print_r($e->__toString());
+            // die;
             return false;
         }
     }
@@ -939,24 +969,68 @@ class PublishLogic extends SvBaseLogic
             5 => [], //快手
         );
         $timeConfig = json_decode($account['time_config'], true);
+        $customDate =  is_null($account['custom_date']) ? [] : json_decode($account['custom_date'], true);
+        // if (!empty($customDate)) {
+        //     $startDate = $account['publish_start'];
+        //     for ($i = 0; $i <= ceil($account['count'] / $account['publish_frep']); $i++) {
+        //         foreach ($timeConfig as $time) {
+        //             $startDate = $account['publish_start'];
+        //             $startDate = date('Y-m-d', strtotime("{$startDate} +" . $i . " day"));
 
-        $startDate = $account['publish_start'];
-        for ($i = 0; $i <= ceil($account['count'] / $account['publish_frep']); $i++) {
-            foreach ($timeConfig as $time) {
-                $startDate = $account['publish_start'];
-                $startDate = date('Y-m-d', strtotime("{$startDate} +" . $i . " day"));
+        //             $tmps = explode('-', $time);
+        //             $st = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[0]}")));
+        //             $et = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[1]}")));
 
+        //             if ($st < time() || $et < time()) {
+        //                 $startDate = date('Y-m-d', strtotime("{$startDate} +" . ($i + 1) . " day"));
+        //                 $st = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[0]}")));
+        //                 $et = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[1]}")));
+        //             }
+
+
+        //             $interval = floor(($et - $st) / 4);
+        //             $xhsPublishTime = date('Y-m-d H:i:s', $st + ($interval * 0));
+        //             $dyPublishTime = date('Y-m-d H:i:s', $st + ($interval * 1));
+        //             $ksPublishTime = date('Y-m-d H:i:s', $st + ($interval * 2));
+        //             $vtPublishTime = date('Y-m-d H:i:s', $st + ($interval * 3));
+        //             if ($maxTime) {
+        //                 if (strtotime($xhsPublishTime) <= strtotime($maxTime) || strtotime($xhsPublishTime) <= time()) {
+        //                     continue;
+        //                 }
+        //                 if (strtotime($dyPublishTime) <= strtotime($maxTime) || strtotime($dyPublishTime) <= time()) {
+        //                     continue;
+        //                 }
+        //                 if (strtotime($ksPublishTime) <= strtotime($maxTime) || strtotime($ksPublishTime) <= time()) {
+        //                     continue;
+        //                 }
+        //                 if (strtotime($vtPublishTime) <= strtotime($maxTime) || strtotime($vtPublishTime) <= time()) {
+        //                     continue;
+        //                 }
+        //             }
+
+        //             $times[3][] = !in_array($xhsPublishTime, $times[3]) ? $xhsPublishTime : date('Y-m-d H:i:s', strtotime($xhsPublishTime) + (($i + 1)  * 86400));
+        //             $times[4][] = !in_array($dyPublishTime, $times[4]) ? $dyPublishTime :  date('Y-m-d H:i:s', strtotime($dyPublishTime) + (($i + 1)  * 86400));
+        //             $times[5][] = !in_array($ksPublishTime, $times[5]) ? $ksPublishTime :  date('Y-m-d H:i:s', strtotime($ksPublishTime) + (($i + 1)  * 86400));
+        //             $times[1][] = !in_array($vtPublishTime, $times[1]) ? $vtPublishTime :  date('Y-m-d H:i:s', strtotime($vtPublishTime) + (($i + 1)  * 86400));
+        //         }
+        //         sort($times[3]);
+        //         sort($times[4]);
+        //         sort($times[5]);
+        //         sort($times[1]);
+
+        //         //$startDate = date('Y-m-d', strtotime("{$startDate} +1 day"));
+        //     }
+        // } else {
+        // }
+
+        foreach ($timeConfig as $config) {
+            $date = $config['date'];
+            $_times = $config['times'];
+            foreach ($_times as $time) {
+                $startDate = $date;
                 $tmps = explode('-', $time);
                 $st = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[0]}")));
                 $et = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[1]}")));
-
-                if ($st < time() || $et < time()) {
-                    $startDate = date('Y-m-d', strtotime("{$startDate} +" . ($i + 1) . " day"));
-                    $st = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[0]}")));
-                    $et = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[1]}")));
-                }
-
-
                 $interval = floor(($et - $st) / 4);
                 $xhsPublishTime = date('Y-m-d H:i:s', $st + ($interval * 0));
                 $dyPublishTime = date('Y-m-d H:i:s', $st + ($interval * 1));
@@ -977,19 +1051,16 @@ class PublishLogic extends SvBaseLogic
                     }
                 }
 
-                $times[3][] = !in_array($xhsPublishTime, $times[3]) ? $xhsPublishTime : date('Y-m-d H:i:s', strtotime($xhsPublishTime) + (($i + 1)  * 86400));
-                $times[4][] = !in_array($dyPublishTime, $times[4]) ? $dyPublishTime :  date('Y-m-d H:i:s', strtotime($dyPublishTime) + (($i + 1)  * 86400));
-                $times[5][] = !in_array($ksPublishTime, $times[5]) ? $ksPublishTime :  date('Y-m-d H:i:s', strtotime($ksPublishTime) + (($i + 1)  * 86400));
-                $times[1][] = !in_array($vtPublishTime, $times[1]) ? $vtPublishTime :  date('Y-m-d H:i:s', strtotime($vtPublishTime) + (($i + 1)  * 86400));
+                $times[3][] = $xhsPublishTime;
+                $times[4][] = $dyPublishTime;
+                $times[5][] = $ksPublishTime;
+                $times[1][] = $vtPublishTime;
             }
-            sort($times[3]);
-            sort($times[4]);
-            sort($times[5]);
-            sort($times[1]);
-
-            //$startDate = date('Y-m-d', strtotime("{$startDate} +1 day"));
         }
-        //print_r($times);die;
+        sort($times[3]);
+        sort($times[4]);
+        sort($times[5]);
+        sort($times[1]);
         return $times;
     }
 
@@ -1235,9 +1306,9 @@ class PublishLogic extends SvBaseLogic
             $mergedArray = [];
             $media_url = json_decode($account['media_url'], true);
             $media_copywriting = json_decode($account['media_copywriting'], true);
-
+            //print_r($account);die;
             $timeDict = self::getTimes($account);
-            //print_r($timeDict);die;
+
             $times = $timeDict[$account['account_type']] ?? [];
             if (empty($timeDict)) {
                 return [];

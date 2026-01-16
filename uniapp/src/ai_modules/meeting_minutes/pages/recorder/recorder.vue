@@ -144,7 +144,7 @@ const userRecordTimeLimit = computed(() => {
 
 // 把tokensValue 转为秒
 const tokensValueSecond = computed(() => {
-    return tokensValue.score / 60;
+    return tokensValue.value / 60;
 });
 
 const formData = reactive({

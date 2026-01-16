@@ -5,10 +5,10 @@
         confirm-button-text=""
         cancel-button-text=""
         :show-close="false"
-        style="padding: 0; background-color: var(--app-bg-color-1)">
+        style="padding: 0">
         <div class="py-[18px] -my-4">
             <div class="absolute top-[18px] right-[18px] w-6 h-6" @click="close">
-                <close-btn :theme="ThemeEnum.DARK"></close-btn>
+                <close-btn></close-btn>
             </div>
             <div class="font-bold text-[20px] text-white px-[18px]">图片灵感库</div>
             <div class="mt-3">
@@ -21,7 +21,7 @@
                                         class="relative overflow-hidden cursor-pointer rounded-lg hover:"
                                         v-for="(value, sub_index) in item.subs"
                                         :key="sub_index"
-                                        :class="[isNotIncluded(value) ? 'shadow-[0_0_0_1px_var(--color-primary)]' : '']"
+                                        :class="[isNotIncluded(value) ? 'shadow-[0_0_0_2px_var(--color-primary)]' : '']"
                                         @click="handleAssembleItem(value)">
                                         <img :src="value.pic" class="w-full h-full object-cover" />
                                         <div class="absolute bottom-2 left-0 w-full flex justify-center">
@@ -38,8 +38,8 @@
             </div>
             <div class="mt-5 px-4">
                 <template v-if="optionsData.assembleLists.length > 0">
-                    <div class="bg-app-bg-3 border border-app-border-2 rounded-lg px-4 py-2 min-h-[40px] relative mt-4">
-                        <div class="text-white text-xs">
+                    <div class="bg-[#F6F6F6] rounded-lg px-4 py-2 min-h-[40px] relative mt-4">
+                        <div class="text-xs">
                             {{ `${getAssemblePrompt}` }}
                         </div>
                         <div class="absolute bottom-1.5 right-2 cursor-pointer" @click="assembleItemValue = []">
@@ -128,16 +128,6 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
-:deep(.el-tabs) {
-    .el-tabs__nav,
-    .el-tabs__header {
-        border-color: var(--app-border-color-2);
-    }
-    .el-tabs__item {
-        color: #ffffff;
-        border-color: var(--app-border-color-2);
-    }
-}
 .title-text {
     @apply px-5 h-[34px] flex items-center justify-center rounded-full text-white;
     border: 1px solid rgba(255, 255, 255, 0.1);

@@ -14,7 +14,9 @@
                 @close="stopChat">
                 <template #content>
                     <div class="h-full w-full">
-                        <div class="md:max-w-3xl lg:max-w-[42rem] xl:max-w-[48rem] 2xl:max-w-[52rem] mx-auto">
+                        <div
+                            class="md:max-w-3xl lg:max-w-[42rem] xl:max-w-[48rem] 2xl:max-w-[52rem] mx-auto"
+                            v-if="Object.keys(config).length > 0">
                             <img :src="detail.avatar" class="w-[70px] h-[70px] rounded-[10px] mt-[50px]" />
                             <div v-html="config?.onboarding_info?.prologue" class="mt-5 text-[14px]"></div>
                             <div class="mt-5 flex flex-col gap-2">

@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace app\common\traits;
 
+use app\api\logic\service\TokenLogService;
 use app\common\enum\DeviceEnum;
+use app\common\enum\AutomationEnum;
+use app\common\enum\user\AccountLogEnum;
+use app\common\logic\AccountLogLogic;
 use app\common\model\sv\SvAddWechatRecord;
 use app\common\model\sv\SvCrawlingManualTask;
 use app\common\model\sv\SvCrawlingManualTaskRecord;
 use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvCrawlingTaskDeviceBind;
+use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceActive;
 use app\common\model\sv\SvDeviceActiveAccount;
 use app\common\model\sv\SvDeviceTakeOverTask;
@@ -20,6 +25,9 @@ use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSetting;
 use app\common\model\sv\SvPublishSettingAccount;
 use app\common\model\sv\SvPublishSettingDetail;
+use app\common\model\user\User;
+use app\common\model\wechat\AiWechatCircleTask;
+use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatLog;
 use app\common\service\FileService;
@@ -34,6 +42,8 @@ trait DeviceAutoTaskTrait
     private static $redisInstance = null;
     private static $logtitle = '';
     private static $redisSelect = 8;
+
+    // 自动化功能常量定义已迁移到 AutomationEnum 枚举类
 
     public static function sphCluesStartTask(SvDeviceTask $dtask, Output $output, callable $callback)
     {
@@ -318,7 +328,8 @@ trait DeviceAutoTaskTrait
                 'create_time' => time()
             ]);
 
-
+            $scene = AutomationEnum::SOCIAL_MEDIA_RELEASED;
+            self::requestUrl($payload,$scene, $publish['user_id'],$task->id,  $task->device_code);
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
@@ -422,13 +433,87 @@ trait DeviceAutoTaskTrait
                 'data' => json_encode($payload)
             ]);
             self::setRpaPublishStatus($publish);
-
-
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
                     'remark' => '任务执行中',
                     'publish_id' => $publish['id'],
+                ]);
+            }
+        } catch (\Throwable $th) {
+            self::setLog($th->getTraceAsString(), 'publish');
+            $output->writeln("任务执行失败：" . $th->getMessage());
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 3,
+                    'remark' => '任务执行失败：' . $th->getMessage(),
+                ]);
+            }
+            throw new \Exception($th->getMessage(), $th->getCode());
+        }
+    }
+
+
+    public static function wechatCirclePublishTask(SvDeviceTask $task, Output $output, callable $callback)
+    {
+        try {
+            self::$logtitle = "微圈发布任务[{$task->device_code}]";
+            
+            self::checkOnline($task->device_code, 'ws');
+
+            $publish = AiWechatCircleTask::where('id', $task->sub_data_id)->where('send_status', 0)->where('auto_type', $task->auto_type)->findOrEmpty();
+            if ($publish->isEmpty()) {
+                self::setLog("微圈发布任务不存在:\n" . Db::getLastSql(), 'publish');
+                return $callback([
+                    'status' => -1,
+                    'remark' => '微圈发布任务不存在',
+                ]);
+            }
+            
+            $payload = array(
+                'appType' => $task->account_type,
+                'messageId' => 0,
+                'type' => 5,
+                'deviceId' => $task->device_code,
+                'appVersion' => '2.4.0',
+                'content' => json_encode([
+                    'material_id' => $publish['id'],
+                    'title' => $publish['title'] ?? '',
+                    'type' => $publish['attachment_type'] === 1 ? 2 : 1,
+                    'list' => $publish['attachment_content'],
+                    'isLocation' => !empty($publish['poi']) ? 1 : 0,
+                    'location' => $publish['poi'] ?? '',
+                    'isScheduledTime' => true,
+                    'scheduledTime' => $publish['send_time'],
+                    'taskId' => $publish['task_id'],
+                    'body' => $publish['content'],
+                    'tag' => $publish['tag'] ?? '',
+                    'comment' => $publish['comment'] ?? [],
+
+                ], JSON_UNESCAPED_UNICODE)
+            );
+            self::setLog(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'publish');
+            $channel = "device.{$publish['device_code']}.message";
+            ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+            ChannelClient::publish($channel, [
+                'data' => json_encode($payload)
+            ]);
+
+            $publish->send_status = 1;
+            $publish->update_time = time();
+            $publish->save();
+
+            
+            AiWechatCircleTaskConfig::where('id', $publish['task_config_id'])->update([
+                'status' => 2,
+                'update_time' => time(),
+            ]);
+            $scene = AutomationEnum::FRIENDS_CIRCLE_RELEASED;
+            self::requestUrl($payload,$scene, $publish['user_id'],$task->id,  $task->device_code);
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 1,
+                    'remark' => '任务执行中',
                 ]);
             }
         } catch (\Throwable $th) {
@@ -473,15 +558,16 @@ trait DeviceAutoTaskTrait
                 ->where('t.wechat_id', 'not in', ['', null]) // 过滤掉wechat_id为空的记录
                 //->where('t.status', 'in', [1, 2]) // 过滤掉已完成、已暂停、已删除的任务
                 ->whereRaw('t.exec_add_count > t.completed_add_count') // 过滤掉已执行加微次数大于等于注册类型的记录
-                ->limit(10)
+                //->limit(10)
                 ->order('r.id', 'desc')
                 ->select()
                 ->toArray();
 
             //print_r(Db::getLastSql()); die;
-
+            $sendWechatIds = [];
+            $add_interval_time = 0;
             foreach ($records as $record) {
-                $task = SvCrawlingManualTask::where('id', $record['task_id'])->findOrEmpty();
+                $task = SvCrawlingTask::where('id', $record['crawling_task_id'])->findOrEmpty();
                 if ($task->isEmpty()) {
                     self::setLog("线索任务不存在:\n" . Db::getLastSql(), 'add_wechat');
                     $output->writeln("线索任务不存在:\n" . Db::getLastSql());
@@ -501,6 +587,7 @@ trait DeviceAutoTaskTrait
                     $task->save();
                 }
 
+                $add_interval_time = (int)$record['add_interval_time'] > $add_interval_time ? (int)$record['add_interval_time'] : $add_interval_time;
                 $wxPattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
                 if (preg_match($wxPattern, $record['clue_wechat'])) {
                     $response = \app\common\service\ToolsService::Sv()->queryResult([
@@ -534,7 +621,7 @@ trait DeviceAutoTaskTrait
                         if (isset($response['data']['valid']) && (bool)$response['data']['valid'] === false) {
                             self::setLog($record['clue_wechat'] . '该账号不是有效的微信号,忽略', 'add_wechat');
                             self::setLog($response, 'add_wechat');
-                            SvCrawlingManualTaskRecord::where('id', $record['id'])->update([
+                            SvAddWechatRecord::where('id', $record['id'])->update([
                                 'status' => 0,
                                 'result' => '该线索经过校验为无效线索',
                                 'update_time' => time(),
@@ -546,75 +633,118 @@ trait DeviceAutoTaskTrait
 
 
                 // 处理加微逻辑
-                $wechat_ids = explode(',', $record['wechat_id']);
-                $useWechat = [];
-                foreach ($wechat_ids as $wechat_id) {
-                    //计算微信加微间隔
-                    $interval_find = AiWechatLog::where('user_id', $record['user_id'])
-                        ->where('log_type', 0)
-                        ->where('wechat_id', $wechat_id)
-                        ->where('create_time', '>', (time() - ((int)$record['add_interval_time'] * 60)))
-                        ->order('id', 'desc')
-                        ->findOrEmpty();
-                    if (!$interval_find->isEmpty()) {
-                        self::setLog('当前微信' . $wechat_id . '加微间隔未到', 'add_wechat');
-                        continue;
-                    }
+                // $wechat_ids = explode(',', $record['wechat_id']);
+                // $useWechat = [];
+                // foreach ($wechat_ids as $wechat_id) {
+                //     //计算微信加微间隔
+                //     $interval_find = AiWechatLog::where('user_id', $record['user_id'])
+                //         ->where('log_type', 0)
+                //         ->where('wechat_id', $wechat_id)
+                //         ->where('create_time', '>', (time() - ((int)$record['add_interval_time'] * 60)))
+                //         ->order('id', 'desc')
+                //         ->findOrEmpty();
+                //     if (!$interval_find->isEmpty()) {
+                //         self::setLog('当前微信' . $wechat_id . '加微间隔未到', 'add_wechat');
+                //         continue;
+                //     }
 
-                    $addCount = AiWechatLog::where('user_id', $record['user_id'])
-                        ->where('log_type', 0)
-                        ->where('wechat_id', $wechat_id)
-                        ->where('create_time', 'between', [strtotime(date('Y-m-d 00:00:00')), strtotime(date('Y-m-d 23:59:59'))])
-                        ->count();
-                    if ($addCount >= $record['add_number']) {
-                        self::setLog('当前微信' . $wechat_id . '今日加微信次数已到', 'add_wechat');
-                        continue;
-                    }
-                    array_push($useWechat, $wechat_id);
-                }
+                //     $addCount = AiWechatLog::where('user_id', $record['user_id'])
+                //         ->where('log_type', 0)
+                //         ->where('wechat_id', $wechat_id)
+                //         ->where('create_time', 'between', [strtotime(date('Y-m-d 00:00:00')), strtotime(date('Y-m-d 23:59:59'))])
+                //         ->count();
+                //     if ($addCount >= $record['add_number']) {
+                //         self::setLog('当前微信' . $wechat_id . '今日加微信次数已到', 'add_wechat');
+                //         continue;
+                //     }
+                //     array_push($useWechat, $wechat_id);
+                // }
 
-                if (empty($useWechat)) {
-                    self::setLog('当前无可以使用的微信账号', 'add_wechat');
-                    SvCrawlingManualTaskRecord::where('id', $record['id'])->update([
-                        'status' => 4,
-                        'result' => '冷却中，等待后可继续添加',
-                        'update_time' => time(),
-                    ]);
-                    continue;
-                }
+                // if (empty($useWechat)) {
+                //     self::setLog('当前无可以使用的微信账号', 'add_wechat');
+                //     SvCrawlingManualTaskRecord::where('id', $record['id'])->update([
+                //         'status' => 4,
+                //         'result' => '冷却中，等待后可继续添加',
+                //         'update_time' => time(),
+                //     ]);
+                //     continue;
+                // }
 
-                $currentTime = time(); // 获取当前时间戳
-                $coolingThreshold = $currentTime - 1800; // 2小时前的时间戳（7200秒）
-                $wechat = AiWechat::field('*')
-                    ->where('wechat_id', 'in', $useWechat)
-                    ->where(function ($query) use ($coolingThreshold) {
-                        $query->where('is_cooling', 0)->whereOr('cooling_time', '<', $coolingThreshold);
-                    })
-                    ->where('wechat_status', 1)
-                    ->order('update_time asc')->limit(1)->findOrEmpty();
-                if (!$wechat->isEmpty()) {
-                    self::setLog(Db::getLastSql(), 'add_wechat');
-                    self::setLog($wechat, 'add_wechat');
-                    self::_sendChannelAddWechatMessage([
-                        'WechatId' => $wechat['wechat_id'],
-                        'DeviceCode' => $wechat['device_code'],
-                        'Phones' => $record['clue_wechat'],
-                        'message' => self::_createGreetingMessage($record, $dtask), //ai生成打招呼消息
-                    ], $wechat, $record);
-                } else {
-                    SvCrawlingManualTaskRecord::where('id', $record['id'])->update([
+                // $currentTime = time(); // 获取当前时间戳
+                // $coolingThreshold = $currentTime - 1800; // 2小时前的时间戳（7200秒）
+                // $wechat = AiWechat::field('*')
+                //     ->where('wechat_id', 'in', $useWechat)
+                //     ->where(function ($query) use ($coolingThreshold) {
+                //         $query->where('is_cooling', 0)->whereOr('cooling_time', '<', $coolingThreshold);
+                //     })
+                //     ->where('wechat_status', 1)
+                //     ->order('update_time asc')->limit(1)->findOrEmpty();
+                // if (!$wechat->isEmpty()) {
+                //     self::setLog(Db::getLastSql(), 'add_wechat');
+                //     self::setLog($wechat, 'add_wechat');
+                //     self::_sendChannelAddWechatMessage([
+                //         'WechatId' => $wechat['wechat_id'],
+                //         'DeviceCode' => $wechat['device_code'],
+                //         'Phones' => $record['clue_wechat'],
+                //         'message' => self::_createGreetingMessage($record, $dtask), //ai生成打招呼消息
+                //     ], $wechat, $record);
+                // } else {
+                //     SvCrawlingManualTaskRecord::where('id', $record['id'])->update([
+                //         'status' => 0,
+                //         'result' => '当前账号存在安全风险，暂停添加',
+                //         'update_time' => time(),
+                //     ]);
+                //     self::setLog('冷却中，等待后可继续添加', 'add_wechat');
+                //     continue;
+                // }
+
+                $wechat_device_code = SvDevice::where('device_code', $dtask->device_code)->limit(1)->value('wechat_device_code');
+                if(is_null($wechat_device_code) || empty($wechat_device_code)){
+                    SvAddWechatRecord::where('id', $record['id'])->update([
                         'status' => 0,
-                        'result' => '当前账号存在安全风险，暂停添加',
+                        'result' => '设备' . $dtask->device_code .' 没有绑定微信',
                         'update_time' => time(),
                     ]);
-                    self::setLog('冷却中，等待后可继续添加', 'add_wechat');
                     continue;
                 }
+
+                $wechat = AiWechat::where('device_code', $wechat_device_code)->limit(1)->findOrEmpty();
+                if($wechat->isEmpty()){
+                    SvAddWechatRecord::where('id', $record['id'])->update([
+                        'status' => 0,
+                        'result' => '设备' . $dtask->device_code .' 没有获取微信信息',
+                        'update_time' => time(),
+                    ]);
+                    continue;
+                }
+                $addRemark = self::_createGreetingMessage($record, $dtask);
+                self::_sendChannelAddWechatMessage([
+                    'WechatId' => $wechat['wechat_id'],
+                    'DeviceCode' => $wechat['device_code'],
+                    'Phones' => $record['clue_wechat'],
+                    'message' =>  $addRemark, //ai生成打招呼消息
+                ], $wechat, $record);
+
+                array_push($sendWechatIds, [
+                    // 'wechatId' => $wechat['wechat_id'],
+                    // 'deviceCode' => $wechat['device_code'],
+                    'friendWechatId' => $record['clue_wechat'],
+                    'message' => $addRemark, //ai生成打招呼消息
+                    //'taskId' => $request['TaskId'],
+                    'recordId' => $record['id'],
+                    'isManual' => 0,
+                ]);
             }
 
-            if ($dtask->status === 0) {
+            // if(empty($sendWechatIds)){
+            //     $dtask->end_time = time() + 60;
+            //     $dtask->remark = '无加微账号可加,任务结束';
+            //     $dtask->save();
+            // }
+
+            if (!empty($sendWechatIds)) {
                 $data = array(
-                    'type' => 50, // 接管任务启动
+                    'type' => DeviceEnum::RPA_ADD_WECHAT, // 接管任务启动
                     'appType' => 0,
                     'content' => json_encode(array(
                         'task_id' => $dtask->id,
@@ -625,6 +755,8 @@ trait DeviceAutoTaskTrait
                         'start_time' => $dtask->start_time,
                         'end_time' => $dtask->end_time,
                         'time_interval' => ($dtask->end_time - $dtask->start_time) / 60,
+                        'send_wechat_ids' => $sendWechatIds,
+                        'add_interval_time' => $add_interval_time,
                         'msg' => '加微任务运行'
                     ), JSON_UNESCAPED_UNICODE),
                     'deviceId' => $dtask->device_code,
@@ -773,8 +905,6 @@ trait DeviceAutoTaskTrait
             $account->update_time = time();
             $account->save();
 
-
-
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 2,
@@ -858,9 +988,8 @@ trait DeviceAutoTaskTrait
             $account->status = DeviceEnum::TASK_STATUS_RUNNING;
             $account->update_time = time();
             $account->save();
-
-
-
+            $scene = AutomationEnum::SHUT_OFF_COMMENTS;
+            self::requestUrl($data,$scene, $setting->user_id, $dtask->id,  $dtask->device_code);
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
@@ -947,8 +1076,8 @@ trait DeviceAutoTaskTrait
             $account->update_time = time();
             $account->save();
 
-
-
+            $scene = AutomationEnum::SHUT_OFF_OBTAIN;
+            self::requestUrl($data,$scene, $setting->user_id,$dtask->id,  $dtask->device_code);
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
@@ -1194,6 +1323,18 @@ trait DeviceAutoTaskTrait
                 'update_time' => time(),
             ]);
 
+            $scene = AutomationEnum::WECHAT_ADD_FRIEND;
+            self::requestUrl([
+                'wechat_no' => $wechat->wechat_id,
+                'wechat_name' => $wechat->wechat_nickname,
+                'remark' => $request['Message'],
+                'exec_task_id' => $request['TaskId'],
+                'exec_time' => date('Y-m-d H:i:s', time()),
+                'status' => 2,
+                'result' => '执行中',
+                'update_time' => time(),
+            ],$scene, $wechat->user_id,$request['TaskId'],$payload['DeviceCode']);
+
             $completed_add_count = SvCrawlingManualTask::where('id', $record['task_id'])->value('completed_add_count');
             SvCrawlingManualTask::where('id', $record['task_id'])->update([
                 'completed_add_count' => $completed_add_count + 1,
@@ -1248,6 +1389,10 @@ trait DeviceAutoTaskTrait
                     'update_time' => time(),
                     'status' => 2,
                 ]);
+                $scene = AutomationEnum::SOCIAL_MEDIA_RELEASED;
+                $request = $detail->toArray();
+                self::requestUrl($request,$scene,$detail['user_id'],$detail['task_id'],$detail['device_code']);
+
                 self::setLog('发布账号数据更新成功:' . $publish['publish_account_id'], 'publish');
             } else {
 
@@ -1314,5 +1459,95 @@ trait DeviceAutoTaskTrait
             $content = json_encode($content, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         }
         Log::channel('auto')->{$level}(self::$logtitle . "\n" . $content);
+    }
+
+    /**
+     * 请求上游接口与计费
+     * @param array $request
+     * @param string $scene
+     * @param int $userId
+     * @param string $taskId
+     * @return array
+     * @throws \Exception
+     */
+    private static function requestUrl(array $request, string $scene, int $userId,  $taskId,$device_code)
+    {
+        $autoType = SvDevice::where('device_code', $device_code)->value('auto_type') ?? 0;
+
+        self::setLog('自动化扣费' . $scene.'----设备号--'.$device_code.'----任务id--'.$taskId);
+        if ($autoType == 0){
+            return [];
+        }
+        $requestService = \app\common\service\ToolsService::Automation();
+
+        [$tokenScene, $tokenCode] = match ($scene) {
+            // 自动化功能场景
+            AutomationEnum::SOCIAL_MEDIA_RELEASED => ['automation_social_media_released', AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED],
+            AutomationEnum::SHUT_OFF_COMMENTS => ['automation_shut_off_comments', AccountLogEnum::TOKENS_DEC_AUTOMATION_SHUT_OFF_COMMENTS],
+            AutomationEnum::SHUT_OFF_OBTAIN => ['automation_shut_off_obtain', AccountLogEnum::TOKENS_DEC_AUTOMATION_SHUT_OFF_OBTAIN],
+            AutomationEnum::SHUT_OFF_PRIVATE_LETTER => ['automation_shut_off_private_letter', AccountLogEnum::TOKENS_DEC_AUTOMATION_SHUT_OFF_PRIVATE_LETTER],
+            AutomationEnum::FRIENDS_CIRCLE_COMMENTS => ['automation_friends_circle_comments', AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS],
+            AutomationEnum::FRIENDS_CIRCLE_RELEASED => ['automation_friends_circle_released', AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_RELEASED],
+            AutomationEnum::FRIENDS_CIRCLE_PRAISE => ['automation_friends_circle_praise', AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_PRAISE],
+            AutomationEnum::WECHAT_ADD_FRIEND => ['automation_wechat_add_friend', AccountLogEnum::TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND],
+            AutomationEnum::SOCIAL_MEDIA_OBTAIN => ['automation_social_media_obtain', AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN],
+            AutomationEnum::SOCIAL_MEDIA_NURSING => ['automation_social_media_nursing', AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_NURSING],
+            AutomationEnum::OCR_LOCAL => ['automation_orc_local', AccountLogEnum::TOKENS_DEC_AUTOMATION_OCR_LOCAL],
+            AutomationEnum::OCR_IMG => ['automation_orc_img', AccountLogEnum::TOKENS_DEC_AUTOMATION_OCR_IMG],
+        };
+
+        //计费
+        $unit = TokenLogService::checkToken($userId, $tokenScene);
+        $points = $unit;
+        // 添加辅助参数
+        $request['task_id'] = $taskId;
+        $request['user_id'] = $userId;
+        $request['now'] = time();
+        $extra = [ '算力单价' => $unit, '实际消耗算力' => $unit];
+        switch ($scene) {
+            // 自动化功能处理
+            case AutomationEnum::SOCIAL_MEDIA_RELEASED:
+                $response = $requestService->socialMediaReleased($request);
+                break;
+            case AutomationEnum::SHUT_OFF_COMMENTS:
+                $response = $requestService->shutOffComments($request);
+                break;
+            case AutomationEnum::SHUT_OFF_OBTAIN:
+                $response = $requestService->shutOffObtain($request);
+                break;
+            case AutomationEnum::SHUT_OFF_PRIVATE_LETTER:
+                $response = $requestService->shutOffPrivateLetter($request);
+                break;
+           
+            case AutomationEnum::FRIENDS_CIRCLE_RELEASED:
+                $response = $requestService->friendsCircleReleased($request);
+                break;
+       
+            case AutomationEnum::WECHAT_ADD_FRIEND:
+                $response = $requestService->wechatAddFriend($request);
+                break;
+            case AutomationEnum::SOCIAL_MEDIA_OBTAIN:
+                $response = $requestService->socialMediaObtain($request);
+                break;
+            case AutomationEnum::SOCIAL_MEDIA_NURSING:
+                   $points = $request['time_difference_minutes'] * $unit;
+                   $extra = [ '执行时长（分钟）' => $request['time_difference_minutes'],'算力单价' => $unit, '实际消耗算力' => $points];
+                $response = $requestService->socialMediaNursing($request);
+                break;
+        
+            default:
+        }
+
+        //成功响应，需要扣费
+        if (isset($response['code']) && $response['code'] == 10000) {
+            if ($points > 0) {
+                //token扣除
+                User::userTokensChange($userId, $points);
+                //记录日志
+                AccountLogLogic::recordUserTokensLog(true, $userId, $tokenCode, $points, $taskId, $extra);
+            }
+        }
+
+        return $response['data'] ?? [];
     }
 }

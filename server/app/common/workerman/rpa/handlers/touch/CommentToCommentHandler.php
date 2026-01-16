@@ -2,8 +2,13 @@
 
 namespace app\common\workerman\rpa\handlers\touch;
 
+use app\api\logic\service\TokenLogService;
+use app\common\enum\user\AccountLogEnum;
+use app\common\logic\AccountLogLogic;
+use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvLeadScrapingRecord;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
+use app\common\model\user\User;
 use app\common\workerman\rpa\BaseMessageHandler;
 use app\common\workerman\rpa\WorkerEnum;
 use Workerman\Connection\TcpConnection;
@@ -80,7 +85,6 @@ class CommentToCommentHandler extends BaseMessageHandler
                 'exec_time'           => time(),
             ];
             SvLeadScrapingRecord::create($insert);
-
             return [
                 'isProceed' => 1,//是否处理 1是 0 否
             ];

@@ -32,24 +32,13 @@
             <analysis v-if="previewActiveTab === 1" :detail="detail"></analysis>
             <chat-log v-if="previewActiveTab === 2" :id="state.id" :detail="detail" :scene-detail="sceneDetail" />
         </view>
-        <view class="absolute bottom-[40rpx] left-0 right-0">
-            <view class="flex items-center justify-center">
-                <u-button type="primary" shape="circle" :custom-style="{ width: '500rpx' }" @click="openKnbBind">
-                    <image class="w-[42rpx] h-[42rpx] mr-2" src="/static/images/common/kn_icon.png"></image>
-                    将报告训练至知识库</u-button
-                >
-            </view>
-        </view>
     </view>
-    <KnbBind ref="knbBindRef" @confirm="handleKnbBind" />
 </template>
 
 <script setup lang="ts">
 import { lpSceneDetail, lpAnalysisDetail, lpKnbTrain } from "@/api/ladder_player";
 import Analysis from "./analysis.vue";
 import ChatLog from "./chatlog.vue";
-import KnbBind from "@/components/knb-bind/knb-bind.vue";
-import { ref, watch, onMounted, nextTick, getCurrentInstance } from "vue";
 
 const state = reactive({
     id: "",
@@ -62,38 +51,6 @@ const previewTabs = [
     { label: "报告", id: 1 },
     { label: "对话", id: 2 },
 ];
-
-const knbBindRef = ref<InstanceType<typeof KnbBind>>();
-const openKnbBind = () => {
-    knbBindRef.value?.open();
-};
-
-const handleKnbBind = async (knbId: string) => {
-    uni.showLoading({
-        title: "训练中",
-        mask: true,
-    });
-    try {
-        await lpKnbTrain({
-            ids: [state.id],
-            indexid: knbId,
-        });
-        knbBindRef.value?.close();
-        uni.hideLoading();
-        uni.showToast({
-            title: "训练成功",
-            icon: "none",
-            duration: 3000,
-        });
-    } catch (error: any) {
-        uni.hideLoading();
-        uni.showToast({
-            title: error || "绑定知识库失败",
-            icon: "none",
-            duration: 3000,
-        });
-    }
-};
 
 const getDetail = async () => {
     uni.showLoading({

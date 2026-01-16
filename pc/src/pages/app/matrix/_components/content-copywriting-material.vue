@@ -1,315 +1,271 @@
 <template>
     <popup
         ref="popupRef"
-        width="718px"
+        width="850px"
+        top="10vh"
         confirm-button-text=""
         cancel-button-text=""
-        style="background-color: var(--app-bg-color-3); border: 1px solid var(--app-border-color-1)"
+        header-class="!p-0"
+        footer-class="!p-0"
+        style="padding: 0"
         :show-close="false">
-        <div class="-my-4">
-            <div class="absolute w-6 h-6 top-4 right-4" @click="close">
-                <close-btn :theme="ThemeEnum.DARK"></close-btn>
+        <div class="p-4">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-[22px] font-black text-[#1E293B] tracking-tight">内容文案库</h2>
+                    <p class="text-[12px] text-[#94A3B8] font-medium mt-1">从库中挑选优质标题与正文描述</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex bg-[#F1F5F9] p-1 rounded-xl">
+                        <button
+                            @click="isViewSelected = false"
+                            :class="!isViewSelected ? 'bg-white  text-[#6366F1]' : 'text-[#64748B]'"
+                            class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all">
+                            全部素材
+                        </button>
+                        <button
+                            @click="handleViewSelected"
+                            :class="isViewSelected ? 'bg-white  text-[#6366F1]' : 'text-[#64748B]'"
+                            class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all">
+                            已选 ({{ titleCount + contentCount }})
+                        </button>
+                    </div>
+                    <div
+                        class="w-8 h-8 rounded-full bg-[#F1F5F9] flex items-center justify-center cursor-pointer hover:bg-[#E2E8F0] transition-colors"
+                        @click="close">
+                        <close-btn class="w-4 h-4 text-[#64748B]"></close-btn>
+                    </div>
+                </div>
             </div>
-            <div class="text-white text-[20px] font-bold">内容文案库</div>
-            <div class="mt-[17px]">
+
+            <div class="mb-6" v-show="!isViewSelected">
                 <ElSelect
                     v-model="selectCopywriting"
-                    class="!w-[314px] !h-11"
-                    placeholder="请选择"
-                    popper-class="dark-select-popper"
-                    clearable
-                    filterable
-                    :show-arrow="false"
+                    class="custom-select !w-[320px]"
+                    placeholder="请选择文案库分类"
                     @change="handleChangeCopywriting">
                     <ElOption v-for="item in copywritingLists" :label="item.name" :value="item.id" :key="item.id">
+                        <div class="flex justify-between items-center">
+                            <span>{{ item.name }}</span>
+                            <span class="text-[10px] text-[#94A3B8]">{{ item.title?.length || 0 }}条</span>
+                        </div>
                     </ElOption>
                 </ElSelect>
             </div>
-            <div class="flex justify-between items-center gap-x-2 mt-4">
-                <div class="flex gap-x-2">
-                    <div class="text-[#ffffff80] text-[11px]">
-                        已选择标题<span class="text-white">（{{ titleCount }}）</span>
-                    </div>
-                    <div class="text-[#ffffff80] text-[11px]">
-                        已选择正文<span class="text-white">（{{ contentCount }}）</span>
-                    </div>
-                </div>
-                <ElButton link class="!text-[#ffffff80] !text-[11px]" @click="handleViewSelected">{{
-                    isViewSelected ? "隐藏已选择" : "查看已选择"
-                }}</ElButton>
-            </div>
-            <div class="flex gap-x-[10px] mt-[18px]">
-                <div class="basis-[45%] flex-shrink-0 rounded-xl border border-app-border-1 bg-app-bg-2">
-                    <div
-                        class="flex items-center justify-between h-11 border-[0] border-b-[1px] border-app-border-1 px-[10px]">
-                        <div class="text-white">标题</div>
+
+            <div class="flex gap-x-6 h-[380px]">
+                <div class="flex-[2] flex flex-col bg-white border border-br rounded-[24px] overflow-hidden">
+                    <div class="px-5 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-[#F8FAFC]">
+                        <span class="font-bold text-[#334155] text-sm flex items-center gap-2">
+                            <span class="w-1.5 h-4 bg-[#6366F1] rounded-full"></span> 备选标题
+                        </span>
                         <ElButton
-                            class="!border-app-border-2"
-                            color="#1f1f1f"
-                            size="small"
+                            link
+                            type="primary"
+                            class="!text-xs font-bold"
                             @click="chooseAll(CopywritingType.Title)"
                             >全选</ElButton
                         >
                     </div>
-                    <div class="h-[350px]">
-                        <ElScrollbar class="h-full" v-if="getCopywritingLibraryContent.title.length > 0">
-                            <div class="p-3 flex flex-col gap-y-2">
+                    <ElScrollbar class="flex-1">
+                        <div class="p-4 flex flex-col gap-y-3" v-if="getCopywritingLibraryContent.title.length > 0">
+                            <div
+                                v-for="(item, index) in getCopywritingLibraryContent.title"
+                                :key="index"
+                                :class="
+                                    item.checked ? 'bg-[#EEF2FF] border-[#6366F1]' : 'bg-[#F8FAFC] border-transparent'
+                                "
+                                class="group flex items-center gap-x-3 px-2 py-1 rounded-xl border border-br transition-all hover:border-[#6366F1]/30 cursor-pointer"
+                                @click="choose(CopywritingType.Title, item)">
+                                <div class="flex-1">
+                                    <ElInput
+                                        v-model="item.content"
+                                        maxlength="20"
+                                        placeholder="请输入标题"
+                                        clearable
+                                        @click.stop />
+                                </div>
                                 <div
-                                    class="flex items-center gap-x-3"
-                                    v-for="(item, index) in getCopywritingLibraryContent.title"
-                                    :key="index">
-                                    <div class="flex-1">
-                                        <ElInput
-                                            v-model="item.content"
-                                            class="!h-11"
-                                            clearable
-                                            maxlength="20"
-                                            show-word-limit
-                                            placeholder="-"
-                                            input-style="font-size: 11px" />
-                                    </div>
-                                    <div
-                                        class="w-4 h-4 rounded-full cursor-pointer"
-                                        @click="choose(CopywritingType.Title, item)">
-                                        <Icon
-                                            name="local-icon-success_fill"
-                                            :size="16"
-                                            :color="item.checked ? 'var(--color-primary)' : '#ffffff1a'"></Icon>
-                                    </div>
+                                    class="w-5 h-5 flex items-center justify-center transition-transform group-active:scale-90">
+                                    <Icon
+                                        name="local-icon-success_fill"
+                                        :size="20"
+                                        :color="item.checked ? '#6366F1' : '#CBD5E1'"></Icon>
                                 </div>
                             </div>
-                        </ElScrollbar>
-                        <div class="h-full flex items-center justify-center" v-else>
-                            <ElEmpty description="暂无数据" :image-size="100"></ElEmpty>
                         </div>
-                    </div>
+                        <div class="h-full flex items-center justify-center pt-20" v-else>
+                            <ElEmpty description="暂无标题" :image-size="80"></ElEmpty>
+                        </div>
+                    </ElScrollbar>
                 </div>
-                <div class="flex-auto rounded-xl border border-app-border-1 bg-app-bg-2">
-                    <div
-                        class="flex items-center justify-between h-11 border-[0] border-b-[1px] border-app-border-1 px-[10px]">
-                        <div class="text-white">正文描述</div>
+
+                <div class="flex-[3] flex flex-col bg-white border border-br rounded-[24px] overflow-hidden">
+                    <div class="px-5 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-[#F8FAFC]">
+                        <span class="font-bold text-[#334155] text-sm flex items-center gap-2">
+                            <span class="w-1.5 h-4 bg-[#10B981] rounded-full"></span> 正文描述
+                        </span>
                         <ElButton
-                            class="!border-app-border-2"
-                            color="#1f1f1f"
-                            size="small"
+                            link
+                            type="primary"
+                            class="!text-xs font-bold"
                             @click="chooseAll(CopywritingType.Described)"
                             >全选</ElButton
                         >
                     </div>
-                    <div class="h-[350px]">
-                        <ElScrollbar class="h-full" v-if="getCopywritingLibraryContent.described.length > 0">
-                            <div class="p-3 flex flex-col gap-y-3">
-                                <div
-                                    class="flex items-center gap-x-3"
-                                    v-for="(item, index) in getCopywritingLibraryContent.described"
-                                    :key="index">
-                                    <div class="flex-1">
-                                        <div>
-                                            <ElInput
-                                                v-model="item.content"
-                                                type="textarea"
-                                                maxlength="800"
-                                                show-word-limit
-                                                :rows="6" />
-                                        </div>
-                                        <div class="relative mt-4 flex gap-x-2 items-end">
-                                            <div
-                                                class="flex-1 flex flex-wrap gap-2"
-                                                v-if="item.topic && item.topic.length > 0">
-                                                <div
-                                                    v-for="(topic, t_index) in item.topic"
-                                                    :key="t_index"
-                                                    class="relative text-[11px] rounded-md shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
-                                                    :class="{ 'bg-app-bg-4': topic }">
-                                                    <ElInput
-                                                        v-model="item.topic[t_index]"
-                                                        class="h-[26px] !w-[78px]"
-                                                        placeholder="#请输入话题"
-                                                        input-style="font-size: 11px;height: 100%"></ElInput>
-                                                    <div
-                                                        class="absolute -top-2 -right-2 w-4 h-4 rounded-full flex items-center justify-center bg-[#FF3C26] cursor-pointer"
-                                                        @click="handleDeleteTopic(index, t_index)">
-                                                        <Icon name="local-icon-close" color="#ffffff"></Icon>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="" v-if="item.topic?.length < 5">
-                                                <ElButton
-                                                    type="primary"
-                                                    class="!h-[26px]"
-                                                    @click="handleAddTopic(index)"
-                                                    >添加话题</ElButton
-                                                >
-                                            </div>
-                                        </div>
-                                    </div>
+                    <ElScrollbar class="flex-1">
+                        <div class="p-4 flex flex-col gap-y-4" v-if="getCopywritingLibraryContent.described.length > 0">
+                            <div
+                                v-for="(item, index) in getCopywritingLibraryContent.described"
+                                :key="index"
+                                :class="
+                                    item.checked ? 'bg-[#EEF2FF] border-[#6366F1]' : 'bg-[#F8FAFC] border-transparent'
+                                "
+                                class="group relative flex flex-col gap-y-3 p-4 rounded-2xl border border-br transition-all"
+                                @click="choose(CopywritingType.Described, item)">
+                                <div class="absolute right-1 top-1 transition-transform group-active:scale-90 z-[888]">
+                                    <Icon
+                                        name="local-icon-success_fill"
+                                        :size="20"
+                                        :color="item.checked ? '#6366F1' : '#cbd5e1'"></Icon>
+                                </div>
+
+                                <ElInput
+                                    v-model="item.content"
+                                    class="custom-textarea-input"
+                                    type="textarea"
+                                    placeholder="请输入正文描述"
+                                    resize="none"
+                                    maxlength="800"
+                                    show-word-limit
+                                    :rows="6"
+                                    @click.stop></ElInput>
+
+                                <div class="flex flex-wrap gap-2 pt-2 border-t border-[#00000005]">
                                     <div
-                                        class="w-4 h-4 rounded-full cursor-pointer"
-                                        @click="choose(CopywritingType.Described, item)">
-                                        <Icon
-                                            name="local-icon-success_fill"
-                                            :size="16"
-                                            :color="item.checked ? 'var(--color-primary)' : '#ffffff1a'"></Icon>
+                                        v-for="(topic, t_index) in item.topic"
+                                        :key="t_index"
+                                        class="group/tag relative flex items-center bg-white border border-br px-2 py-1 rounded-lg">
+                                        <span class="text-[#6366F1] font-bold text-[12px] mr-1">#</span>
+                                        <input
+                                            v-model="item.topic[t_index]"
+                                            class="bg-transparent border-none outline-none text-[11px] w-[70px] text-[#64748B]"
+                                            placeholder="输入话题"
+                                            @click.stop />
+                                        <div
+                                            class="ml-1 w-3 h-3 bg-[#94A3B8] text-white rounded-full flex items-center justify-center cursor-pointer opacity-0 group-hover/tag:opacity-100 transition-opacity"
+                                            @click.stop="handleDeleteTopic(index, t_index)">
+                                            <Icon name="local-icon-close" :size="8"></Icon>
+                                        </div>
                                     </div>
+                                    <button
+                                        v-if="item.topic?.length < 5"
+                                        class="px-3 py-1 rounded-lg border border-dashed border-[#CBD5E1] text-[#94A3B8] text-[11px] hover:border-[#6366F1] hover:text-[#6366F1] transition-all"
+                                        @click.stop="handleAddTopic(index)">
+                                        + 添加话题
+                                    </button>
                                 </div>
                             </div>
-                        </ElScrollbar>
-                        <div class="h-full flex items-center justify-center" v-else>
-                            <ElEmpty description="暂无数据" :image-size="100"></ElEmpty>
                         </div>
-                    </div>
+                        <div class="h-full flex items-center justify-center pt-20" v-else>
+                            <ElEmpty description="暂无正文" :image-size="80"></ElEmpty>
+                        </div>
+                    </ElScrollbar>
                 </div>
             </div>
-            <div class="mt-[18px] flex justify-center">
-                <ElButton type="primary" class="!rounded-full w-[246px] !h-[50px]" @click="confirm">确定</ElButton>
+
+            <div class="mt-8 flex justify-center">
+                <ElButton type="primary" class="w-[280px] !h-[52px] !rounded-xl" @click="confirm">
+                    <span class="font-bold">确定选择材料</span>
+                </ElButton>
             </div>
         </div>
     </popup>
 </template>
 
 <script setup lang="ts">
+/* ... 脚本部分保持逻辑不变，仅确保引用了相应的 API 和 Enums ... */
 import { getCopywritingLibraryList } from "@/api/matrix";
 import { CopywritingTypeEnum } from "@/pages/app/matrix/_enums";
-import { ThemeEnum } from "@/enums/appEnums";
 
-// 定义组件emit事件
 const emit = defineEmits<{
-    (e: "close"): void; // 关闭弹窗事件
-    (e: "confirm", value: any): void; // 确认事件，携带选中的文案
+    (e: "close"): void;
+    (e: "confirm", value: any): void;
 }>();
 
-// 定义文案类型枚举
 enum CopywritingType {
-    Title = "title", // 标题
-    Described = "described", // 正文描述
+    Title = "title",
+    Described = "described",
 }
 
-// 响应式状态：存储所有文案库列表
 const copywritingLists = ref<any[]>([]);
-
-// 响应式状态：存储用户最终选中的标题和正文
-const chooseValue = ref<{
-    title: any[];
-    described: any[];
-}>({
-    title: [],
-    described: [],
-});
-
-// 响应式状态：当前在下拉框中选中的文案库ID
+const chooseValue = ref<{ title: any[]; described: any[] }>({ title: [], described: [] });
 const selectCopywriting = ref();
+const isViewSelected = ref(false);
 
-// 计算属性：根据是否“查看已选择”来决定显示的内容
 const getCopywritingLibraryContent = computed(() => {
-    // 如果开启了“查看已选择”，则只显示已选中的内容
-    if (isViewSelected.value) {
-        return {
-            title: chooseValue.value.title,
-            described: chooseValue.value.described,
-        };
-    }
-    // 否则，显示当前选中的文案库的完整内容
+    if (isViewSelected.value) return chooseValue.value;
     const data = copywritingLists.value.find((item) => item.id == selectCopywriting.value) || {};
-    return {
-        title: data.title || [],
-        described: data.described || [],
-    };
+    return { title: data.title || [], described: data.described || [] };
 });
 
-// 计算属性：已选择的标题数量
-const titleCount = computed(() => {
-    return chooseValue.value.title.length;
-});
+const titleCount = computed(() => chooseValue.value.title.length);
+const contentCount = computed(() => chooseValue.value.described.length);
 
-// 计算属性：已选择的正文数量
-const contentCount = computed(() => {
-    return chooseValue.value.described.length;
-});
-
-// 处理文案库下拉框变化事件
 const handleChangeCopywriting = () => {
-    // 切换文案库时，退出“查看已选择”模式
     isViewSelected.value = false;
 };
 
-// 异步方法：获取内容文案库列表
 const getCopywritingLibraryLists = async () => {
     const { lists } = await getCopywritingLibraryList({ page_size: 9999, copywriting_type: CopywritingTypeEnum.TITLE });
     if (lists.length > 0) {
-        // 为每个文案条目添加 `checked` 属性，用于标记选中状态
         lists.forEach((item) => {
             item.title = item.title.map((t: any) => ({ ...t, checked: false }));
             item.described = item.described.map((d: any) => ({ ...d, checked: false }));
         });
         copywritingLists.value = lists;
-        // 默认选中第一个文案库
         selectCopywriting.value = lists[0].id;
     }
 };
 
-// 处理添加话题
 const handleAddTopic = (index: number) => {
     const { described } = getCopywritingLibraryContent.value;
-    if (!described[index].topic) {
-        described[index].topic = [];
-    }
+    if (!described[index].topic) described[index].topic = [];
     described[index].topic.push("");
 };
 
-// 处理删除话题
 const handleDeleteTopic = (index: number, t_index: number) => {
     const { described } = getCopywritingLibraryContent.value;
-    if (described[index].topic) {
-        described[index].topic.splice(t_index, 1);
-    }
+    if (described[index].topic) described[index].topic.splice(t_index, 1);
 };
 
-// 响应式状态：是否只查看已选择的文案
-const isViewSelected = ref(false);
-// 切换“查看已选择”状态
 const handleViewSelected = () => {
-    isViewSelected.value = !isViewSelected.value;
+    isViewSelected.value = true;
 };
 
-// 核心方法：更新所有选中项的集合
 const setChooseValue = () => {
-    // 从所有文案库中筛选出被选中的标题
     const allTitle = copywritingLists.value.flatMap((item) => item.title).filter((t) => t.checked);
-    // 从所有文案库中筛选出被选中的正文
     const allDesc = copywritingLists.value.flatMap((item) => item.described).filter((d) => d.checked);
-
-    // 更新最终选中的值
-    chooseValue.value = {
-        title: allTitle,
-        described: allDesc,
-    };
+    chooseValue.value = { title: allTitle, described: allDesc };
 };
 
-// 处理单个文案项的选中/取消选中
 const choose = (type: CopywritingType, item: any) => {
     item.checked = !item.checked;
-    // 每次选择后，重新计算所有选中的项
     setChooseValue();
 };
 
-// 处理“全选”操作
 const chooseAll = (type: CopywritingType) => {
-    // 判断当前是全选还是全不选
-    const shouldSelectAll = getCopywritingLibraryContent.value[type].some((item: any) => !item.checked);
-    // 更新当前可视列表中的所有项的选中状态
-    getCopywritingLibraryContent.value[type].forEach((item: any) => {
+    const targetList = getCopywritingLibraryContent.value[type];
+    const shouldSelectAll = targetList.some((item: any) => !item.checked);
+    targetList.forEach((item: any) => {
         item.checked = shouldSelectAll;
     });
-    // 每次全选操作后，重新计算所有选中的项
     setChooseValue();
 };
 
-// 弹窗组件引用
 const popupRef = ref();
-// 公开方法：打开弹窗
 const open = () => {
     popupRef.value.open();
-    // 打开时清空旧数据并重新获取
     copywritingLists.value = [];
     chooseValue.value = { title: [], described: [] };
     selectCopywriting.value = undefined;
@@ -317,41 +273,72 @@ const open = () => {
     getCopywritingLibraryLists();
 };
 
-// 关闭弹窗
 const close = () => {
     emit("close");
     popupRef.value.close();
 };
 
-// 确认选择
 const confirm = () => {
-    // 触发confirm事件，并传递格式化后的选中数据
     emit("confirm", {
-        titleList: chooseValue.value.title.map((item) => ({
-            content: item.content,
-        })),
-        contentList: chooseValue.value.described.map((item) => ({
-            content: item.content,
-            topic: item.topic,
-        })),
+        titleList: chooseValue.value.title.map((item) => ({ content: item.content })),
+        contentList: chooseValue.value.described.map((item) => ({ content: item.content, topic: item.topic })),
     });
     close();
 };
 
-// 暴露open方法给父组件
-defineExpose({
-    open,
-});
+defineExpose({ open });
 </script>
 
 <style scoped lang="scss">
-@import "@/pages/app/_assets/styles/index.scss";
-:deep(.el-select__wrapper) {
-    background-color: var(--app-bg-color-1) !important;
-}
-:deep(.el-input) {
+/* 深度自定义 Element 样式 */
+:deep(.custom-select) {
     .el-input__wrapper {
-        background-color: transparent;
+        background-color: #f1f5f9;
+        box-shadow: none !important;
+        border-radius: 14px;
+        padding: 4px 12px;
+    }
+    .el-input__inner {
+        font-weight: 600;
+        color: #1e293b;
+    }
+}
+
+/* 自定义滚动条样式 */
+:deep(.el-scrollbar__bar.is-vertical) {
+    width: 4px;
+}
+:deep(.el-scrollbar__thumb) {
+    background-color: #cbd5e1 !important;
+}
+
+:deep(.el-input__wrapper) {
+    box-shadow: none;
+    background-color: transparent;
+}
+
+:deep(.custom-textarea-input) {
+    .el-textarea__inner {
+        background-color: #f9fafb;
+        border: 1px solid #f3f4f6;
+        border-radius: 16px;
+        padding: 16px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #374151;
+        box-shadow: none;
+        transition: all 0.3s;
+        &:focus {
+            background-color: #ffffff;
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.05);
+        }
+    }
+    .el-input__count {
+        background: transparent;
+        font-weight: bold;
+        bottom: 12px;
+        right: 16px;
     }
 }
 </style>

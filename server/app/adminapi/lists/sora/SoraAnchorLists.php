@@ -5,6 +5,7 @@ namespace app\adminapi\lists\sora;
 use app\adminapi\lists\BaseAdminDataLists;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\sora\SoraAnchor;
+use app\common\model\user\User;
 
 class SoraAnchorLists extends BaseAdminDataLists implements ListsSearchInterface
 {
@@ -26,6 +27,9 @@ class SoraAnchorLists extends BaseAdminDataLists implements ListsSearchInterface
             ->order(['id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
+            ->each(function ($item) {
+                $item['nickname'] = User::where(['id' => $item['user_id']])->value('nickname');
+            })
             ->toArray();
         return $list;
     }

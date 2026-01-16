@@ -195,6 +195,7 @@ class DeviceLogic extends ApiLogic
                     'device_model' => $params['device_model'],
                     'sdk_version'  => $params['sdk_version'],
                     'status'       => 0,
+                    'auto_type'    => 1,
                     'create_time'  => time(),
                 ];
                 SvDevice::create($insert);

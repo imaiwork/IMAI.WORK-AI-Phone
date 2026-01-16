@@ -231,30 +231,27 @@
             </view>
         </view>
     </u-popup>
-    <popup-bottom
-        v-model="showFeePopup"
-        title="24小时自动任务算力消耗明细（内测期间暂不收费）"
-        custom-class="bg-[#F6F6F6]">
+    <popup-bottom v-model="showFeePopup" title="24小时自动任务算力消耗明细" custom-class="bg-[#F7F8FA]">
         <template #content>
             <scroll-view class="h-full" scroll-y>
-                <view class="px-4 pb-[50rpx] mt-4">
-                    <view class="bg-white rounded-[20rpx] px-[40rpx]">
-                        <view
-                            v-for="(item, index) in freeList"
-                            :key="index"
-                            class="py-[26rpx] border-[0] border-b border-solid border-[#0000000d]"
-                            :class="{ 'border-b-0': index === freeList.length - 1 }">
-                            <view class="flex items-center justify-between">
-                                <view>
-                                    {{ item.name }}
-                                </view>
-                                <view class="text-[#696969] text-end">
+                <view class="px-4 pb-[50rpx] pt-2 space-y-3">
+                    <view
+                        v-for="(item, index) in getTaskCostConfig"
+                        :key="index"
+                        class="bg-white rounded-[20rpx] p-4 flex items-center justify-between relative overflow-hidden">
+                        <view class="flex items-center gap-3 flex-1 mr-4">
+                            <view class="flex flex-col">
+                                <text class="text-[30rpx] font-medium text-slate-800 mb-1">{{ item.name }}</text>
+                                <text class="text-[24rpx] text-slate-400 leading-snug line-clamp-1">
                                     {{ item.description }}
-                                </view>
+                                </text>
                             </view>
-                            <view class="flex items-center justify-end mt-[24rpx]">
-                                <text class="text-primary">{{ item.price }}</text
-                                >{{ item.unit }}
+                        </view>
+
+                        <view class="flex flex-col items-end shrink-0">
+                            <view class="flex items-baseline gap-0.5">
+                                <text class="text-[36rpx] font-bold text-primary">{{ item.score }}</text>
+                                <text class="text-[22rpx] text-slate-500 font-medium">{{ item.unit }}</text>
                             </view>
                         </view>
                     </view>
@@ -272,8 +269,10 @@ import useDeviceWs from "@/ai_modules/device/hooks/useDeviceWs";
 import CircleIcon from "@/ai_modules/device/static/images/common/circle.png";
 import SphIcon from "@/static/images/common/sph_s.png";
 import PhoneIcon from "@/ai_modules/device/static/images/common/phone.png";
+import { useUserStore } from "@/stores/user";
 
 const { platformLogo } = useDevice();
+const userStore = useUserStore();
 
 // 初始化WebSocket服务
 const { send, onEvent, close } = useDeviceWs();
@@ -452,6 +451,7 @@ const taskTimeConfig = ref<any[]>([
 ]);
 
 // 算力消耗明细
+
 const freeList = [
     {
         scene: "auto_phone_sph_add_wechat",
@@ -545,6 +545,24 @@ const freeList = [
     },
 ];
 
+const getTaskCostConfig = computed(() => {
+    const getScene = (scene: string) => {
+        return userStore.getTokenByScene(scene);
+    };
+    return [
+        "automation_social_media_released",
+        "automation_shut_off_comments",
+        "automation_shut_off_obtain",
+        "automation_shut_off_private_letter",
+        "automation_friends_circle_comments",
+        "automation_friends_circle_released",
+        "automation_friends_circle_praise",
+        "automation_wechat_add_friend",
+        "automation_social_media_obtain",
+        "automation_social_media_nursing",
+    ].map(getScene);
+});
+
 // 判断是不是全部获取成功
 const isAllGetSuccess = computed(() => {
     return sortedPlatformLogo.value.every((item) => item.active);
@@ -581,12 +599,29 @@ const handleGetAccount = () => {
         uni.$u.toast("所有账号均已获取");
         return;
     }
+    // 重置状态
+    sortedPlatformLogo.value.forEach((p) => {
+        if (platformsToProcess.includes(p.type)) {
+            p.status = 0;
+        }
+    });
 
     updateAccountSteps.value = stepsToUpdate;
     showUpdateProgress.value = true;
-    if (updateAccountSteps.value.length > 0) {
-        updateAccountSteps.value[currentAccountIndex.value].status = 1;
-        sendGetAccountCmd(updateAccountSteps.value[currentAccountIndex.value].type);
+    processNextAccount();
+};
+
+const processNextAccount = () => {
+    const platformToProcess = sortedPlatformLogo.value.find(
+        (p) => updateAccountSteps.value.map((item: any) => item.type).includes(p.type) && p.status === 0
+    );
+    if (platformToProcess) {
+        updateAccountSteps.value.forEach((item: any) => {
+            if (item.type === platformToProcess.type) {
+                item.status = 1;
+            }
+        });
+        sendGetAccountCmd(platformToProcess.type);
     }
 };
 
@@ -674,6 +709,7 @@ const getTaskConfig = async () => {
                 ...item,
                 active: !!account,
                 icon: account ? item.activeIcon : item.icon,
+                status: account ? 2 : 0,
             };
         });
     }
@@ -688,48 +724,57 @@ const getTaskConfig = async () => {
 
 onEvent("success", async (data: any) => {
     const { type, content, deviceId, appType } = data;
-
     if (type !== DeviceCmdEnum.GET_USER_INFO) return;
 
-    if (updateAccountSteps.value[currentAccountIndex.value]) {
-        updateAccountSteps.value[currentAccountIndex.value].status = 2;
+    const platform = sortedPlatformLogo.value.find((p) => p.type === appType);
+    if (platform && platform.status === 1) {
+        const { account, account_no, extra, avatar, nickname } = content;
+        const existingAccount = deviceDetail.value.accounts?.find((acc: any) => acc.type === appType);
+        const params = {
+            account,
+            account_no,
+            avatar,
+            device_code: deviceId,
+            type: appType,
+            nickname,
+            extra: JSON.stringify(extra),
+        };
+
+        try {
+            if (existingAccount) {
+                await updateDeviceAccount({ ...params, id: existingAccount.id });
+            } else {
+                await addDeviceAccount(params);
+            }
+            platform.status = 2; // 成功
+            platform.active = true;
+            platform.account = account;
+            platform.account_no = account_no;
+            platform.avatar = avatar;
+            platform.nickname = nickname;
+            platform.extra = extra;
+        } catch (error) {
+            platform.status = 3; // 如果API调用失败，也标记为失败
+        }
     }
 
-    const { account, account_no, extra, avatar, nickname } = content;
+    const isFinished = !sortedPlatformLogo.value.some(
+        (p) => updateAccountSteps.value.includes(p.type) && (p.status === 0 || p.status === 1)
+    );
 
-    const existingAccount = deviceDetail.value.accounts?.find((acc: any) => acc.type === appType);
-
-    const params = {
-        account,
-        account_no,
-        avatar,
-        device_code: deviceId,
-        type: appType,
-        nickname,
-        extra: JSON.stringify(extra),
-    };
-
-    if (existingAccount) {
-        await updateDeviceAccount({ ...params, id: existingAccount.id });
-    } else {
-        await addDeviceAccount(params);
-    }
-
-    currentAccountIndex.value++;
-
-    if (currentAccountIndex.value < updateAccountSteps.value.length) {
-        updateAccountSteps.value[currentAccountIndex.value].status = 1;
-        sendGetAccountCmd(updateAccountSteps.value[currentAccountIndex.value].type);
+    if (!isFinished) {
+        processNextAccount();
     } else {
         await getDetail();
     }
 });
 
 onEvent("error", (error: any) => {
-    const index = currentAccountIndex.value;
-    if (updateAccountSteps.value.length > 0 && updateAccountSteps.value[index]) {
-        const updatedStep = { ...updateAccountSteps.value[index], status: 3 };
-        updateAccountSteps.value.splice(index, 1, updatedStep);
+    const platformInProgress = sortedPlatformLogo.value.find((p) => p.status === 1);
+    if (platformInProgress) {
+        platformInProgress.error = error.error;
+        platformInProgress.status = 3; // 失败
+        processNextAccount(); // 即使失败也尝试下一个
     }
 });
 

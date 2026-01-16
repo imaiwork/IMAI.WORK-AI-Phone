@@ -1,119 +1,130 @@
 <template>
     <div class="h-full flex flex-col">
-        <div class="bg-white p-4 rounded-xl">
-            <div class="flex items-center gap-2">
-                <ElSelect
-                    v-model="queryParams.wechat_id"
-                    placeholder="请选择微信"
-                    class="!w-[200px]"
-                    @change="getBoardLists">
-                    <template #prefix>
-                        <div>选择微信</div>
-                    </template>
-                    <ElOption
-                        v-for="item in wechatLists"
-                        :key="item.id"
-                        :label="item.wechat_nickname"
-                        :value="item.wechat_id"></ElOption>
-                </ElSelect>
-                <ElSelect
-                    v-model="queryParams.flow_id"
-                    placeholder="请选择客户流程"
-                    class="!w-[200px]"
-                    @change="getBoardLists">
-                    <template #prefix>
-                        <div>客户流程</div>
-                    </template>
-                    <ElOption
-                        v-for="item in flowLists"
-                        :key="item.id"
-                        :label="item.flow_name"
-                        :value="item.id"></ElOption>
-                </ElSelect>
+        <header class="bg-white p-[20px] rounded-[20px] border border-br flex items-center gap-[16px]">
+            <div class="flex items-center gap-[12px]">
+                <div class="flex items-center bg-gray-50 rounded-[8px] px-[12px] py-1 border border-br-extra-light">
+                    <span class="text-[13px] font-bold text-tx-secondary mr-[8px]">归属微信</span>
+                    <ElSelect
+                        v-model="queryParams.wechat_id"
+                        placeholder="请选择微信"
+                        class="custom-select !w-[200px]"
+                        :show-arrow="false"
+                        @change="getBoardLists">
+                        <ElOption
+                            v-for="item in wechatLists"
+                            :key="item.id"
+                            :label="item.wechat_nickname"
+                            :value="item.wechat_id" />
+                    </ElSelect>
+                </div>
+
+                <div class="flex items-center bg-gray-50 rounded-[8px] px-[12px] py-1 border border-br-extra-light">
+                    <span class="text-[13px] font-bold text-tx-secondary mr-[8px]">当前流程</span>
+                    <ElSelect
+                        v-model="queryParams.flow_id"
+                        placeholder="请选择流程"
+                        class="custom-select !w-[200px]"
+                        :show-arrow="false"
+                        @change="getBoardLists">
+                        <ElOption v-for="item in flowLists" :key="item.id" :label="item.flow_name" :value="item.id" />
+                    </ElSelect>
+                </div>
             </div>
-        </div>
-        <div class="grow min-h-0 bg-white rounded-xl mt-4 px-6" v-loading="loading">
+
+            <div class="ml-auto flex items-center gap-[8px] text-[12px] text-tx-secondary">
+                <span class="text-primary opacity-70 leading-[0]">
+                    <Icon name="el-icon-InfoFilled" />
+                </span>
+                <span>左右拖拽成员卡片可快速调整阶段</span>
+            </div>
+        </header>
+        <div class="grow min-h-0 mt-3 bg-white rounded-[20px] border border-br overflow-hidden" v-loading="loading">
             <ElScrollbar v-if="boardLists.length > 0">
-                <div class="flex gap-5 py-6 h-full whitespace-nowrap">
-                    <div
-                        v-for="({ members, sub_stage_name }, index) in boardLists"
-                        :key="index"
-                        class="rounded-md border border-[#E0E0E0] w-[243px] flex flex-col flex-shrink-0 overflow-hidden">
-                        <div class="flex-shrink-0">
-                            <div class="h-[4px] bg-[#E0E0E0]">
+                <div class="flex gap-[20px] p-[20px] h-full">
+                    <div v-for="({ members, sub_stage_name }, index) in boardLists" :key="index" class="kanban-column">
+                        <div class="kanban-header shrink-0">
+                            <div class="h-[3px] bg-gray-100 relative overflow-hidden">
                                 <div
-                                    class="h-full"
-                                    :style="{
-                                        width: `${((index + 1) / boardLists.length) * 100}%`,
-                                        backgroundColor: 'var(--color-primary)',
-                                    }"></div>
+                                    class="h-full bg-primary transition-all duration-500"
+                                    :style="{ width: `${((index + 1) / boardLists.length) * 100}%` }"></div>
                             </div>
-                            <div
-                                class="h-[72px] flex items-center justify-between border-b border-primary-light-8 px-4">
-                                <div class="flex items-center gap-2">
-                                    <Icon name="el-icon-LocationFilled" color="var(--color-primary)" :size="20"></Icon>
-                                    <span class="text-[#5E656E] text-lg">{{ sub_stage_name }}</span>
+
+                            <div class="flex items-center justify-between px-[16px] h-[64px]">
+                                <div class="flex items-center gap-[8px]">
+                                    <div
+                                        class="w-[8px] h-[8px] rounded-full bg-primary shadow-[0_0_8px_rgba(0,101,251,0.5)]"></div>
+                                    <div class="text-[15px] font-[900] text-tx-primary">{{ sub_stage_name }}</div>
+                                    <div
+                                        class="shrink-0 text-xs px-[6px] py-[1px] bg-gray-100 text-tx-secondary rounded-full font-bold">
+                                        {{ members?.length || 0 }}
+                                    </div>
                                 </div>
-                                <ElPopover
-                                    trigger="click"
-                                    :show-arrow="false"
-                                    popper-class="!w-[290px] !rounded-lg !p-0">
-                                    <div class="py-2">
-                                        <div class="flex flex-col">
-                                            <div
-                                                v-for="option in handleOptions"
-                                                :key="option.value"
-                                                class="flex items-center gap-2 h-9 px-4 cursor-pointer hover:bg-primary-light-9 hover:text-primary"
-                                                :class="{
-                                                    'bg-primary-light-8 text-primary':
-                                                        selectedMap[index] === option.value,
-                                                }"
-                                                @click="handleOptionClick(option.value, index)">
-                                                {{ option.label }}
-                                            </div>
+
+                                <ElPopover trigger="click" :show-arrow="false" popper-class="custom-board-popover">
+                                    <template #reference>
+                                        <div class="more-action-btn">
+                                            <Icon name="el-icon-MoreFilled" />
+                                        </div>
+                                    </template>
+                                    <div class="p-[6px] flex flex-col gap-[2px]">
+                                        <div
+                                            v-for="option in handleOptions"
+                                            :key="option.value"
+                                            class="popover-item"
+                                            :class="{ 'is-disabled': option.disabled }"
+                                            @click="handleOptionClick(option.value, index)">
+                                            {{ option.label }}
                                         </div>
                                     </div>
-                                    <template #reference>
-                                        <ElButton type="primary" link>操作</ElButton>
-                                    </template>
                                 </ElPopover>
                             </div>
-                            <div
-                                class="flex items-center justify-center gap-x-4 bg-primary-light-9 p-2 rounded-md mx-2 mt-6 cursor-pointer"
-                                @click="handleAddUser(index)">
-                                <Icon name="local-icon-add_box_fill" color="var(--color-primary)" :size="20"></Icon>
-                                <span class="text-primary">添加用户</span>
+
+                            <div class="px-[12px] pb-[12px]">
+                                <div class="add-user-trigger" @click="handleAddUser(index)">
+                                    <Icon name="el-icon-Plus" />
+                                    <span class="ml-1"> 添加客户 </span>
+                                </div>
                             </div>
                         </div>
-                        <div class="min-h-0 grow">
+
+                        <div class="min-h-0 grow px-[12px] py-[4px]">
                             <ElScrollbar>
                                 <div
-                                    class="p-4 flex flex-col gap-4 h-full"
+                                    class="flex flex-col gap-[12px] h-full min-h-[100px] py-5"
                                     :ref="(el) => setListRef(el, index)"
                                     :data-index="index">
                                     <div
                                         v-for="item in members"
-                                        :key="`List${index + 1}-Item${item.friend_id}`"
-                                        class="flex gap-x-4 p-3 bg-white shadow-lighter mb-2 rounded cursor-move"
+                                        :key="item.friend_id"
+                                        class="member-card shadow-light"
                                         @click="openUserDetail(item)">
-                                        <div class="flex-shrink-0">
-                                            <img class="w-12 h-12 rounded-md" :src="item.avatar" v-if="item.avatar" />
-                                            <ElAvatar
-                                                v-else
-                                                :size="48"
-                                                :src="item.avatar"
-                                                shape="square"
-                                                icon="el-icon-UserFilled" />
-                                        </div>
-                                        <div>
-                                            <div class="font-medium mb-1">
-                                                {{ item.remark || "-" }}
+                                        <div class="flex gap-[12px]">
+                                            <div class="relative shrink-0">
+                                                <img
+                                                    v-if="item.avatar"
+                                                    class="w-[44px] h-[44px] rounded-[10px] border border-br-extra-light"
+                                                    :src="item.avatar" />
+                                                <div
+                                                    v-else
+                                                    class="w-[44px] h-[44px] rounded-[10px] bg-blue-50 text-primary flex items-center justify-center">
+                                                    <Icon name="el-icon-UserFilled" :size="20" />
+                                                </div>
                                             </div>
-                                            <div class="text-[#9E9E9E] text-xs whitespace-normal">
-                                                微信昵称：{{ item.nickname }}
-                                            </div>
-                                            <div class="text-[#9E9E9E] text-xs whitespace-normal">
-                                                微信ID：{{ item.friend_id }}
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-[14px] font-[900] text-tx-primary truncate">
+                                                    {{ item.remark || item.nickname || "未知用户" }}
+                                                </div>
+                                                <div
+                                                    class="text-[11px] text-tx-secondary mt-[4px] flex flex-col gap-[2px]">
+                                                    <span class="opacity-70">ID: {{ item.friend_id }}</span>
+                                                    <span class="flex items-center gap-[4px]">
+                                                        <Icon
+                                                            name="local-icon-wechat"
+                                                            :size="10"
+                                                            color="var(--green-500)" />
+                                                        {{ item.nickname }}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -123,11 +134,12 @@
                     </div>
                 </div>
             </ElScrollbar>
-            <div v-else class="flex items-center justify-center h-full">
-                <ElEmpty description="暂无数据" />
+            <div v-else class="h-full flex flex-col items-center justify-center bg-white">
+                <ElEmpty description="当前选择的流程暂无客户数据" :image-size="120" />
             </div>
         </div>
     </div>
+
     <add-friend
         ref="addFriendRef"
         v-if="showAddFriend"
@@ -146,7 +158,6 @@
         @close="showBoardHandle = false"
         @confirm="handleBoardHandleConfirm" />
 </template>
-
 <script setup lang="ts">
 import {
     getWeChatLists,
@@ -406,35 +417,67 @@ onBeforeUnmount(() => {
     sortables.forEach((s) => s.destroy());
 });
 </script>
-
 <style scoped lang="scss">
-:deep(.el-select__wrapper) {
-    min-height: 34px;
+.kanban-column {
+    @apply w-[280px] bg-[#F8FAFC] border border-br flex flex-col shrink-0 rounded-[16px] overflow-hidden transition-all duration-300;
+
+    &:hover {
+        @apply border-primary-light-8 shadow-light;
+    }
 }
+
+.kanban-header {
+    @apply bg-white;
+}
+
+.more-action-btn {
+    @apply w-[28px] h-[28px] flex items-center justify-center rounded-full text-gray-400 cursor-pointer transition-all;
+    &:hover {
+        @apply bg-gray-100 text-tx-primary;
+    }
+}
+
+.add-user-trigger {
+    @apply flex items-center justify-center h-[36px] bg-blue-50 text-primary text-[13px] font-bold rounded-[10px] cursor-pointer transition-all border border-primary-light-8;
+    &:hover {
+        @apply bg-primary text-white border-primary shadow-light;
+    }
+}
+
+.member-card {
+    @apply p-[14px] bg-white border border-br rounded-[12px] cursor-move transition-all;
+
+    &:hover {
+        @apply border-primary-light-5 -translate-y-[2px];
+        box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+    }
+}
+
+:deep(.sortable-ghost) {
+    @apply opacity-40 bg-blue-100 border-2 border-dashed border-primary rounded-[12px];
+}
+
+:deep(.sortable-drag) {
+    @apply rotate-[2deg] !scale-105;
+    box-shadow: 0 10px 20px rgba(0, 101, 251, 0.15) !important;
+}
+
 :deep(.el-scrollbar__view) {
-    height: 100%;
-}
-
-.sortable-ghost {
-    opacity: 0.4;
-    background: #c8ebfb;
-}
-
-.sortable-chosen {
-    background: #f0f9ff;
-}
-
-.sortable-drag {
-    opacity: 1 !important;
-    transform: rotate(2deg);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    @apply h-full;
 }
 </style>
 
 <style lang="scss">
-.transfer-message-box {
-    .el-message-box__message {
-        width: 100%;
+.custom-board-popover {
+    @apply rounded-[12px] !border-br !p-[4px];
+    .popover-item {
+        @apply px-[12px] py-[8px] text-[13px] text-tx-primary rounded-[8px] cursor-pointer transition-all;
+        &:hover {
+            @apply bg-blue-50 text-primary;
+        }
+        &.is-disabled {
+            @apply text-gray-300 cursor-not-allowed pointer-events-none;
+        }
     }
 }
 </style>

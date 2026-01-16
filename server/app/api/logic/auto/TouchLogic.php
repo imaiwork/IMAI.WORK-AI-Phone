@@ -149,9 +149,10 @@ class TouchLogic extends ApiLogic
         print_r("\n{$deviceCode}自动化截流任务生成\n");
         try {
             $where = [];
+            $where[] = ['device_code', '=', $deviceCode];
             if($isFrist === 1){
                 $where[] = ['is_first', '=', 0];
-                $where[] = ['device_code', '=', $deviceCode];
+                
             }else{
                 $where[] = ['exec_date', '<=', date('Y-m-d', time())];
             }

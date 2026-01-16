@@ -1,61 +1,109 @@
 <template>
-    <div class="h-full flex flex-col">
-        <!-- 主内容区 -->
-        <div class="flex grow min-h-0 bg-white rounded-lg overflow-hidden">
-            <!-- 左侧设置面板 -->
-            <div class="w-[250px] h-full flex flex-col border-r border-[#E5E5E5]">
-                <div class="h-[74px] flex items-center justify-center text-white text-2xl bg-primary">策略设置</div>
-                <div class="grow min-h-0">
-                    <ElScrollbar>
-                        <div class="p-4">
-                            <ElForm :model="formData" label-position="top">
-                                <ElFormItem label="是否开启打招呼">
-                                    <ElSwitch v-model="formData.is_enable" :active-value="1" :inactive-value="0" />
-                                </ElFormItem>
-                                <ElFormItem label="添加后打招呼间隔">
+    <div class="h-full flex overflow-hidden rounded-[20px] bg-white border border-br">
+        <div class="w-[280px] h-full flex flex-col border-r border-br-extra-light bg-[#f9f9f9]/50">
+            <div class="h-[74px] flex items-center px-6 bg-primary shrink-0">
+                <Icon name="el-icon-Setting" color="white" :size="20" />
+                <span class="ml-2 text-white text-[18px] font-[900] tracking-wider">策略设置</span>
+            </div>
+
+            <div class="grow min-h-0">
+                <ElScrollbar>
+                    <div class="p-[20px] flex flex-col gap-[24px]">
+                        <ElForm :model="formData" label-position="top" class="custom-strategy-form">
+                            <div class="setting-group-card">
+                                <div class="flex items-center justify-between mb-[12px]">
+                                    <span class="text-[14px] font-[900] text-tx-primary">开启自动化</span>
+                                    <ElSwitch
+                                        v-model="formData.is_enable"
+                                        :active-value="1"
+                                        :inactive-value="0"
+                                        inline-prompt
+                                        active-text="ON"
+                                        inactive-text="OFF" />
+                                </div>
+                                <p class="text-[12px] text-tx-placeholder leading-relaxed">
+                                    开启后，系统将在好友通过后自动执行打招呼策略。
+                                </p>
+                            </div>
+
+                            <ElFormItem label="执行延迟">
+                                <div class="flex items-center w-full gap-[8px]">
                                     <ElInputNumber
                                         v-model="formData.interval_time"
                                         :precision="0"
                                         :min="0"
-                                        size="small" />
-                                    <span class="ml-2">分钟后</span>
-                                </ElFormItem>
-                                <ElFormItem label="对方打招呼是否回复：">
-                                    <ElRadioGroup v-model="formData.friend_greet_is_reply">
-                                        <ElRadio :value="1">不再打招呼</ElRadio>
-                                        <ElRadio :value="0">继续打招呼</ElRadio>
-                                    </ElRadioGroup>
-                                </ElFormItem>
-                                <ElFormItem label="打招呼后接管类型：">
-                                    <ElRadioGroup v-model="formData.greet_after_ai_enable">
-                                        <ElRadio :value="1">AI接管</ElRadio>
-                                        <ElRadio :value="0">人工接管</ElRadio>
-                                    </ElRadioGroup>
-                                </ElFormItem>
-                            </ElForm>
-                        </div>
-                    </ElScrollbar>
-                </div>
+                                        class="!w-full custom-number-input"
+                                        controls-position="right" />
+                                    <span class="shrink-0 text-[13px] font-bold text-tx-secondary">分钟后</span>
+                                </div>
+                            </ElFormItem>
+
+                            <ElDivider class="!my-[4px] opacity-50" />
+
+                            <ElFormItem label="对方打招呼是否回复">
+                                <ElRadioGroup v-model="formData.friend_greet_is_reply" class="custom-radio-stack">
+                                    <ElRadio :value="1" class="strategy-radio">
+                                        <span class="font-bold">静默</span>
+                                        <span class="text-[11px] block opacity-60 font-normal">不再打招呼</span>
+                                    </ElRadio>
+                                    <ElRadio :value="0" class="strategy-radio">
+                                        <span class="font-bold">强制执行</span>
+                                        <span class="text-[11px] block opacity-60 font-normal">按原计划发送内容</span>
+                                    </ElRadio>
+                                </ElRadioGroup>
+                            </ElFormItem>
+
+                            <ElFormItem label="后续接管模式">
+                                <ElRadioGroup v-model="formData.greet_after_ai_enable" class="custom-radio-stack">
+                                    <ElRadio :value="1" class="strategy-radio">
+                                        <div class="flex items-center gap-1">
+                                            <Icon name="el-icon-Cpu" :size="14" />
+                                            <span class="font-bold">AI 智能接管</span>
+                                        </div>
+                                    </ElRadio>
+                                    <ElRadio :value="0" class="strategy-radio">
+                                        <div class="flex items-center gap-1">
+                                            <Icon name="el-icon-User" :size="14" />
+                                            <span class="font-bold">人工手动接管</span>
+                                        </div>
+                                    </ElRadio>
+                                </ElRadioGroup>
+                            </ElFormItem>
+                        </ElForm>
+                    </div>
+                </ElScrollbar>
             </div>
-            <!-- 右侧内容编辑区 -->
-            <div class="px-6 h-full flex flex-col grow">
-                <div class="h-[75px] flex-shrink-0 flex items-center">编辑打招呼素材内容</div>
-                <ElDivider class="!my-0" />
-                <div class="grow min-h-0 py-4">
-                    <!-- 素材添加/编辑组件 -->
+        </div>
+        <div class="h-full flex flex-col grow bg-white">
+            <header
+                class="h-[74px] flex-shrink-0 flex items-center justify-between px-8 border-b border-br-extra-light">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-[4px] h-[18px] bg-primary rounded-full"></div>
+                        <h3 class="text-[16px] font-[900] text-tx-primary">编辑打招呼素材内容</h3>
+                    </div>
+                    <div class="flex items-center text-[12px] text-tx-placeholder bg-gray-50 px-3 py-1 rounded-full">
+                        <Icon name="el-icon-Edit" />
+                        <span class="ml-1">内容将按顺序逐条发送</span>
+                    </div>
+                </div>
+                <ElButton
+                    type="primary"
+                    class="!h-[44px] px-[60px] !rounded-xl !font-[900] shadow-lg shadow-primary/25 hover:scale-105 transition-transform"
+                    :loading="lockLoading"
+                    @click="lockConfirm">
+                    保存策略
+                </ElButton>
+            </header>
+
+            <div class="grow min-h-0 p-8">
+                <div class="max-w-[900px] mx-auto h-full">
                     <AddContent v-model="formData.greet_content" />
                 </div>
             </div>
         </div>
-        <!-- 底部操作区 -->
-        <div class="mt-4 flex justify-center">
-            <ElButton type="primary" class="w-[100px] !h-[40px]" :loading="lockLoading" @click="lockConfirm">
-                保存
-            </ElButton>
-        </div>
     </div>
 </template>
-
 <script setup lang="ts">
 import { sopGreetInfo, sopGreetEdit } from "@/api/person_wechat";
 import AddContent from "../../../_components/add-content.vue";
@@ -149,16 +197,34 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-// 使用 :deep() 选择器穿透 scoped 样式，修改子组件 Element Plus 的样式
-:deep(.el-form-item__label) {
-    color: #9e9e9e;
+.setting-group-card {
+    @apply p-[16px] bg-white border border-br-extra-light rounded-xl  mb-[8px];
 }
-:deep(.el-radio-group) {
-    // 将单选框组垂直排列
-    flex-direction: column;
-    align-items: flex-start;
+
+:deep(.custom-radio-stack) {
+    @apply flex flex-col gap-[10px] w-full;
     .el-radio {
-        margin-right: 0;
+        @apply h-auto w-full p-[12px] m-0 border border-br rounded-xl bg-white transition-all;
+        .el-radio__label {
+            @apply flex flex-col text-tx-primary;
+        }
+        &.is-checked {
+            @apply border-primary bg-[#eff6ff]/30;
+            .el-radio__inner {
+                @apply border-primary bg-primary;
+            }
+            .el-radio__label {
+                @apply text-primary;
+            }
+        }
+        &:hover:not(.is-checked) {
+            @apply border-primary-light-7 bg-[#eff6ff]/10;
+        }
     }
+}
+
+:deep(.el-button--primary) {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #2b82ff 100%);
+    border: none;
 }
 </style>

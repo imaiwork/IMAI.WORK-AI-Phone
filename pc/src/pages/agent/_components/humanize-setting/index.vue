@@ -1,135 +1,160 @@
 <template>
-    <div class="h-full flex flex-col py-6">
-        <div class="grow min-h-0">
+    <div class="h-[full] flex flex-col bg-[#FFFFFF]">
+        <div class="grow min-h-[0]">
             <ElScrollbar>
-                <div class="px-[30px]">
-                    <ElDivider content-position="left">参数设置</ElDivider>
-                    <div class="flex items-center gap-4 px-5 my-6">
-                        <div
-                            v-for="(item, index) in defaultTypes"
-                            :key="index"
-                            class="px-[9px] h-[32px] flex items-center gap-x-2 rounded-lg shadow-[0_0_0_1px_rgba(0,0,0,0.1)] cursor-pointer text-xs font-bold"
-                            :class="{ '!border-primary text-primary': formData.mode_type == item.type }"
-                            @click="handleChangeType(item.type)">
-                            <Icon :name="item.icon" :size="16" />
-                            <span>{{ item.label }}</span>
+                <div class="px-[30px] py-[24px]">
+                    <div class="mb-[32px]">
+                        <div class="flex items-center gap-[10px] mb-[16px]">
+                            <div class="w-[4px] h-[16px] bg-[#0065fb] rounded-[full]"></div>
+                            <span class="text-[15px] font-[900] text-[#0F172A]">预设模式</span>
+                        </div>
+                        <div class="flex items-center gap-[16px]">
+                            <div
+                                v-for="(item, index) in defaultTypes"
+                                :key="index"
+                                @click="handleChangeType(item.type)"
+                                :class="[
+                                    'mode-card',
+                                    formData.mode_type == item.type ? 'mode-card-active' : 'mode-card-inactive',
+                                ]">
+                                <Icon :name="item.icon" :size="18" />
+                                <span>{{ item.label }}</span>
+                            </div>
                         </div>
                     </div>
-                    <ElForm :model="formData" label-width="100px">
-                        <!-- 上下文数 -->
-                        <ElFormItem label="上下文数">
-                            <div class="flex items-center w-full gap-x-4">
-                                <div class="flex-1">
-                                    <ElSlider v-model="formData.context_num" :min="0" :max="5" />
+
+                    <ElForm :model="formData" label-position="top" class="custom-param-form">
+                        <div class="grid grid-cols-[1fr_1fr] gap-x-[40px] gap-y-[4px]">
+                            <ElFormItem label="上下文记忆条数" class="col-span-1">
+                                <div class="param-control-group">
+                                    <div class="flex-1 px-[8px]">
+                                        <ElSlider v-model="formData.context_num" :min="0" :max="5" />
+                                    </div>
+                                    <ElInputNumber
+                                        v-model="formData.context_num"
+                                        controls-position="right"
+                                        :min="0"
+                                        :max="5" />
                                 </div>
-                                <ElInputNumber
-                                    v-model="formData.context_num"
-                                    controls-position="right"
-                                    :min="0"
-                                    :max="5">
-                                    <template #suffix>
-                                        <span>条</span>
-                                    </template>
-                                </ElInputNumber>
-                            </div>
-                        </ElFormItem>
-                        <!-- 词汇多样性 -->
-                        <ElFormItem label="词汇多样性" v-if="formData.model_id != ModelIdEnum.CLAUDE_SONNET_4_5">
-                            <div class="flex items-center w-full gap-x-4">
-                                <div class="flex-1">
-                                    <ElSlider v-model="formData.top_p" :min="0.01" :max="1" :step="0.1" />
+                            </ElFormItem>
+
+                            <ElFormItem label="最大回复长度 (Max Tokens)" class="col-span-1">
+                                <div class="param-control-group">
+                                    <div class="flex-1 px-[8px]">
+                                        <ElSlider v-model="formData.max_tokens" :min="1" :max="getMaxTokens" />
+                                    </div>
+                                    <ElInputNumber
+                                        v-model="formData.max_tokens"
+                                        controls-position="right"
+                                        :min="1"
+                                        :max="getMaxTokens" />
                                 </div>
-                                <ElInputNumber
-                                    v-model="formData.top_p"
-                                    controls-position="right"
-                                    :min="0"
-                                    :max="1"
-                                    :step="0.1"></ElInputNumber>
-                            </div>
-                        </ElFormItem>
-                        <!-- 重复词频率 -->
-                        <ElFormItem label="重复词频率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
-                            <div class="flex items-center w-full gap-x-4">
-                                <div class="flex-1">
-                                    <ElSlider v-model="formData.frequency_penalty" :min="-2" :max="2" :step="0.1" />
-                                </div>
-                                <ElInputNumber
-                                    v-model="formData.frequency_penalty"
-                                    controls-position="right"
-                                    :min="-2"
-                                    :max="2"
-                                    :step="0.1"></ElInputNumber>
-                            </div>
-                        </ElFormItem>
-                        <!-- 特定词重复率 -->
-                        <ElFormItem label="特定词重复率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
-                            <div class="flex items-center w-full gap-x-4">
-                                <div class="flex-1">
-                                    <ElSlider v-model="formData.presence_penalty" :min="0" :max="1" :step="0.1" />
-                                </div>
-                                <ElInputNumber
-                                    v-model="formData.presence_penalty"
-                                    controls-position="right"
-                                    :min="0"
-                                    :max="1"
-                                    :step="0.1"></ElInputNumber>
-                            </div>
-                        </ElFormItem>
-                        <!-- 结果相似性 -->
-                        <ElFormItem label="结果相似性">
-                            <div class="flex items-center w-full gap-x-4">
-                                <div class="flex-1">
-                                    <ElSlider
+                            </ElFormItem>
+
+                            <ElFormItem label="结果随机性 (Temperature)" class="col-span-1">
+                                <div class="param-control-group">
+                                    <div class="flex-1 px-[8px]">
+                                        <ElSlider
+                                            v-model="formData.temperature"
+                                            :min="0.01"
+                                            :max="getMaxTemperature"
+                                            :step="0.1" />
+                                    </div>
+                                    <ElInputNumber
                                         v-model="formData.temperature"
+                                        controls-position="right"
                                         :min="0.01"
                                         :max="getMaxTemperature"
                                         :step="0.1" />
                                 </div>
-                                <ElInputNumber
-                                    v-model="formData.temperature"
-                                    controls-position="right"
-                                    :min="0.01"
-                                    :max="getMaxTemperature"
-                                    :step="0.1"></ElInputNumber>
-                            </div>
-                        </ElFormItem>
-                        <!-- 显示前几个候选词对数概率 -->
-                        <ElFormItem label="显示前几个候选词对数概率" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
-                            <div class="flex items-center w-full gap-x-4">
-                                <div class="flex-1">
-                                    <ElSlider v-model="formData.top_logprobs" :min="0" :max="20" />
+                            </ElFormItem>
+
+                            <ElFormItem
+                                v-if="formData.model_id != ModelIdEnum.CLAUDE_SONNET_4_5"
+                                label="核采样 (Top P)"
+                                class="col-span-1">
+                                <div class="param-control-group">
+                                    <div class="flex-1 px-[8px]">
+                                        <ElSlider v-model="formData.top_p" :min="0.01" :max="1" :step="0.1" />
+                                    </div>
+                                    <ElInputNumber
+                                        v-model="formData.top_p"
+                                        controls-position="right"
+                                        :min="0.01"
+                                        :max="1"
+                                        :step="0.1" />
                                 </div>
-                                <ElInputNumber
-                                    v-model="formData.top_logprobs"
-                                    controls-position="right"
-                                    :min="0"
-                                    :max="20"></ElInputNumber>
-                            </div>
-                        </ElFormItem>
-                        <!-- 显示候选词 -->
-                        <ElFormItem label="显示候选词" v-if="formData.model_id != ModelIdEnum.DEEPSEEK">
-                            <ElSwitch v-model="formData.logprobs" :active-value="1" :inactive-value="0" />
-                        </ElFormItem>
-                        <!-- 返回长度 -->
-                        <ElFormItem label="返回长度">
-                            <div class="flex items-center w-full gap-x-4">
-                                <div class="flex-1">
-                                    <ElSlider v-model="formData.max_tokens" :min="1" :max="getMaxTokens" />
+                            </ElFormItem>
+
+                            <ElFormItem
+                                v-if="formData.model_id != ModelIdEnum.DEEPSEEK"
+                                label="重复惩罚 (Frequency Penalty)"
+                                class="col-span-1">
+                                <div class="param-control-group">
+                                    <div class="flex-1 px-[8px]">
+                                        <ElSlider v-model="formData.frequency_penalty" :min="-2" :max="2" :step="0.1" />
+                                    </div>
+                                    <ElInputNumber
+                                        v-model="formData.frequency_penalty"
+                                        controls-position="right"
+                                        :min="-2"
+                                        :max="2"
+                                        :step="0.1" />
                                 </div>
-                                <ElInputNumber
-                                    v-model="formData.max_tokens"
-                                    controls-position="right"
-                                    :min="1"
-                                    :max="getMaxTokens" />
+                            </ElFormItem>
+
+                            <ElFormItem
+                                v-if="formData.model_id != ModelIdEnum.DEEPSEEK"
+                                label="存在惩罚 (Presence Penalty)"
+                                class="col-span-1">
+                                <div class="param-control-group">
+                                    <div class="flex-1 px-[8px]">
+                                        <ElSlider v-model="formData.presence_penalty" :min="0" :max="1" :step="0.1" />
+                                    </div>
+                                    <ElInputNumber
+                                        v-model="formData.presence_penalty"
+                                        controls-position="right"
+                                        :min="0"
+                                        :max="1"
+                                        :step="0.1" />
+                                </div>
+                            </ElFormItem>
+                        </div>
+
+                        <div
+                            v-if="formData.model_id != ModelIdEnum.DEEPSEEK"
+                            class="mt-[24px] p-[24px] rounded-[20px] bg-[#F8FAFC] border-[transparent]">
+                            <div class="flex items-center justify-between mb-[20px]">
+                                <div>
+                                    <div class="text-[14px] font-[900] text-[#0F172A]">对数概率分析 (Logprobs)</div>
+                                    <div class="text-[12px] text-[#94A3B8] mt-[4px]">
+                                        显示模型输出词汇的概率分布情况，通常用于学术或精细化调试。
+                                    </div>
+                                </div>
+                                <ElSwitch v-model="formData.logprobs" :active-value="1" :inactive-value="0" />
                             </div>
-                        </ElFormItem>
+
+                            <transition name="el-fade-in">
+                                <ElFormItem v-if="formData.logprobs" label="候选词对数概率展示数量">
+                                    <div class="param-control-group !bg-[#FFFFFF]">
+                                        <div class="flex-1 px-[8px]">
+                                            <ElSlider v-model="formData.top_logprobs" :min="0" :max="20" />
+                                        </div>
+                                        <ElInputNumber
+                                            v-model="formData.top_logprobs"
+                                            controls-position="right"
+                                            :min="0"
+                                            :max="20" />
+                                    </div>
+                                </ElFormItem>
+                            </transition>
+                        </div>
                     </ElForm>
                 </div>
             </ElScrollbar>
         </div>
     </div>
 </template>
-
 <script setup lang="ts">
 import { ModelIdEnum } from "@/enums/appEnums";
 import { Agent, ModeTypeEnum } from "../../_enums";
@@ -196,13 +221,24 @@ defineExpose({
     },
 });
 </script>
-
 <style scoped lang="scss">
-:deep(.el-input-number) {
-    .el-input {
-        .el-input__inner {
-            height: 36px;
-        }
+.mode-card {
+    @apply flex items-center gap-[10px] px-[20px] h-[44px] rounded-[12px] cursor-pointer font-[900] text-[13px] transition-all border-[2px];
+
+    &-active {
+        @apply bg-[#F1F6FF] border-primary text-primary shadow-[0_4px_12px_-2px_rgba(0,101,251,0.15)];
+    }
+
+    &-inactive {
+        @apply bg-[#FFFFFF] border-[#F1F5F9] text-[#64748B] hover:border-[#E2E8F0];
+    }
+}
+
+.param-control-group {
+    @apply flex items-center w-full gap-[16px] bg-[#F8FAFC] px-[16px] py-[6px] rounded-[12px] border-[transparent] transition-all;
+
+    &:focus-within {
+        @apply bg-[#FFFFFF] shadow-[0_0_0_2px_#0065fb22] border-[#0065fb33];
     }
 }
 </style>

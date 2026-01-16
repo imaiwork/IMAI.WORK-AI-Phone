@@ -2,6 +2,7 @@
 
 namespace app\common\workerman\rpa\handlers\sph;
 
+use app\common\model\sv\SvDevice;
 use Workerman\Connection\TcpConnection;
 use app\common\workerman\rpa\BaseMessageHandler;
 use app\common\workerman\rpa\WorkerEnum;
@@ -126,14 +127,28 @@ class TaskRecordSaveHandler extends BaseMessageHandler
                     'exec_keyword' => $content['exec_keyword'],
                     'update_time' => time(),
                 ]);
+            $autoType = SvDevice::where('device_code',$this->payload['deviceId'])->value('auto_type') ?? 0;
+            if ($autoType == 0){
+                //扣除算力
+                $userId = $task['user_id'] ?? 0;
+                $tokenScene = "sph_add_wechat";
+                $tokenCode = AccountLogEnum::TOKENS_DEC_SPH_ADD_WECHAT;
+                $unit = TokenLogService::checkToken($userId, $tokenScene);
+                $points = $unit;
+                $extra = ['算力单价' => $unit . '算力/条', '实际消耗算力' => $points];
+            }else{
+                $requestService = \app\common\service\ToolsService::Automation()->wechatAddFriend($content);
+                if (isset($requestService['code']) && $requestService['code'] == 10000){
+                    $userId = $task['user_id'] ?? 0;
+                    $tokenScene = "automation_wechat_add_friend";
+                    $tokenCode = AccountLogEnum::TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND;
+                    $unit = TokenLogService::checkToken($userId, $tokenScene);
+                    $points = $unit;
+                    $extra = ['算力单价' => $unit . '算力/条', '实际消耗算力' => $points];
+                }
 
-            //扣除算力
-            $userId = $task['user_id'] ?? 0;
-            $tokenScene = "sph_add_wechat";
-            $tokenCode = AccountLogEnum::TOKENS_DEC_SPH_ADD_WECHAT;
-            $unit = TokenLogService::checkToken($userId, $tokenScene);
-            $points = $unit;
-            $extra = ['算力单价' => $unit . '算力/条', '实际消耗算力' => $points];
+            }
+
             $sub_task_id = generate_unique_task_id();
 
             if ($task->add_type == 1) {

@@ -11,7 +11,7 @@
 const router = useRouter();
 
 const handleBack = () => {
-    router.push("/staff");
+    router.push("/");
 };
 </script>
 

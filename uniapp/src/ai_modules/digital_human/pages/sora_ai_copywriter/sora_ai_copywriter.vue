@@ -145,6 +145,13 @@ const useContent = (item: any) => {
     });
     uni.navigateBack();
 };
+
+onLoad((options: any) => {
+    if (options.content) {
+        contentVal.value = options.content;
+        contentPost();
+    }
+});
 </script>
 
 <style scoped lang="scss">

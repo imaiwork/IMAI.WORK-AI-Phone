@@ -1,35 +1,24 @@
 <template>
-    <div class="h-full relative w-full">
-        <ElScrollbar>
-            <div class="px-[10px]">
-                <result-content
-                    :result-lists="resultLists"
-                    :is-all-tasks-completed="isAllTasksCompleted"
-                    @retry="retry">
-                    <template #add-content="{ item }">
-                        <div class="z-[22] absolute top-4 left-0 w-full flex px-4">
-                            <div class="flex flex-col items-center gap-5 mt-2">
-                                <div class="create-image-item">
-                                    <img
-                                        :src="item.formData.params.upper_clothes"
-                                        class="w-full h-full object-contain" />
-                                </div>
-                                <div
-                                    class="create-image-item"
-                                    v-if="item.formData.type == FashionImageTypeEnum.UPPER_LOWER_CLOTHES">
-                                    <img
-                                        :src="item.formData.params.lower_clothes"
-                                        class="w-full h-full object-contain" />
-                                </div>
-                                <div class="create-image-item">
-                                    <img :src="item.formData.params.persons[0]" class="w-full h-full object-contain" />
-                                </div>
-                            </div>
+    <div class="h-full relative w-full bg-white rounded-[20px]">
+        <result-content :result-lists="resultLists" :is-all-tasks-completed="isAllTasksCompleted" @retry="retry">
+            <template #add-content="{ item }">
+                <div class="z-[22] absolute top-4 left-0 w-full flex px-4">
+                    <div class="flex flex-col items-center gap-5 mt-2">
+                        <div class="create-image-item">
+                            <img :src="item.formData.params.upper_clothes" class="w-full h-full object-contain" />
                         </div>
-                    </template>
-                </result-content>
-            </div>
-        </ElScrollbar>
+                        <div
+                            class="create-image-item"
+                            v-if="item.formData.type == FashionImageTypeEnum.UPPER_LOWER_CLOTHES">
+                            <img :src="item.formData.params.lower_clothes" class="w-full h-full object-contain" />
+                        </div>
+                        <div class="create-image-item">
+                            <img :src="item.formData.params.persons[0]" class="w-full h-full object-contain" />
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </result-content>
     </div>
 </template>
 

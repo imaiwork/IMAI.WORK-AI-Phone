@@ -1,146 +1,133 @@
 <template>
     <HeaderContentDefineTemplate v-slot="{ title, index }">
-        <div class="text-white flex items-center gap-x-2">
-            <span class="flex items-center justify-center w-4 h-4 rounded-full bg-primary text-[10px]">{{
-                index
-            }}</span>
-            {{ title }}
+        <div class="flex items-center gap-x-3 py-1.5 group">
+            <div
+                class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center border transition-all duration-300 bg-[#3b82f620] border-[#3b82f660]">
+                <span class="text-[10px] font-bold text-[#60a5fa]">{{ index }}</span>
+            </div>
+            <span class="text-[14px] font-medium transition-colors text-[#cbd5e1]">{{ title }}</span>
         </div>
     </HeaderContentDefineTemplate>
-    <div
-        class="bg-app-bg-2 rounded-[20px] h-full"
-        style="background: linear-gradient(125deg, #dae1eb 0%, #1a4a8c 14.83%, rgba(3, 4, 6, 0) 35.01%)">
-        <ElScrollbar>
-            <div class="p-[18px] min-w-[1100px]">
-                <div class="flex gap-x-5">
-                    <div class="basis-1/2 px-[42px]">
-                        <div class="text-white text-[40px] font-bold mt-[70px] title-gradient">
-                            如何用自动化 <br />
-                            工具搭建私域引流矩阵
+
+    <div class="h-full rounded-[24px] relative bg-[#0f172a] min-w-[1000px]">
+        <div
+            class="absolute top-0 right-0 w-[500px] h-[400px] opacity-20 pointer-events-none"
+            style="background: radial-gradient(circle, #3b82f6 0%, transparent 70%); filter: blur(60px)"></div>
+        <div
+            class="absolute bottom-0 left-0 w-[400px] h-[300px] opacity-10 pointer-events-none"
+            style="background: radial-gradient(circle, #8b5cf6 0%, transparent 70%); filter: blur(50px)"></div>
+
+        <ElScrollbar class="h-full z-10 relative">
+            <div class="p-10 mx-auto flex flex-col justify-center">
+                <div class="flex items-center justify-between gap-x-12 mb-10">
+                    <div class="basis-1/2">
+                        <div
+                            class="inline-flex items-center px-3 py-1 rounded-md mb-6 border bg-[#3b82f615] border-[#3b82f630]">
+                            <span
+                                class="w-2 h-2 rounded-full mr-2 animate-pulse"
+                                style="background-color: #10b981"></span>
+                            <span class="text-[12px] font-bold uppercase tracking-wider text-[#60a5fa]"
+                                >AI Matrix System</span
+                            >
                         </div>
-                        <div class="text-[#ffffff80] mt-5">无需多人团队架构，四步开启全自动引流</div>
+                        <h1 class="text-[44px] leading-[1.2] font-extrabold tracking-tight mb-6 text-[#ffffff]">
+                            如何用
+                            <span
+                                class="text-[#3b82f6] bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] bg-clip-text text-transparent"
+                                >自动化工具</span
+                            ><br />
+                            搭建私域引流矩阵
+                        </h1>
+                        <p class="text-[18px] font-light leading-relaxed max-w-md text-[#94a3b8]">
+                            告别低效人工，利用 AI 与 RPA 技术实现 24 小时自动获客增长。
+                        </p>
                     </div>
-                    <div class="bg-app-bg-3 border border-[#ffffff1a] rounded-xl basis-1/2 px-[50px] py-6">
-                        <div class="text-white font-bold text-[20px] mt-[32px]">私域引流全自动作战台</div>
-                        <div class="text-[#ffffff80] mt-[36px] flex flex-col gap-y-5">
-                            <HeaderContentUseTemplate title="智能（AI）手机硬件级授权（免封号）" index="1" />
-                            <HeaderContentUseTemplate title="私信 → 加微全闭环（无需人工）" index="2" />
-                            <HeaderContentUseTemplate title="全平台社媒账号覆盖" index="3" />
-                        </div>
-                        <div class="flex justify-end">
-                            <ElButton
-                                type="primary"
-                                class="!rounded-full !h-[50px] w-[168px]"
-                                @click="handleClickCourseUrl">
-                                查看操作手册
-                            </ElButton>
+
+                    <div class="basis-[420px] rounded-[24px] p-[1px] bg-gradient-to-r from-[#334155] to-[#0f172a]">
+                        <div class="rounded-[23px] p-8 bg-[#1e293b]">
+                            <div class="flex items-center justify-between mb-8">
+                                <h3 class="text-[20px] font-bold text-[#f8fafc]">私域引流作战台</h3>
+                                <div
+                                    class="px-2 py-0.5 rounded text-[10px] border text-[#10b981] border-[#10b98140] bg-[#10b98110]">
+                                    LIVE
+                                </div>
+                            </div>
+
+                            <div class="space-y-3 p-4 rounded-xl mb-8 border bg-[#0f172a80] border-[#334155]">
+                                <HeaderContentUseTemplate title="智能（AI）手机硬件级授权" index="01" />
+                                <HeaderContentUseTemplate title="私信 → 加微全闭环流程" index="02" />
+                                <HeaderContentUseTemplate title="全平台社媒账号矩阵覆盖" index="03" />
+                            </div>
+
+                            <button
+                                @click="handleClickCourseUrl"
+                                class="w-full py-3.5 rounded-xl font-bold text-[14px] transition-all active:scale-95 bg-[#3b82f6] text-[#ffffff]">
+                                查看操作手册 →
+                            </button>
                         </div>
                     </div>
                 </div>
-                <div class="mt-4">
-                    <div class="grid grid-cols-4 gap-x-[20px] gap-y-[20px]">
+
+                <div class="grid grid-cols-4 gap-5 mb-10">
+                    <div
+                        v-for="(item, index) in steps"
+                        :key="index"
+                        class="p-6 rounded-2xl border transition-all duration-300 hover:-translate-y-1 bg-[#1e293b60] border-[#334155]">
                         <div
-                            v-for="(item, index) in middleMenu"
-                            :key="item.title"
-                            class="flex items-center gap-x-[14px] bg-app-bg-3 border rounded-xl p-5 h-[96px] relative"
-                            :class="[index == 0 ? 'border-primary' : 'border-[#ffffff1a]']">
-                            <div class="absolute left-0 top-[50%] translate-y-[-50%]">
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="4"
-                                    height="36"
-                                    viewBox="0 0 4 36"
-                                    fill="none">
-                                    <path
-                                        d="M0 0C2.20914 0 4 1.79086 4 4V32C4 34.2091 2.20914 36 0 36V0Z"
-                                        :fill="index == 0 ? 'var(--color-primary)' : 'var(--color-white)'" />
-                                </svg>
-                            </div>
-                            <div class="flex-shrink-0">
-                                <img :src="item.icon" class="w-12 h-12" />
-                            </div>
-                            <div>
-                                <div class="text-white">{{ item.title }}</div>
-                                <div class="text-[#ffffff80] mt-2">{{ item.desc }}</div>
-                            </div>
+                            class="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+                            :style="{ backgroundColor: item.color + '20', border: '1px solid ' + item.color + '40' }">
+                            <img :src="item.icon" class="w-6 h-6" style="filter: brightness(1.2)" />
                         </div>
+                        <div
+                            class="text-[10px] font-bold mb-2 uppercase tracking-tighter"
+                            :style="{ color: item.color }">
+                            Step 0{{ index + 1 }}
+                        </div>
+                        <h4 class="text-[16px] font-bold mb-2 text-[#f1f5f9]">{{ item.title }}</h4>
+                        <p class="text-[12px] leading-relaxed text-[#64748b]">{{ item.desc }}</p>
                     </div>
                 </div>
-                <div class="flex gap-x-5 mt-8">
-                    <div class="flex-1 px-[30px] bg-app-bg-3 rounded-xl border border-[#ffffff1a] bg-app-bg-2">
-                        <div class="mb-[40px] mt-[30px]">
-                            <div class="text-white text-[20px]">矩阵运营的最佳实践</div>
-                            <div class="text-[#ffffff80] mt-[6px]">
-                                一站式解决批量生产视频、多账号一键发布视频、统一查看运营数据
-                            </div>
-                        </div>
-                        <div class="flex gap-x-4">
-                            <div class="flex-1 -mt-10">
-                                <img src="../../_assets/images/home_bg.png" />
-                            </div>
-                            <div class="flex-1 flex flex-col gap-y-6">
-                                <div>
-                                    <div class="text-white">批量剪辑视频</div>
-                                    <div class="text-[#ffffff80] mt-[10px]">
-                                        通过视频混剪，批量剪辑视频，剪辑后的素材存储在内容管理中
-                                    </div>
-                                </div>
-                                <div>
-                                    <div class="text-white">批量发布视频</div>
-                                    <div class="text-[#ffffff80] mt-[10px]">一次性发布多个视频到多个账号/一个账号</div>
-                                </div>
-                                <div>
-                                    <div class="text-white">自动接管私聊回复引流</div>
-                                    <div class="text-[#ffffff80] mt-[10px]">
-                                        发布后在AI智能体自动接管私信，发送加微话术，当触达微信号后自动加微
-                                    </div>
-                                </div>
+
+                <div class="flex gap-6 h-[300px]">
+                    <div
+                        class="flex-[3] rounded-2xl border overflow-hidden relative group bg-[#1e293b] border-[#334155]">
+                        <img
+                            src="../../_assets/images/home_bg.png"
+                            class="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
+                        <div
+                            class="absolute inset-0 bg-[#0f172a10] bg-gradient-to-t from-[#0f172a] to-[transparent]"></div>
+                        <div class="absolute bottom-8 left-8">
+                            <h3 class="text-[24px] font-black mb-3 text-[#ffffff]">矩阵运营最佳实践</h3>
+                            <div class="flex gap-2">
+                                <span
+                                    class="px-2 py-1 rounded text-[11px] font-medium bg-[#3b82f630] text-[#60a5fa] border border-[#3b82f640]"
+                                    >批量剪辑</span
+                                >
+                                <span
+                                    class="px-2 py-1 rounded text-[11px] font-medium bg-[#8b5cf630] text-[#a78bfa] border border-[#8b5cf640]"
+                                    >一键分发</span
+                                >
+                                <span
+                                    class="px-2 py-1 rounded text-[11px] font-medium bg-[#10b98130] text-[#34d399] border border-[#10b98140]"
+                                    >自动私信</span
+                                >
                             </div>
                         </div>
                     </div>
-                    <div class="flex-1 flex flex-col gap-y-6">
+
+                    <div class="flex-[2] flex flex-col gap-4">
                         <div
-                            class="flex items-center gap-x-5 bg-app-bg-2 border border-[#ffffff1a] rounded-xl h-[132px] px-5">
-                            <img src="../../_assets/icons/mix_list.svg" class="w-12 h-12" />
-                            <div>
-                                <div class="text-white text-[20px] font-bold">小红书智能（AI）矩阵</div>
-                                <div class="text-[#ffffff80] mt-3">
-                                    在数据驱动的新时代，智能（AI）矩阵正在重构认知边界
-                                </div>
+                            v-for="feat in sideFeatures"
+                            :key="feat.name"
+                            class="flex-1 flex items-center gap-4 px-6 rounded-2xl border transition-colors hover:bg-[#ffffff05] bg-[#1e293b40] border-[#334155]">
+                            <div
+                                class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                                :style="{ backgroundColor: feat.color + '15', color: feat.color }">
+                                <img :src="feat.icon" class="w-5 h-5" />
                             </div>
-                        </div>
-                        <div
-                            class="flex items-center gap-x-5 bg-app-bg-2 border border-[#ffffff1a] rounded-xl px-5 h-[108px]">
-                            <img src="../../_assets/icons/msg_wechat.svg" class="w-12 h-12" />
                             <div>
-                                <div class="text-white flex items-center gap-x-2">
-                                    私信<svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="20"
-                                        height="20"
-                                        viewBox="0 0 20 20"
-                                        fill="none">
-                                        <path
-                                            d="M0 10C0 4.47715 4.47715 0 10 0C15.5228 0 20 4.47715 20 10C20 15.5228 15.5228 20 10 20C4.47715 20 0 15.5228 0 10Z"
-                                            fill="#0065FB" />
-                                        <path
-                                            d="M8 7L12 10L8 13"
-                                            stroke="white"
-                                            stroke-width="1.2"
-                                            stroke-linejoin="round" /></svg
-                                    >加微全自动
-                                </div>
-                                <div class="text-[#ffffff80] mt-3">
-                                    关键词触发+微信号自动识别，日均加微89+响应速度< 8秒
-                                </div>
-                            </div>
-                        </div>
-                        <div
-                            class="flex items-center gap-x-5 bg-app-bg-2 border border-[#ffffff1a] rounded-xl px-5 h-[108px]">
-                            <img src="../../_assets/icons/flow_data.svg" class="w-12 h-12" />
-                            <div>
-                                <div class="text-white">收割全天候流量</div>
-                                <div class="text-[#ffffff80] mt-3">自定义发布密度+智能错峰，单次操作覆盖多发布位</div>
+                                <div class="text-[15px] font-bold text-[#f1f5f9]">{{ feat.name }}</div>
+                                <div class="text-[11px] text-[#64748b]">{{ feat.sub }}</div>
                             </div>
                         </div>
                     </div>
@@ -152,53 +139,50 @@
 
 <script setup lang="ts">
 import { useAppStore } from "@/stores/app";
+import { createReusableTemplate } from "@vueuse/core";
 import BindAccount from "@/pages/app/matrix/_assets/icons/bind_account.svg";
 import AutoMsg from "@/pages/app/matrix/_assets/icons/auto_msg.svg";
 import PhonePublish from "@/pages/app/matrix/_assets/icons/phone_publish.svg";
 import MixAuto from "@/pages/app/matrix/_assets/icons/mix_auto.svg";
+import MixList from "@/pages/app/matrix/_assets/icons/mix_list.svg";
+import MsgWechat from "@/pages/app/matrix/_assets/icons/msg_wechat.svg";
+import FlowData from "@/pages/app/matrix/_assets/icons/flow_data.svg";
 
 const appStore = useAppStore();
 
 const getCourseUrl = computed(() => {
-    const { course_url } = appStore.getAppConfig;
-    return course_url;
+    return appStore.getAppConfig?.course_url || "";
 });
 
-const middleMenu = [
-    {
-        title: "第一步：绑定社媒账号池",
-        desc: "通过绑定AI手机添加您的的所有抖音账号",
-        icon: BindAccount,
-    },
-    {
-        title: "第二步：选择发布内容",
-        desc: "选择发布内容或进行内容创作",
-        icon: PhonePublish,
-    },
-    {
-        title: "第三步：矩阵自动发布",
-        desc: "内容自定义时间自动批量发布至",
-        icon: MixAuto,
-    },
-    {
-        title: "第四步：24小时自动私信引流",
-        desc: "自动回复预设「加微话术」，识别微信后自动触达",
-        icon: AutoMsg,
-    },
+const steps = [
+    { title: "绑定账号", desc: "AI手机硬件授权添加抖音账号", icon: BindAccount, color: "#3b82f6" },
+    { title: "创作内容", desc: "智能混剪与一键素材分发", icon: PhonePublish, color: "#8b5cf6" },
+    { title: "自动发布", desc: "自定义时间定时批量推流", icon: MixAuto, color: "#f59e0b" },
+    { title: "私信引流", desc: "24h自动回复并识别微信", icon: AutoMsg, color: "#10b981" },
+];
+
+const sideFeatures = [
+    { name: "抖音、快手、小红书、视频号AI 矩阵", sub: "打破流量边界，重构认知", icon: MixList, color: "#ef4444" },
+    { name: "私信转微信", sub: "日均加微 89+，秒级响应", icon: MsgWechat, color: "#10b981" },
+    { name: "全天候流量收割", sub: "错峰发布，覆盖多展示位", icon: FlowData, color: "#0ea5e9" },
 ];
 
 const handleClickCourseUrl = () => {
     window.open(getCourseUrl.value, "_blank");
 };
 
-const { DefineTemplate: HeaderContentDefineTemplate, UseTemplate: HeaderContentUseTemplate } = useTemplate();
+const [HeaderContentDefineTemplate, HeaderContentUseTemplate] = createReusableTemplate<{
+    title: string;
+    index: string;
+}>();
 </script>
 
-<style scoped lang="scss">
-.title-gradient {
-    background: linear-gradient(282deg, #0065fb 33.53%, #fff 70.93%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+<style scoped>
+/* 仅保留滚动条基础样式美化 */
+:deep(.el-scrollbar__bar.is-vertical) {
+    width: 6px;
+}
+:deep(.el-scrollbar__thumb) {
+    background-color: #334155 !important;
 }
 </style>

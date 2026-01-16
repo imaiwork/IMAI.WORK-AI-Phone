@@ -174,7 +174,7 @@
             </view>
             <scroll-view v-if="step === 3" scroll-y class="h-full">
                 <view class="px-4 pb-[100rpx]">
-                    <bast-setting-v2
+                    <base-setting
                         v-model="formData"
                         :current-frequency="currentFrequency"
                         @change-frequency="currentFrequency = $event" />
@@ -259,7 +259,7 @@ import { useAppStore } from "@/stores/app";
 import { getWeChatLists } from "@/api/person_wechat";
 import { useDictOptions } from "@/hooks/useDictOptions";
 import ClueCard from "@/ai_modules/device/components/clue-card/clue-card.vue";
-import BastSettingV2 from "@/ai_modules/device/components/bast-setting-v2/bast-setting-v2.vue";
+import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 
 const { on } = useEventBusManager();
@@ -443,7 +443,7 @@ const handleAddTask = () => {
                     uploadMaterialList.value = [];
                     const { tempFiles } = await chooseFile({
                         type: "file",
-                        extension: [".csv", ".xlsx"],
+                        extension: ["csv", "xlsx"],
                         count: 1,
                     });
                     const fileList = [];

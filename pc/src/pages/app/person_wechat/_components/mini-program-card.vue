@@ -20,9 +20,9 @@
 
 <script setup lang="ts">
 defineProps<{
-    title: string;
-    pic: string;
-    link: string;
+    title?: string;
+    pic?: string;
+    link?: string;
 }>();
 </script>
 

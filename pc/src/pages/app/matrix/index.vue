@@ -1,17 +1,12 @@
 <template>
-    <div class="p-4 flex gap-[10px] h-full bg-app-bg-1">
-        <Sidebar
-            :sidebar="getSidebar"
-            :sidebarIndex="sidebarIndex"
-            :theme="ThemeEnum.DARK"
-            @update:sidebarIndex="getSliderIndex" />
-        <div class="grow overflow-hidden">
+    <div class="px-4 pb-4 flex gap-[10px] h-full">
+        <Sidebar :sidebar="getSidebar" :sidebarIndex="sidebarIndex" @update:sidebarIndex="getSliderIndex" />
+        <div class="grow min-h-0 min-w-0">
             <component :is="getComponents" @update:sidebarIndex="updateSliderIndex"></component>
         </div>
     </div>
 </template>
 <script setup lang="ts">
-import { AppKeyEnum, ThemeEnum, appKeyNameMap } from "@/enums/appEnums";
 import Sidebar from "../_components/sidebar.vue";
 import { SidebarTypeEnum } from "./_enums";
 import useSidebar from "../_hooks/useSidebar";
@@ -21,7 +16,7 @@ import Publish from "./_pages/publish/index.vue";
 import ImageTask from "./_pages/image_task/index.vue";
 import DhCreation from "./_pages/dh_creation/index.vue";
 import MaterialLibrary from "./_pages/material_library/index.vue";
-import GenerateVideo from "./_pages/generate_video/index.vue";
+import VideoWorks from "./_pages/video_works/index.vue";
 import CopywritingLibrary from "./_pages/copywriting_library/index.vue";
 
 const { sidebar, sidebarIndex, getComponents, getSliderIndex, updateSliderIndex } = useSidebar();
@@ -74,10 +69,10 @@ sidebar.value = [
         type: SidebarTypeEnum.MATERIAL_LIBRARY,
     },
     {
-        name: "生成视频",
+        name: "视频作品",
         icon: "menu_generate_video",
-        components: markRaw(GenerateVideo),
-        type: SidebarTypeEnum.GENERATE_VIDEO,
+        components: markRaw(VideoWorks),
+        type: SidebarTypeEnum.VIDEO_WORKS,
     },
     {
         name: "文案库",
@@ -88,75 +83,42 @@ sidebar.value = [
 ];
 
 enum SidebarGroupEnum {
-    QUICK_START = "快速开始",
     PUBLISH_TASK = "社媒平台运营",
     MATRIX_TASK = "矩阵创作",
     MATERIAL_LIBRARY = "内容管理",
 }
 
 const getSidebar = computed(() => {
-    const groupedItems = [];
+    const typeToGroupMap = {
+        [SidebarTypeEnum.QUICK_START]: null,
+        [SidebarTypeEnum.CREATE]: SidebarGroupEnum.PUBLISH_TASK,
+        [SidebarTypeEnum.PUBLISH_IMAGE_TASK]: SidebarGroupEnum.PUBLISH_TASK,
+        [SidebarTypeEnum.PUBLISH_MIX_TASK]: SidebarGroupEnum.PUBLISH_TASK,
+        [SidebarTypeEnum.DIGITAL_HUMAN_CREATION]: SidebarGroupEnum.MATRIX_TASK,
+        [SidebarTypeEnum.IMAGE_CREATION]: SidebarGroupEnum.MATERIAL_LIBRARY,
+        [SidebarTypeEnum.MIX_TASK_CREATION]: SidebarGroupEnum.MATERIAL_LIBRARY,
+    };
+
+    const result = [];
+    const groupTracker = new Map();
 
     sidebar.value.forEach((item) => {
-        let group;
+        const groupTitle = typeToGroupMap[item.type];
 
-        if (item.type === SidebarTypeEnum.QUICK_START) {
-            group = groupedItems.find((g) => g.type === SidebarGroupEnum.QUICK_START) || {
-                ...item,
-            };
-            groupedItems.push(group);
-        } else if (
-            [SidebarTypeEnum.CREATE, SidebarTypeEnum.PUBLISH_IMAGE_TASK, SidebarTypeEnum.PUBLISH_MIX_TASK].includes(
-                item.type
-            )
-        ) {
-            group = groupedItems.find((g) => g.title === SidebarGroupEnum.PUBLISH_TASK) || {
-                title: SidebarGroupEnum.PUBLISH_TASK,
-                children: [],
-            };
-            group.children.push(item);
-            if (!groupedItems.includes(group)) {
-                groupedItems.push(group);
+        if (groupTitle === null || groupTitle === undefined) {
+            result.push(item);
+        } else {
+            let group = groupTracker.get(groupTitle);
+            if (!group) {
+                group = { title: groupTitle, children: [] };
+                result.push(group);
+                groupTracker.set(groupTitle, group);
             }
-        } else if (
-            [
-                SidebarTypeEnum.DIGITAL_HUMAN_CREATION,
-                SidebarTypeEnum.IMAGE_CREATION,
-                SidebarTypeEnum.MIX_TASK_CREATION,
-            ].includes(item.type)
-        ) {
-            group = groupedItems.find((g) => g.title === SidebarGroupEnum.MATRIX_TASK) || {
-                title: SidebarGroupEnum.MATRIX_TASK,
-                children: [],
-            };
             group.children.push(item);
-            if (!groupedItems.includes(group)) {
-                groupedItems.push(group);
-            }
-        } else if (
-            [
-                SidebarTypeEnum.MATERIAL_LIBRARY,
-                SidebarTypeEnum.GENERATE_VIDEO,
-                SidebarTypeEnum.COPYWRITING_LIBRARY,
-            ].includes(item.type)
-        ) {
-            group = groupedItems.find((g) => g.title === SidebarGroupEnum.MATERIAL_LIBRARY) || {
-                title: SidebarGroupEnum.MATERIAL_LIBRARY,
-                children: [],
-            };
-            group.children.push(item);
-            if (!groupedItems.includes(group)) {
-                groupedItems.push(group);
-            }
         }
     });
-    return groupedItems;
-});
 
-definePageMeta({
-    layout: "base",
-    title: appKeyNameMap[AppKeyEnum.MATRIX],
-    key: AppKeyEnum.MATRIX,
+    return result;
 });
 </script>
 

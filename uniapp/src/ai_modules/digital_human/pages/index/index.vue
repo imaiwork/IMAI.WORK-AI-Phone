@@ -49,18 +49,45 @@
                 <view class="mt-[22rpx]">
                     <view class="grid grid-cols-3 gap-x-[20rpx]" v-if="worksLists.length > 0">
                         <view v-for="(item, index) in worksLists" :key="index" class="h-[288rpx] rounded-[20rpx]">
-                            <video-item
-                                :show-name="false"
-                                :item="{
-                                    name: item.name,
-                                    pic: item.pic,
-                                    status: item.status,
-                                    video_url: item.result_url,
-                                    clip_video_url: item.clip_result_url,
-                                    model_version: item.model_version,
-                                    remark: item.remark,
-                                }"
-                                @play="handlePlay($event, item.pic)"></video-item>
+                            <view class="h-[288rpx] rounded-lg overflow-hidden relative">
+                                <image :src="item.pic" class="h-full w-full" mode="aspectFill"></image>
+                                <view class="text-[20rpx] text-white absolute top-2 left-2" v-if="item.automatic_clip"
+                                    >AI剪辑</view
+                                >
+                                <view
+                                    v-if="getStatus(item) == 1"
+                                    class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center z-[22]"
+                                    @click="handlePlay(item.clip_result_url || item.clip_result_url, item.pic)">
+                                    <image src="/static/images/icons/play.svg" class="w-[58rpx] h-[58rpx]"></image>
+                                    <view
+                                        class="text-white text-center text-[22rpx] mt-[16rpx]"
+                                        v-if="item.automatic_clip">
+                                        <template v-if="item.clip_status == 1 || item.clip_status == 2">
+                                            AI智能剪辑中...
+                                        </template>
+                                        <template v-if="item.clip_status == 3">AI智能剪辑完成</template>
+                                        <template v-if="item.clip_status == 4">AI智能剪辑失败</template>
+                                    </view>
+                                </view>
+                                <view
+                                    v-else
+                                    class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center bg-[#0000004d] z-[22]">
+                                    <template v-if="getStatus(item) == 2">
+                                        <view
+                                            class="text-white bg-[#FF2442] text-[22rpx] font-bold rounded-[10rpx] w-[120rpx] h-[50rpx] flex items-center justify-center mx-auto"
+                                            >生成失败</view
+                                        >
+                                        <view class="mt-[16rpx] text-center text-[22rpx] text-white px-2">
+                                            {{ item.remark }}
+                                        </view>
+                                    </template>
+                                    <template v-else>
+                                        <text class="rotation"></text>
+                                        <text class="text-xs text-[#ffffff80]">正在生成中</text>
+                                        <text class="text-[20rpx] text-[#ffffff80]">几分钟即可生成视频</text>
+                                    </template>
+                                </view>
+                            </view>
                         </view>
                     </view>
                     <view v-else class="my-4">
@@ -110,6 +137,7 @@
 
 <script setup lang="ts">
 import { useAppStore } from "@/stores/app";
+import { getVideoCreationRecord } from "@/api/app";
 import { digitalHumanLists, getPublicAnchorList } from "@/api/digital_human";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { ModeTypeEnum } from "@/ai_modules/digital_human/enums";
@@ -180,6 +208,29 @@ const pageMap: Record<string, string | (() => void)> = {
     [MenuKey.MATERIAL_LIBRARY]: "/packages/pages/material_library/material_library",
 };
 
+// 根据不同的类型获取不同的status值
+const getStatus = (item: any) => {
+    const { type, status } = item || {};
+
+    if (type === 1) {
+        if (status === 0 || status === 1 || status === 2) {
+            return status;
+        }
+        return 3;
+    } else {
+        if (status === 0) {
+            return 0;
+        }
+        if (status === 3) {
+            return 1;
+        }
+        if (status === 2) {
+            return 2;
+        }
+        return 3;
+    }
+};
+
 const toPage = (key: string) => {
     const target = pageMap[key];
     if (!target) return;
@@ -206,7 +257,7 @@ const handlePlay = (url: string, pic: string) => {
 };
 
 const getWorksLists = async () => {
-    const { lists } = await digitalHumanLists({ page_size: 3, page_no: 1 });
+    const { lists } = await getVideoCreationRecord({ page_size: 3, page_no: 1 });
     worksLists.value = lists;
 };
 

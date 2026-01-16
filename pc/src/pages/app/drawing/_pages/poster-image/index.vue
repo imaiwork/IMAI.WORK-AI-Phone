@@ -1,13 +1,6 @@
 <template>
-    <div class="h-full relative w-full">
-        <ElScrollbar>
-            <div class="px-[10px]">
-                <result-content
-                    :result-lists="resultLists"
-                    :is-all-tasks-completed="isAllTasksCompleted"
-                    @retry="retry" />
-            </div>
-        </ElScrollbar>
+    <div class="h-full relative w-full bg-white rounded-[20px]">
+        <result-content :result-lists="resultLists" :is-all-tasks-completed="isAllTasksCompleted" @retry="retry" />
     </div>
 </template>
 
@@ -71,13 +64,7 @@ onEvent("update:formData", async (data: any) => {
         prompt: params.poster_description,
         images: [] as ResultItem[],
         formData: data,
-        tags: [
-            model_name,
-            params.poster_type,
-            params.poster_color,
-            params.poster_title,
-            params.poster_subtitle,
-        ],
+        tags: [model_name, params.poster_type, params.poster_color, params.poster_title, params.poster_subtitle],
     });
     resultLists.value.unshift(resultData);
     try {

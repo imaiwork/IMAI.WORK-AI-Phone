@@ -613,18 +613,17 @@ const navigateToHome = () => {
     });
 };
 
-// 监听模型配置变化
-// watch(
-//     () => appStore.getDigitalHumanConfig.channel,
-//     (newVal) => {
-//         if (newVal && newVal.length > 0) {
-//             formData.model_version = newVal.find((item: any) => item.id == DigitalHumanModelVersionEnum.CHANJING)?.id;
-//         }
-//     },
-//     {
-//         immediate: true,
-//     }
-// );
+watch(
+    () => appStore.getDigitalHumanConfig.channel,
+    (newVal) => {
+        if (newVal && newVal.length > 0) {
+            formData.model_version = newVal.find((item: any) => item.id == DigitalHumanModelVersionEnum.SHANJIAN)?.id;
+        }
+    },
+    {
+        immediate: true,
+    }
+);
 
 onLoad((options: any) => {
     if (options.model_version) {

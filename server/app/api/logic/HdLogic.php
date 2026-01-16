@@ -109,6 +109,50 @@ class HdLogic extends ApiLogic
     }
 
     /**
+     * @desc 保存日志
+     * @param $type
+     * @param $request_id
+     * @param $params
+     * @param $task_id
+     * @param $sub_task_id
+     * @return true
+     * @date 2024/7/6 15:57
+     * @author dagouzi
+     */
+    public static function saveLogReturn($type, $request_id, $params, $task_id, $sub_task_id,$status = 0,$model = 1,$image = '')
+    {
+
+        if($image != ''){
+            $image = FileService::downloadFileBySource($image, 'image');
+        }
+
+        $data = [
+            'user_id' => self::$uid,
+            'request_id' => $request_id,
+            'task_status' => $status,
+            'type' => $type,
+            'model_type' => $model,
+            'params' => json_encode($params, JSON_UNESCAPED_UNICODE),
+            'task_id' => $task_id,
+            'sub_task_ids' => json_encode($sub_task_id, JSON_UNESCAPED_UNICODE)
+        ];
+        $log = HdLog::create($data);
+
+        foreach ($sub_task_id as $id) {
+            $imageData = [
+                'log_id' => $log->id,
+                'image' => $image,
+                'model_type' => $model,
+                'sub_task_id' => $id,
+                'task_status' => $status,
+                'task_completion' => 0,
+            ];
+            HdImage::create($imageData);
+        }
+        return $image;
+    }
+
+    /**
      * @desc 获取模板
      * @param $params
      * @return true

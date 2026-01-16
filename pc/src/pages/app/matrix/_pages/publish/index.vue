@@ -1,152 +1,179 @@
 <template>
-    <div class="h-full flex flex-col bg-app-bg-2 rounded-[20px]">
-        <div class="flex-shrink-0 px-[14px]">
-            <ElScrollbar>
-                <div class="flex items-center justify-end h-[88px]">
-                    <div class="flex items-center gap-[14px]">
-                        <!-- 发布类型 -->
-                        <div>
-                            <ElSelect
-                                v-model="queryParams.media_type"
-                                class="!w-[160px]"
-                                placeholder="请选择发布类型"
-                                clearable
-                                popper-class="dark-select-popper"
-                                :show-arrow="false"
-                                :empty-values="[null, undefined]"
-                                @clear="getLists()"
-                                @change="getLists()">
-                                <ElOption label="全部" value=""></ElOption>
-                                <ElOption label="视频" value="1"></ElOption>
-                                <ElOption label="图片" value="2"></ElOption>
-                            </ElSelect>
-                        </div>
-                        <ElInput
-                            v-model="queryParams.name"
-                            prefix-icon="el-icon-Search"
-                            class="!w-[240px] search-name-input"
-                            placeholder="请输入任务名称"
-                            clearable
-                            @clear="getLists()"
-                            @keydown.enter="getLists()">
-                            <template #append>
-                                <ElButton text @click="getLists()"> 搜索 </ElButton>
-                            </template>
-                        </ElInput>
-                        <div>
-                            <ElTooltip content="刷新">
-                                <ElButton
-                                    circle
-                                    color="#1f1f1f"
-                                    icon="el-icon-Refresh"
-                                    class="!w-10 !h-10"
-                                    @click="resetPage()"></ElButton>
-                            </ElTooltip>
-                        </div>
-                    </div>
+    <div class="h-full flex flex-col bg-white rounded-[20px] border border-br overflow-hidden min-w-[1000px]">
+        <div class="flex-shrink-0 px-8 h-[88px] flex items-center justify-between">
+            <div class="flex flex-col">
+                <h1 class="text-xl font-[900] text-gray-950">发布任务管理</h1>
+                <p class="text-[12px] text-tx-placeholder font-bold mt-0.5">监控所有账号的视频与图文发布进度</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <ElSelect
+                    v-model="queryParams.media_type"
+                    class="!w-[140px] custom-select-pill"
+                    placeholder="发布类型"
+                    clearable
+                    :show-arrow="false"
+                    :empty-values="[null, undefined]"
+                    @change="getLists()">
+                    <ElOption label="全部类型" value=""></ElOption>
+                    <ElOption label="视频素材" value="1"></ElOption>
+                    <ElOption label="图片素材" value="2"></ElOption>
+                </ElSelect>
+
+                <div
+                    class="flex items-center rounded-full h-11 border border-br px-1.5 bg-gray-50/50 transition-all bg-white focus-within:border-primary focus-within:bg-white">
+                    <ElInput
+                        v-model="queryParams.name"
+                        class="search-input-clean !w-[180px]"
+                        placeholder="搜索任务名称..."
+                        clearable
+                        @clear="resetPage"
+                        @keyup.enter="resetPage">
+                        <template #prefix>
+                            <Icon name="el-icon-Search" :size="16" color="#94a3b8" />
+                        </template>
+                    </ElInput>
+                    <ElButton
+                        type="primary"
+                        class="!rounded-full !h-8 !px-5 !text-xs !font-black shadow-sm"
+                        @click="resetPage">
+                        搜索
+                    </ElButton>
                 </div>
-            </ElScrollbar>
+            </div>
         </div>
-        <div class="grow min-h-0 overflow-hidden flex flex-col">
-            <div class="grow min-h-0">
-                <ElTable
-                    height="100%"
-                    :data="pager.lists"
-                    :header-row-style="{ height: '62px' }"
-                    :row-style="{ height: '50px' }"
-                    v-loading="pager.loading">
-                    <ElTableColumn prop="name" label="任务名称" width="240" fixed="left">
-                        <template #default="{ row }">
-                            <div class="flex items-center justify-center gap-2 cursor-pointer" @click="handleEdit(row)">
-                                <div class="text-white">{{ row.name }}</div>
-                                <Icon name="local-icon-edit" color="#ffffff" />
+
+        <div class="grow min-h-0">
+            <ElTable height="100%" :data="pager.lists" v-loading="pager.loading">
+                <ElTableColumn prop="name" label="任务名称" width="220" fixed="left">
+                    <template #default="{ row }">
+                        <div class="flex items-center gap-2 group cursor-pointer" @click="handleEdit(row)">
+                            <span class="text-gray-950 font-black truncate max-w-[160px]">{{ row.name }}</span>
+                            <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Icon name="local-icon-edit" :size="14" color="var(--color-primary)" />
                             </div>
-                        </template>
-                    </ElTableColumn>
-                    <ElTableColumn label="发布账号" props="account" min-width="200" show-overflow-tooltip>
-                        <template #default="{ row }">
-                            <div class="flex justify-center items-center gap-x-1">
-                                <img :src="getPlatform(row.account_type)?.icon" class="w-4 h-4" />
-                                <span>{{ row.account }}</span>
-                            </div>
-                        </template>
-                    </ElTableColumn>
-                    <ElTableColumn label="任务类型" width="120">
-                        <template #default="{ row }">
-                            {{ row.auto_type == 0 ? "手动" : "24h任务" }}
-                        </template>
-                    </ElTableColumn>
-                    <ElTableColumn label="发布类型" width="80">
-                        <template #default="{ row }">
-                            {{ row.media_type == 1 ? "视频" : "图片" }}
-                        </template>
-                    </ElTableColumn>
-                    <ElTableColumn label="任务状态" width="120">
-                        <template #default="{ row }">
-                            <div class="flex items-center justify-center gap-2">
-                                <div
-                                    class="w-[6px] h-[6px] rounded-full"
-                                    :class="{
-                                        'bg-primary': row.status == 1,
-                                        'bg-[#3BB840]': row.status == 2,
-                                    }"></div>
-                                <div v-if="row.status == 1">进行中</div>
-                                <div v-else-if="row.status == 2">已完成</div>
-                                <div v-else>-</div>
-                            </div>
-                        </template>
-                    </ElTableColumn>
-                    <ElTableColumn label="开始时间" prop="publish_start" width="120"> </ElTableColumn>
-                    <ElTableColumn label="结束时间" prop="publish_end" width="120"> </ElTableColumn>
-                    <ElTableColumn label="发布周期" min-width="100">
-                        <template #default="{ row }">
-                            <div>{{ getPublishCycle(row) }}</div>
-                        </template>
-                    </ElTableColumn>
-                    <ElTableColumn label="发布进度" width="100">
-                        <template #default="{ row }"> {{ row.published_count }} / {{ row.count }} </template>
-                    </ElTableColumn>
-                    <ElTableColumn prop="create_time" label="创建时间" width="180"></ElTableColumn>
-                    <ElTableColumn label="操作" width="120" fixed="right" align="right">
-                        <template #default="{ row }">
-                            <div class="flex justify-end items-center">
-                                <ElButton
-                                    class="!border-app-border-2"
-                                    color="#181818"
-                                    size="small"
-                                    @click="handleDetail(row)"
-                                    >详情</ElButton
-                                >
-                                <ElButton
-                                    type="danger"
-                                    link
-                                    size="small"
-                                    @click="handleDelete(row.id)"
-                                    v-if="row.auto_type == 0"
-                                    >删除</ElButton
-                                >
-                            </div>
-                        </template>
-                    </ElTableColumn>
-                    <template #empty>
-                        <ElEmpty />
+                        </div>
                     </template>
-                </ElTable>
-            </div>
-            <div class="flex justify-center p-4">
-                <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
-            </div>
+                </ElTableColumn>
+
+                <ElTableColumn label="发布账号" min-width="180">
+                    <template #default="{ row }">
+                        <div class="flex justify-center">
+                            <div
+                                class="flex justify-center items-center gap-2 px-2 py-1 rounded-lg bg-gray-50 border border-br-extra-light w-fit">
+                                <img :src="getPlatform(row.account_type)?.icon" class="w-4 h-4 object-contain" />
+                                <span class="text-xs font-bold text-tx-regular line-clamp-1">{{ row.account }}</span>
+                            </div>
+                        </div>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn label="配置详情" width="160">
+                    <template #default="{ row }">
+                        <div class="flex justify-center items-center flex-col gap-0.5">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[11px] font-black text-tx-placeholder uppercase">类型:</span>
+                                <span class="text-xs font-bold text-tx-secondary">{{
+                                    row.auto_type == 0 ? "手动" : "24h任务"
+                                }}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[11px] font-black text-tx-placeholder uppercase">素材:</span>
+                                <span class="text-xs font-bold text-primary">{{
+                                    row.media_type == 1 ? "视频" : "图片"
+                                }}</span>
+                            </div>
+                        </div>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn label="任务状态" width="120" align="center">
+                    <template #default="{ row }">
+                        <div class="status-badge" :class="row.status == 1 ? 'is-running' : 'is-success'">
+                            <span class="badge-dot"></span>
+                            <span class="badge-text">{{ row.status == 1 ? "进行中" : "已完成" }}</span>
+                        </div>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn label="执行周期" width="180">
+                    <template #default="{ row }">
+                        <div class="flex justify-center items-center flex-col text-[11px]">
+                            <div class="flex items-center gap-1 text-tx-secondary">
+                                <span class="font-bold">{{ row.publish_start }}</span>
+                                <span class="text-tx-placeholder">始</span>
+                            </div>
+                            <div class="flex items-center gap-1 text-tx-secondary">
+                                <span class="font-bold">{{ row.publish_end }}</span>
+                                <span class="text-tx-placeholder">终</span>
+                            </div>
+                        </div>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn label="进度/周期" width="120" align="center">
+                    <template #default="{ row }">
+                        <div class="flex flex-col items-center">
+                            <div class="text-sm font-black text-gray-950">
+                                {{ row.published_count }}<span class="text-tx-placeholder font-medium mx-0.5">/</span
+                                >{{ row.count }}
+                            </div>
+                            <div class="text-[10px] font-bold text-primary bg-[#0065fb]/10 px-1.5 rounded">
+                                {{ getPublishCycle(row) }}
+                            </div>
+                        </div>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn
+                    prop="create_time"
+                    label="创建时间"
+                    width="160"
+                    class-name="text-[12px] text-tx-placeholder" />
+
+                <ElTableColumn label="操作" width="100" fixed="right" align="right">
+                    <template #default="{ row }">
+                        <div class="flex justify-end items-center gap-1">
+                            <ElButton type="primary" link size="small" class="!font-black" @click="handleDetail(row)"
+                                >详情</ElButton
+                            >
+                            <div v-if="row.auto_type == 0" class="w-[1px] h-3 bg-br-extra-light mx-1"></div>
+                            <ElButton
+                                v-if="row.auto_type == 0"
+                                type="danger"
+                                link
+                                size="small"
+                                @click="handleDelete(row.id)"
+                                >删除</ElButton
+                            >
+                        </div>
+                    </template>
+                </ElTableColumn>
+
+                <template #empty>
+                    <div class="py-20">
+                        <ElEmpty description="暂无发布任务数据" />
+                    </div>
+                </template>
+            </ElTable>
+        </div>
+        <div class="h-[72px] px-8 flex items-center justify-between">
+            <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 个分发任务已就绪</div>
+            <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>
-    <EditPopup v-if="showEdit" ref="editPopupRef" @close="showEdit = false" @success="getLists()" />
+    <rename-pop
+        v-if="showRename"
+        ref="renamePopupRef"
+        :fetch-fn="updateDeviceAccountTask"
+        @close="showRename = false"
+        @success="getLists()"></rename-pop>
     <Detail v-if="showDetail" ref="detailPopupRef" @close="showDetail = false" />
 </template>
 
 <script setup lang="ts">
 import dayjs from "dayjs";
-import { getDeviceAccountTaskList, deleteDeviceAccountTask } from "@/api/device";
-import { PublishTaskTypeEnum } from "@/pages/app/matrix/_enums";
-import EditPopup from "./edit.vue";
+import { getDeviceAccountTaskList, deleteDeviceAccountTask, updateDeviceAccountTask } from "@/api/device";
 import Detail from "./detail.vue";
 
 const { getPlatform } = useSocialPlatform();
@@ -168,8 +195,8 @@ const { pager, getLists, resetPage } = usePaging({
 const showDetail = ref(false);
 const detailPopupRef = ref<InstanceType<typeof Detail>>();
 
-const showEdit = ref(false);
-const editPopupRef = ref<InstanceType<typeof EditPopup>>();
+const showRename = ref(false);
+const renamePopupRef = shallowRef();
 
 // 获取发布周期
 const getPublishCycle = (row: any) => {
@@ -187,17 +214,16 @@ const handleDetail = async (row: any) => {
 };
 
 const handleEdit = async (row: any) => {
-    showEdit.value = true;
+    showRename.value = true;
     await nextTick();
-    editPopupRef.value.open();
-    editPopupRef.value.setFormData(row);
+    renamePopupRef.value.open();
+    renamePopupRef.value.setFormData({ id: row.id, name: row.name });
 };
 
 // 添加发布视频 End
 const handleDelete = async (id) => {
     useNuxtApp().$confirm({
         message: "是否删除该任务？",
-        theme: "dark",
         onConfirm: async () => {
             try {
                 await deleteDeviceAccountTask({ id });
@@ -213,4 +239,37 @@ const handleDelete = async (id) => {
 getLists();
 </script>
 
-<style scoped></style>
+<style lang="scss" scoped>
+.search-input-clean {
+    :deep(.el-input__wrapper) {
+        border: none;
+        background: transparent;
+        box-shadow: none;
+    }
+}
+:deep(.custom-select-pill) {
+    .el-select__wrapper {
+        border-radius: 99px !important;
+        height: 40px !important;
+        &.is-focus {
+            box-shadow: 0 0 0 1px #4f46e5 inset !important;
+        }
+    }
+}
+.status-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-black;
+    .badge-dot {
+        @apply w-1.5 h-1.5 rounded-full bg-[currentColor];
+    }
+
+    &.is-running {
+        @apply bg-blue-50 text-primary border-blue-100;
+        .badge-dot {
+            @apply animate-pulse;
+        }
+    }
+    &.is-success {
+        @apply bg-green-50 text-green-600 border-green-100;
+    }
+}
+</style>

@@ -19,7 +19,7 @@ class VoiceLists extends BaseApiDataLists implements ListsSearchInterface
     public function lists(): array
     {
         $this->searchWhere[] = ['user_id', '=', $this->userId];
-        $this->searchWhere[] = ['model_version', '', 8];
+        $this->searchWhere[] = ['model_version', '=', 8];
         $list = HumanVoice::where($this->searchWhere)
             ->order(['id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)

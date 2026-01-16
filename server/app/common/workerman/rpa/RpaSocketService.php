@@ -112,13 +112,15 @@ class RpaSocketService
                     WorkerEnum::RPA_COMMENT_TO_MSG => new \app\common\workerman\rpa\handlers\touch\CommentToMsgHandler($this), #评论区私信
                     WorkerEnum::RPA_COMMENT_TO_MARK_CLUE => new \app\common\workerman\rpa\handlers\touch\CommentToMarkClueHandler($this), #评论区留痕获客
 
-
                     WorkerEnum::RPA_TAKE_OVER_TASK_RESULT_SAVE => new \app\common\workerman\rpa\handlers\TakeOverTaskResultSaveHandler($this), #接管任务结果保存
 
                     WorkerEnum::RPA_ACTIVE_TASK_RESULT_SAVE => new \app\common\workerman\rpa\handlers\ActiveTaskResultSaveHandler($this), #活动任务结果保存
 
                     WorkerEnum::RPA_DEVICE_APP_EXEC => new \app\common\workerman\rpa\handlers\DeviceAppStartExecHandler($this), #设备应用执行
                     WorkerEnum::RPA_GET_WECHAT_DEVICE_CODE => new \app\common\workerman\rpa\handlers\GetWechatDeviceCodeHandler($this), #获取微信设备验证码
+
+                    WorkerEnum::RPA_ADD_WECHAT_TASK_NOTICE => new \app\common\workerman\rpa\handlers\wechat\AddWechatTaskNoticeHandler($this), #加微信任务通知
+                    WorkerEnum::RPA_WECHAT_CIRCLE_LIKE_COMMENT => new \app\common\workerman\rpa\handlers\wechat\CircleLikeCommentHandler($this), #微信圈点赞评论
 
                     // ...其他case对应的handler...
                     default => new \app\common\workerman\rpa\handlers\DefaultHandler($this)

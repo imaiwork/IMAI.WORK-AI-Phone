@@ -1,55 +1,102 @@
 <template>
-    <div class="w-full h-full card-gradient">
-        <div class="w-full px-3 absolute z-[22] top-2">
-            <div class="line-clamp-1 text-white">
-                {{ item.name }}
-            </div>
-            <div class="text-[10px] text-white" v-if="item.automatic_clip == 1">AI剪辑</div>
-        </div>
-        <template v-if="item.status == VideoStatus.VIDEO_COMPOSITION_SUCCESS">
-            <video :src="item.video_result_url" class="w-full h-full object-cover"></video>
-            <div
-                class="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-[99]"
-                @click="emit('preview', item.video_result_url)">
-                <div class="w-12 h-12">
-                    <play-btn :icon-size="38"></play-btn>
+    <div class="w-full h-full relative group overflow-hidden rounded-[20px] bg-[#1a1d24]">
+        <div
+            class="absolute inset-x-0 top-0 z-[22] p-4 bg-gradient-to-b from-[#000000]/80 via-[#000000]/20 to-[#00000000] pointer-events-none">
+            <div class="flex items-start justify-between gap-2">
+                <div class="flex-1">
+                    <div class="text-[14px] font-black text-white line-clamp-1 drop-shadow-md">
+                        {{ item.name || "未命名作品" }}
+                    </div>
+                    <div v-if="item.automatic_clip == 1" class="mt-1 inline-flex">
+                        <span
+                            class="px-2 py-0.5 rounded-md bg-[#0065fb]/20 backdrop-blur-md border border-[#0065fb]/30 text-[9px] font-black text-primary tracking-wider uppercase">
+                            AI剪辑
+                        </span>
+                    </div>
                 </div>
             </div>
-            <div
-                v-if="item.automatic_clip == 1"
-                class="absolute bottom-[80px] left-0 w-full z-[51] text-[#ffffff80] text-center">
-                <template v-if="item.clip_status == 1 || item.clip_status == 2"> AI智能剪辑中... </template>
-                <template v-if="item.clip_status == 3">AI智能剪辑完成</template>
-                <template v-if="item.clip_status == 4">AI智能剪辑失败</template>
-            </div>
-        </template>
-        <template
-            v-else-if="
-                [VideoStatus.VIDEO_COMPOSITION_FAILED, VideoStatus.AUDIO_COMPOSITION_FAILED].includes(item.status)
-            ">
-            <div class="w-full h-full flex flex-col items-center justify-center gap-2">
-                <img src="@/assets/images/image_error.png" class="w-10 h-10" />
-                <div class="text-white font-bold text-xs">生成失败</div>
-            </div>
-        </template>
-        <template v-else>
-            <div class="w-full h-full flex flex-col items-center justify-center gap-2">
-                <div class="loading"></div>
-                <div class="text-white text-xs font-bold">正在生成...</div>
-            </div>
-        </template>
-        <div class="absolute bottom-2 w-full text-center px-3 z-[22]">
-            <div class="flex justify-center mb-2" v-if="modelVersionMap[item.model_version]">
-                <div class="digital-human-tag !py-1.5 !px-5" :class="`digital-human-tag-${item.model_version}`">
-                    {{ modelVersionMap[item.model_version] }}
+        </div>
+
+        <div class="w-full h-full">
+            <template v-if="item.status == VideoStatus.VIDEO_COMPOSITION_SUCCESS">
+                <video
+                    :src="item.video_result_url"
+                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"></video>
+
+                <div
+                    class="absolute inset-0 flex items-center justify-center z-[30] bg-[#000000]/5 group-hover:bg-[#000000]/20 transition-colors cursor-pointer"
+                    @click="emit('preview', item.video_result_url)">
+                    <div
+                        class="w-14 h-14 rounded-full bg-[#ffffff]/20 backdrop-blur-xl flex items-center justify-center border border-[#ffffff]/30 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:border-primary">
+                        <Icon name="el-icon-CaretRight" :size="32" color="white" />
+                    </div>
+                </div>
+
+                <div v-if="item.automatic_clip == 1" class="absolute bottom-[80px] inset-x-4 z-[31]">
+                    <div
+                        class="py-1.5 px-3 rounded-full bg-[#000000]/40 backdrop-blur-xl border border-[#ffffff]/10 text-center w-fit mx-auto">
+                        <span class="text-[11px] font-bold" :class="getClipStatusClass(item.clip_status)">
+                            <Icon v-if="item.clip_status < 3" name="el-icon-Loading" class="mr-1 animate-spin" />
+                            {{ getClipStatusText(item.clip_status) }}
+                        </span>
+                    </div>
+                </div>
+            </template>
+
+            <template
+                v-else-if="
+                    [VideoStatus.VIDEO_COMPOSITION_FAILED, VideoStatus.AUDIO_COMPOSITION_FAILED].includes(item.status)
+                ">
+                <div class="w-full h-full flex flex-col items-center justify-center gap-4 bg-slate-900">
+                    <div
+                        class="w-16 h-16 rounded-full bg-[#ef4444]/10 flex items-center justify-center border border-[#ef4444]/20">
+                        <Icon name="el-icon-CircleClose" :size="32" color="#f87171" />
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <span class="text-white font-black text-sm">作品合成失败</span>
+                        <span class="text-slate-500 text-[10px] mt-1">{{ item.remark }}</span>
+                    </div>
+                </div>
+            </template>
+
+            <template v-else>
+                <div class="w-full h-full flex flex-col items-center justify-center gap-6 bg-[#1a1d24]">
+                    <div class="relative w-20 h-20 flex items-center justify-center">
+                        <div class="absolute inset-0 rounded-full border-4 border-[#0065fb]/10"></div>
+                        <div
+                            class="absolute inset-0 rounded-full border-4 border-primary border-t-[transparent] animate-spin"></div>
+                        <span class="animate-bounce">
+                            <Icon name="local-icon-import" :size="24" color="var(--color-primary)" />
+                        </span>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-white text-sm font-black tracking-widest">DIGITAL HUMAN</div>
+                        <div class="text-primary text-[10px] font-bold mt-1 animate-pulse">正在构建数字人...</div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div
+            class="absolute inset-x-0 bottom-0 z-[22] p-4 bg-gradient-to-t from-[#000000]/90 via-[#000000]/40 to-[transparent]">
+            <div class="flex flex-col items-center gap-2">
+                <div v-if="modelVersionMap[item.model_version]" class="mb-1">
+                    <div
+                        class="px-4 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase border border-[#ffffff]/20"
+                        :class="`tag-v-${item.model_version}`"
+                        style="background: rgba(255, 255, 255, 0.1); color: #fff; backdrop-filter: blur(8px)">
+                        {{ modelVersionMap[item.model_version] }}
+                    </div>
+                </div>
+                <div class="text-slate-400 text-[10px] font-bold italic">
+                    {{ item.create_time }}
                 </div>
             </div>
-            <div class="text-[#ffffff80] line-clamp-1">
-                {{ item.create_time }}
-            </div>
         </div>
-        <div class="absolute right-2 top-2 z-[1000] w-9 h-9 invisible group-hover:visible">
-            <handle-menu :theme="ThemeEnum.DARK" :data="item" :menu-list="getUtilsMenuList(item)" />
+
+        <div
+            class="w-8 h-8 absolute right-3 top-3 z-[1000] opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+            <handle-menu :data="item" :menu-list="getUtilsMenuList(item)" />
         </div>
     </div>
 </template>
@@ -90,6 +137,17 @@ const modelVersionMap = computed(() => {
     }, {});
 });
 
+const getClipStatusText = (status: number) => {
+    const map = { 1: "AI智能剪辑中", 2: "AI智能剪辑中", 3: "AI剪辑已完成", 4: "AI剪辑失败" };
+    return map[status] || "等待剪辑";
+};
+
+const getClipStatusClass = (status: number) => {
+    if (status === 3) return "text-emerald-400";
+    if (status === 4) return "text-red-400";
+    return "text-primary animate-pulse";
+};
+
 const getUtilsMenuList = (item) => {
     const { automatic_clip, clip_status, clip_result_url, video_result_url } = item;
     const utilsMenuList: HandleMenuType[] = [
@@ -97,7 +155,6 @@ const getUtilsMenuList = (item) => {
             label: "重命名",
             icon: "local-icon-edit3",
             click: async (data) => {
-                console.log(data);
                 emit("edit", props.item);
             },
         },
@@ -114,7 +171,6 @@ const getUtilsMenuList = (item) => {
             click: ({ id }) => {
                 useNuxtApp().$confirm({
                     message: "确定删除该视频吗？",
-                    theme: "dark",
                     onConfirm: async () => {
                         emit("delete", props.item);
                     },
@@ -161,6 +217,15 @@ const handleDownLoad = (url: string) => {
 
 <style scoped lang="scss">
 @import "@/pages/app/_assets/styles/index.scss";
+
+.tag-v-1 {
+    border-color: #0065fb !important;
+    color: #0065fb !important;
+}
+.tag-v-2 {
+    border-color: #10b981 !important;
+    color: #10b981 !important;
+}
 
 .loading {
     width: 40px;

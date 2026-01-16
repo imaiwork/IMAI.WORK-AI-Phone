@@ -51,7 +51,7 @@
                                 v-for="(item, index) in anchorLists"
                                 :key="index"
                                 class="h-[276rpx] rounded-xl relative overflow-hidden"
-                                @click="handleSelect(item)">
+                                @click="handleAnchorSelect(item)">
                                 <image :src="item.pic" lazy class="w-full h-full rounded-xl" mode="aspectFill"></image>
                                 <view
                                     class="absolute right-2 bottom-2"
@@ -253,7 +253,7 @@
                                     </view>
                                 </view>
                                 <scroll-view scroll-x class="mt-1">
-                                    <view class="flex gap-x-[24rpx]">
+                                    <view class="flex gap-x-[24rpx] pb-2">
                                         <view
                                             v-for="(item, index) in formData.anchorLists"
                                             :key="index"
@@ -318,6 +318,50 @@
                                         </view>
                                     </view>
                                 </view>
+                                <view
+                                    class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
+                                    <view class="text-[30rpx] font-bold">选择音色</view>
+                                    <view class="flex items-center gap-x-1" @click="showChooseTone = true">
+                                        <view
+                                            v-if="!voiceValue.name"
+                                            class="text-[20rpx] text-primary bg-[#DDF3FF] rounded font-bold p-1">
+                                            视频原音
+                                        </view>
+                                        <view v-else class="text-primary">
+                                            {{ voiceValue.name }}
+                                        </view>
+                                        <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
+                                    </view>
+                                </view>
+                                <view class="flex items-center justify-between h-[106rpx]">
+                                    <view class="text-[30rpx] font-bold">素材视频原声</view>
+                                    <u-switch
+                                        v-model="formData.extra.soundSwitch"
+                                        inactive-color="#E5E5E5"
+                                        :size="40" />
+                                </view>
+                            </view>
+
+                            <view
+                                class="mt-[20rpx] flex items-center justify-between h-[110rpx] bg-white rounded-[20rpx] px-4">
+                                <view class="text-[30rpx] font-bold">背景音乐</view>
+                                <navigator
+                                    :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
+                                        formData.music
+                                    )}&volume=${formData.extra.volume}`"
+                                    hover-class="none"
+                                    class="flex items-center gap-x-1">
+                                    <view>
+                                        <template v-if="formData.music.length > 0">
+                                            共<text class="mx-1 text-primary font-bold">{{
+                                                formData.music.length
+                                            }}</text
+                                            >个
+                                        </template>
+                                        <text class="text-[#000000]/70" v-else>AI音乐库</text>
+                                    </view>
+                                    <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
+                                </navigator>
                             </view>
                         </view>
                     </scroll-view>
@@ -375,6 +419,12 @@
         title="视频预览"
         :poster="videoPreview.poster"
         :video-url="videoPreview.url" />
+    <choose-tone
+        v-model="showChooseTone"
+        :model-version="DigitalHumanModelVersionEnum.SHANJIAN"
+        :active-tone="formData.voice?.[0]?.voice_id"
+        :show-free-tone="false"
+        @confirm="handleSelectTone" />
     <create-success-pop
         v-model="showCreateSuccess"
         title="混剪视频创建成功"
@@ -391,12 +441,13 @@ import { useUserStore } from "@/stores/user";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
 import useMontageMaterial, { montageConfig } from "@/hooks/useMontageMaterial";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
 import UploadRulePop from "@/ai_modules/digital_human/components/upload-rule-pop/upload-rule-pop.vue";
 import ChooseCharacter from "@/ai_modules/digital_human/components/choose-character/choose-character.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
-import { useEventBusManager } from "@/hooks/useEventBusManager";
+import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
 
 const { on } = useEventBusManager();
 
@@ -421,18 +472,26 @@ const formData = reactive<{
     materialList: any[];
     person_name: string;
     person_introduction: string;
+    music: any[];
+    extra: {
+        volume: number;
+        soundSwitch: boolean;
+    };
+    voice: any[];
 }>({
     shanjian_type: MontageTypeEnum.REAL_PERSON_MIX,
-    // 形象列表
     anchorLists: [],
-    // 人物名称
     name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "口播混剪",
-    // 人物介绍
     person_name: "",
     person_introduction: "",
     copywriterList: [],
-    // 素材列表
     materialList: [],
+    music: [],
+    extra: {
+        volume: 0.5,
+        soundSwitch: true,
+    },
+    voice: [],
 });
 
 // 形象列表
@@ -466,7 +525,8 @@ const videoPreview = reactive({
     poster: "",
     url: "",
 });
-
+const showChooseTone = ref(false);
+const voiceValue = ref<any>({});
 // 充值弹窗
 const rechargePopupRef = shallowRef();
 // 显示创建成功
@@ -482,11 +542,11 @@ const canStepProceed = (stepNumber: number) => {
         case 1:
             return formData.anchorLists.length > 0;
         case 2:
-            return !!formData.person_name && !!formData.person_introduction;
+            return true;
         case 3:
             return formData.copywriterList.length > 0;
         case 4:
-            // 单张图片计算为 2秒 + 视频时长，所有素材总时长不能超过5分钟，
+            if (formData.materialList.length === 0) return true;
             const totalDuration =
                 formData.materialList.reduce((acc, item) => (item.type === "video" ? acc + item.duration : acc), 0) +
                 formData.materialList.filter((item: any) => item.type === "image").length * montageConfig.imageDuration;
@@ -494,7 +554,7 @@ const canStepProceed = (stepNumber: number) => {
                 uni.$u.toast(`素材总时长不能超过${montageConfig.materialTotalDuration}分钟`);
                 return false;
             }
-            return formData.materialList.length >= 3;
+            return true;
         case 5:
             return true; // 最后一步总是可进行的
         default:
@@ -544,12 +604,17 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
     }
 };
 
-const handleSelect = (val: any) => {
+const handleAnchorSelect = (val: any) => {
     if (formData.anchorLists.includes(val)) {
         formData.anchorLists = formData.anchorLists.filter((item: any) => item !== val);
     } else {
         formData.anchorLists.push(val);
     }
+    formData.voice = formData.anchorLists.map((item: any) => ({
+        voice_id: item.voice_id,
+        voice_url: item.voice_url,
+        name: item.name,
+    }));
 };
 
 const handleCreateAnchor = () => {
@@ -644,6 +709,12 @@ const handleDeleteMaterial = (id: number) => {
     handleDeleteMaterialFromHook(id);
 };
 
+const handleSelectTone = (tone: any) => {
+    formData.voice = [{ voice_id: tone.voice_id, voice_url: tone.voice_urls, name: tone.name }];
+    voiceValue.value = tone;
+    showChooseTone.value = false;
+};
+
 // 生成视频
 const handleCreateVideo = async () => {
     // 判断是否有算力
@@ -653,6 +724,10 @@ const handleCreateVideo = async () => {
     }
     if (!formData.name) {
         uni.$u.toast("请输入视频名称");
+        return;
+    }
+    if (formData.voice.length === 0) {
+        showChooseTone.value = true;
         return;
     }
     uni.showLoading({
@@ -674,15 +749,16 @@ const handleCreateVideo = async () => {
                     introduced: formData.person_introduction,
                 },
             ],
-            voice: formData.anchorLists.map((item: any) => ({
-                voice_id: item.voice_id,
-                voice_url: item.voice_url,
-                voice_name: item.voice_name,
-            })),
+            voice: formData.voice,
             copywriting: formData.copywriterList,
             material: formData.materialList.map((item: any) => ({ fileUrl: item.url, type: item.type })),
+            music: formData.music.map((item: any) => item.content),
+            extra: {
+                volume: formData.extra.volume,
+                soundSwitch: formData.extra.soundSwitch,
+            },
         });
-        if (!isCharacter.value) {
+        if (formData.person_name && formData.person_introduction) {
             addShanjianPerson({
                 name: formData.person_name,
                 introduced: formData.person_introduction,
@@ -759,6 +835,10 @@ onLoad(() => {
             } else {
                 formData.copywriterList = formData.copywriterList.concat(data);
             }
+        }
+        if (type === ListenerTypeEnum.CHOOSE_MUSIC) {
+            formData.music = data.music;
+            formData.extra.volume = data.volume;
         }
     });
 });

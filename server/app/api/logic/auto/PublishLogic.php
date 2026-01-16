@@ -144,7 +144,7 @@ class PublishLogic extends ApiLogic
                     foreach ($medias as $mk => $media) {
                         $publishTime = $publishTimes[$mk];
 
-                        print_r(date('Y-m-d H:i:s', $publishTime) . PHP_EOL);
+                        //print_r(date('Y-m-d H:i:s', $publishTime) . PHP_EOL);
                         $setting = SvPublishSetting::create([
                             'user_id' => $device->user_id,
                             'task_type' => 99,
@@ -374,7 +374,7 @@ class PublishLogic extends ApiLogic
                 foreach ($medias as $mk => $media) {
                     $publishTime = $publishTimes[$mk];
                     //$maxDay = date('Y-m-d', $publishTime);
-                    print_r(date('Y-m-d H:i:s', $publishTime) . PHP_EOL);
+                    //print_r(date('Y-m-d H:i:s', $publishTime) . PHP_EOL);
                     $setting = SvPublishSetting::create([
                         'user_id' => $account->user_id,
                         'task_type' => 99,

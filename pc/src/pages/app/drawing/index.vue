@@ -1,21 +1,20 @@
 <template>
-    <div class="p-4 flex gap-[10px] h-full bg-app-bg-1">
-        <div class="flex-shrink-0 flex gap-[10px]">
-            <sidebar
-                :sidebar="getSidebar"
-                :sidebar-index="sidebarIndex"
-                :theme="ThemeEnum.DARK"
-                @update:sidebar-index="getSliderIndex" />
-            <create-panel :type="sidebarIndex" />
+    <div class="px-4 pb-4 flex gap-[10px] h-full">
+        <div class="flex-shrink-0">
+            <sidebar :sidebar="getSidebar" :sidebar-index="sidebarIndex" @update:sidebar-index="getSliderIndex" />
         </div>
-        <div class="grow overflow-hidden">
-            <component :is="getComponents"></component>
+        <div class="grow min-h-0">
+            <div class="min-w-[1000px] h-full flex gap-[10px]">
+                <create-panel :type="sidebarIndex" />
+                <div class="flex-1">
+                    <component :is="getComponents"></component>
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { AppKeyEnum, appKeyNameMap, ThemeEnum } from "@/enums/appEnums";
 import { SidebarEnum } from "./_enums";
 import Sidebar from "../_components/sidebar.vue";
 import CreatePanel from "./_components/create-panel.vue";
@@ -98,42 +97,8 @@ const getSidebar = computed(() => {
     });
     return groupedItems;
 });
-
-definePageMeta({
-    layout: "base",
-    key: AppKeyEnum.DRAWING,
-    title: appKeyNameMap[AppKeyEnum.DRAWING],
-});
 </script>
 
-<style scoped lang="scss">
-.sidebar-item {
-    &:hover {
-        background-color: rgba(24, 24, 24, 0.1);
-        box-shadow: 0px 0px 0px 1px rgba(255, 255, 255, 0.1);
-    }
-    &:hover {
-        background-color: var(--app-bg-color-1);
-    }
-}
-</style>
-
-<style scoped lang="scss">
+<style lang="scss">
 @import "@/pages/app/_assets/styles/index.scss";
-:deep(.el-tabs) {
-    padding: 0 0;
-    .el-tabs__nav {
-        width: 100%;
-    }
-    .el-tabs__item {
-        flex: 1;
-    }
-    .el-tabs__nav-wrap {
-        &::after {
-            height: 1px;
-            background-color: var(--app-border-color-2);
-            display: block;
-        }
-    }
-}
 </style>

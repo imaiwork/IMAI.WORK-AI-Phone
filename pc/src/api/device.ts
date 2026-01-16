@@ -102,3 +102,8 @@ export function deleteDeviceTaskRecord(params: any) {
 export function getDeviceAccountList(params: any) {
     return $request.get({ url: "/device.account/lists", params });
 }
+
+// 发布账号列表
+export function getPublishAccountList(params: any) {
+    return $request.get({ url: "/sv.account/alllists", params });
+}

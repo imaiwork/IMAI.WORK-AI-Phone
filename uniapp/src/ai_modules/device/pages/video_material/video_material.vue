@@ -71,6 +71,7 @@ const showVideoPreview = ref(false);
 const playData = ref<{ url: string; pic: string }>({ url: "", pic: "" });
 
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useMontageMaterial({
+    isTranscode: true,
     count: 9,
     onSuccess: (res: any[]) => {
         dataList.value.push(...res);

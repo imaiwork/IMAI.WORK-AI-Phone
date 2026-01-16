@@ -59,8 +59,11 @@ class ShanjianVideoSettingLists extends BaseAdminDataLists implements ListsSearc
                             $material_count += count($group) ?? 0;
                         }
                         $item['material_num'] = $material_count;
-                        $copywriting = json_decode($item['copywriting'], true);
-                        $item['copywriting_num'] = count($copywriting) ?? 0;
+                        $item['copywriting_num'] = 0;
+                           if ($item['copywriting']!= ''){
+                               $copywriting = json_decode($item['copywriting'], true);
+                               $item['copywriting_num'] = count($copywriting) ?? 0;
+                           }
                         break;
                     default:
                         $item['shanjian_type_name'] = '数字人口播混剪';

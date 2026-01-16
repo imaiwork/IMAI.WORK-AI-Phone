@@ -2,12 +2,17 @@
 
 namespace app\api\logic;
 
+use app\api\logic\material\FfmpegFileLogic;
+use app\api\logic\shanjian\ShanjianAnchorLogic;
 use app\common\model\digitalHuman\DigitalHumanAnchor;
+use app\common\model\file\File;
 use app\common\model\human\HumanAnchor;
+use app\common\model\material\FfmpegFile;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\service\FileService;
 use think\db\exception\DbException;
 use think\facade\Db;
+use think\facade\Log;
 
 /**
  * 数字人形象合并查询逻辑（公共表+渠道表+闪剪表）
@@ -106,7 +111,7 @@ class DigitalHumanLogic extends ApiLogic
                                 ])
                         ->where($commonWhere)
                         ->where($humanWhere)
-                        ->where('model_version', 'in', [1,7])
+                        ->where('model_version', 'in', [1, 7])
                         ->where('dh_id', '=', 0)
                         ->buildSql();
         //闪剪形象
@@ -165,6 +170,47 @@ class DigitalHumanLogic extends ApiLogic
         ];
     }
 
+    public static function createPublicAnchor(array $params)
+    {
+        try {
+            if (empty($params['name']) || empty($params['anchor_url']) || empty($params['authorized_url'])) {
+                throw new \Exception('参数错误');
+            }
+            $res = DigitalHumanAnchor::where('name', $params['name'])->findOrEmpty();
+            if (!$res->isEmpty()) {
+                throw new \Exception('名称已存在');
+            }
+            $dhInsert         = [
+                'user_id'        => self::$uid,
+                'name'           => $params['name'],
+                'image'          => $params['pic'] ?? '',
+                'task_ids'       => json_encode([
+                                                    'shanjian' => ['task_id' => '', 'status' => 0],
+                                                    'weiju'    => ['task_id' => '', 'status' => 0],
+                                                    'chanjing' => ['task_id' => '', 'status' => 0]
+                                                ]),
+                'status'         => 0,
+                'result_url'     => FileService::setFileUrl($params['anchor_url']),
+                'authorized_url' => FileService::setFileUrl($params['authorized_url']),
+                'width'          => $params['width'] ?? 0,
+                'height'         => $params['height'] ?? 0,
+            ];
+            $dh               = DigitalHumanAnchor::create($dhInsert);
+            self::$returnData = $dh->refresh()->toArray();
+            $data             = [
+                'user_id' => self::$uid,
+                'file_id' => File::where('uri', $dh['authorized_url'])->value('id'),
+                'type'    => 20,
+                'uri'     => $params['authorized_url']
+            ];
+            FfmpegFileLogic::addFfmpegFile($data);
+            return true;
+        } catch (\Exception $exception) {
+            self::setError($exception->getMessage());
+            return false;
+        }
+    }
+
     public static function deletePublicAnchor(array $data)
     {
         try {
@@ -184,9 +230,73 @@ class DigitalHumanLogic extends ApiLogic
         }
     }
 
+    public static function createDigitalHumanAnchorCron()
+    {
+        try {
+            $lists = DigitalHumanAnchor::where('status', '=', 0)->select();
+            if ($lists->isEmpty()) {
+                return true;
+            }
+            $lists = $lists->toArray();
+            Log::channel('shanjian')->write('定时任务开启：' . json_encode($lists, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            foreach ($lists as $item) {
+                $file = FfmpegFile::where('uri', '=', $item['authorized_url'])->findOrEmpty();
+                if ($file->isEmpty()) {
+                    continue;
+                }
+                if (in_array($file->status, [0, 1]) || in_array($file->status, ["0", "1"])) {
+//                    if ($file->status == 3) {
+//                        $update['status'] = 3;
+//                        $update['remark'] = '授权文件转码失败，请重试';
+//                        DigitalHumanAnchor::update($update, ['id' => $item['id']]);
+//                    }
+                    continue;
+                }
+                Log::channel('shanjian')->write('定时任务执行：' . $item['id']);
+                $shanjianData = [
+                    'user_id'        => $item['user_id'],
+                    'dh_id'          => $item['id'],
+                    'name'           => $item['name'],
+                    'anchor_url'     => FileService::getFileUrl($item['result_url']),
+                    'pic'            => FileService::getFileUrl($item['image']),
+                    'authorized_url' => FileService::getFileUrl($item['authorized_url']),
+                    'authorized_pic' => empty($item['authorized_pic']) ? '' : FileService::getFileUrl($item['authorized_pic']),
+                ];
+                $weijuData    = [
+                    'user_id'       => $item['user_id'],
+                    'dh_id'         => $item['id'],
+                    'name'          => $item['name'],
+                    'url'           => FileService::getFileUrl($item['result_url']),
+                    'pic'           => FileService::getFileUrl($item['image']),
+                    'width'         => $item['width'],
+                    'height'        => $item['height'],
+                    'model_version' => 1
+                ];
+                $chanjingData = [
+                    'user_id'       => $item['user_id'],
+                    'dh_id'         => $item['id'],
+                    'name'          => $item['name'],
+                    'url'           => FileService::getFileUrl($item['result_url']),
+                    'pic'           => FileService::getFileUrl($item['image']),
+                    'width'         => $item['width'],
+                    'height'        => $item['height'],
+                    'model_version' => 7
+                ];
+                ShanjianAnchorLogic::add($shanjianData);
+                HumanLogic::createAnchor($weijuData);
+                HumanLogic::createAnchor($chanjingData);
+
+            }
+            return true;
+        } catch (\Exception $exception) {
+            echo $exception->getMessage();
+            return false;
+        }
+    }
+
     public static function getDigitalHumanAnchorStatusCron()
     {
-        $lists = DigitalHumanAnchor::where('status', 'in', [0, 1])->select();
+        $lists = DigitalHumanAnchor::where('status', '=', 1)->select();
         if ($lists->isEmpty()) {
             return true;
         }
@@ -208,7 +318,8 @@ class DigitalHumanLogic extends ApiLogic
 
             $update['task_ids'] = json_encode($task_ids);
             if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 1) {
-                $update['status'] = 2;
+                $update['status']   = 2;
+                $update['task_ids'] = json_encode($task_ids);
             }
             DigitalHumanAnchor::where('id', $item['id'])->update($update);
         }
@@ -255,7 +366,7 @@ class DigitalHumanLogic extends ApiLogic
         }
 
         $countPublic   = Db::name('digital_human_anchor')->where($where)->where($publicWhere)->count();
-        $countHuman    = Db::name('human_anchor')->where($where)->where($humanWhere)->where('dh_id', '=', 0)->where('model_version', 'in', [1,7])->count();
+        $countHuman    = Db::name('human_anchor')->where($where)->where($humanWhere)->where('dh_id', '=', 0)->where('model_version', 'in', [1, 7])->count();
         $countShanjian = Db::name('shanjian_anchor')->where($where)->where($shanjianWhere)->where('dh_id', '=', 0)->count();
 
         if ($filter == 1) {
@@ -292,8 +403,8 @@ class DigitalHumanLogic extends ApiLogic
                     'shanjian_anchor_id' => $shanjian->anchor_id ?? '',
                 ];
                 $item['extra_info'] = [
-                    'width'  => $weiju->width ?? ($chanjing->width ?? ''),
-                    'height' => $weiju->height ?? ($chanjing->width ?? ''),
+                    'width'             => $weiju->width ?? ($chanjing->width ?? ''),
+                    'height'            => $weiju->height ?? ($chanjing->width ?? ''),
                     'shanjian_voice_id' => $shanjian->voice_id ?? '',
                 ];
             } else {

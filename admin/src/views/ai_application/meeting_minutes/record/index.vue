@@ -49,7 +49,7 @@
                 @selection-change="handleSelectionChange">
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
                 <el-table-column label="ID" prop="id" min-width="80" />
-                <el-table-column label="会议标题" prop="name" min-width="180" />
+                <el-table-column label="会议标题" prop="name" min-width="180" show-overflow-tooltip />
                 <el-table-column label="头像" min-width="100">
                     <template #default="{ row }">
                         <el-avatar :src="row.user_avatar" :size="50" />
@@ -63,9 +63,7 @@
                     </template>
                 </el-table-column>
                 <el-table-column label="消耗算力" prop="points" min-width="120">
-                    <template #default="{ row }">
-                        {{ row.status == 4 ? row.points : 0 }}
-                    </template>
+                    <template #default="{ row }"> {{ row.status == 4 ? row.points : 0 }}算力 </template>
                 </el-table-column>
                 <el-table-column label="当前状态" width="120">
                     <template #default="{ row }">

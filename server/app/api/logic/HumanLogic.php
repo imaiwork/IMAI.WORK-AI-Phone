@@ -740,18 +740,20 @@ class HumanLogic extends ApiLogic
      */
     public static function createAnchor($data)
     {
+        $user_id       = $data['user_id'] ?? self::$uid;
         // 检查余额
         if ($data['model_version'] == 1) {
-            TokenLogService::checkToken(self::$uid, 'human_anchor');
+            TokenLogService::checkToken($user_id, 'human_anchor');
         } elseif ($data['model_version'] == 4){
-            TokenLogService::checkToken(self::$uid, 'human_anchor_ym');
+            TokenLogService::checkToken($user_id, 'human_anchor_ym');
         }elseif ($data['model_version'] == 6){
-            TokenLogService::checkToken(self::$uid, 'human_anchor_ymt');
+            TokenLogService::checkToken($user_id, 'human_anchor_ymt');
         }elseif ($data['model_version'] == 7){
-            TokenLogService::checkToken(self::$uid, 'human_anchor_chanjing');
+            TokenLogService::checkToken($user_id, 'human_anchor_chanjing');
         }else {
-            TokenLogService::checkToken(self::$uid, 'human_anchor_pro');
+            TokenLogService::checkToken($user_id, 'human_anchor_pro');
         }
+
         $name          = $data['name'] ?? '';
         $width         = $data['width'] ?? '';
         $height        = $data['height'] ?? '';
@@ -784,7 +786,7 @@ class HumanLogic extends ApiLogic
         if (in_array($data['model_version'], [2, 4, 6])) {
 
             $addData = [
-                'user_id'       => self::$uid,
+                'user_id'       => $user_id,
                 'status'        => 1,
                 'anchor_id'     => uniqid(),
                 'name'          => $name,
@@ -840,7 +842,7 @@ class HumanLogic extends ApiLogic
                 break;
         }
 
-        $result = self::requestUrl($request, $scene, self::$uid, $taskId);
+        $result = self::requestUrl($request, $scene, $user_id, $taskId);
 
         if (!empty($result) && isset($result['id'])) {
             // 更新数字人公共形象
@@ -852,7 +854,7 @@ class HumanLogic extends ApiLogic
             $result['picurl'] = FileService::getFileUrl($pic);
             self::$returnData = $result;
             $addData          = [
-                'user_id'       => self::$uid,
+                'user_id'       => $user_id,
                 'status'        => $result['status'] == 'completed' ? 1 : 0,
                 'anchor_id'     => $result['id'],
                 'name'          => $name,

@@ -3,9 +3,24 @@ export const createAnchor = (params: Record<string, any>) => {
     return $request.post({ url: "/human/createAnchor", params });
 };
 
+// 闪剪形象创建
+export const createShanjianAnchor = (params: Record<string, any>) => {
+    return $request.post({ url: "/shanjian.shanjianAnchor/add", params });
+};
+
 // 形象列表
 export const getAnchorList = (params?: Record<string, any>) => {
     return $request.get({ url: "/human/anchorLists", params });
+};
+
+// 数字人公共形象列表
+export const getPublicAnchorList = (params?: Record<string, any>) => {
+    return $request.get({ url: "/digitalHuman/anchorLists", params });
+};
+
+// 数字人公共形象列表
+export const getPublicAnchorListV2 = (params?: Record<string, any>) => {
+    return $request.get({ url: "/digitalHuman/anchorPublicLists", params });
 };
 
 // 重试形象
@@ -16,6 +31,20 @@ export const retryAnchor = (params: Record<string, any>) => {
 // 删除形象
 export const deleteAnchor = (params: Record<string, any>) => {
     return $request.post({ url: "/human/anchorDelete", params });
+};
+// 闪剪形象删除
+export const deleteShanjianAnchor = (params: Record<string, any>) => {
+    return $request.post({ url: "/shanjian.shanjianAnchor/delete", params });
+};
+
+// 闪剪形象详情
+export const getShanjianAnchorDetail = (params: Record<string, any>) => {
+    return $request.get({ url: "/shanjian.shanjianAnchor/detail", params });
+};
+
+// 删除公共形象
+export const deletePublicAnchor = (params: Record<string, any>) => {
+    return $request.post({ url: "/digitalHuman/deletePublicAnchor", params });
 };
 
 // 获取数字人列表
@@ -91,4 +120,9 @@ export const generatePrompt = (params: Record<string, any>) => {
 // 闪剪语音克隆
 export const shanjianVoiceClone = (params: Record<string, any>) => {
     return $request.post({ url: "/shanjian.voice/add", params });
+};
+
+// 批量克隆形象
+export const batchCloneAnchor = (params: Record<string, any>) => {
+    return $request.post({ url: "/digitalHuman/createAnchor", params });
 };

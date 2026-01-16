@@ -1,25 +1,30 @@
 <template>
-    <div class="w-[228px] rounded-[20px] py-5 flex-shrink-0" :style="getTheme">
+    <div class="w-[200px] h-full flex-shrink-0 bg-white py-6 rounded-[20px]">
         <ElScrollbar>
-            <div class="flex flex-col gap-2.5 px-4 mt-1">
-                <div v-for="(item, index) in sidebar" :key="index">
-                    <div class="text-white rounded-md px-3 py-3 mb-1 font-bold" v-if="item.title">{{ item.title }}</div>
-                    <template v-if="item.children && item.children.length > 0">
-                        <div class="flex flex-col gap-2.5">
+            <div class="flex flex-col gap-3 px-4">
+                <div v-for="(group, index) in sidebar" :key="index">
+                    <div
+                        class="mb-3 text-[11px] font-black text-[#94A3B8] px-4 uppercase tracking-widest"
+                        v-if="group.title">
+                        {{ group.title }}
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <template v-if="group.children && group.children.length > 0">
                             <sidebar-item
-                                v-for="(child, index) in item.children"
-                                :key="index"
+                                v-for="(child, cIndex) in group.children"
+                                :key="cIndex"
                                 :item="child"
                                 :sidebar-index="sidebarIndex"
                                 @update:sidebar-index="emit('update:sidebarIndex', $event)" />
-                        </div>
-                    </template>
-                    <template v-else>
-                        <sidebar-item
-                            :item="item"
-                            :sidebar-index="sidebarIndex"
-                            @update:sidebar-index="emit('update:sidebarIndex', $event)" />
-                    </template>
+                        </template>
+                        <template v-else>
+                            <sidebar-item
+                                :item="group"
+                                :sidebar-index="sidebarIndex"
+                                @update:sidebar-index="emit('update:sidebarIndex', $event)" />
+                        </template>
+                    </div>
                 </div>
             </div>
         </ElScrollbar>
@@ -28,34 +33,13 @@
 
 <script setup lang="ts">
 import SidebarItem from "./sidebar-item.vue";
-import { ThemeEnum } from "@/enums/appEnums";
 
-const props = withDefaults(defineProps<{ sidebar: any[]; sidebarIndex: number; theme?: ThemeEnum }>(), {
+const props = withDefaults(defineProps<{ sidebar: any[]; sidebarIndex: number }>(), {
     sidebar: () => [],
     sidebarIndex: 0,
-    theme: ThemeEnum.LIGHT,
 });
 
 const emit = defineEmits<{
     (event: "update:sidebarIndex", index: number): void;
 }>();
-
-// 检查sidebar 是否存在children
-const hasChildren = computed(() => {
-    return props.sidebar.some((item) => item.children);
-});
-
-const getTheme = computed(() => {
-    if (props.theme === ThemeEnum.LIGHT) {
-        return {
-            backgroundColor: "#fff",
-        };
-    } else {
-        return {
-            backgroundColor: "var(--app-bg-color-2)",
-        };
-    }
-});
 </script>
-
-<style scoped></style>

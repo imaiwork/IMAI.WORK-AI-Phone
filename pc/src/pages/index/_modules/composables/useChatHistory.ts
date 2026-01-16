@@ -157,7 +157,7 @@ export function useChatHistory() {
     const loadHistory = async () => {
         if (!isFinished.value || isLoading.value) return;
         pagination.page_no++;
-        fetchChatRecord();
+        await fetchChatRecord();
     };
 
     /**

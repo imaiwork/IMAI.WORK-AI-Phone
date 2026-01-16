@@ -13,7 +13,7 @@
     "clue-gen-pop": "../../components/clue-gen-pop/clue-gen-pop",
     "keywords-edit": "../../components/keywords-edit/keywords-edit",
     "comment-filter": "../../components/comment-filter/comment-filter",
-    "bast-setting-v2": "../../components/bast-setting-v2/bast-setting-v2",
+    "base-setting": "../../components/base-setting/base-setting",
     "choose-region": "../../components/choose-region/choose-region",
     "choose-age": "../../components/choose-age/choose-age",
     "choose-comment-time": "../../components/choose-comment-time/choose-comment-time"

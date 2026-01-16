@@ -16,7 +16,10 @@ class DeviceEnum
     const TASK_TYPE_CLUES = 4; // 获客
     const TASK_TYPE_FRIENDS = 5; // 加好友
     const TASK_TYPE_TOUCH = 6; // 截流获客
-    const TASK_TYPE_WECHAT_CIRCLE = 7; // 客户互动
+    const TASK_TYPE_WECHAT_CIRCLE = 7; // 朋友圈发布
+    const TASK_TYPE_WECHAT_CIRCLE_THUMB_COMMENT = 8; // 朋友圈点赞评论
+    const TASK_TYPE_CLUES_WECHAT = 9; // 视频号获客加微任务
+
 
 
     const ACCOUNT_TYPE_SPH = 1; // 视频号
@@ -40,6 +43,11 @@ class DeviceEnum
     const TASK_SOURCE_CLUES = 4; // 获客
     const TASK_SOURCE_FRIENDS = 5; // 加好友
     const TASK_SOURCE_TOUCH = 6; // 截流获客
+    const TASK_SOURCE_WECHAT_CIRCLE_PUBLISH = 7; // 朋友圈发布
+    const TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT = 8; // 朋友圈点赞评论
+    const TASK_SOURCE_CLUES_WECHAT = 9; // 视频号获客加微任务
+
+
 
     const XHS_TAKE_OVER = 30; // 小红书接管
     const DY_TAKE_OVER = 31; // 抖音接管
@@ -48,6 +56,9 @@ class DeviceEnum
     const XHS_MAINTENANCE_ACCOUNT = 40; // 小红书维护账号
     const DY_MAINTENANCE_ACCOUNT = 41; // 抖音维护账号
     const KS_MAINTENANCE_ACCOUNT = 42; // 快手维护账号
+
+    const RPA_ADD_WECHAT = 50; // 自动加微任务启动
+    const WECHAT_CIRCLE_LIKE_COMMENT = 51; // 微信圈点赞评论
 
     const TASK_COMMENT_TO_COMMENT = 101; // 评论区评论
     const TASK_COMMENT_TO_MSG = 102; // 评论区私信
@@ -65,7 +76,7 @@ class DeviceEnum
     # 自动化任务类型
     const AUTO_TYPE_CLUES = 21; // 获客
     const AUTO_TYPE_PUBLISH = 22; // 发布
-    const AUTO_TYPE_WECHAT_CIRCLE = 23; // 3客户互动
+    const AUTO_TYPE_WECHAT_CIRCLE = 23; // 客户互动
     const AUTO_TYPE_COMMENT_CLUE = 24; // 评论区获客
     const AUTO_TYPE_WECHAT_FRIEND = 25; // 微信加v
     const AUTO_TYPE_ACTIVE = 26; // 养号
@@ -81,6 +92,8 @@ class DeviceEnum
     const AUTO_TASK_SCENE_SPH_CLUE = 4; // 视频号获客
     const AUTO_TASK_SCENE_CONTENT_PUBLISH = 5; // 内容发布
     const AUTO_TASK_SCENE_TAKE_OVER = 6; // 私信接管
+    const AUTO_TASK_SCENE_WECHAT_CIRCLE_PUBLISH = 7; // 朋友圈发布
+    const AUTO_TASK_SCENE_WECHAT_CIRCLE_THUMB_COMMENT = 8; // 朋友圈点赞评论
 
     
     
@@ -118,6 +131,9 @@ class DeviceEnum
             4 => '获客',
             5 => '加好友',
             6 => '截流获客',
+            7 => '朋友圈发布',
+            8 => '朋友圈点赞评论',
+            9 => '获客加微任务',
 
             21 => '获客',
             22 => '发布',
@@ -159,6 +175,10 @@ class DeviceEnum
             3 => '留痕获客',
             4 => '视频号获客',
             5 => '内容发布',
+            6 => '私信接管',
+            7 => '朋友圈发布',
+            8 => '朋友圈点赞评论',
+            9 => '视频号获客加微任务',
         ];
         if ($flag) {
             return $desc;

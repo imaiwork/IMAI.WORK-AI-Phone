@@ -1,6 +1,6 @@
 <template>
     <view class="p-4 pb-[120rpx]">
-        <bast-setting-v2
+        <base-setting
             v-model="formData"
             :show-device="false"
             :show-accounts="true"
@@ -37,7 +37,7 @@
 import { addGrowthAccountTask } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
-import BastSettingV2 from "@/ai_modules/device/components/bast-setting-v2/bast-setting-v2.vue";
+import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 
 const { on } = useEventBusManager();

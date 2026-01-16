@@ -126,19 +126,19 @@ export const useUpload = (options: Options) => {
         const isDurationValid = fileDuration >= duration[0] && fileDuration <= duration[1];
 
         if (fileSize > size * 1024 * 1024) {
-            uni.showToast({
-                title: `视频大小不能超过${size}M`,
-                icon: "none",
-                duration: 4000,
-            });
-            return;
+            // uni.showToast({
+            //     title: `视频大小不能超过${size}M`,
+            //     icon: "none",
+            //     duration: 4000,
+            // });
+            // return;
         } else if (!isWidthResolutionValid || !isHeightResolutionValid) {
-            uni.showToast({
-                title: `上传视频分辨率不能满足${widthResolution[0]}-${widthResolution[1]}x${heightResolution[0]}-${heightResolution[1]}`,
-                icon: "none",
-                duration: 4000,
-            });
-            return;
+            // uni.showToast({
+            //     title: `上传视频分辨率不能满足${widthResolution[0]}-${widthResolution[1]}x${heightResolution[0]}-${heightResolution[1]}`,
+            //     icon: "none",
+            //     duration: 4000,
+            // });
+            // return;
         } else if (!isDurationValid) {
             uni.showToast({
                 title: `上传视频时长不能小于${duration[0]}秒或大于${duration[1]}秒`,
@@ -152,6 +152,7 @@ export const useUpload = (options: Options) => {
             await uploadVideo(file.tempFilePath);
             onSuccess?.(uploadResult);
         } catch (error: any) {
+            console.log(error);
             if (
                 error.errMsg &&
                 error.errMsg === "chooseMedia:fail api scope is not declared in the privacy agreement"
@@ -182,7 +183,7 @@ export const useUpload = (options: Options) => {
     };
 
     const uploadImageFn = async (file: string) => {
-        const { uri }: any = await uploadImage(file, "", "", (e) => {
+        const { uri }: any = await uploadFile("image", { filePath: file }, (e) => {
             onProgress?.({ type: "image", progress: e });
         });
         uploadResult.pic = uri;

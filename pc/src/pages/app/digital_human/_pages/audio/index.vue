@@ -139,7 +139,6 @@ const handleDelete = async (id: number) => {
     useNuxtApp().$confirm({
         title: "提示",
         message: "是否删除该音频",
-        theme: "dark",
         onConfirm: async () => {
             try {
                 await deleteAudio({ id });

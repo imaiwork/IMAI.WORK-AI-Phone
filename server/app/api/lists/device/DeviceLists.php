@@ -123,9 +123,9 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
                 }
 
                 if ($item['status'] !== 2) {
-                    Cache::store('redis')->select(env('redis.WS_SELECT', 8));
-                    $status = Cache::store('redis')->get("xhs:device:{$item['device_code']}:status");
-                    $item['status'] = $status === 'online' ? 1 : 0;
+                    Cache::store('redis')->handler()->select(env('redis.WS_SELECT', 8));
+                    $status = Cache::store('redis')->handler()->get("xhs:device:{$item['device_code']}:status");
+                    $item['status'] = unserialize($status) === 'online' ? 1 : 0;
                     $item->save();
                 }
 

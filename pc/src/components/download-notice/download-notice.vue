@@ -6,7 +6,7 @@
             'translate-y-0 opacity-100': show,
             'translate-y-full opacity-0': !show,
         }">
-        <div class="bg-white p-[10px] rounded-xl shadow-md flex items-center">
+        <div class="bg-white p-[10px] rounded-xl flex items-center">
             <div class="w-10 h-10 rounded-xl border border-token-primary p-[2px]">
                 <img :src="websiteConfig.pc_logo" class="w-full h-full object-contain rounded-xl" />
             </div>

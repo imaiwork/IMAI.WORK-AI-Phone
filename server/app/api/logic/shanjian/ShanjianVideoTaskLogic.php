@@ -11,9 +11,9 @@ use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
+use app\common\service\FileService;
 use think\facade\Db;
 use think\facade\Log;
-use app\common\service\FileService;
 
 /**
  * ShanjianVideoTaskLogic
@@ -540,7 +540,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
             foreach ($tasks as $task) {
                 try {
-
+                    $extra = $task->extra;
+                    $volume =  $extra['volume'] ?? 0.3;
+                    $volume = (float)$volume;
+                    $soundSwitch =  $extra['soundSwitch'] ?? false;
                     switch ($task->shanjian_type) {
                         case 1:
                             $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
@@ -554,13 +557,11 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 'title' => $task->title,
                                 'content' => $task->msg,
                                 'speakerId' => $task->voice_id,
-                                'materials' => $task->material,
-                            
                                 'packRules' => [
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
                                         "audioUrl" => $task->music_url,
-                                        "volume" => 0.3
+                                        "volume" => $volume
                                     ],
                                 ],
                                 'processRules' => [
@@ -572,7 +573,12 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     'name' => $task->card_name,
                                     'description' => $task->card_introduced,
                                 ];
-
+                            }
+                            if ($soundSwitch){
+                                $requestdata['materialSoundSwitch'] = !($soundSwitch == "false") && (bool)$soundSwitch;
+                            }
+                            if($task->material != ''){
+                                $requestdata['materials'] =  $task->material;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
                             Log::channel('shanjian')->write('合成视频' . json_encode($response));
@@ -629,18 +635,23 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             $requestdata = [
                                 'styleId' => $task->clip_id,
                                 'videoUrl' => $task->anchor_id,
-                                'materials' => $task->material,
                                 'packRules' => [
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
                                         "audioUrl" => $task->music_url,
-                                        "volume" => 0.3
+                                        "volume" =>  $volume
                                     ],
                                 ],
                                 'processRules' => [
                                     "watermarkShow" => false,
                                 ]
                             ];
+                            if($task->material != ''){
+                                $requestdata['materials'] =  $task->material;
+                            }
+                            if ($soundSwitch){
+                                $requestdata['materialSoundSwitch'] = !($soundSwitch == "false") && (bool)$soundSwitch;
+                            }
                             if($task->card_name != ''){
                                 $requestdata['introduceCard'] = [
                                     'name' => $task->card_name,
@@ -698,23 +709,34 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             $unit = TokenLogService::checkToken($task->user_id, 'shanjian_broadcast_mixcut', $duration);
                             // 更新状态为视频合成中
                             $scene = self::SHANJIAN_BROADCAST_MIXCUT;
-                            $response = self::requestUrl([
+
+                            $requestdata = [
                                 'styleId' => $task->clip_id,
                                 'title' => $task->title,
                                 'content' => $task->msg,
                                 'speakerId' => $task->voice_id,
-                                'materials' => $task->material,
                                 'packRules' => [
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
                                         "audioUrl" => $task->music_url,
-                                        "volume" => 0.3
+                                        "volume" => $volume
                                     ],
                                 ],
                                 'processRules' => [
                                     "watermarkShow" => false,
                                 ]
-                            ], $scene, $task->user_id, $task->task_id);
+                            ];
+                            if($task->card_name != ''){
+                                $requestdata['introduceCard'] = [
+                                    'name' => $task->card_name,
+                                    'description' => $task->card_introduced,
+                                ];
+
+                            }
+                            if($task->material != ''){
+                                $requestdata['materials'] =  $task->material;
+                            }
+                            $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
                             Log::channel('shanjian')->write('合成视频' . json_encode($response));
 
                             if (!isset($response['data']['taskId']) || empty($response['data']['taskId'])) {
@@ -767,12 +789,11 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             $requestdata = [
                                 'styleId' => $task->clip_id,
                                 'title' => $title,
-                                'materials' => $task->material,
                                 'packRules' => [
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
                                         "audioUrl" => $task->music_url,
-                                        "volume" => 0.3
+                                        "volume" => $volume
                                     ],
                                 ],
                                 'processRules' => [
@@ -784,7 +805,9 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     'name' => $task->card_name,
                                     'description' => $task->card_introduced,
                                 ];
-
+                            }
+                            if($task->material != ''){
+                                $requestdata['materials'] =  $task->material;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
                             Log::channel('shanjian')->write('新闻合成视频' . json_encode($response));
@@ -856,16 +879,21 @@ class ShanjianVideoTaskLogic extends ApiLogic
     }
 
 
+    /**
+     * 检查视频任务状态（修复锁超时问题版）
+     */
     public static function check()
     {
-
         try {
+            // 修改点1：增加 limit 限制，防止一次查询太多导致长事务
             $tasks = ShanjianVideoTask::where('status', 1)
                 ->where('create_time', '<=', strtotime('-5 minutes'))
+                ->limit(20) 
                 ->select();
 
             foreach ($tasks as $task) {
                 $setPublish = false;
+                
                 // 1. 先进行外部API调用，避免在事务中持有锁过长时间
                 $params = ['taskId' => $task->result_id, 'task_id' => $task->task_id];
                 $response = \app\common\service\ToolsService::Shanjian()->status($params);
@@ -897,7 +925,8 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         Db::commit();
                         continue;
                     }
-                    $num = $ShanjianVideoSetting->video_count - $ShanjianVideoSetting->success_num - $ShanjianVideoSetting->error_num;
+                    
+                    // 准备计费和日志参数
                     $typeIDArray = [
                         '1' => AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN,
                         '2' => AccountLogEnum::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN,
@@ -905,6 +934,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         '4' => AccountLogEnum::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN
                     ];
                     $typeID = $typeIDArray[$task->shanjian_type] ?? AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN;
+                    
                     $sceneArray = [
                         '1' => 'human_video_shanjian',
                         '2' => 'shanjian_realman_broadcast',
@@ -920,6 +950,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         '4' => '新闻体混剪视频'
                     ];
                     $remark = $remarkArray[$task->shanjian_type] ?? '数字人口播混剪视频';
+
                     if (isset($response['data']['status'])) {
                         $data = $response['data'];
                         switch ($data['status']) {
@@ -937,8 +968,8 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
                                     AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
                                 }
-
                                 break;
+
                             case 'succeed':
                                 $item->status = 3;
                                 if (isset($data['result']['videoUrl'])) {
@@ -961,79 +992,39 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 $newpoints = $item->video_token;
                                 $sl = $newpoints - $points;
                                 $item->video_token = $points;
+                                
+                                // 处理退费或补扣逻辑
                                 if ($sl > 0) {
-
                                     switch ($item->shanjian_type) {
-                                        case 1:
-                                            $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费' ;
-                                            break;
-                                        case 2:
-                                            $kf = '真人口播混剪视预扣费超额扣费退费' ;
-                                            break;
-                                        case 3:
-                                            $kf = '素材混剪视预扣费超额扣费退费' ;
-                                            break;
-                                        case 4:
-                                            $kf = '新闻体混剪视频预扣费超额扣费退费' ;
-                                            break;
-                                        default:
-                                            $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费';
-                                            break;
+                                        case 1: $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费'; break;
+                                        case 2: $kf = '真人口播混剪视预扣费超额扣费退费'; break;
+                                        case 3: $kf = '素材混剪视预扣费超额扣费退费'; break;
+                                        case 4: $kf = '新闻体混剪视频预扣费超额扣费退费'; break;
+                                        default: $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费'; break;
                                     }
-                                    $sl =  round($sl, 2);
-                                    //调整可用余额
-                                    $extra = ['扣费项目' => $kf,'实际视频时长' => $duration, '算力单价' => $unit, '实际消耗算力' => $points, '之前扣除算力' => $newpoints, '退费算力' => $sl];
+                                    $sl = round($sl, 2);
+                                    $extra = ['扣费项目' => $kf, '实际视频时长' => $duration, '算力单价' => $unit, '实际消耗算力' => $points, '之前扣除算力' => $newpoints, '退费算力' => $sl];
 
                                     $user->tokens += $sl;
                                     $user->save();
-                                    //记录日志
-                                    AccountLogLogic::add(
-                                        $user->id,
-                                        $typeID,
-                                        AccountLogEnum::INC,
-                                        $sl,
-                                        1,
-                                        $item->task_id,
-                                        $remark,
-                                        $extra
-                                    );
+                                    AccountLogLogic::add($user->id, $typeID, AccountLogEnum::INC, $sl, 1, $item->task_id, $remark, $extra);
                                 } else {
                                     $sl = $points - $newpoints;
                                     switch ($item->shanjian_type) {
-                                        case 1:
-                                            $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣' ;
-                                            break;
-                                        case 2:
-                                            $kf = '真人口播混剪视频预扣费补足费用补扣';
-                                            break;
-                                        case 3:
-                                            $kf = '素材混剪视频预扣费补足费用补扣' ;
-                                            break;
-                                        case 4:
-                                            $kf = '新闻体混剪视频预扣费补足费用补扣';
-                                            break;
-                                        default:
-                                            $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣';
-                                            break;
+                                        case 1: $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣'; break;
+                                        case 2: $kf = '真人口播混剪视频预扣费补足费用补扣'; break;
+                                        case 3: $kf = '素材混剪视频预扣费补足费用补扣'; break;
+                                        case 4: $kf = '新闻体混剪视频预扣费补足费用补扣'; break;
+                                        default: $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣'; break;
                                     }
-                                    $sl =  round($sl, 2);
-                                    $extra = ['扣费项目' => $kf,'实际视频时长' => $duration, '算力单价' => $unit, '实际消耗算力' => $points, '之前扣除算力' => $newpoints, '补扣算力' => $sl];
+                                    $sl = round($sl, 2);
+                                    $extra = ['扣费项目' => $kf, '实际视频时长' => $duration, '算力单价' => $unit, '实际消耗算力' => $points, '之前扣除算力' => $newpoints, '补扣算力' => $sl];
 
                                     $user->tokens -= $sl;
                                     $user->save();
-                                    //记录日志
-                                    AccountLogLogic::add(
-                                        $user->id,
-                                        $typeID,
-                                        AccountLogEnum::DEC,
-                                        $sl,
-                                        1,
-                                        $item->task_id,
-                                        $kf,
-                                        $extra
-                                    );
+                                    AccountLogLogic::add($user->id, $typeID, AccountLogEnum::DEC, $sl, 1, $item->task_id, $kf, $extra);
                                 }
-
+                                break;
                         }
                         $item->update_time = time();
                         $item->save();
@@ -1046,7 +1037,6 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         $userId = $item->user_id;
                         $taskId = $item->task_id;
                         $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-                        //查询是否已返还
                         if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
                             $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
                             AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
@@ -1057,11 +1047,28 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     Db::commit();
                 } catch (\Exception $e) {
                     Db::rollback();
-                    Log::channel('shanjian')->error('Check 方法处理任务失败, task_id: ' . $task->task_id . ', Error: ' . $e->getMessage());
-                    // 标记任务为失败，避免无限重试
-                    $task->status = 2;
-                    $task->remark = 'Check方法异常：' . $e->getMessage();
-                    $task->save();
+                    $errorMsg = $e->getMessage();
+
+                    // 修改点2：关键修复 - 识别锁等待超时
+                    if (strpos($errorMsg, 'Lock wait timeout exceeded') !== false) {
+                        // 如果是锁超时，说明 notify 正在处理或数据库繁忙
+                        // 记录警告日志，但【不要】修改任务状态为失败，直接跳过，等待下一次 check
+                        Log::channel('shanjian')->warning('Check 任务锁等待超时，跳过本次处理: ' . $task->task_id);
+                        continue; 
+                    }
+
+                    Log::channel('shanjian')->error('Check 方法处理任务失败, task_id: ' . $task->task_id . ', Error: ' . $errorMsg);
+                    
+                    // 修改点3：只有非锁超时的真正异常，才标记为失败
+                    // 使用 update 直接更新，避免使用旧对象 save 导致的问题
+                    try {
+                        ShanjianVideoTask::where('id', $task->id)->update([
+                            'status' => 2,
+                            'remark' => 'Check方法异常：' . $errorMsg
+                        ]);
+                    } catch (\Exception $ex) {
+                        // 忽略更新失败状态时的错误
+                    }
                 }
 
                 if ($setPublish){
@@ -1074,12 +1081,13 @@ class ShanjianVideoTaskLogic extends ApiLogic
             }
 
             return true;
-        } catch (\Exception|\think\db\exception\DataNotFoundException|\think\db\exception\ModelNotFoundException $e) { // Added specific DB exceptions
+        } catch (\Exception|\think\db\exception\DataNotFoundException|\think\db\exception\ModelNotFoundException $e) {
             self::setError($e->getMessage());
             Log::channel('shanjian')->error('Check 方法整体异常: ' . $e->getMessage());
             return false;
         }
     }
+
 
 
 }

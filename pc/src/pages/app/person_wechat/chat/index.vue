@@ -1,6 +1,6 @@
 <template>
-    <div class="w-full h-full flex p-[50px] wx-chat-page">
-        <div class="rounded-xl overflow-hidden grow flex max-w-[1500px] mx-auto h-full">
+    <div class="w-full h-full flex">
+        <div class="rounded-xl overflow-hidden grow flex min-w-[1000px] h-full">
             <div class="w-[94px] flex-shrink-0">
                 <SidebarPanel
                     ref="sidebarPanelRef"
@@ -1183,10 +1183,3 @@ definePageMeta({
     layout: "wechat",
 });
 </script>
-
-<style scoped lang="scss">
-.wx-chat-page {
-    background: url("./_assets/images/wx_chat_bg.jpg") no-repeat center center;
-    background-size: 100% 100%;
-}
-</style>

@@ -1,0 +1,266 @@
+<?php
+
+namespace app\common\workerman\rpa\handlers\wechat;
+
+use app\common\workerman\rpa\BaseMessageHandler;
+use Workerman\Connection\TcpConnection;
+use app\common\model\sv\SvDeviceCircleLikeReply;
+use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
+use app\common\model\sv\SvDeviceCircleLikeReplyRecord;
+use app\common\model\kb\KbRobot;
+use app\common\workerman\rpa\WorkerEnum;
+use app\common\enum\user\AccountLogEnum;
+use app\api\logic\service\TokenLogService;
+use app\api\logic\ChatLogic;
+use app\common\model\user\User;
+use app\common\logic\AccountLogLogic;
+use app\common\model\sv\SvDevice;
+use app\common\model\wechat\AiWechatLog;
+
+
+
+class CircleLikeCommentHandler extends BaseMessageHandler
+{
+    public function handle(TcpConnection $connection, string $uid, array $payload): void
+    {
+        $content = !is_array($payload['content']) ? json_decode($payload['content'], true) : $payload['content'];
+        try {
+            $this->msgType = WorkerEnum::DESC[$payload['type']] ?? $payload['type'];
+            $this->uid = $uid;
+            $this->payload = $payload;
+            $this->userId = $content['userId'] ?? 0;
+            $this->connection = $connection;
+
+            $taskId = $content['taskId'] ?? 0;
+
+            $task = SvDeviceCircleLikeReplyAccount::where('id', $taskId)->findOrEmpty();
+            if (!$task->isEmpty()) {
+                $request_id = generate_unique_task_id();
+                $comment = $this->getCircleComment($content['content'], $task, $request_id);
+
+                SvDeviceCircleLikeReplyRecord::create([
+                    'user_id' => $task->user_id,
+                    'like_reply_account' => $task->id,
+                    'device_code' => $task->device_code,
+                    'account' => $task->account,
+                    'nickname' => $content['nickname'] ?? '',
+                    'content' => $content['content'] ?? '',
+                    'comment' => $comment,
+                    'task_id' => $request_id,
+                    'create_time' => time(),
+                ]);
+
+                $this->payload['reply'] = array(
+                    'type' => 1,
+                    'content' => [
+                        $comment
+                    ],
+                    'link' => '',
+                    'targetRecipient' => $content['nickname'] ?? '',
+                    'lastMessageContent' => $content['content'] ?? ''
+                );
+            } else {
+                $this->payload['reply'] = array(
+                    'type' => 1,
+                    'content' => [],
+                    'link' => '',
+                    'targetRecipient' => $content['nickname'] ?? '',
+                    'lastMessageContent' => $content['content'] ?? ''
+                );
+            }
+
+            $this->payload['code'] =  WorkerEnum::SUCCESS_CODE;
+            $this->payload['type'] = 6;
+            $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+        } catch (\Exception $e) {
+            $this->setLog('异常信息' . $e, 'like');
+
+            $this->payload['reply'] = $e->getMessage();
+            $this->payload['code'] =  WorkerEnum::DEVICE_ERROR_CODE;
+            $this->payload['type'] = 'error';
+            $this->sendError($this->connection,  $this->payload);
+        } finally {
+            unset($content);
+        }
+    }
+
+    private function getCircleComment(string $circleContent, SvDeviceCircleLikeReplyAccount $task, string $request_id)
+    {
+        try {
+            if (empty($circleContent)) {
+                $this->setLog('朋友圈内容为空', 'like');
+                return '';
+            }
+
+            $option = SvDeviceCircleLikeReply::where('id', $task->circle_like_reply_id)->findOrEmpty();
+            if ($option->isEmpty()) {
+                $this->setLog('点赞回复选项不存在', 'like');
+                return '';
+            }
+
+
+            $replyContent = '';
+            $robot = KbRobot::where('id', $option->robot_id)->findOrEmpty();
+            if ($robot->isEmpty()) {
+                $this->setLog('点赞回复机器人不存在', 'like');
+                return '';
+            }
+            $knowledge = [];
+            if ($robot->kb_type == 1) { //rag
+                // 检查是否挂载知识库
+                $bind = \app\common\model\knowledge\KnowledgeBind::where('data_id', $robot->id)->where('user_id', $task->user_id)->where('type', 1)->limit(1)->find();
+                if (!empty($bind)) {
+                    $bindFind = \app\common\model\knowledge\Knowledge::where('id', $bind['kid'])->limit(1)->find();
+                    if (empty($bindFind)) {
+                        $this->setLog('挂载知识库不存在', 'like');
+                        return '';
+                    } else {
+                        $knowledge = $bindFind->toArray();
+                    }
+                }
+            }
+
+            if ($robot->kb_type == 2) { //向量
+                // 检查是否挂载知识库
+                $bind = \app\common\model\knowledge\KnowledgeBind::where('data_id', $robot->id)->where('user_id', $task->user_id)->where('type', 1)->limit(1)->find();
+                if (!empty($bind)) {
+                    $bindFind = \app\common\model\kb\KbKnow::where('id', $bind['kid'])->limit(1)->find();
+                    if (empty($bindFind)) {
+                        $this->setLog('挂载知识库不存在', 'like');
+                        return '';
+                    } else {
+                        $knowledge = $bindFind->toArray();
+                    }
+                }
+            }
+
+            $messages = array(
+                array(
+                    'role' => 'system',
+                    'content' => $robot->roles_prompt,
+                ),
+                array(
+                    'role' => 'user',
+                    'content' => $circleContent,
+                ),
+
+            );
+
+            $this->setLog(json_encode($messages, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
+
+            if (!empty($knowledge) || $robot->kb_type == 2) {
+                [$chatStatus, $response] = \app\api\logic\KnowledgeLogic::socketChat([
+                    'message' => $circleContent,
+                    'messages' => $messages,
+                    'indexid' => $knowledge['index_id'] ?? '',
+                    'rerank_min_score' => $knowledge['rerank_min_score'] ?? 0.2,
+                    'stream' => false,
+                    'user_id' => $task->user_id,
+                    'scene' => '评论朋友圈聊天',
+                    'model' => $robot->model,
+                    'robot' => $robot->toArray(),
+                ]);
+                if ($chatStatus === false) {
+                    $this->setLog('队列请求知识库失败: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
+                    return '';
+                } else {
+                    if (isset($response['choices'][0]) && !empty($response['choices'][0])) {
+                        $replyContent =  $response['choices'][0]['message']['content'];
+                    }
+                }
+            } else {
+                $request = [
+                    'messages' => $messages,
+                    'message' => $robot->roles_prompt,
+                    'model' => $robot->model,
+                    'stream' => false,
+                    'user_id' => $task->user_id,
+                    'task_id' => $request_id,
+                    'chat_type' => AccountLogEnum::TOKENS_DEC_AI_WECHAT,
+                    'now'       => time(),
+                ];
+                $this->setLog('请求参数: ' . json_encode($request, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
+                $autoType = SvDevice::where('device_code', $task->device_code)->value('auto_type') ?? 0;
+                if($autoType == 0){
+                    // 执行微信AI消息处理
+                    $response = \app\common\service\ToolsService::Wechat()->chat($request);
+                }else{
+                    // 执行自动化消息处理
+                    $response = \app\common\service\ToolsService::Automation()->friendsCircleComments($request);
+                }
+                if (isset($response['code']) && $response['code'] == 10000) {
+                    // 处理响应
+                    $replyContent = $this->handleResponse($response, $request,$autoType);
+                } else {
+                    // 重试
+
+                    $this->setLog('队列请求知识库失败: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
+                    return '';
+                }
+            }
+
+            return $replyContent;
+        } catch (\Throwable $e) {
+            $this->setLog('异常信息' . $e->__toString(), 'like');
+            return '';
+        }
+    }
+
+    private function handleResponse(array $response, array $request, $autoType)
+    {
+        if($autoType == 0){
+            $scene = $request['model'] == 'deepseek' ? 'ai_reply_like' : 'openai_chat';
+        }else{
+            $scene = 'automation_friends_circle_comments';
+        }
+
+        //检查扣费
+        $unit = TokenLogService::checkToken($request['user_id'], $scene);
+        // 获取回复内容
+        $reply = $response['data']['message'] ?? '';
+
+        //计费
+        $tokens = $response['data']['usage']['total_tokens'] ?? 0;
+        if (!$reply || $tokens == 0) {
+            throw new \Exception('获取内容失败');
+        }
+
+        $response = [
+            'reply' => $reply,
+            'usage_tokens' => $response['data']['usage'] ?? [],
+        ];
+
+        // 保存聊天记录
+        ChatLogic::saveChatResponseLog($request, $response);
+
+        //计算消耗tokens
+        $points = $unit > 0 ? round($tokens / $unit, 2) : 0;
+        //token扣除
+        User::userTokensChange($request['user_id'], (float)$points);
+
+        $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points, '场景' => '朋友圈评论'];
+        if($autoType == 0){
+            $desc = $request['model'] == 'deepseek' ? AccountLogEnum::TOKENS_DEC_AI_REPLY_LIKE : AccountLogEnum::TOKENS_DEC_OPENAI_CHAT;
+        }else{
+            $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS;
+        }
+        //扣费记录
+        AccountLogLogic::recordUserTokensLog(true, $request['user_id'], $desc, (float)$points, $request['task_id'], $extra);
+
+        if($autoType == 1){          
+            // 处理响应
+            $response = \app\common\service\ToolsService::Automation()->friendsCirclePraise($request);
+
+            if (isset($response['code']) && $response['code'] == 10000) {
+                $unit = TokenLogService::checkToken($request['user_id'], 'automation_friends_circle_praise');
+                $extra = [ '算力单价' => $unit, '实际消耗算力' => $unit, '场景' => '朋友圈点赞'];
+                $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_PRAISE;
+                     //扣费记录
+                AccountLogLogic::recordUserTokensLog(true, $request['user_id'], $desc, (float)$points, $request['task_id'], $extra);
+            }
+          
+        }
+
+        return $reply;
+    }
+}

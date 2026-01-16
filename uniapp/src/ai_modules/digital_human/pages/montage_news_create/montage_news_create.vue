@@ -257,6 +257,24 @@
                             </view>
                         </view>
                     </view>
+                    <view class="mt-[20rpx] flex items-center justify-between h-[110rpx] bg-white rounded-[20rpx] px-4">
+                        <view class="text-[30rpx] font-bold">背景音乐</view>
+                        <navigator
+                            :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
+                                formData.music
+                            )}&volume=${formData.extra.volume}`"
+                            hover-class="none"
+                            class="flex items-center gap-x-1">
+                            <view>
+                                <template v-if="formData.music.length > 0">
+                                    共<text class="mx-1 text-primary font-bold">{{ formData.music.length }}</text
+                                    >个
+                                </template>
+                                <text class="text-[#000000]/70" v-else>AI音乐库</text>
+                            </view>
+                            <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
+                        </navigator>
+                    </view>
                 </view>
             </scroll-view>
         </view>
@@ -313,7 +331,7 @@
 </template>
 
 <script setup lang="ts">
-import { createShanjianTask } from "@/api/digital_human";
+import { addShanjianPerson, createShanjianTask } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
 import { ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
 import ChooseCharacter from "@/ai_modules/digital_human/components/choose-character/choose-character.vue";
@@ -345,6 +363,10 @@ const formData = reactive<{
     person_introduction: string;
     shanjian_type: MontageTypeEnum;
     video_count: number;
+    music: any[];
+    extra: {
+        volume: number;
+    };
 }>({
     anchorLists: [],
     copywriterList: [],
@@ -354,6 +376,10 @@ const formData = reactive<{
     person_introduction: "",
     video_count: 1,
     shanjian_type: MontageTypeEnum.NEWS_BODY,
+    music: [],
+    extra: {
+        volume: 0.5,
+    },
 });
 
 const editMaterialIndex = ref(-1);
@@ -385,7 +411,7 @@ const canStepProceed = (stepNumber: number) => {
         case 1:
             return formData.materialList.length > 0;
         case 2:
-            return formData.person_name && formData.person_introduction;
+            return true;
         case 3:
             return formData.copywriterList.length > 0;
         case 4:
@@ -531,7 +557,18 @@ const handleCreateVideo = async () => {
             ),
             shanjian_type: formData.shanjian_type,
             video_count: formData.video_count,
+            music: formData.music.map((item: any) => item.content),
+            extra: {
+                volume: formData.extra.volume,
+            },
         });
+
+        if (formData.person_name && formData.person_introduction) {
+            addShanjianPerson({
+                name: formData.person_name,
+                introduced: formData.person_introduction,
+            });
+        }
         uni.hideLoading();
         createResult.value = res;
         showCreateSuccess.value = true;
@@ -585,6 +622,10 @@ onLoad(() => {
             } else {
                 formData.materialList.push(data);
             }
+        }
+        if (type === ListenerTypeEnum.CHOOSE_MUSIC) {
+            formData.music = data.music;
+            formData.extra.volume = data.volume;
         }
     });
 });

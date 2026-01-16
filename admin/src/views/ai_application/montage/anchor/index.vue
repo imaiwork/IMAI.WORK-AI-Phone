@@ -44,7 +44,7 @@
                 <el-table-column label="任务ID" prop="task_id" width="160" show-overflow-tooltip />
                 <el-table-column label="创建用户" prop="nickname" min-width="140" show-overflow-tooltip />
                 <!-- <el-table-column label="形象名称" prop="name" min-width="180" show-overflow-tooltip /> -->
-                <el-table-column label="形象视频" prop="name" min-width="140">
+                <el-table-column label="形象视频" prop="name" min-width="200">
                     <template #default="{ row }">
                         <div
                             class="line-clamp-1 text-primary hover:underline cursor-pointer"
@@ -53,13 +53,20 @@
                         </div>
                     </template>
                 </el-table-column>
-                <el-table-column label="授权视频" min-width="140">
+                <el-table-column label="授权视频" min-width="200">
                     <template #default="{ row }">
                         <div
                             class="line-clamp-1 text-primary hover:underline cursor-pointer"
                             @click="jumpUrl(row.authorized_url)">
                             {{ row.anchor_url }}
                         </div>
+                    </template>
+                </el-table-column>
+                <el-table-column label="生成状态" width="120">
+                    <template #default="{ row }">
+                        <el-tag :type="row.status === 6 ? 'success' : 'danger'">
+                            {{ row.status === 6 ? "成功" : "失败" }}
+                        </el-tag>
                     </template>
                 </el-table-column>
                 <!-- <el-table-column label="消耗算力" prop="name" min-width="120" /> -->
@@ -93,6 +100,7 @@ const queryParams = reactive({
     nickname: "",
     start_time: "",
     end_time: "",
+    status: "",
 });
 
 const { pager, getLists, resetPage, resetParams } = usePaging({

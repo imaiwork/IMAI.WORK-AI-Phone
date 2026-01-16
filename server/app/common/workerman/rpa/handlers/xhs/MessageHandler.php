@@ -16,6 +16,7 @@ use app\common\model\sv\SvAccountKeyword;
 use app\common\model\sv\SvAccountLog;
 use app\common\model\sv\SvAddWechatRecord;
 use app\common\model\sv\SvAddWechatStrategy;
+use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvPrivateMessage;
 use app\common\model\sv\SvReplyStrategy;
 use app\common\model\sv\SvRobotKeyword;
@@ -950,8 +951,8 @@ class MessageHandler extends BaseMessageHandler
 
             $history = implode("\n", array_column($logs, 'content'));
             $keyword = str_replace(
-                ['角色设定', '用户发送的内容', '历史对话上下文', '相关知识库检索结果'],
-                [$robot->roles_prompt, (is_array($request['message']) ? implode("\n", $request['message']) : $request['message']), $history, empty($knowledge) ? '' : '相关知识库检索结果'],
+                ['角色设定', '用户发送的内容', '相关知识库检索结果'],
+                [$robot->roles_prompt, (is_array($request['message']) ? implode("\n", $request['message']) : $request['message']), empty($knowledge) ? '' : '相关知识库检索结果'],
                 $keyword
             );
 
@@ -1034,6 +1035,7 @@ class MessageHandler extends BaseMessageHandler
             $this->userId = $data['user_id'];
             $this->request = $data['request'];
             $this->taskId = $data['task_id'];
+            $autoType = SvDevice::where('device_code', $data['device_code'])->value('auto_type') ?? 0;
 
             // 检查AI 是否已有回复记录
             $log = ChatLog::where('task_id', $this->taskId)->findOrEmpty();
@@ -1044,6 +1046,7 @@ class MessageHandler extends BaseMessageHandler
                     $_message = is_array($this->request['message']) ? implode("\n", $this->request['message']) : $this->request['message'];
 
                     [$chatStatus, $response] = \app\api\logic\KnowledgeLogic::socketChat([
+                        'auto_type' => $autoType,
                         'message' => $_message,
                         'messages' => $this->request['messages'],
                         'indexid' => $this->request['knowledge']['index_id'] ?? '',
@@ -1073,19 +1076,27 @@ class MessageHandler extends BaseMessageHandler
                         }
                     }
                 } else {
-                    // 执行微信AI消息处理
-                    if ($this->request['model'] == 'deepseek') {
-                        $response = \app\common\service\ToolsService::Sv()->chat($this->request);
-                    } else {
-                        $this->request['stream'] = false;
-                        $response = \app\common\service\ToolsService::Sv()->openaiChat($this->request);
-                    }
+                    if($autoType == 0){
+                        if ($this->request['model'] == 'deepseek') {
+                            $response = \app\common\service\ToolsService::Sv()->chat($this->request);
+                        } else {
+                            $this->request['stream'] = false;
+                            $response = \app\common\service\ToolsService::Sv()->openaiChat($this->request);
+                        }
+                    }else{
+                        if ($this->request['model'] != 'deepseek') {
+                            $this->request['stream'] = false;
+                        }
+                        $response = \app\common\service\ToolsService::Automation()->socialMediaObtain($this->request);
 
+                    }
+                    // 执行微信AI消息处理
+                   
                     $response['msg'] = 'chat ai消息回复结果';
                     $this->setLog($response, 'msg');
                     if (isset($response['code']) && $response['code'] == 10000) {
                         // 处理响应
-                        $reply = $this->handleResponse($response, $this->request['model']);
+                        $reply = $this->handleResponse($response, $this->request['model'], $autoType);
                     } else {
                         $this->setLog($this->taskId . '队列请求失败' . json_encode($response), 'msg');
                     }
@@ -1129,11 +1140,15 @@ class MessageHandler extends BaseMessageHandler
      * @param array $response
      * @return string
      */
-    private function handleResponse(array $response, string $model)
+    private function handleResponse(array $response, string $model, $autoType = 0)
 
     {
         try {
-            $scene = $model == 'deepseek' ? 'ai_xhs' : 'openai_chat';
+            if($autoType == 0){
+               $scene = $model == 'deepseek' ? 'ai_xhs' : 'openai_chat';
+            }else{
+                $scene = 'automation_social_media_obtain';
+            }
             //检查扣费
             $unit = TokenLogService::checkToken($this->userId, $scene);
             // 获取回复内容
@@ -1157,7 +1172,11 @@ class MessageHandler extends BaseMessageHandler
             User::userTokensChange($this->userId, $points);
 
             $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points];
-            $desc = $model == 'deepseek' ? AccountLogEnum::TOKENS_DEC_AI_XHS : AccountLogEnum::TOKENS_DEC_OPENAI_CHAT;
+            if($autoType == 0){
+                $desc = $model == 'deepseek' ? AccountLogEnum::TOKENS_DEC_AI_XHS : AccountLogEnum::TOKENS_DEC_OPENAI_CHAT;
+            }else{
+                $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN;
+            }
             //扣费记录
             AccountLogLogic::recordUserTokensLog(true, $this->userId, $desc, $points, $this->taskId, $extra);
 

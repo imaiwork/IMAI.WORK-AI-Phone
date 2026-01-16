@@ -346,7 +346,7 @@
             </scroll-view>
             <scroll-view v-if="step === 4" scroll-y class="h-full">
                 <view class="px-4 pb-[100rpx]">
-                    <bast-setting-v2
+                    <base-setting
                         v-model="formData"
                         :show-device="false"
                         :show-accounts="true"
@@ -477,7 +477,7 @@ import { useEventBusManager } from "@/hooks/useEventBusManager";
 import ClueGenPop from "@/ai_modules/device/components/clue-gen-pop/clue-gen-pop.vue";
 import KeywordsEdit from "@/ai_modules/device/components/keywords-edit/keywords-edit.vue";
 import CommentFilter from "@/ai_modules/device/components/comment-filter/comment-filter.vue";
-import BastSettingV2 from "@/ai_modules/device/components/bast-setting-v2/bast-setting-v2.vue";
+import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
 import ChooseRegion from "@/ai_modules/device/components/choose-region/choose-region.vue";
 import ChooseAge from "@/ai_modules/device/components/choose-age/choose-age.vue";
 import ChooseCommentTime from "@/ai_modules/device/components/choose-comment-time/choose-comment-time.vue";

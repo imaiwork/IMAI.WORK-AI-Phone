@@ -1,123 +1,136 @@
 <template>
-    <div class="h-full flex flex-col p-4">
-        <!-- 页面头部 -->
+    <div class="h-full flex flex-col min-w-[1000px] px-4 pb-4">
         <div
-            class="rounded-[20px] flex items-center justify-between gap-3 px-[30px]"
-            style="
-                background: linear-gradient(152deg, rgba(0, 101, 251, 0.88) -42.44%, rgba(255, 255, 255, 0) 12.19%)
-                    rgb(255, 255, 255);
-            ">
-            <div class="flex items-center gap-3">
-                <img src="@/assets/images/agent.svg" class="w-11 mt-7" />
+            class="h-[120px] rounded-[20px] bg-white border border-br px-10 flex items-center justify-between relative overflow-hidden">
+            <div class="flex items-center gap-6 relative z-10">
+                <img src="@/assets/images/agent.svg" class="w-20 h-20 mt-10" />
                 <div>
-                    <div class="text-[#000000cc]">{{ ToolEnumMap[ToolEnum.AGENT] }}</div>
-                    <div class="text-[#00000080]">
-                        一键激活模块化智能体，精准执行流程、分析等多类任务，化身全能数字员工。
+                    <div class="text-[20px] font-[900] text-[#1E293B] mb-1">{{ ToolEnumMap[ToolEnum.AGENT] }}中心</div>
+                    <div class="text-base font-bold text-[#94A3B8]">
+                        一键激活模块化智能体，精准执行流程、分析等多类任务，化身您的数字员工。
                     </div>
                 </div>
             </div>
-            <div>
-                <ElButton color="#000000" class="!h-[30px]" size="small" @click="handleCozeSetting">
-                    <img src="@/assets/images/coze_setting.png" class="w-[18px] h-[16px] mr-2" />
-                    Coze令牌设置
-                </ElButton>
-                <ElPopover popper-class="!rounded-xl !p-2" trigger="click" :show-arrow="false">
+
+            <div class="flex items-center gap-3 relative z-10">
+                <button class="coze-config-btn" @click="handleCozeSetting">
+                    <img src="@/assets/images/coze_setting.png" class="w-4 h-4 mr-2" />
+                    令牌配置
+                </button>
+
+                <ElPopover
+                    popper-class="!rounded-2xl !shadow-light !p-0"
+                    width="180px"
+                    trigger="click"
+                    :show-arrow="false">
                     <template #reference>
-                        <ElButton type="primary" class="!h-[30px]" size="small">立即创建</ElButton>
+                        <ElButton type="primary" class="create-main-btn">
+                            <Icon name="el-icon-Plus" />
+                            <span class="ml-1">立即创建</span>
+                        </ElButton>
                     </template>
-                    <div>
+                    <div class="p-2 space-y-1">
                         <div
-                            class="h-11 flex items-center gap-x-2 cursor-pointer px-3 rounded-lg hover:bg-[#F6F6F6] hover:shadow-[0_0_0_1px_rgba(239,239,239,1)]"
                             v-for="(item, index) in tabs"
                             :key="index"
+                            class="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-[#0065fb]/5 transition-all group"
                             @click="handleCreate(item.value)">
-                            <span class="flex w-5 h-5 rounded items-center justify-center bg-primary">
-                                <Icon :name="item.icon" size="12"></Icon>
-                            </span>
-                            {{ item.label }}
+                            <div
+                                class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center transition-colors">
+                                <Icon :name="item.icon" :size="16" />
+                            </div>
+                            <span class="text-[13px] font-black text-[#475569] group-hover:text-primary">{{
+                                item.label
+                            }}</span>
                         </div>
                     </div>
                 </ElPopover>
             </div>
         </div>
-        <!-- 主内容区 -->
-        <div class="grow min-h-0 flex flex-col bg-white rounded-[20px] mt-4">
-            <!-- Tabs导航 -->
-            <ElTabs v-model="currentTab" @tab-click="handleTabClick">
-                <ElTabPane v-for="item in tabs" :key="item.value" :label="item.label" :name="item.value"> </ElTabPane>
-            </ElTabs>
-            <!-- 无限滚动列表 -->
-            <div
-                class="grow min-h-0 flex flex-col overflow-y-auto"
-                v-infinite-scroll="load"
-                :infinite-scroll-immediate="false"
-                :infinite-scroll-disabled="!pager.isLoad"
-                :infinite-scroll-distance="10">
-                <template v-if="pager.lists.length">
-                    <div
-                        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 p-5">
-                        <!-- 智能体卡片 -->
-                        <div
-                            v-for="(item, index) in pager.lists"
-                            :key="index"
-                            class="card-item group"
-                            @click="handleAgentChatting(item)">
+        <div class="grow min-h-0 flex flex-col bg-white rounded-[20px] border border-br mt-4 overflow-hidden">
+            <div class="px-6 bg-[#F8FAFC]/50 border-b border-[#F1F5F9]">
+                <ElTabs v-model="currentTab" class="custom-tabs" @tab-click="handleTabClick">
+                    <ElTabPane v-for="item in tabs" :key="item.value" :label="item.label" :name="item.value">
+                    </ElTabPane>
+                </ElTabs>
+            </div>
+
+            <div class="grow min-h-0">
+                <ElScrollbar :distance="20" @end-reached="load">
+                    <template v-if="pager.lists.length">
+                        <div class="grid grid-cols-4 2xl:grid-cols-5 gap-6 p-8">
                             <div
-                                class="top"
-                                :style="{
-                                    background: `url(${item.bg_image || AgentBg}) center center / cover no-repeat`,
-                                }">
+                                v-for="(item, index) in pager.lists"
+                                :key="index"
+                                class="agent-card group"
+                                @click="handleAgentChatting(item)">
                                 <div
-                                    class="w-[72px] h-[72px] bg-white rounded-full p-[5px] absolute left-1/2 -bottom-[20px] -translate-x-1/2">
-                                    <ElImage
-                                        :src="item.image || item.avatar"
-                                        class="w-full h-full rounded-full"
-                                        lazy></ElImage>
+                                    class="card-cover"
+                                    :style="{ background: `url(${item.bg_image || AgentBg}) center/cover` }">
+                                    <div class="cover-mask"></div>
+                                    <div class="avatar-wrapper">
+                                        <ElImage :src="item.image || item.avatar" class="w-full h-full" lazy />
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="px-3 mt-10 mb-6 w-full">
-                                <div class="text-[14px] text-center line-clamp-1">{{ item.name }}</div>
-                                <div class="mt-3 line-clamp-2 text-center text-[#737373] leading-7 h-12">
-                                    {{ item.intro || item.introduced }}
+
+                                <div class="p-5 pt-10 flex flex-col items-center text-center">
+                                    <div
+                                        class="text-[15px] font-[900] text-[#1E293B] mb-2 group-hover:text-primary transition-colors">
+                                        {{ item.name }}
+                                    </div>
+                                    <div class="text-[12px] font-bold text-[#94A3B8] leading-relaxed line-clamp-2 h-9">
+                                        {{ item.intro || item.introduced || "暂无描述信息" }}
+                                    </div>
+
+                                    <div class="w-full h-[1px] bg-[#F1F5F9] my-4"></div>
+
+                                    <div class="w-full flex items-center justify-between">
+                                        <div class="flex items-center gap-1.5">
+                                            <div
+                                                class="w-5 h-5 rounded-full bg-[#0065fb]/10 flex items-center justify-center">
+                                                <Icon name="el-icon-User" :size="10" />
+                                            </div>
+                                            <span class="text-[11px] font-bold text-[#94A3B8]">{{
+                                                item.source_text
+                                            }}</span>
+                                        </div>
+
+                                        <div
+                                            v-if="item.source == 1"
+                                            @click.stop
+                                            class="hover:scale-110 transition-transform">
+                                            <handle-menu :data="item" :menu-list="handleMenuList" :horizontal="true" />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="text-xs text-[#999999] w-full mb-3 px-4">创建人：{{ item.source_text }}</div>
-                            <!-- 悬浮操作菜单 -->
-                            <div
-                                class="absolute right-4 bottom-2 z-10 invisible group-hover:visible w-6 h-6"
-                                v-if="item.source == 1">
-                                <handle-menu :data="item" :menu-list="handleMenuList" :horizontal="true" />
                             </div>
                         </div>
+                        <load-text :is-load="pager.isLoad"></load-text>
+                    </template>
+                    <div v-else class="h-full flex flex-col items-center justify-center grayscale opacity-50">
+                        <ElEmpty description="暂无可用智能体" />
                     </div>
-                    <div v-if="!pager.isLoad" class="text-tx-secondary text-center text-xs w-full py-4">
-                        暂无更多了~
-                    </div>
-                </template>
-                <!-- 空状态 -->
-                <div class="h-full flex items-center justify-center" v-else>
-                    <ElEmpty />
-                </div>
+                </ElScrollbar>
             </div>
         </div>
-        <!-- 弹窗组件 -->
         <coze-setting
             ref="cozeSettingRef"
             v-if="showCozeSetting"
             @close="showCozeSetting = false"
-            @success="getCozeSettingDetail"></coze-setting>
-        <coze-edit ref="cozeEditRef" v-if="showCozeEdit" @close="showCozeEdit = false" @success="resetPage"></coze-edit>
+            @success="getCozeSettingDetail" />
+        <coze-edit ref="cozeEditRef" v-if="showCozeEdit" @close="showCozeEdit = false" @success="resetPage" />
         <coze-flow-edit
             ref="cozeFlowEditRef"
             v-if="showCozeFlowEdit"
             @close="showCozeFlowEdit = false"
-            @success="resetPage"></coze-flow-edit>
+            @success="resetPage" />
     </div>
 </template>
 
 <script setup lang="ts">
 import { getAgentList, deleteAgent, addAgent, getCozeAgentList, cozeAgentDelete, cozeConfigDetail } from "@/api/agent";
 import { ToolEnumMap, ToolEnum } from "@/enums/appEnums";
+import { KnbTypeEnum } from "@/pages/knowledge_base/_enums";
 import { agentExamplePrompt } from "@/config/common";
 import { HandleMenuType } from "@/components/handle-menu/typings";
 import AgentBg from "@/assets/images/agent_bg.png";
@@ -281,6 +294,7 @@ const handleAgentEdit = async (row?: AgentItem) => {
         try {
             const data = await addAgent({
                 context_num: 3,
+                kb_type: KnbTypeEnum.VECTOR,
                 roles_prompt: agentExamplePrompt,
             });
             router.push({ query: { type: "edit", id: String(data.id) } });
@@ -365,39 +379,32 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-:deep(.el-tabs) {
-    --el-border-color-light: #0000000d;
-    .el-tabs__header {
-        margin-bottom: 0;
-        .el-tabs__nav {
-            height: 62px;
-            padding: 0 20px;
-            .el-tabs__item {
-                height: 62px;
-                padding: 0 20px;
-                font-weight: bold;
-                color: rgba(0, 0, 0, 0.3);
-                &.is-active {
-                    color: var(--el-color-black);
-                }
-            }
-            .el-tabs__nav-next,
-            .el-tabs__nav-prev {
-                line-height: 62px;
-            }
-        }
-        .el-tabs__active-bar {
-            height: 1px;
-        }
-        .el-tabs__nav-wrap::after {
-            height: 1px;
+.coze-config-btn {
+    @apply flex items-center h-10 px-4 rounded-xl bg-black border border-br text-[13px] font-black text-white;
+}
+
+.create-main-btn {
+    @apply h-10 rounded-xl px-6 font-black text-[14px] border-none;
+}
+
+.agent-card {
+    @apply bg-white border border-[#F1F5F9] rounded-[20px] overflow-hidden transition-all duration-300 cursor-pointer;
+
+    &:hover {
+        @apply border-primary transform shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)];
+        transform: translateY(-4px);
+    }
+
+    .card-cover {
+        @apply h-28 w-full relative;
+        .cover-mask {
+            @apply absolute inset-0 bg-gradient-to-b from-[#000000]/0 to-[#000000]/20;
         }
     }
-}
-.card-item {
-    @apply shadow-light rounded-[20px] bg-white px-0 relative cursor-pointer flex flex-col items-center justify-center hover:scale-[1.02] transition-all duration-300;
-    .top {
-        @apply h-[120px] w-full rounded-tl-[20px] rounded-tr-[20px] relative;
+
+    .avatar-wrapper {
+        @apply w-20 h-20 rounded-[28px] border-4 border-white bg-white overflow-hidden absolute left-1/2 -bottom-8 -translate-x-1/2;
+        box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
     }
 }
 </style>

@@ -12,7 +12,7 @@ use think\response\Json;
 
 class SoraAnchorController extends BaseApiController
 {
-    public array $notNeedLogin = ['notify'];
+    public array $notNeedLogin = ['notify', 'videoNotify'];
 
     public function lists()
     {
@@ -85,7 +85,7 @@ class SoraAnchorController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('sora')->write('接收Sora形象合成参数'.json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('sora')->write('接收Sora形象合成参数' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             $key = md5(json_encode($data));
             $val = cache($key);
             if ($val) {
@@ -99,7 +99,30 @@ class SoraAnchorController extends BaseApiController
             }
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('sora')->write('Sora形象回调失败'.$e->getMessage());
+            Log::channel('sora')->write('Sora形象回调失败' . $e->getMessage());
+            return $this->fail('fail');
+        }
+    }
+
+    public function videoNotify(): Json
+    {
+        try {
+            $data = $this->request->all();
+            Log::channel('sora')->write('接收Sora角色转绘视频回调参数' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $key = md5(json_encode($data));
+            $val = cache($key);
+            if ($val) {
+                echo 1;
+                die;
+            }
+            cache($key, 1, 20);
+            $result = SoraAnchorLogic::videoNotify($data);
+            if (!$result) {
+                return $this->fail(SoraAnchorLogic::getError());
+            }
+            return $this->success('ok');
+        } catch (\Exception $e) {
+            Log::channel('sora')->write('Sora角色转绘视频回调失败' . $e->getMessage());
             return $this->fail('fail');
         }
     }

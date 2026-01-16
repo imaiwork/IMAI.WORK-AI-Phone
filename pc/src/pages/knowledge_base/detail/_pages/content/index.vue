@@ -1,103 +1,171 @@
 <template>
-    <div class="flex flex-col h-full bg-white rounded-[20px]" v-if="!isAddFile && !isDetail">
+    <div class="flex flex-col h-full min-w-[1000px]" v-if="!isAddFile && !isDetail">
         <div
-            class="flex-shrink-0 h-[88px] flex items-center justify-between gap-x-2 px-[30px] border-b border-[#0000000d]">
-            <div class="">
-                <span class="font-bold">文档内容 （{{ isRag ? "RAG" : "向量" }}）</span>
-                <span class="text-[#00000080]"
-                    >知识库的所有文件都在这里显示，整个知识库都可以被系统中的功能引用或通过聊天进行索引</span
-                >
+            class="flex flex-col h-full bg-white rounded-[24px] border border-br overflow-hidden max-w-[1200px] mx-auto w-full">
+            <div class="flex-shrink-0 h-[90px] flex items-center justify-between px-8 border-b border-br">
+                <div class="flex flex-col gap-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[18px] font-[900] text-[#1E293B]">文档内容</span>
+                        <span class="px-2 py-0.5 rounded-md bg-[#0065fb]/10 text-primary text-[11px] font-black italic">
+                            {{ isRag ? "RAG ENGINE" : "VECTOR DB" }}
+                        </span>
+                    </div>
+                    <div class="text-[13px] font-bold text-[#94A3B8]">
+                        管理知识库文件，系统将根据这些文档进行语义索引与对话回复。
+                    </div>
+                </div>
+                <ElButton type="primary" class="add-doc-btn" @click="handleAddFile">
+                    <Icon name="local-icon-add_circle" :size="18" />
+                    <span class="ml-2">添加新文件</span>
+                </ElButton>
             </div>
-            <ElButton type="primary" class="!rounded-full !h-10" @click="handleAddFile">
-                <Icon name="local-icon-add_circle" />
-                <span class="ml-2">添加文件</span>
-            </ElButton>
-        </div>
-        <div class="flex items-center justify-end gap-4 px-[30px] h-[62px]">
-            <template v-if="isRag">
-                <ElSelect
-                    v-model="queryParams.takeover_mode"
-                    class="!w-[120px] !h-10"
-                    placeholder="请选择"
-                    :empty-values="[null, undefined]"
-                    @change="getLists()">
-                    <ElOption label="全部" value=""></ElOption>
-                    <ElOption label="解析中" :value="0"></ElOption>
-                    <ElOption label="解析完成" :value="1"></ElOption>
-                    <ElOption label="解析失败" :value="2"></ElOption>
-                </ElSelect>
-                <ElInput
-                    v-model="queryParams.name"
-                    class="!h-10 !w-[240px]"
-                    clearable
-                    placeholder="请输入文件名称"
-                    @clear="getLists()"
-                    @keyup.enter="getLists()">
-                </ElInput>
-            </template>
-            <ElInput
-                v-if="isVector"
-                v-model="queryParams.keyword"
-                class="!h-10 !w-[240px]"
-                clearable
-                placeholder="请输入文件名称"
-                @clear="getLists()"
-                @keyup.enter="getLists()">
-            </ElInput>
-        </div>
-        <div class="grow min-h-0">
-            <ElTable
-                :data="pager.lists"
-                v-loading="pager.loading"
-                stripe
-                height="100%"
-                :row-style="{ height: '60px', cursor: 'pointer' }"
-                :header-row-style="{ height: '62px' }"
-                @row-click="handleEdit">
-                <ElTableColumn label="文档名称" prop="name" min-width="200px" />
-                <ElTableColumn prop="type" label="文件格式" min-width="100px">
-                    <template #default="{ row }">
-                        <div class="flex items-center justify-center gap-x-2">
-                            <img :src="getFileType(row.type)" v-if="getFileType(row.type)" class="w-5 h-5" />
-                            <span>{{ row.type || "-" }}</span>
+
+            <div class="flex items-center justify-between px-8 h-[72px] bg-[#F8FAFC]/50">
+                <div class="flex items-center gap-2">
+                    <div class="w-1 h-4 bg-primary rounded-full"></div>
+                    <span class="text-[14px] font-[900] text-[#475569]">所有文档 ({{ pager.count }})</span>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <template v-if="isRag">
+                        <ElSelect
+                            v-model="queryParams.takeover_mode"
+                            class="custom-select !w-[130px]"
+                            placeholder="解析状态"
+                            @change="getLists()">
+                            <ElOption label="全部状态" value=""></ElOption>
+                            <ElOption label="解析中" :value="0"></ElOption>
+                            <ElOption label="解析完成" :value="1"></ElOption>
+                            <ElOption label="解析失败" :value="2"></ElOption>
+                        </ElSelect>
+                        <ElInput
+                            v-model="queryParams.name"
+                            class="custom-input !w-[260px]"
+                            clearable
+                            placeholder="输入文件名搜索..."
+                            @clear="getLists()"
+                            @keyup.enter="getLists()">
+                            <template #prefix><Icon name="el-icon-Search" /></template>
+                        </ElInput>
+                    </template>
+
+                    <ElInput
+                        v-if="isVector"
+                        v-model="queryParams.keyword"
+                        class="custom-input !w-[260px]"
+                        clearable
+                        placeholder="快速检索文档..."
+                        @clear="getLists()"
+                        @keyup.enter="getLists()">
+                        <template #prefix><Icon name="el-icon-Search" /></template>
+                    </ElInput>
+                </div>
+            </div>
+
+            <div class="grow min-h-0">
+                <ElTable
+                    :data="pager.lists"
+                    v-loading="pager.loading"
+                    height="100%"
+                    class="custom-table"
+                    :header-cell-style="{
+                        background: 'transparent',
+                        color: '#64748B',
+                        fontSize: '12px',
+                        fontWeight: '900',
+                    }"
+                    :header-row-style="{ height: '64px' }"
+                    @row-click="handleEdit">
+                    <ElTableColumn label="文档名称" min-width="240px">
+                        <template #default="{ row }">
+                            <div class="flex items-center justify-center gap-3 cursor-pointer">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-[#F1F5F9] flex items-center justify-center border border-br">
+                                    <img :src="getFileType(row.type)" class="w-6 h-6 object-contain" />
+                                </div>
+                                <span
+                                    class="text-[14px] font-bold text-[#1E293B] hover:text-primary transition-colors"
+                                    >{{ row.name }}</span
+                                >
+                            </div>
+                        </template>
+                    </ElTableColumn>
+
+                    <ElTableColumn prop="type" label="格式" width="100px" align="center">
+                        <template #default="{ row }">
+                            <span
+                                class="px-2 py-1 rounded bg-[#F1F5F9] text-[10px] font-black text-[#64748B] uppercase">
+                                {{ row.type || "N/A" }}
+                            </span>
+                        </template>
+                    </ElTableColumn>
+
+                    <ElTableColumn label="大小" width="100px">
+                        <template #default="{ row }">
+                            <span class="text-[13px] font-medium text-[#64748B]">{{ formatFileSize(row.size) }}</span>
+                        </template>
+                    </ElTableColumn>
+
+                    <ElTableColumn label="上传节点" width="180px">
+                        <template #default="{ row }">
+                            <div class="text-[12px] text-[#94A3B8] font-medium">{{ row.create_time }}</div>
+                        </template>
+                    </ElTableColumn>
+
+                    <ElTableColumn prop="status" label="解析状态" width="140px" v-if="isRag">
+                        <template #default="{ row }">
+                            <div class="status-badge" :class="row.status">
+                                <span class="status-dot"></span>
+                                {{
+                                    row.status === "INIT"
+                                        ? "待解析"
+                                        : row.status === "PARSING"
+                                        ? "解析中"
+                                        : row.status === "PARSE_SUCCESS"
+                                        ? "已完成"
+                                        : "失败"
+                                }}
+                            </div>
+                        </template>
+                    </ElTableColumn>
+
+                    <ElTableColumn label="操作" width="150px" align="right" fixed="right">
+                        <template #default="{ row }">
+                            <div class="flex justify-end gap-2">
+                                <ElButton
+                                    link
+                                    type="primary"
+                                    class="!font-black !text-[13px]"
+                                    @click.stop="handleEdit(row)">
+                                    {{ isRag ? "查看" : "编辑" }}
+                                </ElButton>
+                                <div class="w-[1px] h-3 bg-[#E2E8F0] self-center"></div>
+                                <ElButton
+                                    link
+                                    type="danger"
+                                    class="!font-black !text-[13px]"
+                                    @click.stop="handleDelete(row)">
+                                    删除
+                                </ElButton>
+                            </div>
+                        </template>
+                    </ElTableColumn>
+
+                    <template #empty>
+                        <div class="py-20 flex flex-col items-center justify-center grayscale opacity-60">
+                            <Icon name="local-icon-empty" :size="100" />
+                            <p class="text-[14px] font-bold text-[#94A3B8] mt-4">没有任何文档，点击上方按钮开始上传</p>
                         </div>
                     </template>
-                </ElTableColumn>
-                <ElTableColumn label="文件大小" prop="size" min-width="80px">
-                    <template #default="{ row }">
-                        {{ formatFileSize(row.size) }}
-                    </template>
-                </ElTableColumn>
-                <ElTableColumn label="上传时间" prop="create_time" width="180px" />
-                <ElTableColumn prop="status" label="解析状态" width="120px" v-if="isRag">
-                    <template #default="{ row }">
-                        <ElTag v-if="row.status == 'INIT'" type="info">待解析</ElTag>
-                        <ElTag v-else-if="row.status == 'PARSING'" type="warning">解析中</ElTag>
-                        <ElTag v-else-if="row.status == 'PARSE_SUCCESS'" type="success">解析完成</ElTag>
-                        <ElTag v-else-if="row.status == 'PARSE_FAILED'" type="danger">解析失败</ElTag>
-                    </template>
-                </ElTableColumn>
-                <ElTableColumn label="操作" prop="action" width="160px" align="right" fixed="right">
-                    <template #default="{ row }">
-                        <ElButton link type="primary" @click.stop="handleEdit(row)">{{
-                            isRag ? "查看" : "编辑"
-                        }}</ElButton>
-                        <ElButton type="danger" link @click.stop="handleDelete(row)">删除</ElButton>
-                    </template>
-                </ElTableColumn>
-                <template #empty>
-                    <div class="flex items-center justify-center h-full">
-                        <ElButton class="!h-[50px] !rounded-full w-[200px]" @click="handleAddFile"
-                            >点击添加文件</ElButton
-                        >
-                    </div>
-                </template>
-            </ElTable>
-        </div>
-        <div class="flex justify-center p-4">
-            <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
+                </ElTable>
+            </div>
+
+            <div class="flex-shrink-0 h-[70px] flex items-center justify-center border-t border-[#F1F5F9]">
+                <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
+            </div>
         </div>
     </div>
+
     <template v-if="isAddFile">
         <rag-panel
             v-if="isRag"
@@ -110,7 +178,6 @@
     </template>
     <detail v-if="isDetail" :kn-type="kn_type" :kn-id="knId" @back="back" />
 </template>
-
 <script setup lang="ts">
 import {
     knowledgeBaseFileLists,
@@ -244,16 +311,61 @@ onMounted(() => {
     }
 });
 </script>
-
 <style scoped lang="scss">
-:deep(.el-input) {
-    .el-input__wrapper {
-        border-radius: 100px;
+.add-doc-btn {
+    @apply rounded-xl   h-[44px] px-6 font-black text-[15px] border-none transition-all;
+    box-shadow: 0 8px 16px -4px rgba(var(--el-color-primary), 0.4);
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 20px -4px rgba(var(--el-color-primary), 0.5);
     }
 }
-:deep(.el-select) {
-    .el-select__wrapper {
-        border-radius: 100px;
+
+.custom-table {
+    @apply border-none;
+    :deep(.el-table__inner-wrapper::before) {
+        display: none;
+    }
+    :deep(.el-table__row) {
+        @apply transition-colors;
+        &:hover td {
+            background-color: #f8fafc !important;
+        }
+    }
+    :deep(td.el-table__cell) {
+        @apply border-b border-[#F1F5F9] py-4;
+    }
+}
+
+.status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black border;
+    .status-dot {
+        @apply w-1.5 h-1.5 rounded-full;
+    }
+
+    &.INIT {
+        @apply bg-[#f9fafb] text-[#6b7280] border-[##e5e7eb];
+        .status-dot {
+            @apply bg-[#9ca3af];
+        }
+    }
+    &.PARSING {
+        @apply bg-[#fffbeb] text-[#d97706] border-[#fef3c7];
+        .status-dot {
+            @apply bg-[#f59e0b];
+        }
+    }
+    &.PARSE_SUCCESS {
+        @apply bg-[#ecfdf5] text-[#059669] border-[#d1fae5];
+        .status-dot {
+            @apply bg-[#10b981];
+        }
+    }
+    &.PARSE_FAILED {
+        @apply bg-[#fef2f2] text-[#dc2626] border-[#fee2e2];
+        .status-dot {
+            @apply bg-[#ef4444];
+        }
     }
 }
 </style>

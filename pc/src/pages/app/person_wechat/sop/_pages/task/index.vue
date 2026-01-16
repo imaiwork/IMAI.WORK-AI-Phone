@@ -1,106 +1,145 @@
 <template>
-    <div class="h-full flex flex-col bg-white rounded-xl" v-if="!isCreate && !isRecord">
-        <div class="flex items-center justify-between p-4">
-            <ElButton type="primary" @click="handleCreate">添加任务</ElButton>
-            <div class="flex items-center gap-2">
-                <div class="flex items-center gap-2">
-                    <ElSelect
-                        v-model="queryParams.status"
-                        :empty-values="[null, undefined]"
-                        class="!w-[120px]"
-                        @change="getLists()">
-                        <ElOption label="全部" value=""></ElOption>
-                        <ElOption label="未配置" value="0"></ElOption>
-                        <ElOption label="未开启" value="1"></ElOption>
-                        <ElOption label="已开启" value="2"></ElOption>
-                    </ElSelect>
-                </div>
-                <div>
-                    <ElInput
-                        v-model="queryParams.push_name"
-                        class="!w-[240px]"
-                        placeholder="请输入任务名称"
-                        clearable
-                        @clear="resetParams()"
-                        @keyup.enter="getLists()">
-                        <template #append>
-                            <ElButton @click="getLists()">
-                                <Icon name="el-icon-Search"></Icon>
-                            </ElButton>
-                        </template>
-                    </ElInput>
-                </div>
+    <div
+        class="h-full flex flex-col bg-[#FFFFFF] rounded-[20px] border border-br overflow-hidden"
+        v-if="!isCreate && !isRecord">
+        <div class="flex items-center justify-between px-6 py-6">
+            <div class="flex items-center gap-4">
+                <div class="w-1.5 h-6 rounded-full bg-primary shadow-[0_0_10px_rgba(0,101,251,0.4)]"></div>
+                <h3 class="text-lg font-[900] text-[#0F172A]">SOP 任务管理</h3>
+                <ElButton
+                    type="primary"
+                    class="!rounded-xl !h-10 !px-6 !font-black hover:scale-105 transition-transform"
+                    @click="handleCreate">
+                    <Icon name="el-icon-Plus" />
+                    <span class="ml-1">添加新任务</span>
+                </ElButton>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <ElSelect
+                    v-model="queryParams.status"
+                    class="custom-select !w-[160px]"
+                    placeholder="任务状态"
+                    :show-arrow="false"
+                    @change="getLists()">
+                    <ElOption label="全部状态" value=""></ElOption>
+                    <ElOption label="未配置" value="0"></ElOption>
+                    <ElOption label="未开启" value="1"></ElOption>
+                    <ElOption label="已开启" value="2"></ElOption>
+                </ElSelect>
+
+                <ElInput
+                    v-model="queryParams.push_name"
+                    placeholder="搜索任务名称..."
+                    clearable
+                    class="custom-input"
+                    @clear="resetParams()"
+                    @keyup.enter="getLists()">
+                    <template #prefix>
+                        <Icon name="el-icon-Search" :size="16" color="#94A3B8" />
+                    </template>
+                </ElInput>
             </div>
         </div>
-        <div class="grow min-h-0 flex flex-col">
-            <div class="grow min-h-0">
-                <ElTable
-                    :data="pager.lists"
-                    stripe
-                    height="100%"
-                    :header-row-style="{ height: '62px' }"
-                    :row-style="{ height: '60px' }"
-                    v-loading="pager.loading">
-                    >
-                    <ElTableColumn label="任务名称" prop="push_name" min-width="200"> </ElTableColumn>
-                    <ElTableColumn label="营销总天数" prop="all_day" min-width="120">
-                        <template #default="{ row }">
-                            {{ row.all_day ? `${row.all_day}天` : "-" }}
-                        </template>
-                    </ElTableColumn>
-                    <ElTableColumn label="任务状态" width="220">
-                        <template #default="{ row }">
-                            <div class="flex items-center gap-2 justify-center">
-                                <template v-if="row.status == 0">
-                                    <span class="text-info"> 未配置 </span>
-                                </template>
-                                <template v-if="row.status == 1">
-                                    <span class="text-warning"> 未开启 </span>
-                                </template>
-                                <template v-if="row.status == 2">
-                                    <span class="text-success"> 已开启 </span>
-                                </template>
-                                <ElSwitch
-                                    v-if="row.status != 0"
-                                    :model-value="row.status"
-                                    :active-value="2"
-                                    :inactive-value="1"
-                                    style="
-                                        --el-switch-on-color: var(--el-color-success);
-                                        --el-switch-off-color: var(--el-color-warning);
-                                    "
-                                    @change="handleChangeStatus(row)" />
-                            </div>
-                        </template>
-                    </ElTableColumn>
-                    <ElTableColumn label="推送时间" prop="push_day" width="160"> </ElTableColumn>
-                    <ElTableColumn label="创建时间" prop="create_time" width="180"> </ElTableColumn>
-                    <ElTableColumn label="操作" width="160" fixed="right">
-                        <template #default="{ row }">
-                            <ElButton v-if="row.is_publish_edit == 2" type="primary" link @click="handleEdit(row.id)"
+
+        <div class="grow min-h-0">
+            <ElTable :data="pager.lists" height="100%" v-loading="pager.loading" :row-style="{ height: '72px' }">
+                <ElTableColumn label="任务名称" min-width="220">
+                    <template #default="{ row }">
+                        <span class="font-[900] text-[#0F172A]">{{ row.push_name }}</span>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn label="营销周期" min-width="120">
+                    <template #default="{ row }">
+                        <div
+                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#F8FAFC] border border-[#F1F5F9]">
+                            <Icon name="el-icon-Calendar" :size="12" color="#64748B" />
+                            <span class="text-xs font-black text-[#475569]">
+                                {{ row.all_day ? `${row.all_day} 天` : "未设定" }}
+                            </span>
+                        </div>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn label="状态控制" width="200">
+                    <template #default="{ row }">
+                        <div class="flex items-center justify-center gap-3">
+                            <span
+                                class="text-[11px] font-black px-2 py-0.5 rounded-md"
+                                :class="statusStyle(row.status)">
+                                {{ statusText(row.status) }}
+                            </span>
+                            <ElSwitch
+                                v-if="row.status != 0"
+                                :model-value="row.status"
+                                :active-value="2"
+                                :inactive-value="1"
+                                class="custom-switch"
+                                @change="handleChangeStatus(row)" />
+                        </div>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn label="时间安排" width="180">
+                    <template #default="{ row }">
+                        <div class="flex flex-col">
+                            <span class="text-[11px] text-[#94A3B8] font-bold">推送：{{ row.push_day || "-" }}</span>
+                            <span class="text-[11px] text-[#CBD5E1] font-medium">创建：{{ row.create_time }}</span>
+                        </div>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn label="操作" width="160" fixed="right">
+                    <template #default="{ row }">
+                        <div class="flex items-center justify-center gap-1">
+                            <ElButton
+                                v-if="row.is_publish_edit == 2"
+                                type="primary"
+                                link
+                                class="!text-primary !font-black !text-xs hover:scale-105"
+                                @click="handleEdit(row.id)"
                                 >编辑</ElButton
                             >
-                            <ElButton type="primary" link @click="handleRecord(row.id)">详情</ElButton>
-                            <ElButton type="danger" link @click="handleDelete(row.id)">删除</ElButton>
-                        </template>
-                    </ElTableColumn>
-                    <template #empty>
-                        <ElEmpty description="暂无数据"></ElEmpty>
+                            <div class="w-[1px] h-3 bg-[#F1F5F9] mx-1" v-if="row.is_publish_edit == 2"></div>
+                            <ElButton
+                                type="primary"
+                                link
+                                class="!text-[#64748B] !font-black !text-xs hover:!text-primary"
+                                @click="handleRecord(row.id)"
+                                >详情</ElButton
+                            >
+                            <ElButton
+                                type="danger"
+                                link
+                                class="!text-[#EF4444] !font-black !text-xs hover:scale-105"
+                                @click="handleDelete(row.id)"
+                                >删除</ElButton
+                            >
+                        </div>
                     </template>
-                </ElTable>
-            </div>
-            <div class="flex justify-end p-4">
-                <pagination v-model="pager" @change="getLists"></pagination>
-            </div>
+                </ElTableColumn>
+
+                <template #empty>
+                    <ElEmpty description="暂无 SOP 任务数据" />
+                </template>
+            </ElTable>
+        </div>
+
+        <div class="h-[72px] px-8 flex items-center justify-between bg-[#F8FAFC]/50">
+            <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个营销任务</span>
+            <pagination v-model="pager" @change="getLists" />
         </div>
     </div>
+
     <create-panel ref="createPanelRef" v-if="isCreate" @back="back" />
     <send-record ref="recordRef" v-if="isRecord" @back="back" />
 </template>
 
 <script setup lang="ts">
 import { sopPushLists, sopPushDelete, sopPushUpdate } from "@/api/person_wechat";
-import { SidebarTypeEnum, PushTypeEnum } from "../../_enums";
+import { SidebarTypeEnum } from "@/pages/app/person_wechat/_enums";
+import { PushTypeEnum } from "../../_enums";
 import CreatePanel from "./_components/create-panel.vue";
 import SendRecord from "../../_components/send-record.vue";
 const nuxtApp = useNuxtApp();
@@ -117,10 +156,24 @@ const { pager, getLists, resetParams } = usePaging({
     params: queryParams,
 });
 
-const isCreate = ref(query.is_create == "1" && parseInt(query.type as string) == SidebarTypeEnum.TASK);
-const isRecord = ref(query.is_record == "1" && parseInt(query.type as string) == SidebarTypeEnum.TASK);
+const isCreate = ref(query.is_create == "1" && parseInt(query.type as string) == SidebarTypeEnum.SOP_TASK);
+const isRecord = ref(query.is_record == "1" && parseInt(query.type as string) == SidebarTypeEnum.SOP_TASK);
 const recordRef = shallowRef<InstanceType<typeof SendRecord>>();
 const createPanelRef = shallowRef<InstanceType<typeof CreatePanel>>();
+
+const statusStyle = (status: number) => {
+    const maps: Record<number, string> = {
+        0: "bg-[#F1F5F9] text-[#94A3B8]",
+        1: "bg-[#FFFBEB] text-[#D97706]",
+        2: "bg-[#F0FDF4] text-[#16A34A]",
+    };
+    return maps[status] || maps[0];
+};
+
+const statusText = (status: number) => {
+    const maps: Record<number, string> = { 0: "未配置", 1: "未开启", 2: "进行中" };
+    return maps[status] || "未知";
+};
 
 const handleCreate = () => {
     isCreate.value = true;
@@ -131,8 +184,6 @@ const handleCreate = () => {
 
 const handleEdit = async (id: number | string) => {
     isCreate.value = true;
-    await nextTick();
-    createPanelRef.value?.getDetail(id);
     replaceState({
         id,
         is_create: 1,
@@ -180,7 +231,7 @@ const handleRecord = (id: number) => {
 const back = () => {
     isCreate.value = false;
     isRecord.value = false;
-    window.history.replaceState("", "", `?type=${SidebarTypeEnum.TASK}`);
+    window.history.replaceState("", "", `?type=${SidebarTypeEnum.SOP_TASK}`);
     getLists();
 };
 
@@ -190,4 +241,3 @@ onMounted(() => {
     }
 });
 </script>
-<style lang="scss" scoped></style>

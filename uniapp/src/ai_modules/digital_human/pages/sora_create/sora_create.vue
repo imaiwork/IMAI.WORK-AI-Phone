@@ -47,7 +47,8 @@
                         </view>
                         <view class="flex items-center justify-between">
                             <navigator
-                                url="/ai_modules/digital_human/pages/sora_ai_copywriter/sora_ai_copywriter"
+                                :url="`/ai_modules/digital_human/pages/sora_ai_copywriter/sora_ai_copywriter?content=${formData.content}`"
+                                hover-class="none"
                                 class="px-[18rpx] py-[12rpx] bg-black rounded-[10rpx] flex items-center gap-x-[10rpx]">
                                 <image
                                     src="@/ai_modules/digital_human/static/icons/star_white.svg"

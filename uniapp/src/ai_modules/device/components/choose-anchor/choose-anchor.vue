@@ -122,10 +122,6 @@ const isChoose = (data: any) => {
 };
 
 const handleSelect = (data: any) => {
-    if ([0, 1].includes(data.status)) {
-        uni.$u.toast(`该形象正在生成中，请稍后再选择`);
-        return;
-    }
     if (isChoose(data)) {
         chooseLists.value = chooseLists.value.filter((item) => item.id !== item.id);
     } else {
@@ -141,7 +137,6 @@ const toggleSelect = () => {
     if (chooseLists.value.length == dataLists.value.length) {
         chooseLists.value = [];
     } else {
-        // 要过滤掉正在生成中的形象
         chooseLists.value = dataLists.value.slice(0, props.limit || dataLists.value.length);
     }
 };

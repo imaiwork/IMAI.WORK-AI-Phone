@@ -87,7 +87,7 @@ const currentComponent = computed(() => tabs.value.find((tab) => tab.name === cu
 const formData = reactive<Agent>({
     id: agentId.value,
     cate_id: "",
-    kb_type: 1,
+    kb_type: 2,
     kb_ids: "",
     icons: "",
     image: "",

@@ -1,131 +1,201 @@
 <template>
-    <div class="menu-container h-full">
+    <div class="menu-container h-full flex flex-col py-5">
         <ElScrollbar>
-            <div class="p-[18px]">
-                <div class="h-full flex flex-col gap-2 mt-[18px]">
-                    <router-link
-                        :to="item.link"
-                        class="h-11 flex items-center rounded-lg px-[10px] hover:bg-[#fbfbfb]"
-                        :class="{
-                            'router-link-active': activeMenu?.id === item.id,
-                        }"
-                        v-for="item in tools">
-                        <div class="link-icon">
-                            <Icon :name="`local-icon-${item.icon}`" :size="14"></Icon>
-                        </div>
-                        <div class="flex-1 flex items-center ml-3">
-                            <div class="leading-5">
-                                {{ item.name }}
+            <div class="px-4 pb-10">
+                <ElMenu :default-active="route.path" class="custom-main-menu" router unique-opened>
+                    <template v-for="item in tools" :key="item.key">
+                        <ElSubMenu v-if="item.children?.length" :index="item.key" class="menu-group">
+                            <template #title>
+                                <div class="icon-box">
+                                    <Icon v-if="item.icon" :name="`local-icon-${item.icon}`" :size="18"></Icon>
+                                </div>
+                                <span class="menu-text">{{ item.name }}</span>
+                            </template>
+
+                            <div class="sub-menu-wrapper">
+                                <ElMenuItem v-for="child in item.children" :key="child.key" :index="child.link">
+                                    <div class="dot-indicator"></div>
+                                    <Icon v-if="child.icon" :name="`local-icon-${child.icon}`" :size="16"></Icon>
+                                    <span class="ml-3">{{ child.name }}</span>
+                                </ElMenuItem>
                             </div>
-                        </div>
-                    </router-link>
-                </div>
+                        </ElSubMenu>
+
+                        <ElMenuItem v-else :index="item.link" class="single-menu">
+                            <div class="icon-box">
+                                <Icon v-if="item.icon" :name="`local-icon-${item.icon}`" :size="18"></Icon>
+                            </div>
+                            <span class="menu-text">{{ item.name }}</span>
+                            <div class="active-bar" v-if="route.path === item.link"></div>
+                        </ElMenuItem>
+                    </template>
+                </ElMenu>
             </div>
         </ElScrollbar>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ToolEnum, ToolEnumMap } from "@/enums/appEnums";
-
 const route = useRoute();
-
-interface Tools {
-    icon?: string;
-    icon_active?: string;
-    name: string;
-    id: number;
-    link: string;
-    is_new?: boolean;
-}
-
-const tools = ref<Tools[]>([
+const tools = ref<any[]>([
     {
-        id: ToolEnum.CHAT,
-        name: ToolEnumMap[ToolEnum.CHAT],
+        key: "chat",
+        name: "工作台",
         icon: "menu_chat",
         link: "/",
     },
     {
-        id: ToolEnum.STAFF,
-        name: ToolEnumMap[ToolEnum.STAFF],
+        key: "staff",
+        name: "AI员工",
         icon: "menu_staff",
-        link: "/staff",
-        is_new: false,
+        children: [
+            {
+                key: "ai_customer",
+                name: "AI获客",
+                icon: "menu_customer",
+                link: "/app/customer",
+            },
+            {
+                key: "ai_sales",
+                name: "AI销售",
+                icon: "menu_sales",
+                link: "/app/person_wechat",
+            },
+            {
+                key: "digital_human",
+                name: "数字人",
+                icon: "menu_dh",
+                link: "/app/digital_human",
+            },
+            {
+                key: "ai_image",
+                name: "AI图片",
+                icon: "menu_draw",
+                link: "/app/drawing",
+            },
+            {
+                key: "matrix",
+                name: "矩阵任务",
+                icon: "menu_matrix",
+                link: "/app/matrix",
+            },
+            {
+                key: "internal",
+                name: "AI内务",
+                icon: "menu_internal",
+                link: "/app/internal",
+            },
+        ],
     },
     {
-        id: ToolEnum.AID,
-        name: ToolEnumMap[ToolEnum.AID],
-        icon: "menu_auto_customer",
+        key: "aid",
+        name: "岗位员工",
+        icon: "menu_aid",
         link: "/robot",
-        is_new: false,
     },
     {
-        id: ToolEnum.DATABASE,
-        name: ToolEnumMap[ToolEnum.DATABASE],
+        key: "database",
+        name: "知识库",
         icon: "menu_database",
         link: "/knowledge_base",
     },
     {
-        id: ToolEnum.DEVICE,
-        name: ToolEnumMap[ToolEnum.DEVICE],
-        icon: "menu_terminal",
-        link: "/device",
-        is_new: true,
-    },
-    {
-        id: ToolEnum.AGENT,
-        name: ToolEnumMap[ToolEnum.AGENT],
+        key: "agent",
+        name: "智能体",
         icon: "menu_agent",
         link: "/agent",
     },
+    {
+        key: "device",
+        name: "AI终端",
+        icon: "menu_device",
+        link: "/device",
+    },
 ]);
-
-const activeMenu = ref(null);
-
-const initActiveMenu = (path: string) => {
-    activeMenu.value = tools.value.find((item) => item.link === path);
-};
-
-const setActiveMenu = (path: string) => {
-    // 使用路径前缀映射来简化路由匹配逻辑
-    const pathPrefixMap = {
-        "/app": "/staff",
-        "/robot": "/robot/aid",
-        "/knowledge_base": "/knowledge_base",
-        "/device": "/device",
-        "/agent": "/agent",
-        "/creation": "/creation",
-    };
-    // 查找匹配的路径前缀
-    const matchedPrefix = Object.keys(pathPrefixMap).find((prefix) => path.startsWith(prefix));
-
-    // 如果找到匹配的前缀，使用映射的路径，否则使用原始路径
-    initActiveMenu(matchedPrefix ? pathPrefixMap[matchedPrefix] : path);
-};
-
-watch(
-    () => route.path,
-    (newVal) => {
-        setActiveMenu(newVal);
-    }
-);
-
-onMounted(() => {
-    setActiveMenu(route.path);
-});
 </script>
 
 <style lang="scss" scoped>
-.menu-container {
-    .link-icon {
-        @apply flex-shrink-0 flex items-center justify-center rounded w-5 h-5 bg-[#ECECEC];
+$primary: var(--el-color-primary);
+$text-main: #1e293b;
+$text-muted: #64748b;
+$bg-active: rgba(0, 101, 251, 0.06);
+
+.custom-main-menu {
+    border-right: none !important;
+    background: transparent !important;
+    :deep(.el-menu) {
+        background: transparent !important;
     }
-    .router-link-active {
-        @apply bg-white shadow-[0_0_0_1px_rgba(237,237,237,1)];
-        .link-icon {
-            @apply bg-black text-white;
+    :deep(.el-menu-item),
+    :deep(.el-sub-menu__title) {
+        @apply flex items-center h-[50px] rounded-xl transition-all duration-300;
+        color: $text-muted;
+        font-weight: 700;
+        margin-bottom: 4px;
+
+        &:hover {
+            color: $primary;
+            background-color: #f8fafc !important;
+            .icon-box {
+                @apply scale-110 text-primary;
+            }
         }
     }
+
+    :deep(.el-menu-item.is-active) {
+        color: $primary !important;
+        background-color: $bg-active !important;
+        position: relative;
+
+        &::before {
+            content: "";
+            @apply absolute left-0 w-1 h-5 bg-primary rounded-full;
+        }
+
+        .icon-box {
+            color: $primary;
+            @apply scale-100;
+        }
+    }
+
+    .icon-box {
+        @apply w-8 h-8 flex items-center justify-center transition-all duration-300;
+        color: #94a3b8;
+    }
+
+    .menu-text {
+        @apply ml-1 font-[900] text-[14px];
+    }
+
+    .sub-menu-wrapper {
+        @apply pl-4 pt-1 pb-1 relative;
+
+        &::after {
+            content: "";
+            @apply absolute left-[25px] top-1 bottom-4 w-[1px] bg-[#F1F5F9];
+        }
+
+        :deep(.el-menu-item) {
+            @apply h-[44px] text-[13px] pl-[40px] !important;
+            font-weight: 700;
+
+            .dot-indicator {
+                @apply absolute left-[23px] w-1 h-1 rounded-full bg-[#CBD5E1] transition-all;
+            }
+
+            &.is-active {
+                .dot-indicator {
+                    @apply bg-primary scale-[1.5] shadow-[0_0_8px_rgba(0,101,251,0.5)];
+                }
+                &::before {
+                    display: none;
+                }
+            }
+        }
+    }
+}
+
+:deep(.el-sub-menu__title:hover) {
+    background-color: #f8fafc !important;
 }
 </style>

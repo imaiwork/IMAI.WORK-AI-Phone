@@ -30,7 +30,7 @@
                 </div>
             </template>
         </ElTooltip>
-        <div class="text-[rgba(0,0,0,0.3)] text-xs mt-2 mx-3">
+        <div class="text-[#0000004d] text-[11px] mt-2 mx-3">
             <div v-for="(item, index) in getCopyright" :key="index">
                 <a :href="item.value" target="_blank" class="hover:underline">{{ item.key }}</a>
             </div>

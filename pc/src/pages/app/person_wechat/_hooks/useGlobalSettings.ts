@@ -1,20 +1,21 @@
-import { getWeChatLists } from "@/api/person_wechat";
+import { getPublishAccountList } from "@/api/device";
 
 export default function useGlobalSettings() {
-	// 微信列表
-	const { optionsData } = useDictOptions<{
-		wechatLists: any[];
-	}>({
-		wechatLists: {
-			api: getWeChatLists,
-			params: {
-				page_size: 999,
-			},
-			transformData: (data: any) => data.lists,
-		},
-	});
+    // 微信列表
+    const { optionsData } = useDictOptions<{
+        wechatLists: any[];
+    }>({
+        wechatLists: {
+            api: getPublishAccountList,
+            params: {
+                page_size: 999,
+                type: 1,
+            },
+            transformData: (data: any) => data.lists,
+        },
+    });
 
-	return {
-		optionsData,
-	};
+    return {
+        optionsData,
+    };
 }

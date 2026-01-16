@@ -2,69 +2,79 @@
     <popup
         ref="popupRef"
         async
-        width="468px"
+        width="480px"
         confirm-button-text=""
         cancel-button-text=""
         header-class="!p-0"
+        style="padding: 0"
         :show-close="false">
-        <div>
-            <!-- 关闭按钮 -->
-            <div class="absolute w-6 h-6 right-4 top-4 cursor-pointer" @click="close">
+        <div class="relative bg-[#FFFFFF] rounded-[24px] p-4">
+            <div class="absolute right-3 top-3 w-8 h-8" @click="close">
                 <close-btn />
             </div>
-            <!-- 弹窗标题 -->
-            <div class="text-2xl font-bold mb-5">{{ mode === "add" ? "添加" : "编辑" }}菜单</div>
-            <!-- 表单 -->
-            <ElForm :model="form" :rules="rules" ref="formRef" label-position="top">
-                <ElFormItem label="关键词" prop="keyword">
-                    <ElInput v-model="form.keyword" class="!h-11" />
+
+            <div class="flex items-center gap-[10px] mb-[28px]">
+                <div class="w-[5px] h-[20px] bg-[#0065fb] rounded-full"></div>
+                <h3 class="text-[20px] font-[900] text-[#0F172A]">{{ mode === "add" ? "创建新" : "修改" }}快捷菜单</h3>
+            </div>
+
+            <ElForm :model="form" :rules="rules" ref="formRef" label-position="top" class="custom-popup-form">
+                <ElFormItem label="触发关键词" prop="keyword">
+                    <ElInput
+                        v-model="form.keyword"
+                        placeholder="请输入用户点击时显示的关键词..."
+                        class="custom-input" />
                 </ElFormItem>
-                <ElFormItem label="回复内容" prop="content">
-                    <ElInput v-model="form.content" type="textarea" :rows="4" show-word-limit maxlength="2000" />
+
+                <ElFormItem label="自动回复内容" prop="content">
+                    <ElInput
+                        v-model="form.content"
+                        type="textarea"
+                        class="custom-textarea"
+                        :rows="6"
+                        show-word-limit
+                        maxlength="2000"
+                        placeholder="请输入菜单对应的自动回复消息..." />
                 </ElFormItem>
-                <ElFormItem label="上传图片" v-if="false">
-                    <div>
-                        <div class="flex flex-wrap gap-2">
-                            <!-- 已上传图片列表 -->
-                            <div v-for="(item, index) in form.images" :key="index" class="material-item">
-                                <ElImage
-                                    :src="item"
-                                    :preview-src-list="[item]"
-                                    fit="cover"
-                                    class="w-full h-full rounded-md" />
-                                <div class="absolute -top-2 -right-2 cursor-pointer" @click="handleDeleteImage(index)">
-                                    <Icon name="local-icon-error_fill" color="#ffffff" />
-                                </div>
+
+                <ElFormItem label="上传附件图片" v-if="false">
+                    <div class="flex flex-wrap gap-[12px]">
+                        <div v-for="(item, index) in form.images" :key="index" class="material-item group">
+                            <ElImage
+                                :src="item"
+                                :preview-src-list="[item]"
+                                fit="cover"
+                                class="w-full h-full rounded-[8px]" />
+                            <div
+                                class="absolute -top-[8px] -right-[8px] w-[20px] h-[20px] bg-[#EF4444] rounded-[full] flex items-center justify-center cursor-pointer shadow-[0_2px_4px_rgba(0,0,0,0.2)] opacity-0 group-hover:opacity-100 transition-opacity"
+                                @click="handleDeleteImage(index)">
+                                <Icon name="el-icon-Close" color="#ffffff" :size="12" />
                             </div>
-                            <!-- 上传按钮 -->
-                            <upload
-                                v-if="form.images.length < 9"
-                                multiple
-                                show-progress
-                                :limit="9 - form.images.length"
-                                :show-file-list="false"
-                                @success="getImageUploadSuccess">
-                                <div class="material-item">
-                                    <Icon name="local-icon-upload" :size="18" color="#0000004d" />
-                                    <span class="text-[#0000004d] text-xs mt-2">上传图片</span>
-                                </div>
-                            </upload>
                         </div>
-                        <div class="form-tips">图片最多9张</div>
+                        <upload
+                            v-if="form.images.length < 9"
+                            multiple
+                            :limit="9 - form.images.length"
+                            @success="getImageUploadSuccess">
+                            <div
+                                class="material-item border-dashed hover:border-[#0065fb] hover:bg-[#F1F6FF] transition-all">
+                                <Icon name="el-icon-Plus" :size="20" color="#94A3B8" />
+                                <span class="text-[#94A3B8] text-[12px] mt-[4px]">添加图片</span>
+                            </div>
+                        </upload>
                     </div>
                 </ElFormItem>
             </ElForm>
-            <!-- 操作按钮 -->
-            <div class="flex">
-                <ElButton class="!rounded-full flex-1 !h-[50px]" @click="close">取消</ElButton>
-                <ElButton type="primary" class="!rounded-full flex-1 !h-[50px]" :loading="isLock" @click="lockFn">
-                    保存
+
+            <div class="flex gap-[16px] mt-[36px]">
+                <ElButton class="footer-btn btn-secondary" @click="close">取消</ElButton>
+                <ElButton type="primary" class="footer-btn btn-primary" :loading="isLock" @click="lockFn">
+                    确认保存
                 </ElButton>
             </div>
         </div>
     </popup>
 </template>
-
 <script setup lang="ts">
 const emit = defineEmits<{
     (e: "close"): void;
@@ -139,9 +149,12 @@ defineExpose({
     setFormData: (data: any) => setFormData(data, form),
 });
 </script>
-
 <style scoped lang="scss">
+.btn-secondary {
+    @apply bg-[#FFFFFF] border-[#F1F5F9] text-[#64748B] hover:bg-[#F8FAFC] hover:border-[#E2E8F0];
+}
+
 .material-item {
-    @apply cursor-pointer relative w-20 h-20 rounded-md bg-[#fafafa] border border-[#0000001a] flex flex-col items-center justify-center;
+    @apply relative w-[80px] h-[80px] rounded-[12px] bg-[#F8FAFC] border-[1px] border-[#E2E8F0] flex flex-col items-center justify-center overflow-visible;
 }
 </style>

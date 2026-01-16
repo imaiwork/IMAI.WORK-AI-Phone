@@ -1,148 +1,115 @@
 <template>
-    <div class="h-full flex flex-col">
-        <div class="flex-shrink-0">
-            <ElTabs v-model="formData.type" @tab-click="handleTypeTabClick">
-                <ElTabPane
-                    v-for="(tab, index) in typeTabs"
-                    :name="tab.value"
-                    :label="tab.label"
-                    :key="index"></ElTabPane>
-            </ElTabs>
+    <div class="h-full w-full flex flex-col bg-[#F8FAFC]">
+        <div class="shrink-0 px-6 h-[72px] flex items-center bg-white border-b border-[#F1F5F9]">
+            <div class="flex p-1 rounded-[16px] w-full bg-[#F1F5F9]">
+                <div
+                    v-for="tab in typeTabs"
+                    :key="tab.value"
+                    @click="handleTypeTabClick(tab.value)"
+                    class="flex-1 py-2 text-center cursor-pointer transition-all duration-300 rounded-[12px] text-[13px] font-[900]"
+                    :class="
+                        formData.type === tab.value ? 'bg-white text-primary ' : 'text-[#64748B] hover:text-[#1E293B]'
+                    ">
+                    {{ tab.label }}
+                </div>
+            </div>
         </div>
+
         <div class="grow min-h-0">
             <ElScrollbar>
-                <div class="p-4">
-                    <ElForm :model="formData" label-position="top">
-                        <ElFormItem label="生成模型">
-                            <ElSelect
-                                v-model="formData.model"
-                                class="!h-11"
-                                popper-class="dark-select-popper"
-                                placeholder="请选择模型名称"
-                                :show-arrow="false"
-                                @change="handleModelChange">
-                                <ElOption
-                                    v-for="item in getModelChannel"
-                                    :label="item.name"
-                                    :value="item.id"
-                                    :key="item.id"></ElOption>
-                            </ElSelect>
-                        </ElFormItem>
-                        <ElFormItem label="提示词" v-if="formData.type === FormTypeEnum.TXT2IMAGE">
+                <div class="p-4 space-y-3">
+                    <div class="bg-white rounded-[24px] p-5 border border-[#F1F5F9]">
+                        <div class="flex items-center gap-2 mb-4 px-1">
+                            <div class="w-1.5 h-4 bg-primary rounded-full"></div>
+                            <span class="text-[14px] font-[900] text-[#1E293B]">绘制模型</span>
+                            <span class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider ml-auto"
+                                >Drawing Model</span
+                            >
+                        </div>
+                        <ElSelect
+                            v-model="formData.model"
+                            class="custom-select w-full"
+                            popper-class="custom-select-popper"
+                            placeholder="请选择模型"
+                            :show-arrow="false"
+                            @change="handleModelChange">
+                            <ElOption
+                                v-for="item in getModelChannel"
+                                :label="item.name"
+                                :value="item.id"
+                                :key="item.id">
+                            </ElOption>
+                        </ElSelect>
+                    </div>
+
+                    <div class="bg-white rounded-[24px] p-5 border border-[#F1F5F9]">
+                        <div class="flex items-center justify-between mb-4 px-1">
+                            <div class="flex items-center gap-2">
+                                <div class="w-1.5 h-4 bg-primary rounded-full"></div>
+                                <span class="text-[14px] font-[900] text-[#1E293B]">
+                                    {{ formData.type === FormTypeEnum.TXT2IMAGE ? "画面描述" : "修改建议" }}
+                                </span>
+                            </div>
+                            <div class="flex gap-2">
+                                <div
+                                    class="tool-btn"
+                                    @click="handleGeneratePrompt(CopywritingTypeEnum.AI_IMAGE_TO_IMAGE)">
+                                    <Icon name="el-icon-MagicStick" :size="14"></Icon>
+                                    <span class="ml-1 text-[11px] font-bold">随机灵感</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="relative group">
                             <ElInput
                                 v-model="formData.prompt"
                                 type="textarea"
-                                show-word-limit
+                                :rows="6"
                                 resize="none"
-                                placeholder="请输入提示词"
-                                :autosize="{ minRows: 6, maxRows: 15 }"
-                                :maxlength="getPromptMaxlength" />
-                            <ElButton
-                                type="primary"
-                                class="!rounded-full !h-[50px] w-full mt-3"
-                                :disabled="!formData.prompt"
-                                @click="handleGeneratePrompt(CopywritingTypeEnum.AI_TEXT_TO_IMAGE)">
-                                生成提示词
-                            </ElButton>
-                        </ElFormItem>
-                        <template v-if="formData.type === FormTypeEnum.IMAGE2IMAGE">
-                            <ElFormItem>
-                                <div class="w-full">
-                                    <div class="flex items-center gap-2 text-[11px] text-white">
-                                        <div
-                                            class="h-[26px] rounded-md px-[11px] bg-primary flex items-center cursor-pointer">
-                                            单图参考
-                                        </div>
-                                        <div
-                                            class="h-[26px] rounded-md px-[11px] bg-app-bg-3 border border-app-border-2 flex items-center cursor-not-allowed">
-                                            多图参考（开发中）
-                                        </div>
-                                    </div>
-                                    <div class="mt-3 rounded-md bg-app-bg-3 border border-app-border-2 p-[6px]">
-                                        <div class="flex items-center gap-1 text-[11px] px-[6px]">
-                                            <div
-                                                v-for="(item, index) in imageTypeTabs"
-                                                class="text-white px-[11px] rounded-md h-[26px] flex items-center"
-                                                :class="
-                                                    imageTypeTabActive === item.id
-                                                        ? 'shadow-[0_0_0_1px_rgba(255,255,255,0.10)] bg-app-bg-3 cursor-pointer'
-                                                        : 'cursor-not-allowed'
-                                                ">
-                                                {{ item.label }}
-                                            </div>
-                                        </div>
-                                        <div class="mt-2">
-                                            <image-upload
-                                                v-model:form-data="formData"
-                                                :template-video-url="`${getApiUrl()}/static/videos/reference-image-tips-char.mp4`" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </ElFormItem>
-                            <ElFormItem>
-                                <template #label>
-                                    <div class="flex items-center justify-between gap-2">
-                                        <div>
-                                            创意描述（{{ formData.model === ModelEnum.SEEDREAM ? "必填" : "选填" }}）
-                                        </div>
-                                        <ElButton type="primary" size="small" @click="handleInspiration">灵感</ElButton>
-                                    </div>
-                                </template>
-                                <ElInput
-                                    v-model="formData.prompt"
-                                    type="textarea"
-                                    resize="none"
-                                    placeholder="选填内容"
-                                    :rows="6" />
-                                <ElButton
-                                    type="primary"
-                                    class="!rounded-full !h-[50px] w-full mt-3"
-                                    :disabled="!formData.prompt"
-                                    @click="handleGeneratePrompt(CopywritingTypeEnum.AI_IMAGE_TO_IMAGE)">
-                                    生成提示词
-                                </ElButton>
-                            </ElFormItem>
-                        </template>
-                        <ElFormItem v-if="formData.model == ModelEnum.GENERAL">
-                            <ElTooltip
-                                placement="right"
-                                popper-class="w-[228px]"
-                                content="开启后可将【生成规格】中的宽高均乘以2返回，如上述宽高均为512和512，此参数关闭出图 512*512 ，此参数打开出图1024 * 1024">
-                                <div
-                                    class="flex items-center justify-between w-full border border-app-border-2 rounded-lg bg-app-bg-3 px-3 h-11">
-                                    <div class="flex items-center gap-2 text-white">
-                                        超分辨率生成
-                                        <Icon name="local-icon-question" :size="16"></Icon>
-                                    </div>
-                                    <ElSwitch v-model="formData.use_sr" />
-                                </div>
-                            </ElTooltip>
-                        </ElFormItem>
-                        <ElFormItem>
-                            <template #label>
-                                <div class="flex items-center gap-2 text-white">
-                                    <span>生成规格</span>
-                                </div>
-                            </template>
-                            <resolution-select :model="formData.model" @update:resolution="handleResolutionChange" />
-                        </ElFormItem>
-                        <ElFormItem label="生成张数" v-if="formData.model == ModelEnum.HIDREAMAI">
-                            <ElInput
-                                v-model="formData.img_count"
-                                v-number-input="{ decimal: 0 }"
-                                min="1"
-                                max="4"
-                                type="number"
-                                class="!h-11"></ElInput>
-                        </ElFormItem>
-                    </ElForm>
+                                placeholder="描述你想要生成的画面，建议使用英文标签以获得更好效果..."
+                                class="custom-prompt-input"></ElInput>
+                            <div
+                                class="absolute bottom-3 right-3 text-[10px] font-bold text-[#CBD5E1] group-focus-within:text-primary">
+                                {{ formData.prompt.length }} / 500
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="formData.type === FormTypeEnum.IMAGE2IMAGE"
+                        class="bg-white rounded-[24px] p-5 border border-[#F1F5F9]">
+                        <div class="flex items-center gap-2 mb-4 px-1">
+                            <div class="w-1.5 h-4 bg-primary rounded-full"></div>
+                            <span class="text-[14px] font-[900] text-[#1E293B]">参考图</span>
+                            <span class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider ml-auto"
+                                >Reference Image</span
+                            >
+                        </div>
+                        <div class="mt-2">
+                            <image-upload
+                                v-model="formData"
+                                :template-video-url="`${getApiUrl()}/static/videos/reference-image-tips-char.mp4`" />
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-[24px] p-5 border border-[#F1F5F9]">
+                        <div class="flex items-center gap-2 mb-4 px-1">
+                            <div class="w-1.5 h-4 bg-primary rounded-full"></div>
+                            <span class="text-[14px] font-[900] text-[#1E293B]">画面比例</span>
+                            <span class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider ml-auto"
+                                >Aspect Ratio</span
+                            >
+                        </div>
+
+                        <resolution-select :model="formData.model" @update:resolution="handleResolutionChange" />
+                    </div>
+                    <div class="bg-white rounded-[24px] p-5 border border-[#F1F5F9] space-y-6 sticky bottom-2 z-20">
+                        <number-select v-model="formData.img_count" />
+                    </div>
                 </div>
             </ElScrollbar>
         </div>
     </div>
-    <div class="fixed right-4 top-[93px] z-[22]">
-        <ElButton type="primary" class="!rounded-full w-[100px] !h-10" @click="openCaseImage"> 优秀案例 </ElButton>
-    </div>
+    <case-btn @on-click="openCaseImage" />
     <inspiration-image ref="inspirationImageRef" @use-assemble="handleUseAssemble" />
     <case-image-v1 ref="caseImageRef" type="goods" @choose="handleChooseCase" />
 </template>
@@ -156,6 +123,9 @@ import ImageUpload from "./image-upload.vue";
 import ResolutionSelect from "./resolution-select.vue";
 import InspirationImage from "./inspiration-image.vue";
 import CaseImageV1 from "./case-image-v1.vue";
+import CaseBtn from "./case-btn/index.vue";
+import NumberSelect from "./number-select/index.vue";
+
 const emit = defineEmits<{
     (event: "update:formData", value: any): void;
     (event: "generatePrompt", value: { promptId: number; prompt: string }): void;
@@ -208,7 +178,8 @@ const typeTabs = [
     { label: "参考生图", value: FormTypeEnum.IMAGE2IMAGE },
 ];
 
-const handleTypeTabClick = (tab: any) => {
+const handleTypeTabClick = (tab: FormTypeEnum) => {
+    formData.type = tab;
     formData.model = getModelChannel.value[0].id;
 };
 
@@ -368,3 +339,35 @@ defineExpose({
     setPrompt,
 });
 </script>
+
+<style scoped lang="scss">
+.ratio-card {
+    @apply flex flex-col items-center justify-center p-3 rounded-xl border-2 border-[#F1F5F9] cursor-pointer transition-all;
+    &:hover {
+        @apply border-[#0065fb]/30 bg-[#F8FAFC];
+    }
+    &.is-active {
+        @apply border-[#0065fb] bg-[#F5F7FF] text-primary;
+        .ratio-box {
+            @apply border-[#0065fb] bg-[#0065fb]/20;
+        }
+    }
+    .ratio-box {
+        @apply border-2 border-[#CBD5E1] rounded-[2px] transition-all;
+    }
+}
+
+.upload-box {
+    @apply h-[160px] w-full flex flex-col items-center justify-center relative rounded-[18px] border-2 border-dashed border-br bg-[#FBFDFF] hover:border-[#0065fb] hover:bg-[#F5F7FF] transition-all overflow-hidden;
+}
+
+.upload-mask {
+    @apply absolute inset-0 bg-[#000000]/20 opacity-0 transition-opacity flex items-center justify-center z-10;
+}
+
+:deep(.el-slider) {
+    --el-slider-main-bg-color: #4f46e5;
+    --el-slider-runway-bg-color: #f1f5f9;
+    --el-slider-stop-bg-color: #cbd5e1;
+}
+</style>

@@ -1,123 +1,139 @@
 <template>
     <ElDrawer v-model="show" class="user-detail-panel" size="1000px" :show-close="false" @close="close">
-        <div class="relative w-full h-full flex">
-            <div class="flex-shrink-0">
-                <ElButton type="primary" class="w-10 h-10 mt-2" @click="close">
-                    <Icon name="local-icon-close" :size="24" color="#ffffff"></Icon>
-                </ElButton>
+        <div class="relative w-full h-full flex bg-transparent">
+            <div class="flex-shrink-0 flex justify-center w-16 pt-6">
+                <button
+                    @click="close"
+                    class="w-12 h-12 rounded-2xl bg-[#ffffff]/20 backdrop-blur-md text-white hover:bg-[#ffffff]/40 transition-all flex items-center justify-center shadow-xl border border-white/20">
+                    <Icon name="local-icon-close" :size="28"></Icon>
+                </button>
             </div>
-            <div class="h-full flex-1 flex flex-col bg-[#F5F6F9] overflow-hidden">
-                <div class="flex-shrink-0 bg-white px-4 border-b border-[#E6E6E6] pb-5 relative">
-                    <div class="flex items-center gap-x-4 mt-5">
-                        <img :src="friendInfo.avatar" class="w-12 h-12 rounded object-cover" />
-                        <div>
-                            <div class="text-xs text-[#9E9E9E]">{{ friendInfo.remark || "-" }}</div>
-                            <div class="text-[#42453F] text-[15px] font-bold">{{ friendInfo.nickname }}</div>
-                        </div>
-                    </div>
-                    <div class="mt-5 flex gap-x-12">
-                        <div>
-                            <div class="text-[#8A8A8A]">账号类型：</div>
-                            <div class="text-[#07C160] text-xs">@{{ AccountTypeMap[AccountTypeEnum.Personal] }}</div>
-                        </div>
-                        <div>
-                            <div class="text-[#8A8A8A]">来源方式：</div>
-                            <div class="text-[#494949] text-xs mt-1">
-                                {{ AccountSource[friendInfo.source] || "未知" }}
-                            </div>
-                        </div>
-                        <div class="t">
-                            <div class="text-[#8A8A8A]">出生日期：</div>
-                            <div class="text-xs">{{ friendInfo.birth_date || "暂无" }}</div>
-                        </div>
-                        <div class="">
-                            <div class="text-[#8A8A8A]">联系地址：</div>
-                            <div class="text-xs">{{ friendInfo.contact_address || "暂无" }}</div>
-                        </div>
-                    </div>
-                    <div class="mt-5 border border-[#DBDBDB] rounded-lg p-3">
-                        <div class="flex items-center justify-between">
-                            <div class="font-bold">客户标签</div>
-                            <ElButton link @click="isEditTag = !isEditTag">
-                                <Icon name="el-icon-Edit" color="#9E9E9E" :size="16"></Icon>
-                            </ElButton>
-                        </div>
-                        <div class="flex flex-wrap gap-2 mt-4">
-                            <div v-for="item in friendTagLists" :key="item.id" class="relative">
-                                <ElTag type="primary">{{ item.tag_name }}</ElTag>
-                                <div class="absolute -top-1 -right-1" v-if="isEditTag">
-                                    <span
-                                        class="bg-[#D43030] rounded-full w-[14px] h-[14px] flex items-center justify-center cursor-pointer"
-                                        @click="deleteTag(item.tag_id)">
-                                        <Icon name="el-icon-Close" :size="10" color="#ffffff" />
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="">
+
+            <div
+                class="h-[calc(100vh-40px)] my-5 flex-1 flex flex-col bg-[#F8FAFC] rounded-l-[40px] shadow-[-20px_0_60px_rgba(0,0,0,0.1)] overflow-hidden">
+                <div class="flex-shrink-0 bg-white px-8 pt-8 pb-6 relative">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-x-6">
+                            <div class="relative">
+                                <img
+                                    :src="friendInfo.avatar"
+                                    class="w-20 h-20 rounded-[28px] object-cover ring-4 ring-slate-50" />
                                 <div
-                                    class="h-[24px] w-[64px] el-tag el-tag--primary el-tag--light"
-                                    @click="handleAddTag">
+                                    class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-4 border-white"></div>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-3 mb-1">
+                                    <h2 class="text-slate-800 text-[24px] font-[1000]">{{ friendInfo.nickname }}</h2>
                                     <span
-                                        class="w-[14px] h-[14px] bg-primary flex items-center justify-center rounded-[2px]">
-                                        <Icon name="el-icon-Plus" :size="10" color="#ffffff" />
+                                        class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[11px] font-black rounded-md uppercase">
+                                        {{ AccountTypeMap[AccountTypeEnum.Personal] }}
                                     </span>
                                 </div>
+                                <div class="flex items-center gap-2 text-slate-400 text-[13px] font-bold">
+                                    <Icon name="el-icon-User" :size="14" />
+                                    <span>备注：{{ friendInfo.remark || "未设置备注" }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <div class="text-right">
+                                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                                    Join Source
+                                </div>
+                                <div class="text-[14px] text-slate-700 font-black">
+                                    {{ AccountSource[friendInfo.source] || "未知渠道" }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 grid grid-cols-4 gap-6 p-5 bg-slate-50/50 rounded-[24px] border border-slate-100">
+                        <div class="space-y-1">
+                            <div class="text-[11px] text-slate-400 font-bold uppercase">出生日期</div>
+                            <div class="text-[13px] text-slate-700 font-black">
+                                {{ friendInfo.birth_date || "未填写" }}
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="text-[11px] text-slate-400 font-bold uppercase">联系地址</div>
+                            <div class="text-[13px] text-slate-700 font-black truncate">
+                                {{ friendInfo.contact_address || "未填写" }}
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="text-[11px] text-slate-400 font-bold uppercase">活跃程度</div>
+                            <div class="flex items-center gap-1">
+                                <div class="flex gap-0.5">
+                                    <div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                                </div>
+                                <span class="text-[13px] text-primary font-black ml-1">高活跃</span>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="text-[11px] text-slate-400 font-bold uppercase">最后互动</div>
+                            <div class="text-[13px] text-slate-700 font-black">2小时前</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex items-start gap-4">
+                        <div
+                            class="mt-1.5 shrink-0 px-3 py-1 bg-slate-800 text-white text-[10px] font-black rounded-lg uppercase tracking-tighter">
+                            标签
+                        </div>
+                        <div class="flex flex-wrap gap-2 flex-1">
+                            <div v-for="item in friendTagLists" :key="item.id" class="group relative">
+                                <div
+                                    class="px-3 py-1.5 bg-[#0065fb]/5 border border-[#0065fb]/10 text-primary text-[12px] font-black rounded-xl transition-all group-hover:bg-primary group-hover:text-white">
+                                    {{ item.tag_name }}
+                                </div>
+                                <div
+                                    v-if="isEditTag"
+                                    @click="deleteTag(item.tag_id)"
+                                    class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform">
+                                    <Icon name="el-icon-Close" :size="10" />
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button
+                                    @click="handleAddTag"
+                                    class="w-8 h-8 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 flex items-center justify-center hover:border-primary hover:text-primary transition-all">
+                                    <Icon name="el-icon-Plus" :size="14" />
+                                </button>
+                                <button
+                                    @click="isEditTag = !isEditTag"
+                                    class="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-800 hover:text-white transition-all">
+                                    <Icon :name="isEditTag ? 'el-icon-Check' : 'el-icon-Edit'" :size="14" />
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="grow min-h-0 flex gap-x-6 mt-6 w-full">
-                    <div class="flex-1 flex flex-col w-full overflow-hidden" v-loading="loading">
-                        <ElTabs
-                            v-model="activeTab"
-                            class="tab-panel h-full w-full rounded-tr-md"
-                            type="border-card"
-                            @tab-click="handleTabClick">
-                            <ElTabPane label="客户流程" name="1">
-                                <UserFlow :flow-data="friendSopFlow" />
-                            </ElTabPane>
-                            <ElTabPane label="待办活动" name="2">
-                                <ElScrollbar class="h-full" ref="todoScrollRef" @end-reached="handleTodoScrollEnd">
-                                    <div class="px-4 py-6">
-                                        <UserTodo
-                                            :list="todoPager.lists"
-                                            v-if="todoPager.lists.length > 0"
-                                            @edit="handleEditTodo"
-                                            @delete="deleteTodo" />
-                                        <div v-else class="mt-14">
-                                            <ElEmpty description="暂无内容"></ElEmpty>
-                                        </div>
-                                    </div>
-                                </ElScrollbar>
-                            </ElTabPane>
-                            <ElTabPane label="SOP任务" name="3">
-                                <ElScrollbar class="h-full">
-                                    <div class="px-4 py-6">
-                                        <UserSop
-                                            :list="friendSopPush"
-                                            v-if="friendSopPush.length > 0"
-                                            @delete="handleDeleteSop" />
-                                        <div v-else class="mt-14">
-                                            <ElEmpty description="暂无内容"></ElEmpty>
-                                        </div>
-                                    </div>
-                                </ElScrollbar>
-                            </ElTabPane>
-                            <ElTabPane label="群发任务" name="4">
-                                <ElScrollbar class="h-full">
-                                    <div class="px-4 py-6">
-                                        <UserSop
-                                            :list="friendSopPush"
-                                            v-if="friendSopPush.length > 0"
-                                            @delete="handleDeleteSop" />
-                                        <div v-else class="mt-14">
-                                            <ElEmpty description="暂无内容"></ElEmpty>
-                                        </div>
-                                    </div>
-                                </ElScrollbar>
-                            </ElTabPane>
-                        </ElTabs>
-                    </div>
+
+                <div
+                    class="grow min-h-0 mt-4 flex flex-col bg-white rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
+                    <ElTabs v-model="activeTab" class="modern-tabs h-full" @tab-click="handleTabClick">
+                        <ElTabPane label="客户流程" name="1">
+                            <UserFlow :flow-data="friendSopFlow" />
+                        </ElTabPane>
+                        <ElTabPane label="待办活动" name="2">
+                            <ElScrollbar class="h-full" @end-reached="handleTodoScrollEnd">
+                                <div class="px-8 py-6">
+                                    <UserTodo :list="todoPager.lists" @edit="handleEditTodo" @delete="deleteTodo" />
+                                </div>
+                            </ElScrollbar>
+                        </ElTabPane>
+                        <ElTabPane label="SOP 任务" name="3">
+                            <ElScrollbar class="h-full"
+                                ><div class="px-8 py-6"><UserSop :list="friendSopPush" @delete="handleDeleteSop" /></div
+                            ></ElScrollbar>
+                        </ElTabPane>
+                        <ElTabPane label="群发任务" name="4">
+                            <ElScrollbar class="h-full"
+                                ><div class="px-8 py-6"><UserSop :list="friendSopPush" @delete="handleDeleteSop" /></div
+                            ></ElScrollbar>
+                        </ElTabPane>
+                    </ElTabs>
                 </div>
             </div>
         </div>
@@ -128,8 +144,10 @@
         @close="showTagPop = false"
         @success="
             emit('changeTag');
+
             getFriendTagDetail();
         " />
+
     <user-todo-edit
         v-if="showTodoPop"
         ref="userTodoEditRef"
@@ -138,7 +156,6 @@
         @close="showTodoPop = false"
         @confirm="handleSuccessTodo" />
 </template>
-
 <script setup lang="ts">
 import { ElScrollbar } from "element-plus";
 import { AccountSource, AccountTypeEnum, AccountTypeMap } from "~/pages/app/person_wechat/_enums";
@@ -289,24 +306,30 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
-.tab-panel {
-    :deep(.el-tabs__content) {
-        @apply h-full p-0;
-    }
-    :deep(.el-tab-pane) {
-        @apply h-full;
-    }
+.modern-tabs {
     :deep(.el-tabs__header) {
-        @apply rounded-tr-md bg-[#F5F6F9];
+        @apply m-0 px-8 pt-4 bg-white border-none;
+        .el-tabs__nav-wrap::after {
+            display: none;
+        }
+        .el-tabs__active-bar {
+            @apply h-[4px] rounded-full bg-primary shadow-[0_2px_10px_rgba(0,101,251,0.4)];
+        }
         .el-tabs__item {
-            @apply h-12;
+            @apply h-14 text-[15px] font-bold text-slate-400 transition-all;
             &.is-active {
-                @apply relative;
-                &::after {
-                    @apply content-[''] absolute top-0 left-0 w-full h-[2px] bg-primary;
-                }
+                @apply text-primary font-[1000] text-[16px];
             }
         }
+    }
+    :deep(.el-tabs__content) {
+        @apply flex-1 overflow-hidden bg-[#F8FAFC];
+    }
+}
+
+:deep(.user-detail-panel) {
+    .el-drawer__body {
+        @apply bg-[#0f172a]/10 backdrop-blur-sm;
     }
 }
 </style>

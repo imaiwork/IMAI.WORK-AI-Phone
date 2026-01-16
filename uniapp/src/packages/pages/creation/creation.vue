@@ -45,17 +45,19 @@
                                 <view class="absolute bottom-1 px-2 text-[22rpx] text-white font-bold z-[33]">
                                     {{ item.create_time }}
                                 </view>
-                                <view class="text-[20rpx] text-white absolute top-2 left-2" v-if="item.clip_status != 0"
+                                <view
+                                    class="text-[20rpx] text-white absolute top-2 left-2"
+                                    v-if="item.automatic_clip == '1'"
                                     >AI剪辑</view
                                 >
                                 <view
                                     v-if="getStatus(item) == 1"
                                     class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center z-[22]"
-                                    @click="handlePlay(item)">
+                                    @click="handlePlayCheck(item)">
                                     <image src="/static/images/icons/play.svg" class="w-[58rpx] h-[58rpx]"></image>
                                     <view
                                         class="text-white text-center text-[22rpx] mt-[16rpx]"
-                                        v-if="item.clip_status != 0">
+                                        v-if="item.automatic_clip == '1'">
                                         <template v-if="item.clip_status == 1 || item.clip_status == 2">
                                             AI智能剪辑中...
                                         </template>
@@ -71,7 +73,7 @@
                                             class="text-white bg-[#FF2442] text-[22rpx] font-bold rounded-[10rpx] w-[120rpx] h-[50rpx] flex items-center justify-center mx-auto"
                                             >生成失败</view
                                         >
-                                        <view class="mt-[16rpx] text-center text-[22rpx] text-white">
+                                        <view class="mt-[16rpx] text-center text-[22rpx] text-white px-2">
                                             {{ item.remark }}
                                         </view>
                                     </template>
@@ -259,8 +261,8 @@
     <video-preview-v2
         v-model:show="showVideoPreview"
         :is-bar="false"
-        :video-url="operateItem.url"
-        :poster="operateItem.pic"
+        :video-url="playData.url"
+        :poster="playData.pic"
         @update:show="showVideoPreview = false"></video-preview-v2>
     <u-popup v-model="showEditPopup" mode="center" width="90%" :border-radius="20">
         <view class="p-4 bg-white rounded-[20rpx]">
@@ -288,23 +290,98 @@
         </view>
     </u-popup>
     <u-popup v-model="showDownload" mode="center" width="90%" :border-radius="20">
-        <view class="p-4 bg-white rounded-[20rpx]">
-            <view class="text-[30rpx] font-bold text-center mt-2">选择下载类型</view>
-            <view class="flex gap-2 mt-5">
-                <view
-                    class="flex-1 py-3 text-center bg-[#F3F3F3] rounded-[20rpx] font-bold text-[30rpx]"
-                    @click="handleDownload(1)"
-                    >下载原视频</view
-                >
-                <view
-                    v-if="operateItem.clip_result_url"
-                    class="flex-1 py-3 text-center bg-black rounded-[20rpx] text-white font-bold text-[30rpx]"
-                    @click="handleDownload(2)"
-                    >下载剪辑视频</view
-                >
+        <view class="relative overflow-hidden bg-white w-full shadow-xl shadow-[#e2e8f0]/50">
+            <view class="p-6">
+                <view class="flex flex-col items-center gap-1 mb-6">
+                    <view class="text-[32rpx] font-bold text-[#0f172a] tracking-wide">选择下载版本</view>
+                    <view class="text-[24rpx] text-[#64748b]">请选择您需要保存到本地的视频</view>
+                </view>
+
+                <!-- 按钮区域 -->
+                <view class="flex gap-3">
+                    <!-- 选项1：下载生成视频 (次要操作 - 浅灰底) -->
+                    <view
+                        class="flex-1 py-4 px-2 flex flex-col items-center justify-center gap-1 rounded-[24rpx] bg-[#f1f5f9] active:bg-[#e2e8f0] transition-all border border-[transparent] active:border-[#cbd5e1]"
+                        hover-class="opacity-80"
+                        @click="handleDownload(1)">
+                        <!-- 图标 -->
+                        <view class="w-8 h-8 rounded-full bg-white flex items-center justify-center mb-1 shadow-sm">
+                            <text class="text-[#64748b] text-[24rpx] font-bold">原</text>
+                        </view>
+                        <text class="text-[#334155] font-bold text-[26rpx]">生成视频</text>
+                        <text class="text-[#94a3b8] text-[20rpx] scale-90">原始版本</text>
+                    </view>
+
+                    <!-- 选项2：下载剪辑视频 (主要操作 - 蓝底) -->
+                    <view
+                        v-if="operateItem.clip_result_url"
+                        class="flex-1 py-4 px-2 flex flex-col items-center justify-center gap-1 rounded-[24rpx] bg-primary active:bg-[#0055d4] transition-all shadow-lg shadow-[#3b82f6]/30"
+                        hover-class="opacity-90"
+                        @click="handleDownload(2)">
+                        <!-- 装饰纹理 -->
+                        <view
+                            class="absolute top-0 right-0 w-12 h-12 bg-[#ffffff]/10 rounded-bl-[32rpx] pointer-events-none"></view>
+
+                        <!-- 图标 -->
+                        <view
+                            class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mb-1 backdrop-blur-sm border border-solid border-[#ffffff]/20">
+                            <text class="text-white text-[24rpx] font-bold">AI</text>
+                        </view>
+                        <text class="text-white font-bold text-[26rpx]">剪辑视频</text>
+                        <text class="text-[#dbeafe] text-[20rpx] scale-90">智能处理</text>
+                    </view>
+                </view>
             </view>
         </view>
     </u-popup>
+    <view class="modal-container" v-if="showPlaySelection" :class="{ show: showPlaySelection }" @touchmove.stop.prevent>
+        <view class="modal-mask" @tap="showPlaySelection = false"></view>
+        <view class="modal-content">
+            <view class="light-bar"></view>
+            <view class="close-btn" @tap="showPlaySelection = false">
+                <text class="close-icon">×</text>
+            </view>
+            <view class="modal-body">
+                <view class="header-section">
+                    <text class="modal-title">选择播放版本</text>
+                    <text class="modal-subtitle">检测到该作品包含 AI 剪辑版本</text>
+                </view>
+                <view class="action-group">
+                    <button
+                        class="select-btn primary-btn"
+                        hover-class="btn-hover"
+                        @tap="triggerPlay(operateItem.clip_result_url)">
+                        <view class="btn-left">
+                            <view class="icon-box blue-icon">
+                                <text class="icon-text">AI</text>
+                            </view>
+                            <view class="text-col">
+                                <text class="btn-title text-white">播放剪辑视频</text>
+                                <text class="btn-desc text-blue-light">AI 智能处理版本</text>
+                            </view>
+                        </view>
+                        <view class="arrow-icon"></view>
+                        <view class="shine-effect"></view>
+                    </button>
+                    <button
+                        class="select-btn secondary-btn"
+                        hover-class="btn-hover-dark"
+                        @click="triggerPlay(operateItem.video_result_url)">
+                        <view class="btn-left">
+                            <view class="icon-box gray-icon">
+                                <text class="icon-text">原</text>
+                            </view>
+                            <view class="text-col">
+                                <text class="btn-title text-gray">播放数字人视频</text>
+                                <text class="btn-desc text-gray-dark">原始生成版本</text>
+                            </view>
+                        </view>
+                        <view class="arrow-icon gray-arrow"></view>
+                    </button>
+                </view>
+            </view>
+        </view>
+    </view>
 </template>
 
 <script setup lang="ts">
@@ -378,6 +455,10 @@ const newName = ref<string>("");
 const showEditPopup = ref(false);
 const showDownload = ref(false);
 const showVideoPreview = ref(false);
+const playData = reactive({
+    url: "",
+    pic: "",
+});
 
 const isHandle = ref(false);
 // 发布数据
@@ -506,6 +587,32 @@ const formatTime = (time: string) => {
     return uni.$u.timeFormat(time, "yyyy-mm-dd hh:MM");
 };
 
+const showVideo = ref(false);
+const showPlaySelection = ref(false);
+
+const handlePlayCheck = (item: any) => {
+    const { automatic_clip, clip_status, clip_result_url, video_result_url, pic } = item;
+
+    const hasClipVideo = automatic_clip == 1 && clip_status == 3 && clip_result_url;
+    operateItem.value = item;
+    playData.pic = pic;
+    if (hasClipVideo) {
+        showPlaySelection.value = true;
+    } else {
+        triggerPlay(video_result_url);
+    }
+};
+
+const triggerPlay = (url: string) => {
+    playData.url = url;
+    showPlaySelection.value = false;
+    if (url) {
+        showVideoPreview.value = true;
+    } else {
+        uni.$u.toast("视频未生成");
+    }
+};
+
 const showVideoActions = (item: any, index: number) => {
     uni.showActionSheet({
         itemList: ["修改名称", "下载视频", "删除"],
@@ -605,13 +712,6 @@ const handleDownload = async (type: 1 | 2) => {
     } finally {
         showDownload.value = false;
     }
-};
-
-const handlePlay = (item: any) => {
-    const { video_result_url, clip_result_url, pic } = item;
-    operateItem.value.url = clip_result_url || video_result_url;
-    operateItem.value.pic = pic;
-    showVideoPreview.value = true;
 };
 
 const handleDelete = async (index: number | number[]) => {
@@ -786,5 +886,209 @@ onShow(async () => {
 }
 .radio-wrap-active {
     @apply bg-primary border-primary;
+}
+
+.modal-container {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden;
+
+    &.show {
+        visibility: visible;
+
+        .modal-mask {
+            opacity: 1;
+        }
+        .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+}
+
+/* 遮罩 */
+.modal-mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.7); // slate-900 / 0.7
+    backdrop-filter: blur(3px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* 弹窗主体 */
+.modal-content {
+    position: relative;
+    width: 600rpx; // 小程序常用宽度单位
+    background: #0f172a; // slate-900
+    border: 1px solid rgba(51, 65, 85, 0.5); // slate-700
+    border-radius: 32rpx;
+    overflow: hidden;
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 20rpx 50rpx -12rpx rgba(0, 0, 0, 0.5);
+}
+
+/* 顶部光效 */
+.light-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 101, 251, 0.6), transparent);
+}
+
+/* 关闭按钮 */
+.close-btn {
+    position: absolute;
+    top: 20rpx;
+    right: 20rpx;
+    width: 60rpx;
+    height: 60rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+
+    .close-icon {
+        font-size: 40rpx;
+        color: #64748b;
+        line-height: 1;
+    }
+}
+
+.modal-body {
+    padding: 48rpx 40rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* 文本区域 */
+.header-section {
+    text-align: center;
+    margin-bottom: 40rpx;
+    display: flex;
+    flex-direction: column;
+    gap: 10rpx;
+
+    .modal-title {
+        font-size: 36rpx;
+        font-weight: bold;
+        color: #ffffff;
+        letter-spacing: 1px;
+    }
+
+    .modal-subtitle {
+        font-size: 24rpx;
+        color: #94a3b8; // slate-400
+    }
+}
+
+/* 按钮组 */
+.action-group {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24rpx;
+}
+
+/* 通用按钮样式 */
+.select-btn {
+    position: relative;
+    width: 100%;
+    height: 120rpx;
+    padding: 0 30rpx;
+    border-radius: 24rpx;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+    line-height: normal;
+    overflow: hidden;
+
+    &::after {
+        border: none;
+    } // 去除小程序默认边框
+
+    .btn-left {
+        display: flex;
+        align-items: center;
+        gap: 24rpx;
+        z-index: 2;
+    }
+
+    .text-col {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4rpx;
+    }
+
+    .btn-title {
+        font-size: 28rpx;
+        font-weight: bold;
+    }
+
+    .btn-desc {
+        font-size: 20rpx;
+    }
+
+    .icon-box {
+        width: 64rpx;
+        height: 64rpx;
+        border-radius: 16rpx;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .icon-text {
+            font-size: 24rpx;
+            font-weight: 900;
+        }
+    }
+}
+
+/* 样式1：Primary (蓝色) */
+.primary-btn {
+    background-color: #0065fb;
+
+    .blue-icon {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: #fff;
+    }
+
+    .text-white {
+        color: #ffffff;
+    }
+    .text-blue-light {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .arrow-icon {
+        width: 16rpx;
+        height: 16rpx;
+        border-top: 4rpx solid rgba(255, 255, 255, 0.8);
+        border-right: 4rpx solid rgba(255, 255, 255, 0.8);
+        transform: rotate(45deg);
+    }
+
+    /* 扫光动画 */
+    .shine-effect {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transform: translateX(-100%);
+        animation: shine 3s infinite;
+    }
 }
 </style>

@@ -1,8 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "data-select": "../data-select/data-select",
-    "u-button": "../../uni_modules/vk-uview-ui/components/u-button/u-button",
-    "u-popup": "../../uni_modules/vk-uview-ui/components/u-popup/u-popup"
-  }
-}

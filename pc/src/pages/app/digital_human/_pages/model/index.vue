@@ -1,168 +1,161 @@
 <template>
-    <div class="h-full flex flex-col bg-app-bg-2 rounded-[20px]">
-        <div class="flex-shrink-0 px-[14px]">
-            <ElScrollbar>
-                <div class="flex items-center justify-end h-[88px]">
-                    <div class="flex items-center gap-[14px]">
-                        <ElSelect
-                            v-model="queryParams.status"
-                            class="!w-[260px] status-select"
-                            popper-class="dark-select-popper"
-                            clearable
-                            :show-arrow="false"
-                            :empty-values="[null, undefined]"
-                            :value-on-clear="null"
-                            @change="resetPage">
-                            <ElOption
-                                v-for="item in statusList"
-                                :key="item.value"
-                                :label="item.label"
-                                :value="item.value"></ElOption>
-                        </ElSelect>
-                        <template v-if="pager.lists.length > 0">
+    <div class="h-full flex flex-col bg-white rounded-[32px] overflow-hidden border border-br min-w-[1000px]">
+        <div class="flex-shrink-0 px-6 border-b border-br">
+            <div class="flex items-center justify-between h-[80px]">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-12 h-12 flex items-center justify-center rounded-[16px] bg-[#0065FB]/5 text-primary">
+                        <Icon name="el-icon-Monitor" :size="20"></Icon>
+                    </div>
+                    <div>
+                        <div class="text-[16px] text-[#1E293B] font-black tracking-tight">形象管理</div>
+                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                            Model Management
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-x-3">
+                    <div class="flex items-center">
+                        <div v-if="isDelete" class="flex items-center gap-3">
+                            <div class="px-3 py-1 rounded-lg bg-[#0065FB]/5 text-primary text-[12px] font-black">
+                                已选择 {{ selectIndex.length }} 项
+                            </div>
+                            <div class="w-[1px] h-4 bg-[#E2E8F0]"></div>
+                            <ElCheckbox v-model="isAllSelect" @change="handleAllSelect" class="custom-checkbox">
+                                <span class="text-[#64748B] font-bold text-sm">全选所有素材</span>
+                            </ElCheckbox>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <template v-if="!isDelete">
                             <ElButton
-                                type="primary"
-                                class="!h-10 !rounded-full !w-[116px]"
-                                v-if="!isDelete"
-                                @click="isDelete = true">
-                                批量管理
+                                class="!h-[40px] !px-6 !rounded-full !border-br !text-[#64748B] !font-black hover:!text-primary hover:!border-primary hover:!bg-[#F5F7FF] transition-all"
+                                @click="openBatchManage">
+                                <div class="flex items-center gap-2">
+                                    <Icon name="el-icon-Operation" :size="16"></Icon>
+                                    <span>批量管理</span>
+                                </div>
                             </ElButton>
-                            <div class="flex items-center gap-2" v-else>
-                                <ElCheckbox v-model="isAllSelect" @change="handleAllSelect"> 全选 </ElCheckbox>
+                        </template>
+
+                        <template v-else>
+                            <div class="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
+                                <ElButton
+                                    link
+                                    class="!text-[#94A3B8] hover:!text-[#64748B] !font-bold !text-sm mr-2"
+                                    @click="handleExitDelete">
+                                    <div class="flex items-center gap-1">
+                                        <Icon name="el-icon-Close" :size="14"></Icon>
+                                        <span>退出管理</span>
+                                    </div>
+                                </ElButton>
+
                                 <ElButton
                                     type="danger"
-                                    class="!h-10 !rounded-full !w-[90px]"
-                                    @click="handleDelete(deleteIds)">
-                                    删除
+                                    class="!h-[40px] !px-8 !rounded-full !font-black !shadow-[#EF4444]/20 !border-none bg-[#EF4444] hover:bg-[#DC2626] transition-all"
+                                    :disabled="selectIndex.length === 0"
+                                    @click="handleDelete()">
+                                    <div class="flex items-center gap-2">
+                                        <Icon name="el-icon-Delete" :size="16"></Icon>
+                                        <span>彻底删除</span>
+                                    </div>
                                 </ElButton>
-                                <div>
-                                    <ElButton link @click="handleExitDelete">
-                                        <span class="text-white">退出管理</span>
-                                    </ElButton>
-                                </div>
                             </div>
                         </template>
-                        <div>
-                            <ElTooltip content="刷新">
-                                <ElButton
-                                    circle
-                                    color="#1f1f1f"
-                                    icon="el-icon-Refresh"
-                                    class="!w-10 !h-10"
-                                    @click="resetPage()"></ElButton>
-                            </ElTooltip>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="grow min-h-0">
+            <ElScrollbar :distance="20" @end-reached="load">
+                <div class="p-4">
+                    <template v-if="pager.lists.length">
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 pb-4">
+                            <div
+                                v-for="(item, index) in pager.lists"
+                                class="h-[295px] relative cursor-pointer overflow-hidden"
+                                :key="index"
+                                @click="handleChoose(index)">
+                                <anchor-video
+                                    :item="{
+                                        id: item.id,
+                                        name: item.name,
+                                        pic: item.pic,
+                                        status: item.status,
+                                        url: item.result_url,
+                                        remark: item.remark,
+                                        source_type: item.source_type,
+                                    }"
+                                    @delete="handleDelete" />
+                                <div
+                                    class="absolute top-0 right-0 z-[1000] w-full h-full bg-black/5 flex justify-end p-2 rounded-xl"
+                                    v-if="isDelete">
+                                    <div class="w-6 h-6 rounded-full">
+                                        <Icon
+                                            name="local-icon-success_fill"
+                                            :size="20"
+                                            :color="
+                                                selectIndex.includes(index) ? 'var(--el-color-error)' : '#ffffff1a'
+                                            "></Icon>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                        <div v-if="!pager.isLoad" class="text-center text-xs w-full py-4">暂无更多了~</div>
+                    </template>
+                    <div class="h-full flex items-center justify-center" v-else>
+                        <ElEmpty />
                     </div>
                 </div>
             </ElScrollbar>
         </div>
-        <div
-            class="grow min-h-0 overflow-y-auto px-4 dynamic-scroller"
-            :infinite-scroll-immediate="false"
-            :infinite-scroll-disabled="!pager.isLoad"
-            :infinite-scroll-distance="10"
-            v-infinite-scroll="load">
-            <div class="h-full" v-loading="pager.loading">
-                <div v-if="pager.lists.length">
-                    <div
-                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 py-4">
-                        <div
-                            v-for="(item, index) in pager.lists"
-                            class="h-[295px] relative cursor-pointer overflow-hidden"
-                            :key="index"
-                            @click="handleChoose(item.id)">
-                            <video-item
-                                :item="{
-                                    id: item.id,
-                                    name: item.name,
-                                    pic: item.pic,
-                                    status: item.status,
-                                    video_url: item.url,
-                                    model_version: item.model_version,
-                                    remark: item.remark,
-                                    create_time: item.create_time,
-                                }"
-                                @delete="handleDelete"
-                                @retry="handleRetry" />
-                            <div
-                                class="absolute top-0 right-0 z-[1000] w-full h-full bg-black/5 flex justify-end p-2"
-                                v-if="isDelete">
-                                <div class="w-6 h-6 rounded-full">
-                                    <Icon
-                                        name="local-icon-success_fill"
-                                        :size="20"
-                                        :color="
-                                            deleteIds.includes(item.id) ? 'var(--el-color-error)' : '#ffffff1a'
-                                        "></Icon>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div v-if="!pager.isLoad" class="text-white text-center text-xs w-full py-4">暂无更多了~</div>
-                </div>
-                <div class="h-full flex items-center justify-center" v-else>
-                    <Empty />
-                </div>
-            </div>
+        <div class="shrink-0 h-[72px] px-8 flex items-center justify-between border-t border-br">
+            <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 条形象数据</div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { getAnchorList, deleteAnchor, retryAnchor } from "@/api/digital_human";
-import Empty from "@/pages/app/digital_human/_components/empty.vue";
-import VideoItem from "@/pages/app/_components/video-item.vue";
+import { getPublicAnchorList, deleteAnchor, deleteShanjianAnchor, deletePublicAnchor } from "@/api/digital_human";
+import AnchorVideo from "@/pages/app/_components/anchor-video.vue";
 
 const nuxtApp = useNuxtApp();
 
-const statusList = [
-    {
-        label: "全部",
-        value: "",
-    },
-    {
-        label: "生成中",
-        value: "0",
-    },
-    {
-        label: "生成成功",
-        value: "1",
-    },
-    {
-        label: "生成失败",
-        value: "2",
-    },
-];
-
 const isDelete = ref<boolean>(false);
 const isAllSelect = ref<boolean>(false);
-const deleteIds = ref<number[]>([]);
+const selectIndex = ref<number[]>([]);
 const queryParams = reactive({
     page_no: 1,
     page_size: 20,
-    status: "",
-    model_version: "",
-    type: 0,
 });
 
 const { pager, getLists, resetPage } = usePaging({
-    fetchFun: getAnchorList,
+    fetchFun: getPublicAnchorList,
     params: queryParams,
     isScroll: true,
 });
 
+const openBatchManage = () => {
+    if (pager.lists.length == 0) {
+        feedback.msgError("暂无数据，无法进行批量管理");
+        return;
+    }
+    isDelete.value = true;
+};
+
 const handleExitDelete = () => {
     isDelete.value = false;
-    deleteIds.value = [];
+    selectIndex.value = [];
 };
 
 const handleChoose = (id: number) => {
-    if (deleteIds.value.includes(id)) {
-        deleteIds.value = deleteIds.value.filter((item) => item !== id);
+    if (selectIndex.value.includes(id)) {
+        selectIndex.value = selectIndex.value.filter((item) => item !== id);
     } else {
-        deleteIds.value.push(id);
+        selectIndex.value.push(id);
     }
-    if (deleteIds.value.length == pager.lists.length) {
+    if (selectIndex.value.length == pager.lists.length) {
         isAllSelect.value = true;
     } else {
         isAllSelect.value = false;
@@ -171,52 +164,60 @@ const handleChoose = (id: number) => {
 
 const handleAllSelect = () => {
     if (isAllSelect.value) {
-        deleteIds.value = pager.lists.map((item) => item.id);
+        selectIndex.value = pager.lists.map((item, index) => index);
     } else {
-        deleteIds.value = [];
+        selectIndex.value = [];
     }
 };
 
-const handleTabClick = (tab: any) => {
-    queryParams.model_version = tab.paneName;
-    resetPage();
+const load = async (e: any) => {
+    if (e == "bottom") {
+        if (!pager.isLoad || pager.loading) return;
+        queryParams.page_no++;
+        await getLists();
+    }
 };
 
-const load = async () => {
-    queryParams.page_no += 1;
-    getLists();
-};
+// const handleRetry = async (id: number) => {
+//     nuxtApp.$confirm({
+//         message: "确定重试改形象吗？",
+//         theme: "dark",
+//         onConfirm: async () => {
+//             try {
+//                 feedback.loading("重试中...");
+//                 await retryAnchor({ anchor_id: id });
+//                 resetPage();
+//                 feedback.msgSuccess("重试成功");
+//             } catch (error) {
+//                 feedback.msgError(error || "重试失败");
+//             } finally {
+//                 feedback.closeLoading();
+//             }
+//         },
+//     });
+// };
 
-const handleRetry = async (id: number) => {
-    nuxtApp.$confirm({
-        message: "确定重试改形象吗？",
-        theme: "dark",
-        onConfirm: async () => {
-            try {
-                feedback.loading("重试中...");
-                await retryAnchor({ anchor_id: id });
-                resetPage();
-                feedback.msgSuccess("重试成功");
-            } catch (error) {
-                feedback.msgError(error || "重试失败");
-            } finally {
-                feedback.closeLoading();
-            }
-        },
-    });
-};
-
-const handleDelete = async (id: number | number[]) => {
+const handleDelete = async (id?: number, source_type?: string) => {
     nuxtApp.$confirm({
         title: "提示",
         message: "确定删除吗？",
-        theme: "dark",
         onConfirm: async () => {
             try {
-                await deleteAnchor({ id });
-                pager.lists = pager.lists.filter((item) =>
-                    typeof id === "number" ? item.id !== id : !deleteIds.value.includes(item.id)
-                );
+                if (id) {
+                    let deleteFunc =
+                        source_type === "human_anchor"
+                            ? deleteAnchor
+                            : source_type === "shanjian_anchor"
+                            ? deleteShanjianAnchor
+                            : deletePublicAnchor;
+                    await deleteFunc({ id });
+                } else {
+                    await deleteBySourceType("human_anchor", deleteAnchor);
+                    await deleteBySourceType("shanjian_anchor", deleteShanjianAnchor);
+                    await deleteBySourceType("public_anchor", deletePublicAnchor);
+                }
+                pager.lists = pager.lists.filter((item, index) => !selectIndex.value.includes(index));
+                selectIndex.value = [];
                 feedback.msgSuccess("删除成功");
             } catch (error) {
                 feedback.msgError("删除失败");
@@ -224,6 +225,16 @@ const handleDelete = async (id: number | number[]) => {
         },
     });
 };
+
+async function deleteBySourceType(sourceType: string, deleteFunction: Function) {
+    const ids = pager.lists
+        .filter((item, index) => selectIndex.value.includes(index) && item.source_type == sourceType)
+        .map((item) => item.id);
+    if (ids.length === 0) return;
+
+    await deleteFunction({ id: ids });
+}
+
 getLists();
 </script>
 
@@ -237,7 +248,6 @@ getLists();
         }
     }
     .el-checkbox__label {
-        color: #fff;
         font-size: var(--el-font-size-base);
     }
 }

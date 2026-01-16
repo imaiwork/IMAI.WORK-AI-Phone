@@ -1,52 +1,86 @@
 <template>
     <popup
         ref="materialPopRef"
-        width="476px"
+        width="520px"
         confirm-button-text=""
         cancel-button-text=""
+        header-class="!p-0"
+        footer-class="!p-0"
         :show-close="false"
-        style="padding: 0; background-color: var(--app-bg-color-1)">
-        <div class="py-[18px] -my-4">
-            <div class="absolute top-[18px] right-[18px] w-6 h-6 cursor-pointer" @click="close">
-                <close-btn :theme="ThemeEnum.DARK"></close-btn>
+        style="padding: 0">
+        <div class="rounded-[28px] overflow-hidden bg-white shadow-2xl relative">
+            <div class="flex items-center justify-between h-[72px] px-8 border-b border-[#F1F5F9] bg-white">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#F59E0B]/10 text-[#F59E0B]">
+                        <Icon name="el-icon-Star" :size="20"></Icon>
+                    </div>
+                    <div>
+                        <div class="text-[18px] text-[#1E293B] font-black tracking-tight">优秀案例库</div>
+                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                            Inspiration Gallery
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="w-8 h-8 flex items-center justify-center rounded-full bg-[#F8FAFC] hover:bg-[#FEE2E2] hover:text-[#EF4444] transition-all cursor-pointer"
+                    @click="close">
+                    <Icon name="el-icon-Close" :size="14"></Icon>
+                </div>
             </div>
-            <div class="font-bold text-[20px] text-white px-[18px]">优秀案例</div>
-            <div class="mt-5">
-                <div class="h-[40rem]">
-                    <template v-if="isColumn">
-                        <ElScrollbar>
-                            <div
-                                class="grid grid-cols-3 gap-[10px] px-3"
-                                v-infinite-scroll="columnLoad"
-                                :infinite-scroll-disabled="columnFinished"
-                                :infinite-scroll-immediate="false"
-                                :infinite-scroll-distance="10">
+
+            <div class="h-[650px] bg-[#F8FAFC]">
+                <ElScrollbar :distance="20" @end-reached="columnLoad">
+                    <div class="p-6">
+                        <template v-if="isColumn">
+                            <div class="grid grid-cols-3 gap-4">
                                 <div
-                                    class="flex flex-col gap-[10px]"
-                                    v-for="(value, index) in columnLists"
-                                    :key="index">
-                                    <div class="relative overflow-hidden rounded-lg" v-for="item in value">
-                                        <ElImage :src="item.pic" class="w-full h-full min-h-[100px]" lazy> </ElImage>
-                                        <ElTooltip popper-class="max-w-[300px]" :content="item.title">
-                                            <div class="absolute top-2 right-2 cursor-pointer">
-                                                <Icon name="local-icon-tips" color="#ffffff"></Icon>
+                                    class="flex flex-col gap-4"
+                                    v-for="(column, colIndex) in columnLists"
+                                    :key="colIndex">
+                                    <div
+                                        v-for="item in column"
+                                        :key="item.id"
+                                        class="group relative overflow-hidden rounded-[16px] bg-white border border-br transition-all hover:shadow-xl hover:shadow-[#0065fb]/10 hover:-translate-y-1">
+                                        <div class="relative w-full overflow-hidden">
+                                            <ElImage
+                                                :src="item.pic"
+                                                class="w-full h-auto block transition-transform duration-500 group-hover:scale-110"
+                                                lazy>
+                                            </ElImage>
+
+                                            <div
+                                                class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-4">
+                                                <button class="copy-pill-btn" @click="handleCopy(item.title)">
+                                                    <Icon name="el-icon-CopyDocument" class="mr-1.5"></Icon>
+                                                    使用文案
+                                                </button>
                                             </div>
-                                        </ElTooltip>
-                                        <div class="absolute bottom-2 left-0 w-full flex justify-center">
-                                            <button class="copy-btn" @click="handleCopy(item.title)">复制同款</button>
+                                        </div>
+
+                                        <div class="p-3" v-if="item.title">
+                                            <p
+                                                class="text-[11px] text-[#64748B] line-clamp-2 leading-relaxed font-medium">
+                                                {{ item.title }}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div v-if="columnFinished" class="text-white text-center text-xs w-full mt-4">
-                                暂无更多了~
+                            <load-text :is-load="!columnFinished"></load-text>
+                        </template>
+
+                        <div
+                            v-if="!columnLoading && columnLists.length === 0"
+                            class="h-[400px] flex flex-col items-center justify-center">
+                            <div
+                                class="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 border border-[#F1F5F9]">
+                                <Icon name="el-icon-Picture" :size="24" color="#CBD5E1"></Icon>
                             </div>
-                        </ElScrollbar>
-                    </template>
-                    <div v-else class="flex items-center justify-center w-full h-full">
-                        <ElEmpty description="空空如也"></ElEmpty>
+                            <p class="text-[#94A3B8] font-bold text-sm">暂无案例内容</p>
+                        </div>
                     </div>
-                </div>
+                </ElScrollbar>
             </div>
         </div>
     </popup>
@@ -55,7 +89,6 @@
 <script setup lang="ts" name="MaterialImage">
 import { getImagePromptList } from "@/api/drawing";
 import { chunkArray } from "@/utils/util";
-import { ThemeEnum } from "@/enums/appEnums";
 
 const emit = defineEmits<{
     (event: "close"): void;
@@ -94,10 +127,12 @@ const getColumnLists = async () => {
     }
 };
 
-const columnLoad = () => {
-    if (columnLoading.value || columnFinished.value) return;
-    columnParams.page_no += 1;
-    getColumnLists();
+const columnLoad = async (e: any) => {
+    if (e == "bottom") {
+        if (!columnFinished.value || columnLoading.value) return;
+        columnParams.page_no++;
+        await getColumnLists();
+    }
 };
 
 const handleCopy = (title: string) => {
@@ -125,11 +160,29 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
-.copy-btn {
-    @apply px-5 h-[34px] flex items-center justify-center rounded-full text-white;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(56, 56, 56, 0.3) 100%);
-    box-shadow: 0px 6px 12px 0px rgba(0, 0, 0, 0.24);
-    backdrop-filter: blur(6px);
+/* 复制按钮药丸样式 */
+.copy-pill-btn {
+    @apply flex items-center justify-center px-4 py-2 rounded-full bg-white text-primary text-[12px] font-black  transform translate-y-2 group-hover:translate-y-0 transition-all duration-300;
+    border: none;
+    cursor: pointer;
+    &:hover {
+        @apply bg-primary text-white;
+    }
+}
+
+/* 现代加载器 */
+.modern-loader {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #f1f5f9;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 </style>

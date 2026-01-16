@@ -29,7 +29,7 @@
                                             <div class="text-lg font-bold">AI获客</div>
                                             <div
                                                 class="flex items-center text-primary gap-x-1 font-bold cursor-pointer"
-                                                @click="toPage('staff')">
+                                                @click="toPage('customer')">
                                                 更多<Icon name="el-icon-ArrowRight"></Icon>
                                             </div>
                                         </div>
@@ -52,7 +52,7 @@
                                             <div class="text-lg font-bold">矩阵运营</div>
                                             <div
                                                 class="flex items-center text-primary gap-x-1 font-bold cursor-pointer"
-                                                @click="toPage('staff')">
+                                                @click="toPage('matrix')">
                                                 更多<Icon name="el-icon-ArrowRight"></Icon>
                                             </div>
                                         </div>
@@ -179,20 +179,20 @@ const socialPlatformList = [
     {
         name: "视频号获客",
         icon: SphIcon,
-        type: "sph",
+        type: "customer",
     },
-    { name: "小红书获客", icon: RedBookIcon, type: "sph" },
-    { name: "抖音获客", icon: DouyinIcon, type: "sph" },
-    { name: "快手获客", icon: KuaishouIcon, type: "sph" },
+    { name: "小红书获客", icon: RedBookIcon, type: "customer" },
+    { name: "抖音获客", icon: DouyinIcon, type: "customer" },
+    { name: "快手获客", icon: KuaishouIcon, type: "customer" },
 ];
 
 const toPage = (type: string) => {
     // 明确定义路由映射表，增强可读性
     const typeUrl: { [key: string]: string } = {
-        sales: "/app/person_wechat/chat",
+        sales: "/app/person_wechat?type=1",
         matrix: "/app/matrix?type=1",
         dh: "/app/digital_human?type=1",
-        sph: "/app/sph?type=1",
+        customer: "/app/customer?type=1",
         staff: "/staff",
         device: "/device",
     };
@@ -218,7 +218,7 @@ watch(
         initialize().then(async () => {
             await getAgentList();
             await setup();
-            if (route.query.agent_id) {
+            if (Number(route.query.agent_id) > 0) {
                 setAgent({
                     id: route.query.agent_id as string,
                     name: route.query.agent_name as string,

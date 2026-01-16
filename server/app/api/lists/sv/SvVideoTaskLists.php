@@ -18,7 +18,7 @@ class SvVideoTaskLists extends BaseApiDataLists implements ListsSearchInterface,
     public function setSearch(): array
     {
         return [
-            '=' => [ 'type', 'status', 'video_setting_id', 'audio_type', 'model_version', 'ai_type'],
+            '=' => [ 'type', 'status', 'video_setting_id', 'audio_type', 'model_version', 'ai_type','auto_type'],
             '%like%' => ['name'],
             'between' => ['create_time'],
             // 其他搜索条件
@@ -37,6 +37,7 @@ class SvVideoTaskLists extends BaseApiDataLists implements ListsSearchInterface,
     }
     public function lists(): array
     {
+        $this->searchWhere[] = ['auto_type', '=', $this->request->get('auto_type', 0)];
         $this->searchWhere[] = ['user_id', '=', $this->userId];
         $list = SvVideoTask::where($this->searchWhere)
             ->order($this->sortOrder)
@@ -62,6 +63,7 @@ class SvVideoTaskLists extends BaseApiDataLists implements ListsSearchInterface,
 
     public function count(): int
     {
+        $this->searchWhere[] = ['auto_type', '=', $this->request->get('auto_type', 0)];
         return SvVideoTask::where($this->searchWhere)->count();
     }
 }

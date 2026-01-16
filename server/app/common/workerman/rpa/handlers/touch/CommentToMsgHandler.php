@@ -2,8 +2,13 @@
 
 namespace app\common\workerman\rpa\handlers\touch;
 
+use app\api\logic\service\TokenLogService;
+use app\common\enum\user\AccountLogEnum;
+use app\common\logic\AccountLogLogic;
+use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvLeadScrapingRecord;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
+use app\common\model\user\User;
 use app\common\workerman\rpa\BaseMessageHandler;
 use app\common\workerman\rpa\WorkerEnum;
 use Workerman\Connection\TcpConnection;
@@ -80,6 +85,22 @@ class CommentToMsgHandler extends BaseMessageHandler
                 'exec_time'           => time(),
             ];
             SvLeadScrapingRecord::create($insert);
+            $autoType = SvDevice::where('device_code',$this->payload['deviceId'])->value('auto_type') ?? 0;
+            if ($autoType == 1){
+                $response = \app\common\service\ToolsService::Automation()->shutOffPrivateLetter($content);
+                if (isset($response['code']) && $response['code'] == 10000) {
+                    //检查扣费
+                    $unit = TokenLogService::checkToken($task->user_id, 'automation_shut_off_private_letter');
+                    $points = $unit ;
+                    //token扣除
+                    User::userTokensChange($task->user_id, $points);
+                    $extra = [ '算力单价' => $unit, '实际消耗算力' => $points];
+                    $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_SHUT_OFF_PRIVATE_LETTER;
+                    //扣费记录
+                    AccountLogLogic::recordUserTokensLog(true, $task->user_id, $desc, $points, $content['task_id'], $extra);
+                }
+            }
+
 
             return [
                 'isProceed' => 1,//是否处理 1是 0 否

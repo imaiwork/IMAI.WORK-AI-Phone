@@ -2,7 +2,6 @@
     <view class="h-screen flex flex-col pt-4">
         <view class="px-4">
             <view class="font-bold text-[30rpx]">素材（共{{ materialList.length }}张）</view>
-            <view class="mt-1 text-xs text-[#0000004d]"> 至少需要1个视频+3张图片</view>
             <view class="mt-1 text-xs text-[#0000004d]">
                 总量限制：全部素材总时长不得超过{{ montageConfig.materialTotalDuration }}分钟 (图片按{{
                     montageConfig.imageDuration
@@ -102,6 +101,7 @@ const chooseUploadType = () => {
 };
 
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useMontageMaterial({
+    isTranscode: true,
     onSuccess: (res: any[]) => {
         if (replaceMaterialIndex.value !== -1) {
             materialList.value[replaceMaterialIndex.value] = res[0];
@@ -122,22 +122,10 @@ const handleDeleteMaterial = (index: number) => {
 };
 
 const handleConfirm = () => {
-    // 判断素材是否符合要求
-    const videoCount = materialList.value.filter((item: any) => item.type === "video").length;
-    const imageCount = materialList.value.filter((item: any) => item.type === "image").length;
-    if (videoCount < 1 || imageCount < 3) {
-        uni.showToast({
-            title: "至少需要1个视频+3张图片",
-            icon: "none",
-        });
-        return;
-    }
-    // 单张图片计算为 2秒 + 视频时长，所有素材总时长不能超过5分钟，
     if (getCurrentTotalDuration.value > montageConfig.materialTotalDuration * 60) {
         uni.$u.toast(`素材总时长不能超过${montageConfig.materialTotalDuration}分钟`);
         return;
     }
-
     emit("confirm", {
         type: ListenerTypeEnum.MONTAGE_MATERIAL_GROUP,
         data: materialList.value,

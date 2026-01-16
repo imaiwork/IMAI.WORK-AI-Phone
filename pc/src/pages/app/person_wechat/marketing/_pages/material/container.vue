@@ -1,184 +1,169 @@
 <template>
-    <div class="flex flex-col w-full h-full">
-        <!-- 顶部操作区 -->
-        <div class="flex-shrink-0 flex items-center justify-between p-4">
-            <div>
-                <ElButton type="primary" @click="openUploadModal">添加素材</ElButton>
-                <ElButton :disabled="selectIds.length === 0" @click="handleBatchDelete">批量删除</ElButton>
+    <div class="flex flex-col w-full h-full bg-white">
+        <div class="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-br-extra-light">
+            <div class="flex items-center gap-3">
+                <ElButton type="primary" class="!rounded-xl !h-[36px] !font-bold" @click="openUploadModal">
+                    <Icon name="el-icon-Plus" />
+                    <span class="ml-1">添加素材</span>
+                </ElButton>
+                <ElButton
+                    v-if="selectIds.length"
+                    type="danger"
+                    plain
+                    class="!rounded-xl !h-[36px] !font-bold"
+                    @click="handleBatchDelete">
+                    <Icon name="el-icon-Delete" />
+                    <span class="ml-1">批量删除 ({{ selectIds.length }})</span>
+                </ElButton>
             </div>
-            <div class="flex items-center gap-x-2">
+
+            <div class="flex items-center gap-2">
                 <ElInput
                     v-model="queryParams.file_name"
-                    class="h-[34px]"
-                    placeholder="请输入素材名称"
+                    placeholder="搜索素材名称..."
                     clearable
+                    class="custom-input"
                     @clear="getLists"
                     @keyup.enter="getLists">
-                    <template #append>
-                        <ElButton @click="getLists">
-                            <Icon name="el-icon-Search" />
-                        </ElButton>
+                    <template #prefix>
+                        <Icon name="el-icon-Search" />
                     </template>
                 </ElInput>
-                <ElButton @click="getLists">
-                    <Icon name="el-icon-Refresh" />
-                </ElButton>
+                <div class="refresh-btn shrink-0" @click="getLists">
+                    <Icon name="el-icon-Refresh" :size="16" />
+                </div>
             </div>
         </div>
 
-        <!-- 内容网格 -->
-        <div class="grow min-h-0" v-loading="pager.loading">
+        <div class="grow min-h-0 bg-[#f9f9f9]/30" v-loading="pager.loading">
             <template v-if="pager.lists.length">
                 <ElScrollbar>
-                    <div class="grid gap-4 px-4" :class="gridClasses">
-                        <div v-for="item in pager.lists" :key="item.id" class="relative">
-                            <div
-                                class="flex flex-col bg-primary-light-9 rounded-xl overflow-hidden"
-                                :class="getCardHeightClass(item.file_type)">
-                                <!-- 卡片核心内容 -->
-                                <div class="grow min-h-0 overflow-hidden relative group">
-                                    <!-- 不同类型素材的展示 -->
-                                    <div
-                                        v-if="isVisualType(item.file_type)"
-                                        class="h-full hover:scale-105 transition-all duration-300 cursor-pointer"
-                                        @click="openPreviewModal(item.file_url, item.file_type)">
-                                        <img
-                                            v-if="item.file_type === MaterialTypeEnum.IMAGE"
-                                            class="w-full h-full object-cover"
-                                            :src="item.file_url"
-                                            alt="素材图片" />
-                                        <video
-                                            v-else-if="item.file_type === MaterialTypeEnum.VIDEO"
-                                            :src="item.file_url"
-                                            class="w-full h-full" />
-                                    </div>
-                                    <div v-else-if="item.file_type === MaterialTypeEnum.LINK" class="m-2 h-full">
-                                        <LinkCard
-                                            :title="item.file_name"
-                                            :desc="item.ext_info.link_desc"
-                                            :img="item.file_url" />
-                                    </div>
-                                    <div
-                                        v-else-if="item.file_type === MaterialTypeEnum.MINI_PROGRAM"
-                                        class="h-full m-2">
-                                        <MiniProgramCard
-                                            :title="item.file_name"
-                                            :pic="item.file_url"
-                                            :link="item.ext_info.mini_program_path" />
-                                    </div>
-                                    <div v-else-if="item.file_type === MaterialTypeEnum.FILE" class="h-full m-2">
-                                        <FileCard :name="item.file_name" :url="item.file_url" />
-                                    </div>
-                                    <!-- 悬浮操作层 -->
-                                    <div
-                                        class="absolute inset-0 invisible group-hover:visible z-10 flex items-center justify-center gap-2 bg-[var(--el-overlay-color-lighter)]">
-                                        <ElTooltip content="预览" v-if="isVisualType(item.file_type)">
-                                            <div
-                                                class="cursor-pointer"
-                                                @click="openPreviewModal(item.file_url, item.file_type)">
-                                                <Icon name="el-icon-ZoomIn" color="#ffffff" :size="18" />
-                                            </div>
-                                        </ElTooltip>
-                                        <ElTooltip content="删除">
-                                            <div class="cursor-pointer" @click="handleDelete(item.id)">
-                                                <Icon name="el-icon-Delete" color="#ffffff" :size="18" />
-                                            </div>
-                                        </ElTooltip>
-                                        <ElTooltip
-                                            content="下载"
-                                            v-if="
-                                                [MaterialTypeEnum.IMAGE, MaterialTypeEnum.VIDEO].includes(
-                                                    item.file_type
-                                                )
-                                            ">
-                                            <div class="cursor-pointer" @click="handleDownload(item.file_url)">
-                                                <Icon name="el-icon-Download" color="#ffffff" :size="18" />
-                                            </div>
-                                        </ElTooltip>
-                                        <ElTooltip content="选择">
-                                            <div class="cursor-pointer" @click="toggleSelectItem(item)">
-                                                <Icon name="el-icon-Check" color="#ffffff" :size="18" />
-                                            </div>
-                                        </ElTooltip>
-                                    </div>
-                                </div>
-
-                                <!-- 卡片底部 -->
-                                <div class="flex-shrink-0 gap-x-1 flex items-center justify-between p-2">
-                                    <ElTooltip :content="item.file_name" v-if="isVisualType(item.file_type)">
-                                        <div class="line-clamp-1">{{ item.file_name }}</div>
-                                    </ElTooltip>
-                                    <div v-else class="text-xs">{{ item.create_time }}</div>
-
-                                    <div class="flex items-center">
-                                        <!-- 链接与小程序可编辑复杂信息 -->
-                                        <template v-if="isComplexType(item.file_type)">
-                                            <ElTooltip content="编辑">
-                                                <ElButton link :icon="Edit" @click="openEditModal(item)" />
-                                            </ElTooltip>
-                                        </template>
-                                        <!-- 其他类型只可编辑名称 -->
-                                        <popover-input
-                                            v-else
-                                            :value="item.file_name"
-                                            size="default"
-                                            width="400px"
-                                            show-limit
-                                            teleported
-                                            :limit="50"
-                                            @confirm="handleEditName(item, $event)">
-                                            <ElTooltip content="编辑">
-                                                <ElButton link :icon="Edit" />
-                                            </ElTooltip>
-                                        </popover-input>
-                                    </div>
-                                </div>
-
-                                <!-- 选中状态遮罩 -->
+                    <div class="p-6">
+                        <div class="grid gap-3 grid-cols-3">
+                            <div v-for="item in pager.lists" :key="item.id" class="material-card-wrapper">
                                 <div
-                                    v-if="selectIds.includes(item.id)"
-                                    class="absolute inset-0 rounded-xl w-full h-full bg-black/5 z-20 flex items-center justify-center"
-                                    @click="toggleSelectItem(item)">
-                                    <ElTooltip content="取消选择">
-                                        <div>
-                                            <Icon name="el-icon-Close" :size="24" color="#ffffff" />
+                                    class="material-card group"
+                                    :class="[
+                                        getCardHeightClass(item.file_type),
+                                        { 'is-selected': selectIds.includes(item.id) },
+                                    ]">
+                                    <div class="card-main">
+                                        <div
+                                            v-if="isVisualType(item.file_type)"
+                                            class="visual-container"
+                                            @click="toggleSelectItem(item)">
+                                            <img
+                                                v-if="item.file_type === MaterialTypeEnum.IMAGE"
+                                                :src="item.file_url"
+                                                class="media-content" />
+                                            <div
+                                                v-else-if="item.file_type === MaterialTypeEnum.VIDEO"
+                                                class="relative h-full">
+                                                <video :src="item.file_url" class="media-content" />
+                                                <div class="video-play-icon">
+                                                    <Icon name="el-icon-VideoPlay" :size="32" />
+                                                </div>
+                                            </div>
                                         </div>
-                                    </ElTooltip>
+                                        <div v-else class="card-type-container" @click="toggleSelectItem(item)">
+                                            <LinkCard
+                                                v-if="item.file_type === MaterialTypeEnum.LINK"
+                                                :title="item.file_name"
+                                                :desc="item.ext_info.link_desc"
+                                                :img="item.file_url" />
+                                            <MiniProgramCard
+                                                v-else-if="item.file_type === MaterialTypeEnum.MINI_PROGRAM"
+                                                :title="item.file_name"
+                                                :pic="item.file_url"
+                                                :link="item.ext_info.mini_program_path" />
+                                            <FileCard
+                                                v-else-if="item.file_type === MaterialTypeEnum.FILE"
+                                                :name="item.file_name"
+                                                :url="item.file_url" />
+                                        </div>
+
+                                        <div class="card-overlay">
+                                            <div class="flex items-center gap-3">
+                                                <div
+                                                    class="action-icon-btn"
+                                                    v-if="isVisualType(item.file_type)"
+                                                    @click.stop="openPreviewModal(item.file_url, item.file_type)">
+                                                    <Icon name="el-icon-View" :size="16" />
+                                                </div>
+                                                <div class="action-icon-btn" @click.stop="handleDelete(item.id)">
+                                                    <Icon name="el-icon-Delete" :size="16" />
+                                                </div>
+                                                <div
+                                                    class="action-icon-btn highlight"
+                                                    @click.stop="toggleSelectItem(item)">
+                                                    <Icon
+                                                        :name="
+                                                            selectIds.includes(item.id)
+                                                                ? 'el-icon-CircleCheckFilled'
+                                                                : 'el-icon-CircleCheck'
+                                                        "
+                                                        :size="18" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="card-footer">
+                                        <div class="flex-1 min-w-0">
+                                            <div class="text-[13px] font-bold text-tx-primary truncate">
+                                                {{ item.file_name }}
+                                            </div>
+                                            <div class="text-[11px] text-tx-placeholder mt-0.5">
+                                                {{ item.create_time.split(" ")[0] }}
+                                            </div>
+                                        </div>
+
+                                        <div class="footer-actions">
+                                            <template v-if="isComplexType(item.file_type)">
+                                                <div class="edit-btn" @click="openEditModal(item)">
+                                                    <Icon name="el-icon-EditPen" />
+                                                </div>
+                                            </template>
+                                            <popover-input
+                                                v-else
+                                                :value="item.file_name"
+                                                @confirm="handleEditName(item, $event)">
+                                                <div class="edit-btn"><Icon name="el-icon-EditPen" /></div>
+                                            </popover-input>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="selectIds.includes(item.id)" class="selection-indicator">
+                                        <Icon name="el-icon-SuccessFilled" :size="24" color="var(--color-primary)" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </ElScrollbar>
             </template>
-            <!-- 空状态 -->
-            <div v-else class="flex justify-center items-center h-full">
-                <ElEmpty description="暂无数据" />
+            <div v-else class="h-full flex items-center justify-center">
+                <ElEmpty description="这里还没有素材哦，快去添加吧" :image-size="120" />
             </div>
         </div>
 
-        <!-- 分页 -->
-        <div class="p-4 flex justify-end">
+        <div class="flex-shrink-0 px-6 py-4 border-t border-br-extra-light flex justify-between items-center bg-white">
+            <div class="text-[12px] text-tx-placeholder">
+                已选 {{ selectIds.length }} 项，本页共 {{ pager.lists.length }} 项
+            </div>
             <pagination v-model="pager" @change="getLists" />
         </div>
 
-        <!-- 上传/编辑弹窗 -->
         <material-upload
             ref="uploadModalRef"
             v-if="isUploadModalVisible"
             @close="isUploadModalVisible = false"
             @success="handleUploadSuccess" />
-        <!-- 预览弹窗 -->
-        <material-preview
-            v-model="isPreviewModalVisible"
-            :url="previewState.url"
-            :type="previewState.type"
-            @close="isPreviewModalVisible = false" />
+        <material-preview v-model="isPreviewModalVisible" :url="previewState.url" :type="previewState.type" />
     </div>
 </template>
-
 <script setup lang="ts">
 import { ref, computed, nextTick, reactive } from "vue";
-import { Edit } from "@element-plus/icons-vue";
 import { MaterialTypeEnum } from "@/pages/app/person_wechat/_enums";
 import { useCate, useFile } from "../../_hooks/useMaterial";
 import MaterialUpload from "./upload.vue";
@@ -239,14 +224,15 @@ const gridClasses = computed(() => {
 const getCardHeightClass = (type: number) => {
     switch (type) {
         case MaterialTypeEnum.IMAGE:
+            return "h-[180px]";
         case MaterialTypeEnum.VIDEO:
             return "h-[225px]";
         case MaterialTypeEnum.MINI_PROGRAM:
             return "h-[250px]";
         case MaterialTypeEnum.LINK:
-            return "h-[170px]";
+            return "h-[200px]";
         case MaterialTypeEnum.FILE:
-            return "h-[120px]";
+            return "h-[160px]";
         default:
             return "h-[225px]";
     }
@@ -355,7 +341,65 @@ const handleBatchDelete = async () => {
 // --- 初始化 ---
 getLists();
 </script>
+<style scoped lang="scss">
+.refresh-btn {
+    @apply w-[40px] h-[40px] flex items-center justify-center rounded-xl bg-gray-100 text-tx-secondary cursor-pointer hover:bg-gray-200 transition-all;
+}
 
-<style scoped>
-/* 样式保持不变 */
+.material-card {
+    @apply relative bg-white rounded-xl border border-br-extra-light overflow-hidden transition-all duration-300 shadow-light;
+
+    &:hover {
+        @apply shadow-light shadow-[#e3e3e3]/50 -translate-y-1 border-primary-light-8;
+        .card-overlay {
+            @apply opacity-100;
+        }
+    }
+
+    &.is-selected {
+        @apply border-primary ring-2 ring-[#0065FB]/10;
+    }
+}
+
+.card-main {
+    @apply relative overflow-hidden bg-[#f9f9f9] flex-1 h-[calc(100%-60px)];
+}
+
+.visual-container {
+    @apply h-full w-full cursor-pointer overflow-hidden;
+    .media-content {
+        @apply w-full h-full object-cover transition-transform duration-500 group-hover:scale-110;
+    }
+}
+
+.video-play-icon {
+    @apply absolute inset-0 flex items-center justify-center text-[#ffffff]/80;
+}
+
+.card-type-container {
+    @apply p-3 h-full cursor-pointer;
+}
+
+.card-overlay {
+    @apply absolute inset-0 bg-[#000000]/40 flex items-center justify-center opacity-0 transition-opacity duration-300;
+}
+
+.action-icon-btn {
+    @apply w-9 h-9 rounded-full bg-[#ffffff]/20 backdrop-blur-md text-white flex items-center justify-center cursor-pointer hover:bg-white hover:text-primary transition-all;
+    &.highlight {
+        @apply bg-[#0065FB]/80 text-white hover:bg-primary;
+    }
+}
+
+.card-footer {
+    @apply h-[60px] px-3 flex items-center justify-between bg-white border-t border-[#e3e3e3];
+}
+
+.edit-btn {
+    @apply p-1.5 rounded-lg text-tx-placeholder hover:bg-gray-100 hover:text-primary cursor-pointer transition-all;
+}
+
+.selection-indicator {
+    @apply absolute top-2 right-2 z-20 bg-white rounded-full shadow-light leading-[0];
+}
 </style>

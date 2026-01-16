@@ -57,7 +57,7 @@ const props = defineProps({
         default: ThemeEnum.LIGHT,
     },
     data: {
-        type: Object as PropType<{ id: string; [key: string]: any }>,
+        type: Object as PropType<{ id?: string; [key: string]: any }>,
         default: () => ({}),
     },
     menuList: {

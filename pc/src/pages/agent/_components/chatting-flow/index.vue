@@ -1,51 +1,56 @@
 <template>
-    <div class="w-full h-full flex">
-        <!-- 左侧表单区域 -->
-        <div class="w-[350px] flex-shrink-0 border-r-[1px] border-[#0000000d] py-4 flex flex-col">
+    <div class="w-full h-full flex bg-[#F8FAFC]">
+        <div class="w-[380px] flex-shrink-0 border-r border-[#F1F5F9] bg-white py-6 flex flex-col">
+            <div class="px-6 mb-6">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                    <span class="text-[15px] font-[900] text-[#1E293B]">参数配置</span>
+                </div>
+                <p class="text-[12px] font-bold text-[#94A3B8]">请填写下方工作流所需的输入参数</p>
+            </div>
+
             <div class="grow min-h-0">
                 <ElScrollbar>
-                    <div class="px-4">
+                    <div class="px-6">
                         <ElForm
                             ref="formRef"
                             :model="formData"
                             :rules="rules"
                             label-position="top"
+                            class="custom-workflow-form"
                             @submit.native.prevent>
-                            <!-- 动态表单项 -->
                             <template v-for="(field, index) in getFormItem" :key="index">
-                                <ElFormItem :label="field.name" :prop="field.fields">
-                                    <!-- 输入框 -->
+                                <ElFormItem :label="field.name" :prop="field.fields" class="!mb-6">
                                     <template v-if="field.type === FormFieldTypeEnum.INPUT">
                                         <ElInput
                                             v-model="formData[field.fields]"
-                                            class="!h-11"
+                                            class="workflow-input"
                                             clearable
-                                            placeholder="请输入" />
+                                            placeholder="请输入内容..." />
                                     </template>
-                                    <!-- 文本域 -->
+
                                     <template v-if="field.type === FormFieldTypeEnum.TEXTAREA">
                                         <ElInput
                                             v-model="formData[field.fields]"
+                                            class="workflow-textarea"
                                             clearable
-                                            placeholder="请输入"
+                                            placeholder="请输入详细描述..."
                                             type="textarea"
                                             resize="none"
                                             :maxlength="1000"
-                                            :rows="5" />
+                                            :rows="4" />
                                     </template>
-                                    <!-- 数字输入框 -->
-                                    <template v-if="field.type === FormFieldTypeEnum.NUMBER">
-                                        <ElInput v-model="formData[field.fields]" type="number" placeholder="请输入" />
-                                    </template>
-                                    <!-- 文件上传 -->
+
                                     <template
                                         v-if="
-                                            field.type === FormFieldTypeEnum.VIDEO ||
-                                            field.type === FormFieldTypeEnum.IMAGE ||
-                                            field.type === FormFieldTypeEnum.FILE
+                                            [
+                                                FormFieldTypeEnum.VIDEO,
+                                                FormFieldTypeEnum.IMAGE,
+                                                FormFieldTypeEnum.FILE,
+                                            ].includes(field.type)
                                         ">
                                         <upload
-                                            class="w-full"
+                                            class="w-full group"
                                             drag
                                             :type="field.type"
                                             list-type="text"
@@ -54,10 +59,17 @@
                                             @remove="handleUploadRemove($event, field.fields)"
                                             @success="handleUploadSuccess($event, field.fields)">
                                             <div
-                                                class="h-[111px] rounded-md flex flex-col items-center justify-center relative leading-5">
-                                                <Icon name="local-icon-file_add" :size="36" color="#000000"></Icon>
-                                                <span class="text-gray-500 text-xs mt-2"
-                                                    >点击或将文件拖拽到这里上传</span
+                                                class="h-[120px] rounded-2xl border-2 border-dashed border-br group-hover:border-primary group-hover:bg-[#0065fb]/10 transition-all flex flex-col items-center justify-center relative bg-[#F8FAFC]">
+                                                <div
+                                                    class="w-10 h-10 rounded-xl bg-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                                    <Icon
+                                                        name="local-icon-file_add"
+                                                        :size="24"
+                                                        class="text-[#475569] group-hover:text-primary" />
+                                                </div>
+                                                <span
+                                                    class="text-[#94A3B8] text-[12px] font-bold group-hover:text-primary"
+                                                    >点击或拖拽上传文件</span
                                                 >
                                             </div>
                                         </upload>
@@ -68,83 +80,133 @@
                     </div>
                 </ElScrollbar>
             </div>
-            <!-- 运行按钮 -->
-            <div class="mt-3 flex justify-center">
-                <ElButton color="#000000" class="!h-[50px] w-[276px] !rounded-xl" :loading="isLock" @click="lockFn">
-                    立即运行
-                </ElButton>
+
+            <div class="px-6 mt-4">
+                <button
+                    class="w-full h-14 rounded-2xl bg-[#0065FB] text-white flex items-center justify-center gap-3 font-black text-[15px] transition-all active:scale-[0.98] disabled:opacity-50 run-btn-shadow"
+                    :disabled="isLock"
+                    @click="lockFn">
+                    <Icon v-if="!isLock" name="el-icon-VideoPlay" :size="20" />
+                    <span v-if="isLock" class="animate-spin"><Icon name="el-icon-Loading" /></span>
+                    {{ isLock ? "正在处理中..." : "立即运行工作流" }}
+                </button>
             </div>
         </div>
-        <!-- 右侧结果展示区域 -->
-        <div class="flex-1">
-            <template v-if="!genLoading">
-                <ElScrollbar v-if="result">
-                    <div class="p-4">
-                        <div class="flex flex-col gap-y-3">
-                            <!-- 结果项 -->
-                            <div v-for="(value, key) in result" :key="key" class="border border-[#0000000d] rounded-xl">
+
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="h-[72px] shrink-0 px-8 flex items-center justify-between bg-white border-b border-[#F1F5F9]">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-[#0065fb]/10 flex items-center justify-center text-primary">
+                        <Icon name="el-icon-Cpu" :size="18" />
+                    </div>
+                    <span class="text-[16px] font-[900] text-[#1E293B]">输出结果</span>
+                </div>
+                <div v-if="result" class="flex items-center gap-2">
+                    <span class="text-[12px] font-bold text-[#94A3B8]">处理完成</span>
+                </div>
+            </div>
+
+            <div class="grow relative">
+                <template v-if="!genLoading">
+                    <ElScrollbar v-if="result">
+                        <div class="p-8 max-w-[900px] mx-auto">
+                            <div class="grid grid-cols-1 gap-6">
                                 <div
-                                    class="flex items-center justify-between px-[15px] h-[52px] border-b-[1px] border-[#0000000d]">
-                                    <div class="flex items-center gap-x-3">
-                                        <span>{{ getOutputParams[key]?.name || "-" }}</span>
-                                        <span class="px-2 py-[2px] bg-[#F2F2F2] rounded">
-                                            {{ getOutputParams[key]?.type }}
-                                        </span>
+                                    v-for="(value, key) in result"
+                                    :key="key"
+                                    class="bg-white rounded-[24px] border border-br overflow-hidden transition-all hover:border-primary/30">
+                                    <div
+                                        class="flex items-center justify-between px-6 py-4 bg-[#F8FAFC]/50 border-b border-[#F1F5F9]">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-[14px] font-[900] text-[#1E293B]">{{
+                                                getOutputParams[key]?.name || key
+                                            }}</span>
+                                            <span
+                                                class="px-2 py-0.5 bg-white border border-br rounded-md text-[10px] font-black text-[#64748B] uppercase tracking-wider">
+                                                {{ getOutputParams[key]?.type }}
+                                            </span>
+                                        </div>
+                                        <button
+                                            v-if="getOutputParams[key]?.type === FormFieldTypeEnum.FILE"
+                                            class="text-[12px] font-black text-primary hover:underline"
+                                            @click="downloadFile(value, getOutputParams[key]?.name)">
+                                            下载文件
+                                        </button>
+                                        <button
+                                            v-else
+                                            class="text-[12px] font-black text-[#64748B] hover:text-primary transition-colors flex items-center gap-1"
+                                            @click="copy(value)">
+                                            <Icon name="el-icon-DocumentCopy" /> 复制
+                                        </button>
                                     </div>
-                                    <ElButton
-                                        color="#000000"
-                                        size="small"
-                                        v-if="getOutputParams[key]?.type == FormFieldTypeEnum.FILE"
-                                        @click="downloadFile(value, getOutputParams[key]?.name)">
-                                        下载
-                                    </ElButton>
-                                    <ElButton v-else color="#000000" size="small" @click="copy(value)">复制</ElButton>
-                                </div>
-                                <div class="py-4 px-[14px] flex flex-col gap-2">
-                                    <div v-for="(item, index) in formatValue(value)" :key="index">
-                                        <template
-                                            v-if="
-                                                [FormFieldTypeEnum.VIDEO, FormFieldTypeEnum.IMAGE].includes(
-                                                    getOutputParams[key]?.type
-                                                )
-                                            ">
-                                            <video
+
+                                    <div class="p-6">
+                                        <div v-for="(item, index) in formatValue(value)" :key="index">
+                                            <div
                                                 v-if="getOutputParams[key]?.type == FormFieldTypeEnum.VIDEO"
-                                                :src="item"
-                                                class="w-full max-h-[200px] rounded-[10px]"
-                                                controls />
-                                            <ElImage
-                                                v-if="getOutputParams[key]?.type == FormFieldTypeEnum.IMAGE"
-                                                :src="item"
-                                                fit="cover"
-                                                class="w-full rounded-[10px]"
-                                                :preview-src-list="[item]"
-                                                preview-teleported />
-                                            <div class="flex justify-end mt-2" v-if="item">
-                                                <ElButton
-                                                    color="#000000"
-                                                    size="small"
-                                                    @click="downloadFile(item, getOutputParams[key]?.name || '')"
-                                                    >下载</ElButton
-                                                >
+                                                class="group relative">
+                                                <video
+                                                    :src="item"
+                                                    class="w-full rounded-2xl bg-black max-h-[400px]"
+                                                    controls />
+                                                <div class="mt-4 flex justify-end">
+                                                    <ElButton
+                                                        type="primary"
+                                                        link
+                                                        class="!font-black"
+                                                        @click="downloadFile(item, 'video')"
+                                                        >下载视频</ElButton
+                                                    >
+                                                </div>
                                             </div>
-                                        </template>
-                                        <template v-else>
-                                            <span class="break-all">{{ item }}</span>
-                                        </template>
+
+                                            <div
+                                                v-else-if="getOutputParams[key]?.type == FormFieldTypeEnum.IMAGE"
+                                                class="flex flex-col items-center">
+                                                <div class="relative group w-full">
+                                                    <ElImage
+                                                        :src="item"
+                                                        fit="contain"
+                                                        class="w-full rounded-2xl border border-[#F1F5F9] transition-transform duration-500 group-hover:scale-[1.01]"
+                                                        :preview-src-list="[item]"
+                                                        preview-teleported />
+                                                </div>
+                                                <div class="mt-4 w-full flex justify-end">
+                                                    <ElButton
+                                                        type="primary"
+                                                        link
+                                                        class="!font-black"
+                                                        @click="downloadFile(item, 'image')"
+                                                        >保存图片</ElButton
+                                                    >
+                                                </div>
+                                            </div>
+
+                                            <template v-else>
+                                                <div
+                                                    class="text-[14px] text-[#475569] leading-[1.8] font-medium bg-[#F8FAFC] p-4 rounded-xl border border-[#F1F5F9] whitespace-pre-wrap break-all">
+                                                    {{ item }}
+                                                </div>
+                                            </template>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </ElScrollbar>
+
+                    <div v-else class="h-full flex flex-col items-center justify-center opacity-40">
+                        <div class="w-24 h-24 mb-4 bg-[#F1F5F9] rounded-full flex items-center justify-center">
+                            <Icon name="el-icon-Compass" :size="48" class="text-[#94A3B8]" />
+                        </div>
+                        <p class="text-[14px] font-bold text-[#94A3B8]">运行工作流以查看输出结果</p>
                     </div>
-                </ElScrollbar>
-                <div v-else class="h-full flex items-center justify-center">
-                    <ElEmpty />
+                </template>
+
+                <div v-else class="h-full flex flex-col items-center justify-center">
+                    <loader />
+                    <p class="mt-4 text-[14px] font-bold text-primary animate-pulse">正在处理数据，请稍候...</p>
                 </div>
-            </template>
-            <!-- 加载状态 -->
-            <div class="h-full flex items-center justify-center" v-else>
-                <loader />
             </div>
         </div>
     </div>
@@ -289,18 +351,36 @@ watch(
 </script>
 
 <style scoped lang="scss">
-:deep(.el-upload) {
-    .el-upload-dragger {
-        border-style: solid;
-        padding: 0;
+.run-btn-shadow {
+    box-shadow: 0 10px 25px -5px rgba(0, 101, 251, 0.4);
+}
+
+:deep(.workflow-input),
+:deep(.workflow-textarea) {
+    .el-input__wrapper,
+    .el-textarea__inner {
+        @apply rounded-xl bg-[#F8FAFC] shadow-[none] border border-br px-4 transition-all duration-300;
+        &:hover {
+            @apply border-[#CBD5E1];
+        }
+        &.is-focus,
+        &:focus {
+            @apply border-primary !bg-white;
+            box-shadow: 0 0 0 4px rgba(0, 101, 251, 0.08) !important;
+        }
     }
 }
+
+:deep(.el-form-item__label) {
+    @apply text-[13px] font-black text-[#475569] mb-2;
+}
+
 :deep(.el-upload-list) {
     .el-upload-list__item {
-        @apply h-11 flex items-center shadow-[0_0_0_1px_#EFEFEF];
+        @apply rounded-xl border-[#EFEFEF] h-12 bg-white mb-2;
     }
-    .el-progress {
-        @apply top-[34px] left-0;
-    }
+}
+:deep(.el-upload-dragger) {
+    @apply p-0 border-none;
 }
 </style>

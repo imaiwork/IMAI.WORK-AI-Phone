@@ -1,0 +1,1 @@
+function e(t){return $request.get({url:"/mind_map/lists",params:t})}function n(t){return $request.post({url:"/mind_map/edit",params:t})}function i(t){return $request.get({url:"/mind_map/detail",params:t})}function r(t){return $request.post({url:"/mind_map/delete",params:t})}export{r as a,n as b,i as c,e as m};

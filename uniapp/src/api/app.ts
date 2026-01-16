@@ -48,16 +48,6 @@ export function uploadFile(
     );
 }
 
-// 上传GPT文件
-export function uploadGPTFile(options: Omit<UniApp.UploadFileOption, "url">, onProgress?: (progress: number) => void) {
-    return request.uploadFile(
-        { ...options, url: "/GptFile/add", name: "file" },
-        {
-            onProgress,
-        }
-    );
-}
-
 export function wxJsConfig(data: any) {
     return request.get({ url: "/wechat/jsConfig", data });
 }

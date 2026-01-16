@@ -115,21 +115,8 @@
                             montageConfig.imageDuration
                         }}秒/张，视频按实际时长/个)</view
                     >
-                    <view class="mt-[24rpx] bg-white rounded-[20rpx] px-[8rpx]">
-                        <view class="grid grid-cols-2 gap-x-1 h-[100rpx] relative">
-                            <view
-                                v-for="(item, index) in ['使用素材', '不使用素材']"
-                                :key="index"
-                                class="material-type-item"
-                                :class="{ active: index == isMaterial }"
-                                @click="isMaterial = index">
-                                {{ item }}
-                            </view>
-                            <view class="tab-slider" :style="{ transform: `translateX(${isMaterial * 100}%)` }"></view>
-                        </view>
-                    </view>
                 </view>
-                <view class="grow min-h-0" v-if="isMaterial === 0">
+                <view class="grow min-h-0">
                     <scroll-view scroll-y class="h-full">
                         <view class="grid grid-cols-3 gap-[26rpx] p-4">
                             <view v-for="(item, index) in formData.materialList" :key="index" class="relative">
@@ -267,6 +254,24 @@
                             </view>
                         </view>
                     </view>
+                    <view class="mt-[20rpx] flex items-center justify-between h-[110rpx] bg-white rounded-[20rpx] px-4">
+                        <view class="text-[30rpx] font-bold">背景音乐</view>
+                        <navigator
+                            :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
+                                formData.music
+                            )}&volume=${formData.extra.volume}`"
+                            hover-class="none"
+                            class="flex items-center gap-x-1">
+                            <view>
+                                <template v-if="formData.music.length > 0">
+                                    共<text class="mx-1 text-primary font-bold">{{ formData.music.length }}</text
+                                    >个
+                                </template>
+                                <text class="text-[#000000]/70" v-else>AI音乐库</text>
+                            </view>
+                            <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
+                        </navigator>
+                    </view>
                 </view>
             </scroll-view>
         </view>
@@ -337,12 +342,16 @@ import { createShanjianTask, addShanjianPerson } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
 import { MontageTypeEnum } from "@/ai_modules/digital_human/enums";
 import useMontageMaterial, { montageConfig } from "@/hooks/useMontageMaterial";
+import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
 import UploadRulePop from "@/ai_modules/digital_human/components/upload-rule-pop/upload-rule-pop.vue";
 import ChooseHistory from "@/ai_modules/digital_human/components/choose-history/choose-history.vue";
 import ChooseCharacter from "@/ai_modules/digital_human/components/choose-character/choose-character.vue";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
+
+const { on } = useEventBusManager();
 
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
@@ -354,7 +363,7 @@ const steps = ref([
     { step: 4, title: "生成设置" },
 ]);
 
-const step = ref(1);
+const step = ref(4);
 
 const formData = reactive<{
     anchorLists: any[];
@@ -365,17 +374,23 @@ const formData = reactive<{
     person_introduction: string;
     video_count: number;
     shanjian_type: MontageTypeEnum;
+    music: any[];
+    extra: {
+        volume: number;
+    };
 }>({
     anchorLists: [],
     copywriterList: [],
     materialList: [],
     name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "真人口播视频智剪",
-    // 人设名称
     person_name: "",
-    // 人设介绍
     person_introduction: "",
     video_count: 1,
     shanjian_type: MontageTypeEnum.REAL_PERSON_AI,
+    music: [],
+    extra: {
+        volume: 0.5,
+    },
 });
 
 const isFirstOpen = ref(true);
@@ -395,7 +410,6 @@ const showVideoPreview = ref(false);
 const showCharacter = ref(false);
 const isCharacter = ref(false);
 
-const isMaterial = ref(0);
 const videoPreview = reactive({
     poster: "",
     url: "",
@@ -412,21 +426,15 @@ const canStepProceed = (stepNumber: number) => {
         case 1:
             return formData.anchorLists.length > 0;
         case 2:
-            return formData.person_name && formData.person_introduction;
+            return true;
         case 3:
-            if (isMaterial.value === 0) {
-                const totalDuration =
-                    formData.materialList.reduce(
-                        (acc, item) => (item.type === "video" ? acc + item.duration : acc),
-                        0
-                    ) +
-                    formData.materialList.filter((item: any) => item.type === "image").length *
-                        montageConfig.imageDuration;
-                if (totalDuration > montageConfig.materialTotalDuration * 60) {
-                    uni.$u.toast(`素材总时长不能超过${montageConfig.materialTotalDuration}分钟`);
-                    return false;
-                }
-                return true;
+            if (formData.materialList.length === 0) return true;
+            const totalDuration =
+                formData.materialList.reduce((acc, item) => (item.type === "video" ? acc + item.duration : acc), 0) +
+                formData.materialList.filter((item: any) => item.type === "image").length * montageConfig.imageDuration;
+            if (totalDuration > montageConfig.materialTotalDuration * 60) {
+                uni.$u.toast(`素材总时长不能超过${montageConfig.materialTotalDuration}分钟`);
+                return false;
             }
             return true;
         case 4:
@@ -483,6 +491,7 @@ const {
     uploadAndProcessFiles,
     handleDeleteMaterial: handleDeleteMaterialFromHook,
 } = useMontageMaterial({
+    isTranscode: true,
     onSuccess: (materials: any[]) => {
         if (uploadSource.value == 0) {
             if (replaceMaterialIndex.value !== -1) {
@@ -644,18 +653,19 @@ const handleCreateVideo = async () => {
                 },
             ],
             copywriting: formData.copywriterList,
-            material:
-                isMaterial.value === 0
-                    ? formData.materialList.map((item: any) => ({
-                          fileUrl: item.url,
-                          type: item.type,
-                          cover: item.pic,
-                      }))
-                    : [],
+            material: formData.materialList.map((item: any) => ({
+                fileUrl: item.url,
+                type: item.type,
+                cover: item.pic,
+            })),
             shanjian_type: formData.shanjian_type,
             video_count: formData.video_count,
+            music: formData.music.map((item: any) => item.content),
+            extra: {
+                volume: formData.extra.volume,
+            },
         });
-        if (!isCharacter.value) {
+        if (formData.person_name && formData.person_introduction) {
             addShanjianPerson({
                 name: formData.person_name,
                 introduced: formData.person_introduction,
@@ -691,6 +701,16 @@ const toRecord = () => {
         type: "redirect",
     });
 };
+
+onLoad(() => {
+    on("confirm", (res: any) => {
+        const { type, data } = res;
+        if (type == ListenerTypeEnum.CHOOSE_MUSIC) {
+            formData.music = data.music;
+            formData.extra.volume = data.volume;
+        }
+    });
+});
 </script>
 
 <style lang="scss">

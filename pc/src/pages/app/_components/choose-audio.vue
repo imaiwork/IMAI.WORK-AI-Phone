@@ -2,40 +2,46 @@
     <popup
         ref="popupRef"
         width="528px"
-        class="choose-audio-popup"
-        style="
-            padding: 0;
-            background-color: var(--app-bg-color-2);
-            box-shadow: 0px 0px 0px 1px var(--app-border-color-2);
-        "
+        style="padding: 0"
+        footer-class="!p-0"
+        header-class="!p-0"
         confirm-button-text=""
         cancel-button-text=""
         :show-close="false"
         @close="close">
-        <div class="rounded-xl overflow-hidden flex flex-col -my-2">
-            <div class="flex items-center justify-between h-[50px] px-4">
-                <div class="flex items-center gap-x-2">
-                    <div class="w-6 h-6 flex items-center justify-center rounded-md border border-[#ffffff1a]">
-                        <Icon name="local-icon-windows" :size="14"></Icon>
+        <div class="rounded-[28px] overflow-hidden flex flex-col">
+            <div
+                class="flex items-center justify-between h-[72px] px-8 border-b border-[#F1F5F9] bg-white flex-shrink-0">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary">
+                        <Icon name="el-icon-Headset" :size="20"></Icon>
                     </div>
-                    <div class="text-[20px] text-white font-bold">背景音乐素材</div>
+                    <div>
+                        <div class="text-[18px] text-[#1E293B] font-black tracking-tight">背景音乐素材库</div>
+                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                            Audio Library Assets
+                        </div>
+                    </div>
                 </div>
-                <div class="w-6 h-6" @click="close">
+                <div class="w-8 h-8" @click="close">
                     <close-btn />
                 </div>
             </div>
             <div class="px-4 my-4">
-                <div class="flex items-center rounded-full h-[50px] border border-[#2a2a2a] px-[5px]">
+                <div
+                    class="flex items-center rounded-full h-[52px] bg-white border border-br px-1.5 transition-all focus-within:border-[#0065fb]">
                     <ElInput
                         v-model="queryParams.name"
                         class="flex-1 search-input"
                         clearable
                         prefix-icon="el-icon-Search"
-                        placeholder="请输入音乐名称"
-                        input-style="color: #ffffff"
-                        @clear="getLists()"
-                        @keyup.enter="getLists()"></ElInput>
-                    <ElButton type="primary" class="!text-white !rounded-full !w-[116px] !h-10" @click="getLists()">
+                        placeholder="搜索音乐名称..."
+                        @clear="resetPage()"
+                        @keyup.enter="resetPage()"></ElInput>
+                    <ElButton
+                        type="primary"
+                        class="!rounded-full !w-[100px] !h-[42px] !font-bold !text-sm !shadow-[#0065fb]/20"
+                        @click="resetPage()">
                         搜索
                     </ElButton>
                 </div>
@@ -51,48 +57,74 @@
             </div>
             <div class="h-[500px] flex flex-col">
                 <div class="grow min-h-0 cursor-pointer">
-                    <ElScrollbar v-if="getListsData.length > 0">
-                        <div>
-                            <div
-                                v-for="item in getListsData"
-                                :key="item.id"
-                                class="flex items-center justify-between gap-x-2 h-[50px] border-t border-[#2a2a2a] px-[30px] cursor-pointer hover:bg-[#ffffff0d]"
-                                @click="choose(item)">
-                                <div class="flex-1 flex items-center gap-x-2">
-                                    <div
-                                        class="w-5 h-5 flex items-center justify-center rounded"
-                                        :class="[isChoose(item.id) ? 'bg-primary' : 'bg-[#ffffff0d]']">
-                                        <Icon name="local-icon-music" :size="14" color="#ffffff"></Icon>
+                    <ElScrollbar :distance="20" @end-reached="load">
+                        <div class="px-6 py-4" v-loading="pager.loading">
+                            <div v-if="pager.lists.length > 0" class="flex flex-col gap-3">
+                                <div
+                                    v-for="item in pager.lists"
+                                    :key="item.id"
+                                    @click="choose(item)"
+                                    class="group flex items-center justify-between p-4 bg-white rounded-2xl border transition-all cursor-pointer"
+                                    :class="[
+                                        isChoose(item.id)
+                                            ? 'border-[#0065fb]  shadow-[#0065fb]/10 bg-[#EEF2FF]'
+                                            : 'border-br hover:border-br ',
+                                    ]">
+                                    <div class="flex items-center gap-4 flex-1 overflow-hidden">
+                                        <div
+                                            class="w-10 h-10 rounded-xl bg-[#F1F5F9] flex items-center justify-center transition-colors">
+                                            <Icon name="el-icon-VideoPlay" :size="20" class="text-primary"></Icon>
+                                        </div>
+
+                                        <div class="flex flex-col flex-1 overflow-hidden">
+                                            <span
+                                                class="text-[14px] font-black text-[#1E293B] truncate leading-tight"
+                                                >{{ item.name }}</span
+                                            >
+                                            <span class="text-[11px] text-[#94A3B8] mt-1 font-bold"
+                                                >来源: {{ item.source || "系统素材库" }}</span
+                                            >
+                                        </div>
                                     </div>
-                                    <div class="text-white text-base">{{ item.name }}</div>
+
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-6 h-6 rounded-full flex items-center justify-center transition-all"
+                                            :class="[
+                                                isChoose(item.id)
+                                                    ? 'bg-primary text-white scale-110'
+                                                    : 'bg-[#F1F5F9] text-transparent',
+                                            ]">
+                                            <Icon name="el-icon-Check" :size="12" stroke-width="4"></Icon>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex items-center gap-x-4">
-                                    <div
-                                        class="cursor-pointer text-base"
-                                        :class="[isChoose(item.id) ? 'text-primary' : 'text-[rgba(255,255,255,0.5)]']"
-                                        @click.stop="toggleAudio(item)">
-                                        {{ currAudioId && item.id && isPlaying ? "暂停" : "播放" }}
-                                    </div>
-                                    <div class="w-5 h-5 flex items-center justify-center rounded-full mx-auto">
-                                        <Icon
-                                            name="local-icon-success_fill"
-                                            :size="20"
-                                            :color="isChoose(item.id) ? 'var(--color-primary)' : '#ffffff1a'"></Icon>
-                                    </div>
+
+                                <div v-if="!pager.isLoad" class="text-center py-6">
+                                    <span
+                                        class="text-[10px] text-[#94A3B8] font-black uppercase tracking-widest opacity-60"
+                                        >End of Library</span
+                                    >
                                 </div>
+                            </div>
+
+                            <div v-else class="h-[400px] flex flex-col items-center justify-center">
+                                <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4">
+                                    <Icon name="el-icon-Microphone" :size="32" color="#CBD5E1"></Icon>
+                                </div>
+                                <div class="text-[#94A3B8] font-bold text-sm">库中暂无相关音乐资源</div>
                             </div>
                         </div>
                     </ElScrollbar>
-                    <div v-else class="flex items-center justify-center h-full">
-                        <ElEmpty description="暂无数据" :image-size="100"></ElEmpty>
-                    </div>
                 </div>
-                <div class="flex justify-between items-center my-2 px-2">
-                    <pagination v-model="pager" layout="prev, pager, next" @change="getLists()"></pagination>
-                    <ElButton type="primary" class="!rounded-full w-[110px] !h-10" @click="handleConfirm()">
-                        确定
-                    </ElButton>
-                </div>
+            </div>
+            <div class="p-4 bg-white border-t border-[#F1F5F9] flex justify-center">
+                <ElButton
+                    type="primary"
+                    class="!rounded-full !w-[320px] !h-[50px] !text-[15px] !font-black !shadow-xl !shadow-[#0065fb]/20 active:scale-95 transition-all"
+                    @click="handleConfirm">
+                    确认选择音乐
+                </ElButton>
             </div>
         </div>
     </popup>
@@ -158,6 +190,7 @@ const currentTab = ref<any>("system");
 
 const queryParams = reactive<any>({
     name: "",
+    page_no: 1,
 });
 
 const { pager, getLists, resetPage } = usePaging({
@@ -172,7 +205,16 @@ const { pager, getLists, resetPage } = usePaging({
         }
     },
     params: queryParams,
+    isScroll: true,
 });
+
+const load = async (e: any) => {
+    if (e == "bottom") {
+        if (!pager.isLoad || pager.loading) return;
+        queryParams.page_no++;
+        await getLists();
+    }
+};
 
 const getListsData = computed(() => {
     if (currentTab.value === "system") {
@@ -284,10 +326,15 @@ defineExpose({
 @import "@/pages/app/_assets/styles/index.scss";
 :deep(.search-input) {
     .el-input__wrapper {
-        background-color: transparent;
-        box-shadow: none;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding-left: 15px;
+    }
+    .el-input__inner {
+        font-weight: 600;
+        color: #1e293b;
         &::placeholder {
-            color: rgba(255, 255, 255, 0.2);
+            color: #94a3b8;
         }
     }
 }

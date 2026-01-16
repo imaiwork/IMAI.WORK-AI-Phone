@@ -15,6 +15,10 @@ use app\common\model\sv\SvDeviceTakeOverTaskAccount;
 use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSettingAccount;
+use app\common\model\wechat\AiWechatCircleTaskConfig;
+use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
+
+use app\common\model\sv\SvCrawlingWechatTask;
 
 /**
  * 设备任务列表
@@ -48,7 +52,7 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
             ->each(function ($item) {
                 $item['start_time'] = date('H:i', $item['start_time']);
                 $item['end_time'] = date('H:i', $item['end_time']);
-                $item['task_category'] = DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskTypeDesc($item['task_type']);
+                $item['task_category'] = !in_array($item['source'], [7, 8])? DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskTypeDesc($item['task_type']) : DeviceEnum::getTaskSceneDesc($item['task_type']);
                 $item['name'] = '';
                 switch ($item['source']) {
 
@@ -96,7 +100,21 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                         $taskinfo = SvLeadScrapingSettingAccount::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
                         $item['name'] = $taskinfo['name'] ?? '';
                         break;
-
+                     case DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_PUBLISH:
+                        //sv_lead_scraping_setting_account
+                        $taskinfo = AiWechatCircleTaskConfig::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['task_name'] ?? $item['task_name'];
+                        break;
+                    case DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT:
+                        //sv_lead_scraping_setting_account
+                        $taskinfo = SvDeviceCircleLikeReplyAccount::where('id', $item['sub_data_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['task_name'] ?? $item['task_name'];
+                        break;
+                    case DeviceEnum::TASK_SOURCE_CLUES_WECHAT:
+                        //sv_crawling_manual_task
+                        $taskinfo = SvCrawlingWechatTask::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['name'] ?? $item['task_name'];
+                        break;
                     default:
                         break;
                 }

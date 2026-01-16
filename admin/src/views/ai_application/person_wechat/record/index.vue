@@ -44,7 +44,7 @@
                     prop="message"
                     min-width="200"
                     show-overflow-tooltip></el-table-column>
-                <el-table-column label="消耗算力" width="100">
+                <el-table-column label="消耗算力" width="120">
                     <template #default="{ row }">
                         <el-tooltip>
                             <div class="flex items-center justify-center gap-1 cursor-pointer">

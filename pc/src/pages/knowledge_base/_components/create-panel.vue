@@ -1,31 +1,67 @@
 <template>
-    <div class="p-4 h-full">
-        <div class="h-full flex flex-col bg-white rounded-xl">
-            <div class="flex-shrink-0 flex items-center justify-between px-[14px] h-[88px] border-b border-[#0000000d]">
-                <div class="flex items-center gap-2 cursor-pointer" @click="back">
-                    <Icon name="el-icon-ArrowLeft"></Icon>
-                    <div>返回上一步</div>
+    <div class="h-full min-w-[1000px] px-4 pb-4">
+        <div class="w-full h-full bg-white rounded-[20px] border border-br flex flex-col overflow-hidden">
+            <div class="flex-shrink-0 flex items-center justify-between px-8 h-[80px] border-b border-[#F1F5F9]">
+                <div
+                    class="group flex items-center gap-2 cursor-pointer text-[#64748B] hover:text-primary transition-all"
+                    @click="back">
+                    <div
+                        class="w-8 h-8 flex items-center justify-center rounded-full bg-[#F8FAFC] group-hover:bg-[#F0F6FF]">
+                        <Icon name="el-icon-ArrowLeft" :size="16" />
+                    </div>
+                    <span class="text-[14px] font-black">返回上一步</span>
+                </div>
+                <div
+                    class="px-3 py-1 bg-[#F0F6FF] rounded-full text-[11px] font-black text-primary uppercase tracking-wider">
+                    {{ isRag ? "RAG Mode" : "Vector Mode" }}
                 </div>
             </div>
-            <div class="grow min-h-0 mt-4 flex flex-col w-[456px] mx-auto">
-                <div class="text-[20px] font-bold mt-6">创建新的知识库</div>
-                <div class="flex-shrink min-h-0 mt-[23px]">
-                    <ElScrollbar>
-                        <div class="px-2">
-                            <base-form ref="baseFormRef" v-model="formData"></base-form>
+
+            <div class="grow flex flex-col overflow-hidden">
+                <div class="w-full max-w-[480px] mx-auto flex flex-col h-full">
+                    <div class="mt-12 mb-8 text-center">
+                        <h1 class="text-[28px] font-[900] text-[#0F172A] tracking-tight">创建新的知识库</h1>
+                        <p class="text-[14px] font-bold text-[#94A3B8] mt-2">为您的 AI 提供精准的私有数据支撑</p>
+                    </div>
+
+                    <div class="grow min-h-0">
+                        <ElScrollbar>
+                            <div class="px-4 pb-10">
+                                <div class="bg-[#F8FAFC] rounded-[24px] p-6 border border-[#F1F5F9]">
+                                    <base-form ref="baseFormRef" v-model="formData" />
+                                </div>
+
+                                <div
+                                    v-if="tokensValue && isRag"
+                                    class="mt-6 flex items-center justify-center gap-2 p-3 bg-[#FFF9F0] rounded-xl border border-[#FFE4BA]">
+                                    <Icon name="el-icon-WarningFilled" color="#ED6A0C" :size="16" />
+                                    <span class="text-[12px] font-bold text-[#ED6A0C]">
+                                        本次操作将消耗
+                                        <span class="text-[15px] font-black">{{ tokensValue }}</span> 算力
+                                    </span>
+                                </div>
+                            </div>
+                        </ElScrollbar>
+                    </div>
+
+                    <div
+                        class="flex-shrink-0 py-8 px-4 flex flex-col items-center gap-4 bg-white border-t border-[#F1F5F9]">
+                        <ElButton
+                            type="primary"
+                            class="!h-[56px] !rounded-2xl w-full !text-[16px] !font-black hover:!scale-[1.02] active:!scale-[0.98] transition-all shadow-light shadow-[#0065FB]/20"
+                            :loading="isLock"
+                            :disabled="userTokens < tokensValue && isRag"
+                            @click="lockFn">
+                            立即开启知识库
+                        </ElButton>
+
+                        <div
+                            v-if="userTokens < tokensValue && isRag"
+                            class="text-[12px] font-bold text-red-500 flex items-center gap-1">
+                            <Icon name="el-icon-CircleClose" />
+                            当前算力不足 (剩余 {{ userTokens }})
                         </div>
-                    </ElScrollbar>
-                </div>
-                <div class="flex justify-center my-[30px]">
-                    <ElButton
-                        type="primary"
-                        class="!h-[50px] !rounded-full w-[318px]"
-                        :loading="isLock"
-                        :disabled="userTokens < tokensValue && isRag"
-                        @click="lockFn">
-                        创建知识库
-                        <template v-if="tokensValue && isRag">({{ tokensValue }}算力)</template>
-                    </ElButton>
+                    </div>
                 </div>
             </div>
         </div>
@@ -41,6 +77,7 @@ import type { CreateFormData } from "./type";
 import { KnTypeEnum } from "../_enums";
 import BaseForm from "./base-form.vue";
 import KnDefaultCover from "@/assets/images/kn_default_cover.png";
+import { urlToFile } from "@/utils/util"; // 确保导入工具函数
 
 const emit = defineEmits(["success", "back"]);
 const route = useRoute();
@@ -61,7 +98,7 @@ const formData = reactive<CreateFormData>({
     name: "",
     description: "",
     cover: "",
-    type: route.query.type as KnTypeEnum,
+    type: (route.query.type as KnTypeEnum) || KnTypeEnum.VECTOR,
 });
 
 const baseFormRef = shallowRef<InstanceType<typeof BaseForm>>();
@@ -70,13 +107,13 @@ const handleNext = async () => {
     await baseFormRef.value.validateForm();
     try {
         const { name, description, cover } = formData;
-        // 判断cover链接是不是https。 如果是说明是默认封面，需要上传图片
         let coverUrl = cover;
         if (!cover) {
             const file = await urlToFile(KnDefaultCover, "kn_default_cover.png");
             const res = await uploadImage({ file });
             coverUrl = res.uri;
         }
+
         const data = isRag.value
             ? await knowledgeBaseAdd({
                   name,
@@ -92,6 +129,8 @@ const handleNext = async () => {
                   embedding_model_id: 3,
                   embedding_model_sub_id: 3,
               });
+
+        feedback.msgSuccess("创建成功");
         router.replace({
             path: `/knowledge_base/detail/${data.id}`,
             query: {
@@ -115,40 +154,33 @@ const { lockFn, isLock } = useLockFn(handleNext);
 watch(
     () => route.query,
     () => {
-        formData.type = route.query.type as KnTypeEnum;
+        if (route.query.type) formData.type = route.query.type as KnTypeEnum;
     }
 );
 </script>
-<style lang="scss">
-.kb-type-select {
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    background: rgba(255, 255, 255, 0.88);
-    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.06);
-    backdrop-filter: blur(6px);
-    .el-select-dropdown__list {
-        @apply p-2 flex flex-col gap-y-2;
-    }
-    .el-select-dropdown__item {
-        @apply h-11 px-3 rounded-md;
-        &.is-selected {
-            @apply bg-[#F6F6F6] text-black shadow-[0_0_0_1px_rgba(239,239,239,1)];
-            .options-item {
-                .item-icon {
-                    @apply bg-primary;
-                    svg {
-                        color: #ffffff !important;
-                    }
-                }
-            }
-        }
 
-        .options-item {
-            @apply h-full;
-            .item-icon {
-                @apply w-5 h-5 flex items-center justify-center rounded bg-[#00000003];
-            }
+<style lang="scss" scoped>
+:deep(.kb-type-select) {
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+
+    .el-select-dropdown__item.is-selected {
+        background-color: #f0f6ff;
+        color: #0065fb;
+
+        .options-item .item-icon {
+            background-color: #0065fb;
+            color: #ffffff;
         }
     }
+}
+
+/* 按钮动画提升 */
+.el-button--primary {
+    --el-button-bg-color: #0065fb;
+    --el-button-border-color: #0065fb;
+    --el-button-hover-bg-color: #3384fc;
+    --el-button-hover-border-color: #3384fc;
 }
 </style>

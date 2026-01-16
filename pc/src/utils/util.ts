@@ -91,6 +91,7 @@ export function searchQueryToObject(): Record<string, any> {
  * @returns 格式化后的文件大小字符串，包含适当的单位
  */
 export const formatFileSize = (sizeInBytes: any, precision = 2): string => {
+    if (typeof sizeInBytes !== "number") sizeInBytes = parseFloat(sizeInBytes);
     const units = ["B", "KB", "MB", "GB"];
     let unitIndex = 0;
 

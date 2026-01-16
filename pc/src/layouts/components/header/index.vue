@@ -4,7 +4,7 @@
         :class="{
             'min-w-[375px] fixed top-0 left-0 right-0 z-[888]': isFixed,
             'ml-[var(--aside-width)]': isFixed && !hideSidebar,
-            'shadow-lg flex items-center justify-between': !isFixed,
+            ' flex items-center justify-between': !isFixed,
         }"
         :style="{ backgroundColor: getTheme.bgColor }">
         <Back v-if="isBack" />

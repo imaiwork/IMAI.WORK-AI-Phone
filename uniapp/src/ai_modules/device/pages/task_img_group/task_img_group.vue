@@ -104,6 +104,11 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
     fileAccept: uploadFormat,
     fileSize: imageSize,
     onSuccess: (res: any[]) => {
+        // 这里要判断是否超过最大限制，如果超过，则过滤掉多余的图片
+        if (imageList.value.length + res.length > limit) {
+            res.splice(0, res.length - (limit - imageList.value.length));
+        }
+
         if (replaceImageIndex.value !== -1) {
             imageList.value[replaceImageIndex.value] = res[0].url;
         } else {
@@ -137,33 +142,7 @@ const chooseUploadType = () => {
 };
 
 const handleSelectImgMaterial = async (res: any[]) => {
-    const imageCheckPromises = res.map(
-        (item: any) =>
-            new Promise((resolve) => {
-                wx.getImageInfo({
-                    src: item.content,
-                    success: (info: any) => {
-                        const { type, width, height } = info;
-                        // 判断是否符合条件
-                        const isAccord =
-                            width <= imageResolution[0] && height <= imageResolution[1] && uploadFormat.includes(type);
-                        if (isAccord) {
-                            resolve(item.content);
-                        } else {
-                            uni.showToast({
-                                title: `选择的图片包含不符合条件的图片，已自动过滤`,
-                                icon: "none",
-                            });
-                            resolve(null);
-                        }
-                    },
-                    fail: () => {
-                        resolve(null);
-                    },
-                });
-            })
-    );
-    const uploadImages = (await Promise.all(imageCheckPromises)).filter((url) => url);
+    const uploadImages = res.map((item: any) => item.content);
     if (replaceImageIndex.value !== -1) {
         imageList.value[replaceImageIndex.value] = uploadImages[0];
     } else {

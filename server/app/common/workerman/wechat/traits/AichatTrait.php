@@ -478,8 +478,8 @@ trait AichatTrait
             }
 //            $history = implode("\n", array_column($logs, 'content'));
             $keyword = str_replace(
-                ['角色设定', '用户发送的内容', '历史对话上下文', '相关知识库检索结果'],
-                [$robot->roles_prompt, $request['message'], $history, empty($knowledge) ? '' : '相关知识库检索结果'],
+                ['角色设定', '用户发送的内容', '相关知识库检索结果'],
+                [$robot->roles_prompt, $request['message'], empty($knowledge) ? '' : '相关知识库检索结果'],
                 $keyword
             );
 

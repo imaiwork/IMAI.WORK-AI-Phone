@@ -113,7 +113,7 @@ export function useChatAreaManager(options: UseChatAreaOptions) {
             });
 
             // 监听键盘事件，用于处理 Enter 发送
-            chatAreaInstance.richText.addEventListener("keydown", (event: KeyboardEvent) => {
+            chatAreaInstance.richText.addEventListener("keydown", (event: any) => {
                 // 当用户按下 Enter 且没有按 Shift (换行)
                 if (event.key === "Enter" && !event.shiftKey) {
                     // 检查 @ 智能体选择框是否显示
@@ -121,8 +121,13 @@ export function useChatAreaManager(options: UseChatAreaOptions) {
                         chatAreaInstance.chatElement.pcElms.pointDialogElm.classList.contains("chat-view-show");
                     if (!isShow) {
                         event.preventDefault(); // 阻止默认换行行为
-                        options.onEnter(getText()); // 触发发送回调
+                        event.keyCode == 13 && options.onEnter(getText()); // 触发发送回调
                     }
+                }
+                if (event.keyCode == 13 && event.shiftKey) {
+                    // 换行
+                    event.preventDefault();
+                    chatAreaInstance.insertText("\n");
                 }
             });
 

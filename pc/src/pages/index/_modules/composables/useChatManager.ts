@@ -27,8 +27,7 @@ export function useChatManager() {
     const { taskId, agentValue, chatContentList, isReceiving, isStopChat, isDeep, isNetwork, fileLists, extraParams } =
         storeToRefs(chatStore);
     const { userTokens, userInfo } = storeToRefs(userStore);
-    // [FIX] 恢复到原始的 chatConfig 处理方式，以解决响应式系统错误
-    const { chatConfig } = appStore;
+    const { getChatData: chatConfig } = storeToRefs(appStore);
 
     // --- 本地响应式状态 ---
 
@@ -144,8 +143,7 @@ export function useChatManager() {
                             : {
                                   ...item,
                                   is_reasoning_finished: true,
-                                  // [FIX] 恢复原始的属性访问方式
-                                  form_avatar: chatStore.detail.logo,
+                                  form_avatar: chatStore.detail.logo || chatConfig.value?.logo,
                                   consume_tokens: item.tokens_info,
                               }
                 ) ?? [];
@@ -174,11 +172,10 @@ export function useChatManager() {
                 fileList: fileLists.value,
             });
         }
-
         const botMessage: ChatMessage = {
             type: 2,
             loading: true,
-            form_avatar: chatStore.detail.logo,
+            form_avatar: chatStore.detail.logo || chatConfig.value?.logo,
             is_reasoning_finished: isDeep.value,
             error: "",
             reply: "",
@@ -231,7 +228,7 @@ export function useChatManager() {
      * @description 开始一个全新的会话。
      */
     const startNewChat = () => {
-        if (!taskId.value) return feedback.msgError("当前已是新会话");
+        if (!taskId.value) return feedback.msgWarning("当前已是新会话");
         chatStore.clearChat();
         resetURLPath();
         chattingRef.value?.cleanInput?.(); // 清理输入框组件的内容

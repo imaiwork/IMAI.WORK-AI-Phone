@@ -30,7 +30,7 @@
         </template>
         <menu-header v-else />
         <div
-            class="h-full absolute z-20 w-[var(--aside-width)] transition-all duration-300 shadow-lg bg-page flex flex-col"
+            class="h-full absolute z-20 w-[var(--aside-width)] transition-all duration-300 bg-[#F9F9FA] flex flex-col"
             :class="[hideSidebar ? '-translate-x-full' : '']">
             <div class="relative mt-[76px] grow min-h-0 flex flex-col">
                 <div class="is-border h-full w-full flex-1 flex flex-col">

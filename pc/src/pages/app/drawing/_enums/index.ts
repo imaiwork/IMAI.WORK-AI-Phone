@@ -14,6 +14,7 @@ export enum ModelEnum {
 }
 
 export enum DrawTypeEnum {
+    ALL = "all",
     GOODS = "goods",
     MODEL = "model",
     TXT2IMAGE = "txt2image",
@@ -26,6 +27,7 @@ export enum DrawTypeEnum {
 }
 
 export const drawTypeEnumMap = {
+    [DrawTypeEnum.ALL]: 0,
     [DrawTypeEnum.GOODS_IMAGE]: 1,
     [DrawTypeEnum.FASHION_IMAGE]: 2,
     [DrawTypeEnum.TXT2IMAGE]: 3,

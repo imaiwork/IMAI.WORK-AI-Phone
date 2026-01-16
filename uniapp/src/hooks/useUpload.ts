@@ -13,6 +13,7 @@ const defaultOptions = {
     fileSize: 200,
 };
 export default function useUpload(options: {
+    isTranscode?: boolean;
     count?: number;
     imageAccept?: string[];
     imageSize?: number;
@@ -25,6 +26,7 @@ export default function useUpload(options: {
     onSuccess?: (materials: any[]) => void;
 }) {
     const {
+        isTranscode = false,
         count = defaultOptions.count,
         imageAccept = defaultOptions.imageAccept,
         imageSize = defaultOptions.imageSize,
@@ -66,14 +68,17 @@ export default function useUpload(options: {
                             uni.$u.toast(`图片格式必须是${imageAccept.join("、")}`);
                             continue;
                         }
-                        if (width > imageResolution[0] || height > imageResolution[1]) {
-                            uni.$u.toast(`图片分辨率不能超过${imageResolution[0]}*${imageResolution[1]}`);
-                            continue;
+                        if (!isTranscode) {
+                            if (width > imageResolution[0] || height > imageResolution[1]) {
+                                uni.$u.toast(`图片分辨率不能超过${imageResolution[0]}*${imageResolution[1]}`);
+                                continue;
+                            }
+                            if (file.size > imageSize * 1024 * 1024) {
+                                uni.$u.toast(`图片大小不能超过${imageSize}M`);
+                                continue;
+                            }
                         }
-                        if (file.size > imageSize * 1024 * 1024) {
-                            uni.$u.toast(`图片大小不能超过${imageSize}M`);
-                            continue;
-                        }
+
                         fileList.push(file);
                     } catch (error) {
                         continue;
@@ -100,7 +105,7 @@ export default function useUpload(options: {
                         uni.$u.toast(`文件格式必须是${fileAccept.join("、")}`);
                         continue;
                     }
-                    if (file.size > fileSize * 1024 * 1024) {
+                    if (!isTranscode && file.size > fileSize * 1024 * 1024) {
                         uni.$u.toast(`文件大小不能超过${fileSize}M`);
                         continue;
                     }
@@ -115,11 +120,16 @@ export default function useUpload(options: {
             showUploadProgress.value = true;
             const uploadedFilesData = [];
             for (const item of uploadMaterialList.value) {
-                const coverRes: any = isVideo ? await uploadFile("image", { filePath: item.thumbTempFilePath }) : {};
+                const coverRes: any = isVideo
+                    ? await uploadFile("image", {
+                          filePath: item.thumbTempFilePath,
+                          formData: { ffmpeg: isTranscode ? 1 : 0 },
+                      })
+                    : {};
 
                 const fileRes: any = await uploadFile(
                     isAll ? "file" : fileType,
-                    { filePath: item.tempFilePath },
+                    { filePath: item.tempFilePath, formData: { ffmpeg: isTranscode ? 1 : 0 } },
                     (progress) => progressCallback(progress, item)
                 );
 

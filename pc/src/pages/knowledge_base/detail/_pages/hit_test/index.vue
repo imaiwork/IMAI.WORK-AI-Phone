@@ -1,130 +1,143 @@
 <template>
-    <div class="h-full bg-white rounded-[20px] px-[30px] flex flex-col">
-        <div class="flex-shrink-0 mt-[30px]">
-            <div>搜索测试</div>
-            <div class="text-[#00000080] mt-[6px]">根据给定的查询文本测试知识的搜索效果。</div>
+    <div class="h-full flex flex-col gap-3 min-w-[1000px]">
+        <div class="flex-shrink-0 bg-white rounded-2xl px-6 py-4 border border-br">
+            <h2 class="text-lg font-bold text-[#1E293B]">搜索测试</h2>
+            <p class="text-sm text-[#94A3B8] mt-1">根据给定的查询文本测试知识的搜索效果，调优检索参数。</p>
         </div>
-        <div class="grow min-h-0 mt-[30px] overflow-x-scroll dynamic-scroller pb-5">
-            <div class="flex gap-x-5 min-w-[800px] h-full">
-                <div class="h-full flex flex-col flex-1 gap-y-6">
-                    <div class="px-[14px] bg-[#F6F6F6] border border-[#E5E5E5] rounded-xl">
-                        <div class="flex items-center justify-between h-[50px] border-b border-[#0000000d]">
-                            <div>源文本</div>
-                            <ElButton
-                                color="#F6F6F6"
-                                class="!border-[#0000001a]"
-                                v-if="!isRag"
-                                @click="openVectorSetting"
-                                >向量检索</ElButton
-                            >
-                        </div>
-                        <div class="py-[14px]">
-                            <div>
-                                <ElInput
-                                    v-model="sourceText"
-                                    placeholder="请输入文本，建议使用简短的陈述句"
-                                    type="textarea"
-                                    resize="none"
-                                    :maxlength="sourceTextMaxlength"
-                                    :rows="6" />
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <div class="text-[#00000080]">{{ sourceText.length }} / {{ sourceTextMaxlength }}</div>
-                                <ElButton type="primary" class="w-[84px]" :loading="isTestLock" @click="testLockFn"
-                                    >测试</ElButton
-                                >
-                            </div>
+
+        <div class="grow min-h-0 flex gap-3 overflow-hidden">
+            <div class="w-[420px] flex flex-col gap-3 h-full">
+                <div class="bg-white rounded-2xl border border-br p-5 flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-[#475569] flex items-center gap-2">
+                            <Icon name="el-icon-EditPen" />
+                            <span class="text-[12px] font-bold ml-1">源文本测试</span>
+                        </span>
+                        <ElButton v-if="!isRag" type="primary" link class="!font-bold" @click="openVectorSetting">
+                            <Icon name="el-icon-Setting" />
+                            <span class="text-[12px] font-bold ml-1">参数配置</span>
+                        </ElButton>
+                    </div>
+
+                    <div class="relative">
+                        <ElInput
+                            v-model="sourceText"
+                            placeholder="请输入文本，建议使用简短的陈述句..."
+                            type="textarea"
+                            resize="none"
+                            :maxlength="sourceTextMaxlength"
+                            :rows="5"
+                            class="custom-textarea" />
+                        <div class="absolute bottom-2 right-3 text-[11px] text-[#CBD5E1] font-medium">
+                            {{ sourceText.length }} / {{ sourceTextMaxlength }}
                         </div>
                     </div>
-                    <div v-if="isRag" class="px-4">
-                        <div>相似度阈值</div>
-                        <ElSlider v-model="rerank_min_score" :min="0" :max="1" :step="0.01" size="small" show-input />
-                        <div class="absolute -top-[33px] left-[90px]">
-                            <ElTooltip popper-class="w-[200px]">
-                                <div class="absolute top-0 right-0">
-                                    <Icon name="el-icon-QuestionFilled" color="#858585" />
-                                </div>
-                                <template #content>
-                                    <div>
-                                        设定最低分数标准，只有达到或超过这个阈值的检索结果才会被考虑用于后续的排序和生成过程
+
+                    <div v-if="isRag" class="bg-[#F8FAFC] rounded-xl p-4 border border-[#F1F5F9]">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-[#64748B] flex items-center gap-1">
+                                相似度阈值
+                                <ElTooltip content="设定最低分数标准，只有超过阈值的结果会被召回">
+                                    <div class="text-[#CBD5E1]">
+                                        <Icon name="el-icon-QuestionFilled" />
                                     </div>
-                                </template>
-                            </ElTooltip>
+                                </ElTooltip>
+                            </span>
+                            <span class="text-xs font-black text-primary">{{ rerank_min_score }}</span>
                         </div>
+                        <ElSlider v-model="rerank_min_score" :min="0" :max="1" :step="0.01" />
                     </div>
-                    <div class="grow min-h-0 flex flex-col">
-                        <div class="font-bold">记录</div>
-                        <div class="grow min-h-0 mt-6 bg-[#F6F6F6] border border-[#E5E5E5] rounded-xl flex flex-col">
-                            <div
-                                class="flex-shrink-0 h-[50px] border-b border-[#0000000d] flex justify-between items-center px-[14px]">
-                                <span>测试文本</span>
-                                <span>时间</span>
-                            </div>
-                            <div class="grow min-h-0">
-                                <ElScrollbar
-                                    @end-reached="handleRecordScrollEndReached"
-                                    v-if="historyPager.lists.length">
-                                    <div>
-                                        <div
-                                            class="flex justify-between items-center px-[14px] h-[50px] border-b border-[#0000000d] cursor-pointer active:bg-primary-light-9"
-                                            :class="{ 'bg-[rgba(255,255,255,0.3)]': index % 2 === 0 }"
-                                            v-for="(item, index) in historyPager.lists"
-                                            :key="item"
-                                            @click="handleHistoryTestItem(item)">
-                                            <div class="line-clamp-1">{{ item.prompt || item.ask }}</div>
-                                            <div class="flex-shrink-0">{{ item.create_time }}</div>
-                                        </div>
-                                    </div>
-                                </ElScrollbar>
-                                <div v-else class="flex items-center justify-center h-full">
-                                    <ElEmpty description="暂无历史数据" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
+                    <ElButton
+                        type="primary"
+                        class="!rounded-xl !h-11 !font-black !text-[15px] search-btn"
+                        :loading="isTestLock"
+                        @click="testLockFn">
+                        开始召回测试
+                    </ElButton>
                 </div>
-                <div
-                    class="flex-1 bg-[#F6F6F6] rounded-xl border border-[#E5E5E5] flex flex-col py-[15px]"
-                    v-loading="hitTestListLoading">
-                    <div class="px-[15px]">{{ hitTestList.length }} 个段落搜索</div>
-                    <div class="grow min-h-0 mt-[15px]">
-                        <ElScrollbar v-if="hitTestList.length">
-                            <div class="flex flex-col gap-y-3 px-[15px]">
+
+                <div class="grow min-h-0 bg-white rounded-2xl border border-br flex flex-col overflow-hidden">
+                    <div
+                        class="px-5 py-4 border-b border-[#F1F5F9] font-bold text-[#475569] flex items-center gap-2 bg-[#F8FAFC]/50">
+                        <Icon name="el-icon-History" /> 测试记录
+                    </div>
+                    <div class="grow min-h-0">
+                        <ElScrollbar v-if="historyPager.lists.length" @end-reached="handleRecordScrollEndReached">
+                            <div class="p-2 flex flex-col gap-1">
                                 <div
-                                    class="bg-white rounded-md border border-[#efefef]"
-                                    v-for="(item, index) in hitTestList"
-                                    :key="index">
-                                    <div class="px-[14px] py-[12px]">
-                                        <div
-                                            class="line-clamp-4 text-[11px] leading-5 mt-[6px] break-all text-[#00000080]">
-                                            问：{{ item.content || item.question }}
-                                        </div>
-                                        <div
-                                            class="line-clamp-4 text-[11px] leading-5 mt-[6px] break-all text-[#00000080]">
-                                            答：{{ item.answer || "-" }}
-                                        </div>
+                                    v-for="(item, index) in historyPager.lists"
+                                    :key="index"
+                                    class="history-item"
+                                    :class="{ 'is-active': currentTestItem?.id === item.id }"
+                                    @click="handleHistoryTestItem(item)">
+                                    <div class="truncate text-[13px] font-bold text-[#1E293B]">
+                                        {{ item.prompt || item.ask }}
                                     </div>
-                                    <div
-                                        class="flex items-center gap-x-3 px-[13px] border-t border-[#0000000d] h-[50px]">
-                                        <div class="w-5 h-5 rounded bg-[#0000000d] flex items-center justify-center">
-                                            <Icon name="local-icon-upload2"></Icon>
-                                        </div>
-                                        <div class="flex-1 line-clamp-1">{{ item.source }}</div>
-                                        <ElButton type="primary" class="w-[80px]" @click="handleOpenFile(item)"
-                                            >打开</ElButton
-                                        >
-                                    </div>
+                                    <div class="text-[11px] text-[#94A3B8] mt-1">{{ item.create_time }}</div>
                                 </div>
                             </div>
                         </ElScrollbar>
-                        <div v-else class="flex items-center justify-center h-full">
-                            <ElEmpty description="暂无召回结果" />
+                        <div v-else class="h-full flex items-center justify-center opacity-40">
+                            <ElEmpty description="暂无历史" :image-size="60" />
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="flex-1 min-h-0 bg-white rounded-2xl border border-br flex flex-col overflow-hidden"
+                v-loading="hitTestListLoading">
+                <div class="px-6 py-4 border-b border-[#F1F5F9] flex items-center justify-between">
+                    <div class="flex items-center gap-2 font-black text-[#1E293B]">
+                        召回结果明细
+                        <span class="px-2 py-0.5 rounded-full bg-[#0065fb]/10 text-primary text-[11px]">
+                            {{ hitTestList.length }} 段落
+                        </span>
+                    </div>
+                </div>
+
+                <div class="grow min-h-0 bg-[#F8FAFC]/50">
+                    <ElScrollbar v-if="hitTestList.length">
+                        <div class="p-5 flex flex-col gap-4">
+                            <div v-for="(item, index) in hitTestList" :key="index" class="hit-card">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="w-6 h-6 rounded bg-[#0065fb]/10 flex items-center justify-center text-primary text-[10px] font-black">
+                                            #{{ index + 1 }}
+                                        </div>
+                                        <span class="text-[12px] font-bold text-[#64748B] truncate max-w-[300px]">
+                                            {{ item.source }}
+                                        </span>
+                                    </div>
+                                    <ElButton type="primary" link class="!text-[12px]" @click="handleOpenFile(item)">
+                                        <span class="mr-1">查看源文</span> <Icon name="el-icon-Right" />
+                                    </ElButton>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <div class="qa-item is-q">
+                                        <span class="label">问</span>
+                                        <span class="content">{{ item.content || item.question }}</span>
+                                    </div>
+                                    <div class="qa-item is-a">
+                                        <span class="label">答</span>
+                                        <span class="content">{{ item.answer || "-" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </ElScrollbar>
+                    <div v-else class="h-full flex flex-col items-center justify-center grayscale opacity-50">
+                        <Icon name="local-icon-empty" :size="80" />
+                        <p class="text-sm font-bold text-[#94A3B8] mt-4">暂无召回结果，请在左侧发起测试</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <setting-popup
         v-if="showSettingPopup"
         ref="settingPopupRef"
@@ -253,10 +266,11 @@ const handleHistoryTestItem = async (item: any) => {
     }
 };
 
-const handleRecordScrollEndReached = (e: any) => {
-    if (e == "bottom" && historyPager.isLoad && !historyPager.loading) {
+const handleRecordScrollEndReached = async (e: any) => {
+    if (e == "bottom") {
+        if (!historyPager.isLoad || historyPager.loading) return;
         queryParams.page_no++;
-        getHistoryLists();
+        await getHistoryLists();
     }
 };
 
@@ -283,8 +297,51 @@ getHistoryLists();
 </script>
 
 <style scoped lang="scss">
-:deep(.el-textarea__inner) {
-    background-color: transparent;
-    box-shadow: none;
+.search-btn {
+    @apply bg-primary border-[none] transition-all;
+    &:hover {
+        @apply opacity-90  shadow-[0_8px_20px_-6px_rgba(#0065fb,0.4)];
+    }
+}
+
+.history-item {
+    @apply p-3 rounded-xl border border-[transparent] cursor-pointer transition-all;
+    &:hover {
+        @apply bg-[#F1F5F9];
+    }
+    &.is-active {
+        @apply bg-[#0065fb]/[0.02] border-[#0065fb]/[0.02];
+    }
+}
+
+.hit-card {
+    @apply bg-white p-4 rounded-2xl border border-br transition-all;
+    &:hover {
+        @apply border-primary;
+        @apply shadow-[0_4px_12px_rgba(0,0,0,0.03)];
+    }
+}
+
+.qa-item {
+    @apply flex gap-2 p-3 rounded-lg;
+    &.is-q {
+        @apply bg-[#F0F6FF];
+        .label {
+            @apply text-primary font-black;
+        }
+    }
+    &.is-a {
+        @apply bg-[#F8FAFC] border border-[#F1F5F9];
+        .label {
+            @apply text-[#94A3B8] font-black;
+        }
+    }
+    .content {
+        @apply text-[12px] leading-5 text-[#475569] break-all;
+    }
+}
+
+:deep(.el-scrollbar__thumb) {
+    @apply bg-[#e2e8f0];
 }
 </style>

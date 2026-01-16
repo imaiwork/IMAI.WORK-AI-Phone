@@ -125,10 +125,10 @@ class CrawlingManualLogic extends SvBaseLogic
                 }
                 $tmps = array_filter(explode(',', $item[0]));
                 foreach ($tmps as $key => $tmp) {
-                    $find = SvCrawlingManualTaskRecord::where('clue_wechat', $tmp)->where('user_id', $task->user_id)->findOrEmpty();
-                    if (!$find->isEmpty()) {
-                        continue;
-                    }
+                    // $find = SvCrawlingManualTaskRecord::where('clue_wechat', $tmp)->where('user_id', $task->user_id)->findOrEmpty();
+                    // if (!$find->isEmpty()) {
+                    //     continue;
+                    // }
 
                     if(array_key_exists($tmp, $recordData)){
                         continue;
@@ -193,10 +193,10 @@ class CrawlingManualLogic extends SvBaseLogic
             ->select()
             ->toArray();
         foreach ($items as $item) {
-            $find = SvCrawlingManualTaskRecord::where('clue_wechat', $item['reg_wechat'])->where('user_id', $task->user_id)->findOrEmpty();
-            if (!$find->isEmpty()) {
-                continue;
-            }
+            // $find = SvCrawlingManualTaskRecord::where('clue_wechat', $item['reg_wechat'])->where('user_id', $task->user_id)->findOrEmpty();
+            // if (!$find->isEmpty()) {
+            //     continue;
+            // }
             if(array_key_exists($item['reg_wechat'], $recordData)){
                 continue;
             }

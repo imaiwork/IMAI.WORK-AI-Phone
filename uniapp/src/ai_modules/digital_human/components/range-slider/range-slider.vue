@@ -246,6 +246,7 @@ onMounted(() => nextTick(updateRect));
     margin: 10px 0;
 }
 .track-base {
+    width: 100%;
     position: absolute;
     top: 50%;
     left: 16px;

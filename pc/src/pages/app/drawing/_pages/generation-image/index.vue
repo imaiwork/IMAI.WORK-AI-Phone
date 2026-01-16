@@ -1,13 +1,6 @@
 <template>
-    <div class="h-full relative w-full">
-        <ElScrollbar>
-            <div class="px-[10px]">
-                <result-content
-                    :result-lists="resultLists"
-                    :is-all-tasks-completed="isAllTasksCompleted"
-                    @retry="retry" />
-            </div>
-        </ElScrollbar>
+    <div class="h-full relative w-full bg-white rounded-[20px]">
+        <result-content :result-lists="resultLists" :is-all-tasks-completed="isAllTasksCompleted" @retry="retry" />
     </div>
 </template>
 

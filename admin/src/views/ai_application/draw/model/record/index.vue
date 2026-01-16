@@ -16,7 +16,9 @@
                         class="!w-[160px]"
                         placeholder="请选择创作类型"
                         clearable
+                        :empty-values="[undefined, null]"
                         @change="changeType">
+                        <el-option label="全部" value="" />
                         <el-option label="商品图" value="1" />
                         <el-option label="模特换衣图" value="2" />
                         <el-option label="海报图" value="5" />
@@ -60,7 +62,9 @@
                 </el-table-column>
                 <el-table-column label="昵称" prop="nickname" min-width="140" show-overflow-tooltip />
                 <el-table-column label="创作类型" prop="type_name" min-width="120" />
-                <el-table-column label="消耗算力" prop="points" min-width="120"></el-table-column>
+                <el-table-column label="消耗算力" prop="points" min-width="120">
+                    <template #default="{ row }"> {{ row.points }}算力 </template>
+                </el-table-column>
                 <el-table-column label="创作时间" prop="create_time" min-width="180" />
                 <el-table-column label="操作" width="120" fixed="right">
                     <template #default="{ row }">

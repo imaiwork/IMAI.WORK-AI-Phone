@@ -121,6 +121,7 @@ export enum TokensSceneEnum {
     SORA_PRO_VIDEO = "sora_pro_video_create",
     SORA_COPYWRITING = "sora_copywriting_create",
     SORA_ROLE = "human_avatar_sora",
+    SORA_DRAW_AVATAR = "sora_draw_avatar",
 }
 
 export enum KnbTypeEnum {

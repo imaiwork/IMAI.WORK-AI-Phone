@@ -1,112 +1,134 @@
 <template>
-    <div class="h-full">
-        <div class="flex items-center gap-2">
-            <div
-                v-for="item in categoryLists"
-                :key="item.id"
-                class="px-2 py-1 rounded-md cursor-pointer"
-                :class="[
-                    sceneType == item.type
-                        ? 'text-[#000000] font-bold bg-[rgba(120,96,254,.08)]'
-                        : 'bg-[rgba(139,95,95,0.04)]',
-                ]"
-                @click="handleSceneType(item.type)"
-            >
-                <span class="text-base">
-                    {{ item.name }}
-                </span>
-            </div>
+    <div class="h-full flex flex-col bg-[#F8FAFC]">
+        <div class="sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md px-6 py-4">
+            <ElScrollbar>
+                <div class="flex items-center gap-3">
+                    <div
+                        v-for="item in categoryLists"
+                        :key="item.type"
+                        class="px-5 py-2 rounded-full cursor-pointer whitespace-nowrap text-[13px] font-black transition-all duration-300"
+                        :class="[
+                            sceneType == item.type
+                                ? 'bg-primary text-white  shadow-[#0065fb]/20'
+                                : 'bg-white text-[#94A3B8] border border-[#F1F5F9] hover:text-primary hover:border-[#0065fb]/30',
+                        ]"
+                        @click="handleSceneType(item.type)">
+                        {{ item.name }}
+                    </div>
+                </div>
+            </ElScrollbar>
         </div>
-        <div
-            class="mt-4"
-            v-infinite-scroll="load"
-            :infinite-scroll-distance="10"
-            :infinite-scroll-immediate="false"
-            :infinite-scroll-disabled="!pager.isLoad"
-        >
-            <div class="pb-6" v-loading="pager.loading">
-                <template v-if="pager.lists.length">
-                    <div class="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                        <ElCard
-                            class="cursor-pointer !rounded-xl !bg-[#f7f9ff] relative hover:scale-[1.02] !p-0"
-                            shadow="never"
-                            v-for="(item, index) in pager.lists"
-                            :key="index"
-                        >
-                            <div class="flex flex-col rounded-lg w-full flex-grow gap-2 group relative">
-                                <div class="flex items-center justify-center relative group">
-                                    <video
-                                        v-if="sceneType == drawTypeEnumMap[DrawTypeEnum.VIDEO_GENERATION]"
-                                        :src="item.video_url"
-                                        class="w-full h-44 object-cover"
-                                    ></video>
-                                    <ElImage v-else :src="item.image" lazy class="w-full h-44" fit="cover"></ElImage>
+
+        <div class="grow min-h-0">
+            <ElScrollbar :distance="20" @end-reached="load">
+                <div class="p-4">
+                    <template v-if="pager.lists.length">
+                        <div class="grid grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                            <div v-for="(item, index) in pager.lists" :key="index" class="record-card group">
+                                <div class="relative aspect-[3/4] overflow-hidden rounded-[20px] bg-[#F1F5F9]">
                                     <div
-                                        class="bg-[rgba(0,0,0,0.35)] absolute z-40 w-full h-full rounded-lg invisible group-hover:visible flex items-center justify-center gap-2"
-                                    >
-                                        <div class="cursor-pointer flex gap-2 items-center" @click="previewImage(item)">
-                                            <Icon name="el-icon-View" color="#ffffff" size="20"></Icon>
-                                            <div class="text-white">预览</div>
+                                        class="absolute top-2.5 right-2.5 z-10 px-2 py-1 rounded-[6px] bg-[#000000]/30 backdrop-blur-md border border-[#ffffff]/10 pointer-events-none">
+                                        <span class="text-[10px] font-bold text-white tracking-wide">
+                                            {{ getTypeName(item.draw_type || item.type) }}
+                                        </span>
+                                    </div>
+
+                                    <div v-if="sceneType == DrawType.VIDEO" class="w-full h-full">
+                                        <video :src="item.video_url" class="w-full h-full object-cover" muted></video>
+                                        <div
+                                            class="absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-[#000000]/20 backdrop-blur-md">
+                                            <Icon name="el-icon-VideoPlay" color="#ffffff" :size="16"></Icon>
+                                        </div>
+                                    </div>
+
+                                    <ElImage
+                                        v-else
+                                        :src="item.image"
+                                        lazy
+                                        class="w-full h-full transition-transform duration-500 group-hover:scale-110"
+                                        fit="cover">
+                                        <template #placeholder>
+                                            <div class="flex items-center justify-center w-full h-full bg-[#F8FAFC]">
+                                                <div
+                                                    class="w-8 h-8 border-2 border-[#0065fb] border-t-transparent rounded-full animate-spin"></div>
+                                            </div>
+                                        </template>
+                                    </ElImage>
+
+                                    <div
+                                        class="absolute inset-0 bg-[#000000]/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
+                                        <div
+                                            class="w-12 h-12 flex items-center justify-center rounded-full bg-[#ffffff]/20 backdrop-blur-lg border border-[#ffffff]/30 cursor-pointer hover:scale-110 transition-transform"
+                                            @click="previewImage(item)">
+                                            <Icon name="el-icon-View" color="#ffffff" :size="24"></Icon>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex justify-between items-center p-2">
-                                    <div class="text-tx-primary text-sm">
-                                        {{ item.create_time }}
+
+                                <div class="flex justify-between items-center mt-3 px-1">
+                                    <div class="flex flex-col leading-tight">
+                                        <span class="text-[11px] font-black text-[#64748B] tracking-tight">
+                                            {{ item.create_time.split(" ")[0] }}
+                                        </span>
+                                        <span class="text-[10px] font-bold text-[#94A3B8] mt-0.5">
+                                            {{ item.create_time.split(" ")[1] }}
+                                        </span>
                                     </div>
-                                    <div
-                                        class="invisible group-hover:visible"
-                                        :class="[activeImage == item.id ? '!visible' : '']"
-                                        @click.stop
-                                    >
+
+                                    <div class="relative" @click.stop>
                                         <ElPopover
                                             :show-arrow="false"
-                                            popper-class="!w-[120px] !min-w-[120px] !p-[6px] !rounded-xl"
+                                            placement="top-end"
+                                            popper-class="!p-1.5 !rounded-xl !border-[#F1F5F9] !min-w-[120px]"
                                             @show="visibleChange(true, item.id)"
-                                            @hide="visibleChange(false, item.id)"
-                                        >
+                                            @hide="visibleChange(false, item.id)">
                                             <template #reference>
-                                                <div class="rotate-90 origin-center p-1">
-                                                    <Icon name="el-icon-MoreFilled"></Icon>
+                                                <div
+                                                    class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] text-[#94A3B8] cursor-pointer transition-colors">
+                                                    <Icon name="el-icon-MoreFilled" :size="16"></Icon>
                                                 </div>
                                             </template>
-                                            <div class="flex flex-col gap-2">
+                                            <div class="flex flex-col gap-1">
                                                 <div
-                                                    class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                                    @click="handleDownLoad(item)"
-                                                >
-                                                    <Icon name="el-icon-Download"></Icon>
-                                                    <span>下载</span>
+                                                    class="table-action-item hover:text-primary hover:bg-[#F5F7FF]"
+                                                    @click="handleDownLoad(item)">
+                                                    <Icon name="el-icon-Download" :size="14"></Icon>
+                                                    <span>保存到本地</span>
                                                 </div>
                                                 <div
-                                                    class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                                    @click="handleDelete(item.id, index)"
-                                                >
-                                                    <Icon name="el-icon-Delete"></Icon>
-                                                    <span>删除记录</span>
+                                                    class="table-action-item hover:!text-danger hover:bg-[#FDE6E8]"
+                                                    @click="handleDelete(item.id, index)">
+                                                    <Icon name="el-icon-Delete" :size="14"></Icon>
+                                                    <span>永久删除</span>
                                                 </div>
                                             </div>
                                         </ElPopover>
                                     </div>
                                 </div>
                             </div>
-                        </ElCard>
-                    </div>
-                    <div v-if="!pager.isLoad" class="text-center py-4 text-gray-500">暂无更多了</div>
-                </template>
-                <template v-else>
-                    <div v-if="!pager.loading" class="mt-20">
-                        <ElEmpty />
-                    </div>
-                </template>
-            </div>
+                        </div>
+
+                        <load-text :is-load="pager.isLoad"></load-text>
+                    </template>
+
+                    <template v-else>
+                        <div class="flex flex-col items-center justify-center py-32 space-y-4">
+                            <div
+                                class="w-20 h-20 bg-white rounded-[24px] flex items-center justify-center border border-[#F1F5F9]">
+                                <Icon name="local-icon-empty" :size="40" color="#CBD5E1"></Icon>
+                            </div>
+                            <span class="text-[13px] font-black text-[#94A3B8]">开启你的第一次艺术创作</span>
+                        </div>
+                    </template>
+                </div>
+            </ElScrollbar>
         </div>
+
         <ElImageViewer
             v-if="showPreview"
             :initial-index="0"
             :url-list="previewImages"
-            @close="showPreview = false"
-        ></ElImageViewer>
+            @close="showPreview = false"></ElImageViewer>
         <preview-video v-if="showPreviewVideo" ref="previewVideoRef" @close="showPreviewVideo = false"></preview-video>
     </div>
 </template>
@@ -116,31 +138,52 @@ import { drawingRecord, drawingVideoRecord, drawingVideoDelete, drawingDelete } 
 import { downloadFile } from "@/utils/util";
 import { DrawTypeEnum, drawTypeEnumMap } from "@/pages/app/drawing/_enums";
 
-const sceneType = ref<number>(drawTypeEnumMap[DrawTypeEnum.GOODS_IMAGE]);
+enum DrawType {
+    ALL = 0,
+    GOODS = 1,
+    FASHION = 2,
+    TEXT_TO_IMAGE = 3,
+    IMAGE_TO_IMAGE = 4,
+    POSTER = 5,
+    VIDEO = 6,
+}
+
+const sceneType = ref<number>(DrawType.ALL);
 const activeImage = ref<any>("");
 
 const categoryLists = computed(() => [
-    { name: "商品图", id: 1, type: drawTypeEnumMap[DrawTypeEnum.GOODS_IMAGE] },
-    { name: "服饰图", id: 2, type: drawTypeEnumMap[DrawTypeEnum.FASHION_IMAGE] },
-    { name: "文生图", id: 3, type: drawTypeEnumMap[DrawTypeEnum.TXT2IMAGE] },
-    { name: "图生图", id: 4, type: drawTypeEnumMap[DrawTypeEnum.IMAGE2IMAGE] },
-    { name: "海报图", id: 5, type: drawTypeEnumMap[DrawTypeEnum.POSTER_IMAGE] },
-    { name: "视频", id: 6, type: drawTypeEnumMap[DrawTypeEnum.VIDEO_GENERATION] },
+    { name: "全部", type: DrawType.ALL },
+    { name: "文生图", type: DrawType.TEXT_TO_IMAGE },
+    { name: "图生图", type: DrawType.IMAGE_TO_IMAGE },
+    { name: "商品图", type: DrawType.GOODS },
+    { name: "海报图", type: DrawType.POSTER },
+    { name: "服饰图", type: DrawType.FASHION },
+    { name: "视频记录", type: DrawType.VIDEO },
 ]);
+
+const getTypeName = (type: string) => {
+    const target = categoryLists.value.find((item) => item.type === parseInt(type));
+    if (target) return target.name;
+
+    if (sceneType.value === DrawType.VIDEO) return "视频生成";
+
+    return "绘画";
+};
 
 const queryParams = reactive<any>({
     page_no: 1,
     type: sceneType.value,
+    draw_type: sceneType.value,
 });
-
-const fetchApi = (params: any) => {
-    const isVideo = sceneType.value === drawTypeEnumMap[DrawTypeEnum.VIDEO_GENERATION];
-    return isVideo ? drawingVideoRecord(params) : drawingRecord(params);
-};
 
 const { pager, getLists, resetPage } = usePaging({
     size: 25,
-    fetchFun: fetchApi,
+    fetchFun: (params: any) => {
+        if (sceneType.value == DrawType.VIDEO) {
+            params.type = "";
+        }
+        return drawingRecord(params);
+    },
     params: queryParams,
     isScroll: true,
 });
@@ -151,7 +194,7 @@ const previewImages = ref<any[]>([]);
 const previewVideoRef = shallowRef();
 
 const previewImage = async (item: any) => {
-    const isVideo = sceneType.value === drawTypeEnumMap[DrawTypeEnum.VIDEO_GENERATION];
+    const isVideo = sceneType.value === DrawType.VIDEO;
     if (isVideo) {
         showPreviewVideo.value = true;
         await nextTick();
@@ -168,7 +211,7 @@ const visibleChange = (flag: boolean, id: number) => {
 };
 
 const handleDownLoad = (item: any) => {
-    const isVideo = sceneType.value === drawTypeEnumMap[DrawTypeEnum.VIDEO_GENERATION];
+    const isVideo = sceneType.value === DrawType.VIDEO;
     const link = isVideo ? item.video_url : item.image;
     downloadFile(link);
 };
@@ -177,21 +220,17 @@ const handleSceneType = (type: number) => {
     if (type === sceneType.value) return;
     sceneType.value = type;
     queryParams.page_no = 1;
-
-    if (type === drawTypeEnumMap[DrawTypeEnum.VIDEO_GENERATION]) {
-        delete queryParams.type;
-    } else {
-        queryParams.type = type;
-    }
+    queryParams.draw_type = type;
+    queryParams.type = type;
     resetPage();
 };
 
 const handleDelete = async (id: number, index: number) => {
     useNuxtApp().$confirm({
-        message: "确定删除此条记录吗？",
+        message: "确定永久删除此记录吗？",
         onConfirm: async () => {
             try {
-                const isVideo = sceneType.value === drawTypeEnumMap[DrawTypeEnum.VIDEO_GENERATION];
+                const isVideo = sceneType.value === DrawType.VIDEO;
                 if (isVideo) {
                     await drawingVideoDelete({ id });
                 } else {
@@ -206,9 +245,12 @@ const handleDelete = async (id: number, index: number) => {
     });
 };
 
-const load = async () => {
-    queryParams.page_no += 1;
-    await getLists();
+const load = async (e: string) => {
+    if (e == "bottom") {
+        if (!pager.isLoad || pager.loading) return;
+        queryParams.page_no += 1;
+        await getLists();
+    }
 };
 
 onMounted(() => {
@@ -217,7 +259,11 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-:deep(.el-card__body) {
-    padding: 0 !important;
+.record-card {
+    @apply relative transition-all duration-300;
+}
+
+.record-card:hover video {
+    filter: brightness(1.1);
 }
 </style>

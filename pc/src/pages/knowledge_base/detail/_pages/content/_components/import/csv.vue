@@ -1,71 +1,94 @@
 <template>
-    <div class="h-full flex flex-col px-3 pb-3">
+    <div class="h-full flex flex-col px-4 pb-4">
         <div class="flex-shrink-0" v-loading="loading">
             <ElUpload
                 ref="uploadRef"
                 drag
-                show-progress
                 multiple
                 :auto-upload="false"
                 :show-file-list="false"
                 :accept="accept"
-                :limit="50"
-                :on-change="onFileChange">
-                <div class="text-[#00000080] flex items-center gap-2 justify-center">
-                    <Icon name="local-icon-upload" />
-                    拖拽文件至此，或点击<span class="text-primary"> 选择文件 </span>
+                :on-change="onFileChange"
+                class="custom-upload">
+                <div class="flex flex-col items-center py-2">
+                    <div class="w-12 h-12 rounded-full bg-[#F0F6FF] flex items-center justify-center mb-3">
+                        <Icon name="local-icon-upload" class="text-primary" :size="24" />
+                    </div>
+                    <div class="text-[14px] font-bold text-[#64748B]">
+                        拖拽 CSV/Excel 至此，或 <span class="text-primary font-[900]">点击选择文件</span>
+                    </div>
+                    <ElButton link type="primary" class="!text-[12px] mt-2 font-black" @click.stop>
+                        <a href="/static/file/template/kn_qa.csv" target="_blank" class="flex items-center gap-1">
+                            <Icon name="el-icon-Download" :size="14" /> 下载官方导入模版
+                        </a>
+                    </ElButton>
                 </div>
-                <div class="text-[#00000080] mt-2">支持 {{ accept }} 文件</div>
-                <ElButton link type="primary" class="mt-2" @click.stop>
-                    <a href="/static/file/template/kn_qa.csv" target="_blank">点击下载模版</a>
-                </ElButton>
             </ElUpload>
-            <div class="mt-2 text-[#00000080] text-xs leading-5">
-                先完成填写后再上传，问题总数建议不要超过1000条，否则上传会卡顿
-                <br />
-                导入前会进行去重，如果问题和答案完全相同，则不会被导入，所以最终导入的内容可能会比文件的内容少。但是，对于带有换行的内容，目前无法去重。
+
+            <div class="mt-3 p-3 bg-[#FFF9F0] border border-[#FFE4BA] rounded-xl flex gap-3">
+                <Icon name="el-icon-InfoFilled" color="#ED6A0C" :size="16" class="mt-0.5" />
+                <div class="text-[12px] text-[#A25D00] leading-5 font-bold">
+                    请先完成模版填写后再上传。单文件建议不要超过 <span class="underline">1000条</span> 以保证流畅度。
+                    <br />
+                    系统将自动去重完全相同的问答对，但含有换行的内容目前暂不支持自动去重。
+                </div>
             </div>
         </div>
-        <div class="grow min-h-0 mt-3 flex gap-x-2" v-if="data.length > 0">
-            <div class="w-1/4 h-full flex flex-col bg-[#F6F6F6] rounded-xl border border-[#efefef]">
-                <div class="flex-shrink-1 min-h-0 mb-3">
+
+        <div class="grow min-h-0 mt-4 flex gap-x-4" v-if="data.length > 0">
+            <div class="w-1/4 h-full flex flex-col bg-[#F8FAFC] rounded-[20px] border border-br overflow-hidden">
+                <div class="px-4 py-3 border-b border-br bg-white text-[13px] font-[900] text-[#1E293B]">
+                    已选文件 ({{ data.length }})
+                </div>
+                <div class="grow min-h-0 py-2">
                     <ElScrollbar>
-                        <div class="p-3 flex flex-col gap-y-2">
+                        <div class="px-3 flex flex-col gap-y-2">
                             <div
                                 v-for="(item, index) in data"
                                 :key="index"
-                                class="flex items-center p-2 rounded-lg mt-1 cursor-pointer"
-                                :class="[
-                                    currIndex == index
-                                        ? 'bg-[#0065fb0d] shadow-[0_0_0_1px_var(--color-primary)]'
-                                        : 'bg-[#f6f6f6] shadow-[0_0_0_1px_#EFEFEF]',
-                                ]"
+                                class="file-card group"
+                                :class="{ 'is-active': currIndex == index }"
                                 @click="selectStage(index)">
+                                <div class="flex items-center flex-1 min-w-0">
+                                    <div class="icon-box" :class="{ 'is-active': currIndex == index }">
+                                        <Icon name="local-icon-upload2" :size="14" />
+                                    </div>
+                                    <div
+                                        class="ml-3 text-[13px] font-bold truncate flex-1"
+                                        :class="currIndex == index ? 'text-primary' : 'text-[#475569]'">
+                                        {{ item.name }}
+                                    </div>
+                                </div>
                                 <div
-                                    class="w-5 h-5 rounded bg-[#0000000d] flex items-center justify-center"
-                                    :class="{ 'bg-primary text-white': currIndex == index }">
-                                    <Icon name="local-icon-upload2"></Icon>
-                                </div>
-                                <div class="ml-2 line-clamp-1 flex-1">
-                                    {{ item.name }}
-                                </div>
-                                <div @click="handleDeleteFile(index)">
-                                    <close-btn />
+                                    class="opacity-0 group-hover:opacity-100 transition-opacity"
+                                    @click.stop="handleDeleteFile(index)">
+                                    <Icon
+                                        name="el-icon-CircleCloseFilled"
+                                        class="text-[#94A3B8] hover:text-red-500"
+                                        :size="16" />
                                 </div>
                             </div>
                         </div>
                     </ElScrollbar>
                 </div>
             </div>
-            <div class="flex-1 flex flex-col bg-[#F6F6F6] rounded-xl border border-[#efefef]">
-                <div class="px-3 mt-3">分段预览（{{ data[currIndex]?.data.length }}组）</div>
-                <div class="grow min-h-0">
+
+            <div class="flex-1 flex flex-col bg-white rounded-[20px] border border-br overflow-hidden">
+                <div class="px-5 py-4 border-b border-[#F1F5F9] flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-primary rounded-full"></span>
+                        <span class="text-[14px] font-[900] text-[#1E293B]"
+                            >问答对预览（{{ data[currIndex]?.data.length }}）</span
+                        >
+                    </div>
+                </div>
+                <div class="grow min-h-0 bg-[#F8FAFC]">
                     <ElScrollbar>
-                        <div class="px-3">
+                        <div class="p-4 space-y-3">
                             <div
                                 v-for="(item, index) in data[currIndex]?.data"
                                 :key="index"
-                                class="rounded-xl p-[10px] mt-2 break-all bg-white">
+                                class="qa-item-wrapper transition-all">
                                 <CsvItem
                                     v-model:q="item.q"
                                     v-model:a="item.a"
@@ -80,7 +103,6 @@
         </div>
     </div>
 </template>
-
 <script setup lang="ts">
 import { uploadFile } from "@/api/app";
 import type { UploadFile, UploadInstance } from "element-plus";
@@ -173,5 +195,38 @@ const selectStage = (index: number) => {
     currIndex.value = index;
 };
 </script>
+<style scoped lang="scss">
+:deep(.custom-upload) {
+    .el-upload-dragger {
+        @apply bg-[#F8FAFC] border-2 border-dashed border-br rounded-[24px] transition-all;
+        &:hover {
+            @apply border-primary bg-[#0065fb]/[0.02];
+        }
+    }
+}
 
-<style lang="scss"></style>
+.file-card {
+    @apply flex items-center justify-between p-3 rounded-xl border border-[transparent] cursor-pointer transition-all bg-[transparent];
+    &:hover {
+        @apply bg-white border-[#F1F5F9];
+    }
+    &.is-active {
+        @apply bg-white border-primary;
+        box-shadow: 0 4px 12px rgba(var(--el-color-primary), 0.08);
+    }
+}
+
+.icon-box {
+    @apply w-7 h-7 rounded-lg bg-[#E2E8F0] text-[#64748B] flex items-center justify-center transition-all;
+    &.is-active {
+        @apply bg-primary text-white;
+    }
+}
+
+.qa-item-wrapper {
+    @apply bg-white rounded-xl border border-br p-4;
+    &:hover {
+        @apply border-[#0065fb]/30;
+    }
+}
+</style>

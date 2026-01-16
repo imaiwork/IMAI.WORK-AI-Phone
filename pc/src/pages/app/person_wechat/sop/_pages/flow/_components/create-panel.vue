@@ -1,233 +1,194 @@
 <template>
-    <div class="h-full flex flex-col relative">
-        <div class="flex items-center justify-between bg-white p-4 rounded-xl flex-shrink-0">
-            <div>
-                <ElBreadcrumb :separator-icon="ArrowRight">
+    <div class="h-full flex flex-col gap-y-3">
+        <div class="flex items-center justify-between bg-white px-6 py-4 rounded-[20px] border border-br flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <div
+                    class="p-2 rounded-xl bg-[#0065fb]/5 text-primary cursor-pointer hover:bg-[#0065fb]/10 transition-colors leading-[0]"
+                    @click="emit('back')">
+                    <Icon name="el-icon-ArrowLeft" :size="18" />
+                </div>
+                <ElBreadcrumb :separator-icon="ArrowRight" class="modern-breadcrumb">
+                    <ElBreadcrumbItem class="cursor-pointer" @click="emit('back')">任务管理</ElBreadcrumbItem>
                     <ElBreadcrumbItem>
-                        <span class="cursor-pointer text-[#8A8C99] hover:text-primary" @click="emit('back')">
-                            任务管理
-                        </span>
-                    </ElBreadcrumbItem>
-                    <ElBreadcrumbItem>
-                        <span> {{ detail.flow_name }} </span>
+                        <span class="font-black text-[#0F172A]">{{ detail.flow_name }}</span>
                     </ElBreadcrumbItem>
                 </ElBreadcrumb>
             </div>
-            <ElButton type="danger" @click="emit('delete', flowId, true)">
-                <Icon name="el-icon-Delete" :size="16"></Icon>
-                <span>删除</span>
+            <ElButton type="danger" link class="!font-bold" @click="emit('delete', flowId, true)">
+                <Icon name="el-icon-Delete" />
+                <span class="ml-1">删除整条流程</span>
             </ElButton>
         </div>
-        <div class="grow min-h-0 bg-white rounded-xl mt-4 flex flex-col py-4">
-            <div class="flex-shrink-1 min-h-0">
-                <ElScrollbar>
-                    <ElCollapse>
-                        <div class="px-4" v-draggable="draggableOptions">
-                            <div class="stage-list flex flex-col gap-y-4 py-2">
-                                <ElCollapseItem :title="item.sub_stage_name" v-for="(item, index) in stageLists">
-                                    <template #title>
-                                        <div class="flex px-4 justify-between items-center">
-                                            <div class="flex items-center">
-                                                <span class="move-icon cursor-move" @click.stop>
-                                                    <Icon
-                                                        name="local-icon-apps"
-                                                        color="var(--color-primary)"
-                                                        :size="20"></Icon>
-                                                </span>
-                                                <span class="ml-6">{{ item.sub_stage_name }}</span>
-                                                <div class="ml-4">
-                                                    <ElTag type="success" v-if="item.status == 0" disable-transitions
-                                                        >关键阶段</ElTag
-                                                    >
-                                                    <ElTag type="warning" v-if="item.status == 1" disable-transitions
-                                                        >警示阶段</ElTag
-                                                    >
-                                                </div>
-                                                <div class="ml-4 flex gap-x-2">
-                                                    <ElTag type="info" size="small" disable-transitions>
-                                                        触发条件 -
-                                                        {{ item.trigger_count || 0 }}个
-                                                    </ElTag>
-                                                    <ElTag type="info" size="small" disable-transitions>
-                                                        自动跟进提醒 -
-                                                        {{ item.remind || 0 }}个
-                                                    </ElTag>
-                                                </div>
+
+        <div class="grow min-h-0 bg-white rounded-[20px] border border-br flex flex-col overflow-hidden relative">
+            <ElScrollbar>
+                <div class="p-6">
+                    <div class="stage-container relative" v-draggable="draggableOptions">
+                        <div class="stage-list space-y-6">
+                            <div
+                                v-for="(item, index) in stageLists"
+                                :key="item.sub_stage_id"
+                                class="stage-card-wrapper">
+                                <div
+                                    class="bg-white rounded-[20px] shadow-[0_0_10px_0_rgba(0,0,0,0.05)] border border-slate-100 overflow-hidden">
+                                    <div
+                                        class="flex items-center justify-between px-5 py-4 bg-white border-b border-slate-50">
+                                        <div class="flex items-center gap-4">
+                                            <div
+                                                class="move-icon cursor-move p-1 text-slate-300 hover:text-primary transition-colors">
+                                                <Icon name="local-icon-apps" :size="20" />
                                             </div>
-                                            <div>
-                                                <ElButton
-                                                    type="primary"
-                                                    size="small"
-                                                    @click.stop="
-                                                        handleTriggerEventEdit({
-                                                            stage_id: item.sub_stage_id,
-                                                        })
-                                                    ">
-                                                    <Icon name="local-icon-click" color="#fff" :size="16"></Icon>
-                                                    <span class="ml-2">新增触发条件</span>
-                                                </ElButton>
-                                                <ElButton
-                                                    type="primary"
-                                                    size="small"
-                                                    @click.stop="
-                                                        handleFollowRemindEdit({
-                                                            stage_id: item.sub_stage_id,
-                                                        })
-                                                    ">
-                                                    <Icon name="local-icon-alarm" color="#fff"></Icon>
-                                                    <span class="ml-2">新增跟进提醒</span>
-                                                </ElButton>
-                                                <ElButton
-                                                    type="primary"
-                                                    size="small"
-                                                    @click.stop="handleStageEdit(item, index)">
-                                                    <Icon name="local-icon-edit" color="#fff"></Icon>
-                                                    <span class="ml-2">编辑</span>
-                                                </ElButton>
-                                                <ElButton
-                                                    type="danger"
-                                                    size="small"
-                                                    @click.stop="handleStageDelete(item.sub_stage_id, index)">
-                                                    <Icon name="local-icon-delete_bin" color="#fff"></Icon>
-                                                    <span class="ml-2">删除</span>
-                                                </ElButton>
+                                            <div class="flex flex-col">
+                                                <div class="flex items-center gap-3">
+                                                    <span class="text-[16px] font-[900] text-tx-primary">{{
+                                                        item.sub_stage_name
+                                                    }}</span>
+                                                    <span
+                                                        :class="[
+                                                            'status-pill',
+                                                            item.status == 0 ? 'is-key' : 'is-warn',
+                                                        ]">
+                                                        {{ item.status == 0 ? "关键阶段" : "警示阶段" }}
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    class="flex items-center gap-3 mt-1.5 text-[11px] font-bold text-slate-400">
+                                                    <span class="flex items-center gap-1"
+                                                        ><Icon name="local-icon-click" :size="12" />触发器:
+                                                        {{ item.trigger_count }}</span
+                                                    >
+                                                    <span class="flex items-center gap-1"
+                                                        ><Icon name="local-icon-alarm" :size="12" />跟进提醒:
+                                                        {{ item.remind_count }}</span
+                                                    >
+                                                </div>
                                             </div>
                                         </div>
-                                    </template>
-                                    <div class="bg-[#F7F7F7] rounded-lg p-4 mx-2 mb-2">
-                                        <div>
-                                            <div class="flex items-center gap-x-2">
-                                                <span class="text-[#8A8C99]"
-                                                    >标签触发条件配置（{{ item.trigger_count }}）</span
-                                                >
-                                                <ElButton link @click="toggleTriggerEventList(item.sub_stage_id)">
-                                                    <Icon
-                                                        :name="
-                                                            currentTriggerEventId == item.sub_stage_id
-                                                                ? 'el-icon-ArrowRight'
-                                                                : 'el-icon-ArrowDown'
-                                                        "
-                                                        color="#8A8C99"></Icon>
-                                                </ElButton>
-                                            </div>
-                                            <div class="mt-4" v-show="currentTriggerEventId != item.sub_stage_id">
-                                                <div class="grid grid-cols-4 gap-4" v-if="item.trigger_count > 0">
-                                                    <div
-                                                        v-for="value in item.triggerlist"
-                                                        class="bg-white rounded-lg border border-primary-light-8 cursor-pointer"
-                                                        @click="
-                                                            handleTriggerEventEdit({
-                                                                trigger_id: value.id,
-                                                                ...value,
-                                                            })
-                                                        ">
-                                                        <div class="flex items-center justify-between">
-                                                            <div
-                                                                class="text-[10px] bg-primary py-1 px-1.5 text-white rounded-tl-lg rounded-br-lg">
-                                                                {{ getMatchType("trigger", value) }}
-                                                            </div>
-                                                            <div class="mr-1">
-                                                                <ElButton
-                                                                    link
-                                                                    @click.stop="handleTriggerEventDelete(value.id)">
-                                                                    <Icon name="el-icon-Delete" color="#8A8C99"></Icon>
-                                                                </ElButton>
-                                                            </div>
-                                                        </div>
-                                                        <div class="">
-                                                            <div
-                                                                class="text-[#8A8C99] text-xs p-2"
-                                                                v-if="value.match_type == 2">
-                                                                {{ value.chat_keywords }}
-                                                            </div>
-                                                            <div
-                                                                class="flex items-center justify-center gap-x-4 py-4"
-                                                                v-else>
-                                                                <Icon
-                                                                    name="local-icon-user_add"
-                                                                    color="var(--color-primary)"></Icon>
-                                                                <span class="text-primary text-xs">刚刚成为好友</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <ElEmpty v-else description="暂无数据" :image-size="60"></ElEmpty>
-                                            </div>
-                                        </div>
-                                        <div class="mt-4">
-                                            <div class="flex items-center gap-x-2">
-                                                <span class="text-[#8A8C99]"
-                                                    >自动跟进提醒配置（{{ item.remind_count }}）</span
-                                                >
-                                                <ElButton link @click="toggleFollowRemindList(item.sub_stage_id)">
-                                                    <Icon
-                                                        :name="
-                                                            currentFollowRemindId != item.sub_stage_id
-                                                                ? 'el-icon-ArrowDown'
-                                                                : 'el-icon-ArrowRight'
-                                                        "
-                                                        color="#8A8C99"></Icon>
-                                                </ElButton>
-                                            </div>
-                                            <div class="mt-4" v-show="currentFollowRemindId != item.sub_stage_id">
-                                                <div class="grid grid-cols-4 gap-4" v-if="item.remind_count > 0">
-                                                    <div
-                                                        v-for="value in item.remindlist"
-                                                        class="bg-white rounded-lg border border-primary-light-8 cursor-pointer"
-                                                        @click="
-                                                            handleFollowRemindEdit({
-                                                                remind_id: value.id,
-                                                                ...value,
-                                                            })
-                                                        ">
-                                                        <div class="flex items-center justify-between">
-                                                            <div
-                                                                class="text-[10px] bg-primary py-1 px-1.5 text-white rounded-tl-lg rounded-br-lg">
-                                                                {{ getMatchType("follow", value) }}
-                                                            </div>
-                                                            <div class="mr-1">
-                                                                <ElButton
-                                                                    link
-                                                                    @click.stop="handleFollowRemindDelete(value.id)">
-                                                                    <Icon name="el-icon-Delete" color="#8A8C99"></Icon>
-                                                                </ElButton>
-                                                            </div>
-                                                        </div>
-                                                        <div class="p-2">
-                                                            <div class="text-xs">
-                                                                超过<span class="text-primary mx-1">{{
-                                                                    value.judgment
-                                                                }}</span
-                                                                >天后，{{ value.judgment > 0 ? "次日" : "当天" }}
-                                                                <span class="text-primary mx-1">{{
-                                                                    value.send_time
-                                                                }}</span
-                                                                >跟进
-                                                            </div>
-                                                            <div class="text-xs mt-2 text-primary">
-                                                                {{ value.content }}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <ElEmpty v-else description="暂无数据" :image-size="60"></ElEmpty>
-                                            </div>
+
+                                        <div class="flex items-center gap-2">
+                                            <ElButton
+                                                type="primary"
+                                                link
+                                                class="!text-xs !font-black"
+                                                @click="handleStageEdit(item, index)"
+                                                >配置阶段</ElButton
+                                            >
+                                            <div class="w-[1px] h-3 bg-slate-200 mx-1"></div>
+                                            <ElButton
+                                                type="danger"
+                                                link
+                                                class="!text-xs !font-black"
+                                                @click="handleStageDelete(item.sub_stage_id, index)"
+                                                >移除</ElButton
+                                            >
                                         </div>
                                     </div>
-                                </ElCollapseItem>
+
+                                    <div class="p-5 grid grid-cols-2 gap-6 bg-[#FBFCFE]">
+                                        <div class="config-block">
+                                            <div class="flex items-center justify-between mb-3 px-1">
+                                                <span class="text-xs font-black text-slate-500 uppercase tracking-wider"
+                                                    >01. 标签/动作触发</span
+                                                >
+                                                <ElButton
+                                                    type="primary"
+                                                    link
+                                                    class="!p-0"
+                                                    @click="handleTriggerEventEdit({ stage_id: item.sub_stage_id })">
+                                                    <Icon name="el-icon-CirclePlusFilled" :size="18" />
+                                                </ElButton>
+                                            </div>
+
+                                            <div v-if="item.trigger_count > 0" class="space-y-3">
+                                                <div
+                                                    v-for="value in item.triggerlist"
+                                                    :key="value.id"
+                                                    class="item-node group"
+                                                    @click="handleTriggerEventEdit({ trigger_id: value.id, ...value })">
+                                                    <div class="node-icon">
+                                                        <Icon
+                                                            :name="
+                                                                value.match_type == 1
+                                                                    ? 'el-icon-Pointer'
+                                                                    : 'el-icon-ChatLineRound'
+                                                            " />
+                                                    </div>
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="text-[10px] text-primary font-black mb-0.5">
+                                                            {{ getMatchType("trigger", value) }}
+                                                        </div>
+                                                        <div class="text-[12px] font-bold text-tx-regular truncate">
+                                                            {{
+                                                                value.match_type == 2
+                                                                    ? value.chat_keywords
+                                                                    : "新好友加入"
+                                                            }}
+                                                        </div>
+                                                    </div>
+                                                    <div
+                                                        class="node-action"
+                                                        @click.stop="handleTriggerEventDelete(value.id)">
+                                                        <Icon name="el-icon-Close" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div v-else class="empty-placeholder">未配置触发条件</div>
+                                        </div>
+
+                                        <div class="config-block border-l border-slate-100 pl-6">
+                                            <div class="flex items-center justify-between mb-3 px-1">
+                                                <span class="text-xs font-black text-slate-500 uppercase tracking-wider"
+                                                    >02. 自动化跟进任务</span
+                                                >
+                                                <ElButton
+                                                    type="primary"
+                                                    link
+                                                    class="!p-0"
+                                                    @click="handleFollowRemindEdit({ stage_id: item.sub_stage_id })">
+                                                    <Icon name="el-icon-CirclePlusFilled" :size="18" />
+                                                </ElButton>
+                                            </div>
+
+                                            <div v-if="item.remind_count > 0" class="space-y-3">
+                                                <div
+                                                    v-for="value in item.remindlist"
+                                                    :key="value.id"
+                                                    class="item-node group is-remind"
+                                                    @click="handleFollowRemindEdit({ remind_id: value.id, ...value })">
+                                                    <div class="node-icon"><Icon name="el-icon-AlarmClock" /></div>
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="text-[10px] text-amber-500 font-black mb-0.5">
+                                                            {{ getMatchType("follow", value) }}
+                                                        </div>
+                                                        <div class="text-xs font-bold text-tx-regular truncate">
+                                                            {{ value.judgment }}天后 {{ value.send_time }}
+                                                        </div>
+                                                    </div>
+                                                    <div
+                                                        class="node-action"
+                                                        @click.stop="handleFollowRemindDelete(value.id)">
+                                                        <Icon name="el-icon-Close" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div v-else class="empty-placeholder">未配置跟进提醒</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </ElCollapse>
-                </ElScrollbar>
-            </div>
-            <div class="flex justify-end px-4 mt-4">
-                <ElButton type="primary" link @click="handleStageAdd">
-                    <Icon name="local-icon-add_box_fill" :size="18"></Icon>
-                    <span class="ml-2">新增阶段</span>
-                </ElButton>
+                    </div>
+                </div>
+            </ElScrollbar>
+            <div class="mt-8 flex justify-center sticky bottom-5 z-[222]">
+                <div class="add-stage-btn" @click="handleStageAdd">
+                    <Icon name="el-icon-Plus" />
+                    <span class="ml-2">插入流程新阶段</span>
+                </div>
             </div>
         </div>
-        <div class="absolute w-full h-full flex items-center justify-center" v-if="loading">
+
+        <div class="absolute w-full h-full flex items-center justify-center bg-white/50 z-50" v-if="loading">
             <loader />
         </div>
     </div>
@@ -243,7 +204,6 @@
         @success="getDetail" />
     <stage-edit v-if="showStageEdit" ref="stageEditRef" @close="showStageEdit = false" @success="getDetail" />
 </template>
-
 <script setup lang="ts">
 import {
     sopFlowDetail,
@@ -450,17 +410,61 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
-:deep(.el-collapse) {
-    border: none;
-    .el-collapse-item {
-        box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
-        border-radius: 12px;
-        overflow: hidden;
+.status-pill {
+    @apply px-2 py-0.5 rounded-lg text-[10px] font-black uppercase;
+    &.is-key {
+        @apply bg-emerald-50 text-emerald-600;
+    }
+    &.is-warn {
+        @apply bg-amber-50 text-amber-600;
+    }
+}
 
-        .el-collapse-item__wrap,
-        .el-collapse-item__header {
-            border-bottom: none;
-        }
+.item-node {
+    @apply flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl transition-all cursor-pointer relative;
+    &:hover {
+        @apply border-primary shadow-light -translate-y-0.5;
+    }
+
+    .node-icon {
+        @apply w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 transition-colors;
+    }
+    &:hover .node-icon {
+        @apply bg-[#0065fb]/5 text-primary;
+    }
+
+    &.is-remind:hover .node-icon {
+        @apply bg-amber-50 text-amber-500;
+    }
+
+    .node-action {
+        @apply absolute -top-1.5 -right-1.5 w-5 h-5 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center scale-0 opacity-0 transition-all hover:bg-error hover:text-white;
+    }
+    &:hover .node-action {
+        @apply scale-100 opacity-100;
+    }
+}
+
+.empty-placeholder {
+    @apply h-[100px] rounded-xl border-2 border-dashed border-slate-100 flex items-center justify-center text-[12px] text-slate-300 font-bold;
+}
+
+.stage-list {
+    @apply relative;
+    &::before {
+        content: "";
+        @apply absolute left-7 top-4 bottom-4 w-0.5 bg-slate-100 -z-10;
+    }
+}
+
+.add-stage-btn {
+    @apply flex items-center px-8 py-3 bg-primary text-white rounded-full font-black text-sm cursor-pointer shadow-light shadow-[#0065fb]/20 transition-all hover:scale-105 active:scale-95;
+}
+
+.modern-breadcrumb :deep(.el-breadcrumb__inner) {
+    @apply font-bold text-slate-400;
+    &.is-link:hover {
+        @apply text-primary;
     }
 }
 </style>

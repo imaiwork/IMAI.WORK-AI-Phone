@@ -1,142 +1,187 @@
 <template>
-    <div class="h-full bg-app-bg-2 rounded-[20px] overflow-x-auto dynamic-scroller">
-        <div class="h-full flex flex-col min-w-[1000px]">
-            <!-- 头部导航 -->
-            <div class="flex-shrink-0 flex items-center justify-between px-[14px] h-[88px] border-b border-[#ffffff1a]">
-                <div class="flex items-center gap-2 cursor-pointer" @click="handleBack">
-                    <Icon name="el-icon-ArrowLeft" color="#ffffff"></Icon>
-                    <div class="text-white">返回上一步</div>
-                </div>
-                <div class="flex items-center gap-1">
-                    <ElButton
-                        class="!rounded-full !h-10 w-[98px] !border-app-border-2"
-                        color="#181818"
-                        :disabled="isSubmitting"
-                        @click="handleCancel"
-                        >取消</ElButton
+    <div class="h-full bg-white rounded-[20px] overflow-x-auto dynamic-scroller">
+        <div class="h-full flex flex-col">
+            <div class="flex-shrink-0 flex items-center justify-between px-8 h-[80px] border-b border-[#F3F4F6]">
+                <div
+                    class="group flex items-center gap-2 cursor-pointer transition-all hover:translate-x-[-4px]"
+                    @click="handleBack">
+                    <div
+                        class="w-8 h-8 rounded-full bg-[#F9FAFB] flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
+                        <Icon name="el-icon-ArrowLeft" :size="14"></Icon>
+                    </div>
+                    <span class="text-sm font-bold text-[#6B7280] group-hover:text-[#111827] transition-colors"
+                        >返回上一步</span
                     >
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <ElButton
+                        class="!rounded-xl !h-10 !px-8 !border-[#E5E7EB] !bg-white !text-[#374151] font-bold hover:!bg-[#F9FAFB] active:scale-95 transition-all"
+                        :disabled="isSubmitting"
+                        @click="handleCancel">
+                        取消
+                    </ElButton>
                     <ElButton
                         type="primary"
-                        class="!rounded-full !h-10 w-[98px]"
+                        class="!rounded-xl !h-10 !px-8 font-bold shadow-[#0065fb]/20 active:scale-95 transition-all"
                         :loading="isSubmitting"
                         @click="handleNext">
-                        {{ isLastStep ? "提交" : "下一步" }}
+                        {{ isLastStep ? "提交任务" : "继续下一步" }}
                     </ElButton>
                 </div>
             </div>
-            <!-- 步骤条 -->
-            <div class="px-5">
-                <div
-                    class="flex-shrink-0 flex items-center justify-center h-[100px] border-b border-[#ffffff1a] gap-x-[150px]">
-                    <div v-for="(item, index) in steps" :key="index" class="relative">
-                        <div class="flex flex-col items-center gap-2 cursor-pointer" @click="handleStep(item.step)">
+            <div class="px-8">
+                <div class="flex items-center justify-center h-[120px] max-w-[900px] mx-auto relative">
+                    <div v-for="(item, index) in steps" :key="index" class="flex items-center flex-1 last:flex-none">
+                        <div
+                            class="relative z-10 flex flex-col items-center gap-3 cursor-pointer group"
+                            @click="handleStep(item.step)">
                             <div
-                                class="w-6 h-6 rounded-full flex items-center justify-center text-white"
-                                :class="[step >= item.step ? 'bg-primary' : 'bg-[#ffffff0d]']">
-                                {{ index + 1 }}
+                                class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm transition-all duration-300"
+                                :class="[
+                                    step >= item.step
+                                        ? 'bg-primary text-white shadow-[#0065fb]/30'
+                                        : 'bg-[#F3F4F6] text-[#9CA3AF]',
+                                ]">
+                                <i v-if="step == item.step" class="el-icon-check font-bold"></i>
+                                <span v>{{ index + 1 }}</span>
                             </div>
-                            <div :class="[step >= item.step ? 'text-white' : 'text-[#ffffff80]']">
+
+                            <div
+                                class="text-xs font-bold transition-colors duration-300 whitespace-nowrap"
+                                :class="[step >= item.step ? 'text-[#111827]' : 'text-[#9CA3AF]']">
                                 {{ item.title }}
                             </div>
+
+                            <div
+                                v-if="step === item.step"
+                                class="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full border-2 border-white animate-pulse"></div>
                         </div>
+
                         <div
-                            class="absolute w-[120px] h-[1px] left-[calc(100%+15px)] top-[10px]"
-                            :class="[step > item.step ? 'bg-primary' : 'bg-[#ffffff1a]']"
-                            v-if="index != steps.length - 1"></div>
+                            v-if="index != steps.length - 1"
+                            class="grow h-[3px] mx-6 rounded-full transition-all duration-500 bg-[#F3F4F6] relative overflow-hidden">
+                            <div
+                                class="absolute inset-0 bg-primary transition-all duration-500 origin-left"
+                                :style="{ transform: step > item.step ? 'scaleX(1)' : 'scaleX(0)' }"></div>
+                        </div>
                     </div>
                 </div>
             </div>
             <!-- 内容区域 -->
             <div class="grow min-h-0 flex flex-col p-5">
                 <!-- 步骤一：基本信息 -->
-                <div class="grow min-h-0 flex flex-col w-[456px] mx-auto" v-if="step == 1">
-                    <div class="flex items-center justify-between flex-shrink-0">
-                        <div class="text-white font-bold text-[20px]">选择{{ publishTypeMap[type] }}</div>
+                <div class="grow min-h-0 flex flex-col w-[520px] mx-auto pb-6" v-if="step == 1">
+                    <div class="flex items-center justify-between flex-shrink-0 mb-6 px-2">
+                        <div>
+                            <h2 class="text-[22px] font-black text-[#111827] tracking-tight">
+                                选择{{ publishTypeMap[type] }}
+                            </h2>
+                            <p class="text-[12px] text-[#9CA3AF] font-medium mt-1">请上传并管理您的任务素材</p>
+                        </div>
                     </div>
-                    <div class="grow min-h-0 mt-5 flex gap-x-[18px]">
-                        <!-- 素材区 -->
-                        <div class="content-item material-content">
-                            <div class="flex items-center justify-between flex-shrink-0 px-[14px]">
+
+                    <div
+                        class="grow min-h-0 flex flex-col bg-white border border-[#E5E7EB] rounded-[32px] overflow-hidden">
+                        <div
+                            class="flex-shrink-0 px-6 py-5 bg-[#F9FAFB] border-b border-[#F3F4F6] flex justify-between items-center">
+                            <div class="flex flex-col gap-y-1">
                                 <template v-if="isVideoMode">
-                                    <div class="text-[11px] text-white">
-                                        视频（共{{ materialFormData.media_url.length }}个视频）
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                        <span class="text-sm font-black text-[#374151]">视频素材库</span>
                                     </div>
-                                    <div class="text-[11px] text-[#ffffff80] mt-2">
-                                        最多可选{{ videoLimit }}个，视频{{ videoSize }}m以下
+                                    <div class="flex items-center gap-3">
+                                        <span
+                                            class="text-[11px] text-[#6B7280] bg-white px-2 py-0.5 rounded border border-[#E5E7EB]">
+                                            已添加:
+                                            <span class="text-primary font-bold">{{
+                                                materialFormData.media_url.length
+                                            }}</span>
+                                        </span>
+                                        <span class="text-[11px] text-[#9CA3AF]"
+                                            >限制: ≤{{ videoLimit }}个 / {{ videoSize }}MB以内</span
+                                        >
                                     </div>
                                 </template>
+
                                 <template v-if="isImageMode">
-                                    <div>
-                                        <div class="text-[11px] text-white">
-                                            图文（共{{ materialFormData.media_url.length }}组）
-                                        </div>
-                                        <div class="text-[11px] text-[#ffffff80] mt-2">
-                                            每组图片不超过{{ maxImageCount }}张
-                                        </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+                                        <span class="text-sm font-black text-[#374151]">图文素材库</span>
                                     </div>
-                                    <ElButton
-                                        class="!h-10 w-[106px] !border-[#ffffff1a]"
-                                        color="#262626"
-                                        @click="handleAddImageGroup"
-                                        >添加图片组</ElButton
-                                    >
+                                    <div class="text-[11px] text-[#9CA3AF]">每组上限: {{ maxImageCount }} 张</div>
                                 </template>
                             </div>
-                            <div class="grow min-h-0">
-                                <ElScrollbar>
-                                    <div class="px-[14px]">
-                                        <div
-                                            class="mt-[14px] border border-app-border-2 rounded-xl p-2"
-                                            v-if="isVideoMode">
-                                            <MaterialPicker
-                                                v-model:material-list="materialFormData.media_url"
-                                                :type="type"
-                                                :accept="videoFormat"
-                                                :max-video-count="videoLimit"
-                                                :max-size="videoSize"
-                                                @preview-video="handlePreviewVideo"
-                                                @update:material-list="handleUpdateMaterialList"
-                                                @import-material="handleImportMaterial($event, 0)"
-                                                @change-material="handleChangeMaterial" />
-                                        </div>
-                                        <template v-if="isImageMode">
+
+                            <button
+                                v-if="isImageMode"
+                                @click="handleAddImageGroup"
+                                class="h-9 px-4 rounded-xl bg-primary text-white text-[12px] font-bold hover:bg-[#4338CA] transition-all active:scale-95 flex items-center gap-2">
+                                <i class="el-icon-plus"></i>
+                                <span>添加图片组</span>
+                            </button>
+                        </div>
+
+                        <div class="grow min-h-0">
+                            <ElScrollbar>
+                                <div class="p-6">
+                                    <div
+                                        class="border-2 border-dashed border-[#E5E7EB] rounded-[24px] p-3 transition-all hover:border-[#0065fb]/30 bg-[#F9FAFB]/50"
+                                        v-if="isVideoMode">
+                                        <MaterialPicker
+                                            v-model:material-list="materialFormData.media_url"
+                                            :type="type"
+                                            :accept="videoFormat"
+                                            :max-video-count="videoLimit"
+                                            :max-size="videoSize"
+                                            @preview-video="handlePreviewVideo"
+                                            @update:material-list="handleUpdateMaterialList"
+                                            @import-material="handleImportMaterial($event, 0)"
+                                            @change-material="handleChangeMaterial" />
+                                    </div>
+
+                                    <template v-if="isImageMode">
+                                        <div class="space-y-6">
                                             <div
-                                                class="mt-[14px] border border-app-border-2 rounded-xl p-2 relative"
                                                 v-for="(item, index) in materialFormData.media_url"
-                                                :key="index">
-                                                <MaterialPicker
-                                                    v-model:material-list="item.url"
-                                                    :type="type"
-                                                    :max-size="imageSize"
-                                                    :max-image-count="maxImageCount"
-                                                    @update:material-list="handleUpdateMaterialList"
-                                                    @import-material="handleImportMaterial($event, index)"
-                                                    @change-material="handleChangeMaterial" />
+                                                :key="index"
+                                                class="relative border border-[#F3F4F6] bg-white p-4 rounded-[24px] transition-all group">
                                                 <div
-                                                    class="absolute -top-2 -right-2 w-5 h-5"
+                                                    class="absolute -left-3 -top-3 w-8 h-8 rounded-full bg-[#111827] text-white flex items-center justify-center text-[10px] font-black border-4 border-white">
+                                                    {{ index + 1 }}
+                                                </div>
+                                                <div
+                                                    class="absolute -right-2 -top-2 w-7 h-7 z-10"
                                                     @click="handleDeleteMaterialGroup(index)">
-                                                    <close-btn :icon-size="14" :theme="ThemeEnum.DARK"></close-btn>
+                                                    <close-btn :icon-size="12"></close-btn>
+                                                </div>
+
+                                                <div class="pt-2">
+                                                    <MaterialPicker
+                                                        v-model:material-list="item.url"
+                                                        :type="type"
+                                                        :max-size="imageSize"
+                                                        :max-image-count="maxImageCount"
+                                                        @update:material-list="handleUpdateMaterialList"
+                                                        @import-material="handleImportMaterial($event, index)"
+                                                        @change-material="handleChangeMaterial" />
                                                 </div>
                                             </div>
-                                        </template>
-                                    </div>
-                                </ElScrollbar>
-                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </ElScrollbar>
                         </div>
                     </div>
                 </div>
                 <!-- 步骤二：选择内容 -->
                 <div class="grow min-h-0 flex flex-col" v-else-if="step == 2">
                     <div class="flex items-center justify-between flex-shrink-0">
-                        <div class="text-white font-bold text-[20px]">填写文案</div>
-                        <div>
-                            <ElButton
-                                type="primary"
-                                class="!rounded-full !h-10 w-[106px]"
-                                @click="openCopywritingMaterial"
-                                >智能文案</ElButton
-                            >
-                        </div>
+                        <div class="font-bold text-[20px]">填写文案</div>
+                        <ElButton type="primary" class="!rounded-full !h-10 w-[106px]" @click="openCopywritingMaterial"
+                            >智能文案</ElButton
+                        >
                     </div>
                     <div class="grow min-h-0 mt-5 flex gap-x-[18px]">
                         <!-- 标题与描述 -->
@@ -158,91 +203,200 @@
                 </div>
                 <!-- 步骤三：发布设置 -->
                 <ElScrollbar v-else-if="step == 3">
-                    <div class="w-[456px] mx-auto">
-                        <div class="font-bold text-white text-[20px]">发布设置</div>
-                        <div class="mt-[23px] flex flex-col gap-y-4">
-                            <!-- 账号选择 -->
-                            <div>
-                                <div class="text-[#ffffff80] mb-3">账号选择</div>
+                    <div class="w-[480px] mx-auto bg-white rounded-[24px] p-8 shadow-sm border border-slate-100">
+                        <div class="flex items-center gap-3 mb-8">
+                            <div class="w-1.5 h-6 bg-primary rounded-full"></div>
+                            <div class="font-black text-[22px] text-[#0F172A] tracking-tight">发布设置</div>
+                        </div>
+
+                        <div class="flex flex-col gap-y-8">
+                            <div class="form-item">
+                                <div class="item-label">
+                                    <Icon name="el-icon-User" />
+                                    <span class="ml-2">发布账号</span>
+                                </div>
                                 <ElSelect
                                     v-model="formData.accounts"
                                     placeholder="请选择发布的账号"
-                                    class="!w-full !h-11 account-select"
-                                    popper-class="dark-select-popper"
+                                    class="custom-select !w-full"
                                     multiple
                                     collapse-tags
-                                    :show-arrow="false">
+                                    collapse-tags-tooltip
+                                    :show-arrow="true">
                                     <ElOption
                                         v-for="item in accountList"
                                         :key="item.account"
                                         :label="`${item.nickname}（${item.account}）`"
                                         :value="item.account">
-                                        <div class="flex items-center gap-x-2">
-                                            <img :src="getPlatform(item.type)?.icon" class="w-4 h-4" />
-                                            <div>{{ item.nickname }}（{{ item.account }}）</div>
+                                        <div class="flex items-center justify-between w-full">
+                                            <div class="flex items-center gap-2">
+                                                <img :src="getPlatform(item.type)?.icon" class="w-4 h-4 rounded-sm" />
+                                                <span class="font-bold text-[13px]">{{ item.nickname }}</span>
+                                            </div>
+                                            <span class="text-[11px] text-slate-400 opacity-70">{{
+                                                item.account
+                                            }}</span>
                                         </div>
                                     </ElOption>
                                 </ElSelect>
                             </div>
-                            <!-- 发布频率 -->
-                            <div>
-                                <div class="text-[#ffffff80]">发布频率（每日）</div>
-                                <div class="flex flex-wrap gap-2 mt-4">
+
+                            <div class="form-item">
+                                <div class="item-label">
+                                    <Icon name="el-icon-Timer" />
+                                    <span class="ml-2">每日发布频率</span>
+                                </div>
+                                <div class="grid grid-cols-4 gap-2 mt-3">
                                     <div
-                                        v-for="(item, index) in [1, 2, 3, 5, 10]"
+                                        v-for="(item, index) in publishFrequencyOptions"
                                         :key="index"
-                                        class="cursor-pointer rounded-md px-4 py-2 border border-app-border-2 text-white hover:bg-app-bg-1"
-                                        :class="[formData.publish_frep == item ? 'bg-primary hover:bg-primary' : '']"
-                                        @click="handleFrequency(item)">
-                                        {{ item }}条
+                                        class="freq-card"
+                                        :class="{
+                                            'is-active':
+                                                formData.publish_frep == item && currentPublishFrequencyIdx != 5,
+                                        }"
+                                        @click="handlePublishFrequency(item)">
+                                        <span class="text-[14px] font-black">{{ item }}</span>
+                                        <span class="text-[10px] opacity-60 ml-0.5">条/日</span>
+                                    </div>
+                                    <div
+                                        class="freq-card is-custom"
+                                        :class="{ 'is-active': currentPublishFrequencyIdx == 5 }"
+                                        @click="openCustomFreqDialog">
+                                        <Icon name="el-icon-Setting" :size="14" />
+                                        <span class="text-[13px] font-bold">{{
+                                            customPublishFrep ? `${customPublishFrep}条` : "自定义"
+                                        }}</span>
                                     </div>
                                 </div>
                             </div>
-                            <!-- 发布时间 -->
-                            <div>
-                                <div class="text-[#ffffff80] mb-3">选择时间</div>
-                                <div class="mt-4">
-                                    <!-- 随机发布 -->
-                                    <div class="rounded-xl bg-app-bg-3 border border-app-border-2 py-3">
-                                        <div class="px-3">
-                                            <ElAlert type="warning" effect="dark"
-                                                ><span class="text-xs"
-                                                    >设置的时间必须为n+1组的时间大于n组的时间，时间间隔{{
-                                                        publishTimeGapMin
-                                                    }}分钟</span
-                                                ></ElAlert
+
+                            <div class="form-item">
+                                <div class="item-label">
+                                    <Icon name="el-icon-Calendar" />
+                                    <span class="ml-2">任务周期</span>
+                                </div>
+                                <div class="grid grid-cols-4 gap-2 mt-3">
+                                    <div
+                                        v-for="(item, index) in taskFrequencyOptions"
+                                        :key="index"
+                                        class="freq-card"
+                                        :class="{
+                                            'is-active': formData.task_frep == item && currentTaskFrequencyIdx != 5,
+                                        }"
+                                        @click="handleTaskFrequency(item)">
+                                        <span class="text-[14px] font-black">{{ item }}</span>
+                                        <span class="text-[10px] opacity-60 ml-0.5">天</span>
+                                    </div>
+                                    <div
+                                        class="freq-card is-custom"
+                                        :class="{ 'is-active': currentTaskFrequencyIdx == 5 }"
+                                        @click="currentTaskFrequencyIdx = 5">
+                                        <Icon name="el-icon-Setting" :size="14" />
+                                        <span class="text-[13px] font-bold">按日期</span>
+                                    </div>
+                                </div>
+
+                                <Transition name="el-zoom-in-top">
+                                    <div
+                                        v-if="currentTaskFrequencyIdx == 5"
+                                        class="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <ElDatePicker
+                                            v-model="formData.custom_date"
+                                            placeholder="请点击选择多个具体日期"
+                                            type="dates"
+                                            value-format="YYYY-MM-DD"
+                                            :disabled-date="getDisabledTaskDate"
+                                            class="modern-date-picker !w-full"
+                                            @change="changeCustomDate" />
+                                    </div>
+                                </Transition>
+                            </div>
+
+                            <div class="form-item">
+                                <div class="item-label mb-4">
+                                    <Icon name="el-icon-AlarmClock" />
+                                    <span class="ml-2">发布时间轴配置</span>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div
+                                        class="time-config-card"
+                                        :class="{
+                                            'has-error':
+                                                timeErrorIndex.length > 0 &&
+                                                timeErrorIndex.some((item) => item.configIndex == index),
+                                        }"
+                                        v-for="(item, index) in formData.time_config"
+                                        :key="index">
+                                        <div
+                                            class="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                                <span class="text-[15px] font-[900] text-tx-primary">{{
+                                                    dayjs(item.date).format("YYYY-MM-DD")
+                                                }}</span>
+                                            </div>
+                                            <ElTag
+                                                size="small"
+                                                effect="plain"
+                                                round
+                                                class="!border-slate-200 !text-slate-400"
+                                                >待发布</ElTag
                                             >
-                                            <div class="text-white mt-4">任务发布设置</div>
                                         </div>
-                                        <ElScrollbar ref="timeConfigScrollbarRef">
-                                            <div
-                                                class="flex flex-col gap-3 mt-[5px] max-h-[300px] p-3"
-                                                ref="timeConfigWrapperRef">
-                                                <div v-for="(, index) in formData.time_config">
-                                                    <div class="text-[#ffffff80] mb-[13px] text-xs">
-                                                        每天第{{ index + 1 }}个任务发布时间
+
+                                        <ElScrollbar max-height="240px">
+                                            <div class="space-y-4 pr-3 pb-2">
+                                                <div
+                                                    v-for="(time, timeIndex) in item.times"
+                                                    :key="timeIndex"
+                                                    class="relative pl-6">
+                                                    <div
+                                                        v-if="timeIndex !== item.times.length - 1"
+                                                        class="absolute left-[7px] top-4 bottom-[-16px] w-[1px] bg-dashed"></div>
+                                                    <div
+                                                        class="absolute left-0 top-1.5 w-[15px] h-[15px] rounded-full border-2 border-primary bg-white flex items-center justify-center">
+                                                        <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                                                    </div>
+
+                                                    <div
+                                                        class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2"
+                                                        :class="{
+                                                            '!text-red-500':
+                                                                timeErrorIndex.length > 0 &&
+                                                                timeErrorIndex.some((item) =>
+                                                                    item.errorIndexes.includes(timeIndex)
+                                                                ),
+                                                        }">
+                                                        第{{ timeIndex + 1 }}个内容任务发布时间
                                                     </div>
                                                     <ElTimePicker
-                                                        class="w-full"
-                                                        :class="{ 'time-error': timeErrorIndex.includes(index) }"
-                                                        v-model="formData.time_config[index]"
+                                                        class="modern-time-picker !w-full"
+                                                        :class="{
+                                                            'has-error':
+                                                                timeErrorIndex.length > 0 &&
+                                                                timeErrorIndex.some((item) =>
+                                                                    item.errorIndexes.includes(timeIndex)
+                                                                ),
+                                                        }"
+                                                        v-model="item.times[timeIndex]"
                                                         is-range
                                                         range-separator="至"
-                                                        prefix-icon=""
                                                         format="HH:mm"
                                                         value-format="HH:mm"
-                                                        popper-class="dark-select-popper"
                                                         :show-arrow="false" />
                                                 </div>
                                             </div>
                                         </ElScrollbar>
                                     </div>
-                                    <div v-if="taskErrorMsg" class="mt-2">
-                                        <div>任务冲突</div>
-                                        <view class="text-[#FF2442] mt-1 text-xs">
-                                            {{ taskErrorMsg }}
-                                        </view>
-                                    </div>
+
+                                    <Transition name="el-fade-in-linear">
+                                        <div v-if="taskErrorMsg" class="error-notice">
+                                            <Icon name="el-icon-WarningFilled" />
+                                            <span>{{ taskErrorMsg }}</span>
+                                        </div>
+                                    </Transition>
                                 </div>
                             </div>
                         </div>
@@ -251,6 +405,98 @@
             </div>
         </div>
     </div>
+    <popup
+        ref="publishNumberPopRef"
+        v-model="showPublishNumberPop"
+        cancel-button-text=""
+        confirm-button-text=""
+        header-class="!p-0"
+        footer-class="!p-0"
+        width="420px"
+        @close="showPublishNumberPop = false">
+        <div>
+            <div class="flex gap-3 mb-8">
+                <div
+                    class="w-10 h-10 rounded-xl bg-[#0065fb]/10 text-primary flex items-center justify-center border border-[#0065fb]/10 shadow-light shadow-[#0065fb]/5">
+                    <Icon name="el-icon-Timer" :size="20" />
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[16px] font-black text-[#0F172A]">设定每日频率</span>
+                        <ElTooltip content="发布条数受时间间隔限制，系统已自动为您计算最大上限。">
+                            <div class="text-slate-300 cursor-help leading-[0]">
+                                <Icon name="el-icon-QuestionFilled" :size="14" />
+                            </div>
+                        </ElTooltip>
+                    </div>
+                    <p class="text-[12px] text-slate-400 font-medium">请合理规划每日发布节奏，避免频率过高</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-50/50 rounded-[24px] border border-slate-100 p-6 flex flex-col items-center">
+                <div class="text-[13px] text-slate-500 font-black mb-4 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    设定每日发布总量
+                </div>
+
+                <div class="bg-[#0065fb]/5 rounded-[28px] p-6 border border-[#0065fb]/10">
+                    <div class="flex items-end justify-center gap-2 mb-6">
+                        <span class="text-[42px] font-[1000] text-primary leading-none tracking-tighter">{{
+                            tempCustomFreq
+                        }}</span>
+                        <span class="text-[14px] font-black text-primary/60 mb-1.5">条 / 24h</span>
+                    </div>
+
+                    <div class="px-2 mb-8">
+                        <ElSlider
+                            v-model="tempCustomFreq"
+                            :min="1"
+                            :max="(24 * 60) / TIME_INTERVAL"
+                            :show-tooltip="false"
+                            class="modern-slider" />
+                        <div class="flex justify-between mt-2 px-1">
+                            <span class="text-[10px] font-black text-slate-400">MIN: 1</span>
+                            <span class="text-[10px] font-black text-slate-400"
+                                >MAX: {{ (24 * 60) / TIME_INTERVAL }}</span
+                            >
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <div
+                            class="inline-flex items-center bg-white rounded-full p-1 shadow-sm border border-slate-100">
+                            <div
+                                class="px-3 text-[11px] font-black text-slate-400 uppercase tracking-wider border-r border-slate-50">
+                                快速微调
+                            </div>
+                            <ElInputNumber
+                                v-model="tempCustomFreq"
+                                :min="1"
+                                :max="(24 * 60) / TIME_INTERVAL"
+                                controls-position="right"
+                                size="small"
+                                class="!w-[80px] custom-number-step" />
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="mt-6 flex items-start gap-2 text-[11px] leading-relaxed text-orange-600 bg-[#fff7ed]/80 border border-[#ffedd5]/50 px-4 py-3 rounded-xl w-full">
+                    <Icon name="el-icon-WarningFilled" />
+                    <span class="font-bold ml-0.5">修改此数值将导致下方已设置的时间段重置，请确认后再操作。</span>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-8">
+                <ElButton @click="showPublishNumberPop = false" class="modern-btn-secondary !h-11 !px-8">
+                    取消
+                </ElButton>
+                <ElButton type="primary" @click="handleConfirmCustomFreq" class="modern-btn-primary !h-11 !px-8">
+                    立即生效
+                </ElButton>
+            </div>
+        </div>
+    </popup>
     <!-- 弹窗 -->
     <content-copywriting-material
         v-if="showCopywritingMaterial"
@@ -261,7 +507,7 @@
         v-if="showMaterialPop"
         ref="materialPopRef"
         :type="materialTypeMap[type]"
-        :limit="materialPickerLimit"
+        :limit="materialPickerLimit()"
         :multiple="isBatchPickingMaterial"
         @close="showMaterialPop = false"
         @confirm="handleChooseMaterial" />
@@ -271,9 +517,8 @@
 <script setup lang="ts">
 import dayjs from "dayjs";
 import { ElScrollbar } from "element-plus";
-import { getDeviceAccountList as getDeviceAccountListApi, addMatrixTask, publishDeviceTask } from "@/api/device";
+import { getPublishAccountList, addMatrixTask, publishDeviceTask } from "@/api/device";
 import { uploadImage } from "@/api/app";
-import { ThemeEnum } from "@/enums/appEnums";
 import { PublishTaskTypeEnum, MaterialActionType, MaterialTypeEnum, SidebarTypeEnum } from "../_enums";
 import ContentCopywritingMaterial from "./content-copywriting-material.vue";
 import CopywritingCard from "./copywriting-card.vue";
@@ -332,8 +577,9 @@ const videoFormat = ".mp4,.mov";
 const imageSize = 50;
 
 const maxImageCount = 9;
-const publishTimeGapMin = 30;
-
+const publishFrequencyOptions = [1, 2, 3, 5, 10];
+const taskFrequencyOptions = [1, 3, 5, 10, 30];
+const TIME_INTERVAL = 30; // 分钟
 // =================================================================================================
 // State
 // =================================================================================================
@@ -351,6 +597,8 @@ const formData = reactive({
     media_type: type.value,
     time_config: [],
     publish_frep: 2,
+    custom_date: [],
+    task_frep: 1,
 });
 
 // 素材数据
@@ -374,7 +622,8 @@ const materialPopRef = shallowRef<InstanceType<typeof MaterialPopup>>();
 const previewVideoRef = ref();
 const timeConfigScrollbarRef = ref<InstanceType<typeof ElScrollbar>>();
 const timeConfigWrapperRef = ref<HTMLDivElement>();
-
+const currentPublishFrequencyIdx = ref(0);
+const currentTaskFrequencyIdx = ref(0);
 const accountList = ref([]);
 
 // 错误状态
@@ -430,7 +679,6 @@ const handleNext = async () => {
 const handleCancel = () => {
     nuxtApp.$confirm({
         message: "确定要取消创建吗？",
-        theme: "dark",
         onConfirm: closePanel,
     });
 };
@@ -486,16 +734,16 @@ const submitStep2 = async () => {
 const currMaterialGroupIndex = ref(0);
 const currMaterialIndex = ref(-1); // -1 表示批量添加, >-1 表示替换
 
-const materialPickerLimit = computed(() => {
+const materialPickerLimit = () => {
     if (isVideoMode.value) {
         return currMaterialIndex.value === -1 ? videoLimit : videoLimit - materialFormData.media_url.length;
     }
     if (isImageMode.value) {
         const group = materialFormData.media_url[currMaterialGroupIndex.value];
-        return currMaterialIndex.value === -1 ? maxImageCount : maxImageCount - (group?.url.length || 0);
+        return currMaterialGroupIndex.value === -1 ? maxImageCount : maxImageCount - (group?.url.length || 0);
     }
     return 0;
-});
+};
 
 const isBatchPickingMaterial = computed(() => currMaterialIndex.value === -1);
 
@@ -556,7 +804,6 @@ const handleAddImageGroup = () => {
 const handleDeleteMaterialGroup = (index: number) => {
     nuxtApp.$confirm({
         message: "确定要删除该素材组吗？",
-        theme: "dark",
         onConfirm: () => {
             materialFormData.media_url.splice(index, 1);
             updateCopywritingMaterial(materialFormData);
@@ -621,44 +868,143 @@ const addTitleAndDesc = (isUpdate = true) => {
 // =================================================================================================
 // Step 3: 时间设置
 // =================================================================================================
+// 禁用当前日期之前的日期
+const getDisabledTaskDate = (time: Date) => time.getTime() < dayjs().startOf("day").valueOf();
 
 const validatePublishSettings = () => {
-    if (!validateTimeConfig()) return false;
+    const { valid, errors } = validateTimeConfig();
 
     if (formData.accounts.length === 0) {
         feedback.msgWarning("请选择发布账号");
         return false;
     }
+    if (!valid) {
+        timeErrorIndex.value = errors;
+        feedback.msgWarning("请检查时间配置");
+        return false;
+    } else {
+        timeErrorIndex.value = [];
+    }
+    // 如果任务周期选择的是自定义，需要检查是不是有选择日期
+    if (currentTaskFrequencyIdx.value === 5 && formData.custom_date.length === 0) {
+        feedback.msgWarning("请选择任务日期");
+        return false;
+    }
 
     return true;
+};
+
+const showPublishNumberPop = ref(false);
+const tempCustomFreq = ref(1);
+const customPublishFrep = ref<number | null>(null);
+const openCustomFreqDialog = () => {
+    tempCustomFreq.value = customPublishFrep.value || 1;
+    showPublishNumberPop.value = true;
+};
+
+const handleConfirmCustomFreq = () => {
+    const maxFrequency = Math.floor((24 * 60) / TIME_INTERVAL);
+    if (tempCustomFreq.value < 1) {
+        feedback.msgWarning("请输入有效的发布数量");
+        return;
+    }
+    if (tempCustomFreq.value > maxFrequency) {
+        feedback.msgWarning(`每日发布频率最高为${maxFrequency}次`);
+        return;
+    }
+    currentPublishFrequencyIdx.value = 5;
+    formData.publish_frep = tempCustomFreq.value;
+    customPublishFrep.value = tempCustomFreq.value;
+    showPublishNumberPop.value = false;
+    changeTimeConfig();
+};
+
+const changeCustomDate = (e: any) => {
+    if (!e) {
+        currentTaskFrequencyIdx.value = 0;
+        formData.custom_date = [];
+    }
+    changeTimeConfig();
+};
+
+// 核心：重新生成时间配置
+const changeTimeConfig = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // 归一化到今天0点
+
+    const generateTimesForDay = () => {
+        return Array.from({ length: formData.publish_frep }, (_, i) => {
+            const startMs = today.getTime() + i * TIME_INTERVAL * 60 * 1000;
+            const endMs = startMs + TIME_INTERVAL * 60 * 1000;
+
+            // 处理跨天逻辑：如果结束时间跨天，设为当天23:59
+            const startDate = new Date(startMs);
+            let endDate = new Date(endMs);
+            if (endDate.getDate() !== startDate.getDate()) {
+                endDate = new Date(startDate);
+                endDate.setHours(23, 59, 59, 999);
+            }
+
+            return [dayjs(startDate).format("HH:mm"), dayjs(endDate).format("HH:mm")];
+        });
+    };
+
+    if (currentTaskFrequencyIdx.value === 5 && formData.custom_date.length > 0) {
+        formData.time_config = formData.custom_date.map((dateStr) => ({
+            date: dateStr,
+            times: generateTimesForDay(),
+        }));
+    } else {
+        formData.time_config = Array.from({ length: formData.task_frep }, (_, i) => {
+            const dateObj = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
+            return {
+                date: dayjs(dateObj).format("YYYY-MM-DD"),
+                times: generateTimesForDay(),
+            };
+        });
+    }
 };
 
 const validateTimeConfig = () => {
-    const { valid, errorIndexes } = validateSchedule(formData.time_config);
+    const errors = [];
+    let isAllValid = true;
 
-    if (!valid) {
-        timeErrorIndex.value = errorIndexes;
-        feedback.msgWarning("时间配置存在冲突");
-        return false;
+    // 循环验证每个时间配置
+    for (const [index, item] of formData.time_config.entries()) {
+        const { valid, errorIndexes } = validateSchedule(item.times);
+
+        if (!valid) {
+            isAllValid = false;
+            errors.push({
+                configIndex: index,
+                errorIndexes: errorIndexes,
+            });
+        }
     }
-    timeErrorIndex.value = [];
-    return true;
+    // 返回验证结果和错误信息
+    return {
+        valid: isAllValid,
+        errors: errors,
+    };
 };
 
-const handleFrequency = (item: number) => {
+const handlePublishFrequency = (item: number) => {
     if (item == formData.publish_frep) return;
     formData.publish_frep = item;
-    formData.time_config = Array.from({ length: item }, (_, index) => {
-        const baseTime = dayjs().hour(9).minute(0);
-        const startTime = baseTime.add(index * publishTimeGapMin, "minutes").format("HH:mm");
-        const endTime = baseTime.add(index * publishTimeGapMin + publishTimeGapMin, "minutes").format("HH:mm");
-        return [startTime, endTime];
-    });
+    currentPublishFrequencyIdx.value = 0;
+    changeTimeConfig();
+};
+
+const handleTaskFrequency = (item: number) => {
+    if (item == formData.task_frep) return;
+    formData.task_frep = item;
+    formData.custom_date = [];
+    currentTaskFrequencyIdx.value = item;
+    changeTimeConfig();
 };
 
 const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
     if (!validatePublishSettings()) return;
-
     try {
         const copywriterList = materialFormData.title
             .filter((item) => item.content)
@@ -687,13 +1033,17 @@ const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
             copywriting: copywriterList,
             media_type: type.value,
         });
+
         const accountIds = accountList.value
             .filter((item) => formData.accounts.includes(item.account))
             .map((item) => ({ account: item.account, id: item.id, type: item.type }));
         await publishDeviceTask({
             name: formData.name,
             matrix_media_setting_id: id,
-            time_config: formData.time_config.map((item) => `${item[0]}-${item[1]}`),
+            time_config: formData.time_config.map((item: any) => ({
+                date: item.date,
+                times: item.times.map((time: any) => `${time[0]}-${time[1]}`),
+            })),
             accounts: accountIds,
             publish_frep: formData.publish_frep,
             media_type: type.value,
@@ -712,26 +1062,19 @@ const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
     }
 });
 
-const handleChangePublishTime = () => {
-    if (formData.time_config.length === 0) {
-        formData.time_config.push(["09:00", "09:30"]);
-        formData.time_config.push(["09:30", "10:00"]);
-    }
-};
-
 const initPublishJsonForStep3 = () => {
     getAccountList();
-    handleChangePublishTime();
+    changeTimeConfig();
 };
-
 // =================================================================================================
 // Other Actions
 // =================================================================================================
 
 const getAccountList = async () => {
-    const { lists } = await getDeviceAccountListApi({ page_size: 999 });
+    const { lists } = await getPublishAccountList({ page_size: 999 });
     accountList.value = lists;
 };
+initPublishJsonForStep3();
 
 const handlePreviewVideo = async (url: string) => {
     showPreviewVideo.value = true;
@@ -742,33 +1085,123 @@ const handlePreviewVideo = async (url: string) => {
 </script>
 
 <style scoped lang="scss">
-.content-item {
-    @apply rounded-xl bg-app-bg-3 py-[14px] border border-app-border-1 flex flex-col grow min-h-0 flex-1;
+/* 按钮禁用状态美化 */
+:deep(.el-button.is-disabled) {
+    background-color: #f9fafb !important;
+    border-color: #f3f4f6 !important;
+    color: #d1d5db !important;
+}
 
-    &.title-content,
-    &.desc-content {
-        :deep(.el-input__wrapper) {
-            background-color: transparent;
-            box-shadow: none;
-        }
-    }
+/* 步骤条点击效果 */
+.group:active .w-9 {
+    transform: scale(0.9);
+}
+
+/* 蓝色投影增强品牌感 */
+.shadow-primary {
+    box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
+}
+.content-item {
+    @apply rounded-xl border border-[var(--el-border-color)] py-[14px] flex flex-col grow min-h-0 flex-1;
+
     :deep(.el-input__inner::placeholder) {
         font-size: 10px;
     }
 }
-.time-select-wrapper {
-    @apply flex items-center gap-x-2 bg-app-bg-3 rounded-md px-2 border border-app-border-1;
-    :deep(.el-select .el-select__wrapper) {
-        padding: 0;
-        box-shadow: none;
+
+:deep(.el-scrollbar__thumb) {
+    background-color: #e5e7eb !important;
+}
+
+:deep(.el-input__wrapper) {
+    border-radius: 12px;
+    box-shadow: none !important;
+    &:hover {
+        border-color: #4f46e5;
     }
 }
+
 .account-select.el-select :deep(.el-select__wrapper) {
     border-radius: var(--el-input-border-radius, var(--el-border-radius-base));
 }
 :deep() {
     .el-date-editor.el-input__wrapper.time-error {
         box-shadow: 0 0 0 1px var(--el-color-error);
+    }
+}
+
+.item-label {
+    @apply flex items-center text-[13px] font-black text-slate-500 uppercase tracking-wider mb-3 pl-1;
+    .el-icon {
+        @apply text-[#0065fb]/60;
+    }
+}
+
+.freq-card {
+    @apply flex flex-col items-center justify-center h-14 bg-white border border-slate-100 rounded-xl cursor-pointer transition-all;
+    &:hover {
+        @apply border-primary bg-[#0065fb]/5 -translate-y-0.5;
+    }
+
+    &.is-custom {
+        @apply flex-row gap-1.5 bg-slate-50 text-slate-500 border-dashed border-slate-200;
+    }
+    &.is-active {
+        @apply bg-primary border-primary text-white shadow-[#0065fb]/20;
+        span {
+            @apply text-white;
+        }
+    }
+}
+
+.time-config-card {
+    @apply bg-[#FBFCFE] border border-slate-100 rounded-[22px] p-5 transition-all;
+    &:hover {
+        @apply border-[#0065fb]/20;
+    }
+    &.has-error {
+        @apply border-red-500;
+    }
+}
+
+.bg-dashed {
+    background-image: linear-gradient(to bottom, #0065fb 50%, transparent 50%);
+    background-size: 1px 6px;
+}
+
+.error-notice {
+    @apply mt-4 p-3 bg-red-50 text-red-500 rounded-xl text-[12px] font-bold flex items-center gap-2 border border-red-100;
+}
+
+.modern-giant-input :deep(input::-webkit-outer-spin-button),
+.modern-giant-input :deep(input::-webkit-inner-spin-button) {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.modern-btn-secondary {
+    @apply rounded-xl bg-white border-slate-100 text-slate-500 font-black text-[13px] hover:bg-slate-50 hover:text-slate-700 transition-all;
+}
+
+.modern-btn-primary {
+    @apply rounded-xl bg-primary border-none text-white font-black text-[13px] shadow-[#0065fb]/20 hover:shadow-[#0065fb]/30 transition-all;
+}
+
+.custom-number-step :deep(.el-input__wrapper) {
+    @apply bg-[transparent] shadow-[none];
+}
+
+:deep(.modern-freq-popup) {
+    @apply rounded-[28px] overflow-hidden;
+    .el-dialog__header {
+        @apply hidden;
+    }
+}
+</style>
+<style lang="scss">
+.modern-time-picker {
+    &.has-error {
+        box-shadow: 0 0 0 1px var(--el-color-error) !important;
     }
 }
 </style>

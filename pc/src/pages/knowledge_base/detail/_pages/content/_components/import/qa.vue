@@ -1,6 +1,6 @@
 <template>
-    <div class="h-full flex flex-col px-3 pb-3">
-        <div class="flex-shrink-0">
+    <div class="h-full flex flex-col px-4 pb-4">
+        <div class="flex-shrink-0" v-loading="loading">
             <ElUpload
                 ref="uploadRef"
                 drag
@@ -10,59 +10,87 @@
                 :show-file-list="false"
                 :accept="accept"
                 :limit="50"
-                :on-change="onFileChange">
-                <div class="text-[#00000080] flex items-center gap-2 justify-center">
-                    <Icon name="local-icon-upload" />
-                    拖拽文件至此，或点击<span class="text-primary"> 选择文件 </span>
+                :on-change="onFileChange"
+                class="custom-upload">
+                <div class="flex flex-col items-center py-4">
+                    <div class="w-12 h-12 rounded-full bg-[#F0F6FF] flex items-center justify-center mb-3">
+                        <Icon name="local-icon-upload" class="text-primary" :size="24" />
+                    </div>
+                    <div class="text-[14px] font-bold text-[#64748B]">
+                        将文件拖拽至此，或 <span class="text-primary font-[900] cursor-pointer">点击选择文件</span>
+                    </div>
+                    <div class="text-[12px] text-[#94A3B8] mt-2 italic">支持 {{ accept }} 格式，最大 50 个文件</div>
                 </div>
-                <div class="text-[#00000080] mt-2">支持 {{ accept }} 文件</div>
             </ElUpload>
         </div>
-        <div class="grow min-h-0 mt-3 flex gap-x-2" v-if="data.length > 0">
-            <div class="w-1/4 h-full flex flex-col bg-[#F6F6F6] rounded-xl border border-[#efefef]">
-                <div class="flex-shrink-1 min-h-0 mb-3">
+
+        <div class="grow min-h-0 mt-4 flex gap-x-4" v-if="data.length > 0">
+            <div class="w-1/4 h-full flex flex-col bg-[#F8FAFC] rounded-[20px] border border-br overflow-hidden">
+                <div class="p-4 border-b border-br bg-white flex items-center justify-between">
+                    <span class="text-[13px] font-[900] text-[#1E293B]">待解析列表</span>
+                    <span class="text-[11px] font-black text-primary bg-[#F0F6FF] px-2 py-0.5 rounded-md">
+                        {{ data.length }} Files
+                    </span>
+                </div>
+
+                <div class="grow min-h-0 py-2">
                     <ElScrollbar>
-                        <div class="p-3 flex flex-col gap-y-2">
+                        <div class="px-3 flex flex-col gap-y-2">
                             <div
                                 v-for="(item, index) in data"
                                 :key="index"
-                                class="flex items-center p-2 rounded-lg mt-1 cursor-pointer"
-                                :class="[
-                                    currIndex == index
-                                        ? 'bg-[#0065fb0d] shadow-[0_0_0_1px_var(--color-primary)]'
-                                        : 'bg-[#f6f6f6] shadow-[0_0_0_1px_#EFEFEF]',
-                                ]"
+                                class="file-nav-item group"
+                                :class="{ 'is-active': currIndex == index }"
                                 @click="selectStage(index)">
+                                <div class="flex items-center flex-1 min-w-0">
+                                    <div class="icon-tag" :class="{ 'is-active': currIndex == index }">
+                                        <Icon name="local-icon-upload2" :size="14" />
+                                    </div>
+                                    <div
+                                        class="ml-3 text-[13px] font-bold truncate flex-1"
+                                        :class="currIndex == index ? 'text-primary' : 'text-[#475569]'">
+                                        {{ item.name }}
+                                    </div>
+                                </div>
                                 <div
-                                    class="w-5 h-5 rounded bg-[#0000000d] flex items-center justify-center"
-                                    :class="{ 'bg-primary text-white': currIndex == index }">
-                                    <Icon name="local-icon-upload2"></Icon>
-                                </div>
-                                <div class="ml-2 line-clamp-1 flex-1">
-                                    {{ item.name }}
-                                </div>
-                                <div @click="handleDeleteFile(index)">
-                                    <close-btn />
+                                    class="close-action opacity-0 group-hover:opacity-100"
+                                    @click.stop="handleDeleteFile(index)">
+                                    <Icon name="el-icon-Close" :size="14" />
                                 </div>
                             </div>
                         </div>
                     </ElScrollbar>
                 </div>
             </div>
-            <div class="flex-1 flex flex-col bg-[#F6F6F6] rounded-xl border border-[#efefef]">
-                <div class="px-3 mt-3">分段预览（{{ data[currIndex]?.data.length }}组）</div>
-                <div class="grow min-h-0">
+
+            <div class="flex-1 flex flex-col bg-white rounded-[20px] border border-br overflow-hidden">
+                <div class="px-5 py-4 border-b border-[#F1F5F9] flex items-center justify-between bg-white">
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-primary rounded-full"></span>
+                        <span class="text-[14px] font-[900] text-[#1E293B]">分段内容预览</span>
+                    </div>
+                    <div class="text-[12px] font-bold text-[#94A3B8]">
+                        共计 <span class="text-primary">{{ data[currIndex]?.data.length || 0 }}</span> 组
+                    </div>
+                </div>
+
+                <div class="grow min-h-0 bg-[#F8FAFC]">
                     <ElScrollbar>
-                        <div class="px-3">
+                        <div class="p-5 space-y-3">
                             <div
                                 v-for="(item, index) in data[currIndex]?.data"
                                 :key="index"
-                                class="rounded-xl p-[10px] mt-2 break-all bg-white">
-                                <data-item
-                                    v-model:data="item.q"
-                                    :index="index"
-                                    :name="data[currIndex]?.name"
-                                    @delete="handleDeleteStage(index)" />
+                                class="stage-item-card transition-all">
+                                <div class="flex items-start gap-4">
+                                    <div class="stage-num">#{{ index + 1 }}</div>
+                                    <div class="flex-1">
+                                        <data-item
+                                            v-model:data="item.q"
+                                            :index="index"
+                                            :name="data[currIndex]?.name"
+                                            @delete="handleDeleteStage(index)" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </ElScrollbar>
@@ -180,4 +208,56 @@ const selectStage = (index: number) => {
 };
 </script>
 
-<style lang="scss"></style>
+<style scoped lang="scss">
+:deep(.custom-upload) {
+    .el-upload-dragger {
+        @apply bg-[#F8FAFC] border-2 border-dashed border-br rounded-[24px] transition-all;
+        &:hover {
+            @apply border-primary bg-[#0065fb]/[0.02];
+        }
+    }
+}
+
+.file-nav-item {
+    @apply flex items-center justify-between p-3 rounded-xl border-2 border-[transparent] cursor-pointer transition-all bg-[transparent];
+
+    &:hover {
+        @apply bg-white border-[#F1F5F9];
+    }
+
+    &.is-active {
+        @apply border-primary bg-white;
+        box-shadow: 0 4px 12px rgba(var(--el-color-primary), 0.08);
+    }
+}
+
+.icon-tag {
+    @apply w-7 h-7 rounded-lg bg-[#E2E8F0] text-[#64748B] flex items-center justify-center transition-all;
+    &.is-active {
+        @apply bg-primary text-white;
+        box-shadow: 0 4px 8px rgba(var(--el-color-primary), 0.2);
+    }
+}
+
+.close-action {
+    @apply w-6 h-6 flex items-center justify-center rounded-md text-[#94A3B8] hover:bg-[#FEE2E2] hover:text-danger transition-all;
+}
+
+.stage-item-card {
+    @apply bg-white rounded-xl border border-br p-4;
+    &:hover {
+        @apply border-[#0065fb]/30;
+    }
+}
+
+.stage-num {
+    @apply px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] font-black text-[#94A3B8] mt-1;
+}
+
+:deep(.el-scrollbar__thumb) {
+    @apply bg-[#E2E8F0];
+    &:hover {
+        @apply bg-[#CBD5E1];
+    }
+}
+</style>

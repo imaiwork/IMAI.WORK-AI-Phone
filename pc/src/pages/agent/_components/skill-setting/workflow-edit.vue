@@ -16,13 +16,13 @@
             <!-- 表单 -->
             <ElForm ref="formRef" :model="formData" :rules="formRules" label-position="top">
                 <ElFormItem label="智能体ID" prop="bot_id">
-                    <ElInput v-model="formData.bot_id" placeholder="请输入智能体ID" />
+                    <ElInput v-model="formData.bot_id" class="custom-input" placeholder="请输入智能体ID" />
                 </ElFormItem>
                 <ElFormItem label="授权Token" prop="api_token">
-                    <ElInput v-model="formData.api_token" placeholder="请输入授权Token" />
+                    <ElInput v-model="formData.api_token" class="custom-input" placeholder="请输入授权Token" />
                 </ElFormItem>
                 <ElFormItem label="appid" prop="app_id">
-                    <ElInput v-model="formData.app_id" placeholder="请输入appid" />
+                    <ElInput v-model="formData.app_id" class="custom-input" placeholder="请输入appid" />
                 </ElFormItem>
             </ElForm>
             <!-- 操作按钮 -->

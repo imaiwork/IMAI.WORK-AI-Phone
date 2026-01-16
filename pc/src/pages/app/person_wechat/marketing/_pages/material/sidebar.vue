@@ -1,52 +1,52 @@
 <template>
-    <div class="w-full h-full flex flex-col bg-white rounded-xl">
-        <!-- 分组列表 -->
-        <div class="grow min-h-0 pt-5">
+    <div class="w-full h-full flex flex-col bg-white rounded-xl border border-br overflow-hidden">
+        <div class="px-5 py-4 border-b border-br-extra-light flex items-center justify-between bg-gray-50/30">
+            <span class="text-[14px] font-[900] text-tx-primary tracking-tight">内容分组</span>
+            <span class="text-primary opacity-50 leading-[0]">
+                <Icon name="el-icon-FolderOpened" />
+            </span>
+        </div>
+
+        <div class="grow min-h-0 py-3">
             <ElScrollbar>
-                <div>
+                <div class="px-2 space-y-1">
                     <div
                         v-for="item in cateLists"
                         :key="item.id"
-                        class="h-12 px-5 relative cursor-pointer flex items-center"
-                        :class="{ 'bg-[#E5F0FF]': currentGroupId === item.id }"
+                        class="group-item"
+                        :class="{ 'is-active': currentGroupId === item.id }"
                         @click="selectGroup(item)">
-                        <!-- 选中状态指示器 -->
-                        <div
-                            v-if="currentGroupId === item.id"
-                            class="absolute left-0 top-0 h-full w-[2px] bg-primary"></div>
+                        <div class="active-bar"></div>
 
-                        <!-- 图标 -->
-                        <div class="w-5">
-                            <Icon name="local-icon-file_fill" color="var(--color-primary)" :size="18" />
+                        <div class="icon-box">
+                            <Icon
+                                :name="currentGroupId === item.id ? 'el-icon-FolderOpened' : 'el-icon-Folder'"
+                                :size="16" />
                         </div>
 
-                        <!-- 名称和数量 -->
-                        <div class="flex-1 flex items-center gap-x-2 w-0 ml-4">
-                            <span class="overflow-hidden text-ellipsis whitespace-nowrap">{{ item.group_name }}</span>
-                            <span class="text-[#A5ADC7]">({{ item.file_count || 0 }})</span>
+                        <div class="flex-1 flex items-center justify-between min-w-0 ml-3">
+                            <span class="group-name">{{ item.group_name }}</span>
+                            <span class="count-badge">{{ item.file_count || 0 }}</span>
                         </div>
 
-                        <!-- 操作菜单 -->
-                        <div class="flex-shrink-0" @click.stop>
+                        <div class="action-trigger" v-if="item.id > 0" @click.stop>
                             <ElPopover
-                                v-if="item.id > 0"
                                 :show-arrow="false"
-                                popper-class="!w-[130px] !min-w-[130px] !p-[6px] !rounded-xl"
-                                placement="bottom-end">
+                                popper-class="!rounded-[16px] !border-[#F1F5F9] !p-1.5 !shadow-light"
+                                placement="right-start"
+                                :offset="10">
                                 <template #reference>
-                                    <div class="p-2">
-                                        <Icon name="el-icon-MoreFilled" color="#A5ADC7" />
+                                    <div class="more-btn">
+                                        <Icon name="el-icon-MoreFilled" />
                                     </div>
                                 </template>
-                                <div class="flex flex-col gap-1">
-                                    <div
-                                        class="px-3 py-2 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                        @click="openEditModal(item)">
-                                        <Icon name="el-icon-Setting" />
-                                        <span>修改分组</span>
+                                <div class="p-1 flex flex-col gap-0.5">
+                                    <div class="table-action-item" @click="openEditModal(item)">
+                                        <Icon name="el-icon-EditPen" />
+                                        <span>重命名</span>
                                     </div>
                                     <div
-                                        class="px-3 py-2 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2 text-error"
+                                        class="table-action-item !text-red-500 hover:!bg-red-50"
                                         @click="handleDeleteGroup(item.id)">
                                         <Icon name="el-icon-Delete" />
                                         <span>删除分组</span>
@@ -59,30 +59,37 @@
             </ElScrollbar>
         </div>
 
-        <!-- 底部操作区 -->
-        <ElDivider class="!my-0" />
-        <div class="flex-shrink-0 h-[53px] flex justify-center items-center px-4">
-            <ElButton @click="openAddModal">添加分组</ElButton>
+        <div class="p-4 border-t border-br-extra-light bg-[#f9f9f9]/30">
+            <ElButton
+                class="!w-full !rounded-xl !h-10 !border-dashed transition-all !font-bold text-tx-primary hover:!text-primary"
+                @click="openAddModal">
+                <Icon name="el-icon-Plus" />
+                <span class="ml-1">添加分组</span>
+            </ElButton>
         </div>
 
-        <!-- 添加/修改分组弹窗 -->
         <popup
             ref="popupRef"
             :title="popupTitle"
             :async="true"
+            width="400px"
             :confirm-loading="isSubmitting"
             @confirm="submitWithLock">
-            <div>
-                <ElForm :model="formState" @submit.prevent>
+            <div class="p-2">
+                <ElForm :model="formState" label-position="top">
                     <ElFormItem label="分组名称">
-                        <ElInput v-model="formState.name" placeholder="请输入分组名称" maxlength="20" show-word-limit />
+                        <ElInput
+                            v-model="formState.name"
+                            placeholder="例如：话术库、产品图"
+                            maxlength="20"
+                            show-word-limit
+                            class="custom-input" />
                     </ElFormItem>
                 </ElForm>
             </div>
         </popup>
     </div>
 </template>
-
 <script setup lang="ts">
 import { ref, reactive, computed } from "vue";
 import Popup from "@/components/popup/index.vue";
@@ -171,6 +178,56 @@ const { isLock: isSubmitting, lockFn: submitWithLock } = useLockFn(submitGroupFo
 getCateLists();
 </script>
 
-<style scoped>
-/* 样式保持不变 */
+<style scoped lang="scss">
+.group-item {
+    @apply relative h-[42px] px-3 mx-1 rounded-[10px] flex items-center cursor-pointer transition-all duration-200 text-tx-secondary;
+
+    &:hover:not(.is-active) {
+        @apply bg-gray-100 text-tx-primary;
+    }
+
+    &.is-active {
+        @apply bg-blue-50 text-primary font-[900];
+        .icon-box {
+            @apply text-primary scale-110;
+        }
+        .count-badge {
+            @apply bg-primary text-white;
+        }
+        .active-bar {
+            @apply scale-y-100 opacity-100;
+        }
+    }
+}
+
+.active-bar {
+    @apply absolute left-0 top-[25%] h-[50%] w-[3px] bg-primary rounded-r-full opacity-0 scale-y-0 transition-all duration-300;
+}
+
+.icon-box {
+    @apply text-tx-placeholder transition-transform leading-[0];
+}
+
+.group-name {
+    @apply text-[13px] truncate flex-1 pr-2;
+}
+
+.count-badge {
+    @apply text-[10px] px-1.5 py-0.5 rounded-md bg-gray-100 text-tx-placeholder font-bold transition-colors;
+}
+
+.action-trigger {
+    @apply ml-1;
+}
+
+.more-btn {
+    @apply w-6 h-6 flex items-center justify-center rounded-md  text-tx-placeholder hover:bg-gray-200 hover:text-tx-primary transition-all;
+}
+
+:deep(.custom-input .el-input__wrapper) {
+    @apply rounded-lg bg-white shadow-[none] border border-br-extra-light;
+    &.is-focus {
+        @apply bg-white border-primary;
+    }
+}
 </style>

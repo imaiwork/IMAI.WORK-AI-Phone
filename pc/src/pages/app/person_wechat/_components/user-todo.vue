@@ -1,43 +1,70 @@
 <template>
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-5 p-1">
         <div
             v-for="(item, index) in list"
             :key="index"
-            class="border border-solid border-primary-light-9 rounded-xl p-4 min-h-[100px] relative pt-10">
-            <div class="absolute top-0 left-0 bg-primary rounded-tl-xl rounded-br-xl">
-                <div class="flex items-center gap-2 px-3 py-1">
-                    <Icon name="local-icon-send_plane_fill" color="#fff"></Icon>
-                    <span class="text-white text-xs">{{ item.todo_time }}</span>
+            class="todo-card group"
+            :class="{ 'is-folded': foldIndex.includes(item.id) }">
+            <div
+                class="absolute top-0 left-0 right-0 h-1 transition-all duration-300"
+                :class="item.todo_type == 0 ? 'bg-amber-400' : 'bg-primary'"></div>
+
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
+                        <Icon name="local-icon-send_plane_fill" color="var(--color-primary)" :size="14"></Icon>
+                        <span class="text-slate-700 font-black text-xs">{{ item.todo_time }}</span>
+                    </div>
+                    <span
+                        class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider"
+                        :class="item.todo_type == 0 ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-primary'">
+                        {{ item.todo_type == 0 ? "手动待办" : "自动跟进" }}
+                    </span>
+                </div>
+
+                <div
+                    class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+                    <ElButton
+                        circle
+                        size="small"
+                        class="!border-none !bg-slate-50 hover:!bg-red-50 hover:!text-red-500 !text-slate-400"
+                        @click="emit('delete', item.id)">
+                        <Icon name="el-icon-Delete" :size="14" />
+                    </ElButton>
+                    <ElButton
+                        circle
+                        size="small"
+                        class="!border-none !bg-slate-50 hover:!bg-blue-50 hover:!text-primary !text-slate-400"
+                        @click="emit('edit', item)">
+                        <Icon name="el-icon-Edit" :size="14" />
+                    </ElButton>
+                    <ElButton
+                        circle
+                        size="small"
+                        class="!border-none !bg-slate-50 hover:!bg-slate-100 !text-slate-400"
+                        @click="handleFoldContent(item.id)">
+                        <Icon
+                            :name="foldIndex.includes(item.id) ? 'el-icon-ArrowDown' : 'el-icon-ArrowUp'"
+                            :size="14" />
+                    </ElButton>
                 </div>
             </div>
-            <div class="absolute right-2 top-2 z-20">
-                <ElButton type="danger" size="small" @click="emit('delete', item.id)">
-                    <Icon name="el-icon-Delete" color="#fff"></Icon>
-                    <span class="text-white text-xs">删除</span>
-                </ElButton>
-                <ElButton type="primary" size="small" @click="emit('edit', item)">
-                    <Icon name="el-icon-Edit" color="#fff"></Icon>
-                    <span class="text-white text-xs">编辑</span>
-                </ElButton>
-                <ElButton type="primary" size="small" @click="handleFoldContent(item.id)">
-                    <Icon name="el-icon-Fold" color="#fff"></Icon>
-                    <span class="text-white text-xs">折叠/展开</span>
-                </ElButton>
+
+            <div class="todo-content" :class="foldIndex.includes(item.id) ? 'is-collapsed' : 'is-expanded'">
+                <div
+                    class="p-4 bg-[#f8fafc]/50 rounded-2xl border border-slate-50 text-slate-600 text-[14px] leading-relaxed relative overflow-hidden">
+                    <div class="absolute -right-2 -bottom-4 opacity-[0.03] pointer-events-none">
+                        <Icon name="el-icon-ChatDotSquare" :size="80" />
+                    </div>
+                    {{ item.todo_content }}
+                </div>
             </div>
-            <div class="absolute right-2 bottom-2 text-[#474747]">
-                {{ item.todo_type == 0 ? "添加代办" : "自动跟进" }}
-            </div>
+
             <div
-                class="h-full flex flex-col gap-2 overflow-hidden transition-all duration-500 ease-in-out transform origin-top text-[#8A8C99]"
-                :class="[
-                    foldIndex.includes(item.id)
-                        ? 'opacity-0 max-h-0 scale-y-95'
-                        : 'opacity-100 max-h-[2000px] scale-y-100',
-                ]">
-                {{ item.todo_content }}
-            </div>
-            <div class="h-full flex items-center justify-center mt-4 text-gray-500" v-if="foldIndex.includes(item.id)">
-                内容被折叠
+                v-if="foldIndex.includes(item.id)"
+                class="py-3 px-4 bg-[#f8fafc]/50 rounded-xl border border-dashed border-slate-200 text-center text-[12px] text-slate-400 font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                @click="handleFoldContent(item.id)">
+                点击展开待办详情...
             </div>
         </div>
     </div>
@@ -64,8 +91,24 @@ const handleFoldContent = (id: any) => {
 };
 </script>
 
-<style scoped>
-.content-wrapper {
-    @apply h-full bg-primary-light-9 flex p-2 rounded-lg;
+<style scoped lang="scss">
+.todo-card {
+    @apply relative bg-white rounded-[24px] p-6 transition-all duration-300 border border-slate-100 overflow-hidden;
+
+    &:hover {
+        @apply shadow-light shadow-[#0065fb]/5 border-[#0065fb]/20 -translate-y-0.5;
+    }
+}
+
+.todo-content {
+    @apply transition-all duration-500 ease-in-out overflow-hidden;
+
+    &.is-collapsed {
+        @apply max-h-0 opacity-0 scale-y-95;
+    }
+
+    &.is-expanded {
+        @apply max-h-[1000px] opacity-100 scale-y-100;
+    }
 }
 </style>

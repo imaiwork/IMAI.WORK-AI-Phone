@@ -1,7 +1,7 @@
 <?php
 return [
     // 系统版本号
-    'version'               => '2.7.1',
+    'version'               => '2.7.2',
 
     // 官网
     'website'               => [
@@ -140,6 +140,7 @@ return [
         'wmv',
         'excel',
         'xml',
+        'aiff',
         'html'
 
     ],
@@ -151,6 +152,10 @@ return [
         'm4a',
         'wma',
         'speex',
+        'ogg',
+        'amr',
+        'flac',
+        'aiff',
         'aac'
     ],
     //上传文件的格式 (csv)

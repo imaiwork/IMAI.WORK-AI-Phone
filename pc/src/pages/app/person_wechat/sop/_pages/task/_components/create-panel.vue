@@ -1,299 +1,316 @@
 <template>
-    <div class="h-full flex flex-col">
-        <div class="flex items-center justify-between bg-white p-4 rounded-lg flex-shrink-0">
+    <div class="h-full flex flex-col gap-3 relative">
+        <div
+            class="flex items-center justify-between bg-white px-6 py-4 rounded-[20px] border border-slate-100 flex-shrink-0">
             <div>
-                <ElBreadcrumb :separator-icon="ArrowRight">
+                <ElBreadcrumb :separator-icon="ArrowRight" class="custom-breadcrumb">
                     <ElBreadcrumbItem>
-                        <span class="cursor-pointer text-[#8A8C99] hover:text-primary" @click="close"> 任务管理 </span>
+                        <span class="nav-text hover:text-primary" @click="close">任务管理</span>
                     </ElBreadcrumbItem>
                     <ElBreadcrumbItem>
-                        <span
-                            :class="{
-                                'cursor-pointer text-[#8A8C99] hover:text-primary': stepKey == StepKey.CONTENT,
-                            }"
-                            @click="back">
-                            {{ detail?.push_name || "新建任务" }}
+                        <span class="nav-text">
+                            {{ detail ? detail.push_name : "新建 SOP 计划" }}
                         </span>
                     </ElBreadcrumbItem>
-                    <ElBreadcrumbItem v-if="stepKey == StepKey.CONTENT">
-                        <span> 设置推送内容 </span>
+                    <ElBreadcrumbItem>
+                        <span class="px-3 py-1 bg-[#0065fb]/10 text-primary rounded-full text-xs font-black">
+                            {{ stepKey === StepKey.TYPE ? "配置触发方式" : "编排推送内容" }}
+                        </span>
                     </ElBreadcrumbItem>
                 </ElBreadcrumb>
             </div>
-            <div class="flex justify-center">
-                <ElButton type="primary" class="!h-10 w-[100px] !rounded-full" @click="cancel">取消</ElButton>
-                <ElButton class="!h-10 w-[100px] !rounded-full" v-if="stepKey != StepKey.NAME" @click="back"
-                    >返回</ElButton
-                >
+
+            <div class="flex items-center gap-3">
+                <ElButton
+                    class="!h-10 !px-6 !rounded-xl !border-slate-100 hover:!bg-slate-50 !text-slate-500 font-bold"
+                    @click="cancel">
+                    取消编辑
+                </ElButton>
+                <ElButton
+                    v-if="stepKey != StepKey.TYPE"
+                    class="!h-10 !rounded-xl !bg-white !border-primary !text-primary hover:!bg-primary/5 font-black"
+                    @click="handleStepChange(StepKey.TYPE)">
+                    返回上一步
+                </ElButton>
             </div>
         </div>
-        <div class="grow min-h-0 bg-white rounded-lg mt-4 p-6" v-loading="loading">
-            <template v-if="!loading">
-                <div class="step-container h-full flex flex-col" v-if="stepKey == StepKey.NAME">
-                    <div class="grow min-h-0 w-[680px] flex flex-col gap-10">
+
+        <div
+            class="grow min-h-0 bg-white rounded-[20px] border border-slate-100 flex flex-col overflow-hidden relative"
+            v-loading="loading">
+            <div class="flex items-center justify-center py-6 bg-[#f8fafc]/50 border-b border-slate-50 gap-4">
+                <div v-for="(step, i) in [StepKey.TYPE, StepKey.CONTENT]" :key="i" class="flex items-center">
+                    <div class="flex items-center gap-2">
                         <div
-                            v-for="(item, index) in stepLists"
-                            :key="index"
-                            class="h-[149px] rounded-2xl border border-primary-light-8 relative">
+                            class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black transition-all"
+                            :class="
+                                stepKey == step
+                                    ? 'bg-primary text-white shadow-light shadow-[#0065fb]/30 scale-110'
+                                    : 'bg-slate-200 text-slate-500'
+                            ">
+                            {{ i + 1 }}
+                        </div>
+                        <span
+                            class="text-[14px] font-black"
+                            :class="stepKey == step ? 'text-primary' : 'text-slate-400'">
+                            {{ i == 0 ? "基本信息" : i == 1 ? "触发设置" : "内容编排" }}
+                        </span>
+                    </div>
+                    <div
+                        v-if="i < 1"
+                        class="w-12 h-[2px] mx-4 rounded-full"
+                        :class="stepKey == step ? 'bg-[#0065fb]/20' : 'bg-slate-100'"></div>
+                </div>
+            </div>
+
+            <template v-if="!loading">
+                <ElScrollbar>
+                    <div class="p-8 max-w-5xl mx-auto w-full">
+                        <div v-if="stepKey == StepKey.TYPE" class="animate-in fade-in duration-500">
+                            <div class="mb-8 border-b border-slate-50 pb-6">
+                                <h2 class="text-[22px] font-[1000] text-slate-800 tracking-tight">触发方式设置</h2>
+                                <p class="text-slate-400 text-[14px] mt-1">
+                                    请选择一种触发机制，当客户满足条件时将自动启动 SOP 推送流程
+                                </p>
+                            </div>
+
                             <div
-                                class="absolute top-0 right-0 rounded-tr-2xl rounded-bl-2xl w-[100px] p-2 text-center text-white text-lg font-bold"
-                                :class="[item.status == 1 ? 'bg-success' : 'bg-primary']">
-                                {{ item.status == 1 ? "已设置" : `第${index + 1}步` }}
-                            </div>
-                            <div class="px-8 mt-8 flex gap-4">
-                                <img :src="item.img" alt="" class="w-[56px] h-[56px]" />
-                                <div class="flex flex-col gap-2">
-                                    <div class="font-bold text-[20px]">
-                                        {{ item.title }}
-                                    </div>
-                                    <div class="text-lg text-[#8A8C99]">
-                                        {{ item.desc }}
-                                    </div>
+                                class="bg-[#0065fb]/5 p-4 rounded-2xl flex items-center gap-4 mb-4 border border-[#0065fb]/10">
+                                <div class="text-primary font-black text-[14px] shrink-0">任务名称</div>
+                                <ElInput
+                                    v-model="taskFormData.push_name"
+                                    class="custom-input"
+                                    placeholder="输入任务名称..."
+                                    maxlength="50"
+                                    show-word-limit
+                                    clearable />
+                                <div class="text-xs text-[#0065fb]/60 italic shrink-0">
+                                    * 此名称仅用于任务列表管理区分
                                 </div>
                             </div>
-                            <div class="flex justify-end px-3 mt-4">
-                                <div
-                                    v-if="index != 0 && item.status == 0 && stepLists[index - 1].status == 0"
-                                    class="flex items-center gap-2">
-                                    <span class="opacity-50 text-primary"> 您还未完成上一步</span>
-                                    <Icon name="el-icon-QuestionFilled" color="#5580F9"></Icon>
+
+                            <div class="flex items-center gap-4 py-2">
+                                <div class="flex-1 h-[1px] bg-slate-100"></div>
+                                <div class="flex items-center gap-2 text-slate-400 text-[12px] font-bold">
+                                    <Icon name="el-icon-Setting" />
+                                    <span>配置执行流程（支持多选）</span>
                                 </div>
-                                <div v-else class="cursor-pointer flex items-center gap-2" @click="handleStep(item)">
-                                    <span class="hover:underline text-primary">前往设置</span>
-                                    <Icon name="el-icon-Right" :size="16" color="var(--color-primary)"></Icon>
+                                <div class="flex-1 h-[1px] bg-slate-100"></div>
+                            </div>
+                            <div class="mt-4">
+                                <div class="bg-slate-50/50 rounded-[24px] p-8 border border-slate-100">
+                                    <div class="max-w-xl mx-auto">
+                                        <ElSelect
+                                            v-model="flowId"
+                                            placeholder="请选择执行的客户流程"
+                                            filterable
+                                            multiple>
+                                            <ElOption
+                                                v-for="item in flowLists"
+                                                :key="item.id"
+                                                :label="item.flow_name"
+                                                :value="item.id" />
+                                        </ElSelect>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        <div v-if="stepKey == StepKey.CONTENT" class="animate-in fade-in duration-500">
+                            <send-container
+                                ref="sendContainerRef"
+                                :type="PushTypeEnum.TASK"
+                                @success="handleSendContainerSuccess" />
+                        </div>
                     </div>
-                </div>
-                <div v-if="stepKey == StepKey.CONTENT" class="h-full flex flex-col gap-x-4">
-                    <div class="mb-4 text-lg text-[#8A8C99]">推送时间：{{ detail.push_day }}</div>
-                    <send-container
-                        ref="sendContainerRef"
-                        :type="PushTypeEnum.TASK"
-                        :task-id="detail?.id"
-                        :push-day="detail?.push_day"
-                        @back="back"
-                        @success="getDetail(detail?.id)" />
+                </ElScrollbar>
+                <div class="static bottom-2 left-0 right-0 w-full text-center my-4">
+                    <ElButton
+                        type="primary"
+                        class="!h-11 !px-10 !rounded-xl hover:scale-105 active:scale-95 transition-all font-black"
+                        @click="handleMainSave">
+                        <Icon name="el-icon-CircleCheck" />
+                        <span class="ml-2">
+                            {{ stepKey == StepKey.CONTENT ? "完成并发布 SOP" : "保存并下一步" }}
+                        </span>
+                    </ElButton>
                 </div>
             </template>
         </div>
     </div>
-    <send-name
-        v-if="showNameEdit"
-        ref="nameEditRef"
-        :type="PushTypeEnum.TASK"
-        @success="handleNameSuccess"
-        @close="showNameEdit = false" />
-    <send-flow
-        v-if="showSendFlow"
-        ref="sendFlowRef"
-        :type="SendWayEnum.GROUP_SEND"
-        @success="handleSendFlowSuccess"
-        @close="showSendFlow = false" />
 </template>
-
 <script setup lang="ts">
-import { sopPushDetail, sopPushContentTimeLists } from "@/api/person_wechat";
+import {
+    sopPushDetail,
+    sopPushContentTimeLists,
+    sopPushAdd,
+    sopPushUpdate,
+    sopFlowLists,
+    sopPushMemberAdd,
+} from "@/api/person_wechat";
+import dayjs from "dayjs";
 import { ArrowRight } from "@element-plus/icons-vue";
-import { PushTypeEnum, SendWayEnum } from "../../../_enums";
-import useTask from "../../../_hooks/useTask";
-import SendName from "../../../_components/send-name.vue";
 import SendContainer from "../../../_components/send-container.vue";
-import SendFlow from "../../../_components/send-flow.vue";
+import { PushTypeEnum } from "../../../_enums";
 
-const emit = defineEmits<{
-    (e: "back"): void;
-}>();
+const emit = defineEmits<{ (e: "back"): void }>();
 
 enum StepKey {
-    NAME = "name",
-    CONTENT = "content",
-    PEOPLE = "people",
+    TYPE = "type", // 设置类型/名称
+    CONTENT = "content", // 设置内容
 }
+
 const nuxtApp = useNuxtApp();
-const stepKey = ref<StepKey>(StepKey.NAME);
-const { resource } = useTask();
-
-const stepLists = ref<any[]>([
-    {
-        img: resource.CreateImg,
-        title: "给您的任务起个名字",
-        desc: "请输入一个独特的名称，以便更好的管理和识别",
-        status: 0,
-        key: StepKey.NAME,
-    },
-    {
-        img: resource.ContentImg,
-        title: "设置您需要推送的内容",
-        desc: "选择并配置您希望目标对象接收的推送信息和推送类型",
-        status: 0,
-        key: StepKey.CONTENT,
-    },
-    {
-        img: resource.PostImg,
-        title: "选择您希望推送的人员",
-        desc: "请从列表中选择人员或组，您可以根据需要随时调整选择。",
-        status: 0,
-        key: StepKey.PEOPLE,
-    },
-]);
-const detail = ref<any>(null);
-
-const nameEditRef = ref<InstanceType<typeof SendName>>();
-const showNameEdit = ref(false);
-
-const sendContainerRef = ref<InstanceType<typeof SendContainer>>();
-
-const sendFlowRef = ref<InstanceType<typeof SendFlow>>();
-const showSendFlow = ref(false);
-
-const handleNameSuccess = async (result: any) => {
-    showNameEdit.value = false;
-    await getDetail(result?.id || detail.value.id);
-    replaceState({
-        id: result?.id || detail.value.id,
-    });
-};
-
-const handleSendFlowSuccess = async () => {
-    showSendFlow.value = false;
-    getDetail(detail.value.id);
-};
-
-const handleStep = async (item: { key: StepKey }) => {
-    if (item.key == StepKey.PEOPLE) {
-        showSendFlow.value = true;
-        await nextTick();
-        sendFlowRef.value?.open();
-        if (detail.value) {
-            sendFlowRef.value?.setFormData(detail.value);
-        }
-        return;
-    }
-    stepKey.value = item.key;
-    const { key } = item;
-    if (key == StepKey.NAME) {
-        showNameEdit.value = true;
-        await nextTick();
-        nameEditRef.value?.open();
-        if (detail.value) {
-            nameEditRef.value?.setFormData(detail.value);
-        }
-    } else if (key == StepKey.CONTENT) {
-        setContentFormData();
-    }
-    replaceState({
-        step: stepKey.value,
-    });
-};
-
-const close = () => {
-    emit("back");
-};
-
-const cancel = () => {
-    nuxtApp.$confirm({
-        message: "确定取消吗？",
-        onConfirm: () => {
-            close();
-        },
-    });
-};
-
-const back = () => {
-    stepKey.value = StepKey.NAME;
-    replaceState({
-        step: stepKey.value,
-    });
-};
+const query = searchQueryToObject();
 
 const loading = ref(false);
+const stepKey = ref<StepKey>((query.step as StepKey) || StepKey.TYPE);
+const detail = ref<any>(null);
 
-const getDetail = async (id?: number | string) => {
+// 表单数据初始状态抽取，方便重置
+const createInitialFormData = () => ({
+    id: "",
+    push_name: `SOP任务${dayjs().format("YYYYMMDDHHmm")}`,
+    flow_id: "",
+    stage_id: "",
+    type: "",
+    push_type: 0,
+});
+const flowLists = ref<any[]>([]);
+const flowId = ref<any>([]);
+const taskFormData = reactive(createInitialFormData());
+const sendContainerRef = ref<InstanceType<typeof SendContainer>>();
+
+const getFlowLists = async () => {
+    const { lists } = await sopFlowLists({ page_type: 0 });
+    flowLists.value = lists;
+};
+
+const updateUrlParams = (params: Record<string, any>) => {
+    replaceState({ id: detail.value?.id, step: stepKey.value, ...params });
+};
+
+const syncFormDataFromDetail = async (data: any) => {
+    if (!data) return;
+    setFormData(data, taskFormData);
+    if (stepKey.value === StepKey.CONTENT) {
+        setTimeout(() => {
+            sendContainerRef.value?.setFormData(data);
+        }, 100);
+    }
+};
+
+const fetchDetail = async (id: string | number) => {
     if (!id) return;
     loading.value = true;
     try {
-        const result = await sopPushDetail({
-            id,
-        });
+        const result = await sopPushDetail({ id });
+        syncFormDataFromDetail(result);
+        if (stepKey.value === StepKey.CONTENT) {
+            const timeLists = await sopPushContentTimeLists({ push_id: id });
+            sendContainerRef.value?.setDateList(timeLists);
+        }
         detail.value = result;
-
-        if (result.push_name) {
-            stepLists.value.forEach((item) => {
-                if (item.key == StepKey.NAME) {
-                    item.status = 1;
-                }
-            });
-        }
-
-        if (result.push_time_list && result.push_time_list.length) {
-            setContentFormData();
-            stepLists.value.forEach((item) => {
-                if (item.key == StepKey.CONTENT) {
-                    item.status = 1;
-                }
-            });
-        }
-        if (result.flow_id) {
-            setPeopleFormData();
-            stepLists.value.forEach((item) => {
-                if (item.key == StepKey.PEOPLE) {
-                    item.status = 1;
-                }
-            });
-        }
     } finally {
         loading.value = false;
     }
 };
 
-const setContentFormData = async () => {
-    await nextTick();
-    sendContainerRef.value?.setFormData(detail.value);
-    const result = await sopPushContentTimeLists({ push_id: detail.value.id });
-    sendContainerRef.value?.setDateList(result);
+const handleStepChange = async (targetKey: StepKey) => {
+    stepKey.value = targetKey;
+    updateUrlParams({ step: targetKey });
+
+    if (targetKey === StepKey.CONTENT && detail.value) {
+        await fetchDetail(detail.value.id);
+    }
 };
 
-const setPeopleFormData = async () => {
-    await nextTick();
-    sendFlowRef.value?.setFormData(detail.value);
+const handleMainSave = async () => {
+    if (stepKey.value === StepKey.TYPE) {
+        if (!taskFormData.push_name) return feedback.msgWarning("请输入任务名称");
+        if (flowId.value.length === 0) return feedback.msgWarning("请选择执行的客户流程");
+
+        try {
+            await sopPushUpdate(taskFormData);
+            await handleStepChange(StepKey.CONTENT);
+        } catch (error) {
+            feedback.msgError(error || "保存失败");
+        }
+    } else {
+        close();
+    }
+};
+
+const handleSendContainerSuccess = async () => {
+    if (!detail.value?.id) return;
+
+    await sopPushUpdate({
+        ...detail.value,
+        status: 2,
+    });
+    await sopPushMemberAdd({
+        id: taskFormData.id,
+        flow_id: flowId.value,
+        push_type: taskFormData.push_type,
+    });
+    await fetchDetail(detail.value.id);
+    feedback.msgSuccess("保存成功");
 };
 
 const init = async () => {
-    const { id, step } = searchQueryToObject();
-    if (step && stepLists.value.some((item) => item.key == step)) {
-        stepKey.value = step as StepKey;
-    } else {
-        stepKey.value = StepKey.NAME;
-    }
+    const { id } = query;
+    getFlowLists();
 
-    id && getDetail(id);
+    if (id) {
+        await fetchDetail(id as string);
+    } else {
+        // 新增模式：先预创建
+        const result = await sopPushAdd(taskFormData);
+        detail.value = result;
+        syncFormDataFromDetail(result);
+        updateUrlParams({ id: result.id });
+    }
+};
+
+const close = () => emit("back");
+
+const cancel = async () => {
+    nuxtApp.$confirm({
+        message: "确定取消吗？",
+        onConfirm: close,
+    });
 };
 
 onMounted(init);
-
-defineExpose({
-    getDetail,
-});
 </script>
-
 <style scoped lang="scss">
-.step-container {
-    background-image: url("../../_assets/images/task_create_bg.png");
-    background-size: 300px;
-    background-position: right 60px top 40px;
-    background-repeat: no-repeat;
+.nav-text {
+    @apply font-bold text-slate-400 cursor-pointer transition-colors;
+    &.is-active {
+        @apply text-slate-800;
+    }
 }
-:deep(.el-loading-mask) {
-    background-color: #ffffff;
-}
-</style>
 
-<style lang="scss">
-.post-people-message-box {
-    .el-message-box__message {
-        width: 100%;
+.animate-in {
+    animation-fill-mode: forwards;
+}
+
+:deep(.el-breadcrumb__separator) {
+    @apply font-normal text-slate-300;
+}
+
+.flex-shrink-0 {
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
     }
 }
 </style>

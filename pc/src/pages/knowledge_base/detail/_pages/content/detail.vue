@@ -1,89 +1,112 @@
 <template>
-    <div class="h-full bg-white rounded-[20px] flex flex-col">
-        <div
-            class="flex-shrink-0 h-[88px] flex items-center justify-between gap-x-2 px-[30px] border-b border-[#0000000d]">
-            <div class="flex items-center gap-2 cursor-pointer" @click="emit('back')">
-                <Icon name="el-icon-ArrowLeft"></Icon>
-                <div>{{ fileName }}</div>
-            </div>
-            <ElButton type="primary" class="!rounded-full !h-10" @click="handleAdd" v-if="!isRag">
-                <Icon name="local-icon-add_circle"></Icon>
-                <span class="ml-2">添加分段</span>
-            </ElButton>
-        </div>
-        <div class="grow min-h-0 flex flex-col">
-            <div
-                class="flex-shrink-0 h-[62px] flex items-center justify-between gap-x-2 px-[30px] border-b border-[#0000000d]">
-                <div class="flex items-center gap-x-2">
-                    <span class="inline-block w-[6px] h-[6px] rounded-full bg-primary"></span>
-                    <span>{{ pager.count }}分段</span>
+    <div class="h-full flex flex-col min-w-[1000px]">
+        <div class="grow flex flex-col bg-white rounded-[24px] border border-br overflow-hidden w-full">
+            <div class="flex-shrink-0 h-[72px] flex items-center justify-between px-8 border-b border-br">
+                <div class="flex items-center gap-3 cursor-pointer group transition-all" @click="emit('back')">
+                    <div
+                        class="w-8 h-8 rounded-full bg-[#F8FAFC] flex items-center justify-center group-hover:bg-[#0065fb]/10 group-hover:text-primary transition-all">
+                        <Icon name="el-icon-ArrowLeft" :size="16"></Icon>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[12px] font-bold text-[#94A3B8] leading-none mb-1">返回列表</span>
+                        <span class="text-[15px] font-[900] text-[#1E293B]">{{ fileName }}</span>
+                    </div>
                 </div>
-                <ElInput
-                    v-model="queryParams.keywords"
-                    prefix-icon="el-icon-Search"
-                    class="!w-[240px] search-name-input"
-                    placeholder="请输入关键词"
-                    clearable
-                    @clear="getLists()"
-                    @keydown.enter="getLists()">
-                </ElInput>
+
+                <ElButton v-if="!isRag" type="primary" class="add-chunk-btn" @click="handleAdd">
+                    <Icon name="local-icon-add_circle" :size="16"></Icon>
+                    <span class="ml-2">新建分段</span>
+                </ElButton>
             </div>
-            <div class="grow min-h-0" v-loading="pager.loading">
+
+            <div class="flex-shrink-0 h-[64px] flex items-center justify-between px-8 bg-[#F8FAFC]/50">
+                <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-4 bg-primary rounded-full"></div>
+                    <span class="text-[14px] font-[900] text-[#1E293B]">分段列表</span>
+                    <span
+                        class="px-2 py-0.5 rounded-md bg-white border border-br text-[11px] font-black text-primary ml-1">
+                        {{ pager.count }}
+                    </span>
+                </div>
+                <div>
+                    <ElInput
+                        v-model="queryParams.keywords"
+                        prefix-icon="el-icon-Search"
+                        class="custom-input"
+                        placeholder="搜索分段关键词..."
+                        clearable
+                        @clear="getLists()"
+                        @keydown.enter="getLists()">
+                    </ElInput>
+                </div>
+            </div>
+
+            <div class="grow min-h-0 relative" v-loading="pager.loading">
                 <ElScrollbar v-if="pager.lists.length">
-                    <div class="px-3">
+                    <div class="p-6 grid grid-cols-1 gap-4">
                         <div
                             v-for="(item, index) in pager.lists"
                             :key="item.id"
-                            class="flex gap-x-2 border-b border-[#0000000d] py-[15px] px-[30px] hover:bg-[#f6f6f6] cursor-pointer"
+                            class="chunk-card group"
+                            :class="{ 'is-selected': isChoose(item.uuid) }"
                             @click="handleChoose(item.uuid)">
-                            <div class="mt-[3px]" v-if="!isRag">
-                                <Icon
-                                    name="local-icon-success_fill"
-                                    :color="isChoose(item.uuid) ? 'var(--color-primary)' : '#0000000d'"></Icon>
+                            <div v-if="!isRag" class="absolute left-4 top-1/2 -translate-y-1/2">
+                                <div class="checkbox-box" :class="{ 'is-checked': isChoose(item.uuid) }">
+                                    <Icon v-if="isChoose(item.uuid)" name="el-icon-Check" :size="12" color="white" />
+                                </div>
                             </div>
-                            <div class="flex-1">
-                                <div class="flex justify-between items-center">
-                                    <div>分段-{{ index + 1 }}</div>
+
+                            <div class="flex-1" :class="[!isRag ? 'pl-10' : '']">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div class="flex items-center gap-2">
+                                        <span class="chunk-index">#{{ index + 1 }}</span>
+                                        <span class="text-[12px] text-[#94A3B8] font-bold">{{
+                                            item.create_time || "分段详情"
+                                        }}</span>
+                                    </div>
                                     <div
                                         v-if="!isRag"
-                                        class="w-5 h-5 rounded-md bg-[#0000000d] flex items-center justify-center cursor-pointer"
+                                        class="action-edit-btn opacity-0 group-hover:opacity-100"
                                         @click.stop="handleEdit(item)">
                                         <Icon name="local-icon-edit3" :size="14"></Icon>
                                     </div>
                                 </div>
-                                <div class="mt-[10px] flex text-[11px]">
-                                    <div class="flex-shrink-0">文档内容：</div>
-                                    <div class="text-[#00000080]">
-                                        {{ item.content || item.question }}
-                                    </div>
+
+                                <div class="content-section">
+                                    <div class="label">文档内容</div>
+                                    <div class="text line-clamp-3">{{ item.content || item.question }}</div>
                                 </div>
-                                <div class="mt-[10px] flex text-[11px]" v-if="!isRag">
-                                    <div class="flex-shrink-0">补充内容：</div>
-                                    <div class="text-[#00000080]">
-                                        {{ item.answer || "-" }}
-                                    </div>
+
+                                <div v-if="!isRag" class="content-section mt-3 pb-0 border-none">
+                                    <div class="label">补充内容</div>
+                                    <div class="text italic">{{ item.answer || "无补充内容" }}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </ElScrollbar>
-                <div v-else class="flex items-center justify-center h-full">
-                    <ElEmpty description="暂无分段" />
+
+                <div v-else class="h-full flex items-center justify-center opacity-40">
+                    <ElEmpty description="暂无分段数据" />
                 </div>
+
+                <Transition name="slide-up">
+                    <div v-if="chooseList.length > 0 && !isRag" class="floating-batch-bar">
+                        <div class="flex items-center gap-4">
+                            <span class="text-[13px] font-bold"
+                                >已选择 <b class="text-primary mx-1">{{ chooseList.length }}</b> 项分段</span
+                            >
+                            <div class="w-[1px] h-4 bg-[#E2E8F0]"></div>
+                            <ElButton type="danger" link class="!font-black hover:!text-red-500" @click="handleDelete"
+                                >批量删除</ElButton
+                            >
+                            <ElButton link class="!text-[#64748B] !font-black" @click="handleCancel">取消选择</ElButton>
+                        </div>
+                    </div>
+                </Transition>
             </div>
-        </div>
-        <div class="flex flex-col gap-y-2 px-[30px] justify-center items-center my-4">
-            <div
-                class="w-[428px] h-[50px] bg-[#f6f6f6] rounded-md border border-[#efefef] flex justify-between items-center px-[14px] transition-all duration-300"
-                :class="[chooseList.length > 0 ? 'opacity-100 translate-y-[0]' : 'opacity-0 translate-y-[100%]']"
-                v-if="!isRag">
-                <div>已选择{{ chooseList.length }}项</div>
-                <div>
-                    <ElButton color="#FF3C26" @click="handleDelete">删除</ElButton>
-                    <ElButton @click="handleCancel">取消</ElButton>
-                </div>
-            </div>
-            <div class="relative z-[8887]">
+
+            <div class="flex-shrink-0 py-6 flex justify-center border-t border-[#F1F5F9] bg-[#F8FAFC]/30">
                 <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
             </div>
         </div>
@@ -193,9 +216,64 @@ watch(
 </script>
 
 <style scoped lang="scss">
-:deep(.el-input) {
-    .el-input__wrapper {
-        border-radius: 100px;
+.add-chunk-btn {
+    @apply rounded-xl h-10 px-6 font-black border-none bg-primary;
+    box-shadow: 0 4px 12px -2px rgba(var(--el-color-primary), 0.3);
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px -2px rgba(var(--el-color-primary), 0.4);
     }
+}
+
+.chunk-card {
+    @apply relative p-5 bg-white border border-br rounded-[20px] transition-all cursor-pointer select-none;
+
+    &:hover {
+        background-color: #f8fafc;
+    }
+
+    &.is-selected {
+        @apply border-primary bg-[#F0F6FF];
+    }
+}
+
+.chunk-index {
+    @apply px-2 py-0.5 rounded bg-[#1E293B] text-white text-[10px] font-black italic;
+}
+
+.checkbox-box {
+    @apply w-5 h-5 rounded-md border-2 border-br bg-white flex items-center justify-center transition-all;
+    &.is-checked {
+        @apply border-primary bg-primary;
+    }
+}
+
+.content-section {
+    @apply border-l-2 border-[#F1F5F9] pl-3;
+    .label {
+        @apply text-[11px] font-black text-[#94A3B8] uppercase tracking-wider mb-1;
+    }
+    .text {
+        @apply text-[13px] text-[#475569] leading-6;
+    }
+}
+
+.action-edit-btn {
+    @apply w-8 h-8 rounded-lg bg-white border border-br flex items-center justify-center text-[#64748B] hover:text-primary hover:border-primary transition-all;
+}
+
+.floating-batch-bar {
+    @apply absolute bottom-6 left-1/2 -translate-x-1/2 bg-white border border-br px-6 py-3 rounded-full flex items-center z-[100];
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+    transition: all 0.3s ease;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+    transform: translate(-50%, 20px);
+    opacity: 0;
 }
 </style>

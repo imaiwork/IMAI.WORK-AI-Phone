@@ -231,17 +231,16 @@ import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import Cache from "@/utils/cache";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { ModeTypeEnum, CreateTypeEnum, ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
-import { ClipStyleEnum } from "../../enums";
-import { createVideoCopywriter } from "../../config/copywriter";
 import SelectAnchor from "@/ai_modules/digital_human/components/choose-anchor/choose-anchor.vue";
 import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
 import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
 import ModelRule from "@/ai_modules/digital_human/components/model-rule/model-rule.vue";
 import Agreement from "@/ai_modules/digital_human/components/agreement/agreement.vue";
 import CreatePanel from "@/ai_modules/digital_human/components/create-panel/create-panel.vue";
-import { useEventBusManager } from "@/hooks/useEventBusManager";
-
+import { ClipStyleEnum } from "../../enums";
+import { createVideoCopywriter } from "../../config/copywriter";
 // 定义锚点数据接口
 interface AnchorItem {
     name: string;
@@ -325,6 +324,7 @@ const textLimit = computed(() => {
 const modelChannel = computed(() => appStore.getDigitalHumanConfig?.channel || []);
 
 const isPublicAnchor = computed(() => {
+    if (anchorLists.value.length === 0) return false;
     const { model_version } = anchorLists.value[currAnchorIndex.value];
     return model_version === 0;
 });
@@ -368,10 +368,6 @@ const openChooseModel = () => {
 const chooseAnchor = (index: number) => {
     const { status, model_version } = anchorLists.value[index];
 
-    if (status != 2 && model_version === 0) {
-        uni.$u.toast("该形象正在制作中，请稍后再来选择");
-        return;
-    }
     if (model_version !== model_version) {
         formData.voice_id = "-1";
         formData.voice_name = "";

@@ -65,6 +65,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
             if ($duration > 0) {
                 $duration = $duration / 3;
             }
+            $extra = $decodedData['extra'] ?? [];
+            $volume = $extra['volume'] ?? 0.3;
+            if ($volume < 0 || $volume > 1) {
+                self::setError("声音值必须在 0 到 1 之间，当前值为：$volume");
+                return false;
+            }
             $anchor = $decodedData['anchor'] ?? [];
             $params['status'] = 1;
             $params['video_count'] = count($copywriting);
@@ -263,6 +269,8 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $materialData = $decodedData['material'] ?? [];
         $clipData = $decodedData['clip'] ?? [];
         $musicData = $decodedData['music'] ?? [];
+        $extraData = $decodedData['extra'] ?? [];
+
         if (count($clip_template_id) == 0) {
             throw new \Exception("缺少剪辑模版");
         }
@@ -293,9 +301,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
             }
         }
 
-        if (count($materialData) < 3) {
-            throw new \Exception("素材不能少于三条");
-        }
+
         if (count($characterDesignData) == 0) {
             throw new \Exception("人设信息不能为空");
         }
@@ -306,14 +312,13 @@ class ShanjianVideoSettingLogic extends ApiLogic
         if ($materialDatanum > $copywritingDatanum && $materialDatanum > 4) {
             $randcopywriting = true;
         }
-
         for ($i = 0; $i < $videoCount; $i++) {
             $number = random_int(1, 20);
             $music = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
             if (count($musicData) == 0) {
                 $music_url = $music;
             } else {
-                $music_url = $musicData[$i % count($musicData)]['fileUrl'] ?? $music;
+                $music_url = $musicData[$i % count($musicData)] ?? $music;
             }
             $clip = random_int(0, $clip_template_total);
             if (count($clipData) == 0) {
@@ -337,6 +342,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
             }
 
+            $extra = [
+                'setting_index' => $i,
+                'create_type' => 'batch'
+            ];
+            $mergedArray = array_merge($extra, $extraData);
             $taskItem = [
                 'name' => ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($i + 1),
                 'pic' => $anchorData[$i % count($anchorData)]['pic'] ?? '',
@@ -354,10 +364,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 'material' => $material,
                 'music_url' => $music_url,
                 'clip_id' => $clip_id,
-                'extra' => json_encode([
-                    'setting_index' => $i,
-                    'create_type' => 'batch'
-                ], JSON_UNESCAPED_UNICODE),
+                'extra' => json_encode($mergedArray, JSON_UNESCAPED_UNICODE),
                 'create_time' => time(),
                 'update_time' => time()
             ];
@@ -495,6 +502,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 self::setError("生成的视频数量不能超过上限 {$maxVideoCount} 个");
                 return false;
             }
+            $extra = $decodedData['extra'] ?? [];
+            $volume = $extra['volume'] ?? 0.3;
+            if ($volume < 0 || $volume > 1) {
+                self::setError("声音值必须在 0 到 1 之间，当前值为：$volume");
+                return false;
+            }
             $anchor = $decodedData['anchor'] ?? [];
             $duration = 0;
             foreach ($anchor as $key => $value) {
@@ -542,6 +555,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $materialData = $decodedData['material'] ?? [];
         $clipData = $decodedData['clip'] ?? [];
         $musicData = $decodedData['music'] ?? [];
+        $extraData = $decodedData['extra'] ?? [];
         
         // 数据验证
         if (count($clip_template_id) == 0) {
@@ -566,7 +580,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
             $number = random_int(1, 20);
             $defaultMusic = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
             $music_url = count($musicData) > 0
-                ? ($musicData[$i % count($musicData)]['fileUrl'] ?? $defaultMusic)
+                ? ($musicData[$i % count($musicData)] ?? $defaultMusic)
                 : $defaultMusic;
 
             // 选择剪辑模板
@@ -606,7 +620,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
             
             // 编码为JSON
             $material = json_encode($selectedMaterial, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
+            $extra = [
+                'setting_index' => $i,
+                'create_type' => 'batch'
+            ];
+            $mergedArray = array_merge($extra, $extraData);
             $taskItem = [
                 'name' => ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($i + 1),
                 'pic' => $anchorData[$i % count($anchorData)]['pic'] ?? '',
@@ -625,10 +643,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 'material' => $material,
                 'music_url' => $music_url,
                 'clip_id' => $clip_id,
-                'extra' => json_encode([
-                    'setting_index' => $i,
-                    'create_type' => 'batch'
-                ], JSON_UNESCAPED_UNICODE),
+                'extra' => json_encode($mergedArray, JSON_UNESCAPED_UNICODE),
                 'create_time' => time(),
                 'update_time' => time()
             ];
@@ -673,7 +688,6 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 }
             }
             $copywriting = $decodedData['copywriting'] ?? [];
-
             $duration = 0;
             foreach ($copywriting as $key => $value) {
                 if (!empty($value['content'])) {
@@ -684,7 +698,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
             if ($duration > 0) {
                 $duration = $duration / 3;
             }
-
+            $extra = $decodedData['extra'] ?? [];
+            $volume = $extra['volume'] ?? 0.3;
+            if ($volume < 0 || $volume > 1) {
+                self::setError("声音值必须在 0 到 1 之间，当前值为：$volume");
+                return false;
+            }
             $params['status'] = 1;
             // 开始事务
             Db::startTrans();
@@ -831,9 +850,8 @@ class ShanjianVideoSettingLogic extends ApiLogic
         if (count($musicData) == 0) {
             $music_url = $music;
         } else {
-            $music_url = $musicData[$index % count($musicData)]['fileUrl'] ?? $music;
+            $music_url = $musicData[$index % count($musicData)] ?? $music;
         }
-
         // 选择剪辑模板
         $clip = random_int(0, $clip_template_total);
         if (count($clipData) == 0) {
@@ -843,19 +861,26 @@ class ShanjianVideoSettingLogic extends ApiLogic
         }
         $material = json_decode($material, true);
         $pic = "";
+        $extra = $params['extra'] ?? [];
+        $decodedData['extra'] = json_decode($extra, true);
+      
         foreach ($material as $key => &$value) {
             if (isset($value['cover'])) {
                 $pic = $value['cover'];
                 unset($material[$key]['cover']);
             }
             if (isset($value['type']) && $value['type'] == 'video') {
-                $extra = $params['extra'] ?? false;
-                $value['soundSwitch'] = $extra === "true" ? true : false;
+                $soundSwitch =  $decodedData['extra']['soundSwitch'] ?? false;
+                $value['soundSwitch'] = $soundSwitch === "true" ? true : false;
             }
         }
-
         $material = json_encode($material, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $shanjian_type = $params['shanjian_type'] ?? 3;
+        $extra = [
+                'setting_index' => $index,
+                'create_type' => 'batch'
+            ];
+        $mergedArray = array_merge($extra, $decodedData['extra']);
         return [
             'name' => ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($index + 1),
             'pic' => $pic,
@@ -874,10 +899,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
             'material' => $material,
             'music_url' => $music_url,
             'clip_id' => $clip_id,
-            'extra' => json_encode([
-                'setting_index' => $index,
-                'create_type' => 'batch'
-            ], JSON_UNESCAPED_UNICODE),
+            'extra' => json_encode($mergedArray, JSON_UNESCAPED_UNICODE),
             'create_time' => time(),
             'update_time' => time()
         ];
@@ -923,7 +945,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     throw new \Exception("标题必须填写");
                 }
             }
-
+            $extra = $decodedData['extra'] ?? [];
+            $volume = $extra['volume'] ?? 0.3;
+            if ($volume < 0 || $volume > 1) {
+                self::setError("声音值必须在 0 到 1 之间，当前值为：$volume");
+                return false;
+            }
             $params['status'] = 1;
             $params['video_count'] =  $params['video_count'] ?? 1;
             // 开始事务

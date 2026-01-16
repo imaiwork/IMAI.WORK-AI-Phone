@@ -1,135 +1,163 @@
 <template>
-    <div class="h-full p-4 flex flex-col">
+    <div class="h-full flex flex-col min-w-[1000px] pb-4 px-4">
         <div
-            class="rounded-[20px] flex items-center gap-3 px-[30px]"
-            style="
-                background: linear-gradient(152deg, rgba(0, 101, 251, 0.88) -42.44%, rgba(255, 255, 255, 0) 12.19%)
-                    rgb(255, 255, 255);
-            ">
-            <img src="@/assets/images/device.svg" class="w-11 mt-7" />
-            <div>
-                <div class="text-[#000000cc]">
-                    {{ ToolEnumMap[ToolEnum.DEVICE] }}
-                </div>
-                <div class="text-[#00000080]">
-                    一键绑定跨平台设备，激活智能流程引擎，全链路接管部门任务，让团队拥有数字化中枢管家。
-                </div>
-            </div>
-        </div>
-        <div class="grow min-h-0 bg-white rounded-[20px] mt-4 flex flex-col">
-            <div class="h-[88px] px-5 flex items-center justify-between">
-                <div class="flex items-center gap-x-2">
-                    <span class="text-lg font-bold">设备总数量：{{ pager.count }}台</span>
-                    <ElButton text @click="getLists()">
-                        <Icon name="el-icon-Refresh"></Icon>
-                        <span class="text-[#86909C]">刷新</span>
-                    </ElButton>
-                </div>
+            class="h-[120px] rounded-[20px] bg-white border border-br px-10 flex items-center justify-between relative overflow-hidden">
+            <div class="flex items-center gap-6">
+                <img src="@/assets/images/device.svg" class="w-20 h-20 mt-10" />
                 <div>
-                    <ElButton type="primary" class="!rounded-full !h-10" @click="handleAddDevice">
-                        <Icon name="local-icon-add_circle" />
-                        <span class="ml-2">添加设备</span>
-                    </ElButton>
+                    <div class="text-[20px] font-[900] text-[#1E293B] mb-1">
+                        {{ ToolEnumMap[ToolEnum.DEVICE] }}管理中枢
+                    </div>
+                    <div class="text-base font-bold text-[#64748B]">
+                        一键绑定跨平台设备，激活智能流程引擎。在这里您可以监控设备实时状态并同步各个平台的账号信息。
+                    </div>
                 </div>
             </div>
-            <div class="grow min-h-0">
+            <ElButton
+                type="primary"
+                @click="handleAddDevice"
+                class="!rounded-2xl !h-12 !font-black text-[14px] transition-all hover:translate-y-[-2px]">
+                <Icon name="local-icon-add_circle" :size="18" />
+                <span class="ml-2">添加新设备</span>
+            </ElButton>
+        </div>
+
+        <div class="grow min-h-0 bg-white rounded-[20px] mt-4 flex flex-col border border-br overflow-hidden">
+            <div class="h-[80px] px-8 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="flex flex-col">
+                        <span class="text-[12px] font-black text-[#94A3B8] uppercase tracking-wider"
+                            >Device Assets</span
+                        >
+                        <span class="text-[16px] font-[900] text-[#1E293B]">当前设备：{{ pager.count }}</span>
+                    </div>
+                    <div class="w-[1px] h-8 bg-[#F1F5F9] mx-2"></div>
+                    <button
+                        @click="getLists()"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#F1F5F9] transition-all text-[#64748B] hover:text-primary">
+                        <Icon name="el-icon-Refresh" :size="16" />
+                        <span class="text-[13px] font-bold">同步状态</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grow min-h-0 px-4">
                 <ElTable
                     v-loading="pager.loading"
                     :data="pager.lists"
                     height="100%"
-                    stripe
-                    :row-style="{ height: '60px' }"
-                    :header-cell-style="{ height: '63px' }">
-                    <ElTableColumn prop="device_name" label="设备名称" show-overflow-tooltip>
+                    :row-style="{ cursor: 'pointer' }"
+                    @row-click="handleAccountDetail">
+                    <ElTableColumn label="设备识别" min-width="220">
                         <template #default="{ row }">
-                            <div class="flex items-center justify-center gap-x-1">
-                                <ElButton type="primary" link @click="handleAccountDetail(row)">{{
-                                    row.device_name
-                                }}</ElButton>
-                                <span class="cursor-pointer leading-[0]" @click="handleEditName(row)"
-                                    ><Icon name="el-icon-Edit" color="var(--color-primary)"></Icon
-                                ></span>
+                            <div class="flex items-center justify-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-[#F8FAFC] flex items-center justify-center border border-br cursor-pointer"
+                                    @click.stop="handleEditName(row)">
+                                    <Icon name="local-icon-edit" color="#64748B" />
+                                </div>
+                                <div class="flex flex-col group">
+                                    <div class="flex items-center gap-1">
+                                        <span
+                                            class="text-[14px] font-[900] text-[#1E293B] cursor-pointer hover:text-primary"
+                                            @click="handleAccountDetail(row)">
+                                            {{ row.device_name }}
+                                        </span>
+                                    </div>
+                                    <span class="text-[11px] font-medium text-[#94A3B8]">{{ row.device_code }}</span>
+                                </div>
                             </div>
                         </template>
                     </ElTableColumn>
-                    <ElTableColumn prop="device_model" label="设备型号" show-overflow-tooltip> </ElTableColumn>
-                    <ElTableColumn prop="sdk_version" label="当前SDK版本" show-overflow-tooltip />
-                    <ElTableColumn prop="device_code" label="设备码" show-overflow-tooltip />
-                    <ElTableColumn label="设备状态">
+
+                    <ElTableColumn prop="device_model" label="型号/系统" width="160">
                         <template #default="{ row }">
-                            <ElTag v-if="row.status == 1" type="success" :disable-transitions="true">在线</ElTag>
-                            <ElTag v-else-if="row.status == 2" type="primary" :disable-transitions="true">工作中</ElTag>
-                            <ElTag v-else type="danger" :disable-transitions="true">离线</ElTag>
+                            <div class="text-[13px] font-bold text-[#475569]">{{ row.device_model }}</div>
+                            <div class="text-[11px] text-[#94A3B8]">SDK: {{ row.sdk_version }}</div>
                         </template>
                     </ElTableColumn>
-                    <ElTableColumn prop="create_time" label="绑定时间" width="180" show-overflow-tooltip />
-                    <ElTableColumn prop="name" label="操作" width="100" fixed="right">
+
+                    <ElTableColumn label="实时状态" width="120">
                         <template #default="{ row }">
-                            <ElPopover
-                                :show-arrow="false"
-                                popper-class="!w-[130px] !min-w-[130px] !p-[6px] !rounded-xl">
-                                <template #reference>
-                                    <ElButton link>
-                                        <Icon name="el-icon-MoreFilled"></Icon>
-                                    </ElButton>
-                                </template>
-                                <div class="flex flex-col gap-2">
-                                    <div
-                                        class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                        @click="handleAccountDetail(row)">
-                                        <Icon name="el-icon-User"></Icon>
-                                        <span>账号详情</span>
-                                    </div>
-                                    <div
-                                        class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                        @click="handleRefreshData(row, AppTypeEnum.XHS)">
-                                        <span class="flex items-center justify-center">
-                                            <Icon name="el-icon-Refresh"></Icon>
-                                        </span>
-                                        <span>更新小红书</span>
-                                    </div>
-                                    <div
-                                        class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                        @click="handleRefreshData(row, AppTypeEnum.DOUYIN)">
-                                        <span class="flex items-center justify-center">
-                                            <Icon name="el-icon-Refresh"></Icon>
-                                        </span>
-                                        <span>更新抖音</span>
-                                    </div>
-                                    <div
-                                        class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                        @click="handleRefreshData(row, AppTypeEnum.KUAISHOU)">
-                                        <span class="flex items-center justify-center">
-                                            <Icon name="el-icon-Refresh"></Icon>
-                                        </span>
-                                        <span>更新快手</span>
-                                    </div>
-                                    <div
-                                        class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                        @click="handleUpdateAccount(row.device_code)">
-                                        <span class="flex items-center justify-center">
-                                            <Icon name="el-icon-Refresh"></Icon>
-                                        </span>
-                                        <span>一键更新账号</span>
-                                    </div>
-                                    <div
-                                        class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                        @click="handleDelete(row)">
-                                        <Icon name="el-icon-Delete"></Icon>
-                                        <span>删除</span>
-                                    </div>
+                            <div class="flex items-center justify-center gap-1.5">
+                                <div
+                                    v-if="row.status == 1"
+                                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECFDF5] text-[#10B981] text-[12px] font-black">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span> 在线
                                 </div>
-                            </ElPopover>
+                                <div
+                                    v-else-if="row.status == 2"
+                                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0065fb]/10 text-primary text-[12px] font-black">
+                                    <Icon name="el-icon-Loading" /> 工作中
+                                </div>
+                                <div
+                                    v-else
+                                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FEF2F2] text-[#EF4444] text-[12px] font-black">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-[#EF4444]"></span> 离线
+                                </div>
+                            </div>
                         </template>
                     </ElTableColumn>
-                    <template #empty>
-                        <div class="flex items-center justify-center h-full">
-                            还没有设备，<ElButton type="primary" link @click="handleAddDevice">点击添加设备</ElButton>
-                        </div>
-                    </template>
+
+                    <ElTableColumn prop="create_time" label="绑定周期" width="180">
+                        <template #default="{ row }">
+                            <span class="text-[13px] font-bold text-[#64748B]">{{ row.create_time }}</span>
+                        </template>
+                    </ElTableColumn>
+
+                    <ElTableColumn label="操作" width="60" fixed="right" align="right">
+                        <template #default="{ row }">
+                            <div class="flex items-center justify-end">
+                                <ElPopover
+                                    popper-class="!rounded-[16px] !border-[#F1F5F9] !p-1.5 !shadow-light"
+                                    :show-arrow="false">
+                                    <template #reference>
+                                        <div
+                                            class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] cursor-pointer transition-all">
+                                            <Icon name="el-icon-MoreFilled" color="#94A3B8" />
+                                        </div>
+                                    </template>
+                                    <div class="p-1 space-y-1">
+                                        <div class="table-action-item" @click="handleAccountDetail(row)">
+                                            <Icon name="el-icon-User" /> 账号详情
+                                        </div>
+                                        <div class="h-[1px] bg-[#F1F5F9] my-1"></div>
+                                        <div class="table-action-item" @click="handleRefreshData(row, AppTypeEnum.XHS)">
+                                            <Icon name="el-icon-Refresh" /> 更新小红书
+                                        </div>
+                                        <div
+                                            class="table-action-item"
+                                            @click="handleRefreshData(row, AppTypeEnum.DOUYIN)">
+                                            <Icon name="el-icon-Refresh" /> 更新抖音
+                                        </div>
+                                        <div
+                                            class="table-action-item"
+                                            @click="handleRefreshData(row, AppTypeEnum.KUAISHOU)">
+                                            <Icon name="el-icon-Refresh" /> 更新快手
+                                        </div>
+                                        <div
+                                            class="table-action-item text-primary"
+                                            @click="handleUpdateAccount(row.device_code)">
+                                            <Icon name="el-icon-CircleCheck" /> 一键同步全部
+                                        </div>
+                                        <div class="h-[1px] bg-[#F1F5F9] my-1"></div>
+                                        <div
+                                            class="table-action-item !text-red-500 hover:!bg-red-50"
+                                            @click="handleDelete(row)">
+                                            <Icon name="el-icon-Delete" /> 删除设备
+                                        </div>
+                                    </div>
+                                </ElPopover>
+                            </div>
+                        </template>
+                    </ElTableColumn>
                 </ElTable>
             </div>
-            <div class="flex justify-end p-4">
+
+            <div class="h-[72px] px-8 flex items-center justify-between bg-[#F8FAFC]/50">
+                <span class="text-[12px] font-bold text-[#94A3B8]"
+                    >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条设备数据</span
+                >
                 <pagination v-model="pager" @change="getLists"></pagination>
             </div>
         </div>
@@ -147,34 +175,15 @@
         :progress-error="progressError"
         :progress-error-msg="progressErrorMsg"
         :step="deviceStep"
-        @close="showProgress = false"
+        @close="handleCloseProgress"
         @retry="retryRefreshAccount" />
-    <popup ref="editPopupRef" append-to-body :show-close="false" cancel-button-text="" confirm-button-text="">
-        <div class="-my-4">
-            <div class="absolute top-2 right-2 w-6 h-6" @click="closeEditPopup">
-                <close-btn :icon-size="12"></close-btn>
-            </div>
-            <div class="text-2xl font-bold">重命名</div>
-            <div class="mt-2">
-                <ElInput
-                    v-model="editValue.device_name"
-                    placeholder="请输入名称"
-                    class="!h-11"
-                    clearable
-                    maxlength="50" />
-            </div>
-            <div class="mt-6 flex justify-center text-white">
-                <ElButton
-                    type="primary"
-                    round
-                    class="!h-[50px] shadow-[0px_6px_12px_0px_rgba(0,101,251,0.20)] w-[70%] !rounded-full"
-                    :loading="isLock"
-                    @click="handleEditNameConfirm()">
-                    确定
-                </ElButton>
-            </div>
-        </div>
-    </popup>
+    <rename-pop
+        v-if="showRenamePopup"
+        ref="renamePopupRef"
+        name-key="device_name"
+        :fetch-fn="updateDevice"
+        @close="showRenamePopup = false"
+        @success="getLists"></rename-pop>
 </template>
 
 <script setup lang="ts">
@@ -197,15 +206,12 @@ const sortedPlatformLogo = ref<any[]>([
 ]);
 const platformsToUpdate = ref<any[]>([]);
 const addDeviceRef = ref<InstanceType<typeof DeviceAdd>>();
+const renamePopupRef = shallowRef();
+const showRenamePopup = ref(false);
 const showProgress = ref(false);
 const progressError = ref(false);
 const progressErrorMsg = ref("");
 const deviceStep = ref("");
-const editPopupRef = shallowRef();
-const editValue = ref<any>({
-    device_code: "",
-    device_name: "",
-});
 
 const { isConnected, onEvent, send } = useDeviceWs();
 
@@ -272,14 +278,15 @@ const {
     },
     onError: (err) => {
         const { code, error, content, type } = err;
-        if (content.ode == DeviceCmdCodeEnum.DEVICE_OFFLINE) {
+        if (content?.code == DeviceCmdCodeEnum.DEVICE_OFFLINE) {
             feedback.msgError(error);
             getLists();
         }
         if (
             eventAction.value === EventAction.UpdateAccount ||
             eventAction.value === EventAction.AddAccount ||
-            eventAction.value === EventAction.AddDevice
+            eventAction.value === EventAction.AddDevice ||
+            content?.code == DeviceCmdCodeEnum.DEVICE_OFFLINE
         ) {
             progressError.value = true;
             progressErrorMsg.value = error;
@@ -300,34 +307,30 @@ const {
 const deviceId = ref("");
 const currAppType = ref();
 
-const { isLock, lockFn: handleEditNameConfirm } = useLockFn(async () => {
-    try {
-        await updateDevice(editValue.value);
-        feedback.msgSuccess("更新成功");
-        closeEditPopup();
-        getLists();
-    } catch (error) {
-        feedback.msgError(error || "更新失败");
-    }
-});
-
-const handleEditName = (row: any) => {
-    editPopupRef.value?.open();
-    editValue.value = {
-        device_code: row.device_code,
-        device_name: row.device_name,
-    };
+const handleEditName = async (row: any) => {
+    showRenamePopup.value = true;
+    await nextTick();
+    renamePopupRef.value?.open();
+    renamePopupRef.value?.setFormData({ name: row.device_name, device_code: row.device_code });
 };
 
-const closeEditPopup = () => {
-    editPopupRef.value?.close();
+const handleCheckConnected = () => {
+    if (!isConnected.value) {
+        feedback.msgError("连接失败，请检查网络连接");
+        return false;
+    }
+    return true;
+};
+
+const handleCloseProgress = () => {
+    progressError.value = false;
+    progressValue.value = 0;
+    deviceStep.value = "";
+    showProgress.value = false;
 };
 
 const retryRefreshAccount = () => {
-    if (!isConnected.value) {
-        feedback.msgError("连接失败，请检查网络连接");
-        return;
-    }
+    if (!handleCheckConnected()) return;
     progressError.value = false;
     if (eventAction.value == EventAction.BatchUpdateAccount) {
         processNextAccount();
@@ -338,6 +341,7 @@ const retryRefreshAccount = () => {
 
 const currDevice = ref(null);
 const handleRefreshData = (row: any, appType: AppTypeEnum) => {
+    if (!handleCheckConnected()) return;
     currDevice.value = row.device_code;
     refreshAccount.value = row.accounts;
     showProgress.value = true;
@@ -346,6 +350,7 @@ const handleRefreshData = (row: any, appType: AppTypeEnum) => {
 };
 
 const handleUpdateAccount = (deviceCode: string) => {
+    if (!handleCheckConnected()) return;
     deviceId.value = deviceCode;
     refreshAccount.value = pager.lists.find((item: any) => item.device_code == deviceCode)?.accounts || [];
     const forceRefetch = refreshAccount.value.length == 0;
@@ -402,10 +407,7 @@ const handleAccountDetail = (row: any) => {
 };
 
 const handleAddDevice = async () => {
-    if (!isConnected.value) {
-        feedback.msgError("连接失败，请检查网络连接");
-        return;
-    }
+    if (!handleCheckConnected()) return;
     showAddDevice.value = true;
     await nextTick();
     addDeviceRef.value?.open();
@@ -432,4 +434,13 @@ const handleDelete = (row: any) => {
 getLists();
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.add-device-shadow {
+    box-shadow: 0 8px 20px -6px rgba(var(--el-primary-color), 0.4);
+}
+
+.custom-save-btn {
+    @apply bg-primary;
+    box-shadow: 0 8px 16px -4px rgba(var(--el-primary-color), 0.3);
+}
+</style>

@@ -45,7 +45,7 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
         return HumanVideoTask::alias('hv')
             ->join('user u', 'u.id = hv.user_id')
             ->field('hv.voice_name,hv.id,hv.name,hv.user_id,hv.model_version,hv.anchor_id,hv.create_time,hv.pic,hv.clip_result_url,hv.clip_status,hv.automatic_clip,
-            hv.clip_type,hv.result_url,hv.gender,hv.status,hv.audio_type,hv.task_id,u.nickname,u.avatar')
+            hv.clip_type,hv.result_url,hv.gender,hv.status,hv.audio_type,hv.task_id,u.nickname,u.avatar,hv.remark')
             ->when($this->request->get('user'), function ($query) {
                 $query->where('u.nickname', 'like', '%' . $this->request->get('user') . '%');
             })

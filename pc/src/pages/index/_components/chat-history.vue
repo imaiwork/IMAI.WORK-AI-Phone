@@ -1,100 +1,83 @@
 <template>
-    <div class="w-full h-full flex flex-col bg-[#F9FAFB] border-r border-gray-200">
-        <div class="px-4 mt-[33px]">
-            <ElButton class="w-full !h-[45px]" @click="handleNewSession">
-                <Icon name="local-icon-history_add" :size="16"></Icon>
-                <span class="ml-2 text-[14px] font-bold">新建会话</span>
+    <div class="w-full h-full flex flex-col relative bg-[#F9F9FA] border-r border-[#e2e8f0]/60 transition-all">
+        <div class="px-4 pt-8 pb-4">
+            <ElButton class="modern-new-btn w-full !h-[48px] !rounded-2xl" type="primary" @click="handleNewSession">
+                <Icon name="local-icon-history_add" :size="18"></Icon>
+                <span class="ml-2 text-[14px] font-[900] tracking-wide">新建智能会话</span>
             </ElButton>
-            <div class="flex items-center gap-1 mt-[25px]">
-                <Icon name="local-icon-time" :size="16"></Icon>
-                <span class="text-[14px] font-bold">最近对话</span>
+
+            <div class="flex items-center justify-between mt-8 px-1">
+                <div class="flex items-center gap-2 text-slate-400">
+                    <Icon name="local-icon-time" :size="14"></Icon>
+                    <span class="text-[12px] font-black uppercase tracking-widest">历史会话</span>
+                </div>
             </div>
         </div>
-        <div class="grow min-h-0 mt-4">
-            <div v-if="isRefreshing" class="px-2 pt-1 animate-pulse">
-                <div class="px-2 py-2.5">
-                    <div class="h-3 w-16 bg-gray-200 rounded-full"></div>
-                </div>
-                <div class="mb-4 flex flex-col gap-y-1">
-                    <div class="h-10 bg-gray-200 rounded-lg"></div>
-                    <div class="h-10 bg-gray-200 rounded-lg"></div>
-                    <div class="h-10 bg-gray-200 rounded-lg"></div>
-                </div>
 
-                <div class="px-2 py-2.5">
-                    <div class="h-3 w-24 bg-gray-200 rounded-full"></div>
-                </div>
-                <div class="mb-4 flex flex-col gap-y-1">
-                    <div class="h-10 bg-gray-200 rounded-lg"></div>
-                    <div class="h-10 bg-gray-200 rounded-lg"></div>
+        <div class="grow min-h-0">
+            <div v-if="isRefreshing" class="px-4 space-y-6 animate-pulse mt-4">
+                <div v-for="i in 2" :key="i">
+                    <div class="h-3 w-12 bg-slate-200 rounded-full mb-4 mx-2"></div>
+                    <div class="space-y-2">
+                        <div v-for="j in 3" :key="j" class="h-11 bg-slate-100/80 rounded-xl"></div>
+                    </div>
                 </div>
             </div>
+
             <template v-else>
-                <ElScrollbar @end-reached="load" v-if="chatHistory.length > 0">
-                    <div class="px-2">
-                        <div v-for="group in groupChatHistoryByTime">
-                            <div class="text-[#81858c] text-xs px-2 py-2.5 sticky top-0 z-[88] bg-[#f9fafb]">
+                <ElScrollbar v-if="chatHistory.length > 0" class="custom-scrollbar" :distance="20" @end-reached="load">
+                    <div class="px-3 pb-6">
+                        <div v-for="group in groupChatHistoryByTime" :key="group.date" class="mt-4">
+                            <div
+                                class="sticky top-0 z-[10] bg-[#F8FAFC]/80 backdrop-blur-md text-[11px] font-black text-slate-400 px-3 py-2 flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
                                 {{ group.date }}
                             </div>
-                            <div class="mb-4 flex flex-col gap-y-1">
+
+                            <div class="mt-1">
                                 <div
                                     v-for="session in group.sessions"
                                     :key="session.task_id"
-                                    class="h-10 flex items-center justify-between px-2 py-[9px] cursor-pointer transition-colors rounded-lg group relative"
-                                    :class="[
-                                        currentSessionId === session.task_id
-                                            ? 'bg-[#e4edfd] text-primary hover:bg-[#e4edfd] hover:text-primary'
-                                            : ' hover:bg-[#f1f3f5] ',
-                                    ]"
-                                    @click="() => switchToSession(session.task_id)">
-                                    <div class="text-[14px] truncate">
-                                        {{ session.message }}
+                                    class="session-item group"
+                                    :class="{ 'is-active': currentSessionId === session.task_id }"
+                                    @click="switchToSession(session.task_id)">
+                                    <div class="session-title">
+                                        {{ session.message || "空会话" }}
                                     </div>
+
                                     <ElPopover
-                                        popper-class="!p-2 !rounded-xl !border-[#efefef]"
+                                        popper-class="!rounded-[16px] !border-[#F1F5F9] !p-1.5 !shadow-light"
+                                        placement="right-start"
                                         trigger="click"
                                         :show-arrow="false"
-                                        @hide="visibleChange(false, session.task_id)">
+                                        :offset="0">
                                         <template #reference>
-                                            <div
-                                                class="absolute -right-2 h-full flex items-center justify-center w-[56px] invisible group-hover:visible"
-                                                :class="active === session.task_id ? '!visible' : ''"
-                                                @click.stop="chooseActive(session.task_id)">
-                                                <div
-                                                    class="w-[28px] h-[28px] flex items-center justify-center rounded-full hover:bg-[#2631480f] text-gray-500"
-                                                    :class="active === session.task_id ? '!bg-[#2631480f]' : ''">
-                                                    <Icon name="el-icon-MoreFilled" :size="14"></Icon>
-                                                </div>
+                                            <div class="more-trigger" @click.stop>
+                                                <Icon name="el-icon-MoreFilled" :size="12"></Icon>
                                             </div>
                                         </template>
-                                        <div class="flex flex-col gap-2">
-                                            <div
-                                                class="h-8 px-3 rounded-lg cursor-pointer flex items-center gap-3 hover:shadow-[0_0_0_1px_rgba(239,239,239,1)] hover:bg-[#F6F6F6]"
-                                                @click="deleteSession(session.task_id)">
-                                                <span
-                                                    class="flex w-5 h-5 rounded items-center justify-center bg-[#0000000b]">
-                                                    <Icon name="local-icon-delete"></Icon>
-                                                </span>
-                                                <span>删除</span>
-                                            </div>
+                                        <div
+                                            class="table-action-item !text-red-500 hover:!bg-red-50"
+                                            @click="deleteSession(session.task_id)">
+                                            <Icon name="local-icon-delete" :size="14"></Icon>
+                                            <span>彻底删除</span>
                                         </div>
                                     </ElPopover>
                                 </div>
                             </div>
                         </div>
-                        <div v-if="!isFinished" class="text-tx-secondary text-center text-xs w-full py-4">
-                            暂无更多了~
-                        </div>
+
+                        <load-text :is-load="isFinished"></load-text>
                     </div>
                 </ElScrollbar>
-                <div class="p-10 text-center" v-else>
-                    <ElEmpty description="暂无会话记录" />
+
+                <div v-else class="h-full flex flex-col items-center justify-center opacity-40 grayscale">
+                    <ElEmpty :image-size="80" description="没有找到对话记录" />
                 </div>
             </template>
         </div>
     </div>
 </template>
-
 <script setup lang="ts">
 import dayjs from "dayjs";
 import { useChatHistory } from "../_modules/composables/useChatHistory";
@@ -167,7 +150,51 @@ onMounted(() => {
     fetchChatRecord();
 });
 </script>
+<style scoped lang="scss">
+.modern-new-btn {
+    @apply border-none shadow-light shadow-[#0065fb]/20 transition-all transform;
+    background: linear-gradient(135deg, #0065fb 0%, #2581ff 100%);
+    &:hover {
+        @apply -translate-y-0.5 shadow-light shadow-[#0065fb]/30;
+        filter: brightness(1.1);
+    }
+    &:active {
+        @apply translate-y-0 scale-[0.98];
+    }
+}
 
-<style scoped>
-/* 移除原来的 SCSS 样式 */
+.session-item {
+    @apply flex items-center gap-3 px-3 h-11 cursor-pointer rounded-xl transition-all relative overflow-hidden;
+    @apply text-slate-600 border border-[transparent];
+
+    &:hover {
+        @apply bg-white border-[#e2e8f0]/60  text-slate-900;
+    }
+
+    &.is-active {
+        @apply bg-white border-[#0065fb]/20  shadow-[#0065fb]/5 text-primary font-bold;
+    }
+
+    .session-icon {
+        @apply opacity-30 flex-shrink-0 transition-opacity;
+    }
+    &:hover .session-icon,
+    &.is-active .session-icon {
+        @apply opacity-100;
+    }
+
+    .session-title {
+        @apply text-[13px] truncate flex-1 leading-none;
+    }
+
+    .more-trigger {
+        @apply w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 opacity-0 transition-all;
+        &:hover {
+            @apply bg-slate-100 text-slate-600;
+        }
+    }
+    &:hover .more-trigger {
+        @apply opacity-100;
+    }
+}
 </style>

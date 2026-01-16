@@ -1,134 +1,157 @@
 <template>
     <popup
         ref="popupRef"
-        width="528px"
-        style="
-            padding: 0;
-            background-color: var(--app-bg-color-2);
-            box-shadow: 0px 0px 0px 1px var(--app-border-color-2);
-        "
+        width="650px"
+        style="padding: 0"
+        footer-class="!p-0"
+        header-class="!p-0"
         cancel-button-text=""
         confirm-button-text=""
         :show-close="false"
         @close="close">
-        <div class="rounded-xl overflow-hidden flex flex-col -my-2">
-            <!-- 弹窗头部 -->
-            <div class="flex items-center justify-between h-[50px] px-4">
-                <div class="flex items-center gap-x-2">
-                    <div class="w-6 h-6 flex items-center justify-center rounded-md border border-[#ffffff1a]">
-                        <Icon name="local-icon-windows" :size="14"></Icon>
+        <div class="rounded-[28px] overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between h-[70px] px-6 border-b border-[#F1F5F9] bg-white">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary">
+                        <Icon name="local-icon-windows" :size="20"></Icon>
                     </div>
-                    <div class="text-[20px] text-white font-bold">素材库</div>
+                    <div>
+                        <div class="text-[18px] text-[#1E293B] font-black tracking-tight">素材资源库集</div>
+                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                            Material Resources
+                        </div>
+                    </div>
                 </div>
-                <div class="w-6 h-6 cursor-pointer" @click="close">
-                    <close-btn :theme="ThemeEnum.DARK" />
+                <div class="w-8 h-8" @click="close">
+                    <close-btn :icon-size="10" />
                 </div>
             </div>
 
-            <!-- 搜索栏 -->
-            <div class="px-4 my-4">
-                <div class="flex items-center rounded-full h-[50px] border border-[#2a2a2a] px-[5px]">
+            <div class="px-6 py-4 bg-[#F8FAFC] border-b border-[#F1F5F9]">
+                <div
+                    class="flex items-center rounded-full h-[52px] bg-white border border-br px-1.5 transition-all focus-within:border-[#0065fb]">
                     <ElInput
                         v-model="queryParams.name"
                         class="flex-1 search-input"
                         clearable
                         prefix-icon="el-icon-Search"
-                        placeholder="请输入素材名称"
-                        input-style="color: #ffffff"
+                        placeholder="搜索素材名称..."
                         @clear="search"
-                        @keyup.enter="search"></ElInput>
-                    <ElButton type="primary" class="!text-white !rounded-full !w-[116px] !h-10" @click="search">
+                        @keyup.enter="search">
+                    </ElInput>
+                    <ElButton
+                        type="primary"
+                        class="!rounded-full !w-[100px] !h-[42px] !font-bold !text-sm ! !shadow-[#0065fb]/20"
+                        @click="search">
                         搜索
                     </ElButton>
                 </div>
+
+                <div class="mt-4 px-1" v-if="showTab">
+                    <ElTabs v-model="currentTab" class="custom-tabs" @tab-click="handleTabClick">
+                        <ElTabPane :name="TabTypeEnum.MATERIAL" label="通用素材"></ElTabPane>
+                        <ElTabPane
+                            :name="TabTypeEnum.DH"
+                            label="数字人 V1"
+                            v-if="props.type === MaterialTypeEnum.VIDEO"></ElTabPane>
+                        <ElTabPane
+                            :name="TabTypeEnum.DH_V2"
+                            label="数字人 V2"
+                            v-if="props.type === MaterialTypeEnum.VIDEO"></ElTabPane>
+                    </ElTabs>
+                </div>
             </div>
 
-            <!-- 标签页 -->
-            <div class="px-4" v-if="showTab">
-                <ElTabs v-model="currentTab" class="!text-white" @tab-click="handleTabClick">
-                    <ElTabPane :name="TabTypeEnum.MATERIAL" label="素材库"></ElTabPane>
-                    <ElTabPane
-                        :name="TabTypeEnum.DH"
-                        label="数字人v1"
-                        v-if="props.type === MaterialTypeEnum.VIDEO"></ElTabPane>
-                    <ElTabPane
-                        :name="TabTypeEnum.DH_V2"
-                        label="数字人v2"
-                        v-if="props.type === MaterialTypeEnum.VIDEO"></ElTabPane>
-                </ElTabs>
-            </div>
-
-            <!-- 素材列表 -->
-            <div
-                class="h-[600px] overflow-y-auto relative dynamic-scroller"
-                v-infinite-scroll="load"
-                :infinite-scroll-immediate="false"
-                :infinite-scroll-disabled="isScrollDisabled"
-                :infinite-scroll-distance="10">
-                <div class="h-full" v-loading="pager.loading">
-                    <div v-if="pager.lists.length > 0">
-                        <div class="grid grid-cols-3 gap-2 p-2">
-                            <div v-for="item in pager.lists" :key="item.id" @click="choose(item)">
+            <div class="h-[550px] bg-[#F8FAFC]">
+                <ElScrollbar :distance="20" @end-reached="load">
+                    <div class="p-5" v-loading="pager.loading">
+                        <div v-if="pager.lists.length > 0">
+                            <div class="grid grid-cols-3 gap-4">
                                 <div
-                                    class="card-gradient cursor-pointer bg-black w-full relative h-[210px] flex flex-col overflow-hidden rounded-xl">
-                                    <div class="w-full px-3 absolute z-[22] top-2 pr-[50px]">
-                                        <ElTooltip :content="item.name">
-                                            <div class="line-clamp-1 text-white break-all">
-                                                {{ item.name }}
+                                    v-for="item in pager.lists"
+                                    :key="item.id"
+                                    @click="choose(item)"
+                                    class="group relative flex flex-col bg-white rounded-2xl border transition-all cursor-pointer"
+                                    :class="[
+                                        isChoose(item)
+                                            ? 'border-[#0065fb]  shadow-[#0065fb]/10 scale-[0.98]'
+                                            : 'border-[transparent] ',
+                                    ]">
+                                    <div class="aspect-[3/4] relative overflow-hidden rounded-t-2xl bg-[#E2E8F0]">
+                                        <ElImage
+                                            v-if="props.type === MaterialTypeEnum.IMAGE"
+                                            :src="item.content"
+                                            class="w-full h-full transition-transform duration-500 group-hover:scale-110"
+                                            fit="cover" />
+
+                                        <template v-if="props.type === MaterialTypeEnum.VIDEO">
+                                            <img
+                                                v-if="item.pic"
+                                                :src="item.pic"
+                                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                            <video
+                                                v-else
+                                                :src="item.content || item.video_result_url"
+                                                class="w-full h-full object-cover" />
+
+                                            <div
+                                                class="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-all">
+                                                <div
+                                                    class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white scale-90 group-hover:scale-100 transition-all"
+                                                    @click.stop="handlePreview(item)">
+                                                    <Icon name="el-icon-CaretRight" :size="20"></Icon>
+                                                </div>
                                             </div>
-                                        </ElTooltip>
+                                        </template>
+
+                                        <div
+                                            class="absolute top-2 right-2 z-30 w-6 h-6 rounded-full flex items-center justify-center transition-all"
+                                            :class="[
+                                                isChoose(item)
+                                                    ? 'bg-primary '
+                                                    : 'bg-black/20 backdrop-blur-sm opacity-0 group-hover:opacity-100',
+                                            ]">
+                                            <Icon name="el-icon-Check" :size="14" color="#ffffff"></Icon>
+                                        </div>
                                     </div>
 
-                                    <!-- 图片类型 -->
-                                    <ElImage
-                                        v-if="props.type === MaterialTypeEnum.IMAGE"
-                                        :src="item.content"
-                                        class="w-full h-full rounded-xl"
-                                        preview-teleported
-                                        fit="cover" />
-                                    <!-- 视频类型 -->
-                                    <template v-if="props.type === MaterialTypeEnum.VIDEO">
-                                        <img
-                                            v-if="item.pic"
-                                            :src="item.pic"
-                                            class="w-full h-full rounded-xl object-cover" />
-                                        <video
-                                            v-else
-                                            :src="item.content || item.video_result_url"
-                                            class="w-full h-full rounded-xl object-cover" />
-                                    </template>
-
-                                    <!-- 选中状态 -->
-                                    <div class="absolute top-2 right-2 z-[1000] w-6 h-6 rounded-full">
-                                        <Icon
-                                            name="local-icon-success_fill"
-                                            :size="20"
-                                            :color="isChoose(item) ? 'var(--color-primary)' : '#ffffff1a'"></Icon>
-                                    </div>
-                                    <!-- 视频播放按钮 -->
-                                    <div
-                                        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                                        v-if="props.type === MaterialTypeEnum.VIDEO">
-                                        <div @click.stop="handlePreview(item)">
-                                            <play-btn />
+                                    <div class="p-3 bg-white rounded-b-2xl">
+                                        <div class="text-[12px] font-bold text-[#1E293B] truncate leading-tight">
+                                            {{ item.name || "未命名素材" }}
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            <div class="py-6 text-center">
+                                <span
+                                    v-if="!pager.isLoad"
+                                    class="text-[11px] text-[#94A3B8] font-bold uppercase tracking-widest"
+                                    >End of Content</span
+                                >
+                                <div v-else class="flex items-center justify-center gap-2 text-primary">
+                                    <Icon name="el-icon-Loading"></Icon>
+                                    <span class="text-xs font-bold">正在加载更多...</span>
+                                </div>
+                            </div>
                         </div>
-                        <div v-if="!pager.isLoad" class="text-white text-center text-xs w-full py-4">暂无更多了~</div>
+
+                        <div v-else class="h-[400px] flex flex-col items-center justify-center">
+                            <div
+                                class="w-24 h-24 bg-[#F1F5F9] rounded-full flex items-center justify-center mb-4 text-[#CBD5E1]">
+                                <Icon name="el-icon-FolderOpened" :size="40"></Icon>
+                            </div>
+                            <div class="text-[#94A3B8] font-bold text-sm">此库中暂无素材内容</div>
+                        </div>
                     </div>
-                    <!-- 空状态 -->
-                    <div v-else class="h-full flex items-center justify-center">
-                        <ElEmpty description="暂无数据"></ElEmpty>
-                    </div>
-                </div>
+                </ElScrollbar>
             </div>
 
-            <!-- 底部确认按钮 -->
-            <div class="flex justify-center my-2 px-2" v-if="multiple">
-                <ElButton type="primary" class="!rounded-full w-[318px] !h-[50px]" @click="handleConfirm">
-                    确定
+            <div class="p-4 bg-white border-t border-[#F1F5F9] flex justify-center" v-if="multiple">
+                <ElButton
+                    type="primary"
+                    class="!rounded-full !w-[320px] !h-[50px] !text-[15px] !font-black !shadow-xl !shadow-[#0065fb]/20 active:scale-95 transition-all"
+                    @click="handleConfirm">
+                    确认选择素材
                 </ElButton>
             </div>
         </div>
@@ -146,7 +169,6 @@
 <script setup lang="ts">
 import { getMaterialLibraryList, getDigitalHumanVideo } from "~/api/matrix";
 import { getVideoList as getDigitalHumanVideoList } from "@/api/digital_human";
-import { ThemeEnum } from "@/enums/appEnums";
 import Popup from "@/components/popup/index.vue";
 import { MaterialTypeEnum } from "../_enums";
 import feedback from "@/utils/feedback";
@@ -290,6 +312,7 @@ const choose = (item: MaterialItem) => {
         // 如果已选中，则取消选中
         chooseList.value = chooseList.value.filter((val) => val.id !== item.id);
     } else {
+        console.log(props.limit);
         // 如果未选中，则添加
         if (chooseList.value.length >= props.limit) {
             feedback.msgWarning(`最多只能选择${props.limit}个素材`);
@@ -364,10 +387,12 @@ const handlePreview = async (item: MaterialItem) => {
 /**
  * @description 加载更多数据（无限滚动触发）
  */
-const load = async () => {
-    if (isScrollDisabled.value) return;
-    queryParams.page_no += 1;
-    await getLists();
+const load = async (e: any) => {
+    if (e == "bottom") {
+        if (isScrollDisabled.value || pager.loading || !pager.isLoad) return;
+        queryParams.page_no++;
+        await getLists();
+    }
 };
 
 /**
@@ -404,10 +429,35 @@ defineExpose({
 
 :deep(.search-input) {
     .el-input__wrapper {
-        background-color: transparent;
-        box-shadow: none;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding-left: 15px;
+    }
+    .el-input__inner {
+        font-weight: 600;
+        color: #1e293b;
         &::placeholder {
-            color: rgba(255, 255, 255, 0.2);
+            color: #94a3b8;
+        }
+    }
+}
+
+/* Tabs 美化 */
+:deep(.custom-tabs) {
+    .el-tabs__nav-wrap::after {
+        display: none;
+    }
+    .el-tabs__active-bar {
+        height: 3px;
+        border-radius: 3px;
+        background-color: #4f46e5;
+    }
+    .el-tabs__item {
+        font-weight: 800;
+        font-size: 14px;
+        color: #94a3b8;
+        &.is-active {
+            color: #1e293b;
         }
     }
 }

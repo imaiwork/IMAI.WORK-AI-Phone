@@ -1,85 +1,108 @@
 <template>
-    <div class="h-full flex flex-col bg-white rounded-xl" v-if="!isCreate">
-        <div class="flex items-center justify-between p-4">
-            <ElButton type="primary" @click="handleAddFlow">新建客户流程</ElButton>
-            <div class="flex items-center gap-2">
+    <div class="h-full flex flex-col bg-white rounded-[20px] border border-br overflow-hidden" v-if="!isCreate">
+        <header class="flex items-center justify-between px-[24px] py-[24px] border-b border-br-extra-light">
+            <div class="flex items-center gap-[12px]">
+                <div class="w-[6px] h-[24px] rounded-full bg-primary shadow-sm"></div>
+                <div class="flex flex-col">
+                    <h3 class="text-[18px] font-[900] text-primary leading-none">客户生命周期流程</h3>
+                </div>
+                <ElButton type="primary" class="!rounded-lg !h-[36px] px-[16px] !font-bold" @click="handleAddFlow">
+                    <Icon name="el-icon-Plus" />
+                    <span class="ml-1">新建流程</span>
+                </ElButton>
+            </div>
+
+            <div class="flex items-center gap-[12px]">
                 <ElInput
                     v-model="queryParams.flow_name"
-                    class="!w-[240px]"
+                    class="custom-input"
+                    placeholder="搜索流程方案..."
                     clearable
-                    placeholder="请输入流程名称"
                     @clear="clearSearch"
                     @keyup.enter="resetPage()">
-                    <template #append>
-                        <ElButton @click="resetPage()">
-                            <Icon name="el-icon-Search"></Icon>
-                        </ElButton>
+                    <template #prefix>
+                        <Icon name="el-icon-Search" />
                     </template>
                 </ElInput>
             </div>
-        </div>
-        <div class="grow min-h-0 flex flex-col" v-loading="pager.loading">
-            <div class="grow min-h-0 py-2" v-if="pager.lists.length > 0">
-                <ElScrollbar>
-                    <div class="flex flex-col gap-6 p-4">
+        </header>
+
+        <div class="grow min-h-0 relative bg-page">
+            <ElScrollbar v-if="pager.lists.length > 0" @end-reached="load">
+                <div class="grid grid-cols-1 gap-[20px] p-[24px]">
+                    <div v-for="(item, index) in pager.lists" :key="index" class="flow-card-container group">
                         <div
-                            v-for="(item, index) in pager.lists"
-                            :key="index"
-                            class="h-[160px] flex flex-col rounded-xl shadow-lighter px-4">
-                            <div class="flex items-center justify-between h-[56px]">
-                                <div class="flex items-center gap-4">
-                                    <img src="../../../_assets/images/flow_title_img.png" class="w-6 h-6" />
-                                    <div class="text-lg font-bold">
-                                        {{ item.flow_name }}
-                                    </div>
+                            class="flex items-center justify-between px-[24px] py-[16px] bg-white border-b border-br-extra-light">
+                            <div class="flex items-center gap-[12px]">
+                                <div
+                                    class="w-[40px] h-[40px] rounded-[12px] bg-blue-50 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                                    <Icon name="el-icon-Connection" :size="20" />
                                 </div>
                                 <div>
-                                    <ElButton type="primary" size="small" @click="handleEditFlow(item.id)"
-                                        >编辑</ElButton
-                                    >
-                                    <ElButton type="danger" size="small" @click="handleDeleteFlow(item.id)"
-                                        >删除</ElButton
-                                    >
-                                </div>
-                            </div>
-                            <ElDivider class="!m-0 border-[#E7E7E7]" />
-                            <div class="grow min-h-0">
-                                <div class="h-full flex items-center whitespace-nowrap overflow-x-auto px-6">
                                     <div
-                                        v-for="(value, vIndex) in item.key_stages"
-                                        :key="vIndex"
-                                        class="flex items-center gap-2 w-[200px] flex-shrink-0">
-                                        <div class="flex flex-col items-center gap-2">
-                                            <Icon
-                                                name="el-icon-LocationFilled"
-                                                color="var(--color-primary)"
-                                                :size="20"></Icon>
-                                            <span class="text-[#5E656E]">{{ value.sub_stage_name }}</span>
-                                        </div>
-                                        <div
-                                            class="flex-1 flex justify-center"
-                                            v-if="vIndex < item.key_stages.length - 1">
-                                            <img src="../../../_assets/images/flow_arrow_right.png" class="h-6" />
-                                        </div>
+                                        class="text-[16px] font-[900] text-tx-primary group-hover:text-primary transition-colors">
+                                        {{ item.flow_name }}
+                                    </div>
+                                    <div class="text-[12px] text-tx-secondary">
+                                        包含 {{ item.key_stages?.length || 0 }} 个关键阶段
                                     </div>
                                 </div>
+                            </div>
+                            <div
+                                class="flex gap-[8px] opacity-0 group-hover:opacity-100 transition-all translate-x-[10px] group-hover:translate-x-0">
+                                <ElButton
+                                    class="!rounded-[8px] !font-bold"
+                                    size="small"
+                                    @click="handleEditFlow(item.id)"
+                                    >编辑</ElButton
+                                >
+                                <ElButton
+                                    type="danger"
+                                    plain
+                                    class="!rounded-[8px] !font-bold"
+                                    size="small"
+                                    @click="handleDeleteFlow(item.id)"
+                                    >删除</ElButton
+                                >
+                            </div>
+                        </div>
+
+                        <div class="px-[32px] py-[32px] overflow-x-auto no-scrollbar bg-white rounded-b-xl-custom">
+                            <div class="flex items-center">
+                                <template v-for="(value, vIndex) in item.key_stages" :key="vIndex">
+                                    <div class="flex items-center shrink-0">
+                                        <div class="flex flex-col items-center gap-[12px] relative">
+                                            <div class="node-circle shadow-sm">
+                                                <div class="inner-dot"></div>
+                                                <span
+                                                    class="absolute -top-[8px] -right-[8px] w-[18px] h-[18px] bg-gray-950 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                                                    {{ vIndex + 1 }}
+                                                </span>
+                                            </div>
+                                            <div class="stage-tag">{{ value.sub_stage_name }}</div>
+                                        </div>
+
+                                        <div v-if="vIndex < item.key_stages.length - 1" class="connector-line">
+                                            <div class="arrow"></div>
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
-                </ElScrollbar>
-                <div class="flex justify-end p-4">
-                    <pagination v-model="pager" @change="getLists"></pagination>
                 </div>
-            </div>
-            <div v-else class="h-full flex items-center justify-center">
-                <ElEmpty description="暂无数据"></ElEmpty>
+                <load-text :is-load="pager.isLoad" />
+            </ElScrollbar>
+
+            <div v-else class="h-full flex flex-col items-center justify-center bg-white">
+                <ElEmpty description="暂无流程方案，点击上方按钮新建" :image-size="120" />
             </div>
         </div>
+
         <flow-add-pop v-if="showAdd" ref="flowAddRef" @close="showAdd = false" @success="resetPage" />
     </div>
     <create-panel ref="createPanelRef" v-else @delete="handleDeleteFlow" @back="closeEdit" />
 </template>
-
 <script setup lang="ts">
 import { sopFlowLists, sopFlowDelete } from "@/api/person_wechat";
 import FlowAddPop from "./_components/flow-add.vue";
@@ -90,6 +113,7 @@ const { query } = useRoute();
 const nuxtApp = useNuxtApp();
 const queryParams = reactive({
     flow_name: "",
+    page_no: 1,
 });
 
 const { pager, getLists, resetPage, resetParams } = usePaging({
@@ -101,6 +125,14 @@ const { pager, getLists, resetPage, resetParams } = usePaging({
 const clearSearch = () => {
     queryParams.flow_name = "";
     resetPage();
+};
+
+const load = (e: string) => {
+    if (e === "bottom") {
+        if (!pager.isLoad || pager.loading) return;
+        queryParams.page_no++;
+        getLists();
+    }
 };
 
 const showAdd = ref(false);
@@ -154,5 +186,52 @@ onMounted(() => {
     }
 });
 </script>
+<style scoped lang="scss">
+.flow-card-container {
+    @apply bg-white border border-br rounded-xl overflow-hidden transition-all duration-300;
 
-<style scoped lang="scss"></style>
+    &:hover {
+        @apply border-primary-light-7;
+        box-shadow: var(--el-box-shadow-light);
+    }
+}
+
+.node-circle {
+    @apply w-[44px] h-[44px] rounded-full bg-white border-[3px] border-blue-50 flex items-center justify-center relative z-10 transition-all;
+
+    .inner-dot {
+        @apply w-[10px] h-[10px] rounded-full bg-primary;
+    }
+
+    &:hover {
+        @apply border-primary-light-8 scale-110;
+    }
+}
+
+.stage-tag {
+    @apply text-[13px] font-[900] text-tx-primary bg-gray-50 px-[12px] py-[4px] rounded-[8px] border border-br-extra-light;
+}
+
+.connector-line {
+    @apply w-[60px] h-[2px] bg-gray-100 mx-[4px] relative mb-[32px];
+
+    &::after {
+        content: "";
+        @apply absolute inset-0 bg-gradient-to-r from-[#0065fb]/40 to-[transparent] scale-x-0 origin-left transition-transform duration-500;
+    }
+
+    .arrow {
+        @apply absolute right-0 top-1/2 -translate-y-1/2 w-[6px] h-[6px] border-t-2 border-r-2 border-gray-300 rotate-45;
+    }
+}
+
+.flow-card-container:hover .connector-line {
+    @apply bg-blue-100;
+    &::after {
+        @apply scale-x-100;
+    }
+    .arrow {
+        @apply border-primary-light-5;
+    }
+}
+</style>

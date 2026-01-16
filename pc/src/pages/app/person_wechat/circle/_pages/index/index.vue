@@ -1,8 +1,8 @@
 <template>
     <div class="w-full h-full">
-        <div class="h-full flex gap-x-4">
-            <div class="flex-1 flex rounded-xl overflow-hidden" ref="containerRef">
-                <div class="w-[94px] flex-shrink-0">
+        <div class="h-full flex gap-x-3">
+            <div class="flex-1 flex bg-white rounded-[20px] border border-br overflow-hidden" ref="containerRef">
+                <div class="w-[84px] flex-shrink-0 border-r border-[#F1F5F9] bg-[#F8FAFC]">
                     <SidebarPanel
                         ref="sidebarPanelRef"
                         :current-wechat="currentWechat"
@@ -10,53 +10,71 @@
                         :wechat-list="wechatLists"
                         @update:current-wechat="handleSelectWeChat" />
                 </div>
-                <div class="flex-1 flex flex-col">
-                    <div class="flex justify-between gap-x-4 h-[48px] items-center bg-[#EDEDED] px-4 flex-shrink-0">
-                        <ElAlert type="warning" :closable="false">
-                            <div>朋友圈更新存在一定延迟，如有数据不同步，请多刷新</div>
-                        </ElAlert>
+
+                <div class="flex-1 flex flex-col min-w-0">
+                    <div
+                        class="flex-shrink-0 flex items-center justify-between h-[64px] px-6 bg-white border-b border-[#F1F5F9]">
+                        <div class="flex-1 mr-4">
+                            <div
+                                class="flex items-center text-[13px] text-amber-600 bg-amber-50 px-4 py-2 rounded-xl border border-amber-100">
+                                <Icon name="el-icon-InfoFilled" />
+                                <span class="ml-2">朋友圈更新存在延迟，若数据不同步请点击手动刷新</span>
+                            </div>
+                        </div>
                         <ElButton
-                            link
-                            class="!p-2"
-                            color="#878787"
+                            class="!rounded-xl !h-10 hover:!bg-gray-50 transition-all font-bold border-none bg-gray-100"
                             :loading="circleListsLoading"
                             @click="refreshCircle">
                             <Icon name="el-icon-Refresh" />
-                            <span class="ml-2">刷新</span>
+                            <span class="ml-2">刷新动态</span>
                         </ElButton>
                     </div>
-                    <div class="grow min-h-0 bg-white relative">
+
+                    <div class="grow min-h-0 relative bg-white">
                         <div
-                            v-if="circleListsLoading"
-                            class="absolute w-full h-full z-[888] bg-white flex justify-center items-center">
+                            v-if="circleListsLoading && !circleList.length"
+                            class="absolute inset-0 z-[888] bg-[#ffffff]/80 backdrop-blur-sm flex flex-col justify-center items-center">
                             <loader />
+                            <span class="mt-4 text-[13px] text-tx-placeholder font-medium">正在拉取朋友圈动态...</span>
                         </div>
+
                         <div
                             v-if="currentWechat && currentWechat.wechat_status == 2"
-                            class="absolute w-full h-full flex items-center justify-center z-[999] bg-black/5">
-                            <div class="flex flex-col items-center">
-                                <Icon name="local-icon-wifi_off" :size="50" color="#ffffff"></Icon>
-                                <span class="text-white text-2xl mt-2">设备离线</span>
+                            class="absolute inset-0 z-[999] bg-[#0f172a]/40 backdrop-blur-[2px] flex items-center justify-center p-6">
+                            <div
+                                class="bg-white rounded-[32px] p-10 flex flex-col items-center max-w-[340px] text-center border border-white">
+                                <div class="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-6">
+                                    <Icon name="local-icon-wifi_off" :size="40" class="text-error" />
+                                </div>
+                                <h3 class="text-[20px] font-black text-tx-primary mb-2">当前设备已离线</h3>
+                                <p class="text-[13px] text-tx-placeholder leading-relaxed mb-6">
+                                    该微信设备通信已中断，无法获取最新动态。请在侧边栏检查登录状态。
+                                </p>
                             </div>
                         </div>
+
                         <CircleLists
                             ref="circleListsRef"
                             :circle-list="circleList"
                             @bottom="circleScrollEnd"
                             @preview-video="handlePreviewVideo" />
+
                         <div
                             v-if="circleListsLoad"
-                            class="absolute bottom-0 h-[50px] bg-white z-30 w-full flex justify-center items-center">
-                            <div class="chat-loader"></div>
+                            class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#ffffff]/90 backdrop-blur px-6 py-2 rounded-full shadow-light border border-primary-light-9 z-30 flex items-center gap-3">
+                            <div class="chat-loader !scale-75"></div>
+                            <span class="text-[12px] font-bold text-primary">正在载入更多动态...</span>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="w-[462px] rounded-xl overflow-hidden">
+
+            <!-- <div class="w-[462px] flex-shrink-0 bg-white rounded-[24px] shadow-sm border border-br overflow-hidden">
                 <CircleSend v-model="circleSendForm" :is-show-we-chat="false" @success="refreshCircle()" />
-            </div>
+            </div> -->
         </div>
     </div>
+
     <ElImageViewer
         v-if="showImageViewer"
         :url-list="imageViewerUrlList"
@@ -64,10 +82,10 @@
         @close="showImageViewer = false" />
     <preview-video ref="previewVideoRef" v-if="showVideoViewer" @close="showVideoViewer = false" />
 </template>
-
 <script setup lang="ts">
 import { dayjs } from "element-plus";
 import { getWeChatLists } from "@/api/person_wechat";
+import { MaterialTypeEnum } from "@/pages/app/person_wechat/_enums";
 import CircleLists from "./circle-lists.vue";
 import CircleSend from "../../_components/circle-send.vue";
 import SidebarPanel from "../../../chat/_components/sidebar-panel.vue";
@@ -84,13 +102,14 @@ const circleListsRef = ref<InstanceType<typeof CircleLists> | null>(null);
 const containerRef = ref<HTMLElement | null>(null);
 
 const circleSendForm = reactive<any>({
+    name: `朋友圈任务${dayjs().format("YYYYMMDDHHmm")}`,
     content: "",
-    task_type: 0,
-    attachment_type: -1,
-    attachment_content: null,
+    attachment_type: MaterialTypeEnum.IMAGE,
+    attachment_content: [],
     comment: "",
-    send_time: dayjs().add(30, "minute").format("YYYY-MM-DD HH:mm:ss"),
+    date: dayjs().format("YYYY-MM-DD"),
     wechat_ids: [],
+    time_config: ["00:00", "00:30"],
 });
 
 const circleList = ref<any[]>([]);
@@ -515,5 +534,33 @@ onUnmounted(() => {
     currentWechat.value = {} as any;
 });
 </script>
+<style scoped lang="scss">
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.4s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
 
-<style scoped></style>
+/* 滚动条美化 */
+.custom-scrollbar {
+    &::-webkit-scrollbar {
+        width: 4px;
+    }
+    &::-webkit-scrollbar-thumb {
+        @apply bg-gray-200 rounded-full hover:bg-gray-300 transition-all;
+    }
+}
+
+/* 覆盖组件样式 */
+:deep(.sidebar-panel) {
+    @apply h-full border-[none] bg-[transparent];
+}
+
+/* Loader 样式对齐 */
+:deep(.loader) {
+    transform: scale(0.85);
+}
+</style>

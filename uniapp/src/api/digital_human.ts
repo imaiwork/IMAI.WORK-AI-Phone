@@ -249,3 +249,8 @@ export const deleteSoraRole = (data: Record<string, any>) => {
 export const editSoraRole = (data: Record<string, any>) => {
     return request.post({ url: "/sora.SoraAnchor/update", data });
 };
+
+// 批量克隆形象
+export const batchCloneAnchor = (data: Record<string, any>) => {
+    return request.post({ url: "/digitalHuman/createAnchor", data });
+};

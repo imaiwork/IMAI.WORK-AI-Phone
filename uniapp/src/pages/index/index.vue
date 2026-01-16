@@ -40,15 +40,13 @@
                             }">
                             <view
                                 class="px-4 h-full flex items-center justify-between"
-                                @click="toPage(isDevice == 1 ? PageKeyEnum.DEVICE_BIND : PageKeyEnum.DEVICE_CONFIG)">
+                                @click="toPage(isLogin ? PageKeyEnum.DEVICE_BIND : PageKeyEnum.DEVICE_CONFIG)">
                                 <view>
                                     <view class="text-[34rpx] text-white font-bold">24h全自动工作 省心托管</view>
                                     <view
                                         class="rounded-full bg-white text-xs font-bold h-[56rpx] w-[220rpx] mt-2 flex items-center justify-center gap-x-1">
-                                        <template v-if="isDevice != 1">
-                                            {{ isDevice == 2 ? "一键开启托管" : "请先绑定设备"
-                                            }}<u-icon name="arrow-right" :size="16"></u-icon>
-                                        </template>
+                                        {{ isLogin ? "一键开启托管" : "请先登录"
+                                        }}<u-icon name="arrow-right" :size="16"></u-icon>
                                     </view>
                                 </view>
                                 <view class="mr-3 mt-4">
@@ -241,8 +239,8 @@ const quickApplicationList = [
         icon: "index_img_1.png",
     },
     {
-        key: PageKeyEnum.DIGITAL_PERSON_CLONE,
-        name: "数字人克隆",
+        key: PageKeyEnum.DH,
+        name: "数字人",
         icon: "index_img_2.png",
     },
     {
@@ -348,7 +346,7 @@ const appStore = useAppStore();
 const userStore = useUserStore();
 const { chatConfig } = toRefs(appStore);
 const websiteConfig = computed(() => appStore.getWebsiteConfig);
-const { userTokens } = toRefs(userStore);
+const { userTokens, isLogin } = toRefs(userStore);
 const tokensValue = userStore.getTokenByScene(TokensSceneEnum.CHAT)?.score;
 
 // 组件引用
@@ -367,8 +365,6 @@ const fileList = ref<FileInfo[]>([]);
 const chatContentList = ref<ChatMessage[]>([]);
 const taskId = ref<string>("");
 const recordLists = ref<any[]>([]);
-
-const isDevice = ref(1);
 
 // 流式请求读取器
 let streamReader: any = null;
@@ -641,12 +637,6 @@ const init = async (options?: Record<string, any>) => {
         isAgent.value = true;
         await nextTick();
         chattingRef.value?.openKeyboard();
-    }
-    try {
-        const { count } = await getDeviceList({ page_no: 1, page_size: 1 });
-        isDevice.value = count > 0 ? 2 : 3;
-    } catch (error) {
-        isDevice.value = 3;
     }
 };
 

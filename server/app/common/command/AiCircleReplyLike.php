@@ -23,7 +23,7 @@ class AiCircleReplyLike extends Command
 
     protected function execute(Input $input, Output $output)
     {
-        StrategyLogic::execCircleReplyLikeStrategy();
+        //StrategyLogic::execCircleReplyLikeStrategy();
         return true;
     }
 }

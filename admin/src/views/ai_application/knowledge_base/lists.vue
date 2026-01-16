@@ -36,12 +36,6 @@
         </el-card>
         <el-card class="!border-none mt-4" shadow="never">
             <div class="mb-4">
-                <el-tabs v-model="activeTab" @tab-click="handleTabClick">
-                    <el-tab-pane label="向量知识库" :name="KnowledgeType.VECTOR"></el-tab-pane>
-                    <el-tab-pane label="RAG知识库" :name="KnowledgeType.RAG"></el-tab-pane>
-                </el-tabs>
-            </div>
-            <div class="mb-4">
                 <el-button
                     v-perms="['ai_application.interview.record/del']"
                     type="default"

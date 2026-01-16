@@ -170,4 +170,12 @@ class VoiceLogic extends ApiLogic
             return false;
         }
     }
+
+    public static function musicLists(){
+        for ($i = 1; $i <= 20; $i++) {
+            $music[] = config('app.app_host') . '/static/audio/music/' . $i . '.mp3';
+        }
+        self::$returnData = $music;
+        return true;
+    }
 }

@@ -27,6 +27,7 @@ class SoraVideoTaskCron extends Command
     {
         SoraVideoSettingLogic::checkStatus();
         SoraVideoTaskLogic::checkStatus();
+        SoraAnchorLogic::checkVideoStatus();
         SoraAnchorLogic::checkStatus();
         return true;
     }

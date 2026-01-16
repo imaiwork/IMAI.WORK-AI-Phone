@@ -1,127 +1,187 @@
 <template>
-    <div class="h-full flex flex-col bg-app-bg-2 rounded-[20px]" v-if="!isCreate">
-        <div class="flex-shrink-0 px-[14px] border-[0] border-b-[1px] border-app-border-1">
-            <ElScrollbar>
-                <div class="flex items-center justify-end h-[88px]">
-                    <div class="flex items-center gap-[14px]">
-                        <ElSelect
-                            v-model="queryParams.copywriting_type"
-                            class="!w-[100px]"
-                            popper-class="dark-select-popper"
-                            clearable
-                            :show-arrow="false"
-                            :empty-values="[null, undefined]"
-                            :value-on-clear="null"
-                            @change="resetPage()">
-                            <ElOption label="全部" value=""></ElOption>
-                            <ElOption label="口播文案" :value="CopywritingTypeEnum.CONTENT"></ElOption>
-                            <ElOption label="内容文案" :value="CopywritingTypeEnum.TITLE"></ElOption>
-                        </ElSelect>
+    <div class="h-full flex flex-col bg-white rounded-[20px] overflow-hidden border border-br" v-if="!isCreate">
+        <div class="flex-shrink-0 px-6 border-b border-br bg-white">
+            <div class="flex items-center justify-between h-[80px]">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary">
+                        <Icon name="el-icon-Document" :size="20"></Icon>
+                    </div>
+                    <div>
+                        <div class="text-[18px] text-[#1E293B] font-black tracking-tight">智能文案库</div>
+                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                            Total: {{ pager.lists.length }} Scripts
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <ElSelect
+                        v-model="queryParams.copywriting_type"
+                        class="!w-[120px] custom-select-pill"
+                        clearable
+                        placeholder="文案类型"
+                        :show-arrow="false"
+                        @change="resetPage()">
+                        <ElOption label="全部类型" value=""></ElOption>
+                        <ElOption label="口播文案" :value="CopywritingTypeEnum.CONTENT"></ElOption>
+                        <ElOption label="内容文案" :value="CopywritingTypeEnum.TITLE"></ElOption>
+                    </ElSelect>
+
+                    <div
+                        class="flex items-center rounded-full h-[40px] border border-br px-1 transition-all focus-within:border-[#0065fb]">
                         <ElInput
                             v-model="queryParams.name"
-                            prefix-icon="el-icon-Search"
-                            class="!w-[240px] search-name-input"
-                            placeholder="请输入素材名称"
+                            class="!w-[200px] search-input"
                             clearable
+                            prefix-icon="el-icon-Search"
+                            placeholder="搜索文案名称..."
                             @clear="resetPage()"
                             @keydown.enter="resetPage()">
-                            <template #append>
-                                <ElButton text @click="resetPage()"> 搜索 </ElButton>
-                            </template>
                         </ElInput>
                         <ElButton
                             type="primary"
-                            class="!rounded-full !h-10 !px-4"
-                            @click="handleEdit(CopywritingTypeEnum.CONTENT)">
-                            <Icon name="local-icon-add_circle" color="#ffffff"></Icon>
-                            <span class="ml-2">新增口播文案</span>
+                            class="!rounded-full !h-[32px] !px-4 !text-xs !font-bold"
+                            @click="resetPage()">
+                            搜索
                         </ElButton>
-                        <div>
-                            <ElButton
-                                type="primary"
-                                class="!rounded-full !h-10 !px-4"
-                                @click="handleEdit(CopywritingTypeEnum.TITLE)">
-                                <Icon name="local-icon-add_circle" color="#ffffff"></Icon>
-                                <span class="ml-2">新增内容文案</span>
+                    </div>
+
+                    <div class="w-[1px] h-6 bg-[#E2E8F0] mx-2"></div>
+                    <ElPopover
+                        placement="bottom-start"
+                        :width="220"
+                        trigger="hover"
+                        popper-class="!rounded-2xl !p-2 !border-slate-100 "
+                        :offset="12">
+                        <template #reference>
+                            <ElButton type="primary" class="!h-11 !px-6 !rounded-xl">
+                                <div class="flex items-center">
+                                    <Icon name="local-icon-add_circle" color="#ffffff" :size="16"></Icon>
+                                    <span class="ml-2 tracking-wide">新建文案</span>
+                                    <span class="ml-2 opacity-70 group-hover:rotate-180 transition-transform">
+                                        <Icon name="el-icon-ArrowDown" :size="12"></Icon>
+                                    </span>
+                                </div>
                             </ElButton>
+                        </template>
+
+                        <div class="flex flex-col gap-1 p-1">
+                            <div class="menu-item" @click="handleEdit(CopywritingTypeEnum.TITLE)">
+                                <div class="icon-wrapper bg-blue-50">
+                                    <Icon name="el-icon-Microphone" color="var(--color-primary)" :size="14"></Icon>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="menu-title">口播文案</span>
+                                    <span class="menu-desc">适用于短视频脚本</span>
+                                </div>
+                            </div>
+
+                            <div class="menu-item" @click="handleEdit(CopywritingTypeEnum.CONTENT)">
+                                <div class="icon-wrapper bg-[#eef2ff]">
+                                    <Icon name="el-icon-Document" color="#6366f1" :size="14"></Icon>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="menu-title">内容文案</span>
+                                    <span class="menu-desc">适用于朋友圈、社群</span>
+                                </div>
+                            </div>
                         </div>
-                        <ElTooltip content="刷新">
-                            <ElButton
-                                circle
-                                color="#1f1f1f"
-                                icon="el-icon-Refresh"
-                                class="!w-10 !h-10"
-                                @click="resetPage()"></ElButton>
-                        </ElTooltip>
+                    </ElPopover>
+                </div>
+            </div>
+        </div>
+
+        <div class="grow min-h-0 bg-[#F8FAFC]">
+            <ElScrollbar :distance="20" @end-reached="load">
+                <div class="p-6">
+                    <template v-if="pager.lists.length > 0">
+                        <div
+                            v-if="pager.lists.length > 0"
+                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                            <div
+                                v-for="item in pager.lists"
+                                :key="item.id"
+                                @click="handleEdit(item.copywriting_type, item.id)"
+                                class="group relative bg-white rounded-[20px] p-5 border border-br transition-all hover:shadow-xl hover:shadow-[#0065fb]/10 hover:-translate-y-1 cursor-pointer flex flex-col h-[240px]">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div
+                                        class="w-10 h-10 rounded-lg bg-[#F8FAFC] group-hover:bg-[#0065fb]/10 group-hover:text-primary flex items-center justify-center transition-colors">
+                                        <Icon
+                                            :name="
+                                                item.copywriting_type === CopywritingTypeEnum.CONTENT
+                                                    ? 'el-icon-Mic'
+                                                    : 'el-icon-CollectionTag'
+                                            "
+                                            :size="20"></Icon>
+                                    </div>
+                                    <span
+                                        class="text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider"
+                                        :class="
+                                            item.copywriting_type === CopywritingTypeEnum.CONTENT
+                                                ? 'bg-[#EEF2FF] text-primary'
+                                                : 'bg-[#F0FDF4] text-[#22C55E]'
+                                        ">
+                                        {{
+                                            item.copywriting_type === CopywritingTypeEnum.CONTENT
+                                                ? "内容文案"
+                                                : "口播文案"
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div class="flex-1 min-w-0">
+                                    <h4
+                                        class="text-[15px] font-black text-[#1E293B] mb-2 line-clamp-1 group-hover:text-primary transition-colors">
+                                        {{ item.name || "未命名文案" }}
+                                    </h4>
+                                    <p
+                                        class="text-[12px] text-[#64748B] leading-relaxed line-clamp-3 italic opacity-80">
+                                        “{{ getCopywritingContent(item) }}”
+                                    </p>
+                                </div>
+
+                                <div class="mt-4 pt-4 border-t border-[#F1F5F9] flex items-center justify-between">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-[11px] text-[#94A3B8] font-medium">{{
+                                            item.create_time
+                                        }}</span>
+                                    </div>
+                                    <div class="w-6 h-6">
+                                        <handle-menu horizontal :data="item" :menu-list="utilsMenuList" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <load-text :is-load="pager.isLoad"></load-text>
+                    </template>
+                    <div
+                        v-if="pager.lists.length === 0 && !pager.loading"
+                        class="h-[500px] flex flex-col items-center justify-center">
+                        <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4">
+                            <Icon name="el-icon-DocumentDelete" :size="32" color="#CBD5E1"></Icon>
+                        </div>
+                        <p class="text-[#94A3B8] font-bold text-sm">文案库空空如也，快去创作吧</p>
                     </div>
                 </div>
             </ElScrollbar>
         </div>
-        <div
-            class="grow min-h-0 overflow-y-auto flex flex-col dynamic-scroller"
-            :infinite-scroll-immediate="false"
-            :infinite-scroll-disabled="!pager.isLoad"
-            :infinite-scroll-distance="10"
-            v-infinite-scroll="load">
-            <div class="h-full p-4" v-loading="pager.loading">
-                <div v-if="pager.lists.length">
-                    <div
-                        v-if="pager.lists.length"
-                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                        <div
-                            v-for="(item, index) in pager.lists"
-                            class="material-item group"
-                            :key="index"
-                            @click="handleEdit(item.copywriting_type, item.id)">
-                            <div class="w-full px-3 absolute z-[22] top-2">
-                                <div class="line-clamp-1 text-white">
-                                    {{ item.name }}
-                                </div>
-                            </div>
-                            <div
-                                class="absolute w-full h-full left-0 top-0 px-3 z-[22] flex flex-col items-center justify-center">
-                                <div class="title-text">
-                                    {{ copywritingTypeEnumMap[item.copywriting_type] || "文案" }}
-                                </div>
-                                <div class="text-[#ffffff80] mt-[14px]">
-                                    {{ item.create_time }}
-                                </div>
-                            </div>
-                            <div class="absolute right-2 top-2 z-[1000] w-9 h-9 invisible group-hover:visible">
-                                <handle-menu :theme="ThemeEnum.DARK" :data="item" :menu-list="utilsMenuList" />
-                            </div>
-                            <img src="../../../_assets/images/copywriting_bg.png" class="w-full h-full object-cover" />
-                        </div>
-                    </div>
-                    <div v-if="!pager.isLoad" class="text-white text-center text-xs w-full py-4">暂无更多了~</div>
-                </div>
-                <div class="h-full flex items-center justify-center" v-else>
-                    <Empty
-                        btn-text="创建文案"
-                        msg="快去创建你的文案吧"
-                        :custom-click="() => handleEdit(CopywritingTypeEnum.TITLE)" />
-                </div>
-            </div>
-        </div>
-        <edit-popup v-if="showEditPopup" ref="editPopupRef" @close="showEditPopup = false" @success="resetPage()" />
+        <rename-pop
+            v-if="showRenamePopup"
+            ref="renamePopupRef"
+            :fetch-fn="updateCopywritingLibrary"
+            @close="showRenamePopup = false"
+            @success="getUpdateCopywritingLibrary"></rename-pop>
     </div>
     <create-panel :type="copywritingType" v-else @back="back" />
 </template>
 
 <script setup lang="ts">
-import { ThemeEnum, AppTypeEnum } from "@/enums/appEnums";
-import { getCopywritingLibraryList, deleteCopywritingLibrary } from "@/api/matrix";
+import { AppTypeEnum } from "@/enums/appEnums";
+import { getCopywritingLibraryList, deleteCopywritingLibrary, updateCopywritingLibrary } from "@/api/matrix";
 import { HandleMenuType } from "@/components/handle-menu/typings";
 import { CopywritingTypeEnum, SidebarTypeEnum } from "@/pages/app/matrix/_enums";
-import Empty from "@/pages/app/matrix/_components/empty.vue";
 import CreatePanel from "./_components/create-panel.vue";
-import EditPopup from "./_components/edit.vue";
 const route = useRoute();
-
-const copywritingTypeEnumMap = {
-    [CopywritingTypeEnum.TITLE]: "内容文案",
-    [CopywritingTypeEnum.CONTENT]: "口播文案",
-};
 
 const queryParams = reactive({
     name: "",
@@ -137,31 +197,33 @@ const { pager, getLists, resetPage } = usePaging({
     isScroll: true,
 });
 
-const load = () => {
-    queryParams.page_no++;
-    getLists();
+const load = async (e: any) => {
+    if (e == "bottom") {
+        if (!pager.isLoad || pager.loading) return;
+        queryParams.page_no++;
+        await getLists();
+    }
 };
 
-const showEditPopup = ref(false);
-const editPopupRef = ref<InstanceType<typeof EditPopup>>();
+const showRenamePopup = ref(false);
+const renamePopupRef = shallowRef();
 const utilsMenuList: HandleMenuType[] = [
     {
         label: "重命名",
         icon: "local-icon-edit3",
         click: async (data) => {
-            showEditPopup.value = true;
+            showRenamePopup.value = true;
             await nextTick();
-            editPopupRef.value.open();
-            editPopupRef.value.setFormData(data);
+            renamePopupRef.value?.open();
+            renamePopupRef.value?.setFormData({ id: data.id, name: data.name });
         },
     },
     {
-        label: "删除素材",
+        label: "删除文案",
         icon: "local-icon-delete",
         click: ({ id }) => {
             useNuxtApp().$confirm({
-                message: "确定删除该视频吗？",
-                theme: "dark",
+                message: "确定删除该文案吗？",
                 onConfirm: async () => {
                     try {
                         await deleteCopywritingLibrary({ id });
@@ -197,6 +259,32 @@ const back = () => {
     resetPage();
 };
 
+const getCopywritingContent = (data: any) => {
+    const { copywriting_type, oral_copy, described } = data;
+
+    const countStr = (key: string, arr: any[]) => {
+        if (arr && arr.length > 0) {
+            return arr.reduce(
+                (acc: string, curr: any, index: number) =>
+                    acc + `“${curr.content}”` + (index !== arr.length - 1 ? "、" : ""),
+                ""
+            );
+        }
+    };
+    if (copywriting_type == CopywritingTypeEnum.TITLE) {
+        return countStr("described", described);
+    }
+    if (copywriting_type == CopywritingTypeEnum.CONTENT) {
+        return countStr("oral_copy", oral_copy);
+    }
+    return "暂无文案内容...";
+};
+
+const getUpdateCopywritingLibrary = (data: any) => {
+    pager.lists.find((item) => item.id == data.id).name = data.name;
+    showRenamePopup.value = false;
+};
+
 getLists();
 </script>
 
@@ -210,13 +298,53 @@ getLists();
         pointer-events: none;
     }
 }
-.title-text {
-    padding: 8px 22px;
-    border-radius: 1000px;
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(56, 56, 56, 0.3) 100%);
-    box-shadow: 0px 6px 12px 0px rgba(0, 0, 0, 0.24);
-    backdrop-filter: blur(6px);
+:deep(.search-input) {
+    .el-input__wrapper {
+        background: transparent !important;
+        box-shadow: none !important;
+        padding-left: 10px;
+    }
+    .el-input__inner {
+        font-weight: 600;
+        font-size: 13px;
+        color: #1e293b;
+        &::placeholder {
+            color: #94a3b8;
+        }
+    }
+}
+.menu-item {
+    @apply flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 hover:bg-slate-50;
+
+    .icon-wrapper {
+        @apply w-8 h-8 rounded-lg flex items-center justify-center shrink-0;
+    }
+
+    .menu-title {
+        @apply text-[14px] font-black text-slate-800 leading-none;
+    }
+
+    .menu-desc {
+        @apply text-[11px] text-slate-400 font-medium mt-1;
+    }
+
+    &:hover {
+        .menu-title {
+            @apply text-primary;
+        }
+        .icon-wrapper {
+            @apply bg-[#0065fb]/10;
+        }
+    }
+}
+
+:deep(.custom-select-pill) {
+    .el-select__wrapper {
+        border-radius: 99px !important;
+        height: 40px !important;
+        &.is-focus {
+            box-shadow: 0 0 0 1px #4f46e5 inset !important;
+        }
+    }
 }
 </style>

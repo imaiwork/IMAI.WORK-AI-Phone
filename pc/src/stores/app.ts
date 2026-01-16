@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { robotCategory } from "@/api/robot";
 import { getConfig, getScenePrompt, checkSurvey, checkOem } from "@/api/app";
-import { getChatConfig } from "@/api/chat";
+import { getChatConfig as getChatConfigApi } from "@/api/chat";
 interface AppSate {
     config: Record<string, any>;
     menuList: any[];
@@ -27,6 +27,7 @@ export const useAppStore = defineStore("appStore", {
         oem: {},
     }),
     getters: {
+        getChatData: (state) => state.chatConfig || {},
         getWebsiteConfig: (state) => state.config.website || {},
         getCopyright: (state) => state.config.copyright || "",
         getVersion: (state) => state.config.version || "",
@@ -52,8 +53,7 @@ export const useAppStore = defineStore("appStore", {
             this.menuList = data.lists;
         },
         async getChatConfig() {
-            const data = await getChatConfig();
-            this.uploadAssistantId = data.assistants_id;
+            const data = await getChatConfigApi();
             this.chatConfig = data;
         },
         async getSurvey() {

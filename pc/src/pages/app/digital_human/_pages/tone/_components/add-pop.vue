@@ -3,14 +3,14 @@
         ref="popupRef"
         width="400px"
         async
-        style="padding: 18px; background-color: var(--app-bg-color-2)"
+        style="padding: 18px"
         confirm-button-text=""
         cancel-button-text=""
         :show-close="false"
         @close="close">
         <div class="-my-4">
             <div class="w-6 h-6 absolute top-4 right-4" @click="close">
-                <close-btn :theme="ThemeEnum.DARK" />
+                <close-btn />
             </div>
             <div class="flex items-center gap-x-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -19,11 +19,11 @@
                     <path d="M14 8V12" stroke="white" stroke-width="1.2" />
                     <path d="M10 6V14" stroke="white" stroke-width="1.2" />
                 </svg>
-                <span class="text-white font-bold text-[20px]">上传本地音频</span>
+                <span class="font-bold text-[20px]">上传本地音频</span>
             </div>
-            <div class="flex items-center gap-x-1 rounded-full bg-[#ffffff08] p-1 mt-5 w-fit">
-                <Icon name="local-icon-tips" :size="16"></Icon>
-                <span class="text-[#ffffff4d] text-xs">注意：请根据性别上传对应的音频文件素材。</span>
+            <div class="flex items-center gap-x-1 rounded-full p-1 mt-5 w-fit">
+                <Icon name="local-icon-tips2" :size="16"></Icon>
+                <span class="text-xs">注意：请根据性别上传对应的音频文件素材。</span>
             </div>
             <ElForm
                 class="mt-[17px]"
@@ -33,13 +33,16 @@
                 label-position="top"
                 :disabled="isLock">
                 <ElFormItem label="音色名称" prop="name">
-                    <ElInput v-model="formData.name" class="!h-11" placeholder="请输入音色名称" maxlength="30" />
+                    <ElInput
+                        v-model="formData.name"
+                        class="!h-11 custom-input"
+                        placeholder="请输入音色名称"
+                        maxlength="30" />
                 </ElFormItem>
                 <ElFormItem label="使用模型" prop="model_version">
                     <ElSelect
                         v-model="formData.model_version"
-                        class="!h-11"
-                        popper-class="dark-select-popper"
+                        class="!h-11 custom-select"
                         :show-arrow="false"
                         placeholder="请选择模型">
                         <ElOption
@@ -70,17 +73,16 @@
                         type="audio"
                         list-type="text"
                         :limit="1"
-                        :max-size="10"
+                        :max-size="maxSize"
                         :accept="getAccept"
                         @success="handleFileSuccess">
-                        <div class="h-[166px] bg-app-bg-1 rounded-lg flex flex-col justify-center items-center">
+                        <div class="h-[166px] bg-[#f8fafc] rounded-lg flex flex-col justify-center items-center">
                             <div
-                                class="w-12 h-12 rounded-xl flex items-center justify-center border border-dashed border-[#ffffff1a] hover:border-[#ffffff33] cursor-pointer mt-8 flex-shrink-0">
-                                <Icon name="el-icon-Plus" color="#ffffff"></Icon>
+                                class="w-12 h-12 rounded-xl flex items-center justify-center border border-dashed border-[#0000001a] hover:border-[#00000033] cursor-pointer mt-5 flex-shrink-0">
+                                <Icon name="el-icon-Plus"></Icon>
                             </div>
-                            <div class="text-white text-xs mt-3">上传录音文件</div>
-                            <div class="text-xs text-[rgba(255,255,255,0.3)] text-center mt-4">
-                                文件不超过20MB,不支持gif/avif等音频格式以外的文件
+                            <div class="text-xs text-[#00000080] text-center mt-4">
+                                文件不超过{{ maxSize }}MB,不支持gif/avif等音频格式以外的文件
                             </div>
                         </div>
                     </upload>
@@ -156,6 +158,8 @@ const formRules = {
     model_version: [{ required: true, message: "请选择模型" }],
 };
 
+const maxSize = 10;
+
 const getAccept = computed(() => {
     return ".mp3,.m4a,.wav";
 });
@@ -216,27 +220,7 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
-@import "@/pages/app/_assets/styles/index.scss";
-
 :deep(.el-upload-dragger) {
     padding: 0;
-    border-color: var(--app-border-color-1);
-    background-color: transparent;
-    border-radius: 10px;
-    &:hover {
-        border-color: #ffffff33;
-    }
-    &.is-dragover {
-        border-width: 1px;
-        border-color: #ffffff33;
-    }
-}
-
-:deep(.el-form) {
-    .el-form-item {
-        &__label {
-            color: #ffffff;
-        }
-    }
 }
 </style>

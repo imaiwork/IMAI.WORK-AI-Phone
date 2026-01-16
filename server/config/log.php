@@ -140,6 +140,12 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
+        'ffmpeg' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/ffmpeg/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
         // 其它日志通道配置
     ],
 

@@ -31,8 +31,11 @@
             <el-tab-pane label="AI视频获客">
                 <ConfigTable :data="getSphConfig" />
             </el-tab-pane>
-            <el-tab-pane label="小红书">
-                <ConfigTable :data="getRedbookConfig" />
+            <el-tab-pane label="矩阵">
+                <ConfigTable :data="getMatrixConfig" />
+            </el-tab-pane>
+            <el-tab-pane label="AI手机">
+                <ConfigTable :data="getPhoneAutoConfig" />
             </el-tab-pane>
             <el-tab-pane label="其他">
                 <ConfigTable :data="getOtherConfig" />
@@ -96,6 +99,7 @@ const getAiPersonConfig = computed(() => {
             "sora_pro_video_create",
             "sora_copywriting_create",
             "human_avatar_sora",
+            "sora_draw_avatar",
         ].includes(item.scene)
     );
 });
@@ -151,7 +155,7 @@ const getKnbConfig = computed(() => {
     );
 });
 
-const getRedbookConfig = computed(() => {
+const getMatrixConfig = computed(() => {
     return tableData.value.filter((item) =>
         ["keyword_to_title", "keyword_to_subtitle", "keyword_to_copywriting"].includes(item.scene)
     );
@@ -166,6 +170,23 @@ const getSphConfig = computed(() => {
             "sph_search_terms",
             "sph_ocr",
             "sph_local_ocr",
+        ].includes(item.scene)
+    );
+});
+
+const getPhoneAutoConfig = computed(() => {
+    return tableData.value.filter((item: any) =>
+        [
+            "automation_social_media_released",
+            "automation_shut_off_comments",
+            "automation_shut_off_obtain",
+            "automation_shut_off_private_letter",
+            "automation_friends_circle_comments",
+            "automation_friends_circle_released",
+            "automation_friends_circle_praise",
+            "automation_wechat_add_friend",
+            "automation_social_media_obtain",
+            "automation_social_media_nursing",
         ].includes(item.scene)
     );
 });

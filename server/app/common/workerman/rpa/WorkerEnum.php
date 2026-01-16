@@ -56,7 +56,10 @@ class WorkerEnum
     public const RPA_ACTIVE_TASK_COMPLETED = 41; #养号任务完成
     public const RPA_ACTIVE_TASK_RESULT_SAVE = 42; #养号任务结果保存
 
-    public const RPA_ADD_WECHAT_TASK_SEND = 50; //加微信任务发送
+    public const RPA_ADD_WECHAT_TASK_NOTICE = 50; //加微信任务通知
+    public const RPA_WECHAT_CIRCLE_LIKE_COMMENT = 52; #微信圈点赞评论
+
+
 
     public const RPA_DEVICE_APP_EXEC_SEND = 90; #设备应用执行发送
     public const RPA_DEVICE_APP_EXEC = 91; #设备应用执行

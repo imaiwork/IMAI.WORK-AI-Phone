@@ -50,4 +50,12 @@ class VoiceController extends BaseApiController
             return $this->fail('fail');
         }
     }
+
+    public function musicLists()
+    {
+        $result = VoiceLogic::musicLists();
+        if ($result) {
+            return $this->data(VoiceLogic::getReturnData());
+        }
+    }
 }

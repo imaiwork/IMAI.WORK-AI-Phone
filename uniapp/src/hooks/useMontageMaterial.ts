@@ -29,6 +29,7 @@ export const montageConfig = {
 };
 
 export default function useMontageMaterial(options: {
+    isTranscode?: boolean;
     count?: number;
     imageAccept?: string[];
     imageSize?: number;
@@ -43,6 +44,7 @@ export default function useMontageMaterial(options: {
     const appStore = useAppStore();
 
     const {
+        isTranscode = false,
         count = 9,
         imageAccept = montageConfig.imageAccept,
         imageSize = montageConfig.imageSize,
@@ -115,18 +117,18 @@ export default function useMontageMaterial(options: {
                         const { width, height } = await uni.getImageInfo({
                             src: file.tempFilePath,
                         });
-                        if (!imageAccept.includes(file.name.split(".").pop())) {
-                            uni.$u.toast(`图片格式必须是${imageAccept.join("、")}`);
-                            continue;
-                        }
-                        if (width > imageResolution[0] || height > imageResolution[1]) {
-                            uni.$u.toast(`图片分辨率不能超过${imageResolution[0]}*${imageResolution[1]}`);
-                            continue;
-                        }
-                        if (file.size > imageSize * 1024 * 1024) {
-                            uni.$u.toast(`图片大小不能超过${imageSize}M`);
-                            continue;
-                        }
+                        // if (!imageAccept.includes(file.name.split(".").pop())) {
+                        //     uni.$u.toast(`图片格式必须是${imageAccept.join("、")}`);
+                        //     continue;
+                        // }
+                        // if (width > imageResolution[0] || height > imageResolution[1]) {
+                        //     uni.$u.toast(`图片分辨率不能超过${imageResolution[0]}*${imageResolution[1]}`);
+                        //     continue;
+                        // }
+                        // if (file.size > imageSize * 1024 * 1024) {
+                        //     uni.$u.toast(`图片大小不能超过${imageSize}M`);
+                        //     continue;
+                        // }
                         fileList.push({ ...file, materialType: "image" });
                     } catch (error) {
                         continue;
@@ -137,20 +139,20 @@ export default function useMontageMaterial(options: {
                         uni.$u.toast(`视频时长不能超过${videoDuration[1]}秒`);
                         continue;
                     }
-                    if (file.size > videoSize * 1024 * 1024) {
-                        uni.$u.toast(`视频大小不能超过${videoSize}M`);
-                        continue;
-                    }
-                    if (!videoAccept.includes(file.name.split(".").pop())) {
-                        uni.$u.toast(`视频格式必须是${videoAccept.join("、")}`);
-                        continue;
-                    }
-                    if (file.width > videoResolution[0] || file.height > videoResolution[1]) {
-                        uni.$u.toast(
-                            `视频单边分辨率不能超过宽：【${videoResolution[0]}】或高：【${videoResolution[1]}】`
-                        );
-                        continue;
-                    }
+                    // if (file.size > videoSize * 1024 * 1024) {
+                    //     uni.$u.toast(`视频大小不能超过${videoSize}M`);
+                    //     continue;
+                    // }
+                    // if (!videoAccept.includes(file.name.split(".").pop())) {
+                    //     uni.$u.toast(`视频格式必须是${videoAccept.join("、")}`);
+                    //     continue;
+                    // }
+                    // if (file.width > videoResolution[0] || file.height > videoResolution[1]) {
+                    //     uni.$u.toast(
+                    //         `视频单边分辨率不能超过宽：【${videoResolution[0]}】或高：【${videoResolution[1]}】`
+                    //     );
+                    //     continue;
+                    // }
                     fileList.push({ ...file, materialType: "video" });
                 }
             }
@@ -164,10 +166,15 @@ export default function useMontageMaterial(options: {
 
             const uploadedFilesData = [];
             for (const item of uploadMaterialList.value) {
-                const coverRes: any = isImage ? null : await uploadFile("image", { filePath: item.thumbTempFilePath });
+                const coverRes: any = isImage
+                    ? null
+                    : await uploadFile("image", {
+                          filePath: item.thumbTempFilePath,
+                          formData: { ffmpeg: isTranscode ? 1 : 0 },
+                      });
                 const fileRes: any = await uploadFile(
                     isAll ? "file" : fileType,
-                    { filePath: item.tempFilePath },
+                    { filePath: item.tempFilePath, formData: { ffmpeg: isTranscode ? 1 : 0 } },
                     (progress) => progressCallback(progress, item)
                 );
                 uploadedFilesData.push({ item, coverRes: isImage ? fileRes : coverRes, fileRes });
@@ -206,20 +213,20 @@ export default function useMontageMaterial(options: {
 
             if (fileType === "video" || fileType === "all") {
                 for (const [index, data] of uploadedFilesData.entries()) {
-                    const { fileRes } = data;
-                    if (isOssTranscode.value) {
-                        uni.showLoading({
-                            title: `转码中(${index + 1}/${uploadedFilesData.length})...`,
-                            mask: true,
-                        });
-                        try {
-                            await handleVideoTranscode(fileRes.uri);
-                            uni.hideLoading();
-                        } catch (error) {
-                            uni.hideLoading();
-                            showUploadProgress.value = false;
-                        }
-                    }
+                    // const { fileRes } = data;
+                    // if (isOssTranscode.value) {
+                    //     uni.showLoading({
+                    //         title: `转码中(${index + 1}/${uploadedFilesData.length})...`,
+                    //         mask: true,
+                    //     });
+                    //     try {
+                    //         await handleVideoTranscode(fileRes.uri);
+                    //         uni.hideLoading();
+                    //     } catch (error) {
+                    //         uni.hideLoading();
+                    //         showUploadProgress.value = false;
+                    //     }
+                    // }
                     handleAddMaterial(data);
                 }
                 uni.hideLoading();

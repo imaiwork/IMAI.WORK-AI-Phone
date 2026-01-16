@@ -1,70 +1,102 @@
 <template>
-    <div class="h-full flex flex-col px-[30px] py-6">
-        <div class="flex flex-col gap-3">
-            <!-- 欢迎语设置 -->
-            <div>
-                <div class="font-bold">欢迎语</div>
-                <div class="form-tips">
-                    打开聊天窗口后会主动发送，添加双井号可添加提问示例，例如：#帮我写一则关于xxx的文案#多个问题请用回车换行。
+    <div class="h-[full] flex flex-col bg-[#FFFFFF]">
+        <div class="grow min-h-[0]">
+            <ElScrollbar>
+                <div class="px-[30px] py-[24px]">
+                    <ElForm :model="formData" label-position="top">
+                        <section class="mb-[32px]">
+                            <div class="flex items-center gap-[10px] mb-[16px]">
+                                <div class="w-[4px] h-[16px] bg-[#0065fb] rounded-[full]"></div>
+                                <span class="text-[15px] font-[900] text-[#0F172A]">初始引导</span>
+                            </div>
+
+                            <div class="space-y-[24px]">
+                                <ElFormItem>
+                                    <template #label>
+                                        <div class="flex flex-col gap-[2px]">
+                                            <span class="text-[14px] font-[900] text-[#0F172A]">对话欢迎语</span>
+                                            <span class="text-[12px] font-normal text-[#94A3B8]">
+                                                用户进入对话窗口时显示的开场白。添加双井号（如
+                                                #示例问题#）可快速生成引导词。
+                                            </span>
+                                        </div>
+                                    </template>
+                                    <ElInput
+                                        v-model="formData.welcome_introducer"
+                                        type="textarea"
+                                        class="custom-textarea mt-4"
+                                        placeholder="你好！我是你的 AI 助理，你可以试着问我：&#10;#帮我写一则关于夏天的文案#"
+                                        resize="none"
+                                        :maxlength="500"
+                                        :rows="5" />
+                                </ElFormItem>
+
+                                <ElFormItem label="版权底部标识 (Copyright)">
+                                    <ElInput
+                                        v-model="formData.copyright"
+                                        placeholder="例如：由 XXX 提供技术支持"
+                                        :maxlength="100"
+                                        class="custom-input" />
+                                </ElFormItem>
+                            </div>
+                        </section>
+
+                        <div class="h-[1px] bg-[#F1F5F9] my-[32px] border-[transparent] w-full"></div>
+
+                        <section class="flex flex-col grow">
+                            <div class="flex items-center justify-between mb-[20px]">
+                                <div class="flex items-center gap-[10px]">
+                                    <div class="w-[4px] h-[16px] bg-primary rounded-[full]"></div>
+                                    <div class="flex flex-col">
+                                        <span class="text-[15px] font-[900] text-[#0F172A]">快捷菜单</span>
+                                        <span class="text-[12px] text-[#94A3B8]"
+                                            >点击即复，此类消息不消耗 Token 余额</span
+                                        >
+                                    </div>
+                                </div>
+                                <ElButton type="primary" class="add-menu-btn" @click="handleMenuEdit()">
+                                    <Icon name="el-icon-Plus" />
+                                    <span class="ml-1">添加菜单项</span>
+                                </ElButton>
+                            </div>
+
+                            <div class="table-wrapper">
+                                <ElTable :data="formData.menus" stripe :cell-style="{ borderBottom: 'none' }">
+                                    <ElTableColumn label="触发关键词" prop="keyword" min-width="120">
+                                        <template #default="{ row }">
+                                            <span class="font-[900] text-[#0F172A]">{{ row.keyword }}</span>
+                                        </template>
+                                    </ElTableColumn>
+                                    <ElTableColumn
+                                        label="自动回复内容"
+                                        prop="content"
+                                        min-width="200"
+                                        show-overflow-tooltip />
+                                    <ElTableColumn label="操作" width="120" align="right">
+                                        <template #default="{ row, $index }">
+                                            <div class="flex justify-end gap-[12px]">
+                                                <ElButton link class="edit-btn" @click="handleMenuEdit(row, $index)"
+                                                    >编辑</ElButton
+                                                >
+                                                <ElButton link class="del-btn" @click="handleMenuDelete($index)"
+                                                    >删除</ElButton
+                                                >
+                                            </div>
+                                        </template>
+                                    </ElTableColumn>
+                                    <template #empty>
+                                        <ElEmpty :image-size="80" description="暂无快捷菜单" />
+                                    </template>
+                                </ElTable>
+                            </div>
+                        </section>
+                    </ElForm>
                 </div>
-                <ElInput
-                    class="mt-3"
-                    v-model="formData.welcome_introducer"
-                    type="textarea"
-                    placeholder="请输入文字内容 ..."
-                    resize="none"
-                    :maxlength="500"
-                    :rows="4" />
-            </div>
-            <!-- 底部标识设置 -->
-            <div>
-                <div class="font-bold">底部标识</div>
-                <ElInput
-                    class="mt-3 !h-11"
-                    v-model="formData.copyright"
-                    placeholder="请输入文字内容 ..."
-                    :maxlength="100" />
-            </div>
-        </div>
-        <ElDivider class="!border-[#0000000d]" />
-        <!-- 菜单设置 -->
-        <div class="flex items-center justify-between gap-x-23">
-            <div>
-                <div class="font-bold">菜单设置</div>
-                <div class="form-tips">用户点击菜单后，将回复对应内容。此类消息不消耗余额。</div>
-            </div>
-            <ElButton type="primary" @click="handleMenuEdit()">添加菜单</ElButton>
-        </div>
-        <!-- 菜单表格 -->
-        <div class="grow min-h-0 mt-3 flex flex-col border border-[var(--el-border-color)] rounded-lg">
-            <ElTable
-                height="100%"
-                :data="formData.menus"
-                stripe
-                :header-row-style="{
-                    height: '62px',
-                }"
-                :row-style="{
-                    height: '50px',
-                }">
-                <ElTableColumn label="关键词" prop="keyword" min-width="60" show-overflow-tooltip />
-                <ElTableColumn label="回复内容" prop="content" min-width="200" show-overflow-tooltip />
-                <ElTableColumn label="操作" width="100">
-                    <template #default="{ row, $index }">
-                        <ElButton link type="primary" @click="handleMenuEdit(row, $index)">编辑</ElButton>
-                        <ElButton link type="danger" @click="handleMenuDelete($index)">删除</ElButton>
-                    </template>
-                </ElTableColumn>
-                <template #empty>
-                    <ElEmpty description="暂无数据" />
-                </template>
-            </ElTable>
+            </ElScrollbar>
         </div>
     </div>
-    <!-- 菜单编辑弹窗 -->
     <menu-edit v-if="showMenuEdit" ref="menuEditRef" @close="showMenuEdit = false" @success="getMenus" />
 </template>
-
 <script setup lang="ts">
 import MenuEdit from "./menu-edit.vue";
 import { Agent } from "../../_enums";
@@ -138,15 +170,43 @@ defineExpose({
     },
 });
 </script>
-
 <style scoped lang="scss">
+.custom-ui-form {
+    .custom-input-h {
+        @apply h-[46px];
+        :deep(.el-input__wrapper) {
+            @apply h-full;
+        }
+    }
+}
+
+.add-menu-btn {
+    @apply rounded-[12px] h-[38px] px-[16px] font-[900] shadow-[0_8px_15px_-3px_rgba(0,101,251,0.15)];
+}
+
+.table-wrapper {
+    @apply border border-br rounded-2xl overflow-hidden;
+}
+
 :deep(.el-table) {
-    border-radius: 8px;
     thead th.el-table__cell.is-leaf {
-        border-top: 0;
+        border-top: none;
     }
-    &.el-table--fit .el-table__inner-wrapper:before {
-        display: none;
+    .el-table--border .el-table__inner-wrapper:after,
+    .el-table--border:after,
+    .el-table--border:before,
+    .el-table__inner-wrapper:before {
+        background-color: transparent;
     }
+}
+
+.edit-btn {
+    @apply font-[900] text-[13px];
+    --el-button-text-color: #0065fb;
+}
+
+.del-btn {
+    @apply font-[900] text-[13px];
+    --el-button-text-color: #ef4444;
 }
 </style>

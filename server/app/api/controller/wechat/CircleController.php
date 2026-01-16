@@ -89,4 +89,15 @@ class CircleController extends BaseApiController
         }
         return $this->fail(CircleLogic::getError());
     }
+
+        public function check()
+    {
+        $params = $this->request->post();
+        $result = CircleLogic::check($params);
+        if ($result)
+        {
+            return $this->success();
+        }
+        return $this->fail(CircleLogic::getError());
+    }
 }

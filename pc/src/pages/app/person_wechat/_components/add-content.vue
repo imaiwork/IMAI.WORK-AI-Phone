@@ -1,270 +1,281 @@
 <template>
-    <div class="h-full flex gap-4 w-full">
+    <div class="h-full flex gap-[24px] w-full bg-white">
         <div class="grow min-h-0 flex flex-col">
-            <div>
-                <ElTabs v-model="activeName" @tab-click="handleTabClick">
-                    <ElTabPane v-for="item in typeLists" :key="item.id" :label="item.name" :name="item.id"></ElTabPane>
+            <div class="editor-container">
+                <ElTabs v-model="activeName" class="custom-editor-tabs" @tab-click="handleTabClick">
+                    <ElTabPane v-for="item in typeLists" :key="item.id" :label="item.name" :name="item.id" />
                 </ElTabs>
-                <ElAlert title="请注意：视频、小程序、链接、文件支持个微使用" type="warning" class="mt-2"></ElAlert>
-                <div class="mt-2">
+
+                <div
+                    class="flex items-center gap-[8px] px-[12px] py-[8px] bg-blue-50/50 rounded-[8px] mb-[16px] border border-blue-50">
+                    <span class="text-primary opacity-80">
+                        <Icon name="el-icon-InfoFilled" />
+                        <span class="text-[12px] text-primary/80 font-bold">
+                            提示：除文本外，其余格式目前仅支持个微环境使用
+                        </span>
+                    </span>
+                </div>
+
+                <div class="input-dynamic-area">
                     <div v-if="activeName === MaterialTypeEnum.TEXT" class="relative">
                         <ElInput
                             v-model="fileData.text"
                             ref="textInputRef"
                             type="textarea"
-                            :autosize="{
-                                minRows: 7,
-                                maxRows: 15,
-                            }"
-                            placeholder="点击输入您要发送的文本内容" />
-
-                        <div class="absolute bottom-2 w-full px-2 flex items-center justify-between">
-                            <ElPopover
-                                placement="bottom"
-                                width="466"
-                                trigger="click"
-                                :show-arrow="false"
-                                :popper-style="{
-                                    padding: 0,
-                                }">
+                            :autosize="{ minRows: 6, maxRows: 10 }"
+                            placeholder="请输入消息文本内容..."
+                            class="custom-textarea" />
+                        <div class="absolute bottom-[10px] left-[12px] flex items-center gap-[8px]">
+                            <ElPopover placement="top-start" width="400" trigger="click" popper-class="emoji-popper">
                                 <template #reference>
-                                    <div class="rounded-lg hover:bg-token-sidebar-surface-secondary p-2 cursor-pointer">
-                                        <Icon name="local-icon-phiz" :size="24" />
+                                    <div class="emoji-trigger-btn">
+                                        <Icon name="local-icon-phiz" :size="20" />
                                     </div>
                                 </template>
-                                <div>
-                                    <emoji-container />
-                                </div>
+                                <emoji-container />
                             </ElPopover>
-                            <ElButton type="primary" @click="insertRemark" v-if="false">插入备注</ElButton>
                         </div>
                     </div>
-                    <div
-                        v-else-if="[MaterialTypeEnum.IMAGE, MaterialTypeEnum.VIDEO].includes(activeName)"
-                        class="w-full">
+
+                    <div v-else-if="[MaterialTypeEnum.IMAGE, MaterialTypeEnum.VIDEO].includes(activeName)">
                         <upload
-                            class="h-full w-full"
+                            class="w-full"
                             show-progress
                             :max-size="20"
                             :show-file-list="false"
                             :type="activeName == MaterialTypeEnum.IMAGE ? 'image' : 'video'"
                             @success="getUploadFile">
-                            <div
-                                class="h-[202px] border border-dashed border-[#dcdfe6] rounded-lg w-full flex flex-col items-center justify-center hover:border-primary">
+                            <div class="upload-drop-box group">
                                 <template
                                     v-if="
                                         activeName === MaterialTypeEnum.IMAGE
                                             ? !fileData.image.url
                                             : !fileData.video.url
                                     ">
-                                    <img src="../_assets/images/add.png" class="w-8" />
-                                    <div class="text-[#8A8A8A] mt-4">
-                                        点击上传{{
-                                            activeName === MaterialTypeEnum.IMAGE ? "图片" : "视频"
-                                        }}，或点击此<span
-                                            class="text-primary cursor-pointer hover:underline"
+                                    <div class="upload-icon-wrapper group-hover:scale-110 transition-transform">
+                                        <Icon
+                                            :name="
+                                                activeName === MaterialTypeEnum.IMAGE
+                                                    ? 'el-icon-Picture'
+                                                    : 'el-icon-VideoCamera'
+                                            "
+                                            :size="32" />
+                                    </div>
+                                    <div class="text-[13px] text-tx-secondary mt-[12px]">
+                                        点击上传或<span
+                                            class="text-primary font-bold cursor-pointer hover:underline mx-[4px]"
                                             @click.stop="openMaterialLibrary"
                                             >从素材库选择</span
                                         >
                                     </div>
+                                    <div class="text-[11px] text-tx-placeholder mt-[4px]">
+                                        支持 JPG/PNG/MP4，大小不超过 20MB
+                                    </div>
                                 </template>
-                                <div v-else class="h-full w-full flex justify-center relative p-2">
+                                <div v-else class="preview-uploaded relative group/item">
                                     <img
                                         v-if="activeName === MaterialTypeEnum.IMAGE"
                                         :src="fileData.image.url"
-                                        class="rounded-lg" />
-                                    <video v-else :src="fileData.video.url" class="rounded-lg" />
+                                        class="preview-content" />
+                                    <video v-else :src="fileData.video.url" class="preview-content" />
                                     <div
                                         v-if="fileData.video.url"
-                                        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30"
+                                        class="play-overlay"
                                         @click.stop="handlePreviewVideo(fileData.video.url)">
-                                        <play-btn />
+                                        <Icon name="el-icon-VideoPlay" :size="48" />
                                     </div>
-                                    <div class="absolute right-2 top-2">
-                                        <ElButton
+                                    <div class="preview-actions">
+                                        <div
+                                            class="action-circle-btn"
                                             @click.stop="
                                                 activeName === MaterialTypeEnum.IMAGE
                                                     ? (fileData.image = {})
                                                     : (fileData.video = {})
                                             ">
-                                            <Icon name="el-icon-Delete"></Icon>
-                                        </ElButton>
+                                            <Icon name="el-icon-Delete" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </upload>
                     </div>
-                    <div
-                        class="h-[202px] border border-[#dcdfe6] rounded-lg p-2"
-                        v-else-if="
-                            [MaterialTypeEnum.MINI_PROGRAM, MaterialTypeEnum.LINK, MaterialTypeEnum.FILE].includes(
-                                activeName
-                            )
-                        ">
+
+                    <div v-else class="card-upload-area">
                         <div
                             v-if="fileData.miniProgram.name || fileData.link.name || fileData.file.name"
-                            class="w-full h-full relative">
-                            <div class="w-[50%] h-full mx-auto flex items-center justify-center">
-                                <div
-                                    class="h-full bg-primary-light-7 p-2 rounded-xl w-full"
-                                    v-if="activeName == MaterialTypeEnum.MINI_PROGRAM">
-                                    <MiniProgramCard
-                                        :title="fileData.miniProgram.name"
-                                        :pic="fileData.miniProgram.pic"
-                                        :link="fileData.miniProgram.link" />
-                                </div>
-                                <div
-                                    class="h-[70%] bg-primary-light-7 p-2 rounded-xl w-full"
-                                    v-if="activeName == MaterialTypeEnum.LINK">
-                                    <LinkCard
-                                        :title="fileData.link.name"
-                                        :desc="fileData.link.desc"
-                                        :img="fileData.link.img" />
-                                </div>
-                                <div v-if="activeName == MaterialTypeEnum.FILE">
-                                    <FileCard :name="fileData.file.name" :url="fileData.file.url" />
-                                </div>
+                            class="relative p-[16px] h-full flex items-center justify-center">
+                            <div class="w-[280px]">
+                                <MiniProgramCard
+                                    v-if="activeName == MaterialTypeEnum.MINI_PROGRAM"
+                                    :title="fileData.miniProgram.name"
+                                    :pic="fileData.miniProgram.pic"
+                                    :link="fileData.miniProgram.link" />
+                                <LinkCard
+                                    v-if="activeName == MaterialTypeEnum.LINK"
+                                    :title="fileData.link.name"
+                                    :desc="fileData.link.desc"
+                                    :img="fileData.link.img" />
+                                <FileCard
+                                    v-if="activeName == MaterialTypeEnum.FILE"
+                                    :name="fileData.file.name"
+                                    :url="fileData.file.url" />
                             </div>
-                            <div class="absolute right-2 top-2">
-                                <ElButton
-                                    @click.stop="
-                                        fileData.miniProgram = {};
-                                        fileData.link = {};
-                                        fileData.file = {};
-                                    ">
-                                    <Icon name="el-icon-Delete"></Icon>
-                                </ElButton>
+                            <div
+                                class="absolute right-[12px] top-[12px] action-circle-btn shadow-md"
+                                @click="resetFileData">
+                                <Icon name="el-icon-Delete" />
                             </div>
                         </div>
-
-                        <div v-else class="h-full flex flex-col items-center justify-center">
-                            <img src="../_assets/images/add.png" class="w-8" />
+                        <div v-else class="flex flex-col items-center justify-center h-full">
+                            <div class="upload-icon-wrapper">
+                                <Icon name="el-icon-FolderOpened" :size="32" />
+                            </div>
                             <span
-                                class="text-primary cursor-pointer hover:underline mt-4"
-                                @click.stop="openMaterialLibrary"
-                                >从素材库选择</span
-                            >
+                                class="text-primary font-bold cursor-pointer hover:underline mt-[12px]"
+                                @click.stop="openMaterialLibrary">
+                                点击进入素材库选择
+                            </span>
                         </div>
                     </div>
-                    <div class="flex justify-center mt-4">
-                        <ElButton type="primary" @click="handleAddInfo"> 添加信息内容 </ElButton>
-                    </div>
-                </div>
-                <div class="mt-8">
-                    <div class="flex justify-center">
-                        <img src="../_assets/images/arrow_down.png" class="w-[25px]" />
+
+                    <div class="flex justify-center mt-[24px]">
+                        <ElButton type="primary" class="add-material-btn" @click="handleAddInfo">
+                            <Icon name="el-icon-Plus" />
+                            <span class="ml-1"> 确认添加至队列 </span>
+                        </ElButton>
                     </div>
                 </div>
             </div>
-            <div class="grow min-h-0">
+
+            <div class="grow min-h-0 mt-[20px] flex flex-col">
+                <div class="flex items-center gap-[8px] mb-[12px]">
+                    <span class="text-[14px] font-[900] text-tx-primary">待发送队列</span>
+                    <span class="text-[12px] text-tx-secondary opacity-60">(共 {{ materialLists.length }}/6 条)</span>
+                </div>
                 <ElScrollbar>
-                    <div class="px-4" v-draggable="draggableOptions">
-                        <div class="material-list mt-4 flex flex-col gap-y-4">
+                    <div v-draggable="draggableOptions">
+                        <div class="material-list flex flex-col gap-[12px] pr-[12px]">
+                            <div v-for="(item, index) in materialLists" :key="index" class="material-queue-item group">
+                                <div class="flex items-center gap-[12px] flex-1 min-w-0">
+                                    <div class="type-tag" :class="`type-${item.type}`">
+                                        {{ getTypeName(item.type).replace("消息", "") }}
+                                    </div>
+                                    <div class="flex-1 truncate text-[13px] text-tx-primary font-medium">
+                                        <template v-if="item.type == MaterialTypeEnum.TEXT">{{
+                                            item.content
+                                        }}</template>
+                                        <template v-else-if="item.type == MaterialTypeEnum.IMAGE">[图片素材]</template>
+                                        <template v-else-if="item.type == MaterialTypeEnum.VIDEO">[视频素材]</template>
+                                        <template v-else>{{ (item.content as any).name }}</template>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-[12px]">
+                                    <div class="action-icon hover:text-error" @click="delMaterial(index)">
+                                        <Icon name="el-icon-Delete" />
+                                    </div>
+                                    <div class="action-icon move-icon cursor-move">
+                                        <Icon name="el-icon-Rank" />
+                                    </div>
+                                </div>
+                            </div>
                             <div
-                                v-for="(item, index) in materialLists"
-                                :key="index"
-                                class="px-4 py-2 rounded-lg bg-[#2E2E2E] flex justify-between items-center">
-                                <div class="text-white flex items-center gap-x-4 flex-1 w-0">
-                                    <div class="flex-shrink-0 w-[100px]">【{{ getTypeName(item.type) }}】</div>
-                                    <div
-                                        class="flex-shrink-0"
-                                        :class="{
-                                            'flex-1 w-0': item.type == MaterialTypeEnum.TEXT,
-                                        }">
-                                        <div
-                                            class="text-ellipsis overflow-hidden whitespace-nowrap"
-                                            v-if="item.type == MaterialTypeEnum.TEXT">
-                                            {{ item.content }}
-                                        </div>
-                                        <img
-                                            v-if="item.type == MaterialTypeEnum.IMAGE"
-                                            :src="item.content"
-                                            class="w-6 h-6 rounded-lg object-cover" />
-                                        <video
-                                            v-if="item.type == MaterialTypeEnum.VIDEO"
-                                            :src="item.content"
-                                            class="w-6 h-6 rounded-lg object-cover" />
-                                        <div v-if="item.type == MaterialTypeEnum.LINK">
-                                            <img :src="item.content.img" class="w-6 h-6 rounded-lg object-cover" />
-                                        </div>
-                                        <div
-                                            v-if="item.type == MaterialTypeEnum.MINI_PROGRAM"
-                                            class="bg-white rounded-lg">
-                                            <Icon
-                                                name="local-icon-mini_program_fill"
-                                                :size="20"
-                                                color="var(--color-primary)"></Icon>
-                                        </div>
-                                        <div v-if="item.type == MaterialTypeEnum.FILE">
-                                            <Icon name="local-icon-file_fill" color="#80B8F8" :size="20" />
-                                        </div>
-                                    </div>
-                                    <div class="text-ellipsis overflow-hidden whitespace-nowrap">
-                                        {{ typeof item.content == "object" ? item.content.name : "" }}
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-x-2 flex-shrink-0">
-                                    <div class="leading-[0] cursor-pointer" @click="delMaterial(index)">
-                                        <Icon name="el-icon-Delete" color="#ffffff" />
-                                    </div>
-                                    <div class="move-icon cursor-move leading-[0]">
-                                        <Icon name="el-icon-Rank" color="#ffffff" />
-                                    </div>
-                                </div>
+                                v-if="materialLists.length === 0"
+                                class="border-2 border-dashed border-gray-100 rounded-xl h-[100px] flex items-center justify-center text-tx-placeholder text-[13px]">
+                                暂无发送任务，请在上方添加
                             </div>
                         </div>
                     </div>
                 </ElScrollbar>
             </div>
         </div>
-        <div class="w-[400px] flex-shrink-0" v-if="showPreview">
-            <div class="phone-preview bg-primary-light-9 rounded-2xl px-10 py-[80px]">
-                <ElScrollbar>
-                    <div class="py-14 px-5 flex flex-col gap-y-2">
-                        <div v-for="(item, index) in materialLists" :key="index" class="flex gap-x-2">
-                            <div class="flex-shrink-0">
-                                <img :src="userInfo.avatar" class="w-8 h-8 rounded-md" />
-                            </div>
-                            <div class="bg-white p-2 rounded-lg break-all" v-if="item.type == MaterialTypeEnum.TEXT">
-                                {{ item.content }}
-                            </div>
-                            <div class="w-[120px] h-[120px]" v-if="item.type == MaterialTypeEnum.IMAGE">
-                                <ElImage
-                                    :src="item.content"
-                                    :preview-src-list="[item.content]"
-                                    fit="cover"
-                                    class="w-full h-full" />
-                            </div>
-                            <div class="w-[120px] h-[120px] relative" v-if="item.type == MaterialTypeEnum.VIDEO">
-                                <video :src="item.content" fit="cover" class="w-full h-full" />
-                                <div
-                                    class="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-[#00000080] cursor-pointer"
-                                    @click="handlePreviewVideo(item.content)">
-                                    <Icon name="local-icon-play" :size="50" color="#ffffff"></Icon>
-                                </div>
-                            </div>
-                            <div
-                                class="bg-primary-light-8 h-[200px] w-full p-2 rounded-lg"
-                                v-if="item.type == MaterialTypeEnum.MINI_PROGRAM">
-                                <MiniProgramCard
-                                    :title="item.content.name"
-                                    :pic="item.content.pic"
-                                    :link="item.content.link" />
-                            </div>
-                            <div
-                                class="bg-primary-light-8 w-full p-2 rounded-lg"
-                                v-if="item.type == MaterialTypeEnum.LINK">
-                                <LinkCard
-                                    :title="item.content.name"
-                                    :desc="item.content.desc"
-                                    :img="item.content.img" />
-                            </div>
-                            <div v-if="item.type == MaterialTypeEnum.FILE">
-                                <FileCard :name="item.content.name" :url="item.content.url" />
+
+        <div class="w-[360px] flex-shrink-0 flex flex-col" v-if="showPreview">
+            <div class="preview-header mb-[12px] flex items-center gap-[8px]">
+                <Icon name="el-icon-View" color="var(--color-primary)" />
+                <span class="text-[14px] font-[900]">发送效果预览</span>
+            </div>
+            <div class="phone-mockup">
+                <div class="phone-screen">
+                    <div class="wechat-header">
+                        <div class="status-bar">
+                            <span>9:41</span>
+                            <div class="flex gap-[4px]">
+                                <Icon name="el-icon-Connection" /><Icon name="el-icon-BatteryFilled" />
                             </div>
                         </div>
+                        <div class="title-bar">
+                            <Icon name="el-icon-ArrowLeft" />
+                            <span class="truncate">客户名称</span>
+                            <Icon name="el-icon-More" />
+                        </div>
                     </div>
-                </ElScrollbar>
+
+                    <ElScrollbar>
+                        <div class="chat-content flex flex-col gap-[16px]">
+                            <div v-for="(item, index) in materialLists" :key="index" class="chat-bubble-row">
+                                <img :src="userInfo.avatar" class="avatar" />
+                                <div class="bubble-container">
+                                    <div v-if="item.type == MaterialTypeEnum.TEXT" class="text-bubble">
+                                        {{ item.content }}
+                                    </div>
+                                    <div
+                                        v-else-if="item.type == MaterialTypeEnum.IMAGE"
+                                        class="image-bubble shadow-light">
+                                        <ElImage
+                                            :src="item.content as string"
+                                            fit="cover"
+                                            :preview-src-list="[item.content as string]" />
+                                    </div>
+                                    <div
+                                        v-else-if="item.type == MaterialTypeEnum.VIDEO"
+                                        class="video-bubble shadow-light">
+                                        <video :src="item.content as string" />
+                                        <div class="play-icon" @click="handlePreviewVideo(item.content as string)">
+                                            <Icon name="el-icon-VideoPlay" :size="30" />
+                                        </div>
+                                    </div>
+                                    <div v-else class="card-bubble shadow-light">
+                                        <div v-if="item.type == MaterialTypeEnum.MINI_PROGRAM" class="mini-card-mini">
+                                            <div class="flex items-center gap-[4px] mb-[4px] opacity-70">
+                                                <Icon name="local-icon-mini_program_fill" :size="12" color="#0065fb" />
+                                                <span class="text-[10px]">小程序</span>
+                                            </div>
+                                            <div class="text-[13px] font-bold line-clamp-2 mb-[8px]">
+                                                {{ (item.content as any).name }}
+                                            </div>
+                                            <img
+                                                :src="(item.content as any).pic"
+                                                class="w-full h-[120px] object-cover rounded-[4px]" />
+                                        </div>
+                                        <div
+                                            v-if="item.type == MaterialTypeEnum.LINK"
+                                            class="link-card-mini flex gap-[8px]">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-[13px] font-bold line-clamp-2">
+                                                    {{ (item.content as any).name }}
+                                                </div>
+                                                <div class="text-[11px] text-tx-secondary mt-[4px] line-clamp-2">
+                                                    {{ (item.content as any).desc }}
+                                                </div>
+                                            </div>
+                                            <img
+                                                :src="(item.content as any).img"
+                                                class="w-[44px] h-[44px] rounded-[4px] object-cover" />
+                                        </div>
+                                        <div
+                                            v-if="item.type == MaterialTypeEnum.FILE"
+                                            class="file-card-mini flex items-center gap-[10px]">
+                                            <Icon name="local-icon-file_fill" color="#80B8F8" :size="32" />
+                                            <div class="text-[13px] font-medium truncate flex-1">
+                                                {{ (item.content as any).name }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </ElScrollbar>
+                </div>
             </div>
         </div>
     </div>
@@ -277,7 +288,6 @@
         @close="showMaterialPicker = false"
         @select="handleSelectMaterial" />
 </template>
-
 <script setup lang="ts">
 import { setRangeText } from "@/utils/dom";
 import { dayjs, type InputInstance } from "element-plus";
@@ -832,20 +842,140 @@ defineExpose({
     open,
 });
 </script>
-
 <style scoped lang="scss">
-:deep(.el-textarea__inner) {
-    padding-bottom: 50px;
-}
-:deep(.el-tabs__nav-wrap::after) {
-    display: none;
+.editor-container {
+    @apply p-[20px] bg-gray-50 rounded-xl border border-br-extra-light;
 }
 
-.phone-preview {
-    width: 100%;
-    height: 728px;
-    background-image: url("../_assets/images/phone.png");
-    background-size: 100% 100%;
-    background-repeat: no-repeat;
+:deep(.custom-editor-tabs) {
+    .el-tabs__nav-wrap::after {
+        display: none;
+    }
+    .el-tabs__item {
+        @apply text-[14px] font-bold px-[16px];
+    }
+}
+
+:deep(.material-textarea) {
+    .el-textarea__inner {
+        @apply bg-white border-br rounded-xl p-[12px] pb-[40px] shadow-[none] transition-all;
+        &:focus {
+            @apply border-primary shadow-[0_0_0_2px_rgba(0,101,251,0.05)];
+        }
+    }
+}
+
+.emoji-trigger-btn {
+    @apply w-[32px] h-[32px] flex items-center justify-center rounded-lg text-tx-secondary hover:bg-gray-100 transition-all cursor-pointer;
+}
+
+.upload-drop-box {
+    @apply w-full h-[220px] border-2 border-dashed border-br bg-white rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer;
+    &:hover {
+        @apply border-primary bg-[#eff6ff]/20;
+    }
+}
+
+.upload-icon-wrapper {
+    @apply w-[64px] h-[64px] rounded-full bg-gray-50 flex items-center justify-center text-tx-placeholder;
+}
+
+.preview-uploaded {
+    @apply h-full w-full flex items-center justify-center p-[12px];
+    .preview-content {
+        @apply max-h-full max-w-full rounded-lg shadow-light border border-br;
+    }
+}
+
+.play-overlay {
+    @apply absolute inset-0 flex items-center justify-center bg-[#000000]/30 text-white rounded-lg opacity-80 hover:opacity-100 transition-all;
+}
+
+.add-material-btn {
+    @apply h-[42px] rounded-lg px-[24px] font-bold shadow-light;
+}
+
+.material-queue-item {
+    @apply px-[16px] py-[12px] bg-white border border-br rounded-xl flex items-center justify-between transition-all;
+    &:hover {
+        @apply border-primary-light-7 shadow-light bg-[#f5f5f5]/10;
+    }
+
+    .type-tag {
+        @apply text-[10px] px-[8px] py-[2px] rounded-full font-black text-white;
+        &.type-0 {
+            @apply bg-primary;
+        }
+        &.type-1 {
+            @apply bg-blue-500;
+        }
+        &.type-2 {
+            @apply bg-orange-500;
+        }
+        &.type-3 {
+            @apply bg-purple-500;
+        }
+        &.type-4 {
+            @apply bg-green-500;
+        }
+        &.type-5 {
+            @apply bg-sky-500;
+        }
+        &.type-6 {
+            @apply bg-gray-500;
+        }
+    }
+
+    .action-icon {
+        @apply text-tx-placeholder cursor-pointer hover:text-primary transition-colors;
+    }
+}
+
+.phone-mockup {
+    @apply w-[300px] h-[620px] bg-gray-950 rounded-[40px] border-[8px] border-gray-900 relative shadow-light self-center;
+    .phone-screen {
+        @apply h-full w-full bg-[#EDEDED] rounded-[32px] overflow-hidden flex flex-col;
+    }
+}
+
+.wechat-header {
+    @apply bg-[#EDEDED] border-b border-gray-200 shrink-0;
+    .status-bar {
+        @apply flex justify-between px-[20px] py-[6px] text-[10px] font-bold text-gray-950;
+    }
+    .title-bar {
+        @apply flex items-center justify-between px-[12px] py-[10px] text-gray-950;
+        font-weight: bold;
+    }
+}
+
+.chat-content {
+    @apply p-[12px] pb-[40px];
+}
+
+.chat-bubble-row {
+    @apply flex gap-[8px];
+    .avatar {
+        @apply w-[36px] h-[36px] rounded-[6px] bg-white border border-gray-200;
+    }
+    .bubble-container {
+        @apply flex-1 max-w-[80%];
+    }
+}
+
+.text-bubble {
+    @apply bg-white p-[10px] rounded-[4px] rounded-tl-none text-[13px] leading-relaxed text-gray-950 relative shadow-light;
+    &::after {
+        content: "";
+        @apply absolute -left-[6px] top-0 w-0 h-0 border-[6px] border-[transparent] border-t-white;
+    }
+}
+
+.card-bubble {
+    @apply bg-white p-[10px] rounded-[4px] relative shadow-light;
+}
+
+.action-circle-btn {
+    @apply w-[28px] h-[28px] rounded-full bg-white text-tx-secondary flex items-center justify-center cursor-pointer hover:bg-error hover:text-white transition-all;
 }
 </style>

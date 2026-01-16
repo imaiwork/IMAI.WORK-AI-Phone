@@ -1,11 +1,6 @@
 <template>
     <div>
-        <el-tabs v-model="knType" @tab-click="handleTabClick" v-if="!knId">
-            <el-tab-pane label="向量知识库" :name="KnowledgeType.VECTOR"></el-tab-pane>
-            <el-tab-pane label="RAG知识库" :name="KnowledgeType.RAG"></el-tab-pane>
-        </el-tabs>
-        <rag-files v-if="knType == KnowledgeType.RAG" />
-        <vector-files v-if="knType == KnowledgeType.VECTOR" />
+        <vector-files />
     </div>
 </template>
 <script lang="ts" setup>

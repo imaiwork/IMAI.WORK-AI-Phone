@@ -13,6 +13,11 @@ Route::rule('pc/:any', function () {
     return view(app()->getRootPath() . 'public/pc/index.html');
 })->pattern(['any' => '\w+']);
 
+// chat
+Route::rule('chat/:any', function () {
+    return view(app()->getRootPath() . 'public/pc/index.html');
+})->pattern(['any' => '\w+']);
+
 //定时任务
 Route::rule('crontab', function () {
     Console::call('crontab');

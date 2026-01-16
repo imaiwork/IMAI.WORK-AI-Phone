@@ -1,12 +1,12 @@
 <template>
     <div class="flex flex-col items-center justify-center">
         <div
-            class="w-12 h-12 rounded-xl flex items-center justify-center border border-dashed border-[#ffffff1a] hover:border-[#ffffff33] cursor-pointer"
+            class="w-12 h-12 rounded-xl flex items-center justify-center border border-dashed border-[#E2E8F0 ] hover:border-[#0065fb] cursor-pointer"
             @click="handleClick">
-            <Icon name="el-icon-Plus" color="#ffffff"></Icon>
+            <Icon name="el-icon-Plus"></Icon>
         </div>
-        <div class="text-white text-lg mt-4">{{ title }}</div>
-        <div class="text-[#ffffff80]">{{ msg }}</div>
+        <div class="text-lg mt-4">{{ title }}</div>
+        <div class="text-[#00000080]">{{ msg }}</div>
         <ElButton type="primary" class="!px-4 !h-10 !rounded-full mt-5" @click="handleClick">{{ btnText }}</ElButton>
     </div>
 </template>

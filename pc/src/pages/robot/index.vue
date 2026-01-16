@@ -1,23 +1,39 @@
 <template>
-    <div class="flex flex-col h-full p-4">
-        <div class="rounded-lg px-[30px] bg-white">
+    <div class="flex flex-col h-full min-w-[1000px] px-4 pb-4">
+        <div class="bg-white rounded-[20px] px-6 border border-br mb-4">
             <ElScrollbar>
-                <div class="flex gap-8 whitespace-nowrap py-1">
+                <div class="flex items-center gap-3 whitespace-nowrap py-4">
                     <div
                         v-for="(tab, index) in appStore.menuList"
-                        class="flex items-center gap-2 py-4 flex-shrink-0 cursor-pointer"
                         :key="index"
-                        :class="index === sceneIndex ? 'text-primary' : ''"
+                        class="group flex items-center gap-2.5 px-5 py-2.5 rounded-2xl cursor-pointer transition-all duration-300 border-2"
+                        :class="
+                            index === sceneIndex
+                                ? 'bg-[#0065fb]/10 border-primary text-primary'
+                                : 'bg-white border-[transparent] hover:bg-[#F1F5F9] text-[#64748B]'
+                        "
                         @click="handleSceneTab(index)">
-                        <img :src="tab.logo" alt="logo" class="w-[20px] h-[20px] rounded-full" />
-                        <div class="text-lg font-bold">{{ tab.name }}({{ tab.sub_list.length }})</div>
+                        <img
+                            :src="tab.logo"
+                            class="w-5 h-5 rounded-full object-cover transition-transform group-hover:scale-110" />
+                        <span class="text-[15px] font-black">{{ tab.name }}</span>
+                        <span
+                            class="text-[10px] px-1.5 py-0.5 rounded-md font-bold"
+                            :class="
+                                index === sceneIndex
+                                    ? 'bg-primary text-white'
+                                    : 'bg-[#F1F5F9] text-[#94A3B8] group-hover:bg-white'
+                            ">
+                            {{ tab.sub_list.length }}
+                        </span>
                     </div>
                 </div>
             </ElScrollbar>
         </div>
-        <div class="mt-4 bg-white grow min-h-0 flex flex-col rounded-xl">
-            <div class="px-[30px]">
-                <ElTabs v-model="sceneSubIndex" @tab-click="handleSceneSubTab">
+
+        <div class="grow min-h-0 bg-white rounded-[20px] flex flex-col border border-br overflow-hidden">
+            <div class="px-6 bg-[#F8FAFC]/50 border-b border-[#F1F5F9]">
+                <ElTabs v-model="sceneSubIndex" class="custom-tabs" @tab-click="handleSceneSubTab">
                     <ElTabPane
                         v-for="(tab, index) in sceneSubList"
                         :key="index"
@@ -25,38 +41,60 @@
                         :name="index"></ElTabPane>
                 </ElTabs>
             </div>
-            <div class="grow min-h-0 overflow-y-auto dynamic-scroller">
-                <div
-                    v-loading="pager.loading"
-                    :infinite-scroll-immediate="false"
-                    :infinite-scroll-disabled="!pager.isLoad"
-                    :infinite-scroll-distance="10"
-                    v-infinite-scroll="load">
-                    <div
-                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 px-[30px]"
-                        v-if="pager.lists.length">
-                        <router-link
-                            v-for="(item, index) in pager.lists"
-                            :key="index"
-                            :to="`/robot/chat?ppid=${getSceneId}&pid=${queryParams.scene_id}&id=${item.id}`"
-                            class="bg-white p-4 rounded-lg cursor-pointer hover:scale-105 transition-all duration-300 mt-2 border border-[#E0E0E0]">
-                            <div class="flex items-center gap-2">
-                                <img :src="item.logo" alt="logo" class="w-[50px] h-[50px] rounded-lg" />
-                                <div class="font-bold line-clamp-1">
-                                    {{ item.name }}
+
+            <div class="grow min-h-0">
+                <ElScrollbar :distance="20" @end-reached="load">
+                    <template v-if="pager.lists.length">
+                        <div class="grid grid-cols-4 gap-3 p-4">
+                            <router-link
+                                v-for="(item, index) in pager.lists"
+                                :key="index"
+                                :to="`/robot/chat?ppid=${getSceneId}&pid=${queryParams.scene_id}&id=${item.id}`"
+                                class="robot-card group">
+                                <div class="flex items-start gap-4 mb-4">
+                                    <div class="relative flex-shrink-0">
+                                        <img
+                                            :src="item.logo"
+                                            class="w-14 h-14 rounded-[18px] object-cover border border-[#F1F5F9]" />
+                                        <div
+                                            class="absolute -right-1 -bottom-1 w-5 h-5 bg-white rounded-full flex items-center justify-center text-primary shadow-light">
+                                            <Icon name="el-icon-Cpu" :size="12" />
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div
+                                            class="text-[15px] font-[900] text-[#1E293B] line-clamp-1 group-hover:text-primary transition-colors">
+                                            {{ item.name }}
+                                        </div>
+                                        <div class="flex items-center gap-1 mt-1">
+                                            <span
+                                                class="text-[10px] font-black text-[#94A3B8] bg-[#F8FAFC] px-1.5 py-0.5 rounded uppercase tracking-wider"
+                                                >AI Agent</span
+                                            >
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="text-xs text-[#666666] mt-2 line-clamp-2 h-[38px]">
-                                {{ item.description }}
-                            </div>
-                            <div class="text-xs text-[#999999] mt-3">创建时间：{{ item.create_time }}</div>
-                        </router-link>
+
+                                <p
+                                    class="text-[12px] font-medium text-[#64748B] leading-[1.6] line-clamp-2 h-[38px] mb-4">
+                                    {{ item.description || "暂无描述信息..." }}
+                                </p>
+
+                                <div class="pt-4 border-t border-[#F8FAFC] flex items-center justify-between">
+                                    <span class="text-[10px] font-bold text-[#CBD5E1]">{{ item.create_time }}</span>
+                                    <div
+                                        class="opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 text-primary">
+                                        <Icon name="el-icon-Right" />
+                                    </div>
+                                </div>
+                            </router-link>
+                        </div>
+                        <load-text :is-load="pager.isLoad"></load-text>
+                    </template>
+                    <div v-else class="grow flex flex-col items-center justify-center py-20">
+                        <ElEmpty description="该分类下暂无应用" />
                     </div>
-                    <div v-else>
-                        <ElEmpty />
-                    </div>
-                </div>
-                <div v-if="!pager.isLoad" class="text-center py-4 text-gray-500">暂无更多了</div>
+                </ElScrollbar>
             </div>
         </div>
     </div>
@@ -65,7 +103,6 @@
 <script setup lang="ts">
 import { useAppStore } from "@/stores/app";
 import { robotLists } from "@/api/robot";
-import { ToolEnumMap, ToolEnum } from "@/enums/appEnums";
 const appStore = useAppStore();
 
 const sceneIndex = ref<number>(0);
@@ -115,9 +152,12 @@ const { pager, getLists, resetPage } = usePaging({
     size: 40,
 });
 
-const load = async () => {
-    queryParams.page_no += 1;
-    await getLists();
+const load = async (e: string) => {
+    if (e === "bottom") {
+        if (!pager.isLoad || pager.loading) return;
+        queryParams.page_no += 1;
+        await getLists();
+    }
 };
 
 onMounted(() => {
@@ -126,24 +166,19 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-:deep(.el-input__wrapper) {
-    @apply rounded-full;
-}
-:deep(.el-icon) {
-    width: 18px;
-    height: 18px;
-    svg {
-        width: 18px;
-        height: 18px;
-    }
-}
-:deep(.el-tabs__nav-wrap) {
-    &::after {
-        height: 1px;
+.robot-card {
+    @apply bg-white p-5 rounded-[20px] border border-br transition-all duration-300 relative flex flex-col;
+
+    &:hover {
+        @apply border-[#0065FB]/30 translate-y-[-4px];
+        box-shadow: 0 12px 24px -8px rgba(var(--el-primary-color), 0.12);
     }
 }
 
-:deep(.el-tabs) {
-    --el-tabs-header-height: 60px;
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-[#E2E8F0] rounded-full;
 }
 </style>

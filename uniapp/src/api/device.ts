@@ -249,3 +249,18 @@ export const getClosureIndustryHistory = (data: any) => {
 export const deleteClosureIndustryHistory = (data: any) => {
     return request.post({ url: "/sv.leadScraping/deleteIndustryLog", data });
 };
+
+// 朋友圈新增
+export const createCircleTask = (data: any) => {
+    return request.post({ url: "/wechat.circle/addTask", data }, { ignoreCancel: true });
+};
+
+// 朋友圈点赞评论任务新增
+export const createCircleLikeTask = (data: any) => {
+    return request.post({ url: "/device.likeReply/add", data });
+};
+
+// 朋友圈发布时间校验
+export const checkCirclePublishTime = (data: any) => {
+    return request.post({ url: "/wechat.circle/check", data });
+};

@@ -42,3 +42,38 @@ export enum ToneTypeEnum {
     USER = 1, // 用户音色
     ALL = 3, // 全部音色
 }
+
+// 侧边栏类型
+export enum SidebarTypeEnum {
+    // 数字人纯口播视频
+    DIGITAL_HUMAN_PURE_BOUQUET = 1,
+    // 数字人口播混剪
+    BOUQUET_MIXING = 2,
+    // 真人口播视频混剪
+    REAL_PERSON_MIXING = 3,
+    // 素材混剪神器
+    MATERIAL_MIXING = 4,
+    // 新闻体视频
+    NEWS_VIDEO = 5,
+    // 一句话生成视频
+    ONE_WORD_VIDEO = 6,
+    // 形象克隆
+    ANCHOR_CLONE = 7,
+    // 声音克隆
+    VOICE_CLONE = 8,
+    // 我的作品
+    MY_WORKS = 9,
+    // 我的形象
+    MY_ANCHOR = 10,
+}
+
+// 创作视频类型
+export enum CreateVideoTypeEnum {
+    ALL = 0,
+    DIGITAL_HUMAN = 1,
+    ORAL_MIX = 2,
+    TRUE_HUMAN = 3,
+    MATERIAL_MIX = 4,
+    NEWS = 5,
+    SENTENCE = 6,
+}

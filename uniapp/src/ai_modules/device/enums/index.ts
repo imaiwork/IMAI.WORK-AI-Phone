@@ -26,6 +26,8 @@ export enum ListenerTypeEnum {
     CHOOSE_ANCHOR_MATERIAL = "choose-anchor-material",
     // 线索词组
     CLUE_LIST = "clue-list",
+    // 朋友圈
+    CIRCLE_INTERACT = "circle-interact",
 }
 
 // 创建类型
@@ -38,4 +40,6 @@ export enum CreateTypeEnum {
     YH = "yh",
     COMMENT = "comment",
     PRIVATE_MESSAGE = "private_message",
+    CIRCLE = "circle",
+    CIRCLE_INTERACT = "circle_interact",
 }

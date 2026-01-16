@@ -23,7 +23,7 @@ class SphCluesAddWechat extends Command
 
     protected function execute(Input $input, Output $output)
     {
-        CrawlingTaskLogic::sphCluesAddWechat();
+        //CrawlingTaskLogic::sphCluesAddWechat();
         return true;
     }
 }

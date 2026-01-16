@@ -5,6 +5,8 @@ namespace app\common\workerman\rpa\handlers;
 use app\common\workerman\rpa\BaseMessageHandler;
 use Workerman\Connection\TcpConnection;
 use app\common\model\sv\SvPublishSettingDetail;
+use app\common\model\wechat\AiWechatCircleTask;
+use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\model\sv\SvDeviceTask;
 use app\common\workerman\rpa\WorkerEnum;
 use app\common\enum\DeviceEnum;
@@ -33,22 +35,42 @@ class MediaStatusHandler extends BaseMessageHandler
 
             $mediaId = $content['material_id'] ?? 0;
             $status = $content['status'] ?? 0;
-
-            $media = SvPublishSettingDetail::where('id', $mediaId)->findOrEmpty();
-            if (!$media->isEmpty()) {
-                $media->status = $status;
-                $media->remark = $content['msg'] ?? '';
-                $media->update_time = time();
-                $media->exec_time = time();
-                $media->save();
+            $where = [];
+            if($this->payload['appType'] === DeviceEnum::ACCOUNT_TYPE_SPH){
+                $media = AiWechatCircleTask::where('id', $mediaId)->findOrEmpty();
+                if (!$media->isEmpty()) {
+                    $media->send_status = $status === 1 ? 2 : 3;
+                    $media->remark = $content['msg'] ?? '发布失败';
+                    $media->update_time = time();
+                    $media->finish_time = date('Y-m-d H:i', time());
+                    $media->save();
+                }
+                $where = [
+                    ['sub_task_id', '=', $media->task_config_id],
+                    ['sub_data_id', '=', $media->id],
+                    ['device_code', '=', $media->device_code],
+                    ['account', '=', $media->wechat_id],
+                ];
+            }else{
+                $media = SvPublishSettingDetail::where('id', $mediaId)->findOrEmpty();
+                if (!$media->isEmpty()) {
+                    $media->status = $status;
+                    $media->remark = $content['msg'] ?? '';
+                    $media->update_time = time();
+                    $media->exec_time = time();
+                    $media->save();
+                }
+                $where = [
+                    ['sub_task_id', '=', $media->publish_account_id],
+                    ['sub_data_id', '=', $media->id],
+                    ['device_code', '=', $media->device_code],
+                    ['account', '=', $media->account],
+                ];
             }
+            
 
             // 主任务状态修改
-            $task = SvDeviceTask::where('sub_task_id', $media->publish_account_id)
-                ->where('sub_data_id', $media->id)
-                ->where('device_code', $media->device_code)
-                ->where('account', $media->account)
-                ->findOrEmpty();
+            $task = SvDeviceTask::where($where)->findOrEmpty();
             if (!$task->isEmpty()) {
                 $task->status = (int)$status === 2 ? DeviceEnum::TASK_STATUS_FAILED : DeviceEnum::TASK_STATUS_FINISHED;
                 $task->remark = $content['msg'] ?? '';

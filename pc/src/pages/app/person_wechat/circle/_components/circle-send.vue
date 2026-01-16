@@ -1,261 +1,284 @@
 <template>
-    <div class="h-full bg-white w-full overflow-hidden flex flex-col">
-        <!-- 头部 -->
-        <div class="bg-primary h-[48px] flex items-center justify-center font-bold text-white text-xl flex-shrink-0">
-            发送朋友圈
+    <div class="h-full bg-[#F8FAFC] w-full overflow-hidden flex flex-col">
+        <div class="bg-white h-[72px] flex items-center justify-between px-8 border-b border-[#F1F5F9] flex-shrink-0">
+            <div class="flex items-center">
+                <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary mr-3">
+                    <Icon name="el-icon-Promotion" :size="20" />
+                </div>
+                <div>
+                    <div class="text-[18px] text-[#1E293B] font-black tracking-tight">发布朋友圈</div>
+                    <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">Create New Moment</div>
+                </div>
+            </div>
+            <div v-if="showCloseBtn" class="w-8 h-8" @click="emit('close')">
+                <close-btn />
+            </div>
         </div>
 
-        <!-- 表单主体 -->
         <div class="grow min-h-0">
             <ElScrollbar>
-                <ElForm
-                    ref="formRef"
-                    :model="formData"
-                    :rules="!!formData.id ? {} : rules"
-                    label-width="0"
-                    :disabled="!!formData.id">
-                    <div class="px-6 py-3 flex flex-col">
-                        <!-- 区域：基础文本内容 -->
-                        <ElFormItem prop="content">
-                            <div class="w-full">
-                                <div class="flex items-center gap-x-3">
-                                    <div class="bg-primary h-[14px] w-[4px]"></div>
-                                    <div class="text-lg">朋友圈基础文本内容</div>
+                <div class="p-3">
+                    <ElForm
+                        ref="formRef"
+                        :model="formData"
+                        :rules="!!formData.id ? {} : rules"
+                        label-position="top"
+                        :disabled="!!formData.id">
+                        <div class="space-y-3">
+                            <div class="form-section-card">
+                                <div class="section-header">
+                                    <div class="section-title-tag"></div>
+                                    <span class="text-[15px] font-black text-[#1E293B]">基础文本内容</span>
                                 </div>
-                                <div class="mt-4 relative">
+
+                                <div class="mt-4 relative group">
                                     <ElInput
                                         ref="contentRef"
                                         v-model="formData.content"
                                         type="textarea"
                                         resize="none"
-                                        placeholder="点击输入您要发送的文本内容"
-                                        :autosize="{ minRows: 6, maxRows: 15 }"
-                                        maxlength="300" />
-                                    <div class="absolute bottom-1 left-2 flex items-center gap-x-2">
+                                        placeholder="分享此刻的想法..."
+                                        :autosize="{ minRows: 5, maxRows: 12 }"
+                                        maxlength="300"
+                                        class="custom-textarea" />
+
+                                    <div class="absolute bottom-2 left-2">
                                         <ElPopover
-                                            placement="bottom"
-                                            width="466"
+                                            placement="top-start"
+                                            width="400"
                                             trigger="click"
                                             :show-arrow="false"
                                             :popper-style="{ padding: 0 }">
                                             <template #reference>
-                                                <div
-                                                    class="rounded-lg hover:bg-token-sidebar-surface-secondary p-2 cursor-pointer">
-                                                    <Icon name="local-icon-phiz" :size="24" />
+                                                <div class="emoji-trigger">
+                                                    <Icon name="local-icon-phiz" :size="20" />
                                                 </div>
                                             </template>
                                             <EmojiContainer @chooseEmoji="handleChooseEmoji" />
                                         </ElPopover>
                                     </div>
+                                    <div class="absolute bottom-3 right-4 text-[11px] text-[#94A3B8] font-bold">
+                                        {{ formData.content?.length || 0 }}/300
+                                    </div>
                                 </div>
                             </div>
-                        </ElFormItem>
 
-                        <!-- 区域：附加内容 -->
-                        <ElFormItem prop="attachment_content">
-                            <div class="w-full">
-                                <div class="flex items-center gap-x-3">
-                                    <div class="bg-primary h-[14px] w-[4px]"></div>
-                                    <div class="text-lg">朋友圈附加内容</div>
+                            <div class="form-section-card">
+                                <div class="section-header justify-between">
+                                    <div class="flex items-center">
+                                        <div class="section-title-tag"></div>
+                                        <span class="text-[15px] font-black text-[#1E293B]">媒体素材附件</span>
+                                    </div>
+                                    <div
+                                        class="text-[11px] text-primary bg-primary/5 px-2 py-0.5 rounded-md font-bold uppercase">
+                                        {{ postTypeList.find((i) => i.value === formData.attachment_type)?.label }}
+                                    </div>
                                 </div>
+
                                 <div class="mt-4">
-                                    <ElRadioGroup v-model="formData.attachment_type">
-                                        <ElRadio
+                                    <div class="flex flex-wrap gap-2 mb-6" v-if="!formData.id">
+                                        <div
                                             v-for="item in postTypeList"
                                             :key="item.value"
-                                            :value="item.value"
-                                            :disabled="item.disabled">
-                                            {{ item.label }}
-                                        </ElRadio>
-                                    </ElRadioGroup>
-                                </div>
-                                <div class="mt-4">
-                                    <!-- 图片附件 -->
-                                    <template v-if="formData.attachment_type === MaterialTypeEnum.IMAGE">
-                                        <div class="flex mb-4">
+                                            @click="formData.attachment_type = item.value"
+                                            :class="[
+                                                'type-tab',
+                                                formData.attachment_type === item.value ? 'active' : '',
+                                            ]">
+                                            {{ item.label.replace("附加", "") }}
+                                        </div>
+                                    </div>
+
+                                    <div class="media-container">
+                                        <template v-if="formData.attachment_type === MaterialTypeEnum.IMAGE">
+                                            <div class="grid grid-cols-3 gap-3">
+                                                <div
+                                                    v-for="(item, index) in assetData.image"
+                                                    :key="index"
+                                                    class="asset-item group">
+                                                    <ElImage
+                                                        :src="item"
+                                                        :preview-src-list="assetData.image"
+                                                        :initial-index="index"
+                                                        class="w-full h-full rounded-xl overflow-hidden"
+                                                        fit="cover" />
+                                                    <div
+                                                        v-if="!formData.id"
+                                                        class="remove-btn"
+                                                        @click="handleRemoveImage(index)">
+                                                        <Icon name="el-icon-Close" :size="10" />
+                                                    </div>
+                                                </div>
+                                                <upload
+                                                    v-if="imageUploadLimit > 0 && !formData.id"
+                                                    class="asset-upload-btn w-full"
+                                                    type="image"
+                                                    show-progress
+                                                    :limit="imageUploadLimit"
+                                                    :show-file-list="false"
+                                                    @success="uploadSuccess">
+                                                    <div
+                                                        class="flex flex-col items-center justify-center h-[120px] w-full">
+                                                        <Icon
+                                                            name="local-icon-image_add"
+                                                            :size="24"
+                                                            color="var(--color-primary)" />
+                                                        <span class="text-[11px] font-bold text-[#64748B] mt-1"
+                                                            >添加图片</span
+                                                        >
+                                                        <span class="text-[#999999] text-[11px]">
+                                                            或<a @click.stop="openMaterialPicker" class="text-primary"
+                                                                >从素材库选择</a
+                                                            >
+                                                        </span>
+                                                    </div>
+                                                </upload>
+                                            </div>
+                                        </template>
+
+                                        <template v-if="formData.attachment_type === MaterialTypeEnum.VIDEO">
+                                            <div
+                                                v-if="assetData.video"
+                                                class="relative rounded-2xl overflow-hidden border-2 border-white shadow-sm">
+                                                <video
+                                                    :src="assetData.video"
+                                                    class="w-full aspect-video object-cover" />
+                                                <div class="remove-btn !top-2 !right-2" @click="handleRemoveVideo">
+                                                    <Icon name="el-icon-Close" :size="12" />
+                                                </div>
+                                            </div>
                                             <upload
-                                                v-if="imageUploadLimit > 0"
-                                                class="img-upload"
-                                                :limit="imageUploadLimit"
+                                                v-else-if="!formData.id"
+                                                class="w-full"
+                                                type="video"
+                                                :limit="1"
                                                 :show-file-list="false"
                                                 show-progress
                                                 @success="uploadSuccess">
-                                                <div class="upload-select">
-                                                    <Icon name="local-icon-image_add" color="#999999" :size="40" />
-                                                    <span class="text-[#999999] mt-2">点击上传图片</span>
-                                                    <span class="text-[#999999]">
-                                                        或<a @click.stop="openMaterialPicker" class="text-primary"
-                                                            >从素材库选择</a
-                                                        >
-                                                    </span>
+                                                <div class="media-empty-state">
+                                                    <Icon
+                                                        name="local-icon-video_add"
+                                                        :size="32"
+                                                        color="var(--color-primary)" />
+                                                    <span class="text-[13px] font-bold mt-2"
+                                                        ><a @click.stop="openMaterialPicker" class="text-primary"
+                                                            >点击上传</a
+                                                        >或从素材库选择视频</span
+                                                    >
                                                 </div>
                                             </upload>
-                                        </div>
-                                        <div class="grid grid-cols-6 gap-5">
-                                            <div
-                                                v-for="(item, index) in assetData.image"
-                                                :key="index"
-                                                class="w-[64px] h-[64px] bg-[#F7F7F7] rounded-lg p-1 relative">
-                                                <ElImage
-                                                    :src="item"
-                                                    :preview-src-list="[item]"
-                                                    preview-teleported
-                                                    class="h-full rounded-lg w-full object-cover" />
-                                                <div
-                                                    v-if="!formData.id"
-                                                    class="absolute -top-2 -right-2 cursor-pointer"
-                                                    @click="handleRemoveImage(index)">
-                                                    <Icon
-                                                        name="local-icon-close_circle_fill"
-                                                        :size="20"
-                                                        color="#D43030" />
+                                        </template>
+
+                                        <template v-if="isLinkOrMiniProgram">
+                                            <div v-if="hasLinkOrMiniProgramAsset" class="relative group">
+                                                <div class="p-1 bg-white rounded-xl shadow-sm border border-[#F1F5F9]">
+                                                    <link-card
+                                                        v-if="formData.attachment_type === MaterialTypeEnum.LINK"
+                                                        v-bind="assetData.link" />
+                                                    <mini-program-card
+                                                        v-else-if="
+                                                            formData.attachment_type === MaterialTypeEnum.MINI_PROGRAM
+                                                        "
+                                                        v-bind="assetData.mini_program" />
+                                                </div>
+                                                <div class="remove-btn" @click="handleRemoveLinkOrMiniProgram">
+                                                    <Icon name="el-icon-Close" :size="12" />
                                                 </div>
                                             </div>
-                                        </div>
-                                    </template>
-
-                                    <!-- 视频附件 -->
-                                    <template v-if="formData.attachment_type === MaterialTypeEnum.VIDEO">
-                                        <upload
-                                            type="video"
-                                            :limit="1"
-                                            :show-file-list="false"
-                                            show-progress
-                                            @success="uploadSuccess">
-                                            <div class="upload-select">
-                                                <template v-if="assetData.video">
-                                                    <div
-                                                        class="absolute -top-2.5 -right-2.5 cursor-pointer"
-                                                        @click.stop="handleRemoveVideo">
-                                                        <Icon
-                                                            name="local-icon-close_circle_fill"
-                                                            :size="20"
-                                                            color="#D43030" />
-                                                    </div>
-                                                    <video :src="assetData.video" class="w-full h-full" />
-                                                </template>
-                                                <template v-else>
-                                                    <Icon name="local-icon-video_add" color="#999999" :size="40" />
-                                                    <span class="text-[#999999] mt-2">点击上传视频</span>
-                                                    <span class="text-[#999999]">
-                                                        或<a @click.stop="openMaterialPicker" class="text-primary"
-                                                            >从素材库选择</a
-                                                        >
-                                                    </span>
-                                                </template>
+                                            <div v-else class="media-empty-state" @click="openMaterialPicker">
+                                                <Icon name="local-icon-file2" :size="32" color="var(--color-primary)" />
+                                                <span class="text-[13px] font-bold mt-2">点击从素材库选择链接信息</span>
                                             </div>
-                                        </upload>
-                                    </template>
-
-                                    <!-- 链接/小程序附件 -->
-                                    <template v-if="isLinkOrMiniProgram">
-                                        <div class="upload-select cursor-pointer" @click="openMaterialPicker">
-                                            <template v-if="!hasLinkOrMiniProgramAsset">
-                                                <Icon name="local-icon-file2" color="#999999" :size="32"></Icon>
-                                                <a class="text-primary mt-3">点击从素材库选择</a>
-                                            </template>
-                                            <div
-                                                v-else
-                                                class="p-2 bg-primary-light-7 h-full w-full rounded-lg relative">
-                                                <link-card
-                                                    v-if="formData.attachment_type === MaterialTypeEnum.LINK"
-                                                    :title="assetData.link.title"
-                                                    :img="assetData.link.pic"
-                                                    :desc="assetData.link.desc" />
-                                                <mini-program-card
-                                                    v-else-if="
-                                                        formData.attachment_type === MaterialTypeEnum.MINI_PROGRAM
-                                                    "
-                                                    :title="assetData.mini_program.title"
-                                                    :pic="assetData.mini_program.pic"
-                                                    :link="assetData.mini_program.link" />
-                                                <div
-                                                    class="absolute -top-2 -right-2 cursor-pointer"
-                                                    @click.stop="handleRemoveLinkOrMiniProgram">
-                                                    <Icon
-                                                        name="local-icon-close_circle_fill"
-                                                        :size="20"
-                                                        color="#D43030" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </template>
+                                        </template>
+                                    </div>
                                 </div>
                             </div>
-                        </ElFormItem>
 
-                        <!-- 区域：附加评论 -->
-                        <ElFormItem prop="comment">
-                            <div class="w-full">
-                                <div class="flex items-center gap-x-3">
-                                    <div class="bg-primary h-[14px] w-[4px]"></div>
-                                    <div class="text-lg">朋友圈附加评论</div>
+                            <div class="form-section-card">
+                                <div class="section-header">
+                                    <div class="section-title-tag"></div>
+                                    <span class="text-[15px] font-black text-[#1E293B]">发送执行策略</span>
+                                </div>
+                                <div class="mt-4 flex flex-col gap-4">
+                                    <!-- <ElRadioGroup v-model="formData.task_type" class="custom-radio-group">
+                                        <ElRadio :value="0" border class="strategy-radio">立即发送</ElRadio>
+                                        <ElRadio :value="1" border class="strategy-radio">定时发送</ElRadio>
+                                    </ElRadioGroup> -->
+                                    <ElDatePicker
+                                        v-model="formData.date"
+                                        type="date"
+                                        :disabled="!!formData.id"
+                                        :disabled-date="getDisabledDate"
+                                        value-format="YYYY-MM-DD"
+                                        placeholder="请选择确切的发送时间"
+                                        class="!w-full custom-datepicker" />
+                                    <!-- 时间选择 -->
+                                    <ElTimePicker
+                                        v-model="formData.time_config"
+                                        :disabled="!!formData.id"
+                                        format="HH:mm"
+                                        is-range
+                                        value-format="HH:mm"
+                                        range-separator="至"
+                                        placeholder="请选择确切的发送时间"
+                                        class="!w-full custom-timepicker" />
+                                </div>
+                            </div>
+
+                            <div class="form-section-card" v-if="false">
+                                <div class="section-header">
+                                    <div class="section-title-tag"></div>
+                                    <span class="text-[15px] font-black text-[#1E293B]">附加自动评论</span>
                                 </div>
                                 <div class="mt-4">
                                     <ElInput
                                         v-model="formData.comment"
                                         type="textarea"
-                                        placeholder="点击输入您需要附加的评论，多个评论之间用##隔开"
+                                        placeholder="输入评论，多个评论请用 ## 隔开"
                                         resize="none"
-                                        :rows="4" />
+                                        :rows="3"
+                                        class="custom-textarea" />
                                 </div>
                             </div>
-                        </ElFormItem>
 
-                        <!-- 区域：发送策略 -->
-                        <div class="w-full">
-                            <div class="flex items-center gap-x-3">
-                                <div class="bg-primary h-[14px] w-[4px]"></div>
-                                <div class="text-lg">朋友圈发送策略</div>
-                            </div>
-                            <div class="mt-4">
-                                <ElFormItem :prop="formData.task_type === 1 ? 'send_time' : ''">
-                                    <ElRadioGroup v-model="formData.task_type">
-                                        <ElRadio :value="0">立即发送</ElRadio>
-                                        <ElRadio :value="1">
-                                            <ElDatePicker
-                                                v-model="formData.send_time"
-                                                type="datetime"
-                                                :disabled="formData.task_type === 0"
-                                                :disabled-date="getDisabledDate"
-                                                value-format="YYYY-MM-DD HH:mm:ss"
-                                                placeholder="选择发送时间" />
-                                        </ElRadio>
-                                    </ElRadioGroup>
-                                </ElFormItem>
-                            </div>
-                        </div>
-
-                        <!-- 区域：选择账号 -->
-                        <ElFormItem v-if="isShowWeChat" prop="wechat_ids">
-                            <div class="w-full">
-                                <div class="flex items-center gap-x-3">
-                                    <div class="bg-primary h-[14px] w-[4px]"></div>
-                                    <div class="text-lg">请选择发送账号</div>
+                            <div v-if="isShowWeChat" class="form-section-card">
+                                <div class="section-header">
+                                    <div class="section-title-tag"></div>
+                                    <span class="text-[15px] font-black text-[#1E293B]">执行发送账号</span>
                                 </div>
                                 <div class="mt-4">
-                                    <ElSelect v-model="formData.wechat_ids" multiple filterable clearable>
+                                    <ElSelect
+                                        v-model="formData.wechat_ids"
+                                        multiple
+                                        filterable
+                                        clearable
+                                        placeholder="选择要同步的微信号"
+                                        class="!w-full custom-select">
                                         <ElOption
                                             v-for="item in optionsData.wechatLists"
-                                            :key="item.wechat_id"
-                                            :value="item.wechat_id"
-                                            :label="item.wechat_nickname" />
+                                            :key="item.account"
+                                            :value="item.account"
+                                            :label="item.nickname" />
                                     </ElSelect>
                                 </div>
                             </div>
-                        </ElFormItem>
-                    </div>
-                </ElForm>
+                        </div>
+                    </ElForm>
+                </div>
             </ElScrollbar>
         </div>
 
-        <!-- 底部 -->
-        <div v-if="!formData.id" class="my-4 flex justify-center">
-            <ElButton type="primary" :loading="isLock" @click="lockFn">立即创建</ElButton>
+        <div v-if="!formData.id" class="p-6 bg-white border-t border-[#F1F5F9]">
+            <ElButton
+                type="primary"
+                class="!w-full !h-[52px] !rounded-[16px] !text-[16px] !font-bold"
+                :loading="isLock"
+                @click="lockFn">
+                立即创建
+            </ElButton>
         </div>
     </div>
 
-    <!-- 素材选择器弹窗 -->
     <material-picker
         v-if="showMaterialPicker"
         ref="materialPickerRef"
@@ -265,7 +288,6 @@
         @close="showMaterialPicker = false"
         @select="handleConfirmMaterial" />
 </template>
-
 <script setup lang="ts">
 import { dayjs, type FormInstance, type InputInstance } from "element-plus";
 import { circleTaskAdd } from "@/api/person_wechat";
@@ -276,7 +298,6 @@ import MiniProgramCard from "../../_components/mini-program-card.vue";
 import MaterialPicker from "../../_components/material-picker.vue";
 import useGlobalSettings from "../../_hooks/useGlobalSettings";
 import { setRangeText } from "@/utils/dom";
-import { computed, reactive, ref, shallowRef, nextTick } from "vue";
 
 // ** 1. 类型定义与组件接口 **
 
@@ -285,25 +306,29 @@ type FormData = {
     content: string;
     task_type: 0 | 1;
     attachment_type: MaterialTypeEnum;
-    attachment_content: any;
+    attachment_content: any[];
     comment: string;
-    send_time: string;
+    date: string;
     wechat_ids?: string[];
+    time_config: string[];
 };
 
 const props = withDefaults(
     defineProps<{
         modelValue: FormData;
         isShowWeChat?: boolean;
+        showCloseBtn?: boolean;
     }>(),
     {
         isShowWeChat: true,
+        showCloseBtn: false,
     }
 );
 
 const emit = defineEmits<{
     (e: "update:modelValue", value: FormData): void;
     (e: "success"): void;
+    (e: "close"): void;
 }>();
 
 // ** 2. 全局与插件实例 **
@@ -320,12 +345,12 @@ const formData = computed({
 const formRef = shallowRef<FormInstance>();
 const rules = {
     content: [{ required: true, message: "请输入朋友圈基础文本内容" }],
-    send_time: [
+    date: [
         { required: true, message: "请选择朋友圈发送时间" },
         {
             validator: (rule, value, callback) => {
-                if (value && dayjs(value).isBefore(dayjs())) {
-                    callback(new Error("发送时间不能小于当前时间"));
+                if (value && dayjs(value).isBefore(dayjs().add(30, "minutes"))) {
+                    callback(new Error("发送时间不能小于当前时间30分钟"));
                 } else {
                     callback();
                 }
@@ -357,8 +382,8 @@ const handleChooseEmoji = ({ emoji }: any) => {
 const postTypeList = [
     { label: "附加图片", value: MaterialTypeEnum.IMAGE, disabled: false },
     { label: "附加视频", value: MaterialTypeEnum.VIDEO, disabled: false },
-    { label: "附加链接", value: MaterialTypeEnum.LINK, disabled: false },
-    { label: "附加小程序", value: MaterialTypeEnum.MINI_PROGRAM, disabled: false },
+    // { label: "附加链接", value: MaterialTypeEnum.LINK, disabled: false },
+    // { label: "附加小程序", value: MaterialTypeEnum.MINI_PROGRAM, disabled: false },
 ];
 
 // 计算最大可上传图片数量
@@ -502,20 +527,20 @@ const { optionsData } = useGlobalSettings();
 /**
  * 准备附件内容
  */
-const prepareAttachmentContent = () => {
+const prepareAttachmentContent = (): any[] => {
     const { attachment_type } = formData.value;
 
     switch (attachment_type) {
         case MaterialTypeEnum.IMAGE:
             return assetData.image;
         case MaterialTypeEnum.VIDEO:
-            return assetData.video;
-        case MaterialTypeEnum.LINK:
-            return assetData.link;
-        case MaterialTypeEnum.MINI_PROGRAM:
-            return assetData.mini_program;
+            return [assetData.video];
+        // case MaterialTypeEnum.LINK:
+        //     return assetData.link;
+        // case MaterialTypeEnum.MINI_PROGRAM:
+        //     return assetData.mini_program;
         default:
-            return null;
+            return [];
     }
 };
 
@@ -525,10 +550,16 @@ const prepareAttachmentContent = () => {
 const handleCreate = async () => {
     // 表单验证
     await formRef.value?.validate();
+    if (formData.value.time_config.length === 2) {
+        const [start, end] = formData.value.time_config;
+        if (dayjs(end, "HH:mm").diff(dayjs(start, "HH:mm"), "minutes") < 30) {
+            feedback.msgWarning("时间间隔不能小于30分钟");
+            return;
+        }
+    }
     try {
         // 设置附件内容
         formData.value.attachment_content = prepareAttachmentContent();
-
         // 判断附加内容是不是为空
         if (!formData.value.attachment_content) {
             formData.value.attachment_type = MaterialTypeEnum.TEXT;
@@ -536,13 +567,16 @@ const handleCreate = async () => {
 
         // 如果是立即发送，清空发送时间
         if (formData.value.task_type === 0) {
-            formData.value.send_time = "";
+            formData.value.date = "";
         }
 
         // 提交表单
-        await circleTaskAdd(formData.value);
+        await circleTaskAdd({
+            ...formData.value,
+            time_config: `${formData.value.time_config[0]}-${formData.value.time_config[1]}`,
+        });
         feedback.msgSuccess("创建成功");
-        close();
+        emit("close");
         emit("success");
     } catch (error) {
         feedback.msgError(error);
@@ -566,33 +600,74 @@ defineExpose({
     },
 });
 </script>
-
 <style scoped lang="scss">
-/* 上传选择区域样式 */
-.upload-select {
-    @apply w-[216px] py-4 bg-[#F7F7F7] flex flex-col items-center justify-center rounded-lg border border-[#A8A8A8] border-dashed hover:border-primary relative;
-    transition: border-color 0.3s ease;
+.form-section-card {
+    @apply bg-white rounded-[24px] p-5  border border-[#F1F5F9];
 }
 
-/* 文本域样式调整 */
-:deep(.el-textarea__inner) {
-    padding-bottom: 50px;
-
-    &::-webkit-scrollbar {
-        width: 0;
+.section-header {
+    @apply flex items-center mb-1;
+    .section-title-tag {
+        @apply w-[4px] h-[16px] bg-primary rounded-full mr-3;
     }
 }
 
-/* 单选按钮间距调整 */
-:deep(.el-radio) {
-    margin-right: 20px;
+.type-tab {
+    @apply px-4 py-2 bg-slate-100 text-[#64748B] rounded-xl text-xs font-bold cursor-pointer transition-all border border-[transparent];
+    &:hover {
+        @apply bg-slate-200;
+    }
+    &.active {
+        @apply bg-[#0065fb]/10 text-primary border-[#0065fb]/20;
+    }
 }
 
-/* 图片上传组件样式 */
-:deep(.img-upload) {
-    .el-upload {
-        width: 100% !important;
-        height: 100% !important;
+/* 媒体展示 */
+.media-container {
+    @apply min-h-[120px];
+}
+
+.asset-item {
+    @apply relative aspect-square bg-slate-50 rounded-xl border border-gray-100 leading-[0];
+}
+
+.asset-upload-btn {
+    @apply aspect-square bg-slate-50 rounded-[20px] border-2 border-dashed border-slate-200 hover:border-primary hover:bg-[#0065fb]/5 transition-all cursor-pointer;
+}
+
+.media-empty-state {
+    @apply w-full py-10 flex flex-col items-center justify-center bg-slate-50 rounded-[20px] border-2 border-dashed border-slate-200 text-[#94A3B8] cursor-pointer hover:border-primary transition-all;
+}
+
+.remove-btn {
+    @apply absolute -top-1.5 -right-1.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center cursor-pointer shadow-light hover:scale-110 transition-transform z-10;
+}
+
+.custom-radio-group {
+    @apply w-full flex gap-3;
+    .strategy-radio {
+        @apply flex-1 m-0 h-11 rounded-xl px-4 flex items-center justify-center font-bold;
+        &.is-checked {
+            @apply bg-[#0065fb]/5 border-[#0065fb]/30;
+        }
     }
+}
+
+.emoji-trigger {
+    @apply w-10 h-10 flex items-center justify-center bg-white text-[#94A3B8] rounded-xl shadow-light hover:text-primary hover:scale-110 transition-all cursor-pointer;
+}
+
+.custom-datepicker :deep(.el-input__wrapper) {
+    @apply rounded-xl bg-slate-50 border-[none] shadow-[none] py-2;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: all 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
 }
 </style>

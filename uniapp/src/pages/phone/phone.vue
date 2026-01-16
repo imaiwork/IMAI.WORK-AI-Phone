@@ -20,15 +20,24 @@
                 </view>
             </view>
         </view>
-        <view class="px-4 flex items-center gap-x-4 mt-4">
-            <view class="flex items-center gap-x-2" v-for="item in getDeviceStatusCount" :key="item.status">
-                <view
-                    class="w-[10rpx] h-[10rpx] rounded-full"
-                    :style="{ backgroundColor: getDeviceStatusInfo(item.status).textColor }"></view>
-                <text class="text-[22rpx] text-[#000000b3] font-bold"
-                    >{{ getDeviceStatusInfo(item.status).text }} {{ item.count }}
-                </text>
+        <view class="px-4 flex items-center justify-between gap-x-4 mt-4">
+            <view class="flex items-center gap-x-4">
+                <view class="flex items-center gap-x-2" v-for="item in getDeviceStatusCount" :key="item.status">
+                    <view
+                        class="w-[10rpx] h-[10rpx] rounded-full"
+                        :style="{ backgroundColor: getDeviceStatusInfo(item.status).textColor }"></view>
+                    <text class="text-[22rpx] text-[#000000b3] font-bold"
+                        >{{ getDeviceStatusInfo(item.status).text }} {{ item.count }}
+                    </text>
+                </view>
             </view>
+            <navigator
+                url="/packages/pages/task_tutorial/task_tutorial"
+                class="flex items-center gap-x-[4rpx]"
+                hover-class="none">
+                <u-icon name="play-circle" color="#AAAAAA" size="24"></u-icon>
+                <text class="text-[22rpx] text-[#000000]/50 font-bold">操作教程</text>
+            </navigator>
         </view>
         <view class="grow min-h-0 mt-5">
             <z-paging
@@ -47,55 +56,65 @@
                             @click="
                                 toPage('/ai_modules/device/pages/detail/detail', { device_code: item.device_code })
                             ">
-                            <view class="absolute right-2 top-1 p-2" @click.stop>
-                                <switch
-                                    style="transform: scale(0.7)"
-                                    color="#0065FB"
-                                    :checked="item.auto_type == 1"
-                                    @change="switchTaskMode(item)"></switch>
-                            </view>
-                            <view class="flex items-center gap-x-[30rpx]">
-                                <view
-                                    class="w-[80rpx] h-[80rpx] rounded-[20rpx] flex items-center justify-center flex-shrink-0"
-                                    :style="{
-                                        backgroundColor: getDeviceStatusInfo(item.status).iconBgColor,
-                                    }">
-                                    <view class="w-[40rpx] h-[40rpx]">
-                                        <image
-                                            src="/static/images/icons/device_error.svg"
-                                            class="w-full h-full"
-                                            v-if="item.status == 0"></image>
-                                        <image
-                                            src="/static/images/icons/device_success.svg"
-                                            class="w-full h-full"
-                                            v-if="item.status == 1"></image>
-                                        <image
-                                            src="/static/images/icons/device_primary.svg"
-                                            class="w-full h-full"
-                                            v-if="item.status == 2"></image>
-                                    </view>
-                                </view>
-                                <view class="mr-4">
-                                    <view class="line-clamp-1 text-[30rpx] font-bold break-all"
-                                        >{{ item.device_name || "-" }}
-                                    </view>
-                                    <view class="flex items-center gap-x-2">
-                                        <view class="text-xs font-bold text-[#000000b3]">{{
-                                            item.auto_type === 0 ? "手动任务" : "24h自动"
-                                        }}</view>
-                                        <view class="flex items-center gap-x-1 mt-[4rpx]"
-                                            ><view
-                                                class="w-[10rpx] h-[10rpx] rounded-full"
-                                                :style="{
-                                                    backgroundColor: getDeviceStatusInfo(item.status).textColor,
-                                                }"></view>
-                                            <view
-                                                class="font-bold"
-                                                :style="{ color: getDeviceStatusInfo(item.status).textColor }"
-                                                >{{ getDeviceStatusInfo(item.status).text }}</view
-                                            >
+                            <view class="flex">
+                                <view class="flex items-center gap-x-[30rpx] flex-1">
+                                    <view
+                                        class="w-[80rpx] h-[80rpx] rounded-[20rpx] flex items-center justify-center flex-shrink-0"
+                                        :style="{
+                                            backgroundColor: getDeviceStatusInfo(item.status).iconBgColor,
+                                        }">
+                                        <view class="w-[40rpx] h-[40rpx]">
+                                            <image
+                                                src="/static/images/icons/device_error.svg"
+                                                class="w-full h-full"
+                                                v-if="item.status == 0"></image>
+                                            <image
+                                                src="/static/images/icons/device_success.svg"
+                                                class="w-full h-full"
+                                                v-if="item.status == 1"></image>
+                                            <image
+                                                src="/static/images/icons/device_primary.svg"
+                                                class="w-full h-full"
+                                                v-if="item.status == 2"></image>
                                         </view>
                                     </view>
+                                    <view class="mr-4">
+                                        <view class="line-clamp-1 text-[30rpx] font-bold break-all"
+                                            >{{ item.device_name || "-" }}
+                                        </view>
+                                        <view class="flex items-center gap-x-2">
+                                            <view class="text-xs font-bold text-[#000000b3]">{{
+                                                item.auto_type === 0 ? "手动任务" : "24h自动"
+                                            }}</view>
+                                            <view class="flex items-center gap-x-1 mt-[4rpx]"
+                                                ><view
+                                                    class="w-[10rpx] h-[10rpx] rounded-full"
+                                                    :style="{
+                                                        backgroundColor: getDeviceStatusInfo(item.status).textColor,
+                                                    }"></view>
+                                                <view
+                                                    class="font-bold"
+                                                    :style="{ color: getDeviceStatusInfo(item.status).textColor }"
+                                                    >{{ getDeviceStatusInfo(item.status).text }}</view
+                                                >
+                                            </view>
+                                        </view>
+                                    </view>
+                                </view>
+                                <view
+                                    class="shrink-0 h-fit rounded-[100rpx] bg-[#F3F3F3] flex items-center p-[4rpx]"
+                                    @click.stop="switchTaskMode(item)">
+                                    <view
+                                        class="px-[12rpx] h-[40rpx] flex items-center justify-center text-center rounded-[100rpx] text-[22rpx] font-bold"
+                                        :class="[
+                                            item.auto_type == taskMode.value
+                                                ? 'text-white bg-primary'
+                                                : 'text-[#000000]/30',
+                                        ]"
+                                        v-for="(taskMode, index) in taskModeList"
+                                        :key="taskMode.value"
+                                        >{{ taskMode.name }}</view
+                                    >
                                 </view>
                             </view>
                             <template v-if="item.auto_type === 0">
@@ -352,11 +371,11 @@ const showAutoSettingPopup = ref(false);
 // 任务模式
 const taskModeList = [
     {
-        name: "24h自动任务",
+        name: "AI自动",
         value: 1,
     },
     {
-        name: "手动任务",
+        name: "人工",
         value: 0,
     },
 ];

@@ -13,7 +13,6 @@
                                 placeholder="请选择知识库类型"
                                 @change="handleKnChange">
                                 <ElOption label="向量知识库" :value="KnbTypeEnum.VECTOR" />
-                                <ElOption label="RAG知识库" :value="KnbTypeEnum.RAG" />
                             </ElSelect>
                         </el-form-item>
                         <!-- 挂靠知识库 -->
@@ -325,7 +324,7 @@ const searchOptions = [
 const knLists = ref<any[]>([]);
 
 const getKnLists = async (query?: string) => {
-    const apiCall = formData.value.kb_type == KnbTypeEnum.VECTOR ? knowKnowledgeVectorList : knowKnowledgeList;
+    const apiCall = knowKnowledgeVectorList;
     const { lists } = await apiCall({ page_size: 25000, name: query || "" });
     knLists.value = lists || [];
 };

@@ -1,107 +1,150 @@
 <template>
-    <div class="h-full">
-        <div class="grid grid-cols-4 gap-4 h-full">
+    <div class="h-full flex flex-col gap-8 p-1">
+        <div class="grid grid-cols-4 gap-5">
             <div
                 v-for="(card, index) in sendWayList"
-                class="shadow-[2px_2px_7px_1px_rgba(35,83,244,0.12)] rounded-lg p-4 border border-primary-light-8 cursor-pointer h-[70%] flex items-center justify-center hover:bg-primary-light-9 relative"
-                :class="{ 'bg-primary-light-9': formData.type == card.type }"
                 :key="index"
+                class="send-way-card group"
+                :class="{ 'is-active': formData?.type == card.type }"
                 @click="handleSendWay(card)">
-                <div class="absolute top-2 right-2" v-if="formData.type == card.type">
-                    <Icon name="el-icon-SuccessFilled" color="#5580F9" :size="24" />
+                <div class="active-check" v-if="formData?.type == card.type">
+                    <Icon name="el-icon-Check" color="#fff" :size="14" />
                 </div>
-                <div class="flex flex-col items-center relative">
-                    <img :src="card.img" class="w-[153px] h-[153px]" />
-                    <div class="flex flex-col items-center mt-5 h-[100px]">
-                        <span class="text-lg font-bold">{{ card.title }}</span>
-                        <span class="text-[#969696] mt-3 text-center">{{ card.desc }}</span>
+
+                <div class="flex flex-col items-center relative z-10">
+                    <div
+                        class="w-20 h-20 mb-4 rounded-2xl bg-slate-50 flex items-center justify-center group-hover:bg-white transition-all duration-500">
+                        <img
+                            :src="card.img"
+                            class="w-14 h-14 object-contain group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+
+                    <div class="flex flex-col items-center text-center">
+                        <span
+                            class="text-[16px] font-black text-slate-800 mb-2 group-hover:text-primary transition-colors">
+                            {{ card.title }}
+                        </span>
+                        <span class="text-slate-400 text-[12px] font-medium leading-relaxed px-2">
+                            {{ card.desc }}
+                        </span>
                     </div>
                 </div>
+
+                <div
+                    class="absolute bottom-0 left-0 right-0 h-1 bg-primary scale-x-0 group-[.is-active]:scale-x-100 transition-transform duration-300"></div>
             </div>
         </div>
-    </div>
-    <popup
-        v-if="showPopup"
-        ref="popupRef"
-        :title="currentCard.title"
-        width="610px"
-        :confirm-loading="isLock"
-        @close="close"
-        @confirm="lockFn">
-        <ElForm :model="formData" ref="formRef" :rules="rules" label-width="100px" label-position="top">
-            <template v-if="currentCard.type == SendWayEnum.SPECIFIED_PROCESS">
-                <ElFormItem label="请选择客户流程" prop="flow_id">
-                    <ElSelect v-model="formData.flow_id" placeholder="请选择客户流程" filterable>
-                        <ElOption
-                            v-for="item in flowLists"
-                            :label="item.flow_name"
-                            :value="item.id"
-                            :key="item.id"></ElOption>
-                    </ElSelect>
-                </ElFormItem>
-            </template>
-            <template v-if="currentCard.type == SendWayEnum.SPECIFIED_STAGE">
-                <ElFormItem label="请选择流程" prop="flow_id">
-                    <ElSelect v-model="formData.flow_id" placeholder="请选择流程" filterable>
-                        <ElOption
-                            v-for="item in flowLists"
-                            :label="item.flow_name"
-                            :value="item.id"
-                            :key="item.id"></ElOption>
-                    </ElSelect>
-                </ElFormItem>
-                <ElFormItem label="请选择对应流程的阶段" prop="stage_id">
-                    <ElSelect
-                        v-model="formData.stage_id"
-                        placeholder="请选择对应流程的阶段"
-                        filterable
-                        :disabled="!formData.flow_id">
-                        <ElOption
-                            v-for="item in getStageList"
-                            :label="item.sub_stage_name"
-                            :value="item.id"
-                            :key="item.id"></ElOption>
-                    </ElSelect>
-                </ElFormItem>
-            </template>
-            <template v-if="currentCard.type == SendWayEnum.BIRTHDAY_CUSTOMER">
-                <ElFormItem label="请要执行的流程客户" prop="flow_id">
-                    <ElSelect v-model="formData.flow_id" placeholder="请选择流程" filterable>
-                        <ElOption
-                            v-for="item in flowLists"
-                            :label="item.flow_name"
-                            :value="item.id"
-                            :key="item.id"></ElOption>
-                    </ElSelect>
-                </ElFormItem>
-            </template>
-            <template v-if="currentCard.type == SendWayEnum.FESTIVAL_ACTIVITY">
-                <ElFormItem label="请选择流程" prop="festival">
-                    <ElSelect v-model="formData.flow_id" placeholder="请选择流程" filterable>
-                        <ElOption
-                            v-for="item in flowLists"
-                            :label="item.flow_name"
-                            :value="item.id"
-                            :key="item.id"></ElOption>
-                    </ElSelect>
-                </ElFormItem>
-                <ElFormItem label="请选择日期" prop="push_day">
-                    <ElDatePicker
-                        v-model="formData.push_day"
-                        placeholder="请选择日期"
-                        class="!w-full"
-                        format="YYYY-MM-DD"
-                        value-format="YYYY-MM-DD"
-                        :disabled-date="getDisabledDate"></ElDatePicker>
-                </ElFormItem>
-            </template>
-        </ElForm>
-    </popup>
-</template>
 
+        <div class="flex items-center gap-4 py-2">
+            <div class="flex-1 h-[1px] bg-slate-100"></div>
+            <div class="flex items-center gap-2 text-slate-400 text-[12px] font-bold">
+                <Icon name="el-icon-Setting" />
+                <span>配置触发细节</span>
+            </div>
+            <div class="flex-1 h-[1px] bg-slate-100"></div>
+        </div>
+
+        <div class="bg-slate-50/50 rounded-[24px] p-8 border border-slate-100">
+            <ElForm :model="formData" ref="formRef" :rules="rules" label-position="top">
+                <div class="max-w-xl mx-auto">
+                    <template v-if="formData?.type == SendWayEnum.SPECIFIED_PROCESS">
+                        <ElFormItem label="选择客户流程" prop="flow_id">
+                            <ElSelect
+                                v-model="formData.flow_id"
+                                placeholder="请选择客户流程"
+                                filterable
+                                class="custom-select">
+                                <ElOption
+                                    v-for="item in flowLists"
+                                    :label="item.flow_name"
+                                    :value="item.id"
+                                    :key="item.id"></ElOption>
+                            </ElSelect>
+                            <div class="mt-2 text-[12px] text-slate-400">当用户进入此流程时，SOP 将自动开启</div>
+                        </ElFormItem>
+                    </template>
+
+                    <template v-if="formData?.type == SendWayEnum.SPECIFIED_STAGE">
+                        <div class="grid grid-cols-2 gap-6">
+                            <ElFormItem label="选择所属流程" prop="flow_id">
+                                <ElSelect
+                                    v-model="formData.flow_id"
+                                    placeholder="请选择流程"
+                                    filterable
+                                    class="custom-select">
+                                    <ElOption
+                                        v-for="item in flowLists"
+                                        :label="item.flow_name"
+                                        :value="item.id"
+                                        :key="item.id"></ElOption>
+                                </ElSelect>
+                            </ElFormItem>
+                            <ElFormItem label="选择特定阶段" prop="stage_id">
+                                <ElSelect
+                                    v-model="formData.stage_id"
+                                    placeholder="请选择对应阶段"
+                                    filterable
+                                    :disabled="!formData.flow_id"
+                                    class="custom-select">
+                                    <ElOption
+                                        v-for="item in getStageList"
+                                        :label="item.sub_stage_name"
+                                        :value="item.id"
+                                        :key="item.id"></ElOption>
+                                </ElSelect>
+                            </ElFormItem>
+                        </div>
+                    </template>
+
+                    <template v-if="formData?.type == SendWayEnum.BIRTHDAY_CUSTOMER">
+                        <ElFormItem label="目标流程客户范围" prop="flow_id">
+                            <ElSelect
+                                v-model="formData.flow_id"
+                                placeholder="请选择流程"
+                                filterable
+                                class="custom-select">
+                                <ElOption
+                                    v-for="item in flowLists"
+                                    :label="item.flow_name"
+                                    :value="item.id"
+                                    :key="item.id"></ElOption>
+                            </ElSelect>
+                        </ElFormItem>
+                    </template>
+
+                    <template v-if="formData?.type == SendWayEnum.FESTIVAL_ACTIVITY">
+                        <div class="grid grid-cols-2 gap-6">
+                            <ElFormItem label="关联流程" prop="flow_id">
+                                <ElSelect
+                                    v-model="formData.flow_id"
+                                    placeholder="请选择流程"
+                                    filterable
+                                    class="custom-select">
+                                    <ElOption
+                                        v-for="item in flowLists"
+                                        :label="item.flow_name"
+                                        :value="item.id"
+                                        :key="item.id"></ElOption>
+                                </ElSelect>
+                            </ElFormItem>
+                            <ElFormItem label="推送执行日期" prop="push_day">
+                                <ElDatePicker
+                                    v-model="formData.push_day"
+                                    placeholder="选择日期"
+                                    class="!w-full custom-picker"
+                                    format="YYYY-MM-DD"
+                                    value-format="YYYY-MM-DD"
+                                    :disabled-date="getDisabledDate"></ElDatePicker>
+                            </ElFormItem>
+                        </div>
+                    </template>
+                </div>
+            </ElForm>
+        </div>
+    </div>
+</template>
 <script setup lang="ts">
 import { sopPushUpdate } from "@/api/person_wechat";
-import Popup from "@/components/popup/index.vue";
 import SendWayImage1 from "../_assets/images/send_way_1.png";
 import SendWayImage2 from "../_assets/images/send_way_2.png";
 import SendWayImage3 from "../_assets/images/send_way_3.png";
@@ -110,9 +153,16 @@ import { dayjs, ElForm } from "element-plus";
 import { SendWayEnum } from "../_enums";
 import useTask from "../_hooks/useTask";
 
+const props = defineProps<{
+    modelValue: any;
+}>();
+
 const emit = defineEmits<{
     (e: "success"): void;
 }>();
+
+const formData = defineModel<any>("modelValue");
+const { flowLists, getFlowLists } = useTask();
 
 const sendWayList = ref([
     {
@@ -140,24 +190,13 @@ const sendWayList = ref([
         desc: "为节日活动设置专属推送通知",
     },
 ]);
-const { flowLists, getFlowLists } = useTask();
 
 const getStageList = computed(() => {
-    return flowLists.value.find((item) => item.id == formData.flow_id)?.key_stages || [];
+    return flowLists.value.find((item) => item.id == formData.value.flow_id)?.key_stages || [];
 });
-
-const currentCard = ref<any>(null);
 
 const formRef = ref<InstanceType<typeof ElForm>>();
-const formData = reactive<Record<string, any>>({
-    id: "",
-    flow_id: "",
-    stage_id: "",
-    type: "",
-    status: "",
-    push_day: "",
-    push_type: 1,
-});
+
 const rules = {
     flow_id: [{ required: true, message: "请选择客户流程" }],
     stage_id: [{ required: true, message: "请选择客户阶段" }],
@@ -166,46 +205,35 @@ const rules = {
 // 禁用当前日期之前的日期
 const getDisabledDate = (time: Date) => time.getTime() < dayjs().startOf("day").valueOf();
 
-const popupRef = ref<InstanceType<typeof Popup>>();
-const showPopup = ref(false);
 const handleSendWay = async (card: any) => {
-    currentCard.value = card;
-    showPopup.value = true;
-    await nextTick();
-    popupRef.value?.open();
+    formData.value.type = card.type;
 };
-
-const close = () => {
-    showPopup.value = false;
-};
-
-const { lockFn, isLock } = useLockFn(async () => {
-    await formRef.value?.validate();
-    try {
-        if (currentCard.value.type == SendWayEnum.SPECIFIED_PROCESS) {
-            formData.stage_id = undefined;
-        }
-        await sopPushUpdate({
-            ...formData,
-            type: currentCard.value.type,
-        });
-        feedback.msgSuccess("设置成功");
-        emit("success");
-    } catch (error) {
-        feedback.msgError(error);
-    }
-});
 
 getFlowLists();
 
 defineExpose({
-    setFormData: (data: any) => {
-        setFormData(data, formData);
-        if (data.flow_id) {
-            formData.flow_id = parseInt(data.flow_id);
-        }
+    validateForm: () => {
+        return formRef.value?.validate();
     },
 });
 </script>
+<style scoped lang="scss">
+.send-way-card {
+    @apply relative bg-white border border-slate-100 rounded-[24px] p-6 cursor-pointer transition-all duration-300 overflow-hidden;
 
-<style scoped></style>
+    &:hover {
+        @apply shadow-[#0065fb]/5 border-[#0065fb]/20 -translate-y-1;
+    }
+
+    &.is-active {
+        @apply border-primary bg-[#0065fb]/[0.02] shadow-[#0065fb]/10;
+        &:hover {
+            @apply -translate-y-0;
+        }
+    }
+}
+
+.active-check {
+    @apply absolute top-0 right-0 w-8 h-8 bg-primary rounded-bl-2xl flex items-center justify-center z-20;
+}
+</style>

@@ -1,48 +1,97 @@
 <template>
-    <div class="fixed top-0 left-0 w-full h-full bg-black/5 z-[1000]">
-        <div class="flex items-center justify-center h-full">
+    <div class="fixed inset-0 z-[2000] flex items-center justify-center bg-[#0f172a]/60 backdrop-blur-sm">
+        <transition name="el-zoom-in-center" mode="out-in">
             <div
-                class="w-[418px] h-[205px] bg-white rounded-lg flex flex-col items-center px-4"
-                v-if="progressValue < 100">
+                v-if="progressValue < 100"
+                key="loading-or-error"
+                class="w-[440px] bg-white rounded-[32px] p-8 relative overflow-hidden">
                 <template v-if="!progressError">
-                    <div class="text-primary text-lg mt-8">请耐心等待</div>
-                    <div class="text-primary text-[24px] font-bold mt-3 text-center">
-                        {{ step || "正在获取账号信息中..." }}
-                    </div>
-                    <div class="w-full mt-4">
-                        <!-- <ElProgress :percentage="progressValue" :stroke-width="10" striped striped-flow /> -->
-                    </div>
-                    <div class="text-[#C4C4C4] mt-4 text-center text-xs">
-                        请暂时不要关闭窗口，如果超过一分钟未响应，可以尝试刷新页面
+                    <div class="flex flex-col items-center py-4">
+                        <div class="relative w-24 h-24 mb-6">
+                            <ElProgress
+                                type="circle"
+                                :percentage="progressValue"
+                                :stroke-width="8"
+                                :width="96"
+                                :show-text="false" />
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-primary animate-pulse">
+                                    <Icon name="el-icon-Connection" :size="28" />
+                                </span>
+                            </div>
+                        </div>
+
+                        <h3 class="text-xl font-[1000] text-[#1E293B] mb-2">正在同步云端数据</h3>
+                        <p class="text-[15px] font-bold text-primary px-4 py-1.5 bg-[#0065fb]/5 rounded-full mb-6">
+                            {{ step || "正在建立与 RPA 软件的连接..." }}
+                        </p>
+
+                        <div class="w-full space-y-4">
+                            <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                    class="h-full bg-primary transition-all duration-500 rounded-full"
+                                    :style="{ width: `${progressValue}%` }"></div>
+                            </div>
+
+                            <div
+                                class="flex items-start gap-2 text-[11px] text-slate-400 leading-relaxed text-center justify-center italic">
+                                <Icon name="el-icon-InfoFilled" :size="12" />
+                                <span
+                                    >为了确保同步成功，请暂时不要离开或关闭此页面<br />若超过 60s
+                                    无响应，请尝试刷新重试</span
+                                >
+                            </div>
+                        </div>
                     </div>
                 </template>
+
                 <template v-else>
-                    <div class="flex items-center justify-center mt-6">
-                        <Icon name="el-icon-WarningFilled" color="var(--el-color-danger)" :size="28"></Icon>
-                    </div>
-                    <div class="text-lg mt-3 font-bold">账号信息获取失败</div>
-                    <div class="text-center text-[#666666] mt-3">
-                        {{
-                            progressErrorMsg
-                        }}无法获取您的账号信息，请检查手机RPA软件连接是否正常后重试。如果问题持续存在，请联系客服支持。
-                    </div>
-                    <div class="mt-4">
-                        <ElButton @click="handleClose">关闭</ElButton>
-                        <ElButton type="primary" @click="handleRetry">重试</ElButton>
+                    <div class="flex flex-col items-center py-2 text-center">
+                        <div
+                            class="w-16 h-16 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-4 border border-red-100">
+                            <Icon name="el-icon-WarningFilled" :size="32" />
+                        </div>
+                        <h3 class="text-lg font-black text-slate-800 mb-3">账号信息获取失败</h3>
+
+                        <div class="bg-slate-50 rounded-2xl p-4 mb-6 border border-slate-100">
+                            <p class="text-[13px] text-slate-600 leading-relaxed font-medium">
+                                {{ progressErrorMsg || "无法通过 RPA 建立连接" }}，请检查手机软件运行状态是否正常。
+                            </p>
+                        </div>
+
+                        <div class="flex gap-3 w-full">
+                            <ElButton class="flex-1 !h-12 !rounded-2xl !font-bold" @click="handleClose"
+                                >暂不同步</ElButton
+                            >
+                            <ElButton type="primary" class="flex-1 !h-12 !rounded-2xl !font-bold" @click="handleRetry"
+                                >重新尝试</ElButton
+                            >
+                        </div>
                     </div>
                 </template>
             </div>
-            <div class="w-[441px] bg-white rounded-lg flex flex-col p-4" v-else>
-                <div class="flex items-center gap-2">
-                    <Icon name="el-icon-SuccessFilled" color="#28C76F" :size="20"></Icon>
-                    <span class="text-lg font-bold">AI设备及对应账号添加成功</span>
+
+            <div v-else key="success" class="w-[440px] bg-white rounded-[32px] p-8 shadow-2xl text-center">
+                <div
+                    class="w-20 h-20 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto mb-6 border border-emerald-100">
+                    <Icon name="el-icon-CircleCheckFilled" :size="48" />
                 </div>
-                <div class="text-[#87879B] mt-4">若未发现您的设备对应账号，可在稍后刷新重新拉取信息</div>
-                <div class="flex justify-end mt-4">
-                    <ElButton type="primary" round @click="handleClose">确定</ElButton>
+                <h3 class="text-xl font-[1000] text-slate-800 mb-2">同步任务完成</h3>
+                <p class="text-[14px] text-slate-400 font-medium mb-8">AI 设备及对应账号信息已成功添加至列表</p>
+
+                <div
+                    class="bg-[#ecfdf5]/50 rounded-2xl p-4 mb-8 text-[12px] text-emerald-700 font-bold border border-[#d1fae5]/50">
+                    若列表未及时显示，请在 1-2 分钟后刷新页面重试
                 </div>
+
+                <ElButton
+                    type="primary"
+                    class="w-full !h-12 !rounded-2xl !font-black !text-[15px]"
+                    @click="handleClose">
+                    确定
+                </ElButton>
             </div>
-        </div>
+        </transition>
     </div>
 </template>
 
@@ -68,4 +117,26 @@ const handleRetry = () => {
 };
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+:deep(.el-progress__text) {
+    @apply text-primary;
+}
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.el-zoom-in-center-enter-active,
+.el-zoom-in-center-leave-active {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+</style>

@@ -38,6 +38,20 @@ class DigitalHumanController extends BaseApiController
         return $this->data($result);
     }
 
+    /**
+     * @desc 创建1刻3形象任务
+     * @return \think\response\Json
+     */
+    public function createAnchor()
+    {
+        $data   = $this->request->post();
+        $result = DigitalHumanLogic::createPublicAnchor($data);
+        if ($result) {
+            return $this->data(DigitalHumanLogic::getReturnData());
+        }
+        return $this->fail(DigitalHumanLogic::getError());
+    }
+
     public function deletePublicAnchor()
     {
         $params = $this->request->post();

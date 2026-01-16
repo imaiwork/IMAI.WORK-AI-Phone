@@ -69,7 +69,11 @@
                                 </view>
                             </view>
                             <template
-                                v-if="[TaskTypeEnum.CUSTOMER, TaskTypeEnum.PUBLISH].includes(detailData.task_type)">
+                                v-if="
+                                    [TaskTypeEnum.CUSTOMER, TaskTypeEnum.PUBLISH, TaskTypeEnum.CIRCLE].includes(
+                                        detailData.task_type
+                                    )
+                                ">
                                 <template v-if="detailData.detail">
                                     <view
                                         class="bg-white rounded-[20rpx] p-5 mt-3"
@@ -95,14 +99,13 @@
                                                 :src="detailData.detail?.pic"
                                                 class="w-full h-full"
                                                 mode="aspectFill"
-                                                @click="handlePreviewImage"></image>
+                                                @click="handlePreviewImage(0)"></image>
                                             <view
                                                 class="w-full h-full flex items-center justify-center absolute top-0 left-0"
                                                 v-if="detailData.detail?.material_type == 1">
                                                 <view
                                                     class="rounded-full bg-[#ffffff33] w-[68rpx] h-[68rpx]"
-                                                    style="backdrop-filter: blur(5px)"
-                                                    @click="handlePlayVideo">
+                                                    @click="handlePlayVideo(detailData.detail?.material_url)">
                                                     <image
                                                         src="/static/images/icons/play.svg"
                                                         class="w-full h-full"></image>
@@ -134,8 +137,55 @@
                                                 </view>
                                             </view>
                                         </view>
-                                    </view></template
-                                >
+                                    </view>
+                                    <view
+                                        class="bg-white rounded-[20rpx] p-5 mt-3 flex gap-x-3"
+                                        v-if="detailData.task_type == TaskTypeEnum.CIRCLE">
+                                        <view
+                                            class="flex flex-wrap gap-x-3"
+                                            v-if="detailData.detail?.attachment_type == 1">
+                                            <view
+                                                class="flex-shrink-0 relative w-[180rpx] h-[240rpx] rounded-[20rpx] overflow-hidden"
+                                                v-for="(item, index) in detailData.detail?.attachment_content"
+                                                :key="index">
+                                                <image
+                                                    :src="item"
+                                                    class="w-full h-full"
+                                                    mode="aspectFill"
+                                                    @click="handlePreviewImage(index)"></image>
+                                            </view>
+                                        </view>
+                                        <view
+                                            class="flex flex-wrap gap-x-3"
+                                            v-if="detailData.detail?.attachment_type == 2">
+                                            <view
+                                                v-for="(item, index) in detailData.detail?.attachment_content"
+                                                :key="index"
+                                                class="w-[180rpx] h-[240rpx] rounded-[20rpx] overflow-hidden relative">
+                                                <video
+                                                    :src="item"
+                                                    class="w-full h-full"
+                                                    :autoplay="false"
+                                                    :show-loading="false"
+                                                    :controls="false"
+                                                    :show-fullscreen-btn="false"
+                                                    :show-center-play-btn="false"
+                                                    :show-play-btn="false"
+                                                    mode="aspectFill"></video>
+                                                <view
+                                                    class="w-full h-full flex items-center justify-center absolute top-0 left-0">
+                                                    <view
+                                                        class="rounded-full bg-[#ffffff33] w-[68rpx] h-[68rpx]"
+                                                        @click="handlePlayVideo(item)">
+                                                        <image
+                                                            src="/static/images/icons/play.svg"
+                                                            class="w-full h-full"></image>
+                                                    </view>
+                                                </view>
+                                            </view>
+                                        </view>
+                                    </view>
+                                </template>
                                 <view v-else class="bg-white rounded-[20rpx] p-5 mt-3">
                                     <empty text="内容还在生成中，请耐心等待..." :size="240" />
                                 </view>
@@ -159,11 +209,7 @@
         center
         :z-index="1001"
         @confirm="handleDeleteTask" />
-    <video-preview
-        v-model="showVideoPreview"
-        title="视频预览"
-        :poster="detailData.detail?.pic"
-        :video-url="detailData.detail?.material_url" />
+    <video-preview v-model="showVideoPreview" title="视频预览" :video-url="playData.url" />
 </template>
 
 <script setup lang="ts">
@@ -178,6 +224,7 @@ enum TaskTypeEnum {
     CARE = 3,
     CUSTOMER = 4,
     WECHAT = 5,
+    CIRCLE = 7,
 }
 
 const props = defineProps<{
@@ -194,6 +241,9 @@ const show = computed({
 });
 const showConfirmDialog = ref(false);
 const showVideoPreview = ref(false);
+const playData = reactive({
+    url: "",
+});
 
 const { platformLogo, getTaskStatusStyle, getTaskStatusText } = useDevice();
 
@@ -227,17 +277,31 @@ const handleDeleteTask = async () => {
     }
 };
 
-const handlePlayVideo = () => {
+const handlePlayVideo = (url: string) => {
+    playData.url = url;
     showVideoPreview.value = true;
 };
 
-const handlePreviewImage = () => {
+const handlePreviewImage = (index?: number) => {
+    const { task_type, detail } = detailData.value;
     const { material_url } = detailData.value.detail;
-    if (!material_url) return;
-    const pics = material_url.split(",");
-    uni.previewImage({
-        urls: pics,
-    });
+    if (task_type == TaskTypeEnum.CIRCLE) {
+        const { attachment_content } = detail;
+        if (attachment_content.length > 0) {
+            uni.previewImage({
+                urls: attachment_content,
+                current: index,
+            });
+        }
+    }
+    if (task_type == TaskTypeEnum.PUBLISH) {
+        if (!material_url) return;
+        const pics = material_url.split(",");
+        uni.previewImage({
+            urls: pics,
+            current: index,
+        });
+    }
 };
 
 const getDetail = async (data: any) => {

@@ -3,7 +3,6 @@
 
 namespace app\common\command;
 
-use app\api\logic\DigitalHumanLogic;
 use app\api\logic\HumanLogic;
 use think\console\Command;
 use think\console\Input;
@@ -28,7 +27,6 @@ class HumanVideoTaskCron extends Command
         HumanLogic::videoInfoCron();
         HumanLogic::videoWjInfoCron();
         HumanLogic::videoTaskCron();
-        DigitalHumanLogic::getDigitalHumanAnchorStatusCron();
         return true;
     }
 }

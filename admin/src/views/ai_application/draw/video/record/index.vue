@@ -54,7 +54,9 @@
                 </el-table-column>
                 <el-table-column label="昵称" prop="nickname" min-width="140" show-overflow-tooltip />
                 <el-table-column label="创作类型" prop="type_name" min-width="120" />
-                <el-table-column label="消耗算力" prop="points" min-width="120"></el-table-column>
+                <el-table-column label="消耗算力" prop="points" min-width="120">
+                    <template #default="{ row }"> {{ row.points }}算力 </template>
+                </el-table-column>
                 <el-table-column label="创作时间" prop="create_time" min-width="180" />
                 <el-table-column label="操作" width="120" fixed="right">
                     <template #default="{ row }">

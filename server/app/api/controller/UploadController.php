@@ -27,7 +27,9 @@ class UploadController extends BaseApiController
     public function image()
     {
         try {
-            $result = UploadService::image(0, $this->userId, FileEnum::SOURCE_USER);
+            $cid = $this->request->post('cid', 0);
+            $ffmpeg = $this->request->post('ffmpeg', 0);
+            $result = UploadService::image($cid, $this->userId, FileEnum::SOURCE_USER,'uploads/images',$ffmpeg);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
             return $this->fail($e->getMessage());
@@ -43,7 +45,9 @@ class UploadController extends BaseApiController
     public function file()
     {
         try {
-            $result = UploadService::file(0, $this->userId, FileEnum::SOURCE_USER);
+            $cid = $this->request->post('cid', 0);
+            $ffmpeg = $this->request->post('ffmpeg', 0);
+            $result = UploadService::file($cid, $this->userId, FileEnum::SOURCE_USER,'uploads/file',$ffmpeg);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
             return $this->fail($e->getMessage());
@@ -77,7 +81,8 @@ class UploadController extends BaseApiController
     {
         try {
             $cid = $this->request->post('cid', 0);
-            $result = UploadService::video($cid, $this->userId, FileEnum::SOURCE_USER);
+            $ffmpeg = $this->request->post('ffmpeg', 0);
+            $result = UploadService::video($cid, $this->userId, FileEnum::SOURCE_USER,'uploads/video',$ffmpeg);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
             return $this->fail($e->getMessage());
@@ -102,32 +107,7 @@ class UploadController extends BaseApiController
         }
     }
 
-    /**
-     * @notes 上传文件
-     * @return Json
-     * @author 段誉
-     * @date 2022/9/20 18:11
-     */
-    public function llAudio()
-    {
-        $postData = $this->request->post();
-
-        $conversationInfo = LlConversation::where('status', 1)->findOrEmpty($postData['conversation_id']);
-        if ($conversationInfo->isEmpty()) {
-            return $this->fail('会话异常');
-        }
-        $filePath = "lianlian/audio/" . $this->userId . "/" . $postData['conversation_id'] . "/";
-        if (!is_dir(public_path() . $filePath)) {
-            mkdir($filePath, 0755, true);
-        }
-        try {
-            $result = UploadService::audio(0, $this->userId, FileEnum::SOURCE_USER, $filePath, false);
-            return $this->success('上传成功', $result);
-        } catch (Exception $e) {
-            return $this->fail($e->getMessage());
-        }
-    }
-
+ 
     public function wechatUpload(){
         try {
             $result = UploadService::wechatUpload(0, 0, FileEnum::SOURCE_WECHAT);

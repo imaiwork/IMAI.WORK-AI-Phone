@@ -5,6 +5,7 @@ namespace app\api\logic\sv;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvCrawlingRecord;
 use app\common\model\sv\SvCrawlingTask;
+use app\common\model\sv\SvCrawlingWechatTask;
 use app\common\model\sv\SvCrawlingTaskDeviceBind;
 use app\common\model\sv\SvAddWechatRecord;
 use think\facade\Db;
@@ -83,18 +84,24 @@ class CrawlingTaskLogic extends SvBaseLogic
             $arrDeviceData = [];
             $allTaskInstall = [];
             $params['time_config'] = json_encode($params['time_config'], JSON_UNESCAPED_UNICODE);
+            $params['exec_time'] = $params['time_config'];
+            $crawTaskIds = [];
             foreach ($times as $key => $time) {
                 $params['start_time'] = $time['start_time'];
                 $params['end_time'] = $time['end_time'];
                 $task = SvCrawlingTask::create($params);
+                array_push($crawTaskIds, $task->id);
+
                 //将关键词平均分配给设备
                 foreach ($devices as $device => $val) {
-                    list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device, DeviceEnum::TASK_TYPE_ACTIVE, $time['start_time'], $time['end_time'], self::$uid);
+                    list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device, DeviceEnum::TASK_TYPE_CLUES, $time['start_time'], $time['end_time'], self::$uid);
                     if (!$isOverlap) {
                         $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
                         $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
                         throw new \Exception($msg);
                     }
+
+
                     $arrDeviceData[] = [
                         'user_id'     => self::$uid,
                         'task_id'     => $task->id,
@@ -113,12 +120,45 @@ class CrawlingTaskLogic extends SvBaseLogic
                         'task_name' => '视频号自动获客任务',
                         'status' => 0,
                         'day' => date('Y-m-d', $task->start_time),
+                        'time_config' => $params['time_config'],
                         'start_time' => $task->start_time,
                         'end_time' => $task->end_time,
                         'sub_task_id' => $task->id,
                         'source' => DeviceEnum::TASK_SOURCE_CLUES, //sv_crawling_task
                         'create_time' => time(),
                     ]);
+
+                    if(isset($params['add_type']) && isset($params['wechat_time_type']) && (int)$params['add_type'] === 1 && (int)$params['wechat_time_type'] === 0){
+                        $st = $time['end_time'] + 180;
+                        $et = $st + ((int)$params['add_number'] * (int)$params['add_interval_time'] * 60);
+                        if(($et - $st) < (5 *60)){
+                            $et = $st + (5 *60);
+                        }
+                        list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device, DeviceEnum::TASK_TYPE_ACTIVE, $st, $et, self::$uid);
+                        if (!$isOverlap) {
+                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                            throw new \Exception($msg);
+                        }
+                        self::createWechatTask($params, $device, [$task->id], $st, $et, $allTaskInstall);
+                    }
+                }
+
+                
+            }
+
+            if(isset($params['add_type']) && isset($params['wechat_time_type']) && (int)$params['add_type'] === 1 && (int)$params['wechat_time_type'] === 1){
+                $wechatTimes = \app\api\logic\device\TaskLogic::getTimes($params['wechat_time_config'], date('Y-m-d', time()), $params['wechat_task_frep'], $params['wechat_custom_date']);
+                foreach ($wechatTimes as $key => $time) {
+                    foreach ($devices as $device => $val) {
+                        list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device, DeviceEnum::TASK_TYPE_ACTIVE, $time['start_time'], $time['end_time'], self::$uid);
+                        if (!$isOverlap) {
+                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                            throw new \Exception($msg);
+                        }
+                        self::createWechatTask($params, $device, $crawTaskIds, $time['start_time'], $time['end_time'], $allTaskInstall);
+                    }
                 }
             }
             if (!empty($arrDeviceData)) {
@@ -146,6 +186,40 @@ class CrawlingTaskLogic extends SvBaseLogic
             return false;
         }
     }
+
+    private static function createWechatTask(array $params, string $device, array $taskIds, int $st, int $et, array &$allTaskInstall)
+    {
+        $et = $et - 180;
+        $_task = SvCrawlingWechatTask::create([
+            'user_id' => self::$uid,
+            'name' => '视频号加微任务' . date('mdHis', time()),
+            'craw_task_ids' => $taskIds,
+            'device_code' => $device,
+            'time_config' => array(date('H:i', $st) . "-" . date('H:i', $et)),
+            'start_time' => $st,
+            'end_time' => $et,
+            'create_time' => time(),
+            'update_time' => time(),
+        ]);
+        array_push($allTaskInstall, [
+            'user_id' => self::$uid,
+            'device_code' => $device,
+            'task_type' => DeviceEnum::TASK_TYPE_CLUES_WECHAT,
+            'account' => self::getSphAccount($device),
+            'account_type' => 1,
+            'task_name' => '视频号获客加微任务',
+            'status' => 0,
+            'day' => date('Y-m-d', $st),
+            'time_config' => json_encode( array(
+                date('H:i', $st) . "-" . date('H:i', $et),
+            ), JSON_UNESCAPED_UNICODE),
+            'start_time' => $st,
+            'end_time' => $et,
+            'sub_task_id' => $_task->id,
+            'source' => DeviceEnum::TASK_SOURCE_CLUES_WECHAT, //sv_crawling_task
+            'create_time' => time(),
+        ]);    
+    }    
 
     private static function setOldTaskStatus(int $task_id)
     {
@@ -423,8 +497,15 @@ class CrawlingTaskLogic extends SvBaseLogic
                 self::setError('设备不存在');
                 return false;
             }
-
-            $response = \app\common\service\ToolsService::Sv()->ocr($params);
+            if ($find['auto_type'] == 1){
+                $response = \app\common\service\ToolsService::Automation()->ocrImg($params);
+                $scene = "automation_ocr_img";
+                $changetype = AccountLogEnum::TOKENS_DEC_AUTOMATION_OCR_IMG;
+            }else{
+                $response = \app\common\service\ToolsService::Sv()->ocr($params);
+                $scene = "sph_ocr";
+                $changetype = AccountLogEnum::TOKENS_DEC_SPH_OCR;
+            }
             if (isset($response['code']) && $response['code'] == 10000) {
                 $task = SvCrawlingTask::where('id', $params['task_id'])->findOrEmpty();
                 if ($task->isEmpty()) {
@@ -438,7 +519,7 @@ class CrawlingTaskLogic extends SvBaseLogic
                 }
 
                 //检查扣费
-                $unit = TokenLogService::checkToken($task['user_id'], 'sph_ocr');
+                $unit = TokenLogService::checkToken($task['user_id'], $scene);
                 //计算消耗tokens
                 $points = $unit;
                 $task_id = generate_unique_task_id();
@@ -446,7 +527,7 @@ class CrawlingTaskLogic extends SvBaseLogic
                 User::userTokensChange($task['user_id'], $points);
                 $extra = ['算力单价' => $unit . '算力/次', '实际消耗算力' => $points, '场景' => 'ocr'];
                 //扣费记录
-                AccountLogLogic::recordUserTokensLog(true, $task['user_id'], AccountLogEnum::TOKENS_DEC_SPH_OCR, $points, $task_id, $extra);
+                AccountLogLogic::recordUserTokensLog(true, $task['user_id'], $changetype, $points, $task_id, $extra);
 
                 self::$returnData = $response;
                 return true;
@@ -470,7 +551,16 @@ class CrawlingTaskLogic extends SvBaseLogic
                 return false;
             }
 
-            $response = \app\common\service\ToolsService::Sv()->localOcr($params);
+            if ($find['auto_type'] == 1){
+                $response = \app\common\service\ToolsService::Automation()->ocrLocal($params);
+                $scene = "automation_ocr_local";
+                $changetype = AccountLogEnum::TOKENS_DEC_AUTOMATION_OCR_LOCAL;
+            }else{
+                $response = \app\common\service\ToolsService::Sv()->localOcr($params);
+                $scene = "sph_local_ocr";
+                $changetype = AccountLogEnum::TOKENS_DEC_SPH_LOCAL_OCR;
+            }
+
             if (isset($response['code']) && $response['code'] == 10000) {
                 $task = SvCrawlingTask::where('id', $params['task_id'])->findOrEmpty();
                 if ($task->isEmpty()) {
@@ -484,7 +574,7 @@ class CrawlingTaskLogic extends SvBaseLogic
                 }
 
                 //检查扣费
-                $unit = TokenLogService::checkToken($task['user_id'], 'sph_local_ocr');
+                $unit = TokenLogService::checkToken($task['user_id'], $scene);
                 //计算消耗tokens
                 $points = $unit;
                 $task_id = generate_unique_task_id();
@@ -492,7 +582,7 @@ class CrawlingTaskLogic extends SvBaseLogic
                 User::userTokensChange($task['user_id'], $points);
                 $extra = ['算力单价' => $unit . '算力/次', '实际消耗算力' => $points, '场景' => '本地识别'];
                 //扣费记录
-                AccountLogLogic::recordUserTokensLog(true, $task['user_id'], AccountLogEnum::TOKENS_DEC_SPH_LOCAL_OCR, $points, $task_id, $extra);
+                AccountLogLogic::recordUserTokensLog(true, $task['user_id'], $changetype, $points, $task_id, $extra);
 
                 self::$returnData = $response;
                 return true;

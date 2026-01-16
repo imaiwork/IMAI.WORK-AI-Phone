@@ -1,129 +1,127 @@
 <template>
-    <div class="h-full flex flex-col">
-        <div class="flex justify-between gap-x-2 px-[14px]">
+    <div class="h-full flex flex-col bg-white">
+        <div class="flex justify-between items-end pb-4 border-b border-[#F3F4F6] px-4">
             <div>
-                <div class="text-white text-[11px]">{{ typeName }}</div>
-                <div class="flex items-center gap-x-2 mt-2">
-                    <span class="text-[#ffffff80] text-[11px]">
-                        共{{ valueList.length }}个{{ typeName }}，已配置{{ count }}个
+                <div class="flex items-center gap-2">
+                    <span class="w-1 h-4 bg-primary rounded-full"></span>
+                    <span class="text-lg font-black text-[#111827]">{{ typeName }}管理</span>
+                </div>
+                <div class="flex items-center gap-x-2 mt-1.5">
+                    <span class="text-[#9CA3AF] text-[12px] font-medium">
+                        共 <span class="text-[#111827] font-bold">{{ valueList.length }}</span> 个素材，已配置
+                        <span class="text-[#10B981] font-bold">{{ count }}</span> 个
                     </span>
-                    <ElTooltip
-                        v-if="publishTypeName"
-                        placement="top"
-                        popper-class="!rounded-xl !bg-app-bg-2 !border-app-border-2 !p-2"
-                        :show-arrow="false">
+
+                    <ElTooltip v-if="publishTypeName" placement="top" popper-class="custom-tooltip" :show-arrow="false">
                         <div
-                            class="w-4 h-4 rounded-full flex items-center justify-center shadow-[0_0_0_1px_rgba(255,255,255,0.2)] cursor-pointer">
-                            <Icon name="local-icon-tips2" color="#ffffff" :size="16"></Icon>
+                            class="w-4 h-4 rounded-full flex items-center justify-center bg-[#F3F4F6] cursor-pointer hover:bg-[#E5E7EB] transition-colors">
+                            <Icon name="local-icon-tips2" :size="12" color="#9CA3AF"></Icon>
                         </div>
                         <template #content>
-                            <div class="text-[#ffffff80] text-[11px] leading-6 w-[212px]">
-                                1.如配置{{ typeName }}数量等于{{ publishTypeName }}数量，将按{{
-                                    publishTypeName
-                                }}顺序匹配{{ typeName }}。 <br />
-                                2.如配置{{ typeName }}数量不等于{{ publishTypeName }}数量，将{{
-                                    typeName
-                                }}随机匹配给各{{ publishTypeName }}。
+                            <div class="p-1 space-y-1">
+                                <p>1. 数量相等时：按顺序匹配内容。</p>
+                                <p>2. 数量不等时：随机分配内容至各{{ publishTypeName }}。</p>
                             </div>
                         </template>
                     </ElTooltip>
                 </div>
             </div>
-            <div>
-                <ElButton class="!h-10 w-[106px] !border-[#ffffff1a]" color="#262626" @click="handleAdd"
-                    >添加{{ typeName }}</ElButton
-                >
-            </div>
+            <button
+                @click="handleAdd"
+                class="px-5 h-10 rounded-xl bg-[#F3F4F6] text-primary font-bold text-sm hover:bg-primary hover:text-white transition-all active:scale-95 flex items-center gap-2">
+                <i class="el-icon-plus"></i>
+                <span>新增{{ typeName }}</span>
+            </button>
         </div>
-        <div class="grow min-h-0 mt-[14px]">
+
+        <div class="grow min-h-0 mt-4">
             <ElScrollbar>
-                <div class="flex flex-col gap-y-2 px-[14px]">
+                <div class="flex flex-col gap-y-4 px-4 pb-6">
                     <template v-if="type == 1">
                         <div
                             v-for="(item, index) in valueList"
-                            class="flex items-center gap-x-2 border border-app-border-2 px-3 h-11 rounded-md"
-                            :key="index">
+                            :key="index"
+                            class="group flex items-center gap-x-4 p-3 bg-white border border-[#F3F4F6] rounded-2xl hover:border-[#0065fb]/30 hover: transition-all">
                             <div
-                                class="rounded-[100px] text-white min-w-[32px] h-5 flex items-center justify-center"
-                                :class="[
-                                    item.content ? 'bg-[#3BB840]' : 'shadow-[0_0_0_1px_var(--app-border-color-2)]',
-                                ]">
+                                class="w-10 h-10 flex-shrink-0 rounded-xl font-black text-sm transition-colors flex items-center justify-center"
+                                :class="[item.content ? 'bg-[#10B981] text-white' : 'bg-[#F3F4F6] text-[#9CA3AF]']">
                                 {{ index + 1 }}
                             </div>
+
                             <div class="flex-1">
                                 <ElInput
                                     v-model="item.content"
-                                    class="!h-10"
+                                    class="custom-title-input"
                                     maxlength="20"
                                     show-word-limit
-                                    input-style="font-size: 11px"
-                                    placeholder="-"
+                                    placeholder="输入吸引人的标题..."
                                     @blur="handleBlur(index)" />
                             </div>
-                            <div class="w-[1px] h-[12px] bg-[#ffffff1a]"></div>
-                            <div>
-                                <div class="w-4 h-4" @click="handleDelete(index)">
-                                    <close-btn :icon-size="10" :theme="ThemeEnum.DARK"></close-btn>
-                                </div>
+
+                            <div class="w-8 h-8 opacity-0 group-hover:opacity-100" @click="handleDelete(index)">
+                                <close-btn></close-btn>
                             </div>
                         </div>
                     </template>
+
                     <template v-if="type == 2 || type == 3">
                         <div
                             v-for="(item, index) in valueList"
-                            class="border border-app-border-2 p-3 rounded-md h-fit"
-                            :key="index">
-                            <div class="flex justify-between gap-x-2">
-                                <div
-                                    class="rounded-[100px] text-white min-w-[32px] h-5 flex items-center justify-center"
-                                    :class="[
-                                        item.content ? 'bg-[#3BB840]' : 'shadow-[0_0_0_1px_var(--app-border-color-2)]',
-                                    ]">
-                                    {{ index + 1 }}
-                                </div>
-                                <div>
-                                    <div class="w-4 h-4" @click="handleDelete(index)">
-                                        <close-btn :icon-size="10" :theme="ThemeEnum.DARK"></close-btn>
+                            :key="index"
+                            class="group relative border border-[#F3F4F6] bg-white p-5 rounded-[24px] hover:border-[#10B981]/30 transition-all">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="px-3 h-6 rounded-lg font-black text-xs flex items-center justify-center"
+                                        :class="[
+                                            item.content ? 'bg-[#10B981] text-white' : 'bg-[#F3F4F6] text-[#9CA3AF]',
+                                        ]">
+                                        ITEM {{ index + 1 }}
                                     </div>
+                                    <span v-if="item.content" class="text-[11px] text-[#10B981] font-bold">已就绪</span>
+                                </div>
+                                <div class="w-7 h-7 opacity-0 group-hover:opacity-100" @click="handleDelete(index)">
+                                    <close-btn :icon-size="12"></close-btn>
                                 </div>
                             </div>
+
                             <div class="mt-2">
                                 <ElInput
                                     v-model="item.content"
+                                    type="textarea"
+                                    :rows="5"
                                     maxlength="800"
                                     show-word-limit
-                                    placeholder="请输入内容"
-                                    type="textarea"
+                                    placeholder="请输入正文描述内容..."
+                                    class="custom-textarea-input"
                                     resize="none"
-                                    input-style="font-size: 11px"
-                                    :rows="6"
                                     @blur="handleBlur(index)" />
                             </div>
-                            <div class="relative mt-4 flex gap-x-2 items-end" v-if="showTopic">
-                                <div class="flex-1 flex flex-wrap gap-2" v-if="item.topic && item.topic.length">
+
+                            <div class="mt-4 flex flex-wrap gap-2 items-center" v-if="showTopic">
+                                <div
+                                    v-for="(topic, t_index) in item.topic"
+                                    :key="t_index"
+                                    class="group/tag relative flex items-center bg-white border border-br px-2 py-1 rounded-lg">
+                                    <span class="text-[#6366F1] font-bold text-[12px] mr-1">#</span>
+                                    <input
+                                        v-model="item.topic[t_index]"
+                                        class="bg-transparent border-none outline-none text-[11px] w-[70px] text-[#64748B]"
+                                        placeholder="输入话题"
+                                        @click.stop />
                                     <div
-                                        v-for="(topic, t_index) in item.topic"
-                                        :key="t_index"
-                                        class="relative text-[11px] rounded-md shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
-                                        :class="{ 'bg-app-bg-4': topic }">
-                                        <ElInput
-                                            v-model="item.topic[t_index]"
-                                            class="h-[26px] !w-[78px]"
-                                            placeholder="#请输入话题"
-                                            input-style="font-size: 11px;height: 100%"
-                                            @blur="handleTopicBlur(index, t_index)"></ElInput>
-                                        <div
-                                            class="absolute -top-2 -right-2 w-4 h-4 rounded-full flex items-center justify-center bg-[#FF3C26] cursor-pointer"
-                                            @click="handleDeleteTopic(index, t_index)">
-                                            <Icon name="local-icon-close" color="#ffffff"></Icon>
-                                        </div>
+                                        class="ml-1 w-3 h-3 bg-[#94A3B8] text-white rounded-full flex items-center justify-center cursor-pointer opacity-0 group-hover/tag:opacity-100 transition-opacity"
+                                        @click.stop="handleDeleteTopic(index, t_index)">
+                                        <Icon name="local-icon-close" :size="8"></Icon>
                                     </div>
                                 </div>
-                                <div class="" v-if="item.topic?.length < 5">
-                                    <ElButton type="primary" class="!h-[26px]" @click="handleAddTopic(index)"
-                                        >添加话题</ElButton
-                                    >
-                                </div>
+
+                                <button
+                                    v-if="item.topic?.length < 5"
+                                    class="px-3 py-1 rounded-lg border border-dashed border-[#CBD5E1] text-[#94A3B8] text-[11px] hover:border-[#6366F1] hover:text-[#6366F1] transition-all"
+                                    @click.stop="handleAddTopic(index)">
+                                    + 添加话题
+                                </button>
                             </div>
                         </div>
                     </template>
@@ -134,8 +132,6 @@
 </template>
 
 <script setup lang="ts">
-import { ThemeEnum } from "@/enums/appEnums";
-
 const props = withDefaults(
     defineProps<{
         type: 1 | 2 | 3;
@@ -159,32 +155,22 @@ const count = computed(() => {
 });
 
 const typeName = computed(() => {
-    const types = {
-        1: "标题",
-        2: "正文描述",
-        3: "口播文案",
-    };
-    return types[props.type];
+    const types = { 1: "标题", 2: "正文描述", 3: "口播文案" };
+    return types[props.type as keyof typeof types];
 });
 
 const handleAdd = () => {
     if (props.type == 2) {
-        valueList.value.push({
-            content: "",
-            topic: [],
-        });
+        valueList.value.push({ content: "", topic: [] });
     } else {
-        valueList.value.push({
-            content: "",
-        });
+        valueList.value.push({ content: "" });
     }
     emit("update:modelValue", valueList.value);
 };
 
 const handleDelete = (index: number) => {
     useNuxtApp().$confirm({
-        message: `确定要删除该${props.type == 1 ? "标题" : "描述"}吗？`,
-        theme: "dark",
+        message: `确定要彻底移除该${typeName.value}吗？`,
         onConfirm: () => {
             valueList.value.splice(index, 1);
             emit("update:modelValue", valueList.value);
@@ -197,22 +183,14 @@ const handleBlur = (index: number) => {
 };
 
 const handleAddTopic = (index: number) => {
-    if (!valueList.value[index].topic) {
-        valueList.value[index].topic = [];
-    }
+    if (!valueList.value[index].topic) valueList.value[index].topic = [];
     valueList.value[index].topic.push("");
     emit("update:modelValue", valueList.value);
 };
 
 const handleDeleteTopic = (index: number, t_index: number) => {
-    useNuxtApp().$confirm({
-        message: `确定要删除该话题吗？`,
-        theme: "dark",
-        onConfirm: () => {
-            valueList.value[index].topic.splice(t_index, 1);
-            emit("update:modelValue", valueList.value);
-        },
-    });
+    valueList.value[index].topic.splice(t_index, 1);
+    emit("update:modelValue", valueList.value);
 };
 
 const handleTopicBlur = (index: number, t_index: number) => {
@@ -220,4 +198,89 @@ const handleTopicBlur = (index: number, t_index: number) => {
 };
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+/* --- ElInput 精细化重塑 --- */
+
+/* 标题样式：轻盈下划线 */
+:deep(.custom-title-input) {
+    .el-input__wrapper {
+        background-color: transparent;
+        box-shadow: none !important;
+        border-bottom: 1px solid #f3f4f6;
+        border-radius: 0;
+        padding: 4px 0;
+        transition: all 0.3s ease;
+        &.is-focus {
+            border-bottom-color: #4f46e5;
+        }
+    }
+    .el-input__inner {
+        font-weight: 600;
+        color: #111827;
+        font-size: 14px;
+    }
+    .el-input__count {
+        background: transparent;
+        font-size: 10px;
+        color: #9ca3af;
+    }
+}
+
+:deep(.custom-textarea-input) {
+    .el-textarea__inner {
+        background-color: #f9fafb;
+        border: 1px solid #f3f4f6;
+        border-radius: 16px;
+        padding: 16px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #374151;
+        box-shadow: none;
+        transition: all 0.3s;
+        &:focus {
+            background-color: #ffffff;
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.05);
+        }
+    }
+    .el-input__count {
+        background: transparent;
+        font-weight: bold;
+        bottom: 12px;
+        right: 16px;
+    }
+}
+
+/* 话题微型 Input */
+:deep(.custom-topic-input) {
+    .el-input__wrapper {
+        background-color: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        height: 30px;
+        box-shadow: none !important;
+        &.is-focus {
+            border-color: #4f46e5;
+        }
+    }
+    .el-input__inner {
+        font-size: 11px;
+        color: #4f46e5;
+        font-weight: bold;
+    }
+}
+
+/* Tooltip 样式自定义 */
+:global(.custom-tooltip) {
+    background-color: #111827 !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-size: 11px !important;
+    line-height: 1.6 !important;
+}
+
+/* 滚动条 */
+:deep(.el-scrollbar__thumb) {
+    background-color: #e5e7eb !important;
+}
+</style>

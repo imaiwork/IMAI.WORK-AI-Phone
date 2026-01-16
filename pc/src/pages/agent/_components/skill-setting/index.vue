@@ -1,173 +1,186 @@
 <template>
-    <div class="h-full flex flex-col py-6">
-        <div class="grow min-h-0">
+    <div class="h-[full] flex flex-col bg-[#FFFFFF]">
+        <div class="grow min-h-[0]">
             <ElScrollbar>
-                <div class="px-[30px]">
-                    <div class="font-bold">技能</div>
-                    <div class="mt-3">
-                        <ElCollapse v-model="activeNames">
-                            <!-- 插件技能 (开发中) -->
+                <div class="px-[30px] py-[24px]">
+                    <div class="flex items-center gap-[10px] mb-[24px]">
+                        <div class="w-[4px] h-[18px] bg-primary rounded-full"></div>
+                        <span class="text-[16px] font-[900] text-tx-primary">能力扩展与技能库</span>
+                    </div>
+
+                    <div class="skill-collapse-container">
+                        <ElCollapse v-model="activeNames" class="custom-collapse">
                             <ElCollapseItem name="1" disabled>
                                 <template #title>
-                                    <div class="leading-5">
-                                        <div class="flex items-center gap-x-2">
-                                            <span
-                                                class="transition-all duration-300"
-                                                :class="{
-                                                    'rotate-180': activeNames.includes('1'),
-                                                }">
-                                                <Icon name="el-icon-ArrowUp" color="#00000080"></Icon>
-                                            </span>
-                                            <span>插件</span>
-                                            <span
-                                                class="text-xs text-white bg-[#FF8D1A] px-[6px] py-[2px] rounded inline-block">
-                                                功能开发中
-                                            </span>
+                                    <div class="skill-header">
+                                        <div class="flex items-center gap-x-[12px]">
+                                            <div
+                                                class="collapse-icon-box"
+                                                :class="{ 'is-active': activeNames.includes('1') }">
+                                                <Icon name="el-icon-ArrowRight" />
+                                            </div>
+                                            <span class="title">插件系统</span>
+                                            <span class="badge-dev shrink-0">功能开发中</span>
                                         </div>
-                                        <div class="text-[#00000080] mt-1">
-                                            插件能够让智能体调用外部
-                                            API，例如搜索信息、浏览网页、生成图片等，扩展智能体的能力和使用场景。
-                                        </div>
-                                    </div>
-                                </template>
-                                <template #icon>
-                                    <div
-                                        class="w-5 h-5 bg-[#ECECEC] flex items-center justify-center rounded"
-                                        @click.stop>
-                                        <Icon name="el-icon-Plus" :size="12"> </Icon>
+                                        <div class="desc">允许智能体调用外部 API（搜索、绘图、网页分析等）</div>
                                     </div>
                                 </template>
                             </ElCollapseItem>
-                            <!-- 工作流技能 -->
+
                             <ElCollapseItem name="2">
                                 <template #title>
-                                    <div class="leading-5">
-                                        <div class="flex items-center gap-x-2">
-                                            <span
-                                                class="transition-all duration-300"
-                                                :class="{
-                                                    'rotate-180': activeNames.includes('2'),
-                                                }">
-                                                <Icon name="el-icon-ArrowUp" color="#00000080"></Icon>
-                                            </span>
-                                            <span>工作流</span>
+                                    <div class="skill-header">
+                                        <div class="flex items-center justify-between w-full pr-[16px]">
+                                            <div class="flex items-center gap-x-[12px]">
+                                                <div
+                                                    class="collapse-icon-box"
+                                                    :class="{ 'is-active': activeNames.includes('2') }">
+                                                    <Icon name="el-icon-ArrowRight" />
+                                                </div>
+                                                <span class="title">工作流编排</span>
+                                            </div>
+                                            <ElButton type="primary" @click.stop="handleWorkflowEdit()">
+                                                <Icon name="el-icon-Plus" :size="14" />
+                                                <span>配置工作流</span>
+                                            </ElButton>
                                         </div>
-                                        <div class="text-[#00000080] mt-1">
-                                            工作流支持通过可视化的方式，对插件、大语言模型、代码块等功能进行组合，从而实现复杂、稳定的业务流程编排。
+                                        <div class="desc pl-[32px]">
+                                            通过可视化画布编排复杂业务逻辑，实现稳定的流程输出
                                         </div>
                                     </div>
                                 </template>
-                                <template #icon>
-                                    <div
-                                        class="w-5 h-5 bg-[#ECECEC] flex items-center justify-center rounded cursor-pointer"
-                                        @click.stop="handleWorkflowEdit()">
-                                        <Icon name="el-icon-Plus" :size="12"> </Icon>
-                                    </div>
-                                </template>
-                                <div>
-                                    <div
-                                        class="h-10 rounded-lg bg-[#F5F5F5] mb-3 px-4 flex items-center justify-between gap-x-4"
-                                        v-if="formData.flow_status === 1">
-                                        <div class="flex items-center gap-x-3">
-                                            <Icon name="local-icon-flow2" size="24"></Icon>
-                                            <span>{{ formData.flow_config.bot_id }}</span>
-                                            <span class="text-xs text-[#666976] bg-[#ECEDF3] px-3 py-1">
-                                                Token：{{ formData.flow_config.api_token }}
-                                            </span>
-                                        </div>
-                                        <div>
+
+                                <div class="px-[32px] py-[16px]">
+                                    <div v-if="formData.flow_status === 1" class="workflow-active-card">
+                                        <div class="flex items-center gap-x-[16px]">
                                             <div
-                                                class="w-4 h-4 rounded-full flex items-center justify-center cursor-pointer bg-primary"
-                                                @click.stop="handleDeleteWorkflow()">
-                                                <Icon name="el-icon-Close" color="#ffffff" size="10"></Icon>
+                                                class="w-[44px] h-[44px] bg-white rounded-[10px] flex items-center justify-center shadow-sm">
+                                                <Icon name="local-icon-flow2" size="28" color="#0065fb"></Icon>
+                                            </div>
+                                            <div class="flex flex-col gap-[4px]">
+                                                <span class="font-[900] text-tx-primary">{{
+                                                    formData.flow_config.bot_id
+                                                }}</span>
+                                                <div class="flex items-center gap-[8px]">
+                                                    <span
+                                                        class="text-[11px] bg-blue-100 text-primary px-[8px] py-[2px] rounded-[4px] font-bold"
+                                                        >Token 鉴权已开启</span
+                                                    >
+                                                    <span class="text-[12px] text-tx-secondary opacity-60"
+                                                        >ID: {{ formData.flow_config.app_id }}</span
+                                                    >
+                                                </div>
                                             </div>
                                         </div>
+                                        <ElButton link type="danger" @click.stop="handleDeleteWorkflow()">
+                                            <Icon name="el-icon-Delete" class="mr-[4px]" />移除
+                                        </ElButton>
                                     </div>
-                                    <div class="text-center text-[#00000080] text-sm" v-else>
-                                        <ElEmpty description="暂未添加工作流" :image-size="80" />
-                                    </div>
+                                    <ElEmpty
+                                        v-else
+                                        :image-size="60"
+                                        description="点击右上角按钮添加工作流"
+                                        class="py-[20px]" />
                                 </div>
                             </ElCollapseItem>
-                            <!-- 固定话术技能 -->
+
                             <ElCollapseItem name="3">
                                 <template #title>
-                                    <div class="leading-5">
-                                        <div class="flex items-center gap-x-2">
-                                            <span
-                                                class="transition-all duration-300"
-                                                :class="{
-                                                    'rotate-180': activeNames.includes('3'),
-                                                }">
-                                                <Icon name="el-icon-ArrowUp" color="#00000080"></Icon>
-                                            </span>
-                                            <span>固定话术</span>
+                                    <div class="skill-header">
+                                        <div class="flex items-center justify-between w-full pr-[16px]">
+                                            <div class="flex items-center gap-x-[12px]">
+                                                <div
+                                                    class="collapse-icon-box"
+                                                    :class="{ 'is-active': activeNames.includes('3') }">
+                                                    <Icon name="el-icon-ArrowRight" />
+                                                </div>
+                                                <span class="title">固定问答话术</span>
+                                            </div>
+                                            <ElButton type="primary" @click.stop="handleKeywordsAdd()">
+                                                <Icon name="el-icon-Plus" :size="14" />
+                                                <span>新增话术</span>
+                                            </ElButton>
                                         </div>
-                                        <div class="text-[#00000080] mt-1">
-                                            固定话术是智能体在对话过程中，根据用户输入的特定关键词，自动回复的固定内容。
+                                        <div class="desc pl-[32px]">
+                                            针对特定关键词提供 100% 准确的官方回复，不消耗 Token
                                         </div>
                                     </div>
                                 </template>
-                                <template #icon>
-                                    <div
-                                        class="w-5 h-5 bg-[#ECECEC] flex items-center justify-center rounded cursor-pointer"
-                                        @click.stop="handleKeywordsAdd()">
-                                        <Icon name="el-icon-Plus" :size="12"> </Icon>
-                                    </div>
-                                </template>
-                                <div class="flex items-center justify-between gap-x-6 mb-2 px-4">
-                                    <div class="flex items-center w-full gap-x-4">
-                                        <div>模糊匹配阈值</div>
-                                        <div class="flex-1">
-                                            <ElSlider v-model="formData.threshold" :min="0" :max="1" :step="0.01" />
+
+                                <div class="px-[32px] py-[20px] bg-white">
+                                    <div class="threshold-panel mb-[20px]">
+                                        <div class="flex items-center gap-[12px] flex-1">
+                                            <span class="text-[13px] font-[900] text-tx-primary shrink-0"
+                                                >匹配阈值</span
+                                            >
+                                            <ElSlider
+                                                v-model="formData.threshold"
+                                                :min="0"
+                                                :max="1"
+                                                :step="0.01"
+                                                class="flex-1 px-[10px]" />
+                                            <ElInputNumber
+                                                v-model="formData.threshold"
+                                                controls-position="right"
+                                                :min="0"
+                                                :max="1"
+                                                :step="0.01"
+                                                class="w-[90px]" />
                                         </div>
-                                        <ElInputNumber
-                                            v-model="formData.threshold"
-                                            controls-position="right"
-                                            :min="0"
-                                            :max="1"
-                                            :step="0.01">
-                                        </ElInputNumber>
+                                        <div class="w-[1px] h-[24px] bg-gray-200 mx-[20px]"></div>
+                                        <ElButton @click="handleImportKeywords()" class="import-btn">
+                                            <Icon name="el-icon-Upload" class="mr-[4px]" />批量导入
+                                        </ElButton>
                                     </div>
-                                    <ElButton type="primary" @click="handleImportKeywords()">批量导入</ElButton>
-                                </div>
-                                <div class="border border-[var(--el-border-color-lighter)] rounded-lg">
-                                    <ElTable
-                                        v-loading="pager.loading"
-                                        :data="pager.lists"
-                                        stripe
-                                        :header-row-style="{ height: '62px' }"
-                                        :row-style="{ height: '50px' }"
-                                        max-height="300px">
-                                        <ElTableColumn label="匹配模式" width="120">
-                                            <template #default="{ row }">
-                                                {{ row.match_type === 0 ? "模糊匹配" : "精确匹配" }}
-                                            </template>
-                                        </ElTableColumn>
-                                        <ElTableColumn label="匹配内容" prop="keyword" min-width="200"></ElTableColumn>
-                                        <ElTableColumn label="回复内容" min-width="300">
-                                            <template #default="{ row }">
-                                                <ElButton link type="primary" @click="handleKeywordsEdit(row)">
-                                                    点击查看
-                                                </ElButton>
-                                            </template>
-                                        </ElTableColumn>
-                                        <ElTableColumn label="操作" width="120" fixed="right">
-                                            <template #default="{ row }">
-                                                <ElButton link type="primary" @click="handleKeywordsEdit(row)">
-                                                    编辑
-                                                </ElButton>
-                                                <ElButton link type="danger" @click="handleKeywordsDelete(row.id)">
-                                                    删除
-                                                </ElButton>
-                                            </template>
-                                        </ElTableColumn>
-                                    </ElTable>
-                                </div>
-                                <div class="h-[64px] flex justify-center items-center">
-                                    <pagination
-                                        v-model="pager"
-                                        layout="prev, pager, next"
-                                        @change="getLists"></pagination>
+
+                                    <div class="table-wrapper">
+                                        <ElTable
+                                            :data="pager.lists"
+                                            stripe
+                                            v-loading="pager.loading"
+                                            :cell-style="{ borderBottom: 'none' }"
+                                            max-height="400px">
+                                            <ElTableColumn label="模式" width="100">
+                                                <template #default="{ row }">
+                                                    <span
+                                                        :class="
+                                                            row.match_type === 0 ? 'text-orange-500' : 'text-primary'
+                                                        "
+                                                        class="text-[12px] font-bold">
+                                                        {{ row.match_type === 0 ? "模糊" : "精确" }}
+                                                    </span>
+                                                </template>
+                                            </ElTableColumn>
+                                            <ElTableColumn label="关键词" prop="keyword" min-width="140" />
+                                            <ElTableColumn label="回复预览" min-width="200">
+                                                <template #default="{ row }">
+                                                    <span
+                                                        class="text-tx-secondary truncate block cursor-pointer hover:text-primary"
+                                                        @click="handleKeywordsEdit(row)">
+                                                        {{ row.content || "点击查看详情..." }}
+                                                    </span>
+                                                </template>
+                                            </ElTableColumn>
+                                            <ElTableColumn label="操作" width="110" align="right">
+                                                <template #default="{ row }">
+                                                    <div class="flex justify-end gap-[10px]">
+                                                        <ElButton link type="primary" @click="handleKeywordsEdit(row)"
+                                                            >编辑</ElButton
+                                                        >
+                                                        <ElButton
+                                                            link
+                                                            type="danger"
+                                                            @click="handleKeywordsDelete(row.id)"
+                                                            >删除</ElButton
+                                                        >
+                                                    </div>
+                                                </template>
+                                            </ElTableColumn>
+                                        </ElTable>
+                                    </div>
+                                    <div class="mt-[16px] flex justify-end">
+                                        <pagination v-model="pager" layout="prev, pager, next" @change="getLists" />
+                                    </div>
                                 </div>
                             </ElCollapseItem>
                         </ElCollapse>
@@ -175,18 +188,14 @@
                 </div>
             </ElScrollbar>
         </div>
-        <!-- 保存按钮 -->
-        <div class="flex items-center justify-center mt-4">
-            <ElButton
-                type="primary"
-                class="w-[318px] !rounded-full !h-[50px]"
-                :loading="isLockSubmit"
-                @click="lockSubmit">
-                保存
+
+        <div class="h-[80px] border-t border-br flex items-center justify-center bg-white shrink-0">
+            <ElButton type="primary" class="global-save-btn" :loading="isLockSubmit" @click="lockSubmit">
+                更新技能设置
             </ElButton>
         </div>
     </div>
-    <!-- 弹窗组件 -->
+
     <keywords-edit v-if="showKeywords" ref="keywordsEditRef" @close="showKeywords = false" @success="getLists" />
     <workflow-edit
         v-if="showWorkflow"
@@ -201,7 +210,6 @@
         @close="showImportKeywords = false"
         @success="getLists" />
 </template>
-
 <script setup lang="ts">
 import { robotKeywordsLists, deleteRobotKeywords } from "@/api/agent";
 import KeywordsEdit from "./keywords-edit.vue";
@@ -346,25 +354,76 @@ onMounted(() => {
     getLists();
 });
 </script>
-
 <style scoped lang="scss">
-:deep(.el-collapse) {
-    --el-collapse-header-height: 70px; // 自适应高度
-    --el-collapse-header-padding: 10px 0; // 调整内边距
-    .el-collapse-item__header {
-        font-weight: initial;
+.skill-collapse-container {
+    --el-collapse-border-color: transparent;
+    --el-collapse-header-bg-color: transparent;
+}
+
+.skill-header {
+    @apply flex flex-col justify-center w-full py-[16px] transition-all;
+
+    .title {
+        @apply text-[15px] font-[900] text-tx-primary;
     }
-    .el-collapse-item__arrow {
-        display: none; // 隐藏默认箭头
+    .desc {
+        @apply text-[12px] text-tx-secondary mt-[4px] font-normal;
+    }
+
+    .collapse-icon-box {
+        @apply w-[24px] h-[24px] flex items-center justify-center rounded-[6px] bg-gray-50 text-gray-400 transition-all;
+        &.is-active {
+            @apply rotate-90 bg-blue-50 text-primary;
+        }
     }
 }
+
+.badge-dev {
+    @apply text-[11px] text-white bg-orange-400 px-[8px] py-[2px] rounded-[6px] font-bold h-fit;
+}
+
+.workflow-active-card {
+    @apply flex items-center justify-between p-[16px] bg-blue-50 border border-primary-light-8 rounded-lg;
+}
+
+.threshold-panel {
+    @apply flex items-center p-[16px] bg-gray-50 rounded-[12px] border border-[transparent];
+}
+
+.import-btn {
+    @apply h-[36px] rounded-[8px] border-br font-bold text-tx-primary hover:text-primary;
+}
+
+.table-wrapper {
+    @apply border border-br rounded-2xl overflow-hidden;
+}
+
 :deep(.el-table) {
-    border-radius: 8px;
     thead th.el-table__cell.is-leaf {
-        border-top: 0;
+        border-top: none;
     }
-    &.el-table--fit .el-table__inner-wrapper:before {
-        display: none;
+    .el-table--border .el-table__inner-wrapper:after,
+    .el-table--border:after,
+    .el-table--border:before,
+    .el-table__inner-wrapper:before {
+        background-color: transparent;
+    }
+}
+
+.global-save-btn {
+    @apply w-[360px] h-[48px] rounded-xl font-[900] shadow-[0_10px_20px_-5px_rgba(0,101,251,0.2)];
+}
+
+:deep(.el-collapse-item__header) {
+    @apply h-auto border-b border-br-extra-light mb-[8px] leading-[24px];
+}
+:deep(.el-collapse-item__wrap) {
+    @apply border-none bg-[transparent];
+}
+:deep(.el-table) {
+    --el-table-header-bg-color: var(--gray-50);
+    th {
+        @apply font-[900] text-gray-500 text-[12px];
     }
 }
 </style>

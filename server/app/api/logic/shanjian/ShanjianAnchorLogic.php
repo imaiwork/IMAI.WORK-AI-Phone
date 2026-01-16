@@ -24,31 +24,36 @@ class ShanjianAnchorLogic extends ApiLogic
 
     public static function add(array $params)
     {
-        $name = $params['name'] ?? '形象合成'.date('YmdHi');
+        Log::channel('shanjian')->write('定时任务闪剪111');
+        $user_id = $params['user_id'] ?? self::$uid;
+        $dh_id   = $params['dh_id'] ?? 0;
+        $name    = $params['name'] ?? '形象合成' . date('YmdHi');
         try {
-            $task_id = generate_unique_task_id();
-            $param['task_id'] = $task_id;
-            $param['user_id'] = self::$uid;
-            $param['videoUrl'] = $params['anchor_url'] ?? "";
+            $task_id               = generate_unique_task_id();
+            $param['task_id']      = $task_id;
+            $param['user_id']      = $user_id;
+            $param['videoUrl']     = $params['anchor_url'] ?? "";
             $param['authVideoUrl'] = $params['authorized_url'] ?? "";
-            $param['authText'] =  ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI');
-            $scene = self::SHANJIAN_AVATAR;
-            $response = self::requestUrl($param, $scene, self::$uid, $task_id);
-            Log::channel('shanjian')->write('闪剪形象'.json_encode($response,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            $param['authText']     = ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI');
+            $scene                 = self::SHANJIAN_AVATAR;
+            Log::channel('shanjian')->write('定时任务闪剪222');
+            $response              = self::requestUrl($param, $scene, $user_id, $task_id);
+            Log::channel('shanjian')->write('定时任务闪剪333');
+            Log::channel('shanjian')->write('闪剪形象' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             if (isset($response['code']) && $response['code'] == 10000) {
-                //闪剪返回成功时，创建公共形象id
-                $dhInsert = [
-                    'user_id'    => self::$uid,
-                    'name'       => $name,
-                    'image'      => $params['pic'] ?? '',
-                    'task_ids'   => json_encode(['shanjian'=>['task_id'=>$task_id,'status'=>0],'weiju'=>['task_id'=>'','status'=>0],'chanjing'=>['task_id'=>'','status'=>0]]),
-                    'status'     => 0,
+                //闪剪返回成功时公共形象id
+                $dhUpdate = [
+                    'task_ids'   => json_encode([
+                                                    'shanjian' => ['task_id' => $task_id, 'status' => 0],
+                                                    'weiju'    => ['task_id' => '', 'status' => 0],
+                                                    'chanjing' => ['task_id' => '', 'status' => 0]
+                                                ]),
                     'result_url' => $params['anchor_url'] ?? ''
                 ];
-                $dh = DigitalHumanAnchor::create($dhInsert);
+                DigitalHumanAnchor::update($dhUpdate, ['id' => $dh_id]);
 
                 $data  = [
-                    'user_id'        => self::$uid,
+                    'user_id'        => $user_id,
                     'task_id'        => $task_id,
                     'pic'            => $params['pic'] ?? '',
                     'name'           => $name,
@@ -56,21 +61,18 @@ class ShanjianAnchorLogic extends ApiLogic
                     'authorized_pic' => $params['authorized_pic'] ?? '',
                     'authorized_url' => $params['authorized_url'] ?? '',
                     'create_time'    => time(),
-                    'dh_id'          => $dh->id,
+                    'dh_id'          => $dh_id,
                 ];
                 $model = new ShanjianAnchor();
                 $model->save($data);
                 $data['id']       = $model->id;
                 self::$returnData = $data;
                 return true;
-            }else{
+            } else {
                 $msg = $response['message'] ?? '检验失败';
                 self::setError($msg);
                 return false;
             }
-
-
-
         } catch (\Exception $e) {
             self::setError($e->getMessage());
             return false;

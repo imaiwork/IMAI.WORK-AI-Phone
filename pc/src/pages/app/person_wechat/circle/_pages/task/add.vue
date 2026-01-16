@@ -2,14 +2,13 @@
     <ElDrawer v-model="show" title="" size="470px" :with-header="false" class="task-add-drawer relative" @close="close">
         <CircleSend
             v-model="formData"
+            :show-close-btn="true"
             ref="circleSendRef"
+            @close="close"
             @success="
                 emit('success');
                 show = false;
             " />
-        <div class="absolute bottom-0 right-0 p-4">
-            <ElButton @click="close">取消</ElButton>
-        </div>
     </ElDrawer>
 </template>
 
@@ -27,12 +26,12 @@ const emit = defineEmits<{
 const show = ref(false);
 const formData = reactive<any>({
     id: "",
+    name: `朋友圈任务${dayjs().format("YYYYMMDDHHmm")}`,
     content: "",
-    task_type: 0,
-    attachment_type: -1,
-    attachment_content: null,
-    comment: "",
-    send_time: dayjs().add(30, "minute").format("YYYY-MM-DD HH:mm:ss"),
+    attachment_type: MaterialTypeEnum.IMAGE,
+    attachment_content: [],
+    date: dayjs().format("YYYY-MM-DD"),
+    time_config: ["00:00", "00:30"],
     wechat_ids: [],
 });
 

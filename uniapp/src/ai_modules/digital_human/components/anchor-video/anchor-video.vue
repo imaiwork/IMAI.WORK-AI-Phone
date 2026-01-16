@@ -14,7 +14,7 @@
             <view class="absolute top-0 left-0 z-50 w-full h-full">
                 <template v-if="getStatus(item) == 1">
                     <view class="w-full h-full flex items-center justify-center gap-1 text-center px-2 text-white">
-                        <view class="rounded-full bg-[#ffffff33] w-[48rpx] h-[48rpx]" @click="handlePlay(item.url)">
+                        <view class="rounded-full bg-[#ffffff33] w-[68rpx] h-[68rpx]" @click="handlePlay(item.url)">
                             <image src="/static/images/icons/play.svg" class="w-full h-full"></image>
                         </view>
                     </view>

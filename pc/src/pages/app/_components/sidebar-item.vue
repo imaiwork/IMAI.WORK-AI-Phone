@@ -1,130 +1,43 @@
 <template>
     <div
-        class="sidebar-item"
+        class="sidebar-item group"
         :class="[
             {
                 active: isActive,
-                'is-black': isBlack,
                 'is-disabled': item.disabled,
             },
-            isActive && getThemeClass.shadow,
-            getThemeClass.hoverBgColor,
-            getThemeClass.hoverShadow,
         ]"
-        :style="{
-            backgroundColor: isActive ? getTheme.sidebarBgColor : '',
-        }"
         @click="handleSidebar(item.type)">
-        <span
-            class="flex items-center justify-center rounded p-1"
-            :class="[isActive ? 'bg-primary' : getThemeClass.iconBgColor]">
-            <Icon :name="`local-icon-${item.icon}`" :size="14" :color="getIconColor" />
-        </span>
-        <span class="text-sm" :style="{ color: item.disabled ? 'rgba(255,255,255,0.2)' : getTheme.textColor }">
+        <div
+            class="absolute left-0 w-1 h-5 bg-primary rounded-r-full transition-all duration-300 scale-y-0"
+            :class="{ 'scale-y-100': isActive }"></div>
+
+        <!-- <div v-if="item.icon" class="flex-shrink-0">
+            <Icon :name="item.icon" :size="18" />
+        </div> -->
+
+        <span class="text-[14px] font-bold transition-colors">
             {{ item.name }}
         </span>
+
+        <div v-if="isActive" class="ml-auto">
+            <div class="w-1.5 h-1.5 rounded-full bg-[#0065fb]/40"></div>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { AppKeyEnum } from "@/enums/appEnums";
-
+// Logic remains the same as your original code
 interface SidebarItem {
     type: number;
     icon: string;
     name: string;
     disabled?: boolean;
 }
-
-interface Theme {
-    bgColor: string;
-    iconColor: string;
-    textColor: string;
-    sidebarBgColor: string;
-}
-
-interface ThemeClasses {
-    shadow: string;
-    hoverBgColor: string;
-    hoverShadow: string;
-    iconBgColor: string;
-}
-
-const props = withDefaults(
-    defineProps<{
-        item: SidebarItem;
-        sidebarIndex: number;
-    }>(),
-    {
-        item: () => ({
-            type: 0,
-            icon: "",
-            name: "",
-            disabled: false,
-        }),
-        sidebarIndex: 0,
-    }
-);
-
-const emit = defineEmits<{
-    (e: "update:sidebarIndex", index: number): void;
-}>();
-
-const route = useRoute();
+const props = defineProps<{ item: SidebarItem; sidebarIndex: number }>();
+const emit = defineEmits<{ (e: "update:sidebarIndex", index: number): void }>();
 
 const isActive = computed(() => props.sidebarIndex === props.item.type);
-
-const isBlack = computed(() => {
-    return [
-        AppKeyEnum.DIGITAL_HUMAN,
-        AppKeyEnum.DRAWING,
-        AppKeyEnum.REDBOOK,
-        AppKeyEnum.SPH,
-        AppKeyEnum.MATRIX,
-    ].includes(route.meta.key as AppKeyEnum);
-});
-
-const getIconColor = computed(() => {
-    if (props.item.disabled) return "rgba(255,255,255,0.2)";
-    return isActive.value ? "#ffffff" : getTheme.value.iconColor;
-});
-
-const getTheme = computed<Theme>(() => {
-    const isDarkTheme = isBlack.value;
-
-    return isDarkTheme
-        ? {
-              bgColor: "var(--app-bg-color-2)",
-              sidebarBgColor: "var(--app-bg-color-1)",
-              iconColor: "#ffffff",
-              textColor: "#ffffff",
-          }
-        : {
-              bgColor: "#ffffff",
-              sidebarBgColor: "#F6F6F6",
-              iconColor: "var(--color-black)",
-              textColor: "var(--color-black)",
-          };
-});
-
-const getThemeClass = computed<ThemeClasses>(() => {
-    const isDarkTheme = isBlack.value;
-
-    return isDarkTheme
-        ? {
-              shadow: "shadow-[0_0_0_1px_rgba(42,42,42,1)]",
-              hoverBgColor: "hover:bg-app-bg-1",
-              hoverShadow: "hover:shadow-[0_0_0_1px_rgba(42,42,42,1)]",
-              iconBgColor: "bg-[#ffffff0d]",
-          }
-        : {
-              shadow: "shadow-[0_0_0_1px_rgba(239,239,239,1)]",
-              hoverBgColor: "hover:bg-[#F6F6F6]",
-              hoverShadow: "hover:shadow-[0_0_0_1px_rgba(239,239,239,1)]",
-              iconBgColor: "bg-[#0000000d]",
-          };
-});
-
 const handleSidebar = (type: number) => {
     if (isActive.value || props.item.disabled) return;
     emit("update:sidebarIndex", type);
@@ -133,19 +46,19 @@ const handleSidebar = (type: number) => {
 
 <style scoped lang="scss">
 .sidebar-item {
-    @apply flex items-center gap-2.5 h-11 rounded-md px-3 cursor-pointer transition-all duration-200;
+    @apply relative flex items-center gap-3 h-[46px] rounded-xl pr-2 pl-5 cursor-pointer transition-all duration-300;
+    @apply text-[#64748B];
 
-    &.is-disabled {
-        @apply cursor-not-allowed;
-
-        &:hover {
-            background-color: transparent;
-            box-shadow: none;
-        }
+    &:not(.active):not(.is-disabled):hover {
+        @apply bg-[#F1F5F9] text-primary;
     }
 
-    &:focus {
-        @apply outline-none ring-2 ring-primary ring-offset-2;
+    &.active {
+        @apply bg-[#0065FB]/5 text-primary;
+    }
+
+    &.is-disabled {
+        @apply cursor-not-allowed opacity-40;
     }
 }
 </style>

@@ -1,0 +1,1 @@
+import{r as e}from"./index.5b8bd65f.js";const i=()=>e.get({url:"/setting.ai.models/lists"}),r=t=>e.get({url:"/setting.ai.models/detail",params:t}),o=t=>e.post({url:"/setting.ai.models/edit",data:t});export{i as a,o as e,r as g};

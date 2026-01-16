@@ -68,7 +68,9 @@
                 </el-table-column>
                 <el-table-column label="任务状态" min-width="100">
                     <template #default="{ row }">
-                        {{ getStatusText(row.status) }}
+                        <el-tag :type="getStatusType(row.status)">
+                            {{ getStatusText(row.status) }}
+                        </el-tag>
                     </template>
                 </el-table-column>
                 <el-table-column label="任务类型" prop="" width="100">
@@ -176,6 +178,21 @@ const getPublishCycle = (row: any) => {
         return dayjs(publish_end).diff(dayjs(publish_start), "day") + 1 + "天";
     }
     return "-";
+};
+
+const getStatusType = (status: number) => {
+    if (status === GenStatus.SUCCESS || status === GenStatus.PARTIAL_SUCCESS) {
+        return "success";
+    }
+    if (status === GenStatus.WAITING || status === GenStatus.DRAFT) {
+        return "info";
+    }
+    if (status === GenStatus.GENERATING) {
+        return "warning";
+    }
+    if (status === GenStatus.FAILED) {
+        return "danger";
+    }
 };
 
 const multipleSelection = ref<any[]>([]);

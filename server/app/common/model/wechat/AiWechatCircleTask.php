@@ -22,7 +22,7 @@ class AiWechatCircleTask extends BaseModel
     {
         if (is_string($value))
         {
-            return implode('##', json_decode($value, true));
+            return json_decode($value, true);
         }
         return '';
     }

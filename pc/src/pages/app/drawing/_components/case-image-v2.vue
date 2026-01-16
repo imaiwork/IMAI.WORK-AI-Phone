@@ -1,59 +1,92 @@
 <template>
     <popup
         ref="goodsCasePopRef"
-        width="770px"
+        width="820px"
         confirm-button-text=""
         cancel-button-text=""
         :show-close="false"
-        style="padding: 0; background-color: var(--app-bg-color-1)">
-        <div class="py-[18px] -my-4">
-            <div class="absolute top-[18px] right-[18px] w-6 h-6" @click="close">
-                <close-btn :theme="ThemeEnum.DARK"></close-btn>
+        header-class="!p-0"
+        footer-class="!p-0"
+        style="padding: 0">
+        <div class="rounded-[28px] overflow-hidden bg-white shadow-2xl relative">
+            <div class="flex items-center justify-between h-[72px] px-8 border-b border-[#F1F5F9] bg-white">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary">
+                        <Icon name="el-icon-Collection" :size="20"></Icon>
+                    </div>
+                    <div>
+                        <div class="text-[18px] text-[#1E293B] font-black tracking-tight">灵感案例库</div>
+                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                            Premium Templates
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-8 h-8" @click="close">
+                    <close-btn />
+                </div>
             </div>
-            <div class="font-bold text-[20px] text-white px-[18px]">优秀案例</div>
-            <div class="mt-5">
-                <div class="h-[40rem] overflow-y-auto dynamic-scroller">
-                    <div
-                        class="grid grid-cols-4 gap-[10px] px-3"
-                        v-infinite-scroll="load"
-                        :infinite-scroll-disabled="!pager.isLoad"
-                        :infinite-scroll-immediate="false"
-                        :infinite-scroll-distance="10">
-                        <template v-if="['goods', 'model'].includes(type)">
-                            <div
-                                v-for="item in pager.lists"
-                                :key="item.id"
-                                class="cursor-pointer"
-                                @click="choose(item)">
-                                <ElImage :src="item.result_image" class="w-full rounded-xl" lazy />
-                            </div>
-                        </template>
-                        <template v-if="type == 'fashion'">
-                            <div
-                                v-for="item in pager.lists"
-                                :key="item.id"
-                                class="relative cursor-pointer"
-                                @click="choose(item)">
-                                <ElImage :src="item.result_image" class="w-full rounded-xl" lazy />
-                                <div class="absolute bottom-2 left-0 w-full p-2">
-                                    <div class="flex justify-around gap-2">
-                                        <template v-for="img in item.params.images">
-                                            <div
-                                                class="w-12 h-12 rounded-md"
-                                                style="
-                                                    backdrop-filter: blur(6px);
-                                                    box-shadow: 0px 6px 12px 0px rgba(0, 0, 0, 0.24);
-                                                "
-                                                v-if="img">
-                                                <ElImage :src="img" fit="cover" class="w-full h-full rounded-md" lazy />
-                                            </div>
-                                        </template>
+
+            <div class="h-[650px] bg-[#F8FAFC]">
+                <ElScrollbar :distance="20" @end-reached="load">
+                    <div class="p-6">
+                        <div class="grid grid-cols-4 gap-5">
+                            <template v-for="item in pager.lists" :key="item.id">
+                                <div
+                                    v-if="['goods', 'model'].includes(type)"
+                                    class="group relative cursor-pointer overflow-hidden rounded-2xl bg-white border border-br transition-all hover:shadow-xl hover:shadow-[#0065fb]/10 hover:-translate-y-1"
+                                    @click="choose(item)">
+                                    <ElImage
+                                        :src="item.result_image"
+                                        class="w-full h-full block transition-transform duration-500 group-hover:scale-105"
+                                        lazy />
+                                    <div
+                                        class="absolute inset-0 bg-[#0065fb]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <div
+                                            class="px-4 py-2 bg-white rounded-full text-primary text-[12px] font-black">
+                                            使用此案例
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </template>
+
+                                <div
+                                    v-if="type == 'fashion'"
+                                    class="group relative cursor-pointer overflow-hidden rounded-2xl bg-white border border-br transition-all hover:shadow-xl hover:shadow-[#0065fb]/10 hover:-translate-y-1"
+                                    @click="choose(item)">
+                                    <ElImage :src="item.result_image" class="w-full h-auto block" lazy />
+
+                                    <div class="absolute bottom-3 left-0 w-full px-3">
+                                        <div
+                                            class="flex justify-center gap-1.5 p-2 rounded-xl bg-white/40 backdrop-blur-md border border-br">
+                                            <template v-for="(img, idx) in item.params.images.slice(0, 3)" :key="idx">
+                                                <div
+                                                    class="w-10 h-10 rounded-lg overflow-hidden border border-br"
+                                                    v-if="img">
+                                                    <ElImage :src="img" fit="cover" class="w-full h-full" lazy />
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="absolute inset-0 bg-[#0065fb]/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <div
+                                            class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-primary shadow-xl">
+                                            <Icon name="el-icon-Check" :size="24"></Icon>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <load-text :is-load="pager.isLoad"></load-text>
                     </div>
-                    <div v-if="!pager.isLoad" class="text-white text-center text-xs w-full mt-4">暂无更多了~</div>
+                </ElScrollbar>
+                <div
+                    v-if="!pager.loading && pager.lists.length === 0"
+                    class="h-[400px] flex flex-col items-center justify-center text-[#94A3B8]">
+                    <Icon name="el-icon-FolderOpened" :size="48" class="mb-4 opacity-20"></Icon>
+                    <p class="font-bold text-sm">库中暂无素材</p>
                 </div>
             </div>
         </div>
@@ -62,7 +95,6 @@
 
 <script setup lang="ts">
 import { getCaseLists } from "@/api/drawing";
-import { ThemeEnum } from "@/enums/appEnums";
 
 const props = defineProps<{
     type: "goods" | "fashion" | "model";
@@ -88,9 +120,12 @@ const { pager, getLists, resetPage } = usePaging({
     isScroll: true,
 });
 
-const load = () => {
-    queryParams.page_no += 1;
-    getLists();
+const load = async (e: any) => {
+    if (e == "bottom") {
+        if (!pager.isLoad || pager.loading) return;
+        queryParams.page_no++;
+        await getLists();
+    }
 };
 
 const choose = (item: any) => {

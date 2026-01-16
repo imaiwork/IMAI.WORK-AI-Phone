@@ -66,6 +66,14 @@ export default function useSidebar() {
 
     init();
 
+    watch(
+        () => route.query,
+        () => {
+            init();
+        },
+        { deep: true }
+    );
+
     return {
         sidebar,
         sidebarIndex,

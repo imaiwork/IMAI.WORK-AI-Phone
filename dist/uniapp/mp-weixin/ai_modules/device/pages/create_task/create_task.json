@@ -6,10 +6,11 @@
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "empty": "../../../../components/empty/empty",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
     "upload-progress": "../../../../components/upload-progress/upload-progress",
     "choose-material": "../../../../components/choose-material/choose-material",
-    "bast-setting": "../../components/bast-setting/bast-setting",
-    "video-preview": "../../../../components/video-preview/video-preview"
+    "video-preview": "../../../../components/video-preview/video-preview",
+    "number-pop": "../../components/number-pop/number-pop"
   }
 }

@@ -2,177 +2,166 @@
     <popup
         ref="popupRef"
         top="10vh"
-        width="700px"
+        width="680px"
+        header-class="!p-0"
+        footer-class="!p-0"
         cancel-button-text=""
         confirm-button-text=""
-        style="padding: 0"
         :show-close="false">
-        <div class="-my-4 p-[18px]">
-            <div class="absolute top-[18px] right-[18px] w-6 h-6" @click="close">
-                <close-btn :theme="ThemeEnum.LIGHT" />
+        <div class="relative">
+            <div class="absolute right-2 top-2 w-8 h-8 z-20" @click="close">
+                <close-btn />
             </div>
-            <div class="font-bold text-[20px]">向量检索配置</div>
-            <div class="border-b border-[#0000001a] my-3"></div>
-            <ElForm ref="formRef" :model="formData" label-width="100px">
-                <ElFormItem label="检索模式" prop="search_mode">
-                    <template #label="{ label }">
-                        <span class="flex items-center">
-                            {{ label }}
-                            <ElTooltip placement="top">
-                                <div class="ml-1 cursor-pointer">
-                                    <Icon name="local-icon-privacy" color="#00000080" />
-                                </div>
-                                <template #content>
-                                    <p>语义检索: 采用向量化模型进行向量检索</p>
-                                    <p>全文检索: 使用传统的数据库检索方式检索</p>
-                                    <p>混合检索: 语义检索+全文检索,具有更好的效果,建议搭配重排模型使用。</p>
-                                    <p>注意: 当您使用全文或混合检索时，是没有语义相似度的，建议您开启重排模型</p>
-                                </template>
-                            </ElTooltip>
-                        </span>
-                    </template>
-                    <ElSelect class="!w-64" v-model="formData.search_mode" placeholder="请选择搜索模式">
-                        <ElOption
-                            v-for="option in searchOptions"
-                            :key="option.value"
-                            :label="option.label"
-                            :value="option.value" />
-                    </ElSelect>
-                </ElFormItem>
-                <ElFormItem label="引用上限" prop="search_tokens">
-                    <template #label="{ label }">
-                        <span class="flex items-center">
-                            {{ label }}
-                            <ElTooltip placement="top">
-                                <div class="ml-1 cursor-pointer">
-                                    <Icon name="local-icon-privacy" color="#00000080" />
-                                </div>
-                                <template #content>
-                                    <p>该参数表示单次文档从知识库检索最大的Tokens数量</p>
-                                    <p>说明: 引用越多意味着所需消耗的token越多</p>
-                                    <p>注意: 切记不要超出模型的最大token限制</p>
-                                </template>
-                            </ElTooltip>
-                        </span>
-                    </template>
-                    <div class="flex items-center">
-                        <ElSlider class="!w-64" v-model="formData.search_tokens" size="small" :min="100" :max="30000" />
-                        <ElInputNumber
-                            class="ml-4"
-                            v-model="formData.search_tokens"
-                            size="small"
-                            :min="100"
-                            :max="30000" />
-                    </div>
-                </ElFormItem>
-                <template v-if="isVisibleSearchSimilar">
-                    <ElFormItem label="最低相似度" prop="search_similar">
-                        <template #label="{ label }">
-                            <span class="flex items-center">
-                                {{ label }}
+
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-[#0065fb]/10 flex items-center justify-center text-primary">
+                    <Icon name="el-icon-Operation" :size="20" />
+                </div>
+                <div>
+                    <div class="text-[18px] font-[900] text-[#1E293B]">向量检索配置</div>
+                    <div class="text-[12px] font-bold text-[#94A3B8]">配置模型检索的精度、上限及重排策略</div>
+                </div>
+            </div>
+
+            <ElForm ref="formRef" :model="formData" label-width="110px" label-position="left">
+                <div class="form-section-card mb-6">
+                    <div class="section-title">基础检索</div>
+
+                    <ElFormItem prop="search_mode">
+                        <template #label>
+                            <span class="custom-label"
+                                >检索模式
                                 <ElTooltip placement="top">
-                                    <div class="ml-1 cursor-pointer">
-                                        <Icon name="local-icon-privacy" color="#00000080" />
+                                    <div class="help-icon">
+                                        <Icon name="el-icon-QuestionFilled" />
                                     </div>
                                     <template #content>
-                                        <p>语义检索的精度，提问检索的内容需要达到该精度才会被引用</p>
-                                        <ol class="list-decimal pl-4">
-                                            <li>
-                                                高语义相似度(>=0.8): 会检索相关性高的知识，会更准确，同时也容易未命中。
-                                            </li>
-                                            <li>
-                                                低语义相似度(如0.4): 检索范围更大，更容易匹配知识，但可能回答会不准确。
-                                            </li>
-                                            <li>
-                                                不同的向量模型检索相似度不一样，具体情况到 『知识库 -
-                                                搜索测试』进行调试。
-                                            </li>
-                                            <li>
-                                                如果您使用的是『全文检索/混合检索』这个值则不会生效，仅对语义检索有效。
-                                            </li>
-                                        </ol>
+                                        <div class="space-y-1">
+                                            <p><b class="text-primary">语义检索:</b> 采用向量化模型进行向量检索</p>
+                                            <p><b class="text-primary">全文检索:</b> 使用传统的关键词数据库检索</p>
+                                            <p><b class="text-primary">混合检索:</b> 语义+全文，推荐配合重排使用</p>
+                                        </div>
                                     </template>
                                 </ElTooltip>
                             </span>
                         </template>
-                        <div class="flex items-center">
+                        <ElSelect
+                            class="!w-full"
+                            v-model="formData.search_mode"
+                            placeholder="请选择搜索模式"
+                            :show-arrow="false">
+                            <ElOption
+                                v-for="option in searchOptions"
+                                :key="option.value"
+                                :label="option.label"
+                                :value="option.value" />
+                        </ElSelect>
+                    </ElFormItem>
+
+                    <ElFormItem prop="search_tokens">
+                        <template #label>
+                            <span class="custom-label"
+                                >引用上限
+                                <ElTooltip
+                                    content="单次从知识库检索的最大 Tokens 数量，引用越多消耗越高。"
+                                    placement="top">
+                                    <div class="help-icon">
+                                        <Icon name="el-icon-QuestionFilled" />
+                                    </div>
+                                </ElTooltip>
+                            </span>
+                        </template>
+                        <div class="flex items-center gap-4 w-full">
+                            <ElSlider class="flex-1" v-model="formData.search_tokens" :min="100" :max="30000" />
+                            <ElInputNumber
+                                v-model="formData.search_tokens"
+                                :min="100"
+                                :max="30000"
+                                :controls="false"
+                                class="!w-20 custom-number" />
+                        </div>
+                    </ElFormItem>
+
+                    <ElFormItem v-if="isVisibleSearchSimilar" prop="search_similar">
+                        <template #label>
+                            <span class="custom-label"
+                                >最低相似度
+                                <ElTooltip placement="top">
+                                    <div class="help-icon">
+                                        <Icon name="el-icon-QuestionFilled" />
+                                    </div>
+                                    <template #content>
+                                        <div class="max-w-[300px] leading-5">
+                                            设定语义匹配的最低精度。数值越高（如0.8）回答越准确但也容易未命中；数值越低（如0.4）检索越广。
+                                        </div>
+                                    </template>
+                                </ElTooltip>
+                            </span>
+                        </template>
+                        <div class="flex items-center gap-4 w-full">
                             <ElSlider
-                                class="!w-64"
+                                class="flex-1"
                                 v-model="formData.search_similar"
-                                size="small"
                                 :min="0"
                                 :max="1"
                                 :step="0.001"
                                 :disabled="formData.search_mode !== 'similar'" />
                             <ElInputNumber
-                                class="ml-4"
                                 v-model="formData.search_similar"
-                                size="small"
                                 :min="0"
                                 :max="1"
                                 :step="0.001"
-                                :disabled="formData.search_mode !== 'similar'" />
+                                :controls="false"
+                                class="!w-20 custom-number" />
                         </div>
                     </ElFormItem>
-                </template>
+                </div>
 
-                <ElDivider />
-
-                <ElFormItem label="结果重排" prop="ranking_status">
-                    <template #label="{ label }">
-                        <span class="flex items-center">
-                            {{ label }}
-                            <ElTooltip content="使用重排模型来进行二次排序, 可增强综合排名。" placement="top">
-                                <div class="ml-1 cursor-pointer">
-                                    <Icon name="local-icon-privacy" color="#00000080" />
-                                </div>
-                            </ElTooltip>
-                        </span>
-                    </template>
-                    <ElSwitch v-model="formData.ranking_status" :active-value="1" :inactive-value="0" />
-                </ElFormItem>
-                <ElFormItem label="重排权重" prop="ranking_score">
-                    <template #label="{ label }">
-                        <span class="flex items-center">
-                            {{ label }}
-                            <ElTooltip content="低于这个分数的数据将会被过滤。" placement="top">
-                                <div class="ml-1 cursor-pointer">
-                                    <Icon name="local-icon-privacy" color="#00000080" />
-                                </div>
-                            </ElTooltip>
-                        </span>
-                    </template>
-                    <div class="flex items-center">
-                        <ElSlider
-                            class="!w-64"
-                            v-model="formData.ranking_score"
-                            size="small"
-                            :min="0"
-                            :max="1"
-                            :step="0.001" />
-                        <ElInputNumber
-                            class="ml-4"
-                            v-model="formData.ranking_score"
-                            size="small"
-                            :min="0"
-                            :max="1"
-                            :step="0.001" />
+                <div class="form-section-card bg-[#F8FAFC]">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="section-title !mb-0">结果重排 (Rerank)</div>
+                        <ElSwitch v-model="formData.ranking_status" :active-value="1" :inactive-value="0" />
                     </div>
-                </ElFormItem>
-                <!-- <ElFormItem label="重排模型" prop="ranking_model">
-                    <ElSelect class="!w-64" v-model="formData.search_mode" placeholder="请选择搜索模式">
-                        <ElOption
-                            v-for="option in searchOptions"
-                            :key="option.value"
-                            :label="option.label"
-                            :value="option.value" />
-                    </ElSelect>
-                </ElFormItem> -->
+
+                    <transition name="el-fade-in">
+                        <div v-if="formData.ranking_status === 1" class="space-y-4 pt-2">
+                            <ElFormItem prop="ranking_score" label-width="110px">
+                                <template #label>
+                                    <span class="custom-label"
+                                        >重排权重
+                                        <ElTooltip
+                                            content="重排模型进行二次打分，低于此分数的数据将被过滤。"
+                                            placement="top">
+                                            <div class="help-icon">
+                                                <Icon name="el-icon-QuestionFilled" />
+                                            </div>
+                                        </ElTooltip>
+                                    </span>
+                                </template>
+                                <div class="flex items-center gap-4 w-full">
+                                    <ElSlider
+                                        class="flex-1"
+                                        v-model="formData.ranking_score"
+                                        :min="0"
+                                        :max="1"
+                                        :step="0.001" />
+                                    <ElInputNumber
+                                        v-model="formData.ranking_score"
+                                        :min="0"
+                                        :max="1"
+                                        :step="0.001"
+                                        :controls="false"
+                                        class="!w-20 custom-number" />
+                                </div>
+                            </ElFormItem>
+                        </div>
+                    </transition>
+                </div>
             </ElForm>
-            <ElDivider />
-            <div class="mt-3 flex">
-                <ElButton class="flex-1 !rounded-full !h-[50px] w-[98px]" @click="close()">取消</ElButton>
-                <ElButton type="primary" class="flex-1 !rounded-full !h-[50px] w-[98px]" @click="save"> 保存 </ElButton>
+
+            <div class="mt-8 flex gap-3">
+                <ElButton class="action-btn !text-[#64748B]" color="#F1F5F9" @click="close()">取消修改</ElButton>
+                <ElButton type="primary" class="action-btn is-save" @click="save"> 保存配置 </ElButton>
             </div>
         </div>
     </popup>
@@ -225,5 +214,46 @@ defineExpose({
     setFormData: (data) => setFormData(data, formData),
 });
 </script>
+<style scoped lang="scss">
+/* 分段卡片 */
+.form-section-card {
+    @apply p-5 rounded-2xl border border-[#F1F5F9] bg-white transition-all;
 
-<style scoped></style>
+    .section-title {
+        @apply text-[14px] font-[900] text-[#1E293B] mb-5 flex items-center gap-2;
+        &::before {
+            content: "";
+            @apply w-1 h-3.5 bg-primary rounded-full;
+        }
+    }
+}
+
+/* 标签样式 */
+.custom-label {
+    @apply flex items-center text-[13px] font-bold text-[#64748B];
+    .help-icon {
+        @apply ml-1.5 text-[#CBD5E1] cursor-pointer hover:text-primary transition-colors leading-[0];
+    }
+}
+
+:deep(.custom-number) {
+    .el-input__inner {
+        @apply text-center font-bold text-primary bg-white rounded-lg border-br;
+    }
+}
+
+:deep(.el-slider__bar) {
+    @apply bg-primary;
+}
+:deep(.el-slider__button) {
+    @apply border-primary border-[3px];
+}
+
+.action-btn {
+    @apply flex-1 !h-12 !rounded-xl !border-none !font-black !text-[15px] transition-all;
+}
+
+:deep(.el-form-item) {
+    @apply mb-5 last:mb-0;
+}
+</style>

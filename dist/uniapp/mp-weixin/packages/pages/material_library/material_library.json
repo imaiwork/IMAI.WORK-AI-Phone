@@ -2,6 +2,7 @@
   "navigationBarTitleText": "素材库",
   "disableScroll": true,
   "usingComponents": {
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "empty": "../../../components/empty/empty",
     "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
     "video-preview": "../../../components/video-preview/video-preview",

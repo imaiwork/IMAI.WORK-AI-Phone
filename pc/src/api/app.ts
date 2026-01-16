@@ -78,3 +78,28 @@ export function checkOem() {
 export function getClipConfig() {
     return $request.get({ url: "/tools/clip" });
 }
+
+// 获取视频创作记录
+export function getVideoCreationRecord(params?: any) {
+    return $request.get({ url: "/video/creationRecord", params });
+}
+
+// 删除视频创作记录
+export function deleteVideoCreationRecord(params: any) {
+    return $request.post({ url: "/video/creationRecordDelete", params });
+}
+
+// 更新视频创作记录
+export function updateVideoCreationRecord(params: any) {
+    return $request.post({ url: "/video/creationRecordUpdate", params });
+}
+
+// 视频转码
+export function videoTranscode(params: any) {
+    return $request.post({ url: "/sv.tools/transcoding", params });
+}
+
+// 查询视频转码结果
+export function getVideoTranscodeResult(params: any) {
+    return $request.post({ url: "/sv.tools/searchTranscoding", params });
+}

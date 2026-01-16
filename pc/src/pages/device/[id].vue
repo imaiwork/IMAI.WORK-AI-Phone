@@ -1,208 +1,268 @@
 <template>
-    <div class="h-full flex flex-col p-4">
-        <ElCard class="!border-none !rounded-xl" shadow="never">
-            <ElBreadcrumb>
+    <div class="h-full px-4 pb-4 flex flex-col min-w-[1000px]">
+        <div class="mb-6 px-2">
+            <ElBreadcrumb separator="/">
                 <ElBreadcrumbItem>
-                    <span class="cursor-pointer text-[#8A8C99] hover:text-primary" @click="$router.back()">
-                        AI终端
-                    </span>
+                    <span
+                        class="text-[13px] font-black text-[#94A3B8] hover:text-primary cursor-pointer transition-colors"
+                        @click="$router.back()"
+                        >AI 终端控制台</span
+                    >
                 </ElBreadcrumbItem>
-                <ElBreadcrumbItem>账号设置</ElBreadcrumbItem>
+                <ElBreadcrumbItem>
+                    <span class="text-[13px] font-[900] text-[#1E293B]">账号矩阵设置</span>
+                </ElBreadcrumbItem>
             </ElBreadcrumb>
-        </ElCard>
-        <div class="grow min-h-0 bg-white rounded-lg mt-4 flex flex-col overflow-hidden" ref="containerRef">
-            <div class="h-[71px] px-5 flex items-center justify-between border-b border-b-[#E8E8E8]">
-                <div>
-                    <div class="flex items-center gap-2">
-                        <ElPopover
-                            :show-arrow="false"
-                            popper-class="!p-0 !min-w-[200px]  !border-none !rounded-lg !shadow-[0_0_10px_1px_rgba(0,0,0,0.1)]">
-                            <template #reference>
-                                <div class="min-w-[170px] flex items-center gap-2 cursor-pointer">
-                                    <Icon name="el-icon-ArrowDownBold"></Icon>
-                                    <span class="text-[#36393F] text-lg font-bold">{{
-                                        getCurrentDevice?.device_model
-                                    }}</span>
-                                </div>
-                            </template>
-                            <div class="flex flex-col">
-                                <div class="flex flex-col gap-y-1 p-2 max-h-[300px] overflow-y-auto">
+        </div>
+        <div
+            class="grow min-h-0 bg-white rounded-[32px] flex flex-col overflow-hidden border border-[var(--el-border-color)]"
+            ref="containerRef">
+            <div class="h-[88px] px-8 flex items-center justify-between bg-[#F8FAFC]/30">
+                <div class="flex items-center gap-4">
+                    <ElPopover
+                        trigger="click"
+                        width="250px"
+                        :show-arrow="false"
+                        popper-class="!rounded-[16px] !border-[#F1F5F9] !p-1.5 !shadow-light">
+                        <template #reference>
+                            <div
+                                class="flex items-center gap-3 px-4 py-2 bg-white border border-br rounded-2xl cursor-pointer hover:border-primary transition-all group">
+                                <span class="group-hover:text-primary transition-colors leading-[0]">
+                                    <Icon name="el-icon-Monitor" :size="18" />
+                                </span>
+                                <span
+                                    class="text-[15px] font-[900] text-[#1E293B] group-hover:text-primary transition-colors"
+                                    >{{ getCurrentDevice?.device_model || "选择设备" }}</span
+                                >
+                                <span class="text-[#CBD5E1] group-hover:text-primary transition-colors leading-[0]">
+                                    <Icon name="el-icon-ArrowDown" />
+                                </span>
+                            </div>
+                        </template>
+
+                        <div class="p-2 w-[240px]">
+                            <div class="text-[11px] font-black text-[#94A3B8] px-3 mb-2 uppercase tracking-widest">
+                                可用设备列表
+                            </div>
+                            <div class="space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+                                <div
+                                    v-for="(item, index) in deviceLists"
+                                    :key="index"
+                                    class="flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-all"
+                                    :class="
+                                        queryParams.device_code === item.device_code
+                                            ? 'bg-[#0065FB]/5 text-primary'
+                                            : 'hover:bg-[#F8FAFC] text-[#475569]'
+                                    "
+                                    @click="changeDevice(item.device_code)">
+                                    <span class="text-[13px] font-bold truncate pr-2">{{ item.device_model }}</span>
                                     <div
-                                        v-for="(item, index) in deviceLists"
-                                        class="break-all hover:bg-primary-light-9 rounded-lg p-2 cursor-pointer"
-                                        :class="{
-                                            'bg-primary-light-9 text-primary':
-                                                queryParams.device_code === item.device_code,
-                                        }"
-                                        :key="index"
-                                        @click="changeDevice(item.device_code)">
-                                        {{ item.device_model }}
-                                    </div>
-                                </div>
-                                <ElDivider class="!m-0" />
-                                <div class="flex justify-center py-3">
-                                    <ElButton type="primary" link @click="openAddDevice">
-                                        <Icon name="el-icon-Plus"></Icon>
-                                        <span>添加设备</span>
-                                    </ElButton>
+                                        v-if="queryParams.device_code === item.device_code"
+                                        class="w-1.5 h-1.5 rounded-full bg-primary"></div>
                                 </div>
                             </div>
-                        </ElPopover>
-                        <span class="bg-[#F2F3F8] text-xs py-1 px-2 rounded-lg" v-if="queryParams.device_code"
-                            >设备ID：{{ queryParams.device_code }}</span
+                        </div>
+                    </ElPopover>
+
+                    <div
+                        v-if="queryParams.device_code"
+                        class="px-3 py-1 bg-[#F1F5F9] border border-br rounded-lg text-[11px] font-mono font-bold text-[#64748B]">
+                        ID: {{ queryParams.device_code }}
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <ElInput
+                        v-model="queryParams.account"
+                        placeholder="搜索账号或昵称..."
+                        class="custom-input"
+                        clearable
+                        @clear="resetParams()"
+                        @keyup.enter="getLists()">
+                        <template #prefix><Icon name="el-icon-Search" /></template>
+                    </ElInput>
+                </div>
+            </div>
+
+            <div class="grow min-h-0 flex w-full">
+                <div class="w-[200px] border-r border-t border-br bg-[#F8FAFC]/30 p-4 space-y-2">
+                    <div class="text-[11px] font-black text-[#94A3B8] px-4 mb-4 uppercase tracking-widest">
+                        社交平台
+                    </div>
+                    <div
+                        v-for="(item, index) in getSocialPlatformList"
+                        :key="index"
+                        class="group flex items-center gap-3 px-4 py-3 cursor-pointer rounded-2xl transition-all border border-[transparent]"
+                        :class="
+                            currentSocialPlatform === item.type
+                                ? 'bg-white border-br shadow-light'
+                                : 'hover:bg-[#ffffff]/50'
+                        "
+                        @click="handleChangeSocialPlatform(item.type)">
+                        <img
+                            :src="item.icon"
+                            class="w-6 h-6 grayscale group-hover:grayscale-0 transition-all"
+                            :class="{ 'grayscale-0': currentSocialPlatform === item.type }" />
+                        <span
+                            class="text-[14px] font-bold"
+                            :class="currentSocialPlatform === item.type ? 'text-primary' : 'text-[#64748B]'"
+                            >{{ item.name }}</span
                         >
                     </div>
                 </div>
-            </div>
-            <div class="grow min-h-0 flex w-full">
-                <div class="w-[178px] bg-white border-r border-r-[#E8E8E8] flex-shrink-0">
-                    <div class="flex flex-col gap-y-4 p-4">
-                        <div
-                            v-for="(item, index) in getSocialPlatformList"
-                            :key="index"
-                            class="flex items-center gap-x-3 px-4 hover:bg-primary-light-9 py-1.5 cursor-pointer rounded-lg"
-                            :class="{
-                                'bg-primary-light-9': currentSocialPlatform === item.type,
-                            }"
-                            @click="handleChangeSocialPlatform(item.type)">
-                            <img :src="item.icon" class="w-6 h-6" />
-                            <div>{{ item.name }}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex-1 overflow-auto flex flex-col mt-4">
-                    <div class="flex justify-between items-center px-4">
-                        <div>
-                            <ElButton link @click="refreshData" :loading="isRefreshData">
-                                <Icon name="el-icon-Refresh"></Icon>
-                                <span>刷新数据</span>
-                            </ElButton>
-                        </div>
-                        <ElInput
-                            v-model="queryParams.account"
-                            placeholder="搜索账号信息"
-                            class="!w-[200px]"
-                            prefix-icon="el-icon-Search"
-                            clearable
-                            @clear="resetParams()"
-                            @keyup.enter="getLists()" />
-                    </div>
-                    <div class="grow min-h-0 mt-4 w-full">
-                        <ElTable
-                            ref="tableRef"
-                            v-loading="pager.loading"
-                            :data="pager.lists"
-                            height="100%"
-                            stripe
-                            :row-style="{ height: '60px', cursor: 'pointer' }"
-                            :header-cell-style="{ height: '63px' }"
-                            @row-click="handleRowClick">
-                            <ElTableColumn label="头像" width="80">
+
+                <div class="flex-1 overflow-hidden flex flex-col">
+                    <div class="grow min-h-0">
+                        <ElTable v-loading="pager.loading" :data="pager.lists" height="100%">
+                            <ElTableColumn label="账号信息" min-width="240">
                                 <template #default="{ row }">
-                                    <ElAvatar :src="row.avatar"></ElAvatar>
-                                </template>
-                            </ElTableColumn>
-                            <ElTableColumn label="账号/昵称" prop="account" min-width="180">
-                                <template #default="{ row }">
-                                    <div class="flex items-center justify-center gap-x-2">
-                                        <div>
-                                            <div>{{ row.account }}</div>
-                                            <div>({{ row.nickname }})</div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="relative">
+                                            <ElAvatar
+                                                :size="48"
+                                                :src="row.avatar"
+                                                class="border-2 border-white shadow-sm" />
+                                            <div
+                                                v-if="row.status == 1"
+                                                class="absolute -bottom-1 -right-1 w-5 h-5 bg-[#10B981] rounded-full border-2 border-white flex items-center justify-center">
+                                                <Icon name="el-icon-Check" color="white" :size="10" />
+                                            </div>
                                         </div>
-                                        <ElTag v-if="row.status == 1" type="success">当前账号</ElTag>
-                                    </div>
-                                </template>
-                            </ElTableColumn>
-                            <ElTableColumn label="粉丝数量" prop="fans" min-width="100">
-                                <template #default="{ row }">
-                                    <div>{{ row.fans || "-" }}</div>
-                                </template>
-                            </ElTableColumn>
-                            <ElTableColumn label="点赞数量" prop="thumbup_collect" min-width="100">
-                                <template #default="{ row }">
-                                    <div>{{ row.thumbup_collect || "-" }}</div>
-                                </template>
-                            </ElTableColumn>
-                            <ElTableColumn label="关注数量" prop="followers" min-width="100">
-                                <template #default="{ row }">
-                                    <div>{{ row.followers || "-" }}</div>
-                                </template>
-                            </ElTableColumn>
-                            <ElTableColumn label="更新时间" prop="create_time" width="180" />
-                            <ElTableColumn label="操作" width="120px" fixed="right">
-                                <template #default="{ row }">
-                                    <div class="flex flex-col gap-2">
-                                        <div
-                                            v-if="row.status == 1"
-                                            class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                            @click.stop="handleRefreshData(row)">
-                                            <span class="flex items-center justify-center">
-                                                <Icon name="el-icon-Refresh"></Icon>
-                                            </span>
-                                            <span>刷新数据</span>
-                                        </div>
-                                        <div
-                                            class="px-2 py-1 hover:bg-primary-light-9 rounded-lg cursor-pointer flex items-center gap-2"
-                                            @click.stop="handleDelete(row)">
-                                            <Icon name="el-icon-Delete"></Icon>
-                                            <span>账号移除</span>
+                                        <div class="flex flex-col">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[14px] font-[900] text-[#1E293B]">{{
+                                                    row.nickname
+                                                }}</span>
+                                                <div
+                                                    v-if="row.status == 1"
+                                                    class="px-2 py-0.5 bg-[#ECFDF5] text-[#10B981] text-[10px] font-black rounded-md">
+                                                    当前账号
+                                                </div>
+                                            </div>
+                                            <span class="text-[11px] font-bold text-[#94A3B8] tracking-tight"
+                                                >ID: {{ row.account }}</span
+                                            >
                                         </div>
                                     </div>
                                 </template>
                             </ElTableColumn>
+                            <ElTableColumn label="数据统计" width="200">
+                                <template #default="{ row }">
+                                    <div class="flex items-center justify-center gap-6 text-[#475569]">
+                                        <div class="flex flex-col">
+                                            <span class="text-[14px] font-black">{{ row.fans || "0" }}</span>
+                                            <span class="text-[10px] font-bold text-[#94A3B8]">粉丝</span>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-[14px] font-black">{{ row.thumbup_collect || "0" }}</span>
+                                            <span class="text-[10px] font-bold text-[#94A3B8]">获赞</span>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-[14px] font-black">{{ row.followers || "0" }}</span>
+                                            <span class="text-[10px] font-bold text-[#94A3B8]">关注</span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </ElTableColumn>
+                            <ElTableColumn label="接管状态" width="100">
+                                <template #default="{ row }">
+                                    <div>{{ row.takeover_mode == 1 ? "AI" : "人工" }}</div>
+                                </template>
+                            </ElTableColumn>
+                            <ElTableColumn label="接管机器人" min-width="120">
+                                <template #default="{ row }">
+                                    <div>{{ row.takeover_mode == 1 ? row.robot_name : "-" }}</div>
+                                </template>
+                            </ElTableColumn>
+                            <ElTableColumn prop="name" label="接管状态">
+                                <template #default="{ row }">
+                                    <ElSwitch
+                                        v-model="row.open_ai"
+                                        :active-value="1"
+                                        :inactive-value="0"
+                                        @change="changeOpenAi(row)" />
+                                </template>
+                            </ElTableColumn>
+                            <ElTableColumn label="最后更新" width="160">
+                                <template #default="{ row }">
+                                    <span class="text-[12px] font-bold text-[#64748B]">{{ row.create_time }}</span>
+                                </template>
+                            </ElTableColumn>
+
+                            <ElTableColumn label="管理" width="50" fixed="right" align="right">
+                                <template #default="{ row }">
+                                    <div class="flex items-center justify-end">
+                                        <ElPopover
+                                            trigger="hover"
+                                            placement="left"
+                                            :show-arrow="false"
+                                            popper-class="!rounded-[16px] !border-[#F1F5F9] !p-1.5 !shadow-light">
+                                            <template #reference>
+                                                <div
+                                                    class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] cursor-pointer transition-all">
+                                                    <Icon name="el-icon-MoreFilled" color="#CBD5E1" />
+                                                </div>
+                                            </template>
+                                            <div class="flex flex-col gap-1 p-1">
+                                                <button @click.stop="handleConfig(row)" class="action-btn">
+                                                    <Icon name="el-icon-Setting" /> 配置
+                                                </button>
+                                                <button @click.stop="handleRefreshData(row)" class="action-btn">
+                                                    <Icon name="el-icon-Refresh" /> 刷新数据
+                                                </button>
+                                                <div class="h-[1px] bg-[#F1F5F9] my-1"></div>
+                                                <button
+                                                    @click.stop="handleDelete(row)"
+                                                    class="action-btn !text-red-500 hover:!bg-red-50">
+                                                    <Icon name="el-icon-Delete" /> 账号移除
+                                                </button>
+                                            </div>
+                                        </ElPopover>
+                                    </div>
+                                </template>
+                            </ElTableColumn>
+
                             <template #empty>
-                                <div class="flex items-center justify-center h-full" v-if="queryParams.device_code">
-                                    还没有账号，<ElButton type="primary" link @click="handleAddAccount"
-                                        >点击获取设备账号信息</ElButton
-                                    >
-                                </div>
-                                <div class="flex items-center justify-center h-full" v-else>
-                                    <ElEmpty description="暂无账号信息"></ElEmpty>
+                                <div class="py-20 flex flex-col items-center justify-center opacity-40 grayscale">
+                                    <ElEmpty :image-size="100" description="该终端尚未同步账号" />
                                 </div>
                             </template>
                         </ElTable>
                     </div>
-                    <div class="flex justify-end p-4">
-                        <pagination v-model="pager" @change="getLists"></pagination>
+                    <div class="h-[72px] px-8 flex items-center justify-between bg-[#F8FAFC]/50">
+                        <span class="text-[12px] font-bold text-[#94A3B8]"
+                            >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条账号数据</span
+                        >
+                        <pagination v-model="pager" @change="getLists" />
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <device-add
-        ref="addDeviceRef"
-        v-if="showAddDevice"
-        :bind-loading="addDeviceLoading"
-        @close="showAddDevice = false"
-        @confirm="handleAddDeviceConfirm" />
-    <device-progress
-        v-if="showProgress"
-        :progress-value="progressValue"
-        :progress-error="progressError"
-        :step="deviceStep"
-        @close="showProgress = false"
-        @retry="retryAddAccount" />
+    <account-setting
+        v-if="showAccountSetting"
+        ref="accountSettingRef"
+        @close="showAccountSetting = false"
+        @success="getLists()"></account-setting>
 </template>
-
 <script setup lang="ts">
-import { getAccountList, addMaterial, deleteAccount } from "@/api/service";
+import { getAccountList, deleteAccount, changeAccountStatus } from "@/api/service";
 import { getDeviceList as getDeviceListApi } from "@/api/device";
 import { AppTypeEnum, DeviceCmdEnum } from "@/enums/appEnums";
-import DeviceAdd from "./_components/device-add.vue";
-import DeviceProgress from "./_components/device-progress.vue";
 import { ElTableColumn } from "element-plus";
+import AccountSetting from "./_components/account-setting.vue";
 
 const route = useRoute();
-const router = useRouter();
 const nuxtApp = useNuxtApp();
 const { socialPlatformList, currentSocialPlatform } = useSocialPlatform();
 
 const deviceLists = ref<any[]>([]);
-
-const addDeviceRef = ref<any>(null);
 const showProgress = ref(false);
 const progressError = ref(false);
 const deviceStep = ref("");
+
+const showAccountSetting = ref(false);
+const accountSettingRef = shallowRef<typeof AccountSetting>();
 
 // 获取当前设备信息
 const getCurrentDevice = computed(() => {
@@ -213,16 +273,9 @@ const getSocialPlatformList = computed(() => {
     return socialPlatformList.filter((item) => item.show);
 });
 
-const { onEvent, send } = useDeviceWs();
+const { onEvent, send, isConnected } = useDeviceWs();
 
-const {
-    showAddDevice,
-    addDeviceLoading,
-    progressValue,
-    handleAddAccount: addAccount,
-    refreshAccount,
-    handleRefreshAccount,
-} = useAddDeviceAccount({
+const { refreshAccount, handleRefreshAccount } = useAddDeviceAccount({
     send,
     onEvent,
     onSuccess: (res) => {
@@ -253,31 +306,6 @@ const {
     },
 });
 
-const handleAddDeviceConfirm = async () => {
-    await getDeviceList();
-    getLists();
-};
-
-const isRefreshData = ref(false);
-const refreshData = async () => {
-    if (isRefreshData.value) return;
-    try {
-        isRefreshData.value = true;
-        const { lists } = await getAccountList({ status: 1, device_code: queryParams.device_code });
-        if (lists.length == 0) {
-            feedback.msgError("暂无在线账号");
-            return;
-        }
-        handleRefreshData(lists[0]);
-    } catch (error) {
-        feedback.msgError(error);
-    } finally {
-        isRefreshData.value = false;
-    }
-};
-
-const tableRef = ref<any>(null);
-
 const getDeviceList = async () => {
     const { lists } = await getDeviceListApi({
         page_size: 999,
@@ -285,10 +313,18 @@ const getDeviceList = async () => {
     deviceLists.value = [{ device_model: "全部", device_code: "" }, ...lists];
 };
 
-const openAddDevice = async () => {
-    showAddDevice.value = true;
-    await nextTick();
-    addDeviceRef.value.open();
+const changeOpenAi = async (row: any) => {
+    try {
+        await changeAccountStatus({
+            account: row.account,
+            open_ai: row.open_ai,
+            account_type: row.type,
+        });
+        feedback.msgSuccess("操作成功");
+    } catch (error) {
+        feedback.msgError("操作失败");
+    }
+    getLists();
 };
 
 const handleChangeSocialPlatform = (type: AppTypeEnum) => {
@@ -315,26 +351,23 @@ const { pager, getLists, resetParams, resetPage } = usePaging({
     params: queryParams,
 });
 
-const handleRowClick = (row: any) => {
-    router.push({
-        path: "/app/service",
-        query: {
-            type: AppTypeEnum.XHS,
-        },
+const handleConfig = async (row: any) => {
+    showAccountSetting.value = true;
+    await nextTick();
+    accountSettingRef.value?.open();
+    accountSettingRef.value?.setFormData({
+        ...row,
+        account_type: queryParams.type,
     });
 };
 
 const containerRef = ref<HTMLElement>();
-const currAccount = ref<any>(null);
-const handleAddAccount = () => {
-    showProgress.value = true;
-    addAccount({
-        device_code: queryParams.device_code,
-        type: queryParams.type,
-    });
-};
 
 const handleRefreshData = (row: any) => {
+    if (!isConnected.value) {
+        feedback.msgError("设备未连接");
+        return;
+    }
     showProgress.value = true;
     refreshAccount.value = [
         {
@@ -344,14 +377,6 @@ const handleRefreshData = (row: any) => {
         },
     ];
     handleRefreshAccount(row.device_code, row.type);
-};
-
-const retryAddAccount = () => {
-    if (currAccount.value) {
-        handleRefreshData(currAccount.value);
-    } else {
-        handleAddAccount();
-    }
 };
 
 const handleDelete = (row: any) => {
@@ -380,4 +405,19 @@ onMounted(async () => {
 getDeviceList();
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.refresh-btn-shadow {
+    box-shadow: 0 8px 16px -4px rgba(var(--el-color-primary), 0.4);
+}
+
+.action-btn {
+    @apply flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-bold text-[#64748B] hover:bg-[#F1F5F9] hover:text-primary transition-all;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-[#E2E8F0] rounded-full;
+}
+</style>

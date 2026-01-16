@@ -62,7 +62,7 @@
 <script lang="ts" setup>
 import { PropType, computed, ref, watch } from "vue";
 import { ChooseResult, FileData, chooseFile, getFileName, getFilesByExtname, normalizeFileData } from "./choose-file";
-import { uploadFile, uploadGPTFile } from "@/api/app";
+import { uploadFile } from "@/api/app";
 import { useAppStore } from "@/stores/app";
 const props = defineProps({
     modelValue: {
@@ -287,31 +287,17 @@ const upload = (files: FileData[]): Promise<void> => {
             const fileItem = files[cur];
             const currentIndex = filesLists.value.findIndex((item) => item.path === fileItem.path);
             try {
-                const { uri, id }: any = props.isGpt
-                    ? await uploadGPTFile(
-                          {
-                              filePath: fileItem.url,
-                              formData: {
-                                  purpose: "assistants",
-                                  assistants_id: uploadAssistantId.value,
-                              },
-                              header: props.header,
-                          },
-                          (progress) => {
-                              filesLists.value[currentIndex].progress = progress;
-                          }
-                      )
-                    : await uploadFile(
-                          fileType.value as "image" | "video" | "file",
-                          {
-                              filePath: fileItem.url,
-                              formData: props.data,
-                              header: props.header,
-                          },
-                          (progress) => {
-                              filesLists.value[currentIndex].progress = progress;
-                          }
-                      );
+                const { uri, id }: any = await uploadFile(
+                    fileType.value as "image" | "video" | "file",
+                    {
+                        filePath: fileItem.url,
+                        formData: props.data,
+                        header: props.header,
+                    },
+                    (progress) => {
+                        filesLists.value[currentIndex].progress = progress;
+                    }
+                );
 
                 filesLists.value[currentIndex].status = "success";
                 filesLists.value[currentIndex].url = uri;

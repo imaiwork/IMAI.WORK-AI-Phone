@@ -17,7 +17,7 @@ export default function useHandleApi(options?: any) {
     const appStore = useAppStore();
     const userStore = useUserStore();
     const userTokens = computed(() => userStore.userInfo.tokens);
-    const tokensValue = userStore.getTokenByScene(TokensSceneEnum.MEETING)?.score;
+    const tokensValue = computed(() => userStore.getTokenByScene(TokensSceneEnum.MEETING)?.score);
 
     const languageList = computed(() => {
         return (appStore.getMeetingConfig?.language || []).map((item: any) => ({

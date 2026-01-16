@@ -1,3 +1,21 @@
+export enum SidebarTypeEnum {
+    CHAT = 1,
+    SOP_TASK = 2,
+    SOP_AUTO_TASK = 3,
+    SOP_FLOW = 4,
+    SOP_FLOW_BOARD = 5,
+    GREETING = 6,
+    CIRCLE = 7,
+    CIRCLE_TASK = 8,
+    CIRCLE_PRAISE_SETTING = 9,
+    TAG_AUTO = 10,
+    TAG_MANUAL_SETTING = 11,
+    FRIEND_STRATEGY = 12,
+    MATERIAL_LIBRARY = 13,
+    DEVICE_MANAGEMENT = 14,
+    WECHAT_MANAGEMENT = 15,
+}
+
 export enum MsgTypeEnum {
     UnknownMsg = "UnknownMsg", //未知消息
     HeartBeatReq = "HeartBeatReq", //客户端发送的心跳包

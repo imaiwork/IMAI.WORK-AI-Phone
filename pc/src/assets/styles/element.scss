@@ -56,6 +56,13 @@
     .el-table {
         --el-table-header-text-color: var(--el-text-color-primary);
         --el-table-header-bg-color: var(--table-header-bg-color);
+        --el-table-header-bg-color: transparent;
+        --el-table-row-hover-bg-color: #f8fafc;
+        .el-table__header {
+            th {
+                @apply text-[11px] font-black text-[#94A3B8] uppercase tracking-widest py-4;
+            }
+        }
         .el-table__cell {
             text-align: center;
         }

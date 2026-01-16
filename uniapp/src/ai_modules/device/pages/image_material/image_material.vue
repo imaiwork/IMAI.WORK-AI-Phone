@@ -49,6 +49,7 @@ const dataList = ref<any[]>(JSON.parse(JSON.stringify(imageList.value)));
 const showChooseMaterial = ref(false);
 
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
+    isTranscode: true,
     imageAccept: ["jpg", "jpeg", "png", "webp"],
     fileAccept: ["jpg", "jpeg", "png", "webp"],
     onSuccess: (res: any[]) => {

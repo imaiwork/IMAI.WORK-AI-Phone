@@ -1,50 +1,61 @@
 <template>
     <div class="h-full flex flex-col p-4">
-        <!-- 顶部Tabs导航 -->
-        <div class="bg-white rounded-[20px] px-[50px]">
-            <ElTabs v-model="currentTab">
-                <ElTabPane v-for="tab in tabs" :key="tab.name" :label="tab.label" :name="tab.name"> </ElTabPane>
-            </ElTabs>
-        </div>
-        <!-- 主内容区 -->
-        <div class="grow min-h-0 bg-white rounded-[20px] mt-4 flex">
-            <!-- 左侧表单设置区域 -->
-            <div class="flex-1 flex flex-col w-full">
-                <div
-                    class="px-[14px] h-[72px] flex items-center justify-between flex-shrink-0 border-b-[1px] border-[#0000000d]">
-                    <div class="flex items-center gap-2 cursor-pointer" @click="emit('back')">
-                        <Icon name="el-icon-ArrowLeft"></Icon>
-                        <div>返回</div>
+        <header class="tab-header-card">
+            <div class="px-[40px]">
+                <ElTabs v-model="currentTab" class="custom-nav-tabs">
+                    <ElTabPane v-for="tab in tabs" :key="tab.name" :label="tab.label" :name="tab.name" />
+                </ElTabs>
+            </div>
+        </header>
+
+        <main class="grow min-h-[0] mt-[16px] flex gap-[16px]">
+            <section class="flex-1 flex flex-col bg-[#FFFFFF] rounded-[24px] overflow-hidden">
+                <div class="toolbar">
+                    <div
+                        class="group flex items-center gap-2 cursor-pointer text-[#64748B] hover:text-primary transition-all"
+                        @click="emit('back')">
+                        <div
+                            class="w-8 h-8 flex items-center justify-center rounded-full bg-[#F8FAFC] group-hover:bg-[#F0F6FF]">
+                            <Icon name="el-icon-ArrowLeft" :size="16" />
+                        </div>
+                        <span class="text-[14px] font-black">退出编辑</span>
                     </div>
-                    <!-- 非特定Tab下显示保存按钮 -->
+
                     <div v-if="![TabName.Skill, TabName.Publish, TabName.Call].includes(currentTab)">
-                        <ElButton type="primary" class="!rounded-full !w-[68px]" :loading="isLock" @click="lockFn">
-                            保存
+                        <ElButton type="primary" class="save-btn" :loading="isLock" @click="lockFn">
+                            立即保存
                         </ElButton>
                     </div>
                 </div>
-                <!-- 动态组件渲染 -->
-                <div class="grow min-h-0">
+
+                <div class="grow min-h-[0] relative">
                     <component ref="formRef" v-model="formData" :is="currentComponent" :agent-id="agentId" />
                 </div>
-            </div>
-            <!-- 右侧聊天调试窗口 -->
-            <div
-                class="w-[400px] flex flex-col border-l-[1px] border-[#0000000d]"
-                v-if="![TabName.Publish].includes(currentTab)">
-                <div
-                    class="h-[72px] flex items-center gap-x-2 justify-between flex-shrink-0 border-b-[1px] border-[#0000000d] px-5">
-                    <div class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ formData.name }}</div>
-                    <ElButton @click="startNewChat">新建对话</ElButton>
+            </section>
+
+            <aside
+                v-if="currentTab !== TabName.Publish"
+                class="w-[420px] flex flex-col bg-[#FFFFFF] rounded-[24px] overflow-hidden shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)] border-[1px] border-[transparent]">
+                <div class="debug-header">
+                    <div class="flex items-center gap-[10px] overflow-hidden">
+                        <div class="w-[8px] h-[8px] rounded-full bg-[#10B981] animate-pulse"></div>
+                        <span class="font-[900] text-[15px] truncate text-[#0F172A]">{{
+                            formData.name || "预览窗口"
+                        }}</span>
+                    </div>
+                    <ElButton class="new-chat-btn" @click="startNewChat">
+                        <Icon name="el-icon-Refresh" />
+                        <span class="ml-1">清空对话</span>
+                    </ElButton>
                 </div>
-                <div class="grow min-h-0">
+
+                <div class="grow min-h-[0] bg-[#FDFDFE]">
                     <Chat ref="chatRef" v-model="formData" :agent-id="agentId" />
                 </div>
-            </div>
-        </div>
+            </aside>
+        </main>
     </div>
 </template>
-
 <script setup lang="ts">
 import { getAgentDetail, updateAgent, addAgent } from "@/api/agent";
 import { KnbTypeEnum } from "@/pages/knowledge_base/_enums";
@@ -94,7 +105,7 @@ const tabs = ref([
 // 智能体表单数据
 const formData = reactive<Agent>({
     id: agentId,
-    kb_type: KnbTypeEnum.RAG,
+    kb_type: KnbTypeEnum.VECTOR,
     kb_ids: "",
     icons: "",
     image: "",
@@ -220,22 +231,57 @@ onMounted(() => {
     getDetail();
 });
 </script>
-
 <style scoped lang="scss">
-:deep(.el-tabs) {
-    .el-tabs__header {
-        margin-bottom: 0;
+.tab-header-card {
+    @apply bg-[#FFFFFF] rounded-[20px] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] border-[transparent];
+}
+
+.custom-nav-tabs {
+    :deep(.el-tabs__header) {
+        @apply m-[0] border-[transparent];
+
         .el-tabs__nav-wrap {
+            @apply after:bg-[transparent]; // 隐藏底部原生长线条
+
             .el-tabs__nav {
                 @apply h-[68px];
+
                 .el-tabs__item {
-                    @apply h-full;
+                    @apply h-full flex items-center px-[24px] text-[15px] font-[900] text-[#94A3B8] transition-all;
+
+                    &.is-active {
+                        @apply text-[var(--el-color-primary)];
+                    }
+                    &:hover {
+                        @apply text-[var(--el-color-primary)] opacity-[0.8];
+                    }
+                }
+
+                .el-tabs__active-bar {
+                    @apply h-[3px] rounded-[full];
                 }
             }
-            &::after {
-                display: none;
-            }
         }
+    }
+}
+
+.toolbar {
+    @apply h-[72px] px-[24px] flex items-center justify-between border-b-[1px] border-[#F1F5F9] shrink-0;
+}
+
+.back-action {
+    @apply flex items-center gap-[8px] cursor-pointer text-[#64748B] hover:text-[#0F172A] transition-colors;
+}
+
+.debug-header {
+    @apply h-[72px] px-[20px] flex items-center justify-between border-b-[1px] border-[#F1F5F9] shrink-0;
+}
+
+.new-chat-btn {
+    @apply rounded-[10px] h-[36px] px-[12px] text-[12px] font-[900] bg-[#F8FAFC] border-[transparent] text-[#64748B] transition-all;
+
+    &:hover {
+        @apply bg-[#F1F5F9] text-[#0F172A];
     }
 }
 </style>

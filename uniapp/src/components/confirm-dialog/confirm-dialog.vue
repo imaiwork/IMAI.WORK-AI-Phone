@@ -1,5 +1,5 @@
 <template>
-    <u-popup v-model="show" mode="center" border-radius="20" width="80%">
+    <u-popup v-model="show" mode="center" border-radius="20" width="80%" @close="close">
         <view class="rounded-[20rpx] bg-white p-5">
             <view class="text-[30rpx] font-bold text-center">{{ title }}</view>
             <view class="text-xs text-[#00000080] mt-[32rpx]" :class="[center ? 'text-center' : '']">
@@ -7,17 +7,17 @@
             </view>
             <view class="flex items-center gap-x-5 mt-[56rpx]">
                 <view
-                    v-if="showClose"
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold"
-                    @click="close">
-                    {{ cancelText }}
-                </view>
-                <view
                     v-if="showConfirm"
                     class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-primary font-bold text-white"
                     @click="confirm"
                     >{{ confirmText }}</view
                 >
+                <view
+                    v-if="showClose"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold"
+                    @click="close">
+                    {{ cancelText }}
+                </view>
             </view>
         </view>
     </u-popup>

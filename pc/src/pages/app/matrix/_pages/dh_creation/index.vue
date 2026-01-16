@@ -1,109 +1,184 @@
 <template>
-    <div class="h-full flex flex-col bg-app-bg-2 rounded-[20px]" v-if="!isCreate">
-        <div class="flex-shrink-0 px-[14px] border-[0] border-b-[1px] border-app-border-1">
-            <ElScrollbar>
-                <div class="flex items-center justify-end h-[88px]">
-                    <div class="flex items-center gap-[14px]">
+    <div
+        class="h-full flex flex-col bg-[#F3F4F6] rounded-[20px] overflow-hidden border border-br min-w-[1000px]"
+        v-if="!isCreate">
+        <div class="flex-shrink-0 px-8 py-6 bg-white border-b border-br relative overflow-hidden">
+            <div
+                class="absolute -top-24 -left-24 w-64 h-64 bg-[#0065fb]/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 flex items-center justify-center rounded-2xl bg-primary shadow-[#0065fb]/20 text-white">
+                        <Icon name="el-icon-Monitor" :size="24"></Icon>
+                    </div>
+                    <div>
+                        <h1 class="text-[22px] font-[900] text-[#1E293B] tracking-tight leading-none">
+                            批量数字人控制台
+                        </h1>
+                        <div class="flex items-center gap-2 mt-2">
+                            <div
+                                class="flex items-center px-2 py-0.5 rounded-full bg-[#F0FDF4] border border-[#DCFCE7]">
+                                <span class="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse"></span>
+                                <span class="ml-1.5 text-[11px] text-[#166534] font-black uppercase tracking-wider"
+                                    >Live Processing</span
+                                >
+                            </div>
+                            <p class="text-[13px] text-[#64748B] font-bold">
+                                当前共有 <span class="text-primary mx-0.5">{{ pager.count }}</span> 个创作任务正在运行
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div
+                        class="flex items-center rounded-full h-[44px] border border-br px-1 transition-all focus-within:border-[#0065fb] focus-within:bg-white focus-within:">
                         <ElInput
                             v-model="queryParams.name"
-                            prefix-icon="el-icon-Search"
-                            class="!w-[240px] search-name-input"
-                            placeholder="请输入任务名称"
+                            class="!w-[240px] search-input"
                             clearable
+                            prefix-icon="el-icon-Search"
+                            placeholder="搜索任务名称..."
                             @clear="resetPage()"
                             @keydown.enter="resetPage()">
-                            <template #append>
-                                <ElButton text @click="resetPage()"> 搜索 </ElButton>
-                            </template>
                         </ElInput>
-                        <ElButton type="primary" class="!rounded-full !h-10 !px-4" @click="handleAddTask()">
-                            <Icon name="local-icon-add_circle" color="#ffffff"></Icon>
-                            <span class="ml-2">创建批量数字人任务</span>
+                        <ElButton
+                            type="primary"
+                            class="!rounded-full !h-[36px] !px-5 !text-xs !font-black"
+                            @click="resetPage()">
+                            搜索
                         </ElButton>
-                        <div>
-                            <ElTooltip content="刷新">
-                                <ElButton
-                                    circle
-                                    color="#1f1f1f"
-                                    icon="el-icon-Refresh"
-                                    class="!w-10 !h-10"
-                                    @click="resetPage()"></ElButton>
-                            </ElTooltip>
+                    </div>
+
+                    <div class="w-[1px] h-6 bg-[#E2E8F0] mx-1"></div>
+
+                    <ElButton
+                        type="primary"
+                        class="!rounded-full !h-[44px] !px-6 !font-black !text-sm !shadow-xl !shadow-[#0065fb]/20 bg-gradient-to-r from-[#0065fb] to-[#7C3AED] !border-none hover:opacity-90 active:scale-95 transition-all"
+                        @click="handleAddTask()">
+                        <div class="flex items-center gap-2">
+                            <Icon name="el-icon-Plus" :size="16"></Icon>
+                            <span>新建创作任务</span>
                         </div>
+                    </ElButton>
+                </div>
+            </div>
+        </div>
+
+        <div class="grow min-h-0">
+            <ElScrollbar :distance="20" @end-reached="load">
+                <div class="p-6">
+                    <template v-if="pager.lists.length > 0">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div
+                                v-for="(item, index) in pager.lists"
+                                :key="index"
+                                class="group relative flex bg-white rounded-[24px] p-5 border border-[#F3F4F6] transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)]"
+                                @click="handleEditTask(item)">
+                                <div
+                                    class="absolute left-0 top-1/4 bottom-1/4 w-1 rounded-r-full transition-all duration-300 group-hover:top-4 group-hover:bottom-4"
+                                    :style="{ backgroundColor: getStatusHex(item.status) }"></div>
+
+                                <button
+                                    class="absolute right-4 top-4 w-8 h-8 opacity-0 group-hover:opacity-100"
+                                    @click.stop="handleDeleteTask(item.id, index)">
+                                    <close-btn :icon-size="16"></close-btn>
+                                </button>
+
+                                <div class="flex-shrink-0 w-[160px] h-[210px] relative overflow-hidden rounded-[18px]">
+                                    <ElImage
+                                        v-if="item.pic"
+                                        :src="item.pic"
+                                        class="w-full h-full transform transition-transform duration-1000 group-hover:scale-110"
+                                        fit="cover">
+                                        <template #error><PlaceholderStyle /></template>
+                                    </ElImage>
+                                    <div v-else class="w-full h-full"><PlaceholderStyle /></div>
+                                    <div
+                                        class="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                    <div
+                                        v-if="item.automatic_clip == 1"
+                                        class="absolute bottom-3 left-3 px-2 py-0.5 rounded-lg bg-[#0065fb]/90 text-white text-[10px] backdrop-blur-sm">
+                                        AI智能剪辑
+                                    </div>
+                                </div>
+
+                                <div class="flex-1 ml-6 flex flex-col py-1">
+                                    <h3
+                                        class="text-lg font-bold text-[#111827] line-clamp-1 mb-2 group-hover:text-primary transition-colors">
+                                        {{ item.name }}
+                                    </h3>
+
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <span
+                                            :style="{
+                                                color: getStatusHex(item.status),
+                                                backgroundColor: getStatusHex(item.status) + '15',
+                                            }"
+                                            class="px-3 py-1 rounded-xl text-[12px] font-bold border border-transparent">
+                                            {{ statusMap[item.status] }}
+                                        </span>
+                                        <span class="text-[#9CA3AF] text-xs font-medium italic"
+                                            >ID: {{ item.id.toString().slice(-6) }}</span
+                                        >
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3 mb-4">
+                                        <div
+                                            class="bg-[#F9FAFB] rounded-2xl p-3 border border-[#F3F4F6] transition-colors group-hover:bg-white group-hover:border-[#EEF2FF]">
+                                            <p
+                                                class="text-[10px] text-[#9CA3AF] uppercase font-bold tracking-wider mb-1">
+                                                成功生成
+                                            </p>
+                                            <div class="flex items-end gap-1">
+                                                <span class="text-xl font-black text-[#10B981] leading-none">{{
+                                                    item.success_num || 0
+                                                }}</span>
+                                                <span class="text-[10px] text-[#6B7280]">/ {{ item.video_count }}</span>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="bg-[#F9FAFB] rounded-2xl p-3 border border-[#F3F4F6] transition-colors group-hover:bg-white group-hover:border-[#FEF2F2]">
+                                            <p
+                                                class="text-[10px] text-[#9CA3AF] uppercase font-bold tracking-wider mb-1">
+                                                异常中断
+                                            </p>
+                                            <span
+                                                class="text-xl font-black"
+                                                :class="item.error_num > 0 ? 'text-[#EF4444]' : 'text-[#374151]'">
+                                                {{ item.error_num || 0 }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-auto flex items-center justify-between">
+                                        <span class="text-[11px] text-[#9CA3AF] font-medium">
+                                            {{ item.create_time.split(" ")[0] }}
+                                        </span>
+                                        <button
+                                            @click.stop="handlePreviewVideoResult(item.id)"
+                                            class="px-5 py-2 rounded-xl bg-[#1F2937] text-white text-[12px] font-bold hover:bg-primary transition-all active:scale-95">
+                                            查看成果
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <load-text :is-load="pager.isLoad" />
+                    </template>
+                    <div
+                        class="h-[500px] flex flex-col items-center justify-center bg-white rounded-[40px] shadow-inner border-2 border-dashed border-[#E5E7EB]"
+                        v-else>
+                        <Empty
+                            btn-text="点击开始创作"
+                            msg="让 AI 赋能您的视频生产"
+                            :custom-click="() => handleAddTask()" />
                     </div>
                 </div>
             </ElScrollbar>
         </div>
-        <div
-            class="grow min-h-0 overflow-y-auto flex flex-col dynamic-scroller"
-            :infinite-scroll-immediate="false"
-            :infinite-scroll-disabled="!pager.isLoad"
-            :infinite-scroll-distance="10"
-            v-infinite-scroll="load">
-            <div class="h-full p-4" v-loading="pager.loading">
-                <div v-if="pager.lists.length">
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        <div
-                            v-for="(item, index) in pager.lists"
-                            class="flex gap-x-4 h-[222px] relative overflow-hidden bg-app-bg-3 border border-app-border-2 rounded-xl p-4"
-                            :class="{ 'cursor-pointer': item.status == 0 }"
-                            :key="index"
-                            @click="handleEditTask(item)">
-                            <div class="absolute right-2 top-2 w-6 h-6" @click.stop="handleDeleteTask(item.id, index)">
-                                <close-btn :theme="ThemeEnum.DARK"></close-btn>
-                            </div>
-                            <div
-                                class="flex-shrink-0 w-[143px] border border-app-border-2 overflow-hidden rounded-md bg-black">
-                                <ElImage :src="item.pic" class="w-full h-full" fit="cover">
-                                    <template #error>
-                                        <div
-                                            class="w-full h-full flex items-center justify-center text-white card-gradient">
-                                            暂无封面
-                                        </div>
-                                    </template>
-                                </ElImage>
-                            </div>
-                            <div class="flex-1 flex flex-col gap-y-[10px]">
-                                <div class="text-white break-all line-clamp-1 mr-4">
-                                    {{ item.name }}<template v-if="item.automatic_clip == 1">（AI剪辑）</template>
-                                </div>
-                                <div class="flex items-center gap-x-1">
-                                    <span class="text-white"
-                                        >生成状态：{{ item.success_num || 0 }}/{{ item.video_count || 1 }}</span
-                                    >
-                                    <span :class="[[3, 5].includes(item.status) ? 'text-[#3BB840]' : 'text-primary']">{{
-                                        statusMap[item.status]
-                                    }}</span>
-                                </div>
-                                <div class="flex items-center gap-x-1 text-white">
-                                    <span>生成视频：</span>
-                                    <span>成功{{ item.success_num || 0 }}</span>
-                                    <span>失败{{ item.error_num || 0 }}</span>
-                                </div>
-                                <div class="text-white">任务创建：{{ item.create_time }}</div>
-                                <div class="text-white">最新提交：{{ item.latest_submission_time }}</div>
-                                <div class="flex items-center gap-x-2">
-                                    <ElButton
-                                        class="!h-10 w-[126px] !border-app-border-2"
-                                        color="#1f1f1f"
-                                        @click.stop="handlePreviewVideoResult(item.id)"
-                                        >查看视频</ElButton
-                                    >
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div v-if="!pager.isLoad" class="text-white text-center text-xs w-full py-4">暂无更多了~</div>
-                </div>
 
-                <div class="h-full flex items-center justify-center" v-else>
-                    <Empty
-                        btn-text="创建批量数字人任务"
-                        msg="快去发布你的专属数字人吧"
-                        :custom-click="() => handleAddTask()" />
-                </div>
-            </div>
-        </div>
         <preview-video-result
             v-if="showPreviewVideoResult"
             ref="previewVideoResultRef"
@@ -113,12 +188,12 @@
 </template>
 
 <script setup lang="ts">
-import { getDigitalHumanList, deleteDigitalHuman } from "~/api/matrix";
+import { getDigitalHumanList, deleteDigitalHuman } from "@/api/matrix";
 import Empty from "@/pages/app/matrix/_components/empty.vue";
-import { ThemeEnum } from "@/enums/appEnums";
 import { SidebarTypeEnum } from "@/pages/app/matrix/_enums";
 import CreatePanel from "./_components/create-panel.vue";
 import PreviewVideoResult from "./_components/preview-video-result.vue";
+
 const route = useRoute();
 
 const queryParams = reactive({
@@ -134,12 +209,47 @@ const { pager, getLists, resetPage } = usePaging({
 });
 
 const statusMap = {
-    0: "草稿箱",
-    1: "待处理",
-    2: "生成中",
-    3: "已完成",
-    4: "失败",
-    5: "部分完成",
+    0: "草稿暂存",
+    1: "等待队列",
+    2: "正在计算",
+    3: "渲染完成",
+    4: "发生错误",
+    5: "部分交付",
+};
+const PlaceholderStyle = defineComponent({
+    render() {
+        return h(
+            "div",
+            { class: "w-full h-full flex flex-col items-center justify-center relative bg-[#F1F5F9] overflow-hidden" },
+            [
+                // 背景装饰几何体
+                h("div", { class: "absolute -right-4 -bottom-4 w-24 h-24 bg-[#E2E8F0] rounded-full opacity-50" }),
+                h("div", { class: "absolute -left-2 top-10 w-12 h-12 bg-[#E2E8F0] rotate-45 opacity-30" }),
+                // 主图标
+                h("i", { class: "el-icon-picture-outline text-4xl text-[#CBD5E1] mb-3 relative z-10" }),
+                h(
+                    "span",
+                    { class: "text-[11px] font-bold text-[#94A3B8] tracking-widest uppercase relative z-10" },
+                    "No Preview"
+                ),
+            ]
+        );
+    },
+});
+
+/**
+ * 使用纯 HEX 色值控制状态颜色
+ */
+const getStatusHex = (status: number) => {
+    const hexMap: Record<number, string> = {
+        0: "#6B7280", // 灰色
+        1: "#3B82F6", // 蓝色
+        2: "#F59E0B", // 琥珀色
+        3: "#10B981", // 绿色
+        4: "#EF4444", // 红色
+        5: "#8B5CF6", // 紫色
+    };
+    return hexMap[status] || "#6B7280";
 };
 
 const back = () => {
@@ -148,9 +258,12 @@ const back = () => {
     resetPage();
 };
 
-const load = () => {
-    queryParams.page_no++;
-    getLists();
+const load = async (e: any) => {
+    if (e == "bottom") {
+        if (!pager.isLoad || pager.loading) return;
+        queryParams.page_no++;
+        await getLists();
+    }
 };
 
 const createPanelRef = ref<InstanceType<typeof CreatePanel>>();
@@ -158,9 +271,7 @@ const isCreate = ref(route.query.is_create == "1");
 
 const handleAddTask = async () => {
     isCreate.value = true;
-    replaceState({
-        is_create: 1,
-    });
+    replaceState({ is_create: 1 });
     await nextTick();
     createPanelRef.value?.createEmptyTask();
 };
@@ -168,21 +279,17 @@ const handleAddTask = async () => {
 const handleEditTask = async (item?: any) => {
     if (item.status != 0) return;
     isCreate.value = true;
-    replaceState({
-        is_create: 1,
-        create_id: item.id,
-    });
+    replaceState({ is_create: 1, create_id: item.id });
 };
 
 const handleDeleteTask = async (id: string, index: number) => {
     useNuxtApp().$confirm({
-        message: "确定要删除该数字人任务吗？",
-        theme: "dark",
+        message: "确认删除该任务？此操作不可撤回。",
         onConfirm: async () => {
             try {
                 await deleteDigitalHuman({ id });
                 pager.lists.splice(index, 1);
-            } catch (error) {
+            } catch (error: any) {
                 feedback.msgError(error);
             }
         },
@@ -200,4 +307,20 @@ const handlePreviewVideoResult = async (id: string) => {
 getLists();
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+/* 搜索框美化 */
+:deep(.search-input) {
+    .el-input__wrapper {
+        background: transparent !important;
+        box-shadow: none !important;
+        padding-left: 15px;
+    }
+    .el-input__inner {
+        font-weight: 600;
+        color: #1e293b;
+        &::placeholder {
+            color: #94a3b8;
+        }
+    }
+}
+</style>

@@ -1,20 +1,20 @@
 <template>
-    <div class="h-full flex flex-col bg-app-bg-2 rounded-[20px] px-[60px] py-[80px]" v-if="!isPublish">
-        <div class="grid grid-cols-2 gap-5">
+    <div class="pt-[5vh]" v-if="!isPublish">
+        <div class="flex flex-col items-center gap-y-5">
             <div
-                class="bg-app-bg-2 border border-app-border-1 rounded-[20px] h-[200px] flex items-center justify-center gap-x-[18px] cursor-pointer hover:bg-app-bg-1"
+                class="bg-white rounded-[20px] w-[520px] h-[200px] flex items-center justify-center gap-x-[18px] cursor-pointer hover:bg-gray-100"
                 v-for="item in createTabs"
                 :key="item.type"
                 @click="handleCreate(item.type)">
                 <img :src="item.icon" />
                 <div>
-                    <div class="font-bold text-[22px] text-white">{{ item.title }}</div>
-                    <div class="text-xs text-[#ffffff66]">{{ item.subTitle }}</div>
+                    <div class="font-bold text-[22px]">{{ item.title }}</div>
+                    <div class="text-xs text-[#666666]">{{ item.subTitle }}</div>
                 </div>
             </div>
         </div>
     </div>
-    <PublishPanel :type="createType" @back="publishBack" v-if="isPublish" />
+    <publish-panel v-if="isPublish" :type="createType" @back="publishBack" />
 </template>
 
 <script setup lang="ts">

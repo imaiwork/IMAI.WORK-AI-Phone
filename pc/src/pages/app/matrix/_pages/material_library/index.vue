@@ -1,153 +1,185 @@
 <template>
-    <div class="h-full flex flex-col bg-app-bg-2 rounded-[20px]">
-        <div class="flex-shrink-0 px-[14px] border-[0] border-b-[1px] border-app-border-1">
-            <ElScrollbar>
-                <div class="flex items-center justify-end h-[88px]">
-                    <div class="flex items-center gap-[14px]">
-                        <ElSelect
-                            v-model="queryParams.m_type"
-                            class="!w-[100px]"
-                            popper-class="dark-select-popper"
-                            clearable
-                            :show-arrow="false"
-                            :empty-values="[null, undefined]"
-                            :value-on-clear="null"
-                            @change="resetPage">
-                            <ElOption label="全部" value=""></ElOption>
-                            <ElOption label="视频" :value="MaterialTypeEnum.VIDEO"></ElOption>
-                            <ElOption label="图片" :value="MaterialTypeEnum.IMAGE"></ElOption>
-                            <ElOption label="音频" :value="MaterialTypeEnum.MUSIC"></ElOption>
-                        </ElSelect>
-                        <ElSelect
-                            v-model="fieldValue"
-                            class="!w-[140px]"
-                            popper-class="dark-select-popper"
-                            clearable
-                            :show-arrow="false"
-                            :empty-values="[null, undefined]"
-                            :value-on-clear="null"
-                            @change="changeField">
-                            <ElOption label="全部" value=""></ElOption>
-                            <ElOption label="最新开始排序" value="1"></ElOption>
-                            <ElOption label="最早开始排序" value="2"></ElOption>
-                            <ElOption label="文件从大到小" value="3"></ElOption>
-                            <ElOption label="文件从小到大" value="4"></ElOption>
-                        </ElSelect>
-                        <ElInput
-                            v-model="queryParams.name"
-                            prefix-icon="el-icon-Search"
-                            class="!w-[240px] search-name-input"
-                            placeholder="请输入任务名称"
-                            clearable
-                            @clear="resetPage()"
-                            @keydown.enter="resetPage()">
-                            <template #append>
-                                <ElButton text @click="resetPage()"> 搜索 </ElButton>
-                            </template>
-                        </ElInput>
-                        <upload
-                            type="file"
-                            :accept="accept"
-                            show-progress
-                            :max-size="200"
-                            :show-file-list="false"
-                            @change="handleUploadSuccess">
-                            <ElButton type="primary" class="!rounded-full !h-10 !px-4">
-                                <Icon name="local-icon-add_circle" color="#ffffff"></Icon>
-                                <span class="ml-2">上传素材</span>
-                            </ElButton>
-                        </upload>
-                        <ElTooltip content="刷新">
-                            <ElButton
-                                circle
-                                color="#1f1f1f"
-                                icon="el-icon-Refresh"
-                                class="!w-10 !h-10"
-                                @click="resetPage()"></ElButton>
-                        </ElTooltip>
+    <div class="h-full flex flex-col bg-white rounded-[20px] overflow-hidden border border-br min-w-[1000px]">
+        <div class="flex-shrink-0 px-6 border-b border-br bg-white">
+            <div class="flex items-center justify-between h-[80px]">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary">
+                        <Icon name="el-icon-Folder" :size="20"></Icon>
                     </div>
-                </div>
-            </ElScrollbar>
-        </div>
-        <div
-            class="grow min-h-0 overflow-y-auto flex flex-col dynamic-scroller"
-            :infinite-scroll-immediate="false"
-            :infinite-scroll-disabled="!pager.isLoad"
-            :infinite-scroll-distance="10"
-            v-infinite-scroll="load">
-            <div class="h-full p-4" v-loading="pager.loading">
-                <div v-if="pager.lists.length">
-                    <div
-                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 cursor-pointer">
-                        <div
-                            v-for="(item, index) in pager.lists"
-                            class="material-item card-gradient group"
-                            :key="index">
-                            <div class="w-full px-3 absolute z-[22] top-2">
-                                <div class="line-clamp-1 text-white">
-                                    {{ item.name }}
-                                </div>
-                            </div>
-                            <div class="absolute bottom-2 w-full text-center px-3 text-[#ffffff80] line-clamp-1 z-[22]">
-                                {{ item.create_time }}
-                            </div>
-                            <ElImage
-                                v-if="MaterialTypeEnum.IMAGE == item.m_type"
-                                class="w-full h-full"
-                                fit="cover"
-                                lazy
-                                preview-teleported
-                                :src="item.content"
-                                :preview-src-list="[item.content]"></ElImage>
-                            <template
-                                v-if="MaterialTypeEnum.VIDEO == item.m_type || MaterialTypeEnum.MUSIC == item.m_type">
-                                <template v-if="MaterialTypeEnum.VIDEO == item.m_type">
-                                    <img v-if="item.pic" :src="item.pic" class="w-full h-full object-cover" />
-                                    <video v-else :src="item.content" class="w-full h-full object-cover" />
-                                </template>
-                                <img
-                                    src="@/assets/images/audio_bg.png"
-                                    class="w-full h-full object-cover"
-                                    v-if="MaterialTypeEnum.MUSIC == item.m_type" />
-                                <div
-                                    class="absolute top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%] z-[1000]">
-                                    <div class="w-12 h-12" @click="handlePlay(item)">
-                                        <play-btn />
-                                    </div>
-                                </div>
-                            </template>
-                            <div class="absolute right-2 top-2 z-[1000] w-9 h-9 invisible group-hover:visible">
-                                <handle-menu :theme="ThemeEnum.DARK" :data="item" :menu-list="utilsMenuList" />
-                            </div>
+                    <div>
+                        <div class="text-[18px] text-[#1E293B] font-black tracking-tight">素材管理中心</div>
+                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                            Total: {{ pager.count }} Assets
                         </div>
                     </div>
-                    <div v-if="!pager.isLoad" class="text-white text-center text-xs w-full py-4">暂无更多了~</div>
                 </div>
-                <div class="h-full flex items-center justify-center" v-else>
+
+                <div class="flex items-center gap-3">
+                    <ElSelect
+                        v-model="queryParams.m_type"
+                        class="!w-[110px] custom-select-pill"
+                        clearable
+                        placeholder="所有类型"
+                        :empty-values="[null, undefined]"
+                        :show-arrow="false"
+                        @change="resetPage">
+                        <ElOption label="全部类型" value=""></ElOption>
+                        <ElOption label="视频素材" :value="MaterialTypeEnum.VIDEO"></ElOption>
+                        <ElOption label="图片素材" :value="MaterialTypeEnum.IMAGE"></ElOption>
+                        <ElOption label="音频素材" :value="MaterialTypeEnum.MUSIC"></ElOption>
+                    </ElSelect>
+                    <ElSelect
+                        v-model="fieldValue"
+                        class="!w-[140px] custom-select-pill"
+                        clearable
+                        :show-arrow="false"
+                        :empty-values="[null, undefined]"
+                        @change="changeField">
+                        <ElOption label="全部" value=""></ElOption>
+                        <ElOption label="最新开始排序" value="1"></ElOption>
+                        <ElOption label="最早开始排序" value="2"></ElOption>
+                        <ElOption label="文件从大到小" value="3"></ElOption>
+                        <ElOption label="文件从小到大" value="4"></ElOption>
+                    </ElSelect>
+                    <div
+                        class="flex items-center rounded-full h-[40px] border border-br px-1 transition-all focus-within:border-[#0065fb]">
+                        <ElInput
+                            v-model="queryParams.name"
+                            class="!w-[200px] search-input"
+                            clearable
+                            prefix-icon="el-icon-Search"
+                            placeholder="搜索素材名称..."
+                            @clear="resetPage"
+                            @keyup.enter="resetPage">
+                        </ElInput>
+                        <ElButton
+                            type="primary"
+                            class="!rounded-full !h-[32px] !px-4 !text-xs !font-bold"
+                            @click="resetPage">
+                            搜索
+                        </ElButton>
+                    </div>
+
+                    <div class="w-[1px] h-6 bg-[#E2E8F0] mx-2"></div>
+
                     <upload
                         type="file"
                         :accept="accept"
                         show-progress
+                        :max-size="200"
                         :show-file-list="false"
                         @change="handleUploadSuccess">
-                        <Empty btn-text="上传素材" msg="快去上传你的素材吧" />
+                        <ElButton type="primary" class="!rounded-full !h-10 !px-4">
+                            <Icon name="local-icon-add_circle" color="#ffffff"></Icon>
+                            <span class="ml-2">上传素材</span>
+                        </ElButton>
                     </upload>
                 </div>
             </div>
         </div>
+
+        <div class="grow min-h-0 bg-[#F8FAFC]">
+            <ElScrollbar :distance="20" @end-reached="load">
+                <div class="p-6">
+                    <template v-if="pager.lists.length > 0">
+                        <div class="grid grid-cols-4 gap-4">
+                            <div
+                                v-for="item in pager.lists"
+                                :key="item.id"
+                                class="group relative bg-white rounded-[20px] overflow-hidden border border-br transition-all hover:shadow-xl hover:shadow-[#0065fb]/10 hover:-translate-y-1">
+                                <div class="aspect-video relative overflow-hidden bg-[#F1F5F9]">
+                                    <ElImage
+                                        v-if="MaterialTypeEnum.IMAGE == item.m_type"
+                                        class="w-full h-full"
+                                        fit="cover"
+                                        lazy
+                                        preview-teleported
+                                        :src="item.content"
+                                        :preview-src-list="[item.content]"></ElImage>
+                                    <template
+                                        v-if="
+                                            MaterialTypeEnum.VIDEO == item.m_type ||
+                                            MaterialTypeEnum.MUSIC == item.m_type
+                                        ">
+                                        <template v-if="MaterialTypeEnum.VIDEO == item.m_type">
+                                            <img v-if="item.pic" :src="item.pic" class="w-full h-full object-cover" />
+                                            <video v-else :src="item.content" class="w-full h-full object-cover" />
+                                        </template>
+                                        <img
+                                            src="@/assets/images/audio_bg.png"
+                                            class="w-full h-full object-cover"
+                                            v-if="MaterialTypeEnum.MUSIC == item.m_type" />
+                                        <div
+                                            class="absolute top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%] z-[1000]">
+                                            <div class="w-12 h-12" @click="handlePlay(item)">
+                                                <play-btn />
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <div class="absolute right-2 top-2 z-[1000] w-9 h-9 invisible group-hover:visible">
+                                        <handle-menu :data="item" :menu-list="utilsMenuList" />
+                                    </div>
+                                </div>
+
+                                <div class="p-4 bg-white">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <div class="text-[13px] font-black text-[#1E293B] truncate flex-1 mr-2">
+                                            {{ item.name || "未命名素材" }}
+                                        </div>
+                                        <div
+                                            class="text-[9px] px-1.5 py-0.5 rounded bg-[#F1F5F9] text-[#64748B] font-black uppercase tracking-tighter">
+                                            {{
+                                                item.m_type == MaterialTypeEnum.VIDEO
+                                                    ? "VIDEO"
+                                                    : item.m_type == MaterialTypeEnum.IMAGE
+                                                    ? "IMAGE"
+                                                    : "AUDIO"
+                                            }}
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-[11px] text-[#94A3B8] font-medium">
+                                            {{ item.create_time }}
+                                        </span>
+                                        <div
+                                            class="flex items-center gap-1.5 bg-[#F8FAFC] px-2 py-0.5 rounded-md border border-[#F1F5F9]">
+                                            <Icon name="el-icon-Files" :size="10"></Icon>
+                                            <span class="text-[10px] text-[#64748B] font-bold">
+                                                {{ formatFileSize(item.size) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <load-text :is-load="pager.isLoad" />
+                    </template>
+                    <div v-else class="h-[600px] flex flex-col items-center justify-center">
+                        <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4">
+                            <Icon name="el-icon-FolderOpened" :size="40" color="#CBD5E1"></Icon>
+                        </div>
+                        <p class="text-[#94A3B8] text-sm font-bold">暂无素材内容，点击右上角上传</p>
+                    </div>
+                </div>
+            </ElScrollbar>
+        </div>
     </div>
     <preview-video v-if="showPreviewVideo" ref="previewVideoRef" @close="showPreviewVideo = false" />
     <preview-audio v-if="showPreviewAudio" ref="previewAudioRef" @close="showPreviewAudio = false" />
-    <edit-popup v-if="showEditPopup" ref="editPopupRef" @close="showEditPopup = false" @success="resetPage()" />
+    <rename-pop
+        v-if="showRenamePopup"
+        ref="renamePopupRef"
+        :fetch-fn="updateMaterialLibrary"
+        @close="showRenamePopup = false"
+        @success="getUpdatedMaterialLibrary" />
 </template>
 
 <script setup lang="ts">
 import { uploadImage } from "@/api/app";
-import { AppTypeEnum, ThemeEnum } from "@/enums/appEnums";
+import { AppTypeEnum } from "@/enums/appEnums";
 import { HandleMenuType } from "@/components/handle-menu/typings";
-import { getMaterialLibraryList, deleteMaterialLibrary, addMaterialLibrary } from "@/api/matrix";
-import Empty from "@/pages/app/matrix/_components/empty.vue";
-import EditPopup from "./_components/edit.vue";
+import { getMaterialLibraryList, deleteMaterialLibrary, addMaterialLibrary, updateMaterialLibrary } from "@/api/matrix";
 import { MaterialTypeEnum } from "../../_enums";
 
 const queryParams = reactive({
@@ -159,9 +191,8 @@ const queryParams = reactive({
     order_by: "",
 });
 
-const fieldValue = ref("");
 const accept = "video/*,image/*,.mp3,.wav,.m4a";
-
+const fieldValue = ref("");
 const changeField = (data: any) => {
     if (data == 1) {
         queryParams.order_by = "desc";
@@ -185,9 +216,20 @@ const { pager, getLists, resetPage } = usePaging({
     isScroll: true,
 });
 
-const load = () => {
-    queryParams.page_no++;
-    getLists();
+const load = async (e: any) => {
+    if (e == "bottom") {
+        if (!pager.isLoad || pager.loading) return;
+        queryParams.page_no++;
+        await getLists();
+    }
+};
+
+const getUpdatedMaterialLibrary = async (data: any) => {
+    pager.lists.forEach((item) => {
+        if (item.id === data.id) {
+            item.name = data.name;
+        }
+    });
 };
 
 const uploadLockTimer = ref<NodeJS.Timeout>();
@@ -235,18 +277,18 @@ const handleUploadSuccess = async (result: any) => {
     } catch (error) {}
 };
 
-const showEditPopup = ref(false);
-const editPopupRef = ref<InstanceType<typeof EditPopup>>();
+const showRenamePopup = ref(false);
+const renamePopupRef = shallowRef();
 
 const utilsMenuList: HandleMenuType[] = [
     {
         label: "重命名",
         icon: "local-icon-edit3",
         click: async (data) => {
-            showEditPopup.value = true;
+            showRenamePopup.value = true;
             await nextTick();
-            editPopupRef.value.open();
-            editPopupRef.value.setFormData(data);
+            renamePopupRef.value.open();
+            renamePopupRef.value.setFormData({ id: data.id, name: data.name });
         },
     },
     {
@@ -262,7 +304,6 @@ const utilsMenuList: HandleMenuType[] = [
         click: ({ id }) => {
             useNuxtApp().$confirm({
                 message: `确定删除该素材吗？`,
-                theme: "dark",
                 onConfirm: async () => {
                     try {
                         await deleteMaterialLibrary({ id });
@@ -288,7 +329,7 @@ const handlePlay = async (data: any) => {
         await nextTick();
         previewVideoRef.value.open();
         previewVideoRef.value.setUrl(content);
-    } else {
+    } else if (m_type == MaterialTypeEnum.MUSIC) {
         showPreviewAudio.value = true;
         await nextTick();
         previewAudioRef.value.open();
@@ -300,13 +341,30 @@ getLists();
 </script>
 
 <style scoped lang="scss">
-.material-item {
-    @apply flex gap-x-4 h-[288px] relative overflow-hidden border border-[#ffffff33] rounded-xl;
-    &::after {
-        @apply absolute top-0 left-0 w-full h-full;
-        content: "";
-        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 50%, #000 100%);
-        pointer-events: none;
+:deep(.search-input) {
+    .el-input__wrapper {
+        background: transparent !important;
+        box-shadow: none !important;
+        padding-left: 10px;
+    }
+    .el-input__inner {
+        font-weight: 600;
+        font-size: 13px;
+        color: #1e293b;
+        &::placeholder {
+            color: #94a3b8;
+        }
+    }
+}
+
+:deep(.custom-select-pill) {
+    .el-select__wrapper {
+        border-radius: 99px !important;
+        height: 40px !important;
+        box-shadow: 0 0 0 1px #e2e8f0 inset !important;
+        &.is-focus {
+            box-shadow: 0 0 0 1px #4f46e5 inset !important;
+        }
     }
 }
 </style>

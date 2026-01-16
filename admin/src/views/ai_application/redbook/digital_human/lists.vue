@@ -57,10 +57,12 @@
                 <el-table-column type="selection" width="55" fixed="left" />
                 <el-table-column label="ID" prop="id" width="100" />
                 <el-table-column label="创建用户" prop="nickname" min-width="160" />
-                <el-table-column label="创作名称" prop="name" min-width="180" />
+                <el-table-column label="创作名称" prop="name" min-width="180" show-overflow-tooltip />
                 <el-table-column label="生成状态" min-width="100">
                     <template #default="{ row }">
-                        {{ getStatusText(row.status) }}
+                        <el-tag :type="getStatusType(row.status)">
+                            {{ getStatusText(row.status) }}
+                        </el-tag>
                     </template>
                 </el-table-column>
                 <el-table-column label="生成数量" min-width="100">
@@ -142,6 +144,21 @@ const getStatusText = (status: number) => {
         [GenStatus.PARTIAL_SUCCESS]: "部分完成",
     } as Record<number, string>;
     return statusMap[status];
+};
+
+const getStatusType = (status: number) => {
+    if (status === GenStatus.SUCCESS || status === GenStatus.PARTIAL_SUCCESS) {
+        return "success";
+    }
+    if (status === GenStatus.WAITING || status === GenStatus.DRAFT) {
+        return "info";
+    }
+    if (status === GenStatus.GENERATING) {
+        return "warning";
+    }
+    if (status === GenStatus.FAILED) {
+        return "danger";
+    }
 };
 
 const multipleSelection = ref<any[]>([]);

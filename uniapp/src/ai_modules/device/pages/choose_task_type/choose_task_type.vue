@@ -29,7 +29,6 @@ import TaskMsgIcon from "@/ai_modules/device/static/images/common/task_type_msg.
 import TaskFriendIcon from "@/ai_modules/device/static/images/common/task_type_friend.png";
 import TaskYhIcon from "@/ai_modules/device/static/images/common/task_type_yh.png";
 import TaskCircleIcon from "@/ai_modules/device/static/images/common/task_type_circle.png";
-import TaskXhsNoIcon from "@/ai_modules/device/static/images/common/task_type_xhsno.png";
 import TaskPrivateIcon from "@/ai_modules/device/static/images/common/task_type_private.png";
 import TaskCommentIcon from "@/ai_modules/device/static/images/common/task_type_comment.png";
 
@@ -94,15 +93,17 @@ const taskTypeList = [
     },
     {
         title: "发朋友圈",
-        desc: "即将解锁",
+        desc: "朋友圈发布内容",
         icon: TaskCircleIcon,
-        disabled: true,
+        disabled: false,
+        type: CreateTypeEnum.CIRCLE,
     },
     {
-        title: "小红书起号",
-        desc: "即将解锁",
-        icon: TaskXhsNoIcon,
-        disabled: true,
+        title: "朋友圈互动",
+        desc: "朋友圈点赞/评论",
+        icon: TaskCircleIcon,
+        disabled: false,
+        type: CreateTypeEnum.CIRCLE_INTERACT,
     },
 ];
 
@@ -120,8 +121,9 @@ const handleClick = (item: any) => {
         [CreateTypeEnum.PRIVATE_MESSAGE]: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.PRIVATE_MESSAGE}`,
         [CreateTypeEnum.FRIEND]: "/ai_modules/device/pages/create_add_wechat/create_add_wechat",
         [CreateTypeEnum.YH]: "/ai_modules/device/pages/create_account_building/create_account_building",
+        [CreateTypeEnum.CIRCLE]: "/ai_modules/device/pages/create_circle/create_circle",
+        [CreateTypeEnum.CIRCLE_INTERACT]: "/ai_modules/device/pages/create_circle_interact/create_circle_interact",
     };
-
     uni.navigateTo({
         url: urls[item.type as CreateTypeEnum],
     });

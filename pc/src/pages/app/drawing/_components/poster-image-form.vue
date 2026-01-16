@@ -1,103 +1,100 @@
 <template>
-    <div class="h-full">
+    <div class="h-full bg-[#F8FAFC]">
         <ElScrollbar>
-            <div class="p-4">
-                <ElForm :model="formData" label-position="top">
-                    <ElFormItem>
-                        <template #label>
-                            <div class="flex justify-between items-center">
-                                <span>生成模型</span>
-                                <ElButton link class="!text-[#ffffff80]" @click="fillExample">填入示例</ElButton>
-                            </div>
-                        </template>
-                        <ElSelect
-                            v-model="formData.model"
-                            class="!h-11"
-                            popper-class="dark-select-popper"
-                            placeholder="请选择模型名称"
-                            :show-arrow="false"
-                            @change="handleModelChange">
-                            <ElOption
-                                v-for="item in getModelChannel"
-                                :label="item.name"
-                                :value="item.id"
-                                :key="item.id"></ElOption>
-                        </ElSelect>
-                    </ElFormItem>
-                    <ElFormItem label="海报类型">
-                        <ElInput
-                            v-model="formData.poster_type"
-                            placeholder="VLOG视频封面"
-                            maxlength="20"
-                            show-word-limit />
-                    </ElFormItem>
-                    <ElFormItem label="海报配色">
-                        <ElInput
-                            v-model="formData.poster_color"
-                            placeholder="马卡龙配色"
-                            maxlength="20"
-                            show-word-limit />
-                    </ElFormItem>
-                    <ElFormItem label="海报主标题">
-                        <ElInput
-                            v-model="formData.poster_title"
-                            placeholder="威海旅游vlog"
-                            maxlength="20"
-                            show-word-limit />
-                    </ElFormItem>
-                    <ElFormItem label="海报副标题">
-                        <ElInput
-                            v-model="formData.poster_subtitle"
-                            placeholder="特种兵一日游 被低估的旅游城市"
-                            maxlength="20"
-                            show-word-limit />
-                    </ElFormItem>
-                    <ElFormItem label="海报主题描述">
+            <div class="p-4 space-y-3">
+                <div class="bg-white rounded-[24px] p-5 border border-[#F1F5F9] space-y-3">
+                    <div class="flex items-center justify-between px-1">
+                        <div class="flex items-center gap-2">
+                            <div class="w-1.5 h-4 bg-primary rounded-full"></div>
+                            <span class="text-[14px] font-[900] text-[#1E293B]">生成模型</span>
+                        </div>
+                        <div
+                            class="flex items-center gap-1 text-[12px] font-bold text-primary cursor-pointer hover:opacity-80 transition-opacity"
+                            @click="fillExample">
+                            <Icon name="el-icon-MagicStick" :size="14"></Icon>
+                            <span>填入示例</span>
+                        </div>
+                    </div>
+
+                    <ElSelect
+                        v-model="formData.model"
+                        class="w-full custom-select"
+                        popper-class="custom-select-popper"
+                        placeholder="请选择模型名称"
+                        :show-arrow="false"
+                        @change="handleModelChange">
+                        <ElOption
+                            v-for="item in getModelChannel"
+                            :label="item.name"
+                            :value="item.id"
+                            :key="item.id"></ElOption>
+                    </ElSelect>
+                </div>
+
+                <div class="bg-white rounded-[24px] p-5 border border-[#F1F5F9] space-y-5">
+                    <div class="flex items-center gap-2 px-1 mb-2">
+                        <div class="w-1.5 h-4 bg-primary rounded-full"></div>
+                        <span class="text-[14px] font-[900] text-[#1E293B]">内容配置</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="text-[12px] font-black text-[#94A3B8] ml-1">海报类型</label>
+                            <ElInput v-model="formData.poster_type" placeholder="如：VLOG封面" class="custom-input" />
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[12px] font-black text-[#94A3B8] ml-1">配色方案</label>
+                            <ElInput v-model="formData.poster_color" placeholder="如：马卡龙色" class="custom-input" />
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[12px] font-black text-[#94A3B8] ml-1">海报主标题</label>
+                        <ElInput v-model="formData.poster_title" placeholder="请输入主标题" class="custom-input" />
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[12px] font-black text-[#94A3B8] ml-1">海报副标题</label>
+                        <ElInput v-model="formData.poster_subtitle" placeholder="请输入副标题" class="custom-input" />
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[12px] font-black text-[#94A3B8] ml-1">海报主题描述</label>
                         <ElInput
                             v-model="formData.poster_description"
                             type="textarea"
                             resize="none"
-                            :autosize="{
-                                minRows: 4,
-                                maxRows: 10,
-                            }"
-                            placeholder="是一个穿着短裙、梳双马尾的少女，人物白色描边"
-                            maxlength="500"
-                            show-word-limit />
-                    </ElFormItem>
-                    <ElFormItem v-if="formData.model == ModelEnum.GENERAL">
-                        <ElTooltip
-                            placement="right"
-                            popper-class="w-[228px]"
-                            content="开启后可将【生成规格】中的宽高均乘以2返回，如上述宽高均为512和512，此参数关闭出图 512*512 ，此参数打开出图1024 * 1024">
-                            <div
-                                class="flex items-center justify-between w-full border border-app-border-2 rounded-lg bg-app-bg-3 px-3 h-11">
-                                <div class="flex items-center gap-2 text-white">
-                                    超分辨率生成
-                                    <Icon name="local-icon-question" :size="16"></Icon>
-                                </div>
-                                <ElSwitch v-model="formData.use_sr" />
-                            </div>
-                        </ElTooltip>
-                    </ElFormItem>
-                    <ElFormItem>
-                        <template #label>
-                            <div class="flex items-center gap-2 text-white">
-                                <span>生成规格</span>
-                            </div>
-                        </template>
-                        <resolution-select :model="formData.model" @update:resolution="handleResolutionChange" />
-                    </ElFormItem>
-                    <ElFormItem label="生成张数" v-if="formData.model == ModelEnum.HIDREAMAI">
-                        <ElInput
-                            v-model="formData.img_count"
-                            v-number-input="{ decimal: 0 }"
-                            min="1"
-                            max="4"
-                            type="number"
-                            class="!h-11"></ElInput>
-                    </ElFormItem>
-                </ElForm>
+                            :rows="4"
+                            placeholder="描述海报的具体画面内容，如：人物动作、背景装饰..."
+                            class="custom-textarea" />
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-[24px] p-5 border border-[#F1F5F9] space-y-6">
+                    <div class="flex items-center gap-2 px-1">
+                        <div class="w-1.5 h-4 bg-primary rounded-full"></div>
+                        <span class="text-[14px] font-[900] text-[#1E293B]">输出设置</span>
+                    </div>
+
+                    <div
+                        v-if="formData.model == ModelEnum.GENERAL"
+                        class="p-4 bg-[#F8FAFC] rounded-2xl border border-[#F1F5F9] flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[13px] font-[900] text-[#1E293B]">超分辨率生成</span>
+                            <ElTooltip content="开启后将返回双倍清晰度的图像">
+                                <Icon name="el-icon-QuestionFilled" :size="14" class="text-[#CBD5E1]"></Icon>
+                            </ElTooltip>
+                        </div>
+                        <ElSwitch v-model="formData.use_sr" style="--el-switch-on-color: #4f46e5" />
+                    </div>
+
+                    <resolution-select :model="formData.model" @update:resolution="handleResolutionChange" />
+                </div>
+                <div
+                    v-if="formData.model == ModelEnum.HIDREAMAI"
+                    class="bg-white rounded-[24px] p-5 border border-[#F1F5F9] space-y-6 sticky bottom-2 z-20">
+                    <number-select v-model="formData.img_count" />
+                </div>
             </div>
         </ElScrollbar>
     </div>
@@ -105,13 +102,11 @@
 
 <script setup lang="ts">
 import { useAppStore } from "@/stores/app";
-import ResolutionSelect from "./resolution-select.vue";
 import { ModelEnum } from "../_enums";
+import ResolutionSelect from "./resolution-select.vue";
+import NumberSelect from "./number-select/index.vue";
 
-const emit = defineEmits<{
-    (event: "update:formData", value: any): void;
-    (event: "generatePrompt", value: { promptId: number; prompt: string }): void;
-}>();
+const emit = defineEmits(["update:formData", "generatePrompt"]);
 
 const appStore = useAppStore();
 const getModelChannel = computed(() => {
@@ -122,6 +117,7 @@ const getModelChannel = computed(() => {
             id: parseInt(item.id),
         }));
 });
+
 const formData = reactive<any>({
     model: "",
     poster_type: "",
@@ -136,8 +132,6 @@ const formData = reactive<any>({
     img_count: 1,
 });
 
-// 填入示例 Start
-
 const fillExample = () => {
     formData.poster_type = "VLOG视频封面";
     formData.poster_color = "马卡龙配色";
@@ -146,19 +140,9 @@ const fillExample = () => {
     formData.poster_description = "是一个穿着短裙、梳双马尾的少女，人物白色描边";
 };
 
-// 填入示例 End
-
-// 生成模型 Start
-
-const handleModelChange = (data: any) => {
-    if (formData.model == ModelEnum.GENERAL) {
-        formData.img_count = 1;
-    }
+const handleModelChange = () => {
+    if (formData.model == ModelEnum.GENERAL) formData.img_count = 1;
 };
-
-// 生成模型 End
-
-// 分辨率 Start
 
 const handleResolutionChange = (data: any) => {
     formData.width = data.width;
@@ -166,18 +150,14 @@ const handleResolutionChange = (data: any) => {
     formData.resolution = data.label;
 };
 
-// 分辨率 End
-
 watch(
     () => getModelChannel.value,
     (value) => {
-        if (value.length > 0) {
+        if (value.length > 0 && !formData.model) {
             formData.model = value[0].id;
         }
     },
-    {
-        immediate: true,
-    }
+    { immediate: true }
 );
 
 watchEffect(() => {
@@ -213,46 +193,56 @@ defineExpose({
                 img_count: formData.img_count,
                 aspect_ratio: formData.resolution,
             };
-        } else if (model == ModelEnum.GENERAL || model == ModelEnum.SEEDREAM) {
-            params = {
-                ...params,
-                use_sr: `${use_sr}`,
-                width,
-                height,
-            };
+        } else {
+            params = { ...params, use_sr: `${use_sr}`, width, height };
         }
-        return {
-            params,
-            model,
-            model_name: getModelChannel.value.find((item) => item.id == model)?.name,
-        };
+        return { params, model, model_name: getModelChannel.value.find((item: any) => item.id == model)?.name };
     },
     validateForm: () => {
         return new Promise((resolve, reject) => {
-            if (!formData.poster_type) {
-                feedback.msgWarning("请输入海报类型");
-                reject(false);
-                return;
-            } else if (!formData.poster_color) {
-                feedback.msgWarning("请输入海报配色");
-                reject(false);
-                return;
-            } else if (!formData.poster_title) {
-                feedback.msgWarning("请输入海报主标题");
-                reject(false);
-                return;
-            } else if (!formData.poster_subtitle) {
-                feedback.msgWarning("请输入海报副标题");
-                reject(false);
-                return;
-            } else if (!formData.poster_description) {
-                feedback.msgWarning("请输入海报主题描述");
-                reject(false);
-                return;
-            } else {
-                resolve(true);
+            const fields = [
+                { key: "poster_type", label: "海报类型" },
+                { key: "poster_color", label: "海报配色" },
+                { key: "poster_title", label: "海报主标题" },
+                { key: "poster_subtitle", label: "海报副标题" },
+                { key: "poster_description", label: "海报主题描述" },
+            ];
+            for (const field of fields) {
+                if (!formData[field.key]) {
+                    feedback.msgWarning(`请输入${field.label}`);
+                    return reject(false);
+                }
             }
+            resolve(true);
         });
     },
 });
 </script>
+
+<style scoped lang="scss">
+:deep(.custom-input),
+:deep(.custom-select) {
+    .el-input__wrapper {
+        @apply rounded-xl bg-[#F8FAFC] shadow-[none] border border-[#F1F5F9] h-11 transition-all;
+        &:hover {
+            @apply border-br;
+        }
+        &.is-focus {
+            @apply border-[#0065fb] bg-white shadow-[0_0_0_4px_rgba(79,70,229,0.06)] !important;
+        }
+    }
+}
+
+:deep(.custom-select) {
+    @apply h-11;
+    .el-input {
+        @apply h-11;
+    }
+}
+
+:deep(input::-webkit-outer-spin-button),
+:deep(input::-webkit-inner-spin-button) {
+    -webkit-appearance: none;
+    margin: 0;
+}
+</style>

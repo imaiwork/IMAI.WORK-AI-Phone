@@ -120,6 +120,7 @@
                         <template v-else> - </template>
                     </template>
                 </el-table-column>
+                <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
                 <el-table-column label="创作时间" prop="create_time" min-width="180" show-overflow-tooltip />
                 <el-table-column label="操作" width="120" fixed="right">
                     <template #default="{ row }">

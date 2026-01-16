@@ -48,7 +48,7 @@ class AnchorLists extends BaseAdminDataLists implements ListsSearchInterface
         return HumanAnchor::alias('ha')
             ->join('user u', 'u.id = ha.user_id')
             ->field('ha.id,ha.name,ha.user_id,ha.model_version,ha.task_id,ha.gender,ha.type,
-            ha.create_time,ha.pic,ha.url,ha.status,u.nickname,u.avatar')
+            ha.create_time,ha.pic,ha.url,ha.status,u.nickname,u.avatar,ha.remark')
             ->when($type, function ($query)use ($type){
                 $query->where('ha.type', $type );
             })
