@@ -147,7 +147,7 @@
                                     <div
                                         v-if="row.auto_type == 0"
                                         class="table-action-item !text-red-500 hover:!bg-red-50"
-                                        @click="handleDelete(row)">
+                                        @click="handleDelete(row.id)">
                                         <Icon name="el-icon-Delete" /> 删除
                                     </div>
                                 </div>

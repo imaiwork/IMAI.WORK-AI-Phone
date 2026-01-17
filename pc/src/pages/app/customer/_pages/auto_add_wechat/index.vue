@@ -164,7 +164,7 @@
                                 >
                                 <div class="w-[1px] h-3 bg-br-extra-light mx-1"></div>
                             </template>
-                            <ElButton type="danger" class="!font-bold" link size="small" @click="handleDelete(row)"
+                            <ElButton type="danger" class="!font-bold" link size="small" @click="handleDelete(row.id)"
                                 >删除</ElButton
                             >
                         </div>

@@ -6,7 +6,7 @@
                     <image :src="item.pic" class="w-full mx-auto h-full rounded-lg" mode="aspectFill"></image>
                 </view>
             </view>
-            <view class="absolute top-1 right-1 z-[8888]">
+            <view class="absolute top-1 right-1 z-[8888]" v-if="showMore">
                 <view class="p-2" style="transform: rotate(90deg)" @click="handleMore">
                     <u-icon name="more-dot-fill" color="#fff"></u-icon>
                 </view>
@@ -61,6 +61,7 @@ const props = withDefaults(
     defineProps<{
         item: Record<string, any>;
         showName?: boolean;
+        showMore?: boolean;
     }>(),
     {
         item: () => ({
@@ -73,6 +74,7 @@ const props = withDefaults(
             source_type: "",
         }),
         showName: true,
+        showMore: true,
     }
 );
 

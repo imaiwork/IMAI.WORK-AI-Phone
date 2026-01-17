@@ -108,6 +108,7 @@
                         <view v-for="(item, index) in anchorLists" :key="index" class="h-[288rpx] rounded-[20rpx]">
                             <anchor-video
                                 :show-name="false"
+                                :show-more="false"
                                 :item="{
                                     name: item.name,
                                     pic: item.pic,

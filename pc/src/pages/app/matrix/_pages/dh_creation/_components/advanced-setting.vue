@@ -180,10 +180,10 @@ const handleChangeClipStyle = (value: string[]) => {
 
 const handleConfirm = () => {
     if (formData.automatic_clip == 1) {
-        if (formData.clip.length == 0) {
-            feedback.msgWarning("请选择剪辑风格");
-            return;
-        }
+        // if (formData.clip.length == 0) {
+        //     feedback.msgWarning("请选择剪辑风格");
+        //     return;
+        // }
         // if (formData.music.length == 0) {
         //     feedback.msgWarning("请上传背景音乐");
         //     return;

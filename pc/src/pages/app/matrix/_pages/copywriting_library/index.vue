@@ -66,7 +66,7 @@
                         </template>
 
                         <div class="flex flex-col gap-1 p-1">
-                            <div class="menu-item" @click="handleEdit(CopywritingTypeEnum.TITLE)">
+                            <div class="menu-item" @click="handleEdit(CopywritingTypeEnum.CONTENT)">
                                 <div class="icon-wrapper bg-blue-50">
                                     <Icon name="el-icon-Microphone" color="var(--color-primary)" :size="14"></Icon>
                                 </div>
@@ -76,7 +76,7 @@
                                 </div>
                             </div>
 
-                            <div class="menu-item" @click="handleEdit(CopywritingTypeEnum.CONTENT)">
+                            <div class="menu-item" @click="handleEdit(CopywritingTypeEnum.TITLE)">
                                 <div class="icon-wrapper bg-[#eef2ff]">
                                     <Icon name="el-icon-Document" color="#6366f1" :size="14"></Icon>
                                 </div>
