@@ -22,9 +22,6 @@
                             type="video"
                             drag
                             show-progress
-                            :data="{
-                                ffmpeg: 1,
-                            }"
                             :limit="1"
                             :accept="commonUploadLimit.videoExtension.join(',')"
                             :show-file-list="false"
@@ -284,15 +281,6 @@ const handleUploadChange = async (res: any, type: "anchor" | "auth") => {
         const { raw, response } = res;
 
         const { uri } = response.data;
-        checkIsH264(raw).then((res) => {
-            if (type == "anchor") {
-                anchorData.isH264 = res;
-            }
-            if (type == "auth") {
-                authData.isH264 = res;
-            }
-        });
-
         const { file, width, height } = await getVideoFirstFrame(uri);
         const imageRes = await uploadImage({
             file,
