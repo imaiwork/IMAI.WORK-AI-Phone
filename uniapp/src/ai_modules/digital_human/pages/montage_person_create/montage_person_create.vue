@@ -363,7 +363,7 @@ const steps = ref([
     { step: 4, title: "生成设置" },
 ]);
 
-const step = ref(4);
+const step = ref(1);
 
 const formData = reactive<{
     anchorLists: any[];
