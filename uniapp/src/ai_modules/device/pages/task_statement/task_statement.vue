@@ -74,7 +74,7 @@
                                                 item.account?.nickname
                                             }}</view>
                                             <image
-                                                :src="getplatform(item.account?.type)"
+                                                :src="getPlatformIcon(item.account?.type)"
                                                 class="w-[32rpx] h-[32rpx]"></image>
                                         </view>
                                         <view class="text-xs text-[#00000066] font-bold mt-[4rpx]"
@@ -413,12 +413,12 @@ const formatDate = (date: string) => {
     return uni.$u.timeFormat(date, "yyyy年mm月dd日 hh:MM");
 };
 
-const getplatform = (app_type: number) => {
-    return platform[app_type as keyof typeof platform]?.activeIcon;
+const getPlatformIcon = (app_type: number) => {
+    return platform.value[app_type as keyof typeof platform.value]?.activeIcon;
 };
 
 const getPlatformName = (app_type: number) => {
-    return platform[app_type as keyof typeof platform]?.name;
+    return platform.value[app_type as keyof typeof platform.value]?.name;
 };
 
 onLoad((options: any) => {

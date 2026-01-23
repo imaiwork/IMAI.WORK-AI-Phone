@@ -23,10 +23,10 @@
                                     class="flex items-center mb-[16rpx] gap-x-[24rpx] bg-white rounded-[24rpx] p-[32rpx]"
                                     :class="{
                                         '!bg-[#F0F7FF] shadow-[0px_0px_0px_1px_rgba(0,101,251,1)]':
-                                            activeTone == item.voice_id,
+                                            chooseToneItem.voice_id == item.voice_id,
                                     }"
                                     :key="index"
-                                    @click="chooseTone(item, item.type)">
+                                    @click="chooseTone(item)">
                                     <view class="flex-shrink-0 leading-[0]">
                                         <image
                                             class="w-[72rpx] h-[72rpx]"
@@ -47,7 +47,7 @@
                                         chooseToneItem.voice_id == item.voice_id,
                                 }"
                                 :key="index"
-                                @click="chooseTone(item, 1)">
+                                @click="chooseTone(item)">
                                 <view class="flex-shrink-0 leading-[0]">
                                     <image
                                         class="w-[72rpx] h-[72rpx]"
@@ -117,11 +117,11 @@ const systemToneLists = computed(() => {
     const list = [
         ...(appStore.getDigitalHumanConfig?.voice || [])
             .filter((item: any) => item.status == "1")
-            .map((item: any) => ({ ...item, voice_id: item.code, type: 0 })),
+            .map((item: any) => ({ ...item, voice_id: item.code, builtin: 0 })),
     ];
-    if (props.showOriginalTone) {
-        list.unshift({ voice_id: -1, name: "视频原音", type: 1 });
-    }
+    // if (props.showOriginalTone) {
+    //     list.unshift({ voice_id: -1, name: "视频原音", type: 1 });
+    // }
     return list;
 });
 const chooseToneItem = ref<any>({ voice_id: props.activeTone });
@@ -148,7 +148,7 @@ const queryList = async (page_no: number, page_size: number) => {
     }
 };
 
-const chooseTone = (item: any, type: number) => {
+const chooseTone = (item: any) => {
     if (props.activeTone === item.voice_id) {
         chooseToneItem.value = {};
         return;

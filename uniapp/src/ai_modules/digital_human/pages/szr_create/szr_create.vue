@@ -253,6 +253,7 @@
         @confirm="showVideoPreview = false" />
     <select-anchor v-model="showChooseAnchor" @confirm="handleChooseAnchor" />
     <choose-tone
+        v-if="showChooseTone"
         v-model="showChooseTone"
         :model-version="formData.model_version"
         :active-tone="formData.voice_id"
@@ -432,7 +433,7 @@ const openChooseModel = () => {
 const chooseAnchor = (index: number) => {
     const { status, model_version } = anchorLists.value[index];
 
-    if (model_version !== model_version) {
+    if (formData.model_version !== model_version) {
         formData.voice_id = "-1";
         formData.voice_name = "";
     }
@@ -464,7 +465,11 @@ const openModel = () => {
 };
 
 const handleChooseModel = (id: string) => {
+    if (formData.model_version == id) return;
     formData.model_version = id;
+    formData.voice_id = "-1";
+    formData.voice_name = "";
+    formData.voice_type = 1;
 };
 
 // 视频预览相关方法
@@ -479,16 +484,20 @@ const openChooseTone = () => {
     showChooseTone.value = true;
 };
 
-const handleChooseTone = (data: { voice_id: string; name: string; type: number }) => {
-    const { voice_id, name, type } = data;
+const handleChooseTone = (data: any) => {
+    const { voice_id, name, builtin } = data;
     if (!data.voice_id) {
         formData.voice_id = "-1";
         formData.voice_name = "";
         formData.voice_type = 1;
     } else {
+        if (builtin === 0) {
+            formData.voice_type = 0;
+        } else {
+            formData.voice_type = 1;
+        }
         formData.voice_id = voice_id;
         formData.voice_name = name;
-        formData.voice_type = type;
     }
     showChooseTone.value = false;
 };

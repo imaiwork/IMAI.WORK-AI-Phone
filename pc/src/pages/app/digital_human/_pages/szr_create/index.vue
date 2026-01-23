@@ -144,7 +144,8 @@
                                 class="w-full custom-select"
                                 placeholder="请选择训练模型"
                                 :show-arrow="false"
-                                :disabled="!isPublicAnchor">
+                                :disabled="!isPublicAnchor"
+                                @change="handleModelChange">
                                 <ElOption
                                     v-for="item in modelChannel"
                                     :key="item.id"
@@ -164,7 +165,7 @@
                         <div class="mb-6">
                             <div class="text-[15px] font-[900] text-[#1E293B] mb-3">音色选择</div>
                             <ElSelect
-                                v-model="formData.voice_id"
+                                v-model="voiceId"
                                 class="w-full custom-select"
                                 placeholder="请选择声音"
                                 :show-arrow="false"
@@ -328,6 +329,7 @@ const formData = reactive<Record<string, any>>({
     clip_type: `${ClipStyleEnum.AI_RECOMMEND}`,
     automatic_clip: 0,
 });
+const voiceId = ref(-1);
 
 const randomCopywriter = [
     `你是不是也有过这样的时刻？很想放弃，但又不甘心；很累很累，却还在硬撑。没人知道你经历了什么，但你知道，你不是为了谁在坚持，而是为了不辜负自己。别怕慢，只要不退，就已经很勇敢了。`,
@@ -345,10 +347,22 @@ const getSystemVoiceList = computed(() => {
     );
 });
 
+const handleModelChange = (value: number) => {
+    formData.voice_id = -1;
+    formData.voice_name = "";
+    voiceId.value = -1;
+    getVoiceList();
+};
+
 const handleVoiceChange = (value: number) => {
-    const currVoice = voiceList.value.find((item) => item.id == value);
-    formData.voice_type = currVoice?.builtin === 0 ? 0 : 1;
-    formData.voice_name = currVoice?.name;
+    const currVoice = voiceList.value.find((item) => item.id == value) || {};
+    formData.voice_type = currVoice.builtin === 0 ? 0 : 1;
+    formData.voice_name = currVoice.name;
+    if (currVoice.builtin === 0) {
+        formData.voice_id = currVoice.id;
+    } else {
+        formData.voice_id = currVoice.voice_id;
+    }
 };
 
 const clipConfig = reactive({
@@ -436,6 +450,7 @@ const handleSelectAnchor = (index: number) => {
     if (formData.model_version != model_version) {
         formData.voice_id = -1;
         formData.voice_name = "";
+        voiceId.value = -1;
     }
     if (model_version == 0) {
         formData.model_version = DigitalHumanModelVersionEnum.CHANJING;
@@ -453,6 +468,8 @@ const handleSelectAnchor = (index: number) => {
             : formData.model_version == DigitalHumanModelVersionEnum.SHANJIAN
             ? shanjian_anchor_id
             : weiju_anchor_id;
+    // 重新请求音色
+    getVoiceList();
 };
 
 const localAnchorLists = ref<any[]>([]);
@@ -528,6 +545,7 @@ const getChooseTone = (data: any) => {
     formData.voice_name = name;
     formData.voice_id = voice_id;
     formData.voice_type = builtin;
+    voiceId.value = voice_id;
 };
 
 /** 音色操作 End  */

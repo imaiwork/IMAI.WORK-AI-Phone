@@ -1,1 +1,0 @@
-import{r as t,M as o}from"./entry.67a15613.js";const e=t(null);function u(){return{triggerHistoryRefresh:r=>{e.value=r},onHistoryRefresh:r=>{o(e,s=>{s&&(r(s),e.value=null)})}}}export{u as useChatEventBus};

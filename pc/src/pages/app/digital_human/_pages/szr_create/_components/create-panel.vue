@@ -201,7 +201,7 @@ const handleNext = () => {
     } = props.formData;
 
     createTaskParams.value = {
-        ...voice_id.value,
+        ...createTaskParams.value,
         name,
         pic,
         video_url: url,
