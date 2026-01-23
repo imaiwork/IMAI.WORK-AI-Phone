@@ -98,7 +98,7 @@ const getUploadImage = (res: any) => {
 
 /* 顶部预览/示例区 */
 .preview-section {
-    @apply w-full h-[180px] rounded-[18px] overflow-hidden bg-[#F8FAFC] relative border border-[#F1F5F9];
+    @apply w-full h-[180px] rounded-[18px] overflow-hidden bg-slate-50 relative border border-[#F1F5F9];
 
     .preview-container {
         @apply w-full h-full relative flex items-center justify-center;
@@ -118,7 +118,7 @@ const getUploadImage = (res: any) => {
     .template-container {
         @apply w-full h-full relative;
         .empty-placeholder {
-            @apply w-full h-full flex items-center justify-center bg-[#F8FAFC];
+            @apply w-full h-full flex items-center justify-center bg-slate-50;
         }
         .type-tag {
             @apply absolute bottom-2 left-2 px-2 py-0.5 bg-[#000000]/40 backdrop-blur-md text-white text-[9px] font-bold rounded-md uppercase tracking-widest;
@@ -129,7 +129,7 @@ const getUploadImage = (res: any) => {
 /* 下方上传触发区 */
 .upload-trigger-section {
     .upload-dropzone {
-        @apply w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#F8FAFC] border-2 border-dashed border-br 
+        @apply w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 border-2 border-dashed border-br 
                transition-all cursor-pointer hover:border-[#0065fb] hover:bg-[#F5F7FF];
 
         .icon-circle {

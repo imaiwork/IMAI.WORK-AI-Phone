@@ -1,5 +1,5 @@
 <template>
-    <div class="h-full flex flex-col bg-[#F8FAFC]">
+    <div class="h-full flex flex-col bg-slate-50">
         <UploadTemplate.define v-slot="{ type, label, subLabel }">
             <div class="bg-white rounded-[24px] p-5 border border-[#F1F5F9] transition-all">
                 <div class="flex items-center justify-between mb-4 px-1">

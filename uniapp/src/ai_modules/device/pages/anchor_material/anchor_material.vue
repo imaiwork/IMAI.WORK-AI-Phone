@@ -56,7 +56,7 @@ const showVideoPreview = ref(false);
 const playData = ref<{ url: string; pic: string }>({ url: "", pic: "" });
 
 const handleChooseAnchor = (list: any[]) => {
-    dataList.value.push(...list);
+    dataList.value.push(...list.map((item) => ({ ...item, url: item.result_url })));
 };
 
 const handleDelete = (index: number) => {

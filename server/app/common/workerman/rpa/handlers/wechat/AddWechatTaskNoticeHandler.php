@@ -27,9 +27,9 @@ class AddWechatTaskNoticeHandler extends BaseMessageHandler
 
             $this->payload['reply'] = $this->setAddWechatTaskNotice($content);
 
-            $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+            //$this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
         } catch (\Exception $e) {
-            $this->setLog('异常信息' . $e);
+            $this->setLog('异常信息' . $e, 'error');
 
             $this->payload['reply'] = $e->getMessage();
             $this->payload['code'] =  WorkerEnum::DEVICE_ERROR_CODE;
@@ -55,7 +55,7 @@ class AddWechatTaskNoticeHandler extends BaseMessageHandler
 
             $maps = array(
                 0 => '添加请求成功',
-                1 => '添加请求失败',
+                1 => '用户不存在',
                 2 => '已经是好友了',
                 3 => '添加请求操作过于频繁，请稍后再试',
                 4 => '添加请求当前账号存在安全风险，暂时无法添加朋友',

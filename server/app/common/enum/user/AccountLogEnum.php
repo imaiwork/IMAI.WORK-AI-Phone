@@ -265,6 +265,9 @@ class AccountLogEnum
     const TOKENS_DEC_AUTOMATION_OCR_LOCAL = 10311;  // 自动化获客视频号OCR
     const TOKENS_DEC_AUTOMATION_OCR_IMG = 10312;   // 自动化获客本地OCR
 
+    // 账号Ip人设分析报告
+    const TOKENS_DEC_AUTOMATION_ACCOUNT_IP_ANALYSIS = 10313;   // 账号Ip人设分析报告
+
 
     const TOKENS_DEC_NEWS_MIXCUT_TITLE = 10200;
 
@@ -384,6 +387,7 @@ class AccountLogEnum
         self::TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND,
         self::TOKENS_DEC_AUTOMATION_OCR_LOCAL,
         self::TOKENS_DEC_AUTOMATION_OCR_IMG,
+        self::TOKENS_DEC_AUTOMATION_ACCOUNT_IP_ANALYSIS,
 
 
         
@@ -579,6 +583,7 @@ class AccountLogEnum
             self::TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND => '自动化自动加微减少算力',
             self::TOKENS_DEC_AUTOMATION_OCR_LOCAL => '自动化获客视频号OCR减少算力',
             self::TOKENS_DEC_AUTOMATION_OCR_IMG => '自动化获客本地OCR减少算力',
+            self::TOKENS_DEC_AUTOMATION_ACCOUNT_IP_ANALYSIS => '自动化获客账号Ip人设分析报告减少算力',
         ];
         if ($flag) {
             return $desc;

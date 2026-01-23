@@ -163,7 +163,7 @@
                 </view>
             </view>
             <scroll-view class="h-full" scroll-y v-if="step == 4">
-                <view class="px-4">
+                <view class="px-4 pb-[150rpx]">
                     <view>
                         <view class="text-[30rpx] font-bold">视频名称</view>
                         <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4 h-[100rpx] flex items-center">
@@ -206,12 +206,14 @@
                             class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
                             <view class="text-[30rpx] font-bold">身份人设</view>
                             <view class="flex items-center gap-x-1" @click="handleStep(2)">
-                                <view class="text-primary line-clamp-1 min-w-[150rpx] text-end">{{
-                                    formData.person_name
-                                }}</view>
+                                <view
+                                    class="line-clamp-1 min-w-[150rpx] text-end"
+                                    :class="{ 'text-primary': formData.person_name }"
+                                    >{{ formData.person_name || "无" }}</view
+                                >
                                 <view class="w-[1rpx] h-[24rpx] bg-[#C6CACC] mx-1"></view>
-                                <view class="line-clamp-1 text-primary">
-                                    {{ formData.person_introduction }}
+                                <view class="line-clamp-1" :class="{ 'text-primary': formData.person_introduction }">
+                                    {{ formData.person_introduction || "无" }}
                                 </view>
                                 <u-icon name="arrow-right" :size="20" color="#C5CACA"></u-icon>
                             </view>
@@ -227,49 +229,121 @@
                                 <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
                             </view>
                         </view>
+
                         <view class="flex items-center justify-between h-[106rpx]">
+                            <view class="text-[30rpx] font-bold">背景音乐</view>
+                            <navigator
+                                :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
+                                    formData.music
+                                )}&volume=${formData.extra.volume}`"
+                                hover-class="none"
+                                class="flex items-center gap-x-1">
+                                <view>
+                                    <template v-if="formData.music.length > 0">
+                                        共<text class="mx-1 text-primary font-bold">{{ formData.music.length }}</text
+                                        >个
+                                    </template>
+                                    <text class="text-[#000000]/70" v-else>AI音乐库</text>
+                                </view>
+                                <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
+                            </navigator>
+                        </view>
+                    </view>
+                    <view class="flex items-center justify-between bg-white mt-[22rpx] p-4 rounded-[20rpx]">
+                        <view>
                             <view class="text-[30rpx] font-bold">生成视频数量</view>
-                            <view class="flex items-center gap-x-2">
-                                <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('minus')">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/icons/minus_circle.svg"
-                                        class="w-[36rpx] h-[36rpx]"></image>
-                                </view>
-                                <view
-                                    class="w-[90rpx] h-[52rpx] px-1 flex items-center justify-center bg-[#F6F6F6] rounded-[10rpx]">
-                                    <u-input
-                                        v-model="formData.video_count"
-                                        type="digit"
-                                        placeholder=""
-                                        :min="1"
-                                        :max="99"
-                                        :custom-style="{ color: '#0065fb', fontWeight: 'bold' }"
-                                        input-align="center" />
-                                </view>
-                                <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('add')">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/icons/add_circle.svg"
-                                        class="w-[36rpx] h-[36rpx]"></image>
-                                </view>
+                            <view class="text-[#000000]/50"> 每条真人口播素材生成视频的数量 </view>
+                        </view>
+                        <view class="flex items-center gap-x-2">
+                            <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('minus')">
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/minus_circle.svg"
+                                    class="w-[36rpx] h-[36rpx]"></image>
+                            </view>
+                            <view
+                                class="w-[90rpx] h-[52rpx] px-1 flex items-center justify-center bg-[#F6F6F6] rounded-[10rpx]">
+                                <u-input
+                                    v-model="formData.extra.video_count"
+                                    type="digit"
+                                    placeholder=""
+                                    :min="1"
+                                    :max="99"
+                                    :custom-style="{ color: '#0065fb', fontWeight: 'bold' }"
+                                    input-align="center" />
+                            </view>
+                            <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('add')">
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/add_circle.svg"
+                                    class="w-[36rpx] h-[36rpx]"></image>
                             </view>
                         </view>
                     </view>
-                    <view class="mt-[20rpx] flex items-center justify-between h-[110rpx] bg-white rounded-[20rpx] px-4">
-                        <view class="text-[30rpx] font-bold">背景音乐</view>
-                        <navigator
-                            :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
-                                formData.music
-                            )}&volume=${formData.extra.volume}`"
-                            hover-class="none"
-                            class="flex items-center gap-x-1">
-                            <view>
-                                <template v-if="formData.music.length > 0">
-                                    共<text class="mx-1 text-primary font-bold">{{ formData.music.length }}</text
-                                    >个
-                                </template>
-                                <text class="text-[#000000]/70" v-else>AI音乐库</text>
+                    <view class="mt-[22rpx] bg-white rounded-[20rpx] px-4">
+                        <view class="font-bold text-[30rpx] py-3">使用设置</view>
+
+                        <view
+                            class="flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#00000008]">
+                            <view
+                                class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
+                                <view class="font-bold">背景音乐使用</view>
                             </view>
-                            <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
+                            <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-[268rpx]">
+                                <view class="grid grid-cols-2 gap-x-1 h-[68rpx] relative">
+                                    <view
+                                        v-for="(item, index) in ['按顺序', '随机']"
+                                        :key="index"
+                                        class="type-item"
+                                        :class="{ active: index == formData.extra.music }"
+                                        @click="formData.extra.music = index">
+                                        {{ item }}
+                                    </view>
+                                    <view
+                                        class="tab-slider"
+                                        :style="{
+                                            transform: `translateX(${formData.extra.music * 100}%)`,
+                                        }"></view>
+                                </view>
+                            </view>
+                        </view>
+                        <view
+                            class="flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#00000008]">
+                            <view
+                                class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
+                                <view class="font-bold">视频风格</view>
+                            </view>
+                            <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-[268rpx]">
+                                <view class="grid grid-cols-2 gap-x-1 h-[68rpx] relative">
+                                    <view
+                                        v-for="(item, index) in ['随机', '手动选择']"
+                                        :key="index"
+                                        class="type-item"
+                                        :class="{ active: index == formData.extra.clip }"
+                                        @click="formData.extra.clip = index">
+                                        {{ item }}
+                                    </view>
+                                    <view
+                                        class="tab-slider"
+                                        :style="{
+                                            transform: `translateX(${formData.extra.clip * 100}%)`,
+                                        }"></view>
+                                </view>
+                            </view>
+                        </view>
+                        <navigator
+                            v-if="formData.extra.clip === 1"
+                            :url="`/ai_modules/digital_human/pages/montage_styles_choose/montage_styles_choose?type=${
+                                MontageStylesType.REAL_PERSON
+                            }&data=${JSON.stringify(formData.clip)}`"
+                            hover-class="none"
+                            class="flex items-center justify-between h-[106rpx]">
+                            <view class="text-[30rpx] font-bold">选择视频风格</view>
+                            <view class="flex items-center">
+                                <view>
+                                    共<text class="mx-1 text-primary font-bold">{{ formData.clip.length }}</text
+                                    >个
+                                </view>
+                                <u-icon name="arrow-right" :size="20" color="#C5CACA"></u-icon>
+                            </view>
                         </navigator>
                     </view>
                 </view>
@@ -309,38 +383,41 @@
                     <view
                         class="rounded-[16rpx] w-[456rpx] h-[100rpx] bg-black text-white font-bold flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
                         @click="handleCreateVideo">
-                        生成视频（{{ formData.video_count }}个）
+                        生成视频
                     </view>
                 </template>
             </view>
         </view>
     </view>
-    <choose-history v-model="showHistory" :type="3" @select="handleSelectHistory" />
-    <choose-character v-model="showCharacter" @select="handleSelectCharacter" />
+    <choose-history v-if="showHistory" v-model="showHistory" :type="3" @select="handleSelectHistory" />
+    <choose-character v-if="showCharacter" v-model="showCharacter" @select="handleSelectCharacter" />
     <upload-rule-pop
+        v-if="showUploadTip"
         v-model="showUploadTip"
         @handle-upload="uploadAndProcessFiles('video')"
         @close="isFirstOpen = false" />
-    <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
+    <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <video-preview
+        v-if="showVideoPreview"
         v-model="showVideoPreview"
         :video-url="playItem.url"
         :poster="playItem.pic"
         @update:show="showVideoPreview = false"></video-preview>
     <create-success-pop
+        v-if="showCreateSuccess"
         v-model="showCreateSuccess"
         title="视频生成中"
-        :desc="`本次提交视频 ${formData.video_count} 条，预计生成时间比较长，您可以先去设置发布任务，也可以等待视频生成成功后再发布`"
+        desc="您可以立即去设置发布任务，也可以等待视频生成成功后再发布"
         @to="toPublish"
         @seek="toRecord" />
-    <tokens-cost v-model="showTokensCost" :type="2" />
+    <tokens-cost v-if="showTokensCost" v-model="showTokensCost" :type="2" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
 </template>
 
 <script setup lang="ts">
 import { createShanjianTask, addShanjianPerson } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
-import { MontageTypeEnum } from "@/ai_modules/digital_human/enums";
+import { MontageTypeEnum, MontageStylesType } from "@/ai_modules/digital_human/enums";
 import useMontageMaterial, { montageConfig } from "@/hooks/useMontageMaterial";
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
@@ -372,12 +449,16 @@ const formData = reactive<{
     name: string;
     person_name: string;
     person_introduction: string;
-    video_count: number;
     shanjian_type: MontageTypeEnum;
     music: any[];
     extra: {
         volume: number;
+        music: number;
+        clip: number;
+        video_count: number;
     };
+    audio: any[];
+    clip: any[];
 }>({
     anchorLists: [],
     copywriterList: [],
@@ -385,12 +466,16 @@ const formData = reactive<{
     name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "真人口播视频智剪",
     person_name: "",
     person_introduction: "",
-    video_count: 1,
     shanjian_type: MontageTypeEnum.REAL_PERSON_AI,
     music: [],
     extra: {
         volume: 0.5,
+        music: 0,
+        clip: 0,
+        video_count: 1,
     },
+    audio: [],
+    clip: [],
 });
 
 const isFirstOpen = ref(true);
@@ -422,26 +507,19 @@ const rechargePopupRef = shallowRef();
 
 //判断是否可以下一步
 const canStepProceed = (stepNumber: number) => {
-    switch (stepNumber) {
-        case 1:
-            return formData.anchorLists.length > 0;
-        case 2:
-            return true;
-        case 3:
+    const strategy: Record<number, () => boolean> = {
+        1: () => formData.anchorLists.length > 0,
+        2: () => true,
+        3: () => {
             if (formData.materialList.length === 0) return true;
             const totalDuration =
                 formData.materialList.reduce((acc, item) => (item.type === "video" ? acc + item.duration : acc), 0) +
                 formData.materialList.filter((item: any) => item.type === "image").length * montageConfig.imageDuration;
-            if (totalDuration > montageConfig.materialTotalDuration * 60) {
-                uni.$u.toast(`素材总时长不能超过${montageConfig.materialTotalDuration}分钟`);
-                return false;
-            }
-            return true;
-        case 4:
-            return true;
-        default:
-            return false;
-    }
+            return totalDuration <= montageConfig.materialTotalDuration * 60;
+        },
+        4: () => true,
+    };
+    return strategy[stepNumber]?.() ?? false;
 };
 
 // 计算当前步骤是否可以点击“下一步”
@@ -605,23 +683,23 @@ const previewMaterial = (item: any) => {
 
 const handleMinusVideoCount = (type: "minus" | "add") => {
     if (type === "minus") {
-        if (formData.video_count <= 1) {
-            uni.$u.toast("最少生成1个视频哦");
+        if (formData.extra.video_count <= 1) {
+            uni.$u.toast("数量最少为1");
             return;
         }
-        formData.video_count--;
+        formData.extra.video_count--;
     } else {
-        if (formData.video_count >= 99) {
-            uni.$u.toast("最多生成99个视频哦");
+        if (formData.extra.video_count >= 99) {
+            uni.$u.toast("数量最多为99");
             return;
         }
-        formData.video_count++;
+        formData.extra.video_count++;
     }
 };
 
 const handleCreateVideo = async () => {
     // 判断是否有算力
-    if (userTokens.value < 0) {
+    if (userTokens.value <= 0) {
         rechargePopupRef.value?.open();
         return;
     }
@@ -629,8 +707,8 @@ const handleCreateVideo = async () => {
         uni.$u.toast("请输入视频名称");
         return;
     }
-    if (formData.video_count <= 0) {
-        uni.$u.toast("请输入生成视频数量");
+    if (formData.extra.clip === 1 && formData.clip.length === 0) {
+        uni.$u.toast("请选择视频风格");
         return;
     }
     uni.showLoading({
@@ -659,11 +737,10 @@ const handleCreateVideo = async () => {
                 cover: item.pic,
             })),
             shanjian_type: formData.shanjian_type,
-            video_count: formData.video_count,
             music: formData.music.map((item: any) => item.content),
-            extra: {
-                volume: formData.extra.volume,
-            },
+            extra: formData.extra,
+            audio: formData.audio,
+            clip: formData.clip.map((item: any) => ({ clip_template_id: item })),
         });
         if (formData.person_name && formData.person_introduction) {
             addShanjianPerson({
@@ -709,6 +786,10 @@ onLoad(() => {
             formData.music = data.music;
             formData.extra.volume = data.volume;
         }
+        if (type == ListenerTypeEnum.CHOOSE_VIDEO_STYLES) {
+            if (data.length === 0) return;
+            formData.clip = data;
+        }
     });
 });
 </script>
@@ -720,15 +801,14 @@ onLoad(() => {
         @apply text-black font-bold relative;
     }
 }
-.tab-slider {
-    @apply h-[calc(100%-10rpx)] w-[50%] rounded-[16rpx] bg-[#F9FAFB] absolute top-[4rpx] left-0 transition-all duration-500;
-    &::after {
-        content: "";
-        @apply absolute bottom-0 w-[20%] h-[4rpx] bg-black;
-        // 让线居中
-        left: 0;
-        right: 0;
-        margin: auto;
+
+.type-item {
+    @apply flex flex-col items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500 text-xs;
+    &.active {
+        @apply text-primary font-bold relative;
     }
+}
+.tab-slider {
+    @apply h-[calc(100%-10rpx)] w-[50%] rounded-[16rpx] bg-white absolute top-[6rpx] left-0 transition-all duration-500;
 }
 </style>

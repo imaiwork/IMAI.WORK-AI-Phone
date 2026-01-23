@@ -282,6 +282,7 @@ const startUpload = async () => {
 
     // 开始上传
     const { upload } = useUpload({
+        isTranscode: true,
         size: commonUploadLimit.size,
         widthResolution: [commonUploadLimit.minWidthResolution, commonUploadLimit.maxWidthResolution],
         heightResolution: [commonUploadLimit.minHeightResolution, commonUploadLimit.maxHeightResolution],

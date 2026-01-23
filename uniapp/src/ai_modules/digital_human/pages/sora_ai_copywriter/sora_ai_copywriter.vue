@@ -9,7 +9,6 @@
                 <textarea
                     class="w-full"
                     v-model="contentVal"
-                    focus
                     type="textarea"
                     height="160"
                     placeholder="请输入或粘贴您的文案 ..."

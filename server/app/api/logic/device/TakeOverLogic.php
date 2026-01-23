@@ -70,6 +70,7 @@ class TakeOverLogic extends ApiLogic
                         'task_name' => '设备接管任务',
                         'status' => 0,
                         'day' => date('Y-m-d',$time['start_time']),
+                        'time_config' => $params['time_config'],
                         'start_time' => $time['start_time'],
                         'end_time' => $time['end_time'],
                         'sub_task_id' => $row->id,

@@ -571,6 +571,7 @@ trait AichatTrait
                     'frequency_penalty' => $payload['request']['frequency_penalty'] ?? 0.3,
                     'max_tokens' => $payload['request']['max_tokens'] ?? 4096,
                     'context_num' => $payload['request']['context_num'] ?? 3,
+                    'kb_id' => $payload['robot']['kb_ids']
                 ]);
                 if ($chatStatus === false) {
                     $reply = '我现在有点累了，稍后再回答您的问题';

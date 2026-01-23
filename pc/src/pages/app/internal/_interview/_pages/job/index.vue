@@ -46,7 +46,7 @@
                         </div>
 
                         <div class="flex gap-4">
-                            <div class="p-1 rounded-xl bg-[#F8FAFC] border border-[#F1F5F9] shrink-0">
+                            <div class="p-1 rounded-xl bg-slate-50 border border-[#F1F5F9] shrink-0">
                                 <ElImage :src="item.avatar" lazy fit="cover" class="w-12 h-12 rounded-lg" />
                             </div>
                             <div class="min-w-0">
@@ -78,7 +78,7 @@
                                 @hide="visibleChange(false, item.id)">
                                 <template #reference>
                                     <div
-                                        class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+                                        class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-50 transition-colors cursor-pointer"
                                         @click.stop>
                                         <Icon name="el-icon-MoreFilled" color="#94A3B8" :size="14"></Icon>
                                     </div>

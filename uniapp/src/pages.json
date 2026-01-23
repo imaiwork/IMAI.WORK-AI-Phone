@@ -225,15 +225,6 @@
 					}
 				},
 				{
-					"path": "pages/rpa_code/rpa_code",
-					"style": {
-						"navigationBarTitleText": "设备绑定码"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
 					"path": "pages/creation/creation",
 					"style": {
 						"navigationBarTitleText": "我的创作库",
@@ -253,16 +244,6 @@
 					"meta": {
 						"share": true,
 						"auth": true
-					}
-				},
-				{
-					"path": "pages/task_tutorial/task_tutorial",
-					"style": {
-						"navigationBarTitleText": "任务操作教程",
-						"navigationBarBackgroundColor": "#F8FAFD"
-					},
-					"meta": {
-						"share": true
 					}
 				}
 			]
@@ -583,6 +564,15 @@
 					"path": "pages/music_choose/music_choose",
 					"style": {
 						"navigationBarTitleText": "背景音乐"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/montage_styles_choose/montage_styles_choose",
+					"style": {
+						"navigationBarTitleText": "选择视频风格"
 					},
 					"meta": {
 						"auth": true
@@ -1028,9 +1018,7 @@
 				{
 					"path": "pages/create_auto_task/create_auto_task",
 					"style": {
-						"navigationBarTitleText": "AI运营顾问",
-						"navigationStyle": "custom",
-						"disableScroll": true
+						"navigationBarTitleText": "AI运营顾问"
 					},
 					"meta": {
 						"auth": true
@@ -1177,6 +1165,25 @@
 					},
 					"meta": {
 						"auth": true
+					}
+				},
+				{
+					"path": "pages/rpa_code/rpa_code",
+					"style": {
+						"navigationBarTitleText": "设备绑定码"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/task_tutorial/task_tutorial",
+					"style": {
+						"navigationBarTitleText": "任务操作教程",
+						"navigationBarBackgroundColor": "#F8FAFD"
+					},
+					"meta": {
+						"share": true
 					}
 				}
 			]

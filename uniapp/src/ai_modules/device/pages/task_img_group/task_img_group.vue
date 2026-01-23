@@ -10,7 +10,7 @@
                     <view
                         v-for="(image, index) in imageList"
                         :key="index"
-                        class="relative w-full h-[220rpx] bg-white rounded-[20rpx]"
+                        class="relative aspect-[3/4] bg-white rounded-[20rpx]"
                         @click="previewImage(index)">
                         <image :src="image" mode="aspectFill" class="w-full h-full rounded-[20rpx]"></image>
                         <view
@@ -24,7 +24,7 @@
                     </view>
                     <view
                         v-if="imageList.length < limit"
-                        class="bg-white rounded-[20rpx] h-[220rpx] flex flex-col items-center justify-center"
+                        class="bg-white rounded-[20rpx] aspect-[3/4] flex flex-col items-center justify-center"
                         @click="chooseUploadType">
                         <view class="w-[32rpx] h-[32rpx] bg-[#00000066] flex items-center justify-center rounded-full">
                             <u-icon name="plus" size="24" color="#ffffff"></u-icon>
@@ -56,14 +56,20 @@
     <choose-material
         v-model="showImgMaterial"
         type="image"
-        :limit="limit - imageList.length"
+        :limit="replaceImageIndex == -1 ? limit - imageList.length : 1"
         @select="handleSelectImgMaterial" />
+    <choose-history
+        v-model="showHistory"
+        type="image"
+        :limit="replaceImageIndex == -1 ? limit - imageList.length : 1"
+        @select="handleSelectHistory" />
 </template>
 
 <script setup lang="ts">
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import useUpload from "@/hooks/useUpload";
+import ChooseHistory from "@/ai_modules/device/components/choose-history/choose-history.vue";
 
 const { emit } = useEventBusManager();
 
@@ -72,9 +78,7 @@ const limit = 9;
 // 图片上传大小
 const imageSize = 50;
 // 上传格式
-const uploadFormat = ["jpg", "png", "jpeg"];
-// 图片分辨率
-const imageResolution = [5000, 5000];
+const uploadFormat = ["jpg", "png", "jpeg", "webp"];
 // 图片列表
 const imageList = ref<any[]>([]);
 // 是否显示上传提示
@@ -85,21 +89,21 @@ const uploadType = ref<"file" | "image">("image");
 const showImgMaterial = ref(false);
 // 替换图片索引
 const replaceImageIndex = ref(-1);
+// 是否显示创作历史
+const showHistory = ref(false);
 // 获取上传提示内容
 const getTipsContent = computed(() => {
     return `
-        <div>· 图片素材支持：${uploadFormat.join("、")}格式，${imageSize}M以内，分辨率不超过${imageResolution[0]}*${
-        imageResolution[1]
-    }</div>
+        <div>· 图片素材支持：${uploadFormat.join("、")}格式，${imageSize}M以内</div>
     <div class="mt-2">· 最多可传${limit}张图片</div>
     <div class="mt-2">· 不符合条件的图片会被自动删除</div>
     `;
 });
 
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
+    isTranscode: true,
     count: limit,
     imageAccept: uploadFormat,
-    imageResolution: imageResolution,
     imageSize: imageSize,
     fileAccept: uploadFormat,
     fileSize: imageSize,
@@ -121,7 +125,7 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
 const chooseUploadType = () => {
     showUploadTip.value = false;
     uni.showActionSheet({
-        itemList: ['从"微信聊天"中选择', '从"素材库"中选择', '从"手机相册"中选择'],
+        itemList: ['从"微信聊天"中选择', '从"素材库"中选择', '从"手机相册"中选择', '从"创作历史"中选择'],
         success: (res) => {
             if (res.tapIndex == 0 || res.tapIndex == 2) {
                 uploadType.value = res.tapIndex == 0 ? "file" : "image";
@@ -137,6 +141,9 @@ const chooseUploadType = () => {
             if (res.tapIndex == 1) {
                 showImgMaterial.value = true;
             }
+            if (res.tapIndex == 3) {
+                showHistory.value = true;
+            }
         },
     });
 };
@@ -147,6 +154,15 @@ const handleSelectImgMaterial = async (res: any[]) => {
         imageList.value[replaceImageIndex.value] = uploadImages[0];
     } else {
         imageList.value = imageList.value.concat(uploadImages);
+    }
+    replaceImageIndex.value = -1;
+};
+
+const handleSelectHistory = (res: any[]) => {
+    if (replaceImageIndex.value !== -1) {
+        imageList.value[replaceImageIndex.value] = res[0].image;
+    } else {
+        imageList.value = imageList.value.concat(res.map((item: any) => item.image));
     }
     replaceImageIndex.value = -1;
 };
@@ -166,6 +182,7 @@ const handleReplaceImage = (index: number) => {
     replaceImageIndex.value = index;
     chooseUploadType();
 };
+
 const handleConfirm = () => {
     if (imageList.value.length === 0) {
         uni.$u.toast(`至少需要上传1张图`);

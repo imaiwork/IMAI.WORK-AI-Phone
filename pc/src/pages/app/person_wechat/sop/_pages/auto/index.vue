@@ -132,7 +132,7 @@
             </ElTable>
         </div>
 
-        <div class="flex justify-between items-center px-8 py-5 bg-[#F8FAFC]">
+        <div class="flex justify-between items-center px-8 py-5 bg-slate-50">
             <span class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider"
                 >共 {{ pager.count }} 个自动化方案</span
             >

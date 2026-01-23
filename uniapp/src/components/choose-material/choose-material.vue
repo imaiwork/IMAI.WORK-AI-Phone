@@ -15,18 +15,17 @@
                         @query="queryList">
                         <view
                             class="grid grid-cols-3 gap-2 px-4"
-                            :class="[props.type == 'video' ? 'grid-cols-3' : 'grid-cols-4']">
+                            :class="[props.type == 'video' ? 'grid-cols-2' : 'grid-cols-3']">
                             <view
-                                class="rounded-xl relative overflow-hidden"
-                                :class="props.type == 'video' ? 'h-[288rpx]' : 'h-[170rpx]'"
+                                class="rounded-xl relative overflow-hidden aspect-[3/4]"
                                 v-for="(item, index) in dataLists"
                                 :key="index"
                                 @click="handleSelect(item)">
                                 <image
-                                    v-if="item.m_type == 1"
+                                    v-if="item.m_type == 1 || item.pic"
                                     :src="item.pic"
                                     class="w-full h-full rounded-xl"
-                                    lazy
+                                    lazy-load
                                     mode="aspectFill"></image>
                                 <video
                                     v-else
@@ -60,10 +59,9 @@
                     <view class="flex items-center gap-x-2" @click="toggleSelect" v-if="props.multiple">
                         <view class="w-[32rpx] h-[32rpx]">
                             <image
-                                v-if="chooseLists.length > 0 && chooseLists.length == dataLists.length"
+                                v-if="chooseLists.length > 0 && isAllSelected"
                                 src="/static/images/icons/success.svg"
-                                class="w-full h-full"
-                                lazy></image>
+                                class="w-full h-full"></image>
                             <view class="w-full h-full rounded-full shadow-[0_0_0_2rpx_rgba(0,0,0,0.2)]" v-else> </view>
                         </view>
                         <view>全选</view>
@@ -101,9 +99,11 @@ const show = computed({
 
 const dataLists = ref<any[]>([]);
 const pagingRef = ref<any>(null);
-
 const chooseLists = ref<any[]>([]);
 
+const isAllSelected = computed(() => {
+    return chooseLists.value.length == dataLists.value.slice(0, props.limit || dataLists.value.length).length;
+});
 const queryList = async (page_no: number, page_size: number) => {
     try {
         const { lists } = await getMaterialLibraryList({
@@ -142,7 +142,7 @@ const handleSelect = (data: any) => {
 };
 
 const toggleSelect = () => {
-    if (chooseLists.value.length == dataLists.value.length) {
+    if (isAllSelected.value) {
         chooseLists.value = [];
     } else {
         chooseLists.value = dataLists.value.slice(0, props.limit || dataLists.value.length);

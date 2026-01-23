@@ -16,7 +16,7 @@
         </div>
 
         <div class="grow min-h-0 flex flex-col bg-white rounded-[20px] border border-br overflow-hidden mt-4">
-            <div class="px-6 bg-[#F8FAFC]/50 border-b border-[#F1F5F9]">
+            <div class="px-6 bg-slate-50/50 border-b border-[#F1F5F9]">
                 <ElTabs v-model="currentTab" @tab-click="handleTabClick" class="custom-tabs">
                     <ElTabPane v-for="item in tabs" :key="item.value" :label="item.label" :name="item.value" />
                 </ElTabs>
@@ -51,7 +51,7 @@
                                             v-if="item.image" />
                                         <div
                                             v-else
-                                            class="w-full h-full flex items-center justify-center text-[#94A3B8] bg-[#F8FAFC] rounded-lg">
+                                            class="w-full h-full flex items-center justify-center text-[#94A3B8] bg-slate-50 rounded-lg">
                                             <Icon name="local-icon-windows2" :size="28" />
                                         </div>
                                     </div>

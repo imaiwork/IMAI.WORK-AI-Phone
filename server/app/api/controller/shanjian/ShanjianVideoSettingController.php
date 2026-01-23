@@ -36,16 +36,16 @@ class ShanjianVideoSettingController extends BaseApiController
             $params['shanjian_type'] =  $params['shanjian_type'] ?? 1;
 
             switch ( $params['shanjian_type']){
-                case 1:
+                case 1://数字人口播
                     $result = ShanjianVideoSettingLogic::add($params);
                     break;
-                case 2:
+                case 2://真人口播
                     $result = ShanjianVideoSettingLogic::addType2($params);
                     break;
-                case 3:
+                case 3://素材
                     $result = ShanjianVideoSettingLogic::addType3($params);
                     break;
-               case 4:
+               case 4://新闻体
                     $result = ShanjianVideoSettingLogic::addType4($params);
                     break;
                 default:

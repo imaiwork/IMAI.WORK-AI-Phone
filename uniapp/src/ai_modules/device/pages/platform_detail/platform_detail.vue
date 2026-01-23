@@ -12,7 +12,7 @@
         <view class="rounded-[20rpx] mx-[26rpx] mt-[12rpx] bg-white">
             <view class="grid grid-cols-4 bg-[#00000012] rounded-tl-[20rpx] rounded-tr-[20rpx]">
                 <view
-                    v-for="(item, index) in platformList"
+                    v-for="(item, index) in getSortedPlatform"
                     class="platform-item"
                     :key="index"
                     :class="{ active: currentPlatform == item.type }"
@@ -386,7 +386,6 @@
 </template>
 
 <script setup lang="ts">
-// 导入API服务
 import {
     addDeviceAccount,
     updateDeviceAccount,
@@ -401,63 +400,28 @@ import { AppTypeEnum, DeviceCmdEnum, DeviceCmdCodeEnum } from "@/enums/appEnums"
 import { formatNumberToWanOrYi } from "@/utils/util";
 import { useDevice } from "@/ai_modules/device/hooks/useDevice";
 import useDeviceWs from "@/ai_modules/device/hooks/useDeviceWs";
+import { useDeviceStore } from "@/ai_modules/device/stores/device";
 import { DeviceEventAction } from "@/ai_modules/device/enums";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 
-// 初始化WebSocket服务
 const { send, onEvent, close } = useDeviceWs();
-
-// 获取平台Logo配置
-const { platformLogo } = useDevice();
-
-// 设备唯一标识码
+const deviceStore = useDeviceStore();
+const { getSortedPlatform } = storeToRefs(deviceStore);
 const deviceCode = ref<string>("");
-
-// 当前事件动作类型
 const eventAction = ref<DeviceEventAction | null>();
 
-// 平台列表数据
-const platformList = [
-    {
-        name: "微信",
-        type: AppTypeEnum.WECHAT,
-    },
-    {
-        name: "小红书",
-        type: AppTypeEnum.XHS,
-    },
-    {
-        name: "抖音",
-        type: AppTypeEnum.DOUYIN,
-    },
-    {
-        name: "快手",
-        type: AppTypeEnum.KUAISHOU,
-    },
-];
-
-// 当前选中的平台类型
 const currentPlatform = ref<AppTypeEnum>(AppTypeEnum.WECHAT);
-// 当前平台账号信息
 const currentPlatformAccount = ref<any>({});
-// 根据当前平台类型计算出对应的平台项
 const currentPlatformItem = computed(() => {
-    return platformList.find((item) => item.type == currentPlatform.value);
+    return getSortedPlatform.value.find((item) => item.type == currentPlatform.value);
 });
 
-// 控制机器人选择弹窗的显示
 const showRobotPopup = ref<boolean>(false);
-// 机器人列表的分页引用
 const robotPagingRef = shallowRef();
-// 机器人列表数据
 const robotList = ref<any[]>([]);
-// 当前选中的机器人ID
 const selectedRobotId = ref<string>("");
-
-// 控制移除账号确认弹窗的显示
 const showRemovePopup = ref<boolean>(false);
 
-// 根据当前平台类型计算出Tab列表
 const getTabList = computed(() => {
     const commonTabs = {
         name: "发布详情",
@@ -475,19 +439,11 @@ const getTabList = computed(() => {
     return [commonTabs];
 });
 
-// 当前选中的Tab索引
 const currentTab = ref<number>(0);
-
-// 列表分页引用
 const pagingRef = shallowRef();
-// 列表数据
 const dataList = ref<any[]>([]);
-
-// 控制更新弹窗的显示
 const showUpdate = ref<boolean>(false);
-// 控制更新进度弹窗的显示
 const showUpdateProgress = ref<boolean>(false);
-// 更新账号的步骤列表
 const updateAccountSteps = ref<any[]>([
     {
         title: "正在发送指令",
@@ -531,23 +487,18 @@ const updateAccountSteps = ref<any[]>([
         type: DeviceCmdEnum.GET_ACCOUNT_INFO_COMPLETE,
     },
 ]);
-// 记录当前正在执行的步骤索引
 const currentStep = ref<number>(0);
 
-// 控制视频预览弹窗的显示
 const showVideoPreview = ref(false);
-// 预览视频的信息
 const previewVideo = reactive({
     url: "",
     pic: "",
 });
 
-// 判断所有更新步骤是否已完成
 const isExecuteComplete = computed(() => {
     return updateAccountSteps.value.every((item) => item.status === 2);
 });
 
-// 将私信记录按日期分组并格式化
 const getPrivateChatRecordList = computed(() => {
     const groupList: any = [];
     const weekList = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
@@ -570,7 +521,6 @@ const getPrivateChatRecordList = computed(() => {
     return groupList.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 });
 
-// 监听WebSocket成功事件
 onEvent("success", async (data: any) => {
     const { type, content, deviceId, appType } = data;
 
@@ -606,22 +556,28 @@ onEvent("success", async (data: any) => {
             nickname,
             extra: JSON.stringify(extra),
         };
-
-        if (eventAction.value === DeviceEventAction.ADD_ACCOUNT) {
-            await addDeviceAccount(params);
+        try {
+            if (eventAction.value === DeviceEventAction.ADD_ACCOUNT) {
+                await addDeviceAccount(params);
+                uni.hideLoading();
+            } else if (eventAction.value === DeviceEventAction.UPDATE_ACCOUNT) {
+                await updateDeviceAccount({ ...params, id: currentPlatformAccount.value.id });
+            }
+            eventAction.value = null;
+            showUpdate.value = false;
             uni.hideLoading();
-        } else if (eventAction.value === DeviceEventAction.UPDATE_ACCOUNT) {
-            await updateDeviceAccount({ ...params, id: currentPlatformAccount.value.id });
+            getDeviceAccount();
+            pagingRef.value.reload();
+        } catch (error: any) {
+            uni.showToast({
+                title: error,
+                icon: "none",
+                duration: 3000,
+            });
         }
-        eventAction.value = null;
-        showUpdate.value = false;
-        uni.hideLoading();
-        getDeviceAccount();
-        pagingRef.value.reload();
     }
 });
 
-// 监听WebSocket错误事件
 onEvent("error", (error: any) => {
     const { type, code } = error;
     uni.hideLoading();
@@ -642,7 +598,6 @@ onEvent("error", (error: any) => {
     }
 });
 
-// 查询机器人列表
 const queryRobotList = async (pageNo: number, pageSize: number) => {
     try {
         const { lists } = await getAgentList({
@@ -656,18 +611,15 @@ const queryRobotList = async (pageNo: number, pageSize: number) => {
     }
 };
 
-// 处理机器人选择
 const handleSelectRobot = (item: any) => {
     selectedRobotId.value = selectedRobotId.value === item.id ? "" : item.id;
 };
 
-// 获取平台Logo图片
 const getPlatformLogo = (type: AppTypeEnum) => {
-    const data = platformLogo[type as keyof typeof platformLogo];
+    const data = getSortedPlatform.value.find((item) => item.type == type) || ({} as any);
     return currentPlatform.value == type ? data.activeIcon : data.icon;
 };
 
-// 切换平台
 const handlePlatformClick = async (type: AppTypeEnum) => {
     if (currentPlatform.value === type) return;
     currentPlatform.value = type;
@@ -676,14 +628,12 @@ const handlePlatformClick = async (type: AppTypeEnum) => {
     pagingRef.value?.reload();
 };
 
-// 切换Tab
 const handleTabChange = (index: number) => {
     if (currentTab.value === index) return;
     currentTab.value = index;
     pagingRef.value?.reload();
 };
 
-// 处理更新账号操作
 const handleUpdateAccount = (event: DeviceEventAction) => {
     if (event == DeviceEventAction.ADD_ACCOUNT) {
         handleAccountConfirm();
@@ -691,14 +641,12 @@ const handleUpdateAccount = (event: DeviceEventAction) => {
         showUpdate.value = true;
     }
     eventAction.value = event;
-    // 重置所有步骤状态
     updateAccountSteps.value.forEach((item) => {
         item.status = 0;
     });
     currentStep.value = 0;
 };
 
-// 确认账号更新/添加
 const handleAccountConfirm = () => {
     showUpdate.value = false;
     if (currentPlatform.value != AppTypeEnum.WECHAT) {
@@ -719,7 +667,6 @@ const handleAccountConfirm = () => {
     });
 };
 
-// 确认移除账号
 const handleAccountRemoveConfirm = async () => {
     showRemovePopup.value = false;
     uni.showLoading({
@@ -747,7 +694,6 @@ const handleAccountRemoveConfirm = async () => {
     }
 };
 
-// 处理私信接管开关状态变更
 const handleOpenAiChange = async (value: boolean) => {
     uni.showLoading({
         title: "更新中...",
@@ -777,7 +723,6 @@ const handleOpenAiChange = async (value: boolean) => {
     }
 };
 
-// 确认绑定机器人
 const handleBindRobotConfirm = async () => {
     uni.showLoading({
         title: "绑定中...",
@@ -809,7 +754,6 @@ const handleBindRobotConfirm = async () => {
     }
 };
 
-// 获取设备账号信息
 const getDeviceAccount = async () => {
     const { lists } = await getDeviceAccountList({
         device_code: deviceCode.value,
@@ -823,7 +767,6 @@ const getDeviceAccount = async () => {
     }
 };
 
-// 查询发布/私信列表
 const queryList = async (pageNo: number, pageSize: number) => {
     try {
         let lists: any[] = [];
@@ -854,7 +797,6 @@ const queryList = async (pageNo: number, pageSize: number) => {
     }
 };
 
-// 根据发布状态获取对应的样式
 const getPublishStatusStyle = (status: number) => {
     switch (status) {
         case 0:
@@ -868,7 +810,6 @@ const getPublishStatusStyle = (status: number) => {
     }
 };
 
-// 根据发布状态获取对应的文本
 const getPublishStatusText = (status: number) => {
     const statusMap: { [key: number]: string } = {
         0: "未发布",
@@ -879,14 +820,12 @@ const getPublishStatusText = (status: number) => {
     return statusMap[status] || "未知状态"; // 添加默认值处理未知状态
 };
 
-// 处理视频播放
 const handlePlayVideo = (item: any) => {
     showVideoPreview.value = true;
     previewVideo.pic = item.pic;
     previewVideo.url = item.material_url;
 };
 
-// 处理图片预览
 const handlePreviewImage = (item: any) => {
     const { pic } = item;
     uni.previewImage({
@@ -894,7 +833,6 @@ const handlePreviewImage = (item: any) => {
     });
 };
 
-// 页面加载生命周期钩子
 onLoad((options: any) => {
     const { device_code, app_type } = options;
     if (device_code) {

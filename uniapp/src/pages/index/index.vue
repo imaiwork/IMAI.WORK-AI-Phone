@@ -40,7 +40,7 @@
                             }">
                             <view
                                 class="px-4 h-full flex items-center justify-between"
-                                @click="toPage(isLogin ? PageKeyEnum.DEVICE_BIND : PageKeyEnum.DEVICE_CONFIG)">
+                                @click="toPage(isLogin ? PageKeyEnum.DEVICE_CONFIG : PageKeyEnum.LOGIN)">
                                 <view>
                                     <view class="text-[34rpx] text-white font-bold">24h全自动工作 省心托管</view>
                                     <view
@@ -209,6 +209,7 @@ interface ChatLogParams {
 }
 
 enum PageKeyEnum {
+    LOGIN = "login",
     CREATE_TASK = "create_task",
     VIEW_SCHEDULE = "view_schedule",
     AI_CUSTOMER = "ai_customer",
@@ -314,6 +315,7 @@ const aiCreationVideoList = [
  */
 const toPage = (key: PageKeyEnum) => {
     const urls = {
+        [PageKeyEnum.LOGIN]: "/pages/login/login",
         [PageKeyEnum.CREATE_TASK]: "/ai_modules/device/pages/choose_task_type/choose_task_type",
         [PageKeyEnum.VIEW_SCHEDULE]: "/ai_modules/device/pages/task_calendar_full/task_calendar_full",
         [PageKeyEnum.DH]: "/ai_modules/digital_human/pages/index/index",
@@ -334,7 +336,7 @@ const toPage = (key: PageKeyEnum) => {
         [PageKeyEnum.ONE_SENTENCE_GENERATION]: "/ai_modules/digital_human/pages/sora_create/sora_create",
         [PageKeyEnum.NEWS_BODY_GENERATION]: "/ai_modules/digital_human/pages/montage_news_create/montage_news_create",
         [PageKeyEnum.DEVICE_CONFIG]: "/pages/phone/phone",
-        [PageKeyEnum.DEVICE_BIND]: "/packages/pages/rpa_code/rpa_code",
+        [PageKeyEnum.DEVICE_BIND]: "/ai_modules/device/pages/rpa_code/rpa_code",
     };
     uni.navigateTo({
         url: urls[key as keyof typeof urls],
@@ -442,7 +444,6 @@ const getChatList = async () => {
         });
 
         chatContentList.value = transformData;
-        console.log("chatContentList", chatContentList.value);
 
         await nextTick();
         chattingRef.value.scrollToBottom();

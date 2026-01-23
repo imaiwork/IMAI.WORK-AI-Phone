@@ -91,48 +91,106 @@
                 </view>
             </view>
             <view v-if="step === 2" class="h-full flex flex-col">
-                <view class="flex items-center gap-x-2 px-4">
-                    <view
-                        class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
-                        @click="handleShowCopywriter()">
-                        <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="font-bold text-[32rpx]">手动输入</text>
+                <view class="flex justify-center mb-3">
+                    <view class="bg-white rounded-[16rpx] px-[8rpx]">
+                        <view class="w-[360rpx] grid grid-cols-2 relative h-[80rpx]">
+                            <view
+                                v-for="(item, index) in ['选择文案', '选择音频']"
+                                :key="index"
+                                class="type-item"
+                                :class="{ active: copywriterTypeIndex === index }"
+                                @click="copywriterTypeIndex = index">
+                                {{ item }}
+                            </view>
+                            <view
+                                class="tab-slider !bg-[#0065fb]/5"
+                                :style="{ transform: `translateX(${copywriterTypeIndex * 100}%)` }"></view>
+                        </view>
                     </view>
-                    <navigator
-                        url="/ai_modules/digital_human/pages/montage_ai_copywriter/montage_ai_copywriter"
-                        hover-class="none"
-                        class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-black rounded-[10rpx]"
-                        @click="editCopywriterIndex = -1">
-                        <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="text-white font-bold text-[32rpx]">AI生成</text>
-                    </navigator>
+                </view>
+                <view class="flex items-center gap-x-2 px-4">
+                    <template v-if="copywriterTypeIndex === 0">
+                        <view
+                            class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
+                            @click="handleShowCopywriter()">
+                            <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
+                            <text class="font-bold text-[32rpx]">手动输入</text>
+                        </view>
+                        <navigator
+                            url="/ai_modules/digital_human/pages/montage_ai_copywriter/montage_ai_copywriter"
+                            hover-class="none"
+                            class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-black rounded-[10rpx]"
+                            @click="editCopywriterIndex = -1">
+                            <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
+                            <text class="text-white font-bold text-[32rpx]">AI生成</text>
+                        </navigator>
+                    </template>
+                    <view
+                        v-if="copywriterTypeIndex === 1"
+                        class="bg-white rounded-[10rpx] w-full h-[100rpx] flex items-center justify-center gap-x-2"
+                        @click="showAudioType = true">
+                        <u-icon name="plus" size="20"></u-icon>
+                        <text class="font-bold text-[32rpx]">添加音频</text>
+                    </view>
                 </view>
                 <view class="grow min-h-0 mt-4">
                     <scroll-view scroll-y class="h-full">
                         <view class="px-4 flex flex-col gap-4 pb-4">
-                            <view
-                                v-for="(item, index) in formData.copywriterList"
-                                :key="index"
-                                class="copywriter-item"
-                                @click="handleSelectCopywriter(index)">
-                                <view class="text-[32rpx] font-bold mr-4">
-                                    {{ item.title }}
-                                </view>
-                                <view class="mt-[28rpx]">
-                                    {{ item.content }}
-                                </view>
+                            <template v-if="copywriterTypeIndex === 0">
                                 <view
-                                    class="absolute right-2 top-2 rounded-full flex item-center justify-center w-4 h-4 bg-[#0000004C]"
-                                    @click.stop="handleDeleteCopywriter(index)">
-                                    <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                    v-for="(item, index) in formData.copywriterList"
+                                    :key="index"
+                                    class="copywriter-item"
+                                    @click="handleSelectCopywriter(index)">
+                                    <view class="text-[32rpx] font-bold mr-4">
+                                        {{ item.title }}
+                                    </view>
+                                    <view class="mt-[28rpx]">
+                                        {{ item.content }}
+                                    </view>
+                                    <view
+                                        class="absolute right-2 top-2 rounded-full flex item-center justify-center w-4 h-4 bg-[#0000004C]"
+                                        @click.stop="handleDeleteCopywriter(index)">
+                                        <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                    </view>
                                 </view>
-                            </view>
+                            </template>
+                            <template v-if="copywriterTypeIndex === 1">
+                                <view v-for="(item, index) in formData.audio" :key="index" class="copywriter-item">
+                                    <view class="flex items-center gap-x-2">
+                                        <view @click="handlePlayAudio(item.url, index)">
+                                            <u-icon
+                                                :name="
+                                                    isPlaying && currentAudioIndex === index
+                                                        ? 'pause-circle'
+                                                        : 'play-circle'
+                                                "
+                                                color="#0065fb"
+                                                size="50"></u-icon>
+                                        </view>
+                                        <text class="font-bold text-[30rpx]">录制的音频</text>
+                                    </view>
+                                    <view class="mt-[40rpx] pb-3">
+                                        <u-input
+                                            v-model="item.content"
+                                            type="textarea"
+                                            placeholder="请输入音频内容"
+                                            height="250"
+                                            maxlength="1500" />
+                                    </view>
+                                    <view
+                                        class="absolute right-2 top-2 rounded-full flex item-center justify-center w-4 h-4 bg-[#0000004C]"
+                                        @click.stop="handleDeleteCopywriter(index)">
+                                        <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                    </view>
+                                </view>
+                            </template>
                         </view>
                     </scroll-view>
                 </view>
             </view>
             <scroll-view class="h-full" scroll-y v-if="step == 3">
-                <view class="px-4">
+                <view class="px-4 pb-[150rpx]">
                     <view class="text-[30rpx] font-bold">视频名称</view>
                     <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4 h-[100rpx] flex items-center">
                         <u-input
@@ -181,50 +239,120 @@
                             <view class="text-[30rpx] font-bold">素材视频原声</view>
                             <u-switch v-model="formData.extra" inactive-color="#E5E5E5" :size="40" />
                         </view>
-                        <view
-                            class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
+                        <view class="flex items-center justify-between h-[106rpx]">
+                            <view class="text-[30rpx] font-bold">背景音乐</view>
+                            <navigator
+                                :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
+                                    formData.music
+                                )}&volume=${formData.extra.volume}`"
+                                hover-class="none"
+                                class="flex items-center gap-x-1">
+                                <view>
+                                    <template v-if="formData.music.length > 0">
+                                        共<text class="mx-1 text-primary font-bold">{{ formData.music.length }}</text
+                                        >个
+                                    </template>
+                                    <text class="text-[#000000]/70" v-else>AI音乐库</text>
+                                </view>
+                                <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
+                            </navigator>
+                        </view>
+                    </view>
+                    <view class="flex items-center justify-between bg-white mt-[22rpx] p-4 rounded-[20rpx]">
+                        <view>
                             <view class="text-[30rpx] font-bold">生成视频数量</view>
-                            <view class="flex items-center gap-x-2">
-                                <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('minus')">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/icons/minus_circle.svg"
-                                        class="w-[36rpx] h-[36rpx]"></image>
-                                </view>
-                                <view
-                                    class="w-[90rpx] h-[52rpx] px-1 flex items-center justify-center bg-[#F6F6F6] rounded-[10rpx]">
-                                    <u-input
-                                        v-model="formData.video_count"
-                                        type="digit"
-                                        placeholder=""
-                                        :min="1"
-                                        :max="99"
-                                        :custom-style="{ color: '#0065fb', fontWeight: 'bold' }"
-                                        input-align="center" />
-                                </view>
-                                <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('add')">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/icons/add_circle.svg"
-                                        class="w-[36rpx] h-[36rpx]"></image>
-                                </view>
+                            <view class="text-[#000000]/50"> 每条素材生成视频的数量 </view>
+                        </view>
+                        <view class="flex items-center gap-x-2">
+                            <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('minus')">
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/minus_circle.svg"
+                                    class="w-[36rpx] h-[36rpx]"></image>
+                            </view>
+                            <view
+                                class="w-[90rpx] h-[52rpx] px-1 flex items-center justify-center bg-[#F6F6F6] rounded-[10rpx]">
+                                <u-input
+                                    v-model="formData.extra.video_count"
+                                    type="digit"
+                                    placeholder=""
+                                    :min="1"
+                                    :max="99"
+                                    :custom-style="{ color: '#0065fb', fontWeight: 'bold' }"
+                                    input-align="center" />
+                            </view>
+                            <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('add')">
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/add_circle.svg"
+                                    class="w-[36rpx] h-[36rpx]"></image>
                             </view>
                         </view>
                     </view>
-                    <view class="mt-[20rpx] flex items-center justify-between h-[110rpx] bg-white rounded-[20rpx] px-4">
-                        <view class="text-[30rpx] font-bold">背景音乐</view>
-                        <navigator
-                            :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
-                                formData.music
-                            )}&volume=${formData.extra.volume}`"
-                            hover-class="none"
-                            class="flex items-center gap-x-1">
-                            <view>
-                                <template v-if="formData.music.length > 0">
-                                    共<text class="mx-1 text-primary font-bold">{{ formData.music.length }}</text
-                                    >个
-                                </template>
-                                <text class="text-[#000000]/70" v-else>AI音乐库</text>
+                    <view class="mt-[22rpx] bg-white rounded-[20rpx] px-4">
+                        <view class="font-bold text-[30rpx] py-3">使用设置</view>
+
+                        <view
+                            class="flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#00000008]">
+                            <view
+                                class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
+                                <view class="font-bold">背景音乐使用</view>
                             </view>
-                            <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
+                            <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-[268rpx]">
+                                <view class="grid grid-cols-2 gap-x-1 h-[68rpx] relative">
+                                    <view
+                                        v-for="(item, index) in ['按顺序', '随机']"
+                                        :key="index"
+                                        class="type-item"
+                                        :class="{ active: index == formData.extra.music }"
+                                        @click="formData.extra.music = index">
+                                        {{ item }}
+                                    </view>
+                                    <view
+                                        class="tab-slider"
+                                        :style="{
+                                            transform: `translateX(${formData.extra.music * 100}%)`,
+                                        }"></view>
+                                </view>
+                            </view>
+                        </view>
+                        <view
+                            class="flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#00000008]">
+                            <view
+                                class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
+                                <view class="font-bold">视频风格</view>
+                            </view>
+                            <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-[268rpx]">
+                                <view class="grid grid-cols-2 gap-x-1 h-[68rpx] relative">
+                                    <view
+                                        v-for="(item, index) in ['随机', '手动选择']"
+                                        :key="index"
+                                        class="type-item"
+                                        :class="{ active: index == formData.extra.clip }"
+                                        @click="formData.extra.clip = index">
+                                        {{ item }}
+                                    </view>
+                                    <view
+                                        class="tab-slider"
+                                        :style="{
+                                            transform: `translateX(${formData.extra.clip * 100}%)`,
+                                        }"></view>
+                                </view>
+                            </view>
+                        </view>
+                        <navigator
+                            v-if="formData.extra.clip === 1"
+                            :url="`/ai_modules/digital_human/pages/montage_styles_choose/montage_styles_choose?type=${
+                                MontageStylesType.MATERIAL
+                            }&data=${JSON.stringify(formData.clip)}`"
+                            hover-class="none"
+                            class="flex items-center justify-between h-[106rpx] b">
+                            <view class="text-[30rpx] font-bold">选择视频风格</view>
+                            <view class="flex items-center">
+                                <view>
+                                    共<text class="mx-1 text-primary font-bold">{{ formData.clip.length }}</text
+                                    >个
+                                </view>
+                                <u-icon name="arrow-right" :size="20" color="#C5CACA"></u-icon>
+                            </view>
                         </navigator>
                     </view>
                 </view>
@@ -264,45 +392,72 @@
                     <view
                         class="rounded-[16rpx] w-[456rpx] h-[100rpx] bg-black text-white font-bold flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
                         @click="handleCreateVideo">
-                        生成视频（{{ formData.video_count }}个）
+                        生成视频
                     </view>
                 </template>
             </view>
         </view>
     </view>
     <confirm-dialog
+        v-if="confirmDialogVisible"
         v-model="confirmDialogVisible"
         confirm-text="删除"
         center
         content="是否确定删除该图组？"
         @confirm="handleDeleteMaterialConfirm" />
     <choose-tone
+        v-if="showChooseTone"
         v-model="showChooseTone"
         :model-version="DigitalHumanModelVersionEnum.SHANJIAN"
         :active-tone="formData.voice"
         :show-free-tone="false"
         @confirm="handleSelectTone" />
-    <video-preview v-model="showVideoPreview" :video-url="playItem.url" :poster="playItem.pic"></video-preview>
+    <video-preview
+        v-if="showVideoPreview"
+        v-model="showVideoPreview"
+        :video-url="playItem.url"
+        :poster="playItem.pic"></video-preview>
+    <upload-progress
+        v-if="showUploadAudioProgress"
+        v-model="showUploadAudioProgress"
+        :upload-list="uploadAudioMaterialList" />
+    <recorder-control
+        v-if="showRecorder"
+        v-model="showRecorder"
+        ref="recorderRef"
+        @close="showRecorder = false"
+        @success="recorderSuccess" />
+    <choose-audio-type
+        v-if="showAudioType"
+        v-model="showAudioType"
+        @recorder="openRecorder"
+        @file="uploadAudio('file')" />
+    <tokens-cost v-if="showTokensCost" v-model="showTokensCost" :type="3" />
+    <recharge-popup ref="rechargePopupRef"></recharge-popup>
     <create-success-pop
+        v-if="showCreateSuccess"
         v-model="showCreateSuccess"
         title="视频生成中"
         desc="您可以立即去设置发布任务，也可以等待视频生成成功后再发布"
         @to="toPublish"
         @seek="toRecord" />
-    <tokens-cost v-model="showTokensCost" :type="3" />
-    <recharge-popup ref="rechargePopupRef"></recharge-popup>
 </template>
 
 <script setup lang="ts">
 import { createShanjianTask } from "@/api/digital_human";
+import { lpSceneSpeechToText } from "@/api/ladder_player";
 import { useUserStore } from "@/stores/user";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
-import { ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
+import { ListenerTypeEnum, MontageTypeEnum, MontageStylesType } from "@/ai_modules/digital_human/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
+import useUpload from "@/hooks/useUpload";
+import { useAudio } from "@/hooks/useAudio";
 import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
+import ChooseAudioType from "@/ai_modules/digital_human/components/choose-audio-type/choose-audio-type.vue";
+import RecorderControl from "@/ai_modules/digital_human/components/recorder-control/recorder-control.vue";
 
 const { on } = useEventBusManager();
 
@@ -322,25 +477,33 @@ const formData = reactive<{
     copywriterList: any[];
     materialList: any[];
     name: string;
-    video_count: number;
     shanjian_type: MontageTypeEnum;
     voice: string;
     music: any[];
     extra: {
         volume: number;
+        music: number;
+        clip: number;
+        video_count: number;
     };
+    audio: any[];
+    clip: any[];
 }>({
     anchorLists: [],
     copywriterList: [],
     materialList: [],
     name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "素材混剪",
-    video_count: 1,
     shanjian_type: MontageTypeEnum.MATERIAL_MIX,
     voice: "",
     music: [],
     extra: {
         volume: 0.5,
+        music: 0,
+        clip: 0,
+        video_count: 1,
     },
+    audio: [],
+    clip: [],
 });
 const confirmDialogVisible = ref(false);
 const editMaterialIndex = ref(-1);
@@ -350,8 +513,12 @@ const playItem = reactive({
     url: "",
 });
 const showVideoPreview = ref(false);
-// 编辑文案索引
+
 const editCopywriterIndex = ref(-1);
+const copywriterTypeIndex = ref(0);
+const showAudioType = ref(false);
+const showRecorder = ref(false);
+const currentAudioIndex = ref(-1);
 const videoPreview = reactive({
     poster: "",
     url: "",
@@ -360,22 +527,29 @@ const showChooseTone = ref(false);
 const voiceValue = ref<any>({});
 const showCreateSuccess = ref(false);
 const createResult = ref<any>(null);
-// 显示算力消耗
 const showTokensCost = ref(false);
+
+const recorderRef = shallowRef<InstanceType<typeof RecorderControl>>();
 const rechargePopupRef = shallowRef();
 
 //判断是否可以下一步
 const canStepProceed = (stepNumber: number) => {
-    switch (stepNumber) {
-        case 1:
-            return formData.materialList.length > 0;
-        case 2:
-            return formData.copywriterList.length > 0;
-        case 3:
-            return true;
-        default:
-            return false;
-    }
+    const strategy: Record<number, () => boolean> = {
+        1: () => formData.materialList.length > 0,
+        2: () => {
+            if (copywriterTypeIndex.value === 0) {
+                if (formData.copywriterList.some((item: any) => item.content.trim().length < 3)) {
+                    uni.$u.toast("口播文案包含内容不能少于3个字");
+                    return false;
+                }
+                return formData.copywriterList.length > 0;
+            } else {
+                return formData.audio.length > 0;
+            }
+        },
+        3: () => true,
+    };
+    return strategy[stepNumber]?.() ?? false;
 };
 
 // 计算当前步骤是否可以点击“下一步”
@@ -416,6 +590,7 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
         }
         step.value = targetStep;
     }
+    destroy();
 };
 
 const handleEditMaterial = (index?: number) => {
@@ -454,34 +629,107 @@ const handleShowCopywriter = (data?: any) => {
 };
 
 const handleDeleteCopywriter = (index: number) => {
-    formData.copywriterList.splice(index, 1);
+    if (copywriterTypeIndex.value === 0) {
+        formData.copywriterList.splice(index, 1);
+    } else {
+        formData.audio.splice(index, 1);
+    }
+};
+
+const { play, pause, isPlaying, destroy } = useAudio();
+
+const handlePlayAudio = (url: string, index: number) => {
+    currentAudioIndex.value = index;
+    if (isPlaying.value) {
+        pause();
+    } else {
+        play(url);
+    }
+};
+
+const {
+    uploadAndProcessFiles: uploadAudio,
+    showUploadProgress: showUploadAudioProgress,
+    uploadMaterialList: uploadAudioMaterialList,
+} = useUpload({
+    count: 1,
+    fileAccept: ["mp3", "wav", "m4a", "MP3", "WAV", "M4A"],
+    fileSize: 100,
+    onSuccess: async (res: any) => {
+        const { url } = res[0];
+        uni.showLoading({
+            title: "正在识别音频",
+            mask: true,
+        });
+        try {
+            const { message, audio_duration } = await lpSceneSpeechToText({
+                audio: url,
+            });
+            formData.audio.push({
+                content: message,
+                url,
+                duration: audio_duration,
+            });
+            showAudioType.value = false;
+            uni.hideLoading();
+        } catch (error: any) {
+            uni.hideLoading();
+            uni.showToast({
+                title: error,
+                icon: "none",
+                duration: 3000,
+            });
+        }
+    },
+});
+
+const openRecorder = async () => {
+    showAudioType.value = false;
+    await recorderRef.value?.authorize(recorderRef.value.proxy);
+    showRecorder.value = true;
+};
+
+const recorderSuccess = (res: any) => {
+    const { link, duration, message } = res;
+    formData.audio.push({
+        url: link,
+        duration: duration,
+        content: message,
+    });
+    showRecorder.value = false;
 };
 
 const handleSelectTone = (tone: any) => {
-    formData.voice = tone.voice_id;
-    voiceValue.value = tone;
+    if (!tone.voice_id) {
+        voiceValue.value = {};
+        formData.voice = "";
+    } else {
+        formData.voice = tone.voice_id;
+        voiceValue.value = tone;
+    }
+
     showChooseTone.value = false;
 };
 
 const handleMinusVideoCount = (type: "minus" | "add") => {
     if (type === "minus") {
-        if (formData.video_count <= 1) {
-            uni.$u.toast("最少生成1个视频哦");
+        if (formData.extra.video_count <= 1) {
+            uni.$u.toast("数量最少为1");
             return;
         }
-        formData.video_count--;
+        formData.extra.video_count--;
     } else {
-        if (formData.video_count >= 99) {
-            uni.$u.toast("最多生成99个视频哦");
+        if (formData.extra.video_count >= 99) {
+            uni.$u.toast("数量最多为99");
             return;
         }
-        formData.video_count++;
+        formData.extra.video_count++;
     }
 };
 
 const handleCreateVideo = async () => {
     // 判断是否有算力
-    if (userTokens.value < 0) {
+    if (userTokens.value <= 0) {
         rechargePopupRef.value?.open();
         return;
     }
@@ -494,10 +742,11 @@ const handleCreateVideo = async () => {
         showChooseTone.value = true;
         return;
     }
-    if (formData.video_count <= 0) {
-        uni.$u.toast("请输入生成视频数量");
+    if (formData.extra.clip === 1 && formData.clip.length === 0) {
+        uni.$u.toast("请选择视频风格");
         return;
     }
+
     uni.showLoading({
         title: "提交中...",
         mask: true,
@@ -505,7 +754,7 @@ const handleCreateVideo = async () => {
     try {
         const res = await createShanjianTask({
             name: formData.name,
-            copywriting: formData.copywriterList,
+            copywriting: copywriterTypeIndex.value === 0 ? formData.copywriterList : [],
             material: formData.materialList.map((group: any) =>
                 group.map((item: any) => ({
                     fileUrl: item.url,
@@ -514,12 +763,11 @@ const handleCreateVideo = async () => {
                 }))
             ),
             shanjian_type: formData.shanjian_type,
-            video_count: formData.video_count,
             voice: formData.voice,
             music: formData.music.map((item: any) => item.content),
-            extra: {
-                volume: formData.extra.volume,
-            },
+            extra: formData.extra,
+            audio: copywriterTypeIndex.value === 1 ? formData.audio.map((item: any) => item.url) : formData.audio,
+            clip: formData.clip.map((item: any) => ({ clip_template_id: item })),
         });
         uni.hideLoading();
         createResult.value = res;
@@ -579,12 +827,30 @@ onLoad(() => {
             formData.music = data.music;
             formData.extra.volume = data.volume;
         }
+
+        if (type == ListenerTypeEnum.CHOOSE_VIDEO_STYLES) {
+            if (data.length === 0) return;
+            formData.clip = data;
+        }
     });
+});
+
+onUnload(() => {
+    destroy();
 });
 </script>
 
 <style lang="scss">
 .copywriter-item {
     @apply relative rounded-[16rpx] bg-white shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] p-4;
+}
+.type-item {
+    @apply flex flex-col items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500 text-xs;
+    &.active {
+        @apply text-primary font-bold relative;
+    }
+}
+.tab-slider {
+    @apply h-[calc(100%-10rpx)] w-[50%] rounded-[16rpx] bg-white absolute top-[6rpx] left-0 transition-all duration-500;
 }
 </style>

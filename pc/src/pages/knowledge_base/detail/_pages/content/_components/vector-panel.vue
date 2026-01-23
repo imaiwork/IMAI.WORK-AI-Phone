@@ -4,7 +4,7 @@
             <div class="flex-shrink-0 flex items-center justify-between px-8 h-[80px] border-b border-br">
                 <div class="group flex items-center gap-3 cursor-pointer" @click="closePanel">
                     <div
-                        class="w-8 h-8 flex items-center justify-center rounded-full bg-[#F8FAFC] group-hover:bg-[#0065fb]/10 group-hover:text-primary transition-all">
+                        class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 group-hover:bg-[#0065fb]/10 group-hover:text-primary transition-all">
                         <Icon name="el-icon-ArrowLeft" :size="16"></Icon>
                     </div>
                     <div>
@@ -298,7 +298,7 @@ onBeforeUnmount(() => {
 }
 
 .icon-box {
-    @apply w-12 h-12 rounded-xl bg-[#F8FAFC] border border-br flex items-center justify-center text-[#64748B] transition-all;
+    @apply w-12 h-12 rounded-xl bg-slate-50 border border-br flex items-center justify-center text-[#64748B] transition-all;
 
     &.is-active {
         @apply bg-primary text-white border-primary shadow-light shadow-[#0065fb]/20;
@@ -306,7 +306,7 @@ onBeforeUnmount(() => {
 }
 
 .content-wrapper {
-    @apply bg-[#F8FAFC] rounded-[24px] border border-[#F1F5F9] min-h-[400px] relative p-6;
+    @apply bg-slate-50 rounded-[24px] border border-[#F1F5F9] min-h-[400px] relative p-6;
 }
 
 .fade-slide-enter-active {

@@ -94,7 +94,7 @@
                 </template>
             </ElTable>
         </div>
-        <div class="h-[72px] px-8 flex items-center justify-between bg-[#F8FAFC]/50">
+        <div class="h-[72px] px-8 flex items-center justify-between bg-slate-50/50">
             <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个终端设备</span>
             <pagination v-model="pager" @change="getLists" />
         </div>

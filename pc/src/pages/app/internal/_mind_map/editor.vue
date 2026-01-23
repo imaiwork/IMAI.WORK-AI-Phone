@@ -72,7 +72,7 @@
                 <div
                     class="flex items-center bg-white/80 backdrop-blur-xl p-1.5 rounded-2xl border border-br shadow-xl shadow-black/5">
                     <ElButton
-                        class="!h-10 !rounded-xl !border-none !bg-transparent hover:!bg-[#F8FAFC] !text-[#64748B] font-black"
+                        class="!h-10 !rounded-xl !border-none !bg-transparent hover:!bg-slate-50 !text-[#64748B] font-black"
                         @click="mindMapFit(formData.reply)">
                         <Icon name="el-icon-RefreshLeft"></Icon>
                         <span class="ml-2">重置视图</span>
@@ -225,7 +225,7 @@ definePageMeta({ layout: "base", title: "AI思维导图" });
 :deep(.markmap-control-group) {
     @apply border-none  rounded-xl overflow-hidden;
     button {
-        @apply bg-white border-none hover:bg-[#F8FAFC] transition-colors p-2;
+        @apply bg-white border-none hover:bg-slate-50 transition-colors p-2;
     }
 }
 

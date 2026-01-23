@@ -25,7 +25,7 @@
                         :key="item.id"
                         class="group relative h-[320px] bg-white rounded-[24px] border border-[#F1F5F9] hover:shadow-[#0065fb]/10 hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden">
                         <div
-                            class="h-[200px] bg-[#F8FAFC] relative overflow-hidden flex items-center justify-center border-b border-[#F1F5F9] cursor-pointer"
+                            class="h-[200px] bg-slate-50 relative overflow-hidden flex items-center justify-center border-b border-[#F1F5F9] cursor-pointer"
                             @click="$router.push(`/app/internal/_mind_map/editor?id=${item.id}`)">
                             <div
                                 class="absolute inset-0 opacity-[0.03]"

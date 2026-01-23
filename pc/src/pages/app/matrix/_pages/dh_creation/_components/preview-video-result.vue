@@ -26,7 +26,7 @@
                     <close-btn :icon-size="10" />
                 </div>
             </div>
-            <div class="h-[600px] bg-[#F8FAFC]">
+            <div class="h-[600px] bg-slate-50">
                 <ElScrollbar :distance="20" @end-reached="load">
                     <div class="h-full p-4">
                         <div v-if="pager.lists.length > 0">

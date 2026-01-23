@@ -181,10 +181,7 @@
                                                             </div>
                                                             <div
                                                                 class="h-[1px] bg-[#F1F5F9] my-1"
-                                                                v-if="
-                                                                    row.status == TurnStatus.ERROR ||
-                                                                    row.status == TurnStatus.SUCCESS
-                                                                "></div>
+                                                                v-if="row.status == TurnStatus.ERROR"></div>
                                                             <div
                                                                 class="table-action-item !text-red-500 hover:!bg-red-50"
                                                                 @click="handleDelete(row.id)">

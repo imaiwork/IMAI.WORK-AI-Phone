@@ -8,6 +8,8 @@ use app\common\logic\AccountLogLogic;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvLeadScrapingRecord;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
+use app\common\model\sv\SvLeadScrapingSetting;
+
 use app\common\model\user\User;
 use app\common\workerman\rpa\BaseMessageHandler;
 use app\common\workerman\rpa\WorkerEnum;
@@ -41,7 +43,7 @@ class CommentToCommentHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }
@@ -54,20 +56,36 @@ class CommentToCommentHandler extends BaseMessageHandler
                 ->where('task_type', 1)
                 ->where('account_type', $this->appType)
                 ->findOrEmpty();
-            if($task->isEmpty()){
-                print_r(\think\facade\Db::getLastSql());
+            if ($task->isEmpty()) {
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务不存在');
+            }
+            
+            $setting = SvLeadScrapingSetting::where('id', $task->scraping_id)->findOrEmpty();
+            if ($setting->isEmpty()) {
+                throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务配置不存在');
+            }
+            if ((int)$setting->is_execed_clues  === 1) {
+                $find = SvLeadScrapingRecord::where([
+                    ['user_id', '=', $task->user_id],
+                    ['task_type', '=', 1],
+                    ['account_name', '=', $content['author_name']],
+                ])->findOrEmpty();
+                if (!$find->isEmpty()) {
+                    return [
+                        'isProceed' => 0, //是否处理 1是 0 否
+                    ];
+                }
             }
 
             $record = SvLeadScrapingRecord::where([
-                                                      ['user_id', '=', $task->user_id],
-                                                      ['task_type', '=', 1],
-                                                      ['account_name', '=', $content['author_name']],
-                                                      ['content', 'like', '%' . $content['content'] . '%']
-                                                  ])->findOrEmpty();
-            if (!$record->isEmpty()){
+                ['user_id', '=', $task->user_id],
+                ['task_type', '=', 1],
+                ['account_name', '=', $content['author_name']],
+                ['content', 'like', '%' . $content['content'] . '%']
+            ])->findOrEmpty();
+            if (!$record->isEmpty()) {
                 return [
-                    'isProceed' => 0,//是否处理 1是 0 否
+                    'isProceed' => 0, //是否处理 1是 0 否
                 ];
             }
             $insert = [
@@ -86,7 +104,7 @@ class CommentToCommentHandler extends BaseMessageHandler
             ];
             SvLeadScrapingRecord::create($insert);
             return [
-                'isProceed' => 1,//是否处理 1是 0 否
+                'isProceed' => 1, //是否处理 1是 0 否
             ];
         } catch (\Exception $e) {
             $this->setLog('异常信息' . $e, 'task_complete');
@@ -99,7 +117,7 @@ class CommentToCommentHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }

@@ -5,7 +5,6 @@
                 <z-paging
                     ref="pagingRef"
                     v-model="dataLists"
-                    :auto="false"
                     :fixed="false"
                     :safe-area-inset-bottom="true"
                     @query="queryList">
@@ -74,16 +73,6 @@ const handleDeleteHistory = async (id: number) => {
     });
     pagingRef.value?.reload();
 };
-
-watch(
-    () => show.value,
-    async () => {
-        if (show.value) {
-            await nextTick();
-            pagingRef.value?.reload();
-        }
-    }
-);
 </script>
 
 <style scoped></style>

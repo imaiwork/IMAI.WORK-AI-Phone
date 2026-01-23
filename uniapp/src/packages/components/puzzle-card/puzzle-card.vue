@@ -13,8 +13,9 @@
                 v-for="(image, imageIndex) in item.puzzle_url"
                 :key="imageIndex"
                 :src="image"
-                @click.stop="previewImage(item.puzzle_url, imageIndex)"
-                class="w-[156rpx] h-[156rpx] rounded-[10rpx]"></image>
+                lazy-load
+                class="w-[156rpx] h-[156rpx] rounded-[10rpx]"
+                @click.stop="previewImage(item.puzzle_url, imageIndex)"></image>
         </view>
         <view v-else class="bg-[#F1F2F5] rounded-[16rpx] h-[156rpx] flex flex-col items-center justify-center mt-2">
             <view v-if="[0, 1, 2].includes(item.status)" class="flex items-center gap-x-2">

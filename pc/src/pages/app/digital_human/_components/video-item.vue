@@ -13,7 +13,7 @@
 
             <div class="absolute top-3 left-3 z-[22]" v-if="item.clip_status != 0">
                 <span
-                    class="px-2 py-0.5 rounded-md bg-[#0065fb]/20 backdrop-blur-md border border-[#0065fb]/30 text-[9px] font-[1000] text-primary uppercase">
+                    class="px-2 py-0.5 rounded-md bg-[#0065fb]/20 backdrop-blur-md border border-[#0065fb]/30 text-[9px] font-bold text-primary uppercase">
                     AI 剪辑
                 </span>
             </div>
@@ -112,7 +112,7 @@
                         class="w-16 h-16 bg-[#0065fb]/5 rounded-2xl flex items-center justify-center mb-4 text-primary">
                         <Icon name="el-icon-Download" :size="28" />
                     </div>
-                    <h3 class="text-slate-800 font-[1000] text-[20px] tracking-tight">资源打包完成</h3>
+                    <h3 class="text-slate-800 font-bold text-[20px] tracking-tight">资源打包完成</h3>
                     <p class="text-slate-400 text-[13px] font-bold mt-1">请选择您需要下载的视频版本</p>
                 </div>
 
@@ -181,7 +181,7 @@
 
             <div class="p-8 flex flex-col items-center text-center gap-6">
                 <div class="space-y-2">
-                    <h3 class="text-slate-800 font-[1000] text-[20px] tracking-tight">预览版本选择</h3>
+                    <h3 class="text-slate-800 font-bold text-[20px] tracking-tight">预览版本选择</h3>
                     <p class="text-slate-400 text-[13px] font-bold">请选择您想要查看的视频版本</p>
                 </div>
 

@@ -102,7 +102,7 @@ defineExpose({
 /* 输入框深度定制 */
 :deep(.custom-token-input) {
     .el-input__wrapper {
-        @apply h-[54px] rounded-2xl bg-[#F8FAFC] shadow-[none] border border-br px-4 transition-all duration-300;
+        @apply h-[54px] rounded-2xl bg-slate-50 shadow-[none] border border-br px-4 transition-all duration-300;
         &:hover {
             @apply border-[#CBD5E1];
         }

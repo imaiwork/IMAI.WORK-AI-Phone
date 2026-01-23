@@ -1,6 +1,6 @@
 <template>
-    <div class="h-full flex flex-col bg-[#F8FAFC]">
-        <div class="sticky top-0 z-20 bg-[#F8FAFC]/80 backdrop-blur-md px-6 py-4">
+    <div class="h-full flex flex-col bg-slate-50">
+        <div class="sticky top-0 z-20 bg-slate-50/80 backdrop-blur-md px-6 py-4">
             <ElScrollbar>
                 <div class="flex items-center gap-3">
                     <div
@@ -48,7 +48,7 @@
                                         class="w-full h-full transition-transform duration-500 group-hover:scale-110"
                                         fit="cover">
                                         <template #placeholder>
-                                            <div class="flex items-center justify-center w-full h-full bg-[#F8FAFC]">
+                                            <div class="flex items-center justify-center w-full h-full bg-slate-50">
                                                 <div
                                                     class="w-8 h-8 border-2 border-[#0065fb] border-t-transparent rounded-full animate-spin"></div>
                                             </div>

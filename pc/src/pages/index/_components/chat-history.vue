@@ -29,7 +29,7 @@
                     <div class="px-3 pb-6">
                         <div v-for="group in groupChatHistoryByTime" :key="group.date" class="mt-4">
                             <div
-                                class="sticky top-0 z-[10] bg-[#F8FAFC]/80 backdrop-blur-md text-[11px] font-black text-slate-400 px-3 py-2 flex items-center gap-2">
+                                class="sticky top-0 z-[10] bg-slate-50/80 backdrop-blur-md text-[11px] font-black text-slate-400 px-3 py-2 flex items-center gap-2">
                                 <span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
                                 {{ group.date }}
                             </div>

@@ -77,3 +77,17 @@ export enum CreateVideoTypeEnum {
     NEWS = 5,
     SENTENCE = 6,
 }
+
+// 混剪发布类型
+export enum MontageTypeEnum {
+    // 真人口播混剪
+    REAL_PERSON_MIX = 1,
+    // 真人口播智剪
+    REAL_PERSON_AI = 2,
+    // 素材混剪
+    MATERIAL_MIX = 3,
+    // 新闻体
+    NEWS_BODY = 4,
+    // Sora生成视频
+    SORA_VIDEO = 5,
+}

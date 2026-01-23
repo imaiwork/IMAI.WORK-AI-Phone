@@ -910,9 +910,12 @@ class KbKnowLogic extends BaseLogic
      */
     public static function embAiChatSearch($KbId,$content,$emb_setting = []): string
     {
+        if (empty($KbId)){
+            return '知识库为空，未找到匹配内容';
+        }
         $know = KbKnow::where('id', $KbId)->where('is_enable',1)->findOrEmpty();
         if ($know->isEmpty()){
-            throw new Exception('知识库信息错误');
+            return '知识库存在变动，未找到匹配内容';
         }
 
         // 接收参数

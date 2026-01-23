@@ -55,7 +55,7 @@
 
             <div class="flex gap-x-6 h-[380px]">
                 <div class="flex-[2] flex flex-col bg-white border border-br rounded-[24px] overflow-hidden">
-                    <div class="px-5 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-[#F8FAFC]">
+                    <div class="px-5 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-slate-50">
                         <span class="font-bold text-[#334155] text-sm flex items-center gap-2">
                             <span class="w-1.5 h-4 bg-[#6366F1] rounded-full"></span> 备选标题
                         </span>
@@ -73,7 +73,7 @@
                                 v-for="(item, index) in getCopywritingLibraryContent.title"
                                 :key="index"
                                 :class="
-                                    item.checked ? 'bg-[#EEF2FF] border-[#6366F1]' : 'bg-[#F8FAFC] border-transparent'
+                                    item.checked ? 'bg-[#EEF2FF] border-[#6366F1]' : 'bg-slate-50 border-transparent'
                                 "
                                 class="group flex items-center gap-x-3 px-2 py-1 rounded-xl border border-br transition-all hover:border-[#6366F1]/30 cursor-pointer"
                                 @click="choose(CopywritingType.Title, item)">
@@ -101,7 +101,7 @@
                 </div>
 
                 <div class="flex-[3] flex flex-col bg-white border border-br rounded-[24px] overflow-hidden">
-                    <div class="px-5 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-[#F8FAFC]">
+                    <div class="px-5 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-slate-50">
                         <span class="font-bold text-[#334155] text-sm flex items-center gap-2">
                             <span class="w-1.5 h-4 bg-[#10B981] rounded-full"></span> 正文描述
                         </span>
@@ -119,7 +119,7 @@
                                 v-for="(item, index) in getCopywritingLibraryContent.described"
                                 :key="index"
                                 :class="
-                                    item.checked ? 'bg-[#EEF2FF] border-[#6366F1]' : 'bg-[#F8FAFC] border-transparent'
+                                    item.checked ? 'bg-[#EEF2FF] border-[#6366F1]' : 'bg-slate-50 border-transparent'
                                 "
                                 class="group relative flex flex-col gap-y-3 p-4 rounded-2xl border border-br transition-all"
                                 @click="choose(CopywritingType.Described, item)">

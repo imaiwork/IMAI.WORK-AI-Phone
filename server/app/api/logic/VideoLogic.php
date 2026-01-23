@@ -22,7 +22,10 @@ class VideoLogic extends ApiLogic
         $offset   = ($pageNo - 1) * $pageSize;
 
         $type          = !empty($params['type']) ? (int)$params['type'] : 0;
+        $success       = !empty($params['success']) ? 1 : 0;
         $shanjianWhere = [];
+        $humanWhere = [];
+        $soraWhere = [];
         if (in_array($type, [2, 3, 4, 5])) {
             switch ($type) {
                 case 2:
@@ -47,6 +50,16 @@ class VideoLogic extends ApiLogic
             }
         }
 
+        if ($success){
+            $humanWhere = [
+                ['status', '=', 1],
+            ];
+            $shanjianWhere[] = ['status', '=', 3];
+            $soraWhere = [
+                ['status', '=', 3],
+            ];
+        }
+
         // 查询条件
         $where = [['user_id', '=', $userId], ['delete_time','=', null]];
 
@@ -68,6 +81,7 @@ class VideoLogic extends ApiLogic
                                 "'1' as type"
                             ])
                     ->where($where)
+                    ->where($humanWhere)
                     ->buildSql();
 
         $query2 = Db::name('shanjian_video_task')
@@ -109,6 +123,7 @@ class VideoLogic extends ApiLogic
                                 "'6' as type"
                             ])
                     ->where($where)
+                    ->where($soraWhere)
                     ->buildSql();
 
         // 合并子查询sql
@@ -147,7 +162,7 @@ class VideoLogic extends ApiLogic
             ];
         }
 
-        $total = self::getTotalCount($where, $shanjianWhere, $type);
+        $total = self::getTotalCount($where, $shanjianWhere, $humanWhere,$soraWhere, $type ,$success);
 
         return [
             'count'      => $total,
@@ -161,12 +176,18 @@ class VideoLogic extends ApiLogic
     /**
      * 计算4个表的总记录数
      */
-    private static function getTotalCount(array $where, $shanjianWhere, $type): int
+    private static function getTotalCount(array $where, $shanjianWhere,$humanWhere, $soraWhere, $type, $success): int
     {
         if ($type === 0) {
-            $count1 = Db::name('human_video_task')->where($where)->count();
-            $count2 = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)->count();
-            $count3 = Db::name('sora_video_task')->where($where)->count();
+            if ($success){
+                $count1 = Db::name('human_video_task')->where($where)->where($humanWhere)->count();
+                $count2 = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)->count();
+                $count3 = Db::name('sora_video_task')->where($where)->where($soraWhere)->count();
+            }else{
+                $count1 = Db::name('human_video_task')->where($where)->count();
+                $count2 = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)->count();
+                $count3 = Db::name('sora_video_task')->where($where)->count();
+            }
             return $count1 + $count2 + $count3;
         }
         if ($type == 1) {

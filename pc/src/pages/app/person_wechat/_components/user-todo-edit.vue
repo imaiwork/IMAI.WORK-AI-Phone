@@ -27,7 +27,7 @@
             <ElFormItem prop="todo_content" class="!mb-6">
                 <template #label>
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="text-[14px] font-[1000] text-slate-700">内容描述</span>
+                        <span class="text-[14px] font-bold text-slate-700">内容描述</span>
                         <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Content</span>
                     </div>
                 </template>
@@ -45,7 +45,7 @@
             <ElFormItem prop="todo_time" class="!mb-2">
                 <template #label>
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="text-[14px] font-[1000] text-slate-700">提醒时间</span>
+                        <span class="text-[14px] font-bold text-slate-700">提醒时间</span>
                         <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Schedule</span>
                     </div>
                 </template>

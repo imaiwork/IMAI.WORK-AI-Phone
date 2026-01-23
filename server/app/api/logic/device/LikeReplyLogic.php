@@ -27,7 +27,9 @@ class LikeReplyLogic extends ApiLogic
             TaskLogic::checkAccounts($params['accounts']);
             $times = TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
             $params['user_id'] = self::$uid;
-            $params['task_name'] =  $params['task_name'] ??  '朋友圈点赞评论任务' . date('mdHis', time()) ;
+            $params['task_name'] =  $params['task_name'] ??  '朋友圈点赞评论任务' . date('mdHis', time());
+            $params['range'] = $params['range'] ?? 0;
+            $params['range'] = $params['range'] > 0 ? ($params['range'] - 1) : $params['range'];
             $task = SvDeviceCircleLikeReply::create($params);
             $allTaskInstall = [];
             foreach ($params['accounts'] as $account) {

@@ -105,7 +105,7 @@
                                     </ElTooltip>
 
                                     <div
-                                        class="flex items-center gap-2 px-4 py-2 bg-[#F8FAFC] rounded-lg border border-[#F1F5F9]">
+                                        class="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-lg border border-[#F1F5F9]">
                                         <Icon name="el-icon-InfoFilled" color="#94A3B8" :size="14" />
                                         <span class="text-xs text-[#64748B] font-bold">
                                             当前算力预计可录制
@@ -116,7 +116,7 @@
                             </div>
                         </template>
 
-                        <div v-if="nextStep == 2" class="bg-[#F8FAFC] p-8 rounded-2xl border border-[#F1F5F9]">
+                        <div v-if="nextStep == 2" class="bg-slate-50 p-8 rounded-2xl border border-[#F1F5F9]">
                             <RecorderControl
                                 ref="recorderControlRef"
                                 :disabled="isRecorderDisabled"
@@ -182,7 +182,7 @@
                                                 </div>
                                             </div>
                                             <div
-                                                class="w-8 h-8 rounded-lg bg-[#F8FAFC] flex items-center justify-center shrink-0">
+                                                class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
                                                 <Icon
                                                     :name="item.task_type == 1 ? 'el-icon-Headset' : 'el-icon-Mic'"
                                                     color="#94A3B8"
@@ -204,7 +204,7 @@
                                                 popper-class="!rounded-[16px] !border-[#F1F5F9] !p-1.5 !shadow-light">
                                                 <template #reference>
                                                     <div
-                                                        class="w-10 h-10 rounded-full bg-[#F8FAFC] flex items-center justify-center hover:bg-[#F1F0FF] transition-colors cursor-pointer">
+                                                        class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center hover:bg-[#F1F0FF] transition-colors cursor-pointer">
                                                         <Icon
                                                             name="el-icon-MoreFilled"
                                                             color="var(--color-primary)"

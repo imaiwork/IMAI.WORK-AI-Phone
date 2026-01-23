@@ -1,5 +1,5 @@
 <template>
-    <div class="h-full bg-[#F8FAFC] w-full overflow-hidden flex flex-col">
+    <div class="h-full bg-slate-50 w-full overflow-hidden flex flex-col">
         <div class="bg-white h-[72px] flex items-center justify-between px-8 border-b border-[#F1F5F9] flex-shrink-0">
             <div class="flex items-center">
                 <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary mr-3">
@@ -548,8 +548,19 @@ const prepareAttachmentContent = (): any[] => {
  * 处理表单提交
  */
 const handleCreate = async () => {
+    // 设置附件内容
+    formData.value.attachment_content = prepareAttachmentContent();
     // 表单验证
     await formRef.value?.validate();
+
+    if (!formData.value.content) {
+        feedback.msgWarning("请输入朋友圈基础文本内容");
+        return;
+    }
+    if (formData.value.attachment_content.length == 0) {
+        feedback.msgWarning("请上传图片或视频");
+        return;
+    }
     if (formData.value.time_config.length === 2) {
         const [start, end] = formData.value.time_config;
         if (dayjs(end, "HH:mm").diff(dayjs(start, "HH:mm"), "minutes") < 30) {
@@ -557,9 +568,11 @@ const handleCreate = async () => {
             return;
         }
     }
+    if (formData.value.wechat_ids.length == 0) {
+        feedback.msgWarning("请选择发送账号");
+        return;
+    }
     try {
-        // 设置附件内容
-        formData.value.attachment_content = prepareAttachmentContent();
         // 判断附加内容是不是为空
         if (!formData.value.attachment_content) {
             formData.value.attachment_type = MaterialTypeEnum.TEXT;

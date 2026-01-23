@@ -57,7 +57,7 @@ const checkAgreement = () => {
 };
 
 const confirmActive = () => {
-    isActive.value = true;
+    // isActive.value = true;
     showConfirm.value = false;
 };
 

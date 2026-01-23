@@ -5,7 +5,7 @@
             <scroll-view scroll-y class="h-full">
                 <view class="grid grid-cols-3 gap-[26rpx] p-4 pb-[100rpx]">
                     <view
-                        class="h-[220rpx] bg-white rounded-[20rpx] flex flex-col items-center justify-center"
+                        class="aspect-[3/4] bg-white rounded-[20rpx] flex flex-col items-center justify-center"
                         @click="chooseUploadType">
                         <image src="@/ai_modules/device/static/icons/add.svg" class="w-[32rpx] h-[32rpx]"></image>
                         <text class="text-[28rpx] text-[#000000b3] mt-1">添加</text>
@@ -13,12 +13,12 @@
                     <view
                         v-for="(item, index) in dataList"
                         :key="index"
-                        class="h-[220rpx] relative"
+                        class="aspect-[3/4] relative"
                         @click="previewImage(index)">
-                        <image :src="item.pic" class="w-full h-full rounded-[20rpx]" mode="aspectFill"></image>
+                        <image :src="item.url" class="w-full h-full rounded-[20rpx]" mode="aspectFill"></image>
                         <view
                             class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
-                            @click="handleDelete(index)">
+                            @click.stop="handleDelete(index)">
                             <u-icon name="close" color="#ffffff" size="16"></u-icon>
                         </view>
                     </view>
@@ -34,6 +34,7 @@
             >
         </view>
     </view>
+    <choose-history v-model="showHistory" type="image" :limit="9999" @select="handleSelectHistory" />
     <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <choose-material v-model="showChooseMaterial" type="image" @select="handleChooseMaterial" />
 </template>
@@ -41,13 +42,14 @@
 <script setup lang="ts">
 import useMaterialStore from "@/ai_modules/device/stores/material";
 import useUpload from "@/hooks/useUpload";
+import ChooseHistory from "@/ai_modules/device/components/choose-history/choose-history.vue";
 
 const materialStore = useMaterialStore();
 const { imageList } = storeToRefs(materialStore);
 
 const dataList = ref<any[]>(JSON.parse(JSON.stringify(imageList.value)));
 const showChooseMaterial = ref(false);
-
+const showHistory = ref(false);
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
     imageAccept: ["jpg", "jpeg", "png", "webp"],
@@ -59,17 +61,22 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
 
 const chooseUploadType = () => {
     uni.showActionSheet({
-        itemList: ['从"微信聊天"中选择', '从"素材库"中选择', '从"手机相册"中选择'],
+        itemList: ['从"微信聊天"中选择', '从"素材库"中选择', '从"手机相册"中选择', '从"创作中心"中选择'],
         success: (res) => {
             if (res.tapIndex === 0) uploadAndProcessFiles("file");
             else if (res.tapIndex === 1) showChooseMaterial.value = true;
             else if (res.tapIndex === 2) uploadAndProcessFiles("image");
+            else if (res.tapIndex === 3) showHistory.value = true;
         },
     });
 };
 
 const handleChooseMaterial = (list: any[]) => {
     dataList.value.push(...list.map((item) => ({ pic: item.pic, url: item.content, type: "image" })));
+};
+
+const handleSelectHistory = (list: any[]) => {
+    dataList.value.push(...list.map((item) => ({ pic: item.image, url: item.image, type: "image" })));
 };
 
 const handleDelete = (index: number) => {

@@ -20,7 +20,7 @@
                 </ElButton>
             </div>
 
-            <div class="flex items-center justify-between px-8 h-[72px] bg-[#F8FAFC]/50">
+            <div class="flex items-center justify-between px-8 h-[72px] bg-slate-50/50">
                 <div class="flex items-center gap-2">
                     <div class="w-1 h-4 bg-primary rounded-full"></div>
                     <span class="text-[14px] font-[900] text-[#475569]">所有文档 ({{ pager.count }})</span>

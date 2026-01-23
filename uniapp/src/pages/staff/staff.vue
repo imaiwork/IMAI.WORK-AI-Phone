@@ -136,7 +136,7 @@
                         </view>
                     </view>
                     <view v-show="currTabKey == TabKey.AI_SALES">
-                        <view class="bg-white rounded-[20rpx] px-5 py-[32rpx]">
+                        <view class="bg-white rounded-[20rpx] px-5 py-[32rpx] relative">
                             <view class="text-[30rpx] font-bold"> 运营统计 </view>
                             <view class="mt-[28rpx] text-[30rpx] font-bold">{{ getToady }}</view>
                             <view class="flex items-center gap-x-1 mt-[12rpx]">
@@ -152,6 +152,15 @@
                                         item.title
                                     }}</view>
                                 </view>
+                            </view>
+                            <view class="absolute top-4 right-4">
+                                <navigator
+                                    url="/ai_modules/device/pages/task_statement/task_statement"
+                                    hover-class="none"
+                                    class="h-[70rpx] w-[144rpx] border border-solid border-[#0000001a] rounded-[16rpx] flex items-center justify-center gap-x-2">
+                                    <image src="/static/images/icons/statement.svg" class="w-[26rpx] h-[26rpx]"></image>
+                                    <text class="font-bold">报表</text>
+                                </navigator>
                             </view>
                         </view>
                         <view class="mt-[54rpx]">

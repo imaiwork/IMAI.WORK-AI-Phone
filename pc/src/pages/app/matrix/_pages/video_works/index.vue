@@ -33,7 +33,7 @@
                 </div>
             </div>
         </div>
-        <div class="grow min-h-0 bg-[#F8FAFC]">
+        <div class="grow min-h-0 bg-slate-50">
             <ElScrollbar :distance="20" @end-reached="load">
                 <div class="h-full p-6">
                     <div v-if="pager.lists.length">
@@ -133,7 +133,7 @@ getLists();
 
 <style scoped lang="scss">
 .material-item {
-    @apply flex gap-x-4 h-[288px] relative overflow-hidden border border-[#ffffff33] rounded-xl cursor-pointer;
+    @apply flex gap-x-4 aspect-[3/4] relative overflow-hidden border border-[#ffffff33] rounded-xl cursor-pointer;
     &::after {
         @apply absolute top-0 left-0 w-full h-full;
         content: "";

@@ -908,8 +908,8 @@ class installModel
 
       $params = [
          'name'            => "Powered by IMAI.WORK",
-         'version_name'    => "V2.7.2.260116_Release",
-         'version_number'  => "272",
+         'version_name'    => "V2.7.3.260122_Release",
+         'version_number'  => "273",
          "install_time"    => date('Y-m-d H:i:s'),
          "update_time"     => date('Y-m-d H:i:s'),
       ];

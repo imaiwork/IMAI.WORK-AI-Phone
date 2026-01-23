@@ -413,7 +413,9 @@ const getSphConfig = computed(() => {
 });
 
 const getOtherConfig = computed(() => {
-    return workbenchData.tokens_lists.filter((item: any) => ["video_clip", "matrix_copywriting"].includes(item.scene));
+    return workbenchData.tokens_lists.filter((item: any) =>
+        ["video_clip", "matrix_copywriting", "automation_account_ip_analysis"].includes(item.scene)
+    );
 });
 
 const getPhoneAutoConfig = computed(() => {
@@ -429,6 +431,8 @@ const getPhoneAutoConfig = computed(() => {
             "automation_wechat_add_friend",
             "automation_social_media_obtain",
             "automation_social_media_nursing",
+            "automation_ocr_local",
+            "automation_ocr_img",
         ].includes(item.scene)
     );
 });

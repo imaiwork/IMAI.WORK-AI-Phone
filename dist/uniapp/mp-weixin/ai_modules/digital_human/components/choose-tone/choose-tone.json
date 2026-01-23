@@ -3,6 +3,7 @@
   "usingComponents": {
     "empty": "../../../../components/empty/empty",
     "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
     "popup-bottom": "../../../../components/popup-bottom/popup-bottom"
   }
 }

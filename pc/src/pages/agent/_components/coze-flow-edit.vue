@@ -72,7 +72,7 @@
                                 </ElFormItem>
                                 <ElFormItem label="响应模式" prop="stream">
                                     <div
-                                        class="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFC] border border-[#F1F5F9]">
+                                        class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#F1F5F9]">
                                         <span class="text-xs font-bold text-[#64748B]">流式输出</span>
                                         <ElSwitch
                                             v-model="formData.stream"

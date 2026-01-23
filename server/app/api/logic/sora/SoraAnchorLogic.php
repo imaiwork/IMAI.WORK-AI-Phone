@@ -56,7 +56,7 @@ class SoraAnchorLogic extends ApiLogic
                     //生成转绘角色视频
                     $requestVideo  = [
                         'model'        => 'sora-2',
-                        'prompt'       => '素材中的角色正面站在一片空地中，脸部旋转特写1秒，上半身旋转特写1秒，全身旋转特写1秒，用最符合角色的声音说出"大家好，我是数字人，AI将改变世界"',
+                        'prompt'       => '素材中的角色正面站在一片空地中，脸部旋转特写1秒，上半身旋转特写1秒，全身旋转特写1秒，在视频第1秒用最符合角色的声音说出"大家好，我是'.$name.'，欢迎大家来创建视频"',
                         'aspect_ratio' => '9:16',
                         'duration'     => 10,
                         'image_urls'   => [FileService::getFileUrl($imageUrl)]
@@ -542,6 +542,12 @@ class SoraAnchorLogic extends ApiLogic
         }
         if (str_contains($message, 'task timeout')) {
             $message = '任务超时，请稍后再试';
+        }
+        if (str_contains($message, 'violate our policies')) {
+            $message = '生成的角色可能违反了我们的政策，请更换图片后再试';
+        }
+        if (str_contains($message, 'the criteria') || str_contains($message, 'Failed to generate')) {
+            $message = '该图片不符合创建角色的标准，请更换图片后再试';
         }
         return $message;
     }

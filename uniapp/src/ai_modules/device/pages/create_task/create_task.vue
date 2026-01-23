@@ -325,11 +325,11 @@
                                                 :key="index"
                                                 class="date-item">
                                                 {{ formatDate(item) }}
-                                                <view
+                                                <!-- <view
                                                     class="w-[24rpx] h-[24rpx] flex items-center justify-center rounded-full bg-[#FF2442]"
                                                     @click="handleDeleteCustomDate(index)">
                                                     <u-icon name="close" size="12" color="#FFFFFF"></u-icon>
-                                                </view>
+                                                </view> -->
                                             </view>
                                         </view>
                                     </view>
@@ -456,12 +456,14 @@
     </view>
 
     <confirm-dialog
+        v-if="confirmDialogVisible"
         v-model="confirmDialogVisible"
         confirm-text="删除"
         center
         content="是否确定删除图组？"
         @confirm="handleDeleteMaterialConfirm" />
     <confirm-dialog
+        v-if="showCreateTaskSuccessDialog"
         v-model="showCreateTaskSuccessDialog"
         confirm-text="确定"
         center
@@ -469,6 +471,7 @@
         :show-close="false"
         @confirm="handleCreateTaskSuccess" />
     <confirm-dialog
+        v-if="showVideoUploadTip"
         v-model="showVideoUploadTip"
         confirm-text="去上传"
         :content="getVideoTipsContent"
@@ -487,8 +490,13 @@
         v-model="showVideoMaterial"
         type="video"
         :multiple="replaceVideoIndex == -1"
-        :limit="VIDEO_CONFIG.limit - formData.materialLists.length"
+        :limit="replaceVideoIndex == -1 ? VIDEO_CONFIG.limit - formData.materialLists.length : 1"
         @select="handleSelectVideoMaterial" />
+    <choose-history
+        v-model="showHistory"
+        type="video"
+        :limit="replaceVideoIndex == -1 ? VIDEO_CONFIG.limit - formData.materialLists.length : 1"
+        @select="handleSelectHistory" />
     <number-pop
         v-model="showNumberPop"
         :max="99"
@@ -500,8 +508,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
-import { onLoad } from "@dcloudio/uni-app";
 import { getVideoCreationRecord } from "@/api/app";
 import { createMatrixTask, publishDeviceTask } from "@/api/device";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
@@ -510,6 +516,7 @@ import { getPuzzleTaskResultList } from "@/api/drawing";
 import useUpload from "@/hooks/useUpload";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import NumberPop from "@/ai_modules/device/components/number-pop/number-pop.vue";
+import ChooseHistory from "@/ai_modules/device/components/choose-history/choose-history.vue";
 
 const { on } = useEventBusManager();
 
@@ -555,7 +562,7 @@ const STEPS = [
 
 const VIDEO_CONFIG = {
     limit: 99,
-    size: 100, // MB
+    size: 200, // MB
     format: ["mp4", "mov"],
 };
 
@@ -583,6 +590,7 @@ const formData = reactive<FormData>({
 const deleteImgIndex = ref<number>(-1);
 const editImgIndex = ref<number>(-1);
 const showVideoMaterial = ref<boolean>(false);
+const showHistory = ref<boolean>(false);
 const confirmDialogVisible = ref<boolean>(false);
 const showVideoUploadTip = ref<boolean>(false);
 const isVideoInitialOpen = ref<boolean>(true);
@@ -706,7 +714,7 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
 const triggerVideoUploadSelection = () => {
     showVideoUploadTip.value = false;
     uni.showActionSheet({
-        itemList: ['从"素材库"中选择', '从"手机相册"中选择'],
+        itemList: ['从"素材库"中选择', '从"手机相册"中选择', '从"创作历史"中选择'],
         success: (res) => {
             if (res.tapIndex === 0) {
                 showVideoMaterial.value = true;
@@ -717,6 +725,8 @@ const triggerVideoUploadSelection = () => {
                 } else {
                     uploadAndProcessFiles("video");
                 }
+            } else if (res.tapIndex === 2) {
+                showHistory.value = true;
             }
         },
     });
@@ -751,6 +761,19 @@ const handleEditMaterial = (index?: number) => {
             imgs: editImgIndex.value !== -1 ? JSON.stringify(formData.materialLists[editImgIndex.value].url) : "",
         },
     });
+};
+
+const handleSelectHistory = (res: any[]) => {
+    if (replaceVideoIndex.value !== -1) {
+        formData.materialLists[replaceVideoIndex.value] = {
+            url: [res[0].pic, res[0].clip_result_url || res[0].video_result_url],
+        };
+    } else {
+        formData.materialLists.push(
+            ...res.map((item: any) => ({ url: [item.pic, item.clip_result_url || item.video_result_url] }))
+        );
+    }
+    replaceVideoIndex.value = -1;
 };
 
 const handleDeleteMaterial = (index: number) => {
@@ -1088,6 +1111,12 @@ onLoad(async (options: any) => {
             if (type === ListenerTypeEnum.CHOOSE_IMG && editImgIndex.value !== -1) {
                 formData.materialLists.splice(editImgIndex.value, 1);
             }
+            if (type === ListenerTypeEnum.CHOOSE_DATE) {
+                currentDayFrequencyIdx.value = 0;
+                formData.custom_date = [];
+                changeTimeConfig();
+                return;
+            }
             return;
         }
 
@@ -1153,7 +1182,7 @@ onLoad(async (options: any) => {
     }
 }
 .date-item {
-    @apply text-xs font-bold text-primary rounded-[10rpx] px-[20rpx] py-[10rpx] bg-[#F6F6F6] flex items-center justify-center gap-2;
+    @apply text-xs font-bold text-[#000000b3] rounded-[10rpx] px-[20rpx] py-[10rpx] bg-[#F6F6F6];
 }
 .change-material-btn {
     @apply text-white text-[22rpx] mt-8 border border-[#ffffff1a] shadow-[0_0_0_1px_rgba(0,0,0,0.24)] rounded-[50rpx] w-full h-[88rpx] flex items-center justify-center;

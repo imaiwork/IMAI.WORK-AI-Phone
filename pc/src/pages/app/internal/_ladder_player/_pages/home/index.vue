@@ -1,7 +1,7 @@
 <template>
     <div class="relative">
         <svg
-            class="absolute left-4 -translate-x-[95%] top-[55%] -translate-y-1/2 z-[88]"
+            class="absolute left-4 -translate-x-[95%] top-[52%] -translate-y-1/2 z-[88]"
             width="24"
             height="36"
             viewBox="0 0 24 36"

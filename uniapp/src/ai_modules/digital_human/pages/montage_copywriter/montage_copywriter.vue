@@ -12,7 +12,7 @@
                         v-model="formData.title"
                         placeholder="点击此输入标题"
                         height="120"
-                        maxlength="50"
+                        maxlength="30"
                         placeholder-style="font-size: 32rpx; font-weight: 600; color: ##838383;" />
                 </view>
                 <view class="mt-4">
@@ -86,6 +86,9 @@ const back = () => {
             return;
         } else if (!formData.content) {
             uni.$u.toast("请输入口播内容");
+            return;
+        } else if (formData.content.trim().length < 3) {
+            uni.$u.toast("口播内容不能少于10个字");
             return;
         }
         emit("confirm", {

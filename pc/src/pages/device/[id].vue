@@ -17,7 +17,7 @@
         <div
             class="grow min-h-0 bg-white rounded-[32px] flex flex-col overflow-hidden border border-[var(--el-border-color)]"
             ref="containerRef">
-            <div class="h-[88px] px-8 flex items-center justify-between bg-[#F8FAFC]/30">
+            <div class="h-[88px] px-8 flex items-center justify-between bg-slate-50/30">
                 <div class="flex items-center gap-4">
                     <ElPopover
                         trigger="click"
@@ -52,7 +52,7 @@
                                     :class="
                                         queryParams.device_code === item.device_code
                                             ? 'bg-[#0065FB]/5 text-primary'
-                                            : 'hover:bg-[#F8FAFC] text-[#475569]'
+                                            : 'hover:bg-slate-50 text-[#475569]'
                                     "
                                     @click="changeDevice(item.device_code)">
                                     <span class="text-[13px] font-bold truncate pr-2">{{ item.device_model }}</span>
@@ -85,7 +85,7 @@
             </div>
 
             <div class="grow min-h-0 flex w-full">
-                <div class="w-[200px] border-r border-t border-br bg-[#F8FAFC]/30 p-4 space-y-2">
+                <div class="w-[200px] border-r border-t border-br bg-slate-50/30 p-4 space-y-2">
                     <div class="text-[11px] font-black text-[#94A3B8] px-4 mb-4 uppercase tracking-widest">
                         社交平台
                     </div>
@@ -229,7 +229,7 @@
                             </template>
                         </ElTable>
                     </div>
-                    <div class="h-[72px] px-8 flex items-center justify-between bg-[#F8FAFC]/50">
+                    <div class="h-[72px] px-8 flex items-center justify-between bg-slate-50/50">
                         <span class="text-[12px] font-bold text-[#94A3B8]"
                             >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条账号数据</span
                         >

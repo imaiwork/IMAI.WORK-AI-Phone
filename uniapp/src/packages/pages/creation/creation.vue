@@ -92,8 +92,7 @@
                                         <image
                                             v-if="isSelect(index)"
                                             src="/static/images/icons/success.svg"
-                                            class="w-full h-full"
-                                            lazy></image>
+                                            class="w-full h-full"></image>
                                         <view
                                             class="w-full h-full rounded-full shadow-[0_0_0_2rpx_rgba(0,0,0,0.2)]"
                                             v-else>
@@ -112,13 +111,13 @@
                             <view class="text-[#0000004d] text-[22rpx]"> {{ getTypeName(item.type) }} </view>
                         </view>
                     </view>
-                    <view v-if="currentTab == 1" class="grid grid-cols-3 gap-3">
+                    <view v-if="currentTab == 1" class="grid grid-cols-2 gap-3">
                         <view class="" v-for="(item, index) in dataLists" :key="index">
-                            <view class="h-[220rpx] relative rounded-[20rpx] overflow-hidden">
+                            <view class="h-[400rpx] relative rounded-[20rpx] overflow-hidden">
                                 <view class="w-full h-full relative" @click="handlePreview(item)">
                                     <image
                                         :src="item.image"
-                                        lazy
+                                        lazy-load
                                         class="w-full h-full"
                                         mode="aspectFill"
                                         v-if="item.draw_type != 6"></image>
@@ -157,14 +156,17 @@
                                     </view>
                                 </view>
                             </view>
-                            <view class="text-xs mt-[14rpx] break-all">
-                                {{ formatTime(item.create_time) }}
-                            </view>
-                            <view class="mt-1 flex items-center justify-between">
-                                <view class="text-[22rpx] text-[#0000004d]">
-                                    {{ getDrawType(item.draw_type) }}
+
+                            <view class="mt-[4rpx] flex justify-between">
+                                <view>
+                                    <view class="text-xs mt-[14rpx] break-all">
+                                        {{ formatTime(item.create_time) }}
+                                    </view>
+                                    <view class="text-[22rpx] text-[#0000004d] mt-[4rpx]">
+                                        {{ getDrawType(item.draw_type) }}
+                                    </view>
                                 </view>
-                                <view class="p-1" @click="handleMore(item, index)">
+                                <view class="p-1 mt-[4rpx]" @click="handleMore(item, index)">
                                     <u-icon name="more-dot-fill" color="#7F7F7F"></u-icon>
                                 </view>
                             </view>

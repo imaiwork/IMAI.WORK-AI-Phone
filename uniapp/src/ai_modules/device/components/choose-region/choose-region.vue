@@ -21,8 +21,7 @@
                             <image
                                 v-if="chooseLists.length > 0 && chooseLists.length == regionList.length"
                                 src="/static/images/icons/success.svg"
-                                class="w-full h-full"
-                                lazy></image>
+                                class="w-full h-full"></image>
                             <view class="w-full h-full rounded-full shadow-[0_0_0_2rpx_rgba(0,0,0,0.2)]" v-else> </view>
                         </view>
                         <view>全选</view>

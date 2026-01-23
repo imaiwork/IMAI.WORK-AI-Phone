@@ -4,12 +4,6 @@ namespace app\api\logic\coze;
 
 use app\common\model\coze\CozeAgent;
 use app\common\model\coze\CozeLog;
-use think\facade\Db;
-use app\common\model\coze\CozeWorkflow;
-use think\facade\Log;
-use GuzzleHttp\Client;
-use GuzzleHttp\Psr7\Request;
-use Psr\Http\Message\ResponseInterface;
 
 class CozeChatLogic extends CozeLogic
 {
@@ -41,10 +35,11 @@ class CozeChatLogic extends CozeLogic
      */
     private function enrichParamsWithAgent(array $params, array $agent): array
     {
-        $params['source'] = $agent['source'];
-        $params['coze_id'] = $agent['coze_id'];
+        $userId              = $params['user_id'] ?? self::$uid;
+        $params['source']    = $agent['source'];
+        $params['coze_id']   = $agent['coze_id'];
         $params['source_id'] = $agent['source_id'];
-        $params['user_id'] = 'user' . self::$uid;
+        $params['user_id']   = 'user' . $userId;
         return $params;
     }
 
@@ -76,49 +71,58 @@ class CozeChatLogic extends CozeLogic
     public function chat($params)
     {
         try {
-            $agent = $this->findAccessibleAgent((int)$params['id']);
+            $userId   = $params['user_id'] ?? self::$uid;
+            $chatType = $params['special_chat_type'] ?? '';
+            if ($chatType == 'automation') {
+                $agent['stream']    = 0;
+                $agent['source']    = 0;
+                $agent['coze_id']   = \app\common\service\ToolsService::Automation()::BOT_ID;
+                $agent['source_id'] = 0;
+            } else {
+                $agent = $this->findAccessibleAgent((int)$params['id']);
+            }
             $params = $this->enrichParamsWithAgent($params, $agent);
-            if (isset($params['content'])){
+            if (isset($params['content'])) {
                 $params['additional_messages'][] = [
-                    'role' => 'user',
-                    'content' => $params['content'],
+                    'role'         => 'user',
+                    'content'      => $params['content'],
                     'content_type' => 'text',
                 ];
             }
 
-            if ((int)$agent['stream'] === 1){
+            if ((int)$agent['stream'] === 1) {
                 throw new \Exception('该智能体是流式返回');
             }
             $resp = $this->cozechat($params);
-            if (!isset($params['content'])){
-                $params['content'] = $params['text']??'';
+            if (!isset($params['content'])) {
+                $params['content'] = $params['text'] ?? '';
             }
             $add = [];
             if (isset($resp['data'])) {
                 $logid = $resp['detail']['logid'] ?? '';
                 $value = $resp['data'];
-                $add[] =[
+                $add[] = [
                     'conversation_id' => $value['conversation_id'],
                     'message_id'      => $value['id'],
                     'type'            => 1,
                     'bot_id'          => $value['bot_id'],
-                    'user_id'         => self::$uid,          // 业务侧用户
+                    'user_id'         => $userId,          // 业务侧用户
                     'role'            => 'user',     // assistant / user
                     'content'         => $params['content'],
-                    'create_time'         => $value['created_at'] ?? time(),
-                    'update_time'         => $value['updated_at'] ?? time(),
+                    'create_time'     => $value['created_at'] ?? time(),
+                    'update_time'     => $value['updated_at'] ?? time(),
                     'status'          => $value['status'] === 'in_progress' ? 'in_progress' : 'completed',
                     'extra'           => json_encode([
-                        'chat_id'           => $value['id'],
-                        'logid'             => $logid,
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                                                         'chat_id' => $value['id'],
+                                                         'logid'   => $logid,
+                                                     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ];
 
             }
-            if (count($add) > 0){
+            if (count($add) > 0) {
                 CozeLog::insertAll($add);
             }
-            $payload = $this->handleCozeResponse($resp);
+            $payload          = $this->handleCozeResponse($resp);
             self::$returnData = $payload;
             return true;
         } catch (\Exception $e) {
@@ -129,7 +133,15 @@ class CozeChatLogic extends CozeLogic
     public function retrieve($params)
     {
         try {
-            $agent = $this->findAccessibleAgent((int)$params['id']);
+            $chatType = $params['special_chat_type'] ?? '';
+            if ($chatType == 'automation') {
+                $agent['stream']    = 0;
+                $agent['source']    = 0;
+                $agent['coze_id']   = \app\common\service\ToolsService::Automation()::BOT_ID;
+                $agent['source_id'] = 0;
+            } else {
+                $agent = $this->findAccessibleAgent((int)$params['id']);
+            }
             $params = $this->enrichParamsWithAgent($params, $agent);
             $params['agent'] = $agent;
             $resp = $this->cozeretrieve($params);
@@ -199,7 +211,16 @@ class CozeChatLogic extends CozeLogic
 
     public function stream($params){
         try {
-            $agent = $this->findAccessibleAgent((int)$params['id']);
+            $chatType = $params['special_chat_type'] ?? '';
+            if ($chatType == 'automation') {
+                $agent['stream']    = 1;
+                $agent['source']    = 0;
+                $agent['coze_id']   = \app\common\service\ToolsService::Automation()::BOT_ID;
+                $agent['source_id'] = 0;
+                $params['coze_id'] = $agent['coze_id'];
+            } else {
+                $agent = $this->findAccessibleAgent((int)$params['id']);
+            }
             $params = $this->enrichParamsWithAgent($params, $agent);
 
             // 追加用户消息

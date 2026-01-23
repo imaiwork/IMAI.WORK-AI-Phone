@@ -132,17 +132,19 @@
 
 <script setup lang="ts">
 import { getMaterialMusicList } from "@/api/material";
-import { getMaterialLibraryList } from "~/api/matrix";
+import { getMaterialLibraryList } from "@/api/matrix";
 import Popup from "@/components/popup/index.vue";
 import { MaterialTypeEnum } from "~/pages/app/matrix/_enums/index";
 
 const props = withDefaults(
     defineProps<{
         // 是否可以多选
+        limit?: number;
         multiple?: boolean;
     }>(),
     {
         multiple: false,
+        limit: 1,
     }
 );
 
@@ -277,6 +279,10 @@ const choose = (item: any) => {
         }
     } else {
         if (multiple.value) {
+            if (selectAudio.value.length >= props.limit) {
+                feedback.msgWarning("最多选择" + props.limit + "个音乐");
+                return;
+            }
             selectAudio.value.push(data);
         } else {
             selectAudio.value = data;

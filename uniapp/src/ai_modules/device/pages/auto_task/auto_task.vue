@@ -25,21 +25,30 @@
                             <view class="text-[#00C08E] font-bold">已获取</view>
                         </template>
                         <view v-else class="absolute right-3 top-0">
-                            <view class="py-[32rpx] flex justify-center items-center gap-x-2" @click="handleGetAccount">
-                                <image
-                                    src="@/ai_modules/device/static/icons/refresh_primary.svg"
-                                    class="w-[28rpx] h-[28rpx]"></image>
-                                <text class="text-primary font-bold">一键获取</text>
+                            <view
+                                class="py-[32rpx] flex justify-center items-center gap-x-2"
+                                @click="showGetAccountPopup = true">
+                                <text class="text-primary font-bold">详情</text>
                             </view>
                         </view>
                     </view>
                 </view>
                 <view class="flex items-center gap-x-2 mt-[22rpx]">
-                    <view v-for="(item, index) in sortedPlatformLogo" :key="index">
-                        <image :src="item.icon" class="w-[48rpx] h-[48rpx]"></image>
+                    <view v-for="(item, index) in sortedPlatform" :key="index">
+                        <image
+                            :src="!isCompleteConfig ? item.activeIcon : item.icon"
+                            class="w-[48rpx] h-[48rpx]"></image>
                     </view>
                 </view>
             </view>
+            <navigator
+                :url="`/ai_modules/device/pages/create_auto_task/create_auto_task?device_code=${deviceCode}`"
+                class="rounded-[20rpx] bg-[#ffffff80] px-[36rpx] py-4 flex items-center justify-between mt-[12rpx]">
+                <view class="font-bold text-[30rpx]">运营策略方案</view>
+                <view class="flex items-center gap-x-1 text-[#000000]/40">
+                    查看<u-icon name="arrow-right" size="20" color="#9DA5B0"></u-icon>
+                </view>
+            </navigator>
         </view>
         <view class="px-4 mt-4 flex justify-end">
             <view class="flex items-center gap-x-1" @click="showFeePopup = true">
@@ -86,23 +95,34 @@
                                 </view>
                                 <view class="text-[#00000080] font-bold">{{ item.time[1] }}</view>
                             </view>
-                            <view class="bg-white flex-1 relative rounded-[20rpx] px-[40rpx] py-[30rpx] h-[238rpx]">
+                            <view class="bg-white flex-1 relative rounded-[20rpx] px-[40rpx] py-[30rpx]">
                                 <view
                                     class="absolute top-[50%] left-0 h-[100rpx] w-[6rpx] rounded-[20rpx]"
                                     :style="{ background: item.color, transform: 'translateY(-50%)' }"></view>
                                 <view class="flex items-center justify-between">
-                                    <view class="flex items-center gap-x-1">
-                                        <image
-                                            src="@/ai_modules/device/static/icons/task.svg"
-                                            class="w-[24rpx] h-[24rpx]"></image>
-                                        <text class="text-xs text-[#0000004d] font-bold">任务类型</text>
-                                    </view>
                                     <view class="flex items-center gap-x-[4rpx]">
                                         <image
                                             v-for="(val, index) in item.platform"
                                             :key="index"
                                             :src="val.activeIcon"
                                             class="w-[32rpx] h-[32rpx]"></image>
+                                    </view>
+                                    <view
+                                        v-if="!item.disabled"
+                                        class="rounded-[10rpx] h-[44rpx] w-[120rpx] flex items-center justify-center gap-x-1 bg-[#FDF3E3]"
+                                        @click.stop="handleDemo(item)">
+                                        <image
+                                            src="@/ai_modules/device/static/icons/window.svg"
+                                            class="w-[20rpx] h-[20rpx]"></image>
+                                        <text class="text-[#BA6F0D]">演示</text>
+                                    </view>
+                                </view>
+                                <view class="flex items-center justify-between mt-2">
+                                    <view class="flex items-center gap-x-1">
+                                        <image
+                                            src="@/ai_modules/device/static/icons/task.svg"
+                                            class="w-[24rpx] h-[24rpx]"></image>
+                                        <text class="text-xs text-[#0000004d] font-bold">任务类型</text>
                                     </view>
                                 </view>
                                 <view class="mt-[6rpx] flex items-center gap-x-[10rpx]">
@@ -168,66 +188,56 @@
             </view>
         </view>
     </view>
-    <u-popup
-        v-model="showUpdateProgress"
-        mode="center"
-        border-radius="20"
-        width="80%"
-        :mask-close-able="false"
-        @close="onProgressPopupClose">
-        <view class="rounded-[20rpx] bg-white px-5 py-[78rpx]">
-            <view class="flex flex-col gap-y-3 w-[70%] mx-auto">
-                <view v-for="(item, index) in updateAccountSteps" :key="index" class="flex gap-x-[28rpx]">
-                    <view class="flex-shrink-0 mt-[4rpx] relative">
-                        <view class="w-[28rpx] h-[28rpx]">
-                            <view
-                                v-if="item.status == 0"
-                                class="w-full h-full rounded-full border border-solid border-[#0000001a]">
-                            </view>
-                            <view
-                                v-if="item.status == 1 || item.status == 3"
-                                class="w-full h-full rounded-full border border-solid border-primary-light-8 flex items-center justify-center">
-                                <view class="w-[12rpx] h-[12rpx] rounded-full bg-primary"></view>
-                            </view>
-                            <view
-                                v-if="item.status == 2"
-                                class="w-full h-full rounded-full flex items-center justify-center border border-solid border-primary">
-                                <u-icon name="checkmark" color="#0065FB" size="16"></u-icon>
-                            </view>
-                        </view>
-                        <view
-                            class="absolute top-[60%] left-[14rpx] w-[2rpx] h-[60%]"
-                            :class="[item.status == 2 ? 'bg-primary' : 'bg-[#0000001a]']"
-                            v-if="index !== updateAccountSteps.length - 1"></view>
+    <account-get
+        v-if="showGetAccountPopup"
+        v-model="showGetAccountPopup"
+        :sorted-platform="sortedPlatform"
+        @get-account="handleGetAccount(deviceCode, false)" />
+    <u-popup v-model="showChooseApp" mode="center" border-radius="20" width="80%">
+        <view class="bg-white p-6 rounded-2xl">
+            <text class="text-xl font-bold mb-2 block">选择平台</text>
+            <text class="text-sm text-[#9ca3af] mb-5 block">请选择您要发布的平台</text>
+
+            <view class="space-y-3">
+                <view
+                    v-for="platform in chooseAppPlatforms"
+                    :key="platform.id"
+                    class="flex items-center p-4 border-2 rounded-xl gap-x-3 transition-all duration-200"
+                    :class="[
+                        selectedPlatform?.type === platform.type
+                            ? 'border-[#3b82f6] bg-[#eff6ff] shadow-md'
+                            : 'border-[#f3f4f6] bg-[#f9fafb] hover:border-[#e5e7eb]',
+                    ]"
+                    @click="selectPlatform(platform)">
+                    <view
+                        class="w-[80rpx] h-[80rpx] rounded-xl flex items-center justify-center"
+                        :class="selectedPlatform?.type === platform.type ? 'bg-[#dbeafe]' : 'bg-white'">
+                        <image :src="platform.activeIcon" class="w-[48rpx] h-[48rpx]"></image>
                     </view>
-                    <view class="h-[80rpx]">
-                        <view
-                            class="font-bold"
-                            :class="{
-                                'text-[#0000004d]': item.status == 0,
-                            }">
-                            {{ item.title }}
-                        </view>
-                        <view class="mt-1">
-                            <text class="text-primary font-bold text-xs" v-if="item.status == 1">获取中...</text>
-                            <text class="text-[#FF2442] font-bold text-xs" v-if="item.status == 3">获取失败</text>
-                        </view>
+                    <view class="flex-1">
+                        <text class="font-semibold text-base block">{{ platform.name }}</text>
+                        <text class="text-xs text-[#9ca3af]" v-if="platform.desc">{{ platform.desc }}</text>
+                    </view>
+                    <view
+                        v-if="selectedPlatform?.type === platform.type"
+                        class="w-[40rpx] h-[40rpx] rounded-full bg-[#3b82f6] flex items-center justify-center">
+                        <u-icon name="checkmark" color="#fff" size="24rpx"></u-icon>
                     </view>
                 </view>
             </view>
-            <view class="mt-2 flex flex-col gap-y-2">
-                <u-button
-                    v-if="isExecuteComplete"
-                    type="primary"
-                    :custom-style="{ height: '90rpx', width: '100%', fontWeight: 'bold', borderRadius: '20rpx' }"
-                    @click="onProgressPopupClose"
-                    >确认</u-button
-                >
+
+            <view class="mt-8 flex gap-3">
                 <u-button
                     :custom-style="{ height: '90rpx', fontWeight: 'bold', borderRadius: '20rpx' }"
-                    @click="onProgressPopupClose"
-                    >取消</u-button
-                >
+                    @click="showChooseApp = false">
+                    取消
+                </u-button>
+                <u-button
+                    type="primary"
+                    :custom-style="{ height: '90rpx', fontWeight: 'bold', borderRadius: '20rpx' }"
+                    @click="confirmSelection">
+                    确认选择
+                </u-button>
             </view>
         </view>
     </u-popup>
@@ -262,74 +272,78 @@
 </template>
 
 <script setup lang="ts">
-import { getDeviceDetail, getAutoTaskDetail, addDeviceAccount, updateDeviceAccount } from "@/api/device";
+import { getDeviceDetail, getAutoTaskDetail, createDemoTask } from "@/api/device";
 import { useDevice } from "@/ai_modules/device/hooks/useDevice";
-import { AppTypeEnum, DeviceCmdEnum } from "@/enums/appEnums";
-import useDeviceWs from "@/ai_modules/device/hooks/useDeviceWs";
+import { useUserStore } from "@/stores/user";
+import { AppTypeEnum } from "@/enums/appEnums";
 import CircleIcon from "@/ai_modules/device/static/images/common/circle.png";
 import SphIcon from "@/static/images/common/sph_s.png";
 import PhoneIcon from "@/ai_modules/device/static/images/common/phone.png";
-import { useUserStore } from "@/stores/user";
+import AccountGet from "@/ai_modules/device/components/account-get/account-get.vue";
 
-const { platformLogo } = useDevice();
+enum TaskKeyEnum {
+    CLUES_SETTING = "clues_setting",
+    TAKEOVER_SETTING = "takeover_setting",
+    PUBLISH_SETTING = "publish_setting",
+    CIRCLE_INTERACTION = "circle_interaction",
+    TOUCH_SETTING = "touch_setting",
+    ADD_WECHAT_SETTING = "add_wechat_setting",
+    AUTO_ACCOUNT = "auto_account",
+}
+
 const userStore = useUserStore();
 
-// 初始化WebSocket服务
-const { send, onEvent, close } = useDeviceWs();
+const { platform, sortedPlatform, connectWebSocket, initializePlatform, handleGetAccount } = useDevice();
 
-const sortedPlatformLogo = ref<any[]>(
-    Object.values(platformLogo).map((item: any) => {
-        return {
-            ...item,
-            icon: item.activeIcon,
-        };
-    })
-);
 const pagingRef = ref<any>(null);
-const showUpdateProgress = ref(false);
-const currentAccountIndex = ref(0);
-const updateAccountSteps = ref<any[]>([]);
 
 const loading = ref(true);
 const deviceCode = ref("");
 const deviceDetail = ref<any>({});
 const autoTaskDetail = ref<any>({});
+
+const showChooseApp = ref(false);
+const showGetAccountPopup = ref(false);
 // 是否完成配置
 const isCompleteConfig = ref(false);
 const showFeePopup = ref(false);
 const taskMap: any = {
     // 关键词获客
     keyword_customer: {
-        key: "clues_setting",
+        key: TaskKeyEnum.CLUES_SETTING,
         name: "关键词获客",
         status: 0,
-        platform: [platformLogo[AppTypeEnum.SPH]],
+        platform: [platform.value[AppTypeEnum.SPH]],
         color: "#CADEFD",
     },
     // 私信接管
     private_message_takeover: {
-        key: "takeover_setting",
+        key: TaskKeyEnum.TAKEOVER_SETTING,
         name: "私信接管",
         status: 0,
-        platform: [platformLogo[AppTypeEnum.XHS], platformLogo[AppTypeEnum.DOUYIN], platformLogo[AppTypeEnum.KUAISHOU]],
+        platform: [
+            platform.value[AppTypeEnum.XHS],
+            platform.value[AppTypeEnum.DOUYIN],
+            platform.value[AppTypeEnum.KUAISHOU],
+        ],
         color: "#CADEFD",
     },
     // 社媒平台发布内容
     social_media_content: {
-        key: "publish_setting",
+        key: TaskKeyEnum.PUBLISH_SETTING,
         name: "社媒平台发布内容",
         status: 0,
         platform: [
-            platformLogo[AppTypeEnum.XHS],
-            platformLogo[AppTypeEnum.DOUYIN],
-            platformLogo[AppTypeEnum.KUAISHOU],
-            { activeIcon: SphIcon },
+            platform.value[AppTypeEnum.XHS],
+            platform.value[AppTypeEnum.DOUYIN],
+            platform.value[AppTypeEnum.KUAISHOU],
+            { activeIcon: SphIcon, name: "视频号", type: AppTypeEnum.SPH },
         ],
         color: "#BCFFB5",
     },
     // 朋友圈互动
     circle_interaction: {
-        key: "circle_interaction",
+        key: TaskKeyEnum.CIRCLE_INTERACTION,
         name: "朋友圈互动",
         status: 4,
         platform: [{ activeIcon: CircleIcon }],
@@ -337,35 +351,35 @@ const taskMap: any = {
     },
     // 评论区获客
     comment_area_customer: {
-        key: "touch_setting",
+        key: TaskKeyEnum.TOUCH_SETTING,
         name: "评论区获客",
         status: 0,
         platform: [
-            platformLogo[AppTypeEnum.DOUYIN],
-            platformLogo[AppTypeEnum.KUAISHOU],
-            platformLogo[AppTypeEnum.XHS],
-            platformLogo[AppTypeEnum.SPH],
+            platform.value[AppTypeEnum.DOUYIN],
+            platform.value[AppTypeEnum.KUAISHOU],
+            platform.value[AppTypeEnum.XHS],
+            platform.value[AppTypeEnum.SPH],
         ],
         color: "#FFE4C1",
     },
     // 自动加微
     auto_add_wechat: {
-        key: "add_wechat_setting",
+        key: TaskKeyEnum.ADD_WECHAT_SETTING,
         name: "自动加微",
         status: 0,
-        platform: [platformLogo[AppTypeEnum.WECHAT]],
+        platform: [platform.value[AppTypeEnum.WECHAT]],
         color: "#DAD4FF",
     },
     // 自动养号
     auto_account: {
-        key: "auto_account",
+        key: TaskKeyEnum.AUTO_ACCOUNT,
         name: "自动养号",
         status: 3,
         platform: [
-            platformLogo[AppTypeEnum.XHS],
-            platformLogo[AppTypeEnum.DOUYIN],
-            platformLogo[AppTypeEnum.KUAISHOU],
-            platformLogo[AppTypeEnum.SPH],
+            platform.value[AppTypeEnum.XHS],
+            platform.value[AppTypeEnum.DOUYIN],
+            platform.value[AppTypeEnum.KUAISHOU],
+            // platform.value[AppTypeEnum.SPH],
         ],
         color: "#FFE4C1",
     },
@@ -399,7 +413,7 @@ const taskTimeConfig = ref<any[]>([
     {
         ...taskMap.comment_area_customer,
         time: ["10:00", "12:30"],
-        platform: [platformLogo[AppTypeEnum.DOUYIN]],
+        platform: [platform.value[AppTypeEnum.DOUYIN]],
     },
     // 社媒平台发布内容
     {
@@ -416,7 +430,7 @@ const taskTimeConfig = ref<any[]>([
     {
         ...taskMap.comment_area_customer,
         time: ["15:30", "17:30"],
-        platform: [platformLogo[AppTypeEnum.XHS]],
+        platform: [platform.value[AppTypeEnum.XHS]],
     },
     // 评论区获客
     {
@@ -435,7 +449,7 @@ const taskTimeConfig = ref<any[]>([
     {
         ...taskMap.comment_area_customer,
         time: ["18:30", "20:30"],
-        platform: [platformLogo[AppTypeEnum.KUAISHOU]],
+        platform: [platform.value[AppTypeEnum.KUAISHOU]],
         disabled: true,
     },
     // 自动加微
@@ -449,101 +463,6 @@ const taskTimeConfig = ref<any[]>([
         time: ["21:30", "23:00"],
     },
 ]);
-
-// 算力消耗明细
-
-const freeList = [
-    {
-        scene: "auto_phone_sph_add_wechat",
-        name: "视频号获客",
-        description: " 按照识别执行线索数量进行扣费",
-        cast_price: "1",
-        price: "2",
-        unit: "算力/次",
-        times: 999,
-    },
-    {
-        scene: "auto_phone_matrix_publish",
-        name: "社媒平台发布",
-        description: "按照内容的发布条数进行扣费",
-        cast_price: "10",
-        price: "20",
-        unit: "算力/条",
-        times: 999,
-    },
-    {
-        scene: "auto_phone_intercept",
-        name: "截流私信/评论",
-        description: "按照主动私信/评论时产生的token进行扣费",
-        cast_price: "1",
-        price: "2",
-        unit: "算力/1000token",
-        times: 999,
-    },
-    {
-        scene: "auto_phone_touch_reach",
-        name: "截流触达",
-        description: "按照找到的用户数进行扣费",
-        cast_price: "1",
-        price: "2",
-        unit: "算力/个",
-        times: 999,
-    },
-    {
-        scene: "auto_phone_comment",
-        name: "朋友圈评论",
-        description: "按照评论朋友圈时产生的token进行扣费",
-        cast_price: "1",
-        price: "2",
-        unit: "算力/1000token",
-        times: 999,
-    },
-    {
-        scene: "auto_phone_circle_publish",
-        name: "朋友圈发布",
-        description: "按照内容的发布条数进行扣费",
-        cast_price: "1",
-        price: "2",
-        unit: "算力/条",
-        times: 999,
-    },
-    {
-        scene: "auto_phone_matrix_publish",
-        name: "朋友圈点赞",
-        description: "按点赞朋友圈的次数进行扣费",
-        cast_price: "1",
-        price: "2",
-        unit: "算力/次",
-        times: 999,
-    },
-    {
-        scene: "auto_phone_add_wechat",
-        name: "自动加微",
-        description: "按发送好友申请的次数进行扣费",
-        cast_price: "1",
-        price: "2",
-        unit: "算力/个",
-        times: 999,
-    },
-    {
-        scene: "auto_phone_reply",
-        name: "私信接管(社媒平台)",
-        description: "按照自动回复时产生的token进行扣费）",
-        cast_price: "1",
-        price: "2",
-        unit: "算力/1000token",
-        times: 999,
-    },
-    {
-        scene: "auto_phone_matrix_publish",
-        name: "自动养号(社媒平台)",
-        description: "按照自动养号运行时长进行扣费",
-        cast_price: "1",
-        price: "2",
-        unit: "算力/分钟",
-        times: 999,
-    },
-];
 
 const getTaskCostConfig = computed(() => {
     const getScene = (scene: string) => {
@@ -560,85 +479,19 @@ const getTaskCostConfig = computed(() => {
         "automation_wechat_add_friend",
         "automation_social_media_obtain",
         "automation_social_media_nursing",
+        "automation_ocr_local",
+        "automation_ocr_img",
     ].map(getScene);
 });
 
 // 判断是不是全部获取成功
 const isAllGetSuccess = computed(() => {
-    return sortedPlatformLogo.value.every((item) => item.active);
-});
-
-const isExecuteComplete = computed(() => {
-    return updateAccountSteps.value.some((step: any) => step.status === 2);
+    return sortedPlatform.value.every((item) => item.active);
 });
 
 const queryList = () => {
     getTaskConfig();
     pagingRef.value?.complete(taskTimeConfig.value);
-};
-
-const handleGetAccount = () => {
-    currentAccountIndex.value = 0;
-
-    let platformsToProcess = sortedPlatformLogo.value;
-
-    if (!isAllGetSuccess.value) {
-        platformsToProcess = sortedPlatformLogo.value.filter((item) => !item.active);
-    }
-
-    const stepsToUpdate = platformsToProcess.map((item) => {
-        const originalPlatform = Object.values(platformLogo).find((p: any) => p.type === item.type);
-        return {
-            status: 0,
-            title: originalPlatform?.name || item.name,
-            type: item.type,
-        };
-    });
-
-    if (stepsToUpdate.length === 0) {
-        uni.$u.toast("所有账号均已获取");
-        return;
-    }
-    // 重置状态
-    sortedPlatformLogo.value.forEach((p) => {
-        if (platformsToProcess.includes(p.type)) {
-            p.status = 0;
-        }
-    });
-
-    updateAccountSteps.value = stepsToUpdate;
-    showUpdateProgress.value = true;
-    processNextAccount();
-};
-
-const processNextAccount = () => {
-    const platformToProcess = sortedPlatformLogo.value.find(
-        (p) => updateAccountSteps.value.map((item: any) => item.type).includes(p.type) && p.status === 0
-    );
-    if (platformToProcess) {
-        updateAccountSteps.value.forEach((item: any) => {
-            if (item.type === platformToProcess.type) {
-                item.status = 1;
-            }
-        });
-        sendGetAccountCmd(platformToProcess.type);
-    }
-};
-
-const onProgressPopupClose = () => {
-    showUpdateProgress.value = false;
-    currentAccountIndex.value = 0;
-    getDetail();
-};
-
-// 发送获取账号指令
-const sendGetAccountCmd = (type: AppTypeEnum) => {
-    send({
-        type: DeviceCmdEnum.GET_USER_INFO,
-        content: { deviceId: deviceCode.value },
-        deviceId: deviceCode.value,
-        appType: type,
-    });
 };
 
 const toTaskConfig = (item: any) => {
@@ -648,19 +501,19 @@ const toTaskConfig = (item: any) => {
         return;
     }
     const urls: any = {
-        clues_setting: "/ai_modules/device/pages/setting_clue/setting_clue",
-        active_setting: "/ai_modules/device/pages/setting_auto_account/setting_auto_account",
-        publish_setting: "/ai_modules/device/pages/setting_publish/setting_publish",
-        takeover_setting: "/ai_modules/device/pages/setting_private_take/setting_private_take",
-        circle_interaction: "/ai_modules/device/pages/setting_circle/setting_circle",
-        touch_setting: "/ai_modules/device/pages/setting_ca/setting_ca",
-        add_wechat_setting: "/ai_modules/device/pages/setting_add_wechat/setting_add_wechat",
+        [TaskKeyEnum.CLUES_SETTING]: "/ai_modules/device/pages/setting_clue/setting_clue",
+        [TaskKeyEnum.AUTO_ACCOUNT]: "/ai_modules/device/pages/setting_auto_account/setting_auto_account",
+        [TaskKeyEnum.PUBLISH_SETTING]: "/ai_modules/device/pages/setting_publish/setting_publish",
+        [TaskKeyEnum.TAKEOVER_SETTING]: "/ai_modules/device/pages/setting_private_take/setting_private_take",
+        [TaskKeyEnum.CIRCLE_INTERACTION]: "/ai_modules/device/pages/setting_circle/setting_circle",
+        [TaskKeyEnum.TOUCH_SETTING]: "/ai_modules/device/pages/setting_ca/setting_ca",
+        [TaskKeyEnum.ADD_WECHAT_SETTING]: "/ai_modules/device/pages/setting_add_wechat/setting_add_wechat",
     };
     const params: any = {
         type: key,
         device_code: deviceCode.value,
     };
-    if (key === "touch_setting") {
+    if (key === TaskKeyEnum.TOUCH_SETTING) {
         params.account_type = item.platform[0].type;
     }
     if (urls[key]) {
@@ -703,15 +556,7 @@ const getTaskConfig = async () => {
     isCompleteConfig.value = is_empty === 0;
 
     if (isCompleteConfig.value) {
-        sortedPlatformLogo.value = Object.values(platformLogo).map((item: any) => {
-            const account = deviceDetail.value.accounts.find((val: any) => val.type == item.type);
-            return {
-                ...item,
-                active: !!account,
-                icon: account ? item.activeIcon : item.icon,
-                status: account ? 2 : 0,
-            };
-        });
+        initializePlatform(deviceDetail.value.accounts);
     }
 
     taskTimeConfig.value.forEach((item: any) => {
@@ -721,62 +566,102 @@ const getTaskConfig = async () => {
         }
     });
 };
+const chooseAppPlatforms = ref<any[]>([]);
+const selectedPlatform = ref<any>({});
+const currTaskKey = ref<any>(null);
+const demoParams = ref<any>({
+    device_code: deviceCode.value,
+    account_type: null,
+    source: null,
+});
 
-onEvent("success", async (data: any) => {
-    const { type, content, deviceId, appType } = data;
-    if (type !== DeviceCmdEnum.GET_USER_INFO) return;
+const selectPlatform = (platform: any) => {
+    selectedPlatform.value = platform;
+};
 
-    const platform = sortedPlatformLogo.value.find((p) => p.type === appType);
-    if (platform && platform.status === 1) {
-        const { account, account_no, extra, avatar, nickname } = content;
-        const existingAccount = deviceDetail.value.accounts?.find((acc: any) => acc.type === appType);
-        const params = {
-            account,
-            account_no,
-            avatar,
-            device_code: deviceId,
-            type: appType,
-            nickname,
-            extra: JSON.stringify(extra),
-        };
-
-        try {
-            if (existingAccount) {
-                await updateDeviceAccount({ ...params, id: existingAccount.id });
+const confirmSelection = () => {
+    showChooseApp.value = false;
+    const { type } = selectedPlatform.value;
+    switch (currTaskKey.value) {
+        case TaskKeyEnum.TAKEOVER_SETTING:
+            demoParams.value.account_type = type;
+            demoParams.value.source = 4;
+            break;
+        case TaskKeyEnum.PUBLISH_SETTING:
+            demoParams.value.account_type = type;
+            if (type == AppTypeEnum.XHS) {
+                demoParams.value.source = 1;
             } else {
-                await addDeviceAccount(params);
+                demoParams.value.source = 2;
             }
-            platform.status = 2; // 成功
-            platform.active = true;
-            platform.account = account;
-            platform.account_no = account_no;
-            platform.avatar = avatar;
-            platform.nickname = nickname;
-            platform.extra = extra;
-        } catch (error) {
-            platform.status = 3; // 如果API调用失败，也标记为失败
-        }
+            break;
+        case TaskKeyEnum.AUTO_ACCOUNT:
+            demoParams.value.account_type = type;
+            demoParams.value.source = 8;
+            break;
     }
+    startDemoTask();
+};
 
-    const isFinished = !sortedPlatformLogo.value.some(
-        (p) => updateAccountSteps.value.includes(p.type) && (p.status === 0 || p.status === 1)
-    );
+const handleDemo = (item: any) => {
+    uni.showModal({
+        title: "提示",
+        content: "检测有任务在执行中，演示任务会中断当前任务，是否确定继续演示任务？",
+        success: (res) => {
+            if (res.confirm) {
+                demoParams.value.device_code = deviceCode.value;
+                currTaskKey.value = item.key;
+                switch (item.key) {
+                    case TaskKeyEnum.CLUES_SETTING:
+                        demoParams.value.account_type = 1;
+                        demoParams.value.source = 3;
+                        startDemoTask();
+                        break;
+                    case TaskKeyEnum.TAKEOVER_SETTING:
+                    case TaskKeyEnum.PUBLISH_SETTING:
+                    case TaskKeyEnum.AUTO_ACCOUNT:
+                        chooseAppPlatforms.value = item.platform;
+                        selectedPlatform.value = chooseAppPlatforms.value[0];
+                        showChooseApp.value = true;
+                        break;
+                    case TaskKeyEnum.TOUCH_SETTING:
+                        demoParams.value.account_type = item.platform[0].type;
+                        demoParams.value.source = 5;
+                        startDemoTask();
+                        break;
+                    case TaskKeyEnum.ADD_WECHAT_SETTING:
+                        demoParams.value.account_type = item.platform[0].type;
+                        demoParams.value.source = 7;
+                        startDemoTask();
+                        break;
+                }
+            }
+        },
+    });
+};
 
-    if (!isFinished) {
-        processNextAccount();
-    } else {
-        await getDetail();
+const startDemoTask = async () => {
+    uni.showLoading({
+        title: "创建中...",
+        mask: true,
+    });
+    try {
+        await createDemoTask(demoParams.value);
+        uni.hideLoading();
+        uni.showToast({
+            title: "创建成功",
+            icon: "success",
+            duration: 3000,
+        });
+    } catch (error: any) {
+        uni.hideLoading();
+        uni.showToast({
+            title: error,
+            icon: "none",
+            duration: 3000,
+        });
     }
-});
-
-onEvent("error", (error: any) => {
-    const platformInProgress = sortedPlatformLogo.value.find((p) => p.status === 1);
-    if (platformInProgress) {
-        platformInProgress.error = error.error;
-        platformInProgress.status = 3; // 失败
-        processNextAccount(); // 即使失败也尝试下一个
-    }
-});
+};
 
 onShow(() => {
     getDetail();
@@ -784,6 +669,7 @@ onShow(() => {
 
 onLoad((options: any) => {
     deviceCode.value = options.device_code;
+    connectWebSocket();
 });
 
 onUnload(() => {

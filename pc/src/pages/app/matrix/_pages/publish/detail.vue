@@ -1,6 +1,6 @@
 <template>
     <ElDrawer v-model="show" body-class="!p-0" size="480px" :with-header="false" class="custom-light-drawer">
-        <div class="h-full flex flex-col bg-[#F8FAFC]" ref="containerRef">
+        <div class="h-full flex flex-col bg-slate-50" ref="containerRef">
             <div class="absolute w-8 h-8 top-3 right-3 z-50" @click="close">
                 <close-btn :icon-size="12" />
             </div>
@@ -18,11 +18,11 @@
                 </h2>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="p-4 rounded-2xl bg-[#F8FAFC] border border-[#F1F5F9]">
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-[#F1F5F9]">
                         <p class="text-[10px] text-[#94A3B8] font-bold uppercase mb-1">任务类型</p>
                         <p class="text-[13px] font-bold text-[#334155]">{{ detail?.task_category }}</p>
                     </div>
-                    <div class="p-4 rounded-2xl bg-[#F8FAFC] border border-[#F1F5F9]">
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-[#F1F5F9]">
                         <p class="text-[10px] text-[#94A3B8] font-bold uppercase mb-1">每日发布量</p>
                         <p class="text-[13px] font-bold text-[#1E293B]">
                             {{ detail?.count || 0 }} <span class="text-[10px] font-normal text-[#94A3B8]">条 / 天</span>
@@ -90,7 +90,7 @@
                                     </div>
                                 </div>
 
-                                <div class="mb-4 rounded-xl overflow-hidden bg-[#F8FAFC] border border-[#F1F5F9]">
+                                <div class="mb-4 rounded-xl overflow-hidden bg-slate-50 border border-[#F1F5F9]">
                                     <div v-if="item.material_type == 2" class="grid grid-cols-4 gap-1.5 p-1.5">
                                         <ElImage
                                             v-for="(img, i) in item.material_url.split(',')"
@@ -108,7 +108,7 @@
                                             class="w-full aspect-video object-cover">
                                             <template #error>
                                                 <div
-                                                    class="flex flex-col items-center justify-center gap-2 w-full h-full bg-[#F8FAFC] text-[#CBD5E1]">
+                                                    class="flex flex-col items-center justify-center gap-2 w-full h-full bg-slate-50 text-[#CBD5E1]">
                                                     <Icon name="el-icon-Picture" :size="32"></Icon>
                                                     <span class="text-[10px] font-bold opacity-60">图片加载失败</span>
                                                 </div>
@@ -158,7 +158,7 @@
                                         </div>
                                         <button
                                             @click="handleDelete(item.id)"
-                                            class="w-9 h-9 rounded-xl bg-[#F8FAFC] text-[#94A3B8] hover:bg-[#FEF2F2] hover:border-[transparent] hover:text-[#EF4444] border border-[#F1F5F9] transition-all flex items-center justify-center">
+                                            class="w-9 h-9 rounded-xl bg-slate-50 text-[#94A3B8] hover:bg-[#FEF2F2] hover:border-[transparent] hover:text-[#EF4444] border border-[#F1F5F9] transition-all flex items-center justify-center">
                                             <Icon name="el-icon-Delete" :size="14"></Icon>
                                         </button>
                                     </div>

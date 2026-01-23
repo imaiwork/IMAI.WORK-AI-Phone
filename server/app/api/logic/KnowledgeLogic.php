@@ -1864,7 +1864,17 @@ class KnowledgeLogic extends ApiLogic
             $vector = '';
             $response = [];
             if ($robot != null && $robot['kb_type'] == 2) {
-                $vector = \app\api\logic\kb\KbKnowLogic::embContentSearch($robot['id'], $message);
+                if (is_array($params['kb_id']) && count($params['kb_id']) > 1) {
+                    $num   = 1;
+                    foreach ($params['kb_id'] as $kb_id) {
+                        $vector .= '知识库' . $num . '：' . \app\api\logic\kb\KbKnowLogic::embAiChatSearch($kb_id, $params['message']);
+                        $num++;
+                    }
+                } else if (is_array($params['kb_id']) && count($params['kb_id']) == 1) {
+                    $vector = \app\api\logic\kb\KbKnowLogic::embAiChatSearch($params['kb_id'][0], $params['message']);
+                } else {
+                    $vector = \app\api\logic\kb\KbKnowLogic::embAiChatSearch($params['kb_id'], $params['message']);
+                }
             } else {
                 $record = array(
                     'user_id' => $uid,

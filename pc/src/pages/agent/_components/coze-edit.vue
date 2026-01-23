@@ -74,7 +74,7 @@
 
                     <div class="grid grid-cols-1 gap-4 py-2">
                         <div
-                            class="flex items-center justify-between p-4 rounded-2xl bg-[#F8FAFC] border border-[#F1F5F9]">
+                            class="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-[#F1F5F9]">
                             <div class="flex flex-col">
                                 <span class="text-sm font-black text-[#475569]">输出方式</span>
                                 <span class="text-[11px] text-[#94A3B8]">流式输出体验更佳</span>
@@ -230,7 +230,7 @@ defineExpose({
         }
         .modern-input .el-input__wrapper,
         .modern-textarea .el-textarea__inner {
-            @apply bg-[#F8FAFC] shadow-[none] border-2 border-[transparent] rounded-xl transition-all;
+            @apply bg-slate-50 shadow-[none] border-2 border-[transparent] rounded-xl transition-all;
             &:hover {
                 @apply border-[#E2E8F0];
             }

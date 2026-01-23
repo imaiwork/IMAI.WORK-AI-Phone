@@ -32,14 +32,15 @@ export enum ListenerTypeEnum {
 
 // 创建类型
 export enum CreateTypeEnum {
-    IMG = "img",
-    VIDEO = "video",
-    CLUE = "clue",
-    MSG = "msg",
-    FRIEND = "friend",
-    YH = "yh",
-    COMMENT = "comment",
-    PRIVATE_MESSAGE = "private_message",
-    CIRCLE = "circle",
-    CIRCLE_INTERACT = "circle_interact",
+    IMAGE_PUBLISH = "IMAGE_PUBLISH", // 发布图文
+    VIDEO_PUBLISH = "VIDEO_PUBLISH", // 发布视频
+    CLUE_AUTO = "CLUE_AUTO", // 自动获线索
+    CHAT_MANAGE = "CHAT_MANAGE", // 私聊接管
+    COMMENT_MARKETING = "COMMENT_MARKETING", // 评论获客
+    DM_MARKETING = "DM_MARKETING", // 私信获客
+    FRIEND_ADD = "FRIEND_ADD", // 自动加好友
+    ACCOUNT_MAINTAIN = "ACCOUNT_MAINTAIN", // 自动养号
+    PRIVATE_MESSAGE = "PRIVATE_MESSAGE", // 私信获客
+    CIRCLE = "CIRCLE", // 发朋友圈
+    CIRCLE_INTERACT = "CIRCLE_INTERACT", // 朋友圈互动
 }

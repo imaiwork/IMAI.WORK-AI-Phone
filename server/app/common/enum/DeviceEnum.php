@@ -10,11 +10,11 @@ namespace app\common\enum;
  */
 class DeviceEnum
 {
-    const TASK_TYPE_PUBLISH = 1; // 发布
-    const TASK_TYPE_TAKEOVER = 2; // 接管
-    const TASK_TYPE_ACTIVE = 3; // 养号
-    const TASK_TYPE_CLUES = 4; // 获客
-    const TASK_TYPE_FRIENDS = 5; // 加好友
+    const TASK_TYPE_PUBLISH = 1; // 发布图文/视频
+    const TASK_TYPE_TAKEOVER = 2; // 私信接管
+    const TASK_TYPE_ACTIVE = 3; // 自动养号
+    const TASK_TYPE_CLUES = 4; // 视频号获客
+    const TASK_TYPE_FRIENDS = 5; // 自动加好友
     const TASK_TYPE_TOUCH = 6; // 截流获客
     const TASK_TYPE_WECHAT_CIRCLE = 7; // 朋友圈发布
     const TASK_TYPE_WECHAT_CIRCLE_THUMB_COMMENT = 8; // 朋友圈点赞评论
@@ -97,6 +97,16 @@ class DeviceEnum
 
     
     
+    const AUTO_DEMO_PUBLISH_IMAGE = 1; // 发布图文
+    const AUTO_DEMO_PUBLISH_VIDEO = 2; // 发布视频
+    const AUTO_DEMO_CLUES = 3; // 视频号获客
+    const AUTO_DEMO_TAKE_OVER = 4; // 自动私信
+    const AUTO_DEMO_TOUCH_COMMENT = 5; // 评论获客
+    const AUTO_DEMO_TOUCH_MSG = 6; // 评论私信
+    const AUTO_DEMO_FRIENDS = 7; // 自动加好友
+    const AUTO_DEMO_ACTIVE = 8; // 自动养号
+    const AUTO_DEMO_PUBLISH_CIRCLE = 9; // 朋友圈发布
+    const AUTO_DEMO_WECHAT_CIRCLE_THUMB_COMMENT = 10; // 朋友圈点赞评论
 
 
 

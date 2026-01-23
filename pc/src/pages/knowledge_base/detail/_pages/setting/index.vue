@@ -54,7 +54,7 @@
                                 <span class="text-[15px] font-[900] text-[#1E293B]">检索参数（预览）</span>
                             </div>
 
-                            <div class="bg-[#F8FAFC] rounded-[24px] border border-[#F1F5F9] p-6 space-y-6">
+                            <div class="bg-slate-50 rounded-[24px] border border-[#F1F5F9] p-6 space-y-6">
                                 <div class="flex items-start gap-4">
                                     <div
                                         class="w-12 h-12 rounded-xl bg-white border border-br flex items-center justify-center text-primary">

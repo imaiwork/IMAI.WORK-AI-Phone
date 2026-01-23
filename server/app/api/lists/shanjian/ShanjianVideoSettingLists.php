@@ -25,7 +25,6 @@ class ShanjianVideoSettingLists extends BaseApiDataLists implements ListsSearchI
     public function lists(): array
     {
         $this->searchWhere[] = ['user_id', '=', $this->userId];
-        $this->searchWhere[] = ['auto_type', '=', $this->request->get('auto_type', 0)];
 
         $list = ShanjianVideoSetting::where($this->searchWhere)
             ->order(['id' => 'desc'])
@@ -55,7 +54,6 @@ class ShanjianVideoSettingLists extends BaseApiDataLists implements ListsSearchI
 
     public function count(): int
     {
-        $this->searchWhere[] = ['auto_type', '=', $this->request->get('auto_type', 0)];
         return ShanjianVideoSetting::where($this->searchWhere)->count();
     }
 }

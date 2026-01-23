@@ -12,7 +12,6 @@
                             <textarea
                                 class="w-full"
                                 v-model="contentVal"
-                                focus
                                 type="textarea"
                                 height="364"
                                 placeholder="点击此输入您想生成的主题，如：北京旅游"

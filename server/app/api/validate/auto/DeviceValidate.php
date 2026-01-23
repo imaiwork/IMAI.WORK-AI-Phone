@@ -16,12 +16,14 @@ class DeviceValidate extends BaseValidate
     protected $rule = [
         'id' => 'require',
         'device_code' => 'require',
-        'human_image' => 'require|array',
-        'clip_material' =>  'require|array',
-        'image_material' => 'require|array',
-        'clue_theme' => 'require|string|max:255',
-        'video_theme' => 'require|string|max:255',
-        'text_theme' => 'require|string|max:255',
+        'human_image' => 'array',
+        'clip_material' =>  'array',
+        'image_material' => 'array',
+        // 'clue_theme' => 'require|string|max:255',
+        // 'video_theme' => 'require|string|max:255',
+        // 'text_theme' => 'require|string|max:255',
+        'source' => 'require|in:1,2,3,4,5,6,7,8,9,10',
+        'account_type' => 'require|in:1,3,4,5',
     ];
 
 
@@ -41,6 +43,10 @@ class DeviceValidate extends BaseValidate
         'video_theme.max' => '视频营销主题最多255个字符',
         'text_theme.require' => '请输入图文营销主题',
         'text_theme.max' => '图文营销主题最多255个字符',
+        'source.require' => '请选择任务来源',
+        'source.in' => '任务来源错误',
+        'account_type.require' => '请选择账号类型',
+        'account_type.in' => '账号类型错误',
     ];
 
 
@@ -50,7 +56,7 @@ class DeviceValidate extends BaseValidate
      */
     public function sceneAdd()
     {
-        return $this->only([ 'device_code', 'character_image', 'clip_material', 'image_material', 'customer_data', 'video_theme', 'text_content']);
+        return $this->only([ 'device_code', 'character_image', 'clip_material', 'image_material', 'customer_data', ]);
     }
 
     /**
@@ -59,7 +65,7 @@ class DeviceValidate extends BaseValidate
      */
     public function sceneUpdate()
     {
-        return $this->only(['id', 'device_code', 'character_image', 'clip_material', 'image_material', 'customer_data', 'video_theme', 'text_content']);
+        return $this->only(['id', 'device_code', 'character_image', 'clip_material', 'image_material', 'customer_data']);
     }
     /**
      * @notes 删除
@@ -77,6 +83,14 @@ class DeviceValidate extends BaseValidate
     public function sceneDetail()
     {
         return $this->only(['device_code']);
+    }
+    /**
+     * @notes 操作
+     * @return Validate
+     */
+    public function sceneOpt()
+    {
+        return $this->only(['device_code', 'account_type', 'source']);
     }
 }
 

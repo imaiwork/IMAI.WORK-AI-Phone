@@ -258,7 +258,7 @@ const handleRetry = (id: string) => {
     });
 };
 
-const handleDelete = async (id) => {
+const handleDelete = async (id: string) => {
     nuxtApp.$confirm({
         message: "确定删除该记录吗？",
         onConfirm: async () => {

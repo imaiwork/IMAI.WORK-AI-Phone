@@ -91,7 +91,7 @@
             </div>
         </div>
 
-        <div class="grow min-h-0 bg-[#F8FAFC]">
+        <div class="grow min-h-0 bg-slate-50">
             <ElScrollbar :distance="20" @end-reached="load">
                 <div class="p-6">
                     <template v-if="pager.lists.length > 0">
@@ -105,7 +105,7 @@
                                 class="group relative bg-white rounded-[20px] p-5 border border-br transition-all hover:shadow-xl hover:shadow-[#0065fb]/10 hover:-translate-y-1 cursor-pointer flex flex-col h-[240px]">
                                 <div class="flex justify-between items-start mb-4">
                                     <div
-                                        class="w-10 h-10 rounded-lg bg-[#F8FAFC] group-hover:bg-[#0065fb]/10 group-hover:text-primary flex items-center justify-center transition-colors">
+                                        class="w-10 h-10 rounded-lg bg-slate-50 group-hover:bg-[#0065fb]/10 group-hover:text-primary flex items-center justify-center transition-colors">
                                         <Icon
                                             :name="
                                                 item.copywriting_type === CopywritingTypeEnum.CONTENT

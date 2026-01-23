@@ -398,6 +398,7 @@ const chooseUploadType = () => {
 };
 
 const { uploadMaterialList, showUploadProgress, uploadAndProcessFiles } = useUpload({
+    isTranscode: true,
     imageAccept,
     imageSize,
     imageResolution,
@@ -507,7 +508,7 @@ const handleMinusVideoCount = (type: "minus" | "add") => {
 };
 
 const handleCreateImage = async () => {
-    if (userTokens.value < 0) {
+    if (userTokens.value <= 0) {
         rechargePopupRef.value?.open();
         return;
     }

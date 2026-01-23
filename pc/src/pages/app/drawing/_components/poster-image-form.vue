@@ -1,5 +1,5 @@
 <template>
-    <div class="h-full bg-[#F8FAFC]">
+    <div class="h-full bg-slate-50">
         <ElScrollbar>
             <div class="p-4 space-y-3">
                 <div class="bg-white rounded-[24px] p-5 border border-[#F1F5F9] space-y-3">
@@ -78,7 +78,7 @@
 
                     <div
                         v-if="formData.model == ModelEnum.GENERAL"
-                        class="p-4 bg-[#F8FAFC] rounded-2xl border border-[#F1F5F9] flex items-center justify-between">
+                        class="p-4 bg-slate-50 rounded-2xl border border-[#F1F5F9] flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <span class="text-[13px] font-[900] text-[#1E293B]">超分辨率生成</span>
                             <ElTooltip content="开启后将返回双倍清晰度的图像">
@@ -223,7 +223,7 @@ defineExpose({
 :deep(.custom-input),
 :deep(.custom-select) {
     .el-input__wrapper {
-        @apply rounded-xl bg-[#F8FAFC] shadow-[none] border border-[#F1F5F9] h-11 transition-all;
+        @apply rounded-xl bg-slate-50 shadow-[none] border border-[#F1F5F9] h-11 transition-all;
         &:hover {
             @apply border-br;
         }

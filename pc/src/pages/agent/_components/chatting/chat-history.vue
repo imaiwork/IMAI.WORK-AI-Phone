@@ -1,5 +1,5 @@
 <template>
-    <div class="h-full flex flex-col w-[300px] border-r border-[#F1F5F9] shrink-0 bg-[#F8FAFC]">
+    <div class="h-full flex flex-col w-[300px] border-r border-[#F1F5F9] shrink-0 bg-slate-50">
         <div class="h-[72px] shrink-0 flex items-center px-6 bg-white border-b border-[#F1F5F9]">
             <div
                 class="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all cursor-pointer group hover:bg-[#F1F5F9]"
@@ -69,7 +69,7 @@
                 新建对话
             </button>
             <button
-                class="w-full h-11 rounded-xl bg-white border border-br text-[#64748B] flex items-center justify-center gap-2 font-black text-[13px] transition-all hover:bg-[#F8FAFC] hover:text-red-500 hover:border-red-100 disabled:opacity-50"
+                class="w-full h-11 rounded-xl bg-white border border-br text-[#64748B] flex items-center justify-center gap-2 font-black text-[13px] transition-all hover:bg-slate-50 hover:text-red-500 hover:border-red-100 disabled:opacity-50"
                 :disabled="isReceiving"
                 @click="emit('delete')">
                 <Icon name="el-icon-RefreshRight" :size="16" />

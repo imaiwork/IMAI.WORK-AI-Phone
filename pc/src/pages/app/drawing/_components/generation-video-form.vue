@@ -1,5 +1,5 @@
 <template>
-    <div class="h-full flex flex-col bg-[#F8FAFC]">
+    <div class="h-full flex flex-col bg-slate-50">
         <div class="shrink-0 px-6 h-[72px] flex items-center bg-white border-b border-[#F1F5F9]">
             <div class="flex p-1 rounded-[16px] w-full bg-[#F1F5F9]">
                 <div

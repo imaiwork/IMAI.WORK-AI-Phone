@@ -2,7 +2,7 @@
     <view class="h-screen device-bg flex flex-col">
         <u-navbar
             title-bold
-            :title="createType === CreateTypeEnum.COMMENT ? '评论获客' : '私信获客'"
+            :title="isComment ? '评论获客' : '私信获客'"
             :border-bottom="false"
             :is-fixed="false"
             :background="{
@@ -32,7 +32,7 @@
         <view class="grow min-h-0 mt-[24rpx]">
             <scroll-view class="h-full" scroll-y v-if="step === 1">
                 <view class="px-4 pb-[100rpx]">
-                    <view class="font-bold text-[30rpx]"> 获客行业 </view>
+                    <view class="font-bold text-[30rpx]"> 获客行业线索词 </view>
                     <view class="mt-[20rpx] bg-white rounded-[20rpx] px-[40rpx] py-[30rpx]">
                         <view class="flex items-center gap-x-2">
                             <view class="flex-1 bg-[#F3F3F3] rounded-[10rpx] h-[80rpx] flex items-center px-4">
@@ -484,7 +484,7 @@ import ChooseCommentTime from "@/ai_modules/device/components/choose-comment-tim
 
 const { on } = useEventBusManager();
 const appStore = useAppStore();
-const createType = ref<CreateTypeEnum>(CreateTypeEnum.COMMENT);
+const createType = ref<CreateTypeEnum>(CreateTypeEnum.COMMENT_MARKETING);
 
 // 步骤
 const steps = ref([
@@ -535,7 +535,7 @@ const formData = reactive<{
     time_config: ["09:00", "09:30"],
 });
 
-const isComment = computed(() => createType.value === CreateTypeEnum.COMMENT);
+const isComment = computed(() => createType.value === CreateTypeEnum.COMMENT_MARKETING);
 
 const industryHistory = ref<string[]>([]);
 const industryHistoryPagingRef = shallowRef();
@@ -884,7 +884,7 @@ const handleCreateTask = async () => {
             name: formData.name,
             accounts: formData.accounts,
             task_frep: formData.task_frep,
-            task_type: createType.value == CreateTypeEnum.COMMENT ? 1 : 2,
+            task_type: isComment.value ? 1 : 2,
             time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
             task_date: formData.custom_date,
             industry: formData.industry.join(";"),
@@ -924,7 +924,7 @@ const handleCreateTaskSuccess = () => {
 const getIndustryHistory = async (page_no: number, page_size: number) => {
     try {
         const { lists } = await getClosureIndustryHistory({
-            task_type: createType.value == CreateTypeEnum.COMMENT ? 1 : 2,
+            task_type: isComment.value ? 1 : 2,
             page_no,
             page_size,
         });
@@ -951,14 +951,15 @@ watch(
 
 onLoad((options: any) => {
     createType.value = options.type as CreateTypeEnum;
-    formData.name = `${createType.value == CreateTypeEnum.COMMENT ? "评论" : "私信"}获客任务${uni.$u.timeFormat(
-        new Date(),
-        "yyyymmddhhMM"
-    )}`;
+    formData.name = `${isComment.value ? "评论" : "私信"}获客任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`;
     on("confirm", (res: any) => {
         const { type, data } = res;
         if (type === ListenerTypeEnum.CHOOSE_DATE) {
-            if (data.length === 0) return;
+            if (data.length === 0) {
+                currentFrequency.value = 0;
+                formData.custom_date = [];
+                return;
+            }
             formData.custom_date = data;
             currentFrequency.value = 5;
         }

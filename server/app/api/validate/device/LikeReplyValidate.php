@@ -22,7 +22,7 @@ class LikeReplyValidate extends BaseValidate
         'action' => 'require|in:1,2,3',
         'number' => 'require|number',
         'interval' => 'require|number',
-        'range' => 'require|in:0,1,2',
+        'range' => 'require|in:1,2,3',
         'robot_id' => 'require|number',
         'comment_type' => 'require|in:0,1,2',
     ];

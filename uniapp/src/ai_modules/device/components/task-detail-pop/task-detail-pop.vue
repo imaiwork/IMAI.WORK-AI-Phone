@@ -54,7 +54,7 @@
                                                     mode="aspectFill"></image>
                                                 <image
                                                     v-if="detailData.account_type"
-                                                    :src="platformLogo[detailData.account_type as keyof typeof platformLogo].activeIcon"
+                                                    :src="platform[detailData.account_type as keyof typeof platform].activeIcon"
                                                     class="w-[32rpx] h-[32rpx] absolute bottom-0 right-0"></image>
                                             </view>
                                             <view class="flex-1 text-[#00000080]"
@@ -245,7 +245,37 @@ const playData = reactive({
     url: "",
 });
 
-const { platformLogo, getTaskStatusStyle, getTaskStatusText } = useDevice();
+const { platform } = useDevice();
+const getTaskStatusText = (status: number) => {
+    switch (status) {
+        case 0:
+            return "等待中";
+        case 1:
+            return "执行中";
+        case 2:
+            return "执行完成";
+        case 3:
+            return "执行失败";
+        case 4:
+            return "中断";
+        default:
+            return "-";
+    }
+};
+
+// 获取任务状态样式
+const getTaskStatusStyle = (status: number) => {
+    switch (status) {
+        case 0:
+        case 1:
+            return "bg-[rgba(0,101,251,0.04)] text-primary";
+        case 2:
+            return "bg-[rgba(0,192,142,0.1)] text-[#00C08E]";
+        case 3:
+        case 4:
+            return "bg-[rgba(255,36,36,0.1)] text-[#FF2442]";
+    }
+};
 
 const handleDeleteTask = async () => {
     showConfirmDialog.value = false;

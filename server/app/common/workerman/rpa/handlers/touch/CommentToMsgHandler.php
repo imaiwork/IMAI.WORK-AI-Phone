@@ -8,6 +8,7 @@ use app\common\logic\AccountLogLogic;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvLeadScrapingRecord;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
+use app\common\model\sv\SvLeadScrapingSetting;
 use app\common\model\user\User;
 use app\common\workerman\rpa\BaseMessageHandler;
 use app\common\workerman\rpa\WorkerEnum;
@@ -41,7 +42,7 @@ class CommentToMsgHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }
@@ -49,25 +50,42 @@ class CommentToMsgHandler extends BaseMessageHandler
     private function recordMsg(array $content)
     {
         try {
-            
+
             $task = SvLeadScrapingSettingAccount::where('id', $content['task_id'])
                 ->where('device_code', $this->payload['deviceId'])
                 ->where('task_type', 2)
                 ->where('account_type', $this->appType)
                 ->findOrEmpty();
-            if($task->isEmpty()){
+            if ($task->isEmpty()) {
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区私信任务不存在');
             }
 
+            $setting = SvLeadScrapingSetting::where('id', $task->scraping_id)->findOrEmpty();
+            if ($setting->isEmpty()) {
+                throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务配置不存在');
+            }
+            if ((int)$setting->is_execed_clues  === 1) {
+                $find = SvLeadScrapingRecord::where([
+                    ['user_id', '=', $task->user_id],
+                    ['task_type', '=', 2],
+                    ['account_name', '=', $content['author_name']],
+                ])->findOrEmpty();
+                if (!$find->isEmpty()) {
+                    return [
+                        'isProceed' => 0, //是否处理 1是 0 否
+                    ];
+                }
+            }
+
             $record = SvLeadScrapingRecord::where([
-                                                      ['user_id', '=', $task->user_id],
-                                                      ['task_type', '=', 2],
-                                                      ['account_name', '=', $content['author_name']],
-                                                      ['content', 'like', '%' . $content['content'] . '%']
-                                                  ])->findOrEmpty();
-            if (!$record->isEmpty()){
+                ['user_id', '=', $task->user_id],
+                ['task_type', '=', 2],
+                ['account_name', '=', $content['author_name']],
+                ['content', 'like', '%' . $content['content'] . '%']
+            ])->findOrEmpty();
+            if (!$record->isEmpty()) {
                 return [
-                    'isProceed' => 0,//是否处理 1是 0 否
+                    'isProceed' => 0, //是否处理 1是 0 否
                 ];
             }
             $insert = [
@@ -85,16 +103,16 @@ class CommentToMsgHandler extends BaseMessageHandler
                 'exec_time'           => time(),
             ];
             SvLeadScrapingRecord::create($insert);
-            $autoType = SvDevice::where('device_code',$this->payload['deviceId'])->value('auto_type') ?? 0;
-            if ($autoType == 1){
+            $autoType = SvDevice::where('device_code', $this->payload['deviceId'])->value('auto_type') ?? 0;
+            if ($autoType == 1) {
                 $response = \app\common\service\ToolsService::Automation()->shutOffPrivateLetter($content);
                 if (isset($response['code']) && $response['code'] == 10000) {
                     //检查扣费
                     $unit = TokenLogService::checkToken($task->user_id, 'automation_shut_off_private_letter');
-                    $points = $unit ;
+                    $points = $unit;
                     //token扣除
                     User::userTokensChange($task->user_id, $points);
-                    $extra = [ '算力单价' => $unit, '实际消耗算力' => $points];
+                    $extra = ['算力单价' => $unit, '实际消耗算力' => $points];
                     $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_SHUT_OFF_PRIVATE_LETTER;
                     //扣费记录
                     AccountLogLogic::recordUserTokensLog(true, $task->user_id, $desc, $points, $content['task_id'], $extra);
@@ -103,7 +121,7 @@ class CommentToMsgHandler extends BaseMessageHandler
 
 
             return [
-                'isProceed' => 1,//是否处理 1是 0 否
+                'isProceed' => 1, //是否处理 1是 0 否
             ];
         } catch (\Exception $e) {
             $this->setLog('异常信息' . $e, 'task_complete');
@@ -116,7 +134,7 @@ class CommentToMsgHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }

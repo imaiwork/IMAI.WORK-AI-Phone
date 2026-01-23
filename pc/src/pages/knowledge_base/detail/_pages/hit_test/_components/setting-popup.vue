@@ -117,7 +117,7 @@
                     </ElFormItem>
                 </div>
 
-                <div class="form-section-card bg-[#F8FAFC]">
+                <div class="form-section-card bg-slate-50">
                     <div class="flex items-center justify-between mb-4">
                         <div class="section-title !mb-0">结果重排 (Rerank)</div>
                         <ElSwitch v-model="formData.ranking_status" :active-value="1" :inactive-value="0" />

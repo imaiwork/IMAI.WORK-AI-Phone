@@ -46,7 +46,7 @@
                 </div>
             </div>
 
-            <div class="p-8 bg-[#F8FAFC]">
+            <div class="p-8 bg-slate-50">
                 <div
                     class="bg-black rounded-[20px] overflow-hidden shadow-2xl relative group border-[6px] border-white">
                     <video

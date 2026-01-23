@@ -1,6 +1,6 @@
 <template>
-    <div class="flex flex-col h-full bg-[#F8FAFC]">
-        <div class="sticky top-0 z-10 bg-[#F8FAFC]/80 backdrop-blur-md px-6 py-4">
+    <div class="flex flex-col h-full bg-slate-50">
+        <div class="sticky top-0 z-10 bg-slate-50/80 backdrop-blur-md px-6 py-4">
             <ElScrollbar>
                 <div class="flex items-center gap-3 pb-3">
                     <div

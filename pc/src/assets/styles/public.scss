@@ -218,7 +218,7 @@ input:-webkit-autofill:active {
 .custom-input {
     .el-input__wrapper {
         border: none;
-        @apply bg-[#F8FAFC]  h-11;
+        @apply bg-slate-50  h-11;
     }
     .el-input__inner {
         @apply text-[#1E293B];
@@ -236,14 +236,14 @@ input:-webkit-autofill:active {
 .custom-select {
     .el-select__wrapper {
         border: none;
-        @apply bg-[#F8FAFC] h-11;
+        @apply bg-slate-50 h-11;
     }
 }
 
 .custom-textarea {
     .el-textarea__inner {
         border: none;
-        @apply bg-[#F8FAFC]  py-2;
+        @apply bg-slate-50  py-2;
     }
     .el-input__count {
         background-color: transparent !important;

@@ -11,7 +11,7 @@
                     <view
                         v-for="item in dataList"
                         :key="item.id"
-                        class="h-[276rpx] rounded-xl relative"
+                        class="h-[276rpx] rounded-xl relative card-gradient"
                         @click="handleChoose(item)">
                         <image :src="item.authorized_pic" class="w-full h-full rounded-xl" mode="aspectFill"></image>
                         <view class="absolute top-[50%] left-[50%]" style="transform: translate(-50%, -50%)">

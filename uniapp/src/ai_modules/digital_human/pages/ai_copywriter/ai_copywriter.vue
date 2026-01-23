@@ -11,7 +11,6 @@
                     <u-input
                         v-model="contentVal"
                         type="textarea"
-                        focus
                         height="160"
                         placeholder="请输入或粘贴您的文案 ..."
                         placeholder-style="color: #00000033; font-size: 26rpx;"

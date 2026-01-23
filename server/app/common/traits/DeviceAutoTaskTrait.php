@@ -589,9 +589,9 @@ trait DeviceAutoTaskTrait
 
                 $add_interval_time = (int)$record['add_interval_time'] > $add_interval_time ? (int)$record['add_interval_time'] : $add_interval_time;
                 $wxPattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
-                if (preg_match($wxPattern, $record['clue_wechat'])) {
+                if (preg_match($wxPattern, $record['reg_wechat'])) {
                     $response = \app\common\service\ToolsService::Sv()->queryResult([
-                        "string" => $record['clue_wechat'],
+                        "string" => $record['reg_wechat'],
                     ]);
                     if (isset($response['code']) && (int)$response['code'] === 10005) {
                         self::setLog($response, 'add_wechat');
@@ -599,27 +599,27 @@ trait DeviceAutoTaskTrait
                     }
                     if (isset($response['code']) && (int)$response['code'] === 10000) {
                         if (is_null($response['data'])) {
-                            self::setLog($record['clue_wechat'] . '该账号还未开始验证', 'add_wechat');
+                            self::setLog($record['reg_wechat'] . '该账号还未开始验证', 'add_wechat');
                             self::setLog($response, 'add_wechat');
                             $response = \app\common\service\ToolsService::Sv()->validateStrings([
-                                "strings" => [$record['clue_wechat']],
+                                "strings" => [$record['reg_wechat']],
                             ]);
                             self::setLog($response, 'add_wechat');
                             continue;
                         }
 
                         if (isset($response['data']['status']) && (int)$response['data']['status'] === 0) {
-                            self::setLog($record['clue_wechat'] . '该账号还未完成验证,稍后再试', 'add_wechat');
+                            self::setLog($record['reg_wechat'] . '该账号还未完成验证,稍后再试', 'add_wechat');
                             self::setLog($response, 'add_wechat');
                             $response = \app\common\service\ToolsService::Sv()->validateStrings([
-                                "strings" => [$record['clue_wechat']],
+                                "strings" => [$record['reg_wechat']],
                             ]);
                             self::setLog($response, 'add_wechat');
                             continue;
                         }
 
                         if (isset($response['data']['valid']) && (bool)$response['data']['valid'] === false) {
-                            self::setLog($record['clue_wechat'] . '该账号不是有效的微信号,忽略', 'add_wechat');
+                            self::setLog($record['reg_wechat'] . '该账号不是有效的微信号,忽略', 'add_wechat');
                             self::setLog($response, 'add_wechat');
                             SvAddWechatRecord::where('id', $record['id'])->update([
                                 'status' => 0,
@@ -721,14 +721,14 @@ trait DeviceAutoTaskTrait
                 self::_sendChannelAddWechatMessage([
                     'WechatId' => $wechat['wechat_id'],
                     'DeviceCode' => $wechat['device_code'],
-                    'Phones' => $record['clue_wechat'],
+                    'Phones' => $record['reg_wechat'],
                     'message' =>  $addRemark, //ai生成打招呼消息
                 ], $wechat, $record);
 
                 array_push($sendWechatIds, [
                     // 'wechatId' => $wechat['wechat_id'],
                     // 'deviceCode' => $wechat['device_code'],
-                    'friendWechatId' => $record['clue_wechat'],
+                    'friendWechatId' => $record['reg_wechat'],
                     'message' => $addRemark, //ai生成打招呼消息
                     //'taskId' => $request['TaskId'],
                     'recordId' => $record['id'],
@@ -965,6 +965,15 @@ trait DeviceAutoTaskTrait
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
+                    'industryType' => $setting->industry_type ?? 0,
+                    'city' => $setting->city ?? '',
+                    'isContentAuthor' => $setting->is_content_author ?? 0,
+                    'isExecedClues' => $setting->is_execed_clues ?? 0,
+                    'isTouchLike' => $setting->is_touch_like ?? 0,
+                    'isTouchFollow' => $setting->is_touch_follow ?? 0,
+                    'contentPublishDay' => $setting->content_publish_day ?? 0,
+                    'commentPublishDay' => $setting->comment_publish_day ?? 0,
+                    'ipAddress' => $setting->ip_address ?? [],
                     'msg' => '评论区评论任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1052,6 +1061,15 @@ trait DeviceAutoTaskTrait
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
+                    'industryType' => $setting->industry_type ?? 0,
+                    'city' => $setting->city ?? '',
+                    'isContentAuthor' => $setting->is_content_author ?? 0,
+                    'isExecedClues' => $setting->is_execed_clues ?? 0,
+                    'isTouchLike' => $setting->is_touch_like ?? 0,
+                    'isTouchFollow' => $setting->is_touch_follow ?? 0,
+                    'contentPublishDay' => $setting->content_publish_day ?? 0,
+                    'commentPublishDay' => $setting->comment_publish_day ?? 0,
+                    'ipAddress' => $setting->ip_address ?? [],
                     'msg' => '评论区私信任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1312,12 +1330,9 @@ trait DeviceAutoTaskTrait
                 'friend_id' => $payload['Phones'],
                 'create_time' => time()
             ]);
-            SvCrawlingManualTaskRecord::where('id', $record['id'])->update([
+            SvAddWechatRecord::where('id', $record['id'])->update([
                 'wechat_no' => $wechat->wechat_id,
                 'wechat_name' => $wechat->wechat_nickname,
-                'remark' => $request['Message'],
-                'exec_task_id' => $request['TaskId'],
-                'exec_time' => date('Y-m-d H:i:s', time()),
                 'status' => 2,
                 'result' => '执行中',
                 'update_time' => time(),
@@ -1335,10 +1350,9 @@ trait DeviceAutoTaskTrait
                 'update_time' => time(),
             ],$scene, $wechat->user_id,$request['TaskId'],$payload['DeviceCode']);
 
-            $completed_add_count = SvCrawlingManualTask::where('id', $record['task_id'])->value('completed_add_count');
-            SvCrawlingManualTask::where('id', $record['task_id'])->update([
+            $completed_add_count = SvCrawlingTask::where('id', $record['crawling_task_id'])->value('completed_add_count');
+            SvCrawlingTask::where('id', $record['crawling_task_id'])->update([
                 'completed_add_count' => $completed_add_count + 1,
-                'status' => 1,
                 'update_time' => time(),
             ]);
         } catch (\Throwable $e) {

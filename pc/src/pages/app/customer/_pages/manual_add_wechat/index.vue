@@ -1,6 +1,6 @@
 <template>
     <div
-        class="h-full flex flex-col bg-white rounded-2xl border border-br overflow-hidden"
+        class="h-full flex flex-col bg-white rounded-[20px] border border-br overflow-hidden"
         v-if="!isCreate && !isDetail">
         <div class="flex-shrink-0 px-8 py-6 flex justify-between items-center">
             <div>

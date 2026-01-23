@@ -27,7 +27,7 @@
                 </div>
             </div>
 
-            <div class="h-[650px] bg-[#F8FAFC]">
+            <div class="h-[650px] bg-slate-50">
                 <ElScrollbar :distance="20" @end-reached="load">
                     <div class="p-6">
                         <div class="grid grid-cols-4 gap-5">

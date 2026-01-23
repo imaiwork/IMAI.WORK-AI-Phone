@@ -1,7 +1,7 @@
 <template>
     <div class="h-full flex flex-col min-w-[1000px] px-4 pb-4">
         <div
-            class="h-[120px] rounded-[20px] bg-white border border-br px-10 flex items-center justify-between relative overflow-hidden">
+            class="shrink-0 h-[120px] rounded-[20px] bg-white border border-br px-10 flex items-center justify-between relative overflow-hidden">
             <div class="flex items-center gap-6 relative z-10">
                 <img src="@/assets/images/agent.svg" class="w-20 h-20 mt-10" />
                 <div>
@@ -48,7 +48,7 @@
             </div>
         </div>
         <div class="grow min-h-0 flex flex-col bg-white rounded-[20px] border border-br mt-4 overflow-hidden">
-            <div class="px-6 bg-[#F8FAFC]/50 border-b border-[#F1F5F9]">
+            <div class="px-6 bg-slate-50/50 border-b border-[#F1F5F9]">
                 <ElTabs v-model="currentTab" class="custom-tabs" @tab-click="handleTabClick">
                     <ElTabPane v-for="item in tabs" :key="item.value" :label="item.label" :name="item.value">
                     </ElTabPane>

@@ -1,16 +1,17 @@
 import { chooseFile } from "@/components/file-upload/choose-file";
-import { uploadFile } from "@/api/app";
+import { uploadFile, videoTranscoding } from "@/api/app";
 
 const defaultOptions = {
     count: 9,
     imageAccept: ["jpg", "png", "jpeg"],
     imageSize: 20,
-    imageResolution: [4096, 4096],
+    imageResolution: [Infinity, Infinity],
     videoAccept: ["mp4", "mov"],
     videoSize: 200,
     videoDuration: [1, 600],
     fileAccept: ["jpg", "png", "jpeg", "mp4", "mov"],
     fileSize: 200,
+    sizeType: ["original", "compressed"],
 };
 export default function useUpload(options: {
     isTranscode?: boolean;
@@ -23,6 +24,7 @@ export default function useUpload(options: {
     videoDuration?: number[];
     fileAccept?: string[];
     fileSize?: number;
+    sizeType?: ("original" | "compressed")[];
     onSuccess?: (materials: any[]) => void;
 }) {
     const {
@@ -36,6 +38,7 @@ export default function useUpload(options: {
         videoDuration = defaultOptions.videoDuration,
         fileAccept = defaultOptions.fileAccept,
         fileSize = defaultOptions.fileSize,
+        sizeType = defaultOptions.sizeType,
         onSuccess,
     } = options;
     const uploadMaterialList = ref<any[]>([]);
@@ -53,6 +56,7 @@ export default function useUpload(options: {
                 count,
                 sourceType: ["album"],
                 extension: isImage ? imageAccept : isVideo ? videoAccept : fileAccept,
+                sizeType,
             });
 
             // 先过滤图片
@@ -129,10 +133,16 @@ export default function useUpload(options: {
 
                 const fileRes: any = await uploadFile(
                     isAll ? "file" : fileType,
-                    { filePath: item.tempFilePath, formData: { ffmpeg: isTranscode ? 1 : 0 } },
+                    { filePath: item.tempFilePath },
                     (progress) => progressCallback(progress, item)
                 );
-
+                if (isTranscode && fileRes.uri) {
+                    const isVideoUrl =
+                        fileRes.uri.includes(".mp4") || fileRes.uri.includes(".mov") || fileRes.uri.includes(".m4a");
+                    if (isVideo || isVideoUrl) {
+                        videoTranscoding(fileRes.uri);
+                    }
+                }
                 uploadedFilesData.push({
                     name: item.name,
                     url: fileRes.uri,

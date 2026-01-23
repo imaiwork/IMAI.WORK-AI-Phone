@@ -126,3 +126,17 @@ export const shanjianVoiceClone = (params: Record<string, any>) => {
 export const batchCloneAnchor = (params: Record<string, any>) => {
     return $request.post({ url: "/digitalHuman/createAnchor", params });
 };
+
+export const createShanjianTask = (params: Record<string, any>) => {
+    return $request.post({ url: "/shanjian.shanjianVideoSetting/add", params });
+};
+
+// 人设新增
+export const addShanjianPerson = (params: Record<string, any>) => {
+    return $request.post({ url: "/shanjian.shanjianCharacterDesign/add", params });
+};
+
+// 闪剪形象列表
+export const getShanjianAnchorList = (params: Record<string, any>) => {
+    return $request.get({ url: "/shanjian.shanjianAnchor/lists", params });
+};

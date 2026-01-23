@@ -109,15 +109,7 @@
                             <anchor-video
                                 :show-name="false"
                                 :show-more="false"
-                                :item="{
-                                    name: item.name,
-                                    pic: item.pic,
-                                    status: item.status,
-                                    video_url: item.url,
-                                    model_version: item.model_version,
-                                    remark: item.remark,
-                                    source_type: item.source_type,
-                                }"
+                                :item="item"
                                 @play="handlePlay($event, item.pic)"></anchor-video>
                         </view>
                     </view>

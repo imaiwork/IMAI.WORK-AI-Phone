@@ -25,22 +25,17 @@
                         :class="[
                             item.error ? 'border border-[#ff4d4f] shadow-[0_4rpx_12rpx_rgba(255,77,79,0.15)]' : '',
                         ]">
-                        <!-- 错误提示条 -->
-                        <!-- 错误提示条 -->
                         <view
                             v-if="item.error"
                             class="flex items-start bg-[#fff2f0] -mx-4 -mt-4 mb-3 px-4 py-2 border-b border-[#ffccc7]">
-                            <!-- 图标稍微下移一点以对齐多行文字 -->
                             <u-icon name="info-circle-fill" size="28" color="#ff4d4f" style="margin-top: 4rpx"></u-icon>
 
-                            <!-- 文字区域 flex-1 自动换行 -->
                             <view class="flex-1 ml-2 mr-2">
                                 <text class="text-xs text-[#ff4d4f] font-bold block leading-normal">
                                     {{ item.error }}
                                 </text>
                             </view>
 
-                            <!-- 按钮防止被挤压 -->
                             <view
                                 class="text-xs text-[#ff4d4f] underline whitespace-nowrap mt-[2rpx]"
                                 @click="handleSetup(index)">
@@ -56,7 +51,6 @@
                             </view>
                         </view>
 
-                        <!-- 内容区域保持不变 -->
                         <view class="text-gray-600 mb-3 text-md leading-relaxed">
                             {{ item.content }}
                         </view>
@@ -192,14 +186,8 @@ const getFormattedTimeStr = (timeConfig: any) => {
     return timeConfig || "";
 };
 
-const handleCreateTask = async () => {
-    if (circleList.value.length === 0) {
-        uni.$u.toast("请先添加朋友圈发布内容");
-        return;
-    }
-
-    uni.showLoading({ title: "检查任务冲突...", mask: true });
-
+// 验证任务是否存在时间冲突
+const validateTaskTimeConflict = () => {
     const compareList = circleList.value.map((item, index) => {
         // 清除旧错误
         delete item.error;
@@ -231,17 +219,13 @@ const handleCreateTask = async () => {
             const taskA = compareList[i];
             const taskB = compareList[j];
 
-            // A. 检查日期是否相同
             if (taskA.date !== taskB.date) continue;
 
-            // B. 检查微信号是否有交集
             const hasSharedAccount = taskA.wechatIds.some((id: string) => taskB.wechatIds.includes(id));
             if (!hasSharedAccount) continue;
 
-            // C. 检查时间是否重叠
             if (isTimeOverlap(taskA.start, taskA.end, taskB.start, taskB.end)) {
                 hasConflict = true;
-
                 const itemA = circleList.value[taskA.index];
                 const itemB = circleList.value[taskB.index];
 
@@ -253,6 +237,18 @@ const handleCreateTask = async () => {
             }
         }
     }
+    return hasConflict;
+};
+
+const handleCreateTask = async () => {
+    if (circleList.value.length === 0) {
+        uni.$u.toast("请先添加朋友圈发布内容");
+        return;
+    }
+
+    uni.showLoading({ title: "检查任务冲突...", mask: true });
+
+    const hasConflict = validateTaskTimeConflict();
 
     if (hasConflict) {
         uni.hideLoading();
@@ -265,10 +261,8 @@ const handleCreateTask = async () => {
 
     try {
         const promises = circleList.value.map(async (item) => {
-            // 在这里转换格式提交给后端，不影响本地 circleList
             const timeConfigStr = getFormattedTimeStr(item.time_config);
 
-            // 提取微信号
             const wechatIdList = item.wechat_ids.map((wechatId: any) =>
                 typeof wechatId === "object" ? wechatId.account : wechatId
             );

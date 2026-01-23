@@ -11,6 +11,7 @@
     "upload-progress": "../../../../components/upload-progress/upload-progress",
     "choose-material": "../../../../components/choose-material/choose-material",
     "video-preview": "../../../../components/video-preview/video-preview",
-    "number-pop": "../../components/number-pop/number-pop"
+    "number-pop": "../../components/number-pop/number-pop",
+    "choose-history": "../../components/choose-history/choose-history"
   }
 }

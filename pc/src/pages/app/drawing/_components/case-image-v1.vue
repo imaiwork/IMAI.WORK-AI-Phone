@@ -21,15 +21,12 @@
                         </div>
                     </div>
                 </div>
-
-                <div
-                    class="w-8 h-8 flex items-center justify-center rounded-full bg-[#F8FAFC] hover:bg-[#FEE2E2] hover:text-[#EF4444] transition-all cursor-pointer"
-                    @click="close">
-                    <Icon name="el-icon-Close" :size="14"></Icon>
+                <div class="w-8 h-8" @click="close">
+                    <close-btn />
                 </div>
             </div>
 
-            <div class="h-[650px] bg-[#F8FAFC]">
+            <div class="h-[650px] bg-slate-50">
                 <ElScrollbar :distance="20" @end-reached="columnLoad">
                     <div class="p-6">
                         <template v-if="isColumn">
@@ -52,8 +49,8 @@
                                             <div
                                                 class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-4">
                                                 <button class="copy-pill-btn" @click="handleCopy(item.title)">
-                                                    <Icon name="el-icon-CopyDocument" class="mr-1.5"></Icon>
-                                                    使用文案
+                                                    <Icon name="el-icon-CopyDocument"></Icon>
+                                                    <span class="ml-1.5">使用文案</span>
                                                 </button>
                                             </div>
                                         </div>

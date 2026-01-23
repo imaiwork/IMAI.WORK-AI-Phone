@@ -300,7 +300,7 @@ defineExpose({
 }
 
 .upload-box {
-    @apply w-20 h-20 rounded-2xl border-2 border-dashed border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-center cursor-pointer transition-all hover:border-primary hover:bg-[#FFFFFF];
+    @apply w-20 h-20 rounded-2xl border-2 border-dashed border-[#E2E8F0] bg-slate-50 flex items-center justify-center cursor-pointer transition-all hover:border-primary hover:bg-[#FFFFFF];
 }
 
 :deep(.el-form-item) {
@@ -313,7 +313,7 @@ defineExpose({
 :deep(.custom-radio-group) {
     @apply flex gap-3;
     .el-radio {
-        @apply h-11 px-5 rounded-xl mr-0 bg-[#F8FAFC] border-2 border-[transparent] font-bold;
+        @apply h-11 px-5 rounded-xl mr-0 bg-slate-50 border-2 border-[transparent] font-bold;
     }
 }
 

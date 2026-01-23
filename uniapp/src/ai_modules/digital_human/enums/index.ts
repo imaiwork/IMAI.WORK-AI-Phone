@@ -44,6 +44,8 @@ export enum ListenerTypeEnum {
     SORA_AI_COPYWRITER = "sora-ai-copywriter",
     // 素材图组
     MONTAGE_MATERIAL_GROUP = "montage-material-group",
+    // 选择视频风格
+    CHOOSE_VIDEO_STYLES = "choose-video-styles",
 }
 
 // 剪辑风格
@@ -78,4 +80,20 @@ export enum MontageTypeEnum {
     NEWS_BODY = 4,
     // Sora生成视频
     SORA_VIDEO = 5,
+}
+
+export enum MontageStylesType {
+    DIGITAL_PERSON = 1,
+    REAL_PERSON = 2,
+    NEWS = 3,
+    MATERIAL = 4,
+}
+
+export enum MontageStylesChooseType {
+    ALL = 0,
+    HIGH = 1,
+    VARIETY = 2,
+    HOT = 3,
+    SIMPLE = 4,
+    LOCAL = 5,
 }

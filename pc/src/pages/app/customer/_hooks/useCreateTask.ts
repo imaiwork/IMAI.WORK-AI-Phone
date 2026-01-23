@@ -12,6 +12,7 @@ export function useCreateTask(formData: any) {
     });
 
     const currentFrequency = ref(0);
+    const currentWechatFrequency = ref(0);
 
     const disabledDate = (date: Date) => {
         return date.getTime() < new Date().getTime() - 24 * 60 * 60 * 1000;
@@ -36,6 +37,11 @@ export function useCreateTask(formData: any) {
     const handleFrequency = (item: number, index: number) => {
         currentFrequency.value = index;
         formData.task_frep = item;
+    };
+
+    const handleWechatFrequency = (item: number, index: number) => {
+        currentWechatFrequency.value = index;
+        formData.wechat_task_frep = item;
     };
 
     const isAddRemarkGen = ref(false);
@@ -85,12 +91,30 @@ export function useCreateTask(formData: any) {
         return true;
     };
 
+    const checkWechatTimeConfig = () => {
+        if (!formData.wechat_time_config[0] || !formData.wechat_time_config[1]) {
+            feedback.msgWarning("请选择执行时间");
+            return false;
+        }
+        if (formData.wechat_time_config[0] && formData.wechat_time_config[1]) {
+            const [startTime, endTime] = formData.wechat_time_config;
+            const diffMinutes = dayjs(endTime).diff(dayjs(startTime), "minutes");
+            if (diffMinutes < 30) {
+                feedback.msgWarning("结束时间不能小于开始时间30分钟");
+                return false;
+            }
+        }
+        return true;
+    };
+
     return {
         getWechatRemarks,
         deviceOptions,
         currentFrequency,
+        currentWechatFrequency,
         disabledDate,
         handleFrequency,
+        handleWechatFrequency,
         isAddRemarkGen,
         remarkPopupRef,
         editRemarkIndex,
@@ -99,5 +123,6 @@ export function useCreateTask(formData: any) {
         handleEditRemark,
         handleDeleteRemark,
         checkTimeConfig,
+        checkWechatTimeConfig,
     };
 }

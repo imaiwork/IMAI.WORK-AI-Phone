@@ -13,7 +13,7 @@
                 v-for="(image, imageIndex) in item.puzzle_url"
                 :key="imageIndex"
                 :src="image"
-                lazy
+                lazy-load
                 class="w-full h-[156rpx] rounded-[10rpx]"
                 mode="aspectFill"
                 @click.stop="previewImage(item.puzzle_url, imageIndex)"></image>

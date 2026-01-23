@@ -24,6 +24,7 @@ class DigitalHumanAnchorCron extends Command
     {
         DigitalHumanLogic::createDigitalHumanAnchorCron();
         DigitalHumanLogic::getDigitalHumanAnchorStatusCron();
+        DigitalHumanLogic::digitalHumanAnchorReturnCron(); //公共数字人创建失败退费
         return true;
     }
 }

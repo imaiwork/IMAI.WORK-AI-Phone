@@ -1,7 +1,7 @@
 <template>
     <div class="live-pop-container w-[500px] relative">
         <svg
-            class="absolute left-4 -translate-x-full bottom-[27px] z-[88]"
+            class="absolute left-4 -translate-x-full bottom-[65px] z-[88]"
             width="30"
             height="30"
             viewBox="0 0 20 20"

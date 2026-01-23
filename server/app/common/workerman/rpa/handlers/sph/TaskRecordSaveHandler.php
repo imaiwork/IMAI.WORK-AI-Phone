@@ -127,28 +127,13 @@ class TaskRecordSaveHandler extends BaseMessageHandler
                     'exec_keyword' => $content['exec_keyword'],
                     'update_time' => time(),
                 ]);
-            $autoType = SvDevice::where('device_code',$this->payload['deviceId'])->value('auto_type') ?? 0;
-            if ($autoType == 0){
-                //扣除算力
-                $userId = $task['user_id'] ?? 0;
-                $tokenScene = "sph_add_wechat";
-                $tokenCode = AccountLogEnum::TOKENS_DEC_SPH_ADD_WECHAT;
-                $unit = TokenLogService::checkToken($userId, $tokenScene);
-                $points = $unit;
-                $extra = ['算力单价' => $unit . '算力/条', '实际消耗算力' => $points];
-            }else{
-                $requestService = \app\common\service\ToolsService::Automation()->wechatAddFriend($content);
-                if (isset($requestService['code']) && $requestService['code'] == 10000){
-                    $userId = $task['user_id'] ?? 0;
-                    $tokenScene = "automation_wechat_add_friend";
-                    $tokenCode = AccountLogEnum::TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND;
-                    $unit = TokenLogService::checkToken($userId, $tokenScene);
-                    $points = $unit;
-                    $extra = ['算力单价' => $unit . '算力/条', '实际消耗算力' => $points];
-                }
 
-            }
-
+            $userId = $task['user_id'] ?? 0;
+            $tokenScene = "sph_add_wechat";
+            $tokenCode = AccountLogEnum::TOKENS_DEC_SPH_ADD_WECHAT;
+            $unit = TokenLogService::checkToken($userId, $tokenScene);
+            $points = $unit;
+            $extra = ['算力单价' => $unit . '算力/条', '实际消耗算力' => $points];
             $sub_task_id = generate_unique_task_id();
 
             if ($task->add_type == 1) {
@@ -428,6 +413,22 @@ class TaskRecordSaveHandler extends BaseMessageHandler
                     }
                     $addWechat[] = $userWechatNo;
                     SvAddWechatRecord::create($record);
+                    $autoType = SvDevice::where('device_code',$device_code)->value('auto_type') ?? 0;
+                    if ($autoType == 1){
+                        //扣除算力
+                        $requestService = \app\common\service\ToolsService::Automation()->wechatAddFriend($record);
+                        if (isset($requestService['code']) && $requestService['code'] == 10000){
+                            $tokenScene = "automation_wechat_add_friend";
+                            $tokenCode = AccountLogEnum::TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND;
+                            $unit = TokenLogService::checkToken($userid, $tokenScene);
+                            $points = $unit;
+                            $extra = ['算力单价' => $unit . '算力/条', '实际消耗算力' => $points];
+                            if ($points > 0){
+                                User::userTokensChange($userid, $points);
+                                AccountLogLogic::recordUserTokensLog(true, $userid, $tokenCode, $points, $task->id, $extra);
+                            }
+                        }
+                    }
                 }
             }
             if ($addWechat) {

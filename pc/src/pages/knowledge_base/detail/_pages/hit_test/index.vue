@@ -33,7 +33,7 @@
                         </div>
                     </div>
 
-                    <div v-if="isRag" class="bg-[#F8FAFC] rounded-xl p-4 border border-[#F1F5F9]">
+                    <div v-if="isRag" class="bg-slate-50 rounded-xl p-4 border border-[#F1F5F9]">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-bold text-[#64748B] flex items-center gap-1">
                                 相似度阈值
@@ -59,7 +59,7 @@
 
                 <div class="grow min-h-0 bg-white rounded-2xl border border-br flex flex-col overflow-hidden">
                     <div
-                        class="px-5 py-4 border-b border-[#F1F5F9] font-bold text-[#475569] flex items-center gap-2 bg-[#F8FAFC]/50">
+                        class="px-5 py-4 border-b border-[#F1F5F9] font-bold text-[#475569] flex items-center gap-2 bg-slate-50/50">
                         <Icon name="el-icon-History" /> 测试记录
                     </div>
                     <div class="grow min-h-0">
@@ -97,7 +97,7 @@
                     </div>
                 </div>
 
-                <div class="grow min-h-0 bg-[#F8FAFC]/50">
+                <div class="grow min-h-0 bg-slate-50/50">
                     <ElScrollbar v-if="hitTestList.length">
                         <div class="p-5 flex flex-col gap-4">
                             <div v-for="(item, index) in hitTestList" :key="index" class="hit-card">
@@ -331,7 +331,7 @@ getHistoryLists();
         }
     }
     &.is-a {
-        @apply bg-[#F8FAFC] border border-[#F1F5F9];
+        @apply bg-slate-50 border border-[#F1F5F9];
         .label {
             @apply text-[#94A3B8] font-black;
         }

@@ -56,7 +56,7 @@
                             :class="{ 'ring-2 ring-primary': isSelect(item.id) }"
                             @click="isHandle ? handleSelect(item.id) : null">
                             <view
-                                class="aspect-video relative bg-[#F8FAFC] overflow-hidden"
+                                class="aspect-square relative bg-[#F8FAFC] overflow-hidden"
                                 @click="!isHandle && handleItem(item)">
                                 <image
                                     v-if="item.m_type != MaterialTypeEnum.MUSIC"
@@ -334,7 +334,6 @@ import {
 import { AppTypeEnum } from "@/enums/appEnums";
 import useUpload from "@/hooks/useUpload";
 import { saveImageToPhotosAlbum, saveVideoToPhotosAlbum } from "@/utils/file";
-import { formatAudioTime } from "@/utils/util";
 
 enum ShowType {
     ALL,
@@ -669,6 +668,7 @@ const handlePlay = (item: any) => {
 
 const { uploadAndProcessFiles, showUploadProgress, uploadMaterialList } = useUpload({
     fileAccept: ["mp4", "mp3", "m4a", "jpg", "png", "jpeg", "webp"],
+    isTranscode: true,
     onSuccess: async (materials) => {
         const promises = [];
         for (const item of materials) {

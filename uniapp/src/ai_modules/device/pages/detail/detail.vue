@@ -36,7 +36,7 @@
                             :url="`/ai_modules/device/pages/platform_detail/platform_detail?device_code=${deviceCode}&app_type=${account.type}`"
                             hover-class="none">
                             <image
-                                :src="platformLogo[account.type as keyof typeof platformLogo].activeIcon"
+                                :src="platform[account.type as keyof typeof platform].activeIcon"
                                 class="w-[40rpx] h-[40rpx]"></image>
                         </navigator>
                     </view>
@@ -182,7 +182,7 @@ const taskEditNameRef = shallowRef<any>(null);
 const showDetailPop = ref<boolean>(false);
 const showEditNamePop = ref<boolean>(false);
 
-const { platformLogo } = useDevice();
+const { platform } = useDevice();
 
 // 获取设备状态样式
 const getDeviceStatusStyle = computed(() => {

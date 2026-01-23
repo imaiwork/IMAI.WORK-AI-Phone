@@ -64,13 +64,20 @@
                 </template>
             </z-paging>
         </view>
-        <view class="flex-shrink-0 pb-5 px-4 pt-2">
-            <u-button
-                type="primary"
-                :custom-style="{ height: '100rpx', borderRadius: '20rpx', fontWeight: 'bold' }"
-                @click="handleConfirmChoose">
-                确认选择
-            </u-button>
+        <view class="flex-shrink-0 pb-5 px-4 pt-2 flex justify-between items-center gap-x-4">
+            <view class="w-[150rpx]">
+                <u-button type="default" @click="toggleSelectAll">
+                    {{ selectAll ? "取消全选" : "全选" }}
+                </u-button>
+            </view>
+            <view class="flex-1">
+                <u-button
+                    type="primary"
+                    :custom-style="{ height: '100rpx', borderRadius: '20rpx', fontWeight: 'bold' }"
+                    @click="handleConfirmChoose">
+                    确认选择
+                </u-button>
+            </view>
         </view>
     </view>
 </template>
@@ -86,14 +93,14 @@ const { emit } = useEventBusManager();
 
 const platformTypes = ref<any[]>([]);
 const multiple = ref(1);
-const { platformLogo } = useDevice();
+const { platform } = useDevice();
 
 const tabs = ref<any[]>([
     { value: 0, label: "全部" },
-    { value: AppTypeEnum.SPH, label: "微信", icon: platformLogo[AppTypeEnum.SPH].activeIcon },
-    { value: AppTypeEnum.XHS, label: "小红书", icon: platformLogo[AppTypeEnum.XHS].activeIcon },
-    { value: AppTypeEnum.DOUYIN, label: "抖音", icon: platformLogo[AppTypeEnum.DOUYIN].activeIcon },
-    { value: 5, label: "快手", icon: platformLogo[AppTypeEnum.KUAISHOU].activeIcon },
+    { value: AppTypeEnum.SPH, label: "微信", icon: platform.value[AppTypeEnum.SPH].activeIcon },
+    { value: AppTypeEnum.XHS, label: "小红书", icon: platform.value[AppTypeEnum.XHS].activeIcon },
+    { value: AppTypeEnum.DOUYIN, label: "抖音", icon: platform.value[AppTypeEnum.DOUYIN].activeIcon },
+    { value: 5, label: "快手", icon: platform.value[AppTypeEnum.KUAISHOU].activeIcon },
 ]);
 
 const getTabs = () => {
@@ -105,13 +112,10 @@ const getTabs = () => {
 };
 
 const activeTab = ref();
-
-// 这里需要根据平台类型来判断显示的tab
-
 const dataLists = ref<any[]>([]);
 const pagingRef = shallowRef();
-
 const chooseAccount = ref<any[]>([]);
+const selectAll = ref(false);
 
 const handleTab = (item: any) => {
     activeTab.value = item.value;
@@ -135,7 +139,6 @@ const getIcon = (type: string) => {
     return tabs.value.find((item) => item.value === parseInt(type))?.icon;
 };
 
-// 判断是否选中
 const isChoose = (item: any) => {
     return chooseAccount.value.some((account) => account.id === item.id);
 };
@@ -150,6 +153,15 @@ const handleChooseAccount = (item: any) => {
     } else {
         chooseAccount.value.push(item);
     }
+};
+
+const toggleSelectAll = () => {
+    if (selectAll.value) {
+        chooseAccount.value = [];
+    } else {
+        chooseAccount.value = [...dataLists.value]; // 选择所有列表项
+    }
+    selectAll.value = !selectAll.value;
 };
 
 const handleConfirmChoose = () => {

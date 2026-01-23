@@ -6,7 +6,7 @@
                     class="group flex items-center gap-2 cursor-pointer text-[#64748B] hover:text-primary transition-all"
                     @click="back">
                     <div
-                        class="w-8 h-8 flex items-center justify-center rounded-full bg-[#F8FAFC] group-hover:bg-[#F0F6FF]">
+                        class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 group-hover:bg-[#F0F6FF]">
                         <Icon name="el-icon-ArrowLeft" :size="16" />
                     </div>
                     <span class="text-[14px] font-black">返回上一步</span>
@@ -27,7 +27,7 @@
                     <div class="grow min-h-0">
                         <ElScrollbar>
                             <div class="px-4 pb-10">
-                                <div class="bg-[#F8FAFC] rounded-[24px] p-6 border border-[#F1F5F9]">
+                                <div class="bg-slate-50 rounded-[24px] p-6 border border-[#F1F5F9]">
                                     <base-form ref="baseFormRef" v-model="formData" />
                                 </div>
 

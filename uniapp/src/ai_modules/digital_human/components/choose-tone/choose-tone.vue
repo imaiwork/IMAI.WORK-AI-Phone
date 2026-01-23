@@ -14,7 +14,6 @@
                         ref="pagingRef"
                         v-model="dataLists"
                         :fixed="false"
-                        :auto="false"
                         :safe-area-inset-bottom="true"
                         @query="queryList">
                         <view class="py-[30rpx] px-[32rpx]">
@@ -45,7 +44,7 @@
                                 class="flex items-center mb-[16rpx] gap-x-[24rpx] bg-white rounded-[24rpx] p-[32rpx]"
                                 :class="{
                                     '!bg-[#F0F7FF] shadow-[0px_0px_0px_1px_rgba(0,101,251,1)]':
-                                        activeTone == item.voice_id,
+                                        chooseToneItem.voice_id == item.voice_id,
                                 }"
                                 :key="index"
                                 @click="chooseTone(item, 1)">
@@ -67,6 +66,9 @@
                             <empty />
                         </template>
                     </z-paging>
+                </view>
+                <view class="p-4">
+                    <u-button type="primary" @click="handleConfirm">确定</u-button>
                 </view>
             </view>
         </template>
@@ -122,6 +124,7 @@ const systemToneLists = computed(() => {
     }
     return list;
 });
+const chooseToneItem = ref<any>({ voice_id: props.activeTone });
 
 const pagingRef = shallowRef();
 const dataLists = ref<any[]>([]);
@@ -131,6 +134,7 @@ const queryParams = reactive<any>({
     status: 1,
     builtin: 1,
 });
+
 const queryList = async (page_no: number, page_size: number) => {
     try {
         const { lists } = await getVoiceList({
@@ -145,17 +149,16 @@ const queryList = async (page_no: number, page_size: number) => {
 };
 
 const chooseTone = (item: any, type: number) => {
-    emit("confirm", { ...item, type });
+    if (props.activeTone === item.voice_id) {
+        chooseToneItem.value = {};
+        return;
+    }
+    chooseToneItem.value = item;
 };
 
-watch(
-    () => props.modelValue,
-    async (val) => {
-        queryParams.model_version = props.modelVersion;
-        await nextTick();
-        pagingRef.value?.reload();
-    }
-);
+const handleConfirm = () => {
+    emit("confirm", chooseToneItem.value);
+};
 </script>
 
 <style scoped></style>

@@ -19,7 +19,7 @@
                 </div>
             </div>
 
-            <div class="flex items-center justify-between px-4 py-3 bg-[#F8FAFC] rounded-2xl border border-[#F1F5F9]">
+            <div class="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-2xl border border-[#F1F5F9]">
                 <div class="flex flex-col">
                     <span class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">Dimension</span>
                     <div class="flex items-center gap-2 mt-0.5">
@@ -106,7 +106,7 @@ watch(
            bg-white border-2 border-[#F1F5F9] cursor-pointer transition-all duration-300;
 
     &:hover {
-        @apply border-[#0065fb]/30 bg-[#F8FAFC] -translate-y-0.5 shadow-light;
+        @apply border-[#0065fb]/30 bg-slate-50 -translate-y-0.5 shadow-light;
     }
 
     &.is-active {
@@ -128,7 +128,7 @@ watch(
 }
 
 .ratio-shape {
-    @apply border-2 border-[#CBD5E1] rounded-[4px] transition-all duration-500 bg-[#F8FAFC];
+    @apply border-2 border-[#CBD5E1] rounded-[4px] transition-all duration-500 bg-slate-50;
 }
 
 /* 比例文字 */

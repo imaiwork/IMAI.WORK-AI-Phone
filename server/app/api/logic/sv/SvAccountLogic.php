@@ -32,6 +32,10 @@ class SvAccountLogic extends SvBaseLogic
             // 获取信息
             $account = self::accountInfo($params['account'], false, $params['type']);
             if ($account instanceof SvAccount) {
+                if($account->device_code != $params['device_code']){
+                    self::setError('该账号已经绑定在设备：' . $account->device_code);
+                    return false;
+                }
                 $params['user_id'] = self::$uid;
                 $params['update_time'] = time();
                 $res = SvAccount::where('account', $params['account'])->where('user_id', self::$uid)->update($params);

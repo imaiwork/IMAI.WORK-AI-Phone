@@ -22,7 +22,7 @@
                     <div
                         v-if="prompts.length === 0 && !isReceiving"
                         class="h-60 flex flex-col items-center justify-center text-center">
-                        <div class="w-16 h-16 bg-[#F8FAFC] rounded-2xl flex items-center justify-center mb-4">
+                        <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4">
                             <Icon name="el-icon-MagicStick" :size="32" color="#CBD5E1"></Icon>
                         </div>
                         <p class="text-[#94A3B8] text-[13px] font-bold">描述你的想法，我来为你润色</p>
@@ -67,7 +67,7 @@
             </ElScrollbar>
         </div>
 
-        <div class="p-6 bg-[#F8FAFC] border-t border-[#F1F5F9]">
+        <div class="p-6 bg-slate-50 border-t border-[#F1F5F9]">
             <div class="relative">
                 <ElInput
                     v-model="prompt"

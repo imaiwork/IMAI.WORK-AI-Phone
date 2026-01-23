@@ -1,5 +1,5 @@
 <template>
-    <div class="h-[full] flex flex-col bg-[#FFFFFF]">
+    <div class="h-full flex flex-col bg-[#FFFFFF]">
         <div class="grow min-h-[0]">
             <ElScrollbar>
                 <div class="px-[30px] py-[24px]">
@@ -123,7 +123,7 @@
 
                         <div
                             v-if="formData.model_id != ModelIdEnum.DEEPSEEK"
-                            class="mt-[24px] p-[24px] rounded-[20px] bg-[#F8FAFC] border-[transparent]">
+                            class="mt-[24px] p-[24px] rounded-[20px] bg-slate-50 border-[transparent]">
                             <div class="flex items-center justify-between mb-[20px]">
                                 <div>
                                     <div class="text-[14px] font-[900] text-[#0F172A]">对数概率分析 (Logprobs)</div>
@@ -235,7 +235,7 @@ defineExpose({
 }
 
 .param-control-group {
-    @apply flex items-center w-full gap-[16px] bg-[#F8FAFC] px-[16px] py-[6px] rounded-[12px] border-[transparent] transition-all;
+    @apply flex items-center w-full gap-[16px] bg-slate-50 px-[16px] py-[6px] rounded-[12px] border-[transparent] transition-all;
 
     &:focus-within {
         @apply bg-[#FFFFFF] shadow-[0_0_0_2px_#0065fb22] border-[#0065fb33];

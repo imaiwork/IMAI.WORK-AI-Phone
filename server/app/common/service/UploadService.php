@@ -890,6 +890,9 @@ class UploadService
                 'default' => ConfigService::get('storage', 'default', 'local'),
                 'engine'  => ConfigService::get('storage') ?? ['local' => []],
             ];
+            if ($config['default'] == 'local'){
+                return $localPath;
+            }
             $StorageDriver = new StorageDriver($config);
             $StorageDriver->setUploadFileByReal($localPath);
             $StorageDriver->setFilename(basename($localPath));

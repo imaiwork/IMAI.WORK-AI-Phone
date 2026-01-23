@@ -111,7 +111,7 @@ class TouchLogic extends ApiLogic
                 ->findOrEmpty();
             if (!$find->isEmpty()) {
                 if ($find->status == DeviceEnum::AUTO_CONFIG_STATUS_RUNNING) {
-                    self::setError('触摸词自动生成任务正在执行，不可修改，稍后再试');
+                    self::setError('该设备截流获客生成任务正在执行，不可修改，稍后再试');
                     return false;
                 }
 

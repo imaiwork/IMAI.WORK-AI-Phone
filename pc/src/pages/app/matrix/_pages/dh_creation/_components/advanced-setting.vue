@@ -20,7 +20,7 @@
             </div>
 
             <div class="grow overflow-y-auto px-6 py-6 custom-scrollbar">
-                <div class="p-5 rounded-[24px] bg-[#F8FAFC] border border-[#F1F5F9]">
+                <div class="p-5 rounded-[24px] bg-slate-50 border border-[#F1F5F9]">
                     <div class="flex justify-between items-center">
                         <div class="flex flex-col">
                             <span class="text-[14px] font-black text-[#1E293B]">AI 智能剪辑</span>

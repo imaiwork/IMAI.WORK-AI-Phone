@@ -18,6 +18,7 @@ export default function useDeviceWs(options?: WebSocketOptions) {
     const wsUrl = `wss://${baseUrl.split("//")[1]}wss`;
 
     const {
+        socket,
         on,
         send: wsSend,
         isConnected,
@@ -125,6 +126,7 @@ export default function useDeviceWs(options?: WebSocketOptions) {
     });
 
     return {
+        socket,
         on,
         send,
         reconnect,

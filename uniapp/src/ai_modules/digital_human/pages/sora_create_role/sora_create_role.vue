@@ -192,9 +192,10 @@
             </view>
         </view>
     </view>
-    <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
+    <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <!-- <choose-material v-model="showChooseMaterial" type="image" :limit="1" @select="handleChooseMaterial" /> -->
     <create-success-pop
+        v-if="showCreateSuccess"
         v-model="showCreateSuccess"
         title="角色生成中"
         seek-text=""
@@ -372,6 +373,7 @@ const roleStyleIndex = ref([0]);
 const showRoleStylePopup = ref(false);
 const showCreateSuccess = ref(false);
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
+    isTranscode: true,
     count: 1,
     imageAccept: imageAccept,
     imageSize: imageMaxSize,

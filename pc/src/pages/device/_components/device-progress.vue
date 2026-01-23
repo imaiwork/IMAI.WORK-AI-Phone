@@ -21,7 +21,7 @@
                             </div>
                         </div>
 
-                        <h3 class="text-xl font-[1000] text-[#1E293B] mb-2">正在同步云端数据</h3>
+                        <h3 class="text-xl font-bold text-[#1E293B] mb-2">正在同步云端数据</h3>
                         <p class="text-[15px] font-bold text-primary px-4 py-1.5 bg-[#0065fb]/5 rounded-full mb-6">
                             {{ step || "正在建立与 RPA 软件的连接..." }}
                         </p>
@@ -76,7 +76,7 @@
                     class="w-20 h-20 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto mb-6 border border-emerald-100">
                     <Icon name="el-icon-CircleCheckFilled" :size="48" />
                 </div>
-                <h3 class="text-xl font-[1000] text-slate-800 mb-2">同步任务完成</h3>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">同步任务完成</h3>
                 <p class="text-[14px] text-slate-400 font-medium mb-8">AI 设备及对应账号信息已成功添加至列表</p>
 
                 <div

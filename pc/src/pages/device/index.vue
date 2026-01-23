@@ -52,7 +52,7 @@
                         <template #default="{ row }">
                             <div class="flex items-center justify-center gap-3">
                                 <div
-                                    class="w-10 h-10 rounded-xl bg-[#F8FAFC] flex items-center justify-center border border-br cursor-pointer"
+                                    class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-br cursor-pointer"
                                     @click.stop="handleEditName(row)">
                                     <Icon name="local-icon-edit" color="#64748B" />
                                 </div>
@@ -154,7 +154,7 @@
                 </ElTable>
             </div>
 
-            <div class="h-[72px] px-8 flex items-center justify-between bg-[#F8FAFC]/50">
+            <div class="h-[72px] px-8 flex items-center justify-between bg-slate-50/50">
                 <span class="text-[12px] font-bold text-[#94A3B8]"
                     >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条设备数据</span
                 >

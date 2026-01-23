@@ -7,7 +7,7 @@
                         <div class="w-10 h-10 rounded-xl bg-[#0065fb]/10 flex items-center justify-center shadow-sm">
                             <img src="@/assets/images/date.png" class="w-6 h-6" />
                         </div>
-                        <span class="text-[18px] font-[1000] text-slate-800 tracking-tight">{{ item.date }}</span>
+                        <span class="text-[18px] font-bold text-slate-800 tracking-tight">{{ item.date }}</span>
                         <div class="flex-1 h-[1px] bg-gradient-to-r from-slate-100 to-transparent ml-2"></div>
                     </div>
 

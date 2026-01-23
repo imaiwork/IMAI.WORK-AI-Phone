@@ -30,7 +30,7 @@
                         </div>
                     </div>
 
-                    <div class="px-6 py-2 bg-[#F8FAFC] flex items-center justify-between border-y border-[#F1F5F9]">
+                    <div class="px-6 py-2 bg-slate-50 flex items-center justify-between border-y border-[#F1F5F9]">
                         <span class="text-[11px] font-black text-[#94A3B8] uppercase">功能模块</span>
                         <span class="text-[11px] font-black text-[#94A3B8] uppercase">消耗标准</span>
                     </div>

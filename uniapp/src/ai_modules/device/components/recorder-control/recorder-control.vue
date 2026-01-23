@@ -250,13 +250,7 @@ export default {
 
 <style lang="scss" scoped>
 .recorder-panel {
-    @apply h-full flex flex-col relative;
-    /* 采用纯白底色，靠留白和投影拉开层次 */
-    background-color: #ffffff;
-}
-
-.text-primary {
-    color: #0065fb !important;
+    @apply h-full flex flex-col relative bg-white;
 }
 
 /* 脉冲动画 */

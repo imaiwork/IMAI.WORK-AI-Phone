@@ -10,7 +10,7 @@
                 <view class="px-4">
                     <view class="grid grid-cols-2 gap-2">
                         <view class="" v-for="(item, index) in dataLists" :key="index">
-                            <view class="h-[440rpx] rounded-[20rpx] relative overflow-hidden">
+                            <view class="h-[440rpx] rounded-[20rpx] relative overflow-hidden card-gradient">
                                 <image :src="item.pic" class="w-full h-full rounded-[20rpx]" mode="aspectFill"></image>
                                 <view
                                     v-if="item.status == 1"
@@ -21,8 +21,8 @@
                                 <view
                                     v-else-if="item.status == 2"
                                     class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center">
-                                    <view class="bg-[#E32340] text-xs text-white rounded-[10rpx] px-2 py-1"
-                                        >训练失败</view
+                                    <view class="bg-[#E32340] text-xs text-white rounded-[10rpx] px-2 py-1">
+                                        训练失败</view
                                     >
                                     <view class="text-xs text-white px-4 text-center mt-2" v-if="item.remark">
                                         {{ item.remark }}

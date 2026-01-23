@@ -145,7 +145,7 @@ const { copy } = useCopy();
     }
 
     .menu-text {
-        @apply text-[13px] font-[900] text-[#475569] transition-colors;
+        @apply text-[13px] font-bold text-[#475569] transition-colors;
     }
 }
 

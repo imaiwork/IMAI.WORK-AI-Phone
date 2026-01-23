@@ -441,7 +441,7 @@
 
                 <div class="bg-[#0065fb]/5 rounded-[28px] p-6 border border-[#0065fb]/10">
                     <div class="flex items-end justify-center gap-2 mb-6">
-                        <span class="text-[42px] font-[1000] text-primary leading-none tracking-tighter">{{
+                        <span class="text-[42px] font-bold text-primary leading-none tracking-tighter">{{
                             tempCustomFreq
                         }}</span>
                         <span class="text-[14px] font-black text-primary/60 mb-1.5">条 / 24h</span>

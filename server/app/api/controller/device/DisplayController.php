@@ -7,6 +7,7 @@ use app\api\controller\BaseApiController;
 use think\exception\HttpResponseException;
 
 use app\api\logic\device\DisplayLogic;
+use app\api\lists\device\DisplayLists;
 
 /**
  * DisplayController
@@ -31,5 +32,10 @@ class DisplayController extends BaseApiController
         } catch (HttpResponseException $e) {
             return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }
+    }
+
+    public function lists()
+    {
+        return $this->dataLists(new DisplayLists());
     }
 }

@@ -15,7 +15,7 @@
                         class="group flex items-center gap-2 cursor-pointer text-[#64748B] hover:text-primary transition-all"
                         @click="emit('back')">
                         <div
-                            class="w-8 h-8 flex items-center justify-center rounded-full bg-[#F8FAFC] group-hover:bg-[#F0F6FF]">
+                            class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 group-hover:bg-[#F0F6FF]">
                             <Icon name="el-icon-ArrowLeft" :size="16" />
                         </div>
                         <span class="text-[14px] font-black">退出编辑</span>
@@ -278,7 +278,7 @@ onMounted(() => {
 }
 
 .new-chat-btn {
-    @apply rounded-[10px] h-[36px] px-[12px] text-[12px] font-[900] bg-[#F8FAFC] border-[transparent] text-[#64748B] transition-all;
+    @apply rounded-[10px] h-[36px] px-[12px] text-[12px] font-[900] bg-slate-50 border-[transparent] text-[#64748B] transition-all;
 
     &:hover {
         @apply bg-[#F1F5F9] text-[#0F172A];

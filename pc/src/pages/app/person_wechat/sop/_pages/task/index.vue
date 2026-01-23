@@ -53,7 +53,7 @@
                 <ElTableColumn label="营销周期" min-width="120">
                     <template #default="{ row }">
                         <div
-                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#F8FAFC] border border-[#F1F5F9]">
+                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-50 border border-[#F1F5F9]">
                             <Icon name="el-icon-Calendar" :size="12" color="#64748B" />
                             <span class="text-xs font-black text-[#475569]">
                                 {{ row.all_day ? `${row.all_day} 天` : "未设定" }}
@@ -126,7 +126,7 @@
             </ElTable>
         </div>
 
-        <div class="h-[72px] px-8 flex items-center justify-between bg-[#F8FAFC]/50">
+        <div class="h-[72px] px-8 flex items-center justify-between bg-slate-50/50">
             <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个营销任务</span>
             <pagination v-model="pager" @change="getLists" />
         </div>

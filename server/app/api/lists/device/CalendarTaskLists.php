@@ -87,7 +87,7 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                     case DeviceEnum::TASK_SOURCE_FRIENDS:
                         //sv_crawling_manual_task
                         $taskinfo = SvCrawlingManualTask::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
-                        $item['name'] = $taskinfo['name'] ?? '';
+                        $item['name'] = $taskinfo['name'] ?? $item['task_name'];
                         break;
 
                     case DeviceEnum::TASK_SOURCE_CLUES:

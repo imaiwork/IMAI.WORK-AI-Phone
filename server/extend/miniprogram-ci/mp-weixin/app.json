@@ -25,10 +25,8 @@
         "pages/setting/setting",
         "pages/404/404",
         "pages/choose_file/choose_file",
-        "pages/rpa_code/rpa_code",
         "pages/creation/creation",
-        "pages/material_library/material_library",
-        "pages/task_tutorial/task_tutorial"
+        "pages/material_library/material_library"
       ]
     },
     {
@@ -63,7 +61,8 @@
         "pages/montage_news_create/montage_news_create",
         "pages/sora_create_role/sora_create_role",
         "pages/sora_role_library/sora_role_library",
-        "pages/music_choose/music_choose"
+        "pages/music_choose/music_choose",
+        "pages/montage_styles_choose/montage_styles_choose"
       ]
     },
     {
@@ -146,7 +145,9 @@
         "pages/create_closure/create_closure",
         "pages/create_circle/create_circle",
         "pages/create_circle_interact/create_circle_interact",
-        "pages/setting_circle_interact/setting_circle_interact"
+        "pages/setting_circle_interact/setting_circle_interact",
+        "pages/rpa_code/rpa_code",
+        "pages/task_tutorial/task_tutorial"
       ]
     },
     {

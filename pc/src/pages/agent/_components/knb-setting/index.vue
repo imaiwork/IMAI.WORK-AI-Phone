@@ -1,5 +1,5 @@
 <template>
-    <div class="h-[full] flex flex-col bg-[#FFFFFF]">
+    <div class="h-full flex flex-col bg-[#FFFFFF]">
         <div class="grow min-h-[0]">
             <ElScrollbar>
                 <div class="px-[30px] py-[24px]">
@@ -193,7 +193,7 @@
                                     <div class="indicator"></div>
                                     <span class="group-title">兜底策略 (Empty Response)</span>
                                 </div>
-                                <div class="bg-[#F8FAFC] p-[20px] rounded-[16px] border-[transparent]">
+                                <div class="bg-slate-50 p-[20px] rounded-[16px] border-[transparent]">
                                     <ElRadioGroup v-model="formData.search_empty_type" class="mb-[16px]">
                                         <ElRadio :value="1">AI 自由发挥</ElRadio>
                                         <ElRadio :value="2">指定自定义内容</ElRadio>
@@ -313,7 +313,7 @@ defineExpose({
 }
 
 .slider-box {
-    @apply flex items-center w-full gap-[20px] bg-[#F8FAFC] px-[16px] py-[8px] rounded-[12px] border-[transparent];
+    @apply flex items-center w-full gap-[20px] bg-slate-50 px-[16px] py-[8px] rounded-[12px] border-[transparent];
 }
 
 .switch-card {

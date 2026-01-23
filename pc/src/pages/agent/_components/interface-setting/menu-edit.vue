@@ -151,10 +151,10 @@ defineExpose({
 </script>
 <style scoped lang="scss">
 .btn-secondary {
-    @apply bg-[#FFFFFF] border-[#F1F5F9] text-[#64748B] hover:bg-[#F8FAFC] hover:border-[#E2E8F0];
+    @apply bg-[#FFFFFF] border-[#F1F5F9] text-[#64748B] hover:bg-slate-50 hover:border-[#E2E8F0];
 }
 
 .material-item {
-    @apply relative w-[80px] h-[80px] rounded-[12px] bg-[#F8FAFC] border-[1px] border-[#E2E8F0] flex flex-col items-center justify-center overflow-visible;
+    @apply relative w-[80px] h-[80px] rounded-[12px] bg-slate-50 border-[1px] border-[#E2E8F0] flex flex-col items-center justify-center overflow-visible;
 }
 </style>

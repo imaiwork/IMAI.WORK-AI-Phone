@@ -32,9 +32,77 @@ class CircleLikeCommentHandler extends BaseMessageHandler
             $this->connection = $connection;
 
             $taskId = $content['taskId'] ?? 0;
+            $nickname = $content['nickname'] ?? '';
+            $message = $content['content'] ?? '';
 
             $task = SvDeviceCircleLikeReplyAccount::where('id', $taskId)->findOrEmpty();
             if (!$task->isEmpty()) {
+
+                //验证同一客户在任务中互动数量是否上限
+                $setting = SvDeviceCircleLikeReply::where('id', $task->circle_like_reply_id)->findOrEmpty();
+                if ($setting->isEmpty()) {
+                    $this->setLog('任务配置不存在', 'like');
+                    $this->payload['reply'] = array(
+                        'type' => 1,
+                        'content' => [],
+                        'link' => '',
+                        'isLike' => 0,
+                        'isComment' => 0,
+                        'msg' => '任务配置不存在',
+                        'targetRecipient' => $content['nickname'] ?? '',
+                        'lastMessageContent' => $content['content'] ?? ''
+                    );
+                    $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+                    return;
+                }
+
+
+                $hash = hash('sha256', $nickname . $message);
+                $record = SvDeviceCircleLikeReplyRecord::where('user_id', $task->user_id)
+                    ->where('like_reply_account', $task->id)
+                    ->where('device_code', $task->device_code)
+                    ->where('account', $task->account)
+                    ->where('hash', $hash)
+                    ->where('type', $setting->action)
+                    ->findOrEmpty();
+                if (!$record->isEmpty()) {
+                    $this->setLog('重复评论', 'like');
+                    $this->payload['reply'] = array(
+                        'type' => 1,
+                        'content' => [],
+                        'link' => '',
+                        'isLike' => 0,
+                        'isComment' => 0,
+                        'msg' => '重复评论',
+                        'targetRecipient' => $content['nickname'] ?? '',
+                        'lastMessageContent' => $content['content'] ?? ''
+                    );
+                    $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+                    return;
+                }
+                
+                $count =  SvDeviceCircleLikeReplyRecord::where('user_id', $task->user_id)
+                    ->where('like_reply_account', $task->id)
+                    ->where('device_code', $task->device_code)
+                    ->where('nickname', $nickname)
+                    ->where('type', $setting->action)
+                    ->count();
+                if ($count >= $setting->number) {
+                    $this->setLog('互动次数已达上限', 'like');
+                    $this->payload['reply'] = array(
+                        'type' => 1,
+                        'content' => [],
+                        'link' => '',
+                        'isLike' => 0,
+                        'isComment' => 0,
+                        'msg' => '互动次数已达上限',
+                        'targetRecipient' => $content['nickname'] ?? '',
+                        'lastMessageContent' => $content['content'] ?? ''
+                    );
+                    $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+                    return;
+                }
+
                 $request_id = generate_unique_task_id();
                 $comment = $this->getCircleComment($content['content'], $task, $request_id);
 
@@ -46,7 +114,9 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     'nickname' => $content['nickname'] ?? '',
                     'content' => $content['content'] ?? '',
                     'comment' => $comment,
+                    'hash' =>  $hash,
                     'task_id' => $request_id,
+                    'type' => $setting->action,
                     'create_time' => time(),
                 ]);
 
@@ -56,6 +126,9 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                         $comment
                     ],
                     'link' => '',
+                    'isLike' => in_array($setting->action, [1, 3]) ? 1 : 0,
+                    'isComment' => in_array($setting->action, [2, 3]) ? 1 : 0,
+                    'msg' => '互动成功',
                     'targetRecipient' => $content['nickname'] ?? '',
                     'lastMessageContent' => $content['content'] ?? ''
                 );
@@ -64,6 +137,9 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     'type' => 1,
                     'content' => [],
                     'link' => '',
+                    'isLike' => 0,
+                    'isComment' => 0,
+                    'msg' => '互动失败',
                     'targetRecipient' => $content['nickname'] ?? '',
                     'lastMessageContent' => $content['content'] ?? ''
                 );
@@ -159,6 +235,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     'scene' => '评论朋友圈聊天',
                     'model' => $robot->model,
                     'robot' => $robot->toArray(),
+                    'kb_id' => $robot->kb_ids ? explode(',', $robot->kb_ids) : [],
                 ]);
                 if ($chatStatus === false) {
                     $this->setLog('队列请求知识库失败: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
@@ -181,16 +258,16 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                 ];
                 $this->setLog('请求参数: ' . json_encode($request, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
                 $autoType = SvDevice::where('device_code', $task->device_code)->value('auto_type') ?? 0;
-                if($autoType == 0){
+                if ($autoType == 0) {
                     // 执行微信AI消息处理
                     $response = \app\common\service\ToolsService::Wechat()->chat($request);
-                }else{
+                } else {
                     // 执行自动化消息处理
                     $response = \app\common\service\ToolsService::Automation()->friendsCircleComments($request);
                 }
                 if (isset($response['code']) && $response['code'] == 10000) {
                     // 处理响应
-                    $replyContent = $this->handleResponse($response, $request,$autoType);
+                    $replyContent = $this->handleResponse($response, $request, $autoType);
                 } else {
                     // 重试
 
@@ -208,9 +285,9 @@ class CircleLikeCommentHandler extends BaseMessageHandler
 
     private function handleResponse(array $response, array $request, $autoType)
     {
-        if($autoType == 0){
+        if ($autoType == 0) {
             $scene = $request['model'] == 'deepseek' ? 'ai_reply_like' : 'openai_chat';
-        }else{
+        } else {
             $scene = 'automation_friends_circle_comments';
         }
 
@@ -239,26 +316,25 @@ class CircleLikeCommentHandler extends BaseMessageHandler
         User::userTokensChange($request['user_id'], (float)$points);
 
         $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points, '场景' => '朋友圈评论'];
-        if($autoType == 0){
+        if ($autoType == 0) {
             $desc = $request['model'] == 'deepseek' ? AccountLogEnum::TOKENS_DEC_AI_REPLY_LIKE : AccountLogEnum::TOKENS_DEC_OPENAI_CHAT;
-        }else{
+        } else {
             $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS;
         }
         //扣费记录
         AccountLogLogic::recordUserTokensLog(true, $request['user_id'], $desc, (float)$points, $request['task_id'], $extra);
 
-        if($autoType == 1){          
+        if ($autoType == 1) {
             // 处理响应
             $response = \app\common\service\ToolsService::Automation()->friendsCirclePraise($request);
 
             if (isset($response['code']) && $response['code'] == 10000) {
                 $unit = TokenLogService::checkToken($request['user_id'], 'automation_friends_circle_praise');
-                $extra = [ '算力单价' => $unit, '实际消耗算力' => $unit, '场景' => '朋友圈点赞'];
+                $extra = ['算力单价' => $unit, '实际消耗算力' => $unit, '场景' => '朋友圈点赞'];
                 $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_PRAISE;
-                     //扣费记录
+                //扣费记录
                 AccountLogLogic::recordUserTokensLog(true, $request['user_id'], $desc, (float)$points, $request['task_id'], $extra);
             }
-          
         }
 
         return $reply;

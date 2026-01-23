@@ -1062,6 +1062,7 @@ class MessageHandler extends BaseMessageHandler
                         'frequency_penalty' => $this->request['frequency_penalty'] ?? 0.3, //避免重复用词力度
                         'max_tokens' => $this->request['max_tokens'] ?? 4096, //token上限
                         'context_num' => $this->request['context_num'] ?? 5, //上下文数
+                        'kb_id' => $data['robot']['kb_ids']
                     ]);
 
                     if ($chatStatus === false) {

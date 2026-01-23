@@ -111,7 +111,7 @@
                                     popper-class="!rounded-[16px] !border-[#F1F5F9] !p-1.5 !shadow-light">
                                     <template #reference>
                                         <div
-                                            class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#F8FAFC] transition-colors cursor-pointer">
+                                            class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-50 transition-colors cursor-pointer">
                                             <Icon name="el-icon-MoreFilled" color="#94A3B8" :size="14" />
                                         </div>
                                     </template>
@@ -202,7 +202,7 @@ const statusStyle = (status: number) => {
     if (status == 1) return "bg-[#F0FDF4] text-[#16A34A]";
     if (status == 5) return "bg-[#EFF6FF] text-primary";
     if (status == 7) return "bg-[#FEF2F2] text-[#EF4444]";
-    return "bg-[#F8FAFC] text-[#94A3B8]";
+    return "bg-slate-50 text-[#94A3B8]";
 };
 
 const statusDot = (status: number) => {

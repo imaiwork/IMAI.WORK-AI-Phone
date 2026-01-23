@@ -282,8 +282,12 @@ const formatDate = (date: string) => {
 };
 
 const handleSubmit = async () => {
-    if (!formData.content && formData.attachment_content.length === 0) {
-        uni.$u.toast("请输入内容或添加图片/视频");
+    if (!formData.content) {
+        uni.$u.toast("请输入内容");
+        return;
+    }
+    if (formData.attachment_content.length === 0) {
+        uni.$u.toast(`请添加${isVideo.value ? "视频" : "图片"}`);
         return;
     }
     if (formData.wechat_ids.length === 0) {

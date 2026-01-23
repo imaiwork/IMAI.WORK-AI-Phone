@@ -76,7 +76,7 @@
                                 </ElOption>
                             </ElSelect>
                             <div
-                                class="mt-4 p-4 rounded-2xl bg-[#F8FAFC] border border-[#F1F5F9] flex items-center justify-between">
+                                class="mt-4 p-4 rounded-2xl bg-slate-50 border border-[#F1F5F9] flex items-center justify-between">
                                 <div class="text-[11px] font-bold text-[#64748B]">没有合适的机器人？</div>
                                 <router-link to="/agent" target="_blank">
                                     <button
@@ -202,7 +202,7 @@ defineExpose({
 /* 下拉框定制 */
 :deep(.workflow-select) {
     .el-input__wrapper {
-        @apply h-12 rounded-2xl bg-[#F8FAFC] shadow-[none] border border-br transition-all px-4;
+        @apply h-12 rounded-2xl bg-slate-50 shadow-[none] border border-br transition-all px-4;
         &.is-focus {
             @apply border-primary bg-white;
             box-shadow: 0 0 0 4px rgba(var(--el-primary-color), 0.08) !important;

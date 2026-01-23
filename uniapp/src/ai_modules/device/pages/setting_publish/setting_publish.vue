@@ -34,7 +34,7 @@
                                     <view
                                         v-for="(item, index) in easyModeData.anchorList.slice(0, 3)"
                                         :key="index"
-                                        class="h-[250rpx] relative">
+                                        class="aspect-[3/4] relative">
                                         <image
                                             :src="item.pic"
                                             class="w-full h-full rounded-[20rpx]"
@@ -71,7 +71,7 @@
                                     <view
                                         v-for="(item, index) in easyModeData.videoList.slice(0, 3)"
                                         :key="index"
-                                        class="h-[250rpx] relative overflow-hidden"
+                                        class="aspect-[3/4] relative overflow-hidden"
                                         @click="handlePreview(item)">
                                         <image
                                             :src="item.pic"
@@ -119,11 +119,11 @@
                             <view class="rounded-[20rpx] bg-white p-[30rpx] mt-[18rpx]">
                                 <view class="grid grid-cols-3 gap-x-[20rpx]" v-if="easyModeData.imageList.length > 0">
                                     <view
-                                        class="h-[200rpx] rounded-[20rpx]"
+                                        class="aspect-[3/4] rounded-[20rpx]"
                                         v-for="(item, index) in easyModeData.imageList.slice(0, 3)"
                                         :key="index">
                                         <image
-                                            :src="item.pic"
+                                            :src="item.url"
                                             class="w-full h-full rounded-[20rpx]"
                                             mode="aspectFill"></image>
                                     </view>
@@ -217,7 +217,7 @@
                             </view>
                         </view>
                     </template>
-                    <view class="flex flex-col gap-y-[50rpx] pb-[400rpx]">
+                    <view class="flex flex-col gap-y-[50rpx] pb-[400rpx]" v-if="false">
                         <view>
                             <view class="font-bold text-[30rpx]"
                                 ><text class="text-[#FF2442]">*</text>您创作的视频营销主题是</view
@@ -280,7 +280,7 @@ import { useDevice } from "@/ai_modules/device/hooks/useDevice";
 import { AppTypeEnum } from "@/enums/appEnums";
 import SphIcon from "@/static/images/common/sph_s.png";
 
-const { platformLogo } = useDevice();
+const { platform } = useDevice();
 const loading = ref(true);
 
 // 模式类型
@@ -339,26 +339,26 @@ const commonMaterialList = [
 const platformConfig = ref<any[]>([
     // 小红书
     {
-        ...platformLogo[AppTypeEnum.XHS],
+        ...platform.value[AppTypeEnum.XHS],
         status: 1,
         materialList: JSON.parse(JSON.stringify(commonMaterialList)),
     },
     // 抖音
     {
-        ...platformLogo[AppTypeEnum.DOUYIN],
+        ...platform.value[AppTypeEnum.DOUYIN],
         status: 1,
         materialList: JSON.parse(JSON.stringify(commonMaterialList)),
     },
     //视频号
     {
-        ...platformLogo[AppTypeEnum.WECHAT],
+        ...platform.value[AppTypeEnum.WECHAT],
         logo: SphIcon,
         status: 1,
         materialList: JSON.parse(JSON.stringify(commonMaterialList)),
     },
     // 快手
     {
-        ...platformLogo[AppTypeEnum.KUAISHOU],
+        ...platform.value[AppTypeEnum.KUAISHOU],
         status: 0,
         materialList: JSON.parse(JSON.stringify(commonMaterialList)),
     },
@@ -490,7 +490,7 @@ const handleSaveConfig = async () => {
                 id: item.id,
                 pic: item.pic,
                 voice_id: item.extra_info.shanjian_voice_id,
-                anchor_url: item.result_url,
+                anchor_url: item.url,
             })),
             clip_material: materialStore.videoList.map((item: any) => ({
                 type: item.type,
@@ -525,9 +525,8 @@ const getDetail = async () => {
         const data = await getAutoTaskPublishConfigDetail({ device_code: deviceCode.value });
         deviceConfig.value = data;
         easyModeData.anchorList = data.human_image.map((item: any) => ({
-            id: item.id,
-            pic: item.pic,
-            result_url: item.anchor_url,
+            ...item,
+            url: item.anchor_url,
             anchor_ids: {
                 shanjian_anchor_id: item.shanjian_anchor_id,
                 chanjing_anchor_id: item.chanjing_anchor_id,
@@ -545,7 +544,6 @@ const getDetail = async () => {
             type: item.type,
         }));
         easyModeData.imageList = data.image_material.map((item: any) => ({
-            pic: item,
             url: item,
         }));
         materialStore.anchorList = easyModeData.anchorList;

@@ -73,6 +73,7 @@ class ActiveLogic extends ApiLogic
                         'day' => date('Y-m-d',$time['start_time']),
                         'start_time' => $time['start_time'],
                         'end_time' => $time['end_time'],
+                        'time_config' => $params['time_config'],
                         'sub_task_id' => $row->id,
                         'source' => DeviceEnum::TASK_SOURCE_ACTIVE,//sv_device_active_account
                         'create_time' => time(),

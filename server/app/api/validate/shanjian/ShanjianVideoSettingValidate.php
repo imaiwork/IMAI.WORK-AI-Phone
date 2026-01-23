@@ -33,16 +33,33 @@ class ShanjianVideoSettingValidate extends BaseValidate
         'video_count.between' => '视频数量必须在1-100之间',
     ];
 
+    /**
+     * 验证音频和文案互斥关系
+     */
+    protected function checkAudioCopywriting($value, $rule, $data = [])
+    {
+        $audio = $data['audio'] ?? [];
+        $copywriting = $data['copywriting'] ?? [];
+        
+        if (!empty($audio) && !empty($copywriting)) {
+            return '音频和文案不能同时存在，只能选择其中一种';
+        }
+        
+        return true;
+    }
+
     // 添加场景
     public function sceneAdd()
     {
-        return $this->only(['anchor', 'voice', 'title', 'character_design', 'material']);
+        return $this->only(['anchor', 'voice', 'title', 'character_design', 'material', 'audio', 'copywriting'])
+                   ->append(['audio' => 'checkAudioCopywriting']);
     }
 
     // 更新场景
     public function sceneUpdate()
     {
-        return $this->only(['id', 'name', 'status', 'video_count', 'anchor', 'voice', 'title', 'character_design', 'material', 'clip', 'music']);
+        return $this->only(['id', 'name', 'status', 'video_count', 'anchor', 'voice', 'title', 'character_design', 'material', 'clip', 'music', 'audio', 'copywriting'])
+                   ->append(['audio' => 'checkAudioCopywriting']);
     }
 
     // 更新名称场景

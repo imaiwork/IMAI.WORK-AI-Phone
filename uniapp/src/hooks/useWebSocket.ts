@@ -173,8 +173,8 @@ export default function useWebSocket<T = unknown>(url: string, options: WebSocke
 
     // 组件卸载时清理
     onUnmounted(() => {
-        close(1000, "Component unmounted");
-        eventHandlers.clear();
+        // close(1000, "Component unmounted");
+        // eventHandlers.clear();
     });
 
     return {

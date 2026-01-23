@@ -68,7 +68,7 @@
                     <div class="p-8 max-w-5xl mx-auto w-full">
                         <div v-if="stepKey == StepKey.TYPE" class="animate-in fade-in duration-500">
                             <div class="mb-8 border-b border-slate-50 pb-6">
-                                <h2 class="text-[22px] font-[1000] text-slate-800 tracking-tight">触发方式设置</h2>
+                                <h2 class="text-[22px] font-bold text-slate-800 tracking-tight">触发方式设置</h2>
                                 <p class="text-slate-400 text-[14px] mt-1">
                                     请选择一种触发机制，当客户满足条件时将自动启动 SOP 推送流程
                                 </p>

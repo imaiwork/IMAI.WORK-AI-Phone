@@ -25,7 +25,7 @@
         </div>
 
         <div class="grow min-h-0 mt-4 flex gap-x-4" v-if="data.length > 0">
-            <div class="w-1/4 h-full flex flex-col bg-[#F8FAFC] rounded-[20px] border border-br overflow-hidden">
+            <div class="w-1/4 h-full flex flex-col bg-slate-50 rounded-[20px] border border-br overflow-hidden">
                 <div class="p-4 border-b border-br bg-white">
                     <div class="text-[13px] font-[900] text-[#1E293B]">已上传文件 ({{ data.length }})</div>
                 </div>
@@ -98,7 +98,7 @@
                     </div>
                 </div>
 
-                <div class="grow min-h-0 bg-[#F8FAFC]">
+                <div class="grow min-h-0 bg-slate-50">
                     <ElScrollbar>
                         <div class="p-5 space-y-3">
                             <div
@@ -245,7 +245,7 @@ const selectStage = (index: number) => {
 <style scoped lang="scss">
 :deep(.custom-upload) {
     .el-upload-dragger {
-        @apply border-2 border-dashed border-br bg-[#F8FAFC] rounded-[20px] transition-all;
+        @apply border-2 border-dashed border-br bg-slate-50 rounded-[20px] transition-all;
         &:hover {
             @apply border-primary bg-[#0065fb]/[0.02];
         }
@@ -287,7 +287,7 @@ const selectStage = (index: number) => {
 }
 :deep(.custom-input-compact) {
     .el-input__wrapper {
-        @apply rounded-xl bg-[#F8FAFC] shadow-[none] border border-br h-[40px];
+        @apply rounded-xl bg-slate-50 shadow-[none] border border-br h-[40px];
         &.is-focus {
             @apply border-primary;
         }

@@ -106,7 +106,7 @@ export default defineComponent({
         // 图片分辨率
         imageResolution: {
             type: Array as unknown as PropType<[number, number]>, // 0: width, 1: height
-            default: () => [4096, 4096],
+            default: () => [99999, 99999],
         },
         // 视频分辨率
         videoMaxWidth: {
@@ -292,6 +292,7 @@ export default defineComponent({
             if (allSuccess) {
                 // uploadRefs.value?.clearFiles();
                 visible.value = false;
+                progressDialogRef.value?.close();
             }
             emit("change", file);
             if (response.code == RequestCodeEnum.SUCCESS) {

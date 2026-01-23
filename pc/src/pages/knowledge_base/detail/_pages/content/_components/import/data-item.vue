@@ -131,7 +131,7 @@ const handleDelete = (): void => {
 }
 
 .content-box {
-    @apply relative p-4 bg-[#F8FAFC] rounded-xl border border-[#F1F5F9] transition-all;
+    @apply relative p-4 bg-slate-50 rounded-xl border border-[#F1F5F9] transition-all;
 
     .content-decorator {
         @apply absolute left-0 top-3 bottom-3 w-[3px] bg-[#0065fb]/[0.02] rounded-r-full transition-all;

@@ -14,6 +14,7 @@ const imageAccept = ["webp", "jpg", "png"];
 const videoAccept = ["mp4", "mov"];
 
 export const montageConfig = {
+    isTranscode: false,
     count: 9,
     imageAccept,
     videoAccept,
@@ -44,8 +45,8 @@ export default function useMontageMaterial(options: {
     const appStore = useAppStore();
 
     const {
-        isTranscode = false,
-        count = 9,
+        isTranscode = montageConfig.isTranscode,
+        count = montageConfig.count,
         imageAccept = montageConfig.imageAccept,
         imageSize = montageConfig.imageSize,
         imageResolution = montageConfig.imageResolution,

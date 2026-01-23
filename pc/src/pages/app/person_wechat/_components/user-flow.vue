@@ -36,7 +36,7 @@
                         <div class="flex items-center gap-x-3">
                             <div class="w-2 h-6 rounded-full bg-primary shadow-sm shadow-[#0065fb]/30"></div>
                             <div class="flex items-center gap-2">
-                                <span class="text-[16px] font-[1000] text-slate-800 tracking-tight">{{
+                                <span class="text-[16px] font-bold text-slate-800 tracking-tight">{{
                                     flowData.flow_name
                                 }}</span>
                                 <span class="px-2 py-0.5 bg-[#0065fb]/10 text-primary text-[10px] rounded-md font-black"

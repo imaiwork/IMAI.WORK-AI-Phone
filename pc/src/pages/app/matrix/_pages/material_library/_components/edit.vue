@@ -23,7 +23,7 @@
                 </div>
             </div>
 
-            <div class="p-8 bg-[#F8FAFC]">
+            <div class="p-8 bg-slate-50">
                 <div class="bg-white p-6 rounded-2xl border border-br">
                     <label class="block text-[12px] font-black text-[#94A3B8] uppercase mb-2 ml-1">新的名称</label>
                     <ElInput

@@ -1,4 +1,4 @@
-import request from "@/utils/request";
+import request, { RequestEventStreamConfig } from "@/utils/request";
 
 // 获取设备统计
 export const getDeviceStatistics = () => {
@@ -263,4 +263,29 @@ export const createCircleLikeTask = (data: any) => {
 // 朋友圈发布时间校验
 export const checkCirclePublishTime = (data: any) => {
     return request.post({ url: "/wechat.circle/check", data });
+};
+
+// 设备任务数据看板
+export const getDeviceTaskDashboard = (data: any) => {
+    return request.get({ url: "/device.display/lists", data });
+};
+
+// 创建演示任务
+export const createDemoTask = (data: any) => {
+    return request.post({ url: "/auto.device/opt", data });
+};
+
+// 24h任务营销对话聊天
+export const marketingChat = (data: any, config: RequestEventStreamConfig) => {
+    return request.eventStream({ url: "/auto.needsAnalysis/chat", data, method: "POST" }, config);
+};
+
+// 24h任务营销分析
+export const marketingAnalysis = (data: any) => {
+    return request.post({ url: "/auto.needsAnalysis/analysis", data });
+};
+
+// 24h任务营销分析详情
+export const marketingAnalysisDetail = (data: any) => {
+    return request.get({ url: "/auto.needsAnalysis/detail", data });
 };

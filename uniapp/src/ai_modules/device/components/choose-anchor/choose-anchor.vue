@@ -30,7 +30,7 @@
                                 v-for="(item, index) in dataLists"
                                 :key="index"
                                 class="h-[288rpx] rounded-[24rpx] relative overflow-hidden card-gradient"
-                                @click.stop="handleSelect(item)">
+                                @click.stop="handleSelect(index)">
                                 <image :src="item.pic" class="w-full h-full" mode="aspectFill"></image>
                                 <view
                                     v-if="[0, 1].includes(item.status)"
@@ -38,7 +38,7 @@
                                     <view class="text-xs text-white">正在生成中</view>
                                     <view class="text-[22rpx] text-white mt-2">几分钟即可生成形象</view>
                                 </view>
-                                <view class="absolute top-0 left-0 w-full h-full bg-[#00000080]" v-if="isChoose(item)">
+                                <view class="absolute top-0 left-0 w-full h-full bg-[#00000080]" v-if="isChoose(index)">
                                     <view class="absolute top-2 right-2">
                                         <image
                                             src="/static/images/icons/success.svg"
@@ -58,8 +58,7 @@
                             <image
                                 v-if="chooseLists.length > 0 && chooseLists.length == dataLists.length"
                                 src="/static/images/icons/success.svg"
-                                class="w-full h-full"
-                                lazy></image>
+                                class="w-full h-full"></image>
                             <view class="w-full h-full rounded-full shadow-[0_0_0_2rpx_rgba(0,0,0,0.2)]" v-else> </view>
                         </view>
                         <view>全选</view>
@@ -117,19 +116,19 @@ const queryList = async (page_no: number = 1, page_size: number = 10) => {
     }
 };
 
-const isChoose = (data: any) => {
-    return chooseLists.value.some((item) => item.id === data.id);
+const isChoose = (index: number) => {
+    return chooseLists.value.includes(index);
 };
 
-const handleSelect = (data: any) => {
-    if (isChoose(data)) {
-        chooseLists.value = chooseLists.value.filter((item) => item.id !== item.id);
+const handleSelect = (index: number) => {
+    if (isChoose(index)) {
+        chooseLists.value = chooseLists.value.filter((item) => item !== index);
     } else {
         if (props.limit && chooseLists.value.length >= props.limit) {
             uni.$u.toast(`最多选择${props.limit}个形象`);
             return;
         }
-        chooseLists.value.push(data);
+        chooseLists.value.push(index);
     }
 };
 
@@ -137,12 +136,15 @@ const toggleSelect = () => {
     if (chooseLists.value.length == dataLists.value.length) {
         chooseLists.value = [];
     } else {
-        chooseLists.value = dataLists.value.slice(0, props.limit || dataLists.value.length);
+        chooseLists.value = dataLists.value.slice(0, props.limit || dataLists.value.length).map((item, index) => index);
     }
 };
 
 const confirm = () => {
-    emit("confirm", chooseLists.value);
+    emit(
+        "confirm",
+        chooseLists.value.map((index) => dataLists.value[index])
+    );
     close();
 };
 

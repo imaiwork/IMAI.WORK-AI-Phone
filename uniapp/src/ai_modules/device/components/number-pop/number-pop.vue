@@ -58,6 +58,7 @@ const show = computed({
 });
 
 const close = () => {
+    show.value = false;
     emit("close");
 };
 

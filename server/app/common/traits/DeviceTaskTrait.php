@@ -564,7 +564,6 @@ trait DeviceTaskTrait
                 'appVersion' => '2.4.0',
                 'content' => json_encode([
                     'taskId' => $comment->id,
-                    'account' => $comment->account,
                     "hasLiked" => ($option->action === 2 || $option->action === 3) ? 1 : 0, //点赞
                     "hasComment" => ($option->action === 1 || $option->action === 3) ? 1 : 0, //评论
                     "planCoverage" => $option->range, //当天   1、3天内   2、7天内
@@ -828,11 +827,11 @@ trait DeviceTaskTrait
                     'isManual' => 1,
                 ]);
             }
-            // if(empty($sendWechatIds)){
-            //     $dtask->end_time = time() + 60;
-            //     $dtask->remark = '无加微账号可加,任务结束';
-            //     $dtask->save();
-            // }
+            if(empty($sendWechatIds)){
+                $dtask->end_time = time() + 60;
+                $dtask->remark = '无加微账号可加,任务结束';
+                $dtask->save();
+            }
             if (!empty($sendWechatIds) || $isFirst) {
                 $data = array(
                     'type' => DeviceEnum::RPA_ADD_WECHAT, // 自动加微任务启动
@@ -1108,11 +1107,11 @@ trait DeviceTaskTrait
                 ]);
             }
 
-            // if(empty($sendWechatIds)){
-            //     $dtask->end_time = time() + 60;
-            //     $dtask->remark = '无加微账号可加,任务结束';
-            //     $dtask->save();
-            // }
+            if(empty($sendWechatIds)){
+                $dtask->end_time = time() + 60;
+                $dtask->remark = '无加微账号可加,任务结束';
+                $dtask->save();
+            }
 
             if (!empty($sendWechatIds) || $isFirst) {
                 $data = array(
@@ -1419,6 +1418,7 @@ trait DeviceTaskTrait
                     'endTime' => $dtask->end_time,
                     'timeInterval' => ($dtask->end_time - $dtask->start_time) / 60,
                     'keyword' => json_decode($setting->industry, true),
+                    'gender' => $setting->gender ?? '不限',
                     'hasLiked' => $setting->is_like,
                     'hasFollowed' => $setting->is_follow,
                     'commentContents' => !empty($setting->content) ? json_decode($setting->content, true) : [],
@@ -1426,6 +1426,13 @@ trait DeviceTaskTrait
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
+                    'industryType' => $setting->industry_type ?? 0,
+                    'city' => $setting->city ?? '',
+                    'isContentAuthor' => $setting->is_content_author ?? 0,
+                    'isExecedClues' => $setting->is_execed_clues ?? 0,
+                    'contentPublishDay' => $setting->content_publish_day ?? 0,
+                    'commentPublishDay' => $setting->comment_publish_day ?? 0,
+                    'ipAddress' => $setting->ip_address ?? [],
                     'msg' => '评论区评论任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1507,6 +1514,7 @@ trait DeviceTaskTrait
                     'endTime' => $dtask->end_time,
                     'timeInterval' => ($dtask->end_time - $dtask->start_time) / 60,
                     'keyword' => json_decode($setting->industry, true),
+                    'gender' => $setting->gender ?? '不限',
                     'hasLiked' => $setting->is_like,
                     'hasFollowed' => $setting->is_follow,
                     'commentContents' => !empty($setting->content) ? json_decode($setting->content, true) : [],
@@ -1514,6 +1522,13 @@ trait DeviceTaskTrait
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
+                    'industryType' => $setting->industry_type ?? 0,
+                    'city' => $setting->city ?? '',
+                    'isContentAuthor' => $setting->is_content_author ?? 0,
+                    'isExecedClues' => $setting->is_execed_clues ?? 0,
+                    'contentPublishDay' => $setting->content_publish_day ?? 0,
+                    'commentPublishDay' => $setting->comment_publish_day ?? 0,
+                    'ipAddress' => $setting->ip_address ?? [],
                     'msg' => '评论区私信任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,

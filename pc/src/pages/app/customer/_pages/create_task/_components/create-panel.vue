@@ -165,10 +165,11 @@
                                     <div v-if="currentFrequency == 5" class="mt-4">
                                         <ElDatePicker
                                             v-model="formData.custom_date"
+                                            class="!w-full custom-date-picker"
                                             placeholder="请选择日期"
                                             type="dates"
-                                            :disabled-date="getDisabledTaskDate"
-                                            class="!w-full custom-date-picker" />
+                                            value-format="YYYY-MM-DD"
+                                            :disabled-date="getDisabledTaskDate" />
                                     </div>
                                 </div>
 
@@ -189,8 +190,38 @@
                             </div>
                         </div>
 
-                        <div class="bg-white p-6 rounded-2xl border border-br relative overflow-hidden">
-                            <div class="flex justify-between items-center mb-6">
+                        <div class="bg-white p-6 rounded-2xl border border-br-extra-light">
+                            <div class="text-base font-black flex items-center gap-2">
+                                <span class="w-1 h-4 bg-green-500 rounded-full"></span>
+                                线索识别方式
+                            </div>
+                            <div class="mt-4">
+                                <ElRadioGroup v-model="formData.ocr_type">
+                                    <ElRadio :value="1">
+                                        <ElTooltip
+                                            popper-class="w-[200px]"
+                                            :content="`云端OCR识别（每条扣 ${getOCRCloudToken} 算力）使用云端OCR服务识别微信号，每次识别消耗${getOCRCloudToken}算力，识别率更高，支持更复杂的图片和场景`">
+                                            <div class="flex items-center gap-1">
+                                                <span class="text-xs text-tx-secondary">云端OCR识别</span>
+                                                <Icon name="el-icon-QuestionFilled" color="var(--gray-500)" />
+                                            </div>
+                                        </ElTooltip>
+                                    </ElRadio>
+                                    <ElRadio :value="2">
+                                        <ElTooltip
+                                            popper-class="w-[200px]"
+                                            :content="`本地识别（每条扣${getOCRLocalToken}算力）使用系统内置识别逻辑完成，识别率较依赖本地环境，复杂图片可能不够精准`">
+                                            <div class="flex items-center gap-1">
+                                                <span class="text-xs text-tx-secondary">本地识别</span>
+                                                <Icon name="el-icon-QuestionFilled" color="var(--gray-500)" />
+                                            </div>
+                                        </ElTooltip>
+                                    </ElRadio>
+                                </ElRadioGroup>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-br-extra-light relative overflow-hidden">
+                            <div class="flex justify-between items-center">
                                 <div class="text-base font-black flex items-center gap-2">
                                     <span class="w-1 h-4 bg-orange-500 rounded-full"></span>
                                     自动加好友设置
@@ -198,18 +229,119 @@
                                 <ElSwitch v-model="formData.add_type" active-value="1" inactive-value="0" />
                             </div>
 
-                            <div
-                                v-if="formData.add_type == '1'"
-                                class="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="col-span-1">
-                                        <ElFormItem label="使用微信" />
+                            <div v-if="formData.add_type == '1'" class="mt-6 space-y-6">
+                                <section class="bg-white p-7 rounded-[24px] border border-slate-100">
+                                    <header class="flex items-center justify-between mb-6">
+                                        <div class="flex items-center gap-3">
+                                            <h3 class="text-base font-[1000] text-slate-800 tracking-tight">
+                                                加微任务执行设置
+                                            </h3>
+                                        </div>
+                                    </header>
+
+                                    <div class="space-y-6">
+                                        <div class="bg-[#f8fafc]/80 p-1.5 rounded-2xl inline-flex w-full">
+                                            <div
+                                                v-for="opt in [
+                                                    { label: '当日获客完成后执行', val: 0 },
+                                                    { label: '自定义执行时间', val: 1 },
+                                                ]"
+                                                :key="opt.val"
+                                                @click="formData.wechat_time_type = opt.val as 0 | 1"
+                                                :class="[
+                                                    'flex-1 py-2.5 text-center text-sm font-black rounded-xl cursor-pointer transition-all duration-300',
+                                                    formData.wechat_time_type === opt.val
+                                                        ? 'bg-white text-primary '
+                                                        : 'text-slate-400 hover:text-slate-600',
+                                                ]">
+                                                {{ opt.label }}
+                                            </div>
+                                        </div>
+
+                                        <div v-if="formData.wechat_time_type == 1" class="space-y-6 pt-2">
+                                            <div>
+                                                <div
+                                                    class="text-[13px] font-black text-slate-500 mb-4 flex items-center gap-2">
+                                                    <Icon name="el-icon-Calendar" :size="14" /> 执行周期选择
+                                                </div>
+                                                <div class="flex flex-wrap gap-2">
+                                                    <div
+                                                        v-for="item in [1, 3, 5, 10, 30]"
+                                                        :key="item"
+                                                        class="px-5 py-2 rounded-xl cursor-pointer text-sm font-bold transition-all border"
+                                                        :class="
+                                                            formData.wechat_task_frep == item &&
+                                                            currentWechatFrequency != 5
+                                                                ? 'bg-primary text-white border-primary shadow-light'
+                                                                : 'bg-white text-tx-secondary border-br-light hover:border-primary'
+                                                        "
+                                                        @click="handleWechatFrequency(item, 0)">
+                                                        {{ item }}天
+                                                    </div>
+                                                    <div
+                                                        class="px-5 py-2 rounded-xl cursor-pointer text-sm font-bold transition-all border"
+                                                        :class="
+                                                            currentWechatFrequency == 5
+                                                                ? 'bg-primary text-white border-primary shadow-light'
+                                                                : 'bg-white text-tx-secondary border-br-light hover:border-primary'
+                                                        "
+                                                        @click="currentWechatFrequency = 5">
+                                                        自定义日期
+                                                    </div>
+                                                </div>
+
+                                                <div
+                                                    v-if="currentWechatFrequency == 5"
+                                                    class="mt-4 animate-in zoom-in-95 duration-300">
+                                                    <ElDatePicker
+                                                        v-model="formData.wechat_custom_date"
+                                                        class="!w-full premium-picker"
+                                                        placeholder="选择具体执行日期"
+                                                        type="dates"
+                                                        value-format="YYYY-MM-DD"
+                                                        :disabled-date="getDisabledTaskDate" />
+                                                </div>
+                                            </div>
+
+                                            <div class="pt-6 border-t border-dashed border-slate-100">
+                                                <div class="flex justify-between items-end mb-4">
+                                                    <div>
+                                                        <div
+                                                            class="text-[13px] font-black text-slate-500 mb-1 flex items-center gap-2">
+                                                            <Icon name="el-icon-AlarmClock" :size="14" /> 每日执行时段
+                                                        </div>
+                                                        <p class="text-[11px] text-slate-400 font-bold">
+                                                            早于获客任务时，将在次日顺延执行
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <ElTimePicker
+                                                    v-model="formData.wechat_time_config"
+                                                    is-range
+                                                    range-separator="至"
+                                                    start-placeholder="开始时间"
+                                                    end-placeholder="结束时间"
+                                                    format="HH:mm"
+                                                    value-format="HH:mm"
+                                                    class="!w-full"
+                                                    :show-arrow="false" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <div class="grid grid-cols-2 gap-5">
+                                    <div class="bg-white p-6 rounded-[24px] border border-slate-100">
+                                        <label
+                                            class="text-[13px] font-black text-slate-400 uppercase tracking-widest mb-3 block ml-1"
+                                            >使用微信</label
+                                        >
                                         <ElSelect
                                             v-model="formData.wechat_id"
                                             multiple
                                             collapse-tags
-                                            :show-arrow="false"
-                                            class="custom-select w-full">
+                                            class="w-full"
+                                            placeholder="选择执行账号">
                                             <ElOption
                                                 v-for="item in deviceOptions.wechatLists"
                                                 :key="item.wechat_id"
@@ -217,96 +349,131 @@
                                                 :value="item.wechat_id" />
                                         </ElSelect>
                                     </div>
-                                    <div class="col-span-1">
-                                        <ElFormItem label="加微规则" />
-                                        <ElSelect
-                                            v-model="formData.wechat_reg_type"
-                                            class="custom-select w-full"
-                                            :show-arrow="false">
-                                            <ElOption label="全部" :value="0" />
-                                            <ElOption label="微信号" :value="1" />
-                                            <ElOption label="手机号" :value="2" />
+                                    <div class="bg-white p-6 rounded-[24px] border border-slate-100">
+                                        <label
+                                            class="text-[13px] font-black text-slate-400 uppercase tracking-widest mb-3 block ml-1"
+                                            >加微规则</label
+                                        >
+                                        <ElSelect v-model="formData.wechat_reg_type" class="w-full">
+                                            <ElOption label="全部方式" :value="0" />
+                                            <ElOption label="仅微信号" :value="1" />
+                                            <ElOption label="仅手机号" :value="2" />
                                         </ElSelect>
                                     </div>
                                 </div>
 
-                                <div class="bg-gray-50 p-4 rounded-xl flex gap-8">
-                                    <div class="flex-1">
-                                        <div class="text-xs font-bold text-tx-secondary mb-2 text-center">
-                                            每天执行次数
+                                <div
+                                    class="p-7 rounded-[28px] border border-slate-100 flex gap-8 relative overflow-hidden group">
+                                    <div class="flex-1 space-y-4 relative z-10">
+                                        <div class="flex items-center gap-2">
+                                            <div
+                                                class="w-8 h-8 rounded-lg bg-[#0065fb]/10 text-primary flex items-center justify-center">
+                                                <Icon name="el-icon-Refresh" :size="16" />
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <span class="text-[13px] font-[1000] text-slate-700">每日执行次数</span>
+                                                <span
+                                                    class="text-[9px] text-slate-400 font-black uppercase tracking-tighter"
+                                                    >Daily Total Count</span
+                                                >
+                                            </div>
                                         </div>
-                                        <ElInputNumber
-                                            v-model="formData.add_number"
-                                            :min="1"
-                                            controls-position="right"
-                                            class="!w-full" />
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="text-xs font-bold text-tx-secondary mb-2 text-center">
-                                            间隔时间 (分钟)
-                                        </div>
-                                        <ElInputNumber
-                                            v-model="formData.add_interval_time"
-                                            :min="1"
-                                            controls-position="right"
-                                            class="!w-full" />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div class="flex items-center justify-between mb-3">
-                                        <ElFormItem label="验证备注内容" />
-                                        <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-lg scale-90">
-                                            <span
-                                                class="text-[10px] font-bold px-2"
-                                                :class="
-                                                    formData.add_remark_enable == 0
-                                                        ? 'text-primary'
-                                                        : 'text-tx-placeholder'
-                                                "
-                                                >单一内容</span
-                                            >
-                                            <ElSwitch
-                                                v-model="formData.add_remark_enable"
-                                                :active-value="1"
-                                                :inactive-value="0"
-                                                size="small" />
-                                            <span
-                                                class="text-[10px] font-bold px-2"
-                                                :class="
-                                                    formData.add_remark_enable == 1
-                                                        ? 'text-primary'
-                                                        : 'text-tx-placeholder'
-                                                "
-                                                >随机库</span
-                                            >
+                                        <div class="premium-number-wrapper">
+                                            <ElInputNumber
+                                                v-model="formData.add_number"
+                                                :min="1"
+                                                controls-position="right"
+                                                class="premium-input-number !w-full" />
                                         </div>
                                     </div>
 
                                     <div
+                                        class="w-[1px] h-12 bg-gradient-to-b from-transparent via-slate-200 to-transparent self-center"></div>
+
+                                    <div class="flex-1 space-y-4 relative z-10">
+                                        <div class="flex items-center gap-2">
+                                            <div
+                                                class="w-8 h-8 rounded-lg bg-blue-50 text-primary flex items-center justify-center">
+                                                <Icon name="el-icon-Timer" :size="16" />
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <span class="text-[13px] font-[1000] text-slate-700"
+                                                    >间隔时间 (分钟)</span
+                                                >
+                                                <span
+                                                    class="text-[9px] text-slate-400 font-black uppercase tracking-tighter"
+                                                    >Wait Interval</span
+                                                >
+                                            </div>
+                                        </div>
+                                        <div class="premium-number-wrapper">
+                                            <ElInputNumber
+                                                v-model="formData.add_interval_time"
+                                                :min="1"
+                                                controls-position="right"
+                                                class="premium-input-number !w-full" />
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
+                                </div>
+
+                                <div class="bg-white p-7 rounded-[28px] border border-slate-100">
+                                    <header class="flex items-center justify-between mb-5">
+                                        <h4 class="text-[15px] font-[1000] text-slate-800">验证备注内容</h4>
+                                        <div class="flex items-center bg-slate-100 p-1 rounded-xl">
+                                            <button
+                                                @click="formData.add_remark_enable = 0"
+                                                :class="[
+                                                    'px-3 py-1.5 text-[11px] font-black rounded-lg transition-all',
+                                                    formData.add_remark_enable == 0
+                                                        ? 'bg-white text-primary '
+                                                        : 'text-slate-400',
+                                                ]">
+                                                单一内容
+                                            </button>
+                                            <button
+                                                @click="formData.add_remark_enable = 1"
+                                                :class="[
+                                                    'px-3 py-1.5 text-[11px] font-black rounded-lg transition-all',
+                                                    formData.add_remark_enable == 1
+                                                        ? 'bg-white text-primary shadow-sm'
+                                                        : 'text-slate-400',
+                                                ]">
+                                                随机库
+                                            </button>
+                                        </div>
+                                    </header>
+
+                                    <div
                                         v-if="formData.add_remark_enable == 1"
-                                        class="border border-br-light rounded-xl p-3 bg-gray-50/50">
-                                        <div class="flex flex-wrap gap-2">
+                                        class="p-5 bg-slate-50 rounded-[20px] border border-dashed border-slate-200">
+                                        <div class="flex flex-wrap gap-2.5">
                                             <div
                                                 v-for="(item, index) in formData.remarks"
                                                 :key="index"
-                                                class="bg-white border border-br-light px-3 py-1.5 rounded-lg flex items-center shadow-sm text-xs group hover:border-primary transition-all">
-                                                <span class="text-tx-regular mr-2">{{ item }}</span>
-                                                <div class="w-4 h-4" @click="handleDeleteRemark(index)">
-                                                    <close-btn :icon-size="14" />
-                                                </div>
+                                                class="bg-white border border-slate-100 pl-3 pr-2 py-2 rounded-xl flex items-center shadow-sm group hover:border-primary transition-all cursor-pointer">
+                                                <span class="text-xs font-bold text-slate-600 mr-3">{{ item }}</span>
+                                                <button
+                                                    @click.stop="handleDeleteRemark(index)"
+                                                    class="w-5 h-5 rounded-md bg-slate-100 text-slate-400 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center">
+                                                    <Icon name="el-icon-Close" :size="10" />
+                                                </button>
                                             </div>
-                                            <ElButton class="!h-7 !px-3" plain @click="handleAddRemark">
-                                                <Icon name="el-icon-Plus" />
-                                                <span class="ml-1">添加文案</span>
-                                            </ElButton>
+                                            <button
+                                                @click="handleAddRemark"
+                                                class="h-[34px] px-4 rounded-xl border-2 border-dashed border-[#0065fb]/30 text-primary hover:bg-primary hover:text-white transition-all flex items-center gap-2 text-xs font-black">
+                                                <Icon name="el-icon-Plus" /> 添加文案
+                                            </button>
                                         </div>
                                     </div>
+
                                     <ElInput
                                         v-else
                                         v-model="formData.remark"
                                         type="textarea"
-                                        :rows="3"
+                                        :rows="4"
                                         placeholder="你好，我是..."
                                         class="custom-textarea" />
                                 </div>
@@ -378,6 +545,10 @@ interface FormData {
     task_frep: number;
     custom_date: string[];
     time_config: string[];
+    wechat_time_type: 0 | 1;
+    wechat_task_frep: number;
+    wechat_time_config: string[];
+    wechat_custom_date: string[];
 }
 enum GreetingContentSettingTypeEnum {
     ADD_FRIEND = "add_friend",
@@ -418,6 +589,10 @@ const formData = reactive<FormData>({
     task_frep: 1,
     custom_date: [],
     time_config: ["", ""],
+    wechat_time_type: 0,
+    wechat_task_frep: 1,
+    wechat_time_config: ["", ""],
+    wechat_custom_date: [],
 });
 
 const taskErrorMsg = ref("");
@@ -426,15 +601,18 @@ const {
     getWechatRemarks,
     deviceOptions,
     currentFrequency,
+    currentWechatFrequency,
     disabledDate,
     handleFrequency,
+    handleWechatFrequency,
     isAddRemarkGen,
     remarkPopupRef,
     handleAddRemark,
-    handleAddRemarkConfirm,
     handleEditRemark,
+    handleAddRemarkConfirm,
     handleDeleteRemark,
     checkTimeConfig,
+    checkWechatTimeConfig,
 } = useCreateTask(formData);
 
 watch(
@@ -533,6 +711,9 @@ const { lockFn, isLock } = useLockFn(async () => {
         return;
     } else if (!checkTimeConfig()) {
         return;
+    } else if (formData.wechat_time_type == 1 && !checkWechatTimeConfig()) {
+        feedback.msgWarning("请选择加微任务执行时段");
+        return;
     } else if (formData.add_remark_enable == 1 && formData.remarks.length == 0) {
         feedback.msgWarning("请输入加好友备注内容");
         return;
@@ -555,5 +736,31 @@ const { lockFn, isLock } = useLockFn(async () => {
 <style scoped lang="scss">
 :deep(.el-form-item) {
     @apply mb-1;
+}
+
+:deep(.custom-input),
+:deep(.custom-select),
+:deep(.custom-date-picker) {
+    .el-input__wrapper {
+        @apply rounded-xl bg-slate-50 border-[none] shadow-[none] h-12 px-4 transition-all;
+        &:hover {
+            @apply bg-slate-100;
+        }
+        &.is-focus {
+            @apply bg-white shadow-[0_0_0_2px_#0065fb];
+        }
+    }
+}
+
+:deep(.custom-time-picker) {
+    @apply bg-slate-50;
+}
+
+:deep(.premium-input-number) {
+    .el-input__wrapper {
+        .el-input__inner {
+            @apply text-slate-700 font-[1000] text-lg text-left;
+        }
+    }
 }
 </style>

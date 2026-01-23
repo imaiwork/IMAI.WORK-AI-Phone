@@ -12,7 +12,7 @@
                     <img src="@/assets/images/7_day.png" class="w-6 h-6" />
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-[18px] font-[1000] text-slate-800 tracking-tight">推送日期全景预览</span>
+                    <span class="text-[18px] font-bold text-slate-800 tracking-tight">推送日期全景预览</span>
                     <span class="text-[11px] text-primary font-bold uppercase tracking-[0.2em] opacity-70"
                         >Push Schedule Panorama</span
                     >

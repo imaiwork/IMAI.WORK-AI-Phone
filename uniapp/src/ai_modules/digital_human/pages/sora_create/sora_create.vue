@@ -28,7 +28,7 @@
                     <view class="p-[30rpx] bg-white rounded-[20rpx] mt-[20rpx]">
                         <view>
                             <view class="font-bold text-[30rpx]">提示词</view>
-                            <textarea
+                            <u-input
                                 ref="inputContentRef"
                                 class="w-full mt-[18rpx]"
                                 v-model="formData.content"
@@ -40,10 +40,8 @@
                                 :show-confirm-bar="false"
                                 :adjust-position="false"
                                 :auto-height="false"
-                                :hold-keyboard="true"
                                 :maxlength="maxDescLength"
-                                placeholder="描个25岁的青年女性，穿着正装，手上拿着商品正在讲解介绍...若选择角色，需在文案中使用角色名 ，如：小爱穿着正装，手上拿着商品正在讲解介绍..."
-                                @focus="handleFocusContent" />
+                                placeholder="描个25岁的青年女性，穿着正装，手上拿着商品正在讲解介绍...若选择角色，需在文案中使用角色名 ，如：小爱穿着正装，手上拿着商品正在讲解介绍..." />
                         </view>
                         <view class="flex items-center justify-between">
                             <navigator
@@ -217,14 +215,15 @@
     </view>
 
     <choose-role v-model="showChooseRole" @confirm="handleConfirmRole" />
-    <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
+    <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <create-success-pop
+        v-if="showCreateSuccess"
         v-model="showCreateSuccess"
         title="视频生成中"
         desc="您可以立即去设置发布任务，也可以等待视频生成成功后再发布"
         @to="toPublish"
         @seek="toRecord" />
-    <tokens-cost v-model="showTokensCost" :type="5" />
+    <tokens-cost v-if="showTokensCost" v-model="showTokensCost" :type="5" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
     <video-preview v-model="showVideoPreview" :video-url="playData.url" :pic="playData.pic" />
 </template>
@@ -314,6 +313,7 @@ const handleFocusContent = (e: any) => {
 };
 
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
+    isTranscode: true,
     count: 1,
     onSuccess: (materials: any[]) => {
         if (replaceMaterialIndex.value !== -1) {
@@ -370,7 +370,7 @@ const handleMinusVideoCount = (type: "minus" | "add") => {
 
 const handleCreateVideo = async () => {
     // 判断是否有算力
-    if (userTokens.value < 0) {
+    if (userTokens.value <= 0) {
         rechargePopupRef.value?.open();
         return;
     }
@@ -446,6 +446,7 @@ onLoad(() => {
         const { type, data } = res;
         if (type === ListenerTypeEnum.SORA_AI_COPYWRITER) {
             formData.content = data;
+            console.log(formData.content, "formData.content");
         }
     });
 });

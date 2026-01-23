@@ -1,6 +1,6 @@
 <template>
-    <div class="h-[full] flex flex-col bg-[#FFFFFF]">
-        <div class="grow min-h-[0]">
+    <div class="h-full flex flex-col bg-[#FFFFFF]">
+        <div class="grow min-h-0">
             <ElScrollbar>
                 <div class="px-[30px] pb-[40px]">
                     <ElForm
@@ -10,7 +10,7 @@
                         label-position="top"
                         class="custom-agent-form">
                         <div
-                            class="mt-[12px] w-[full] h-[200px] bg-no-repeat bg-cover rounded-[24px] flex flex-col justify-center items-center relative overflow-hidden group transition-all"
+                            class="mt-[12px] w-full h-[200px] bg-no-repeat bg-cover rounded-[24px] flex flex-col justify-center items-center relative overflow-hidden group transition-all"
                             :style="{ backgroundImage: `url(${formData.bg_image || AgentBg})` }">
                             <div
                                 class="absolute inset-[0] bg-[rgba(0,0,0,0.2)] group-hover:bg-[rgba(0,0,0,0.3)] transition-all border-[transparent]"></div>
@@ -28,7 +28,7 @@
                             </div>
                         </div>
 
-                        <div class="flex mt-[32px] w-[full] gap-[32px]">
+                        <div class="flex mt-[32px] w-full gap-[32px]">
                             <div class="w-[320px] flex-shrink-0 space-y-[12px]">
                                 <ElFormItem label="智能体名称" prop="name">
                                     <ElInput
@@ -69,12 +69,12 @@
                             </div>
                         </div>
 
-                        <div class="h-[1px] bg-[#F1F5F9] my-[24px] border-[transparent] w-[full]"></div>
+                        <div class="h-[1px] bg-[#F1F5F9] my-[24px] border-[transparent] w-full"></div>
 
                         <div class="prompt-section">
                             <ElFormItem prop="roles_prompt">
                                 <template #label>
-                                    <div class="flex items-center justify-between w-[full] mb-[8px]">
+                                    <div class="flex items-center justify-between w-full mb-[8px]">
                                         <div class="flex items-center gap-[8px]">
                                             <span class="text-[15px] font-[900] text-[#0F172A]"
                                                 >提示词 (System Prompt)</span

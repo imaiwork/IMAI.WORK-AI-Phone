@@ -26,7 +26,7 @@
                 <div class="w-10 flex-shrink-0 bg-[#F0F6FF] flex items-center justify-center border-r border-white">
                     <span class="text-[16px] font-black text-primary">Q</span>
                 </div>
-                <div class="grow p-3 bg-[#F8FAFC]">
+                <div class="grow p-3 bg-slate-50">
                     <div
                         class="text-[14px] font-black text-[#1E293B] outline-none"
                         ref="editRef"

@@ -21,7 +21,7 @@
             </view>
         </view>
         <view class="grow min-h-0 mt-6">
-            <z-paging v-model="dataList" ref="pagingRef" :fixed="false" @query="queryList">
+            <z-paging v-model="dataList" ref="pagingRef" :hide-empty-view="true" :fixed="false" @query="queryList">
                 <view class="flex flex-col gap-y-[48rpx] px-4">
                     <view class="flex items-center gap-x-[20rpx]" @click="handleChoose(-1)">
                         <view

@@ -32,7 +32,7 @@
         </div>
 
         <div class="grow min-h-0 bg-white rounded-[20px] flex flex-col border border-br overflow-hidden">
-            <div class="px-6 bg-[#F8FAFC]/50 border-b border-[#F1F5F9]">
+            <div class="px-6 bg-slate-50/50 border-b border-[#F1F5F9]">
                 <ElTabs v-model="sceneSubIndex" class="custom-tabs" @tab-click="handleSceneSubTab">
                     <ElTabPane
                         v-for="(tab, index) in sceneSubList"
@@ -68,7 +68,7 @@
                                         </div>
                                         <div class="flex items-center gap-1 mt-1">
                                             <span
-                                                class="text-[10px] font-black text-[#94A3B8] bg-[#F8FAFC] px-1.5 py-0.5 rounded uppercase tracking-wider"
+                                                class="text-[10px] font-black text-[#94A3B8] bg-slate-50 px-1.5 py-0.5 rounded uppercase tracking-wider"
                                                 >AI Agent</span
                                             >
                                         </div>

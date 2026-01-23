@@ -102,7 +102,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div v-if="!pager.isLoad" class="text-center text-xs w-full py-4">暂无更多了~</div>
+                        <load-text :is-load="pager.isLoad"></load-text>
                     </template>
                     <div class="h-full flex items-center justify-center" v-else>
                         <ElEmpty />

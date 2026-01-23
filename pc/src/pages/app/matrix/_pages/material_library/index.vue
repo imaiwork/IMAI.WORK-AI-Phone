@@ -78,7 +78,7 @@
             </div>
         </div>
 
-        <div class="grow min-h-0 bg-[#F8FAFC]">
+        <div class="grow min-h-0 bg-slate-50">
             <ElScrollbar :distance="20" @end-reached="load">
                 <div class="p-6">
                     <template v-if="pager.lists.length > 0">
@@ -86,8 +86,8 @@
                             <div
                                 v-for="item in pager.lists"
                                 :key="item.id"
-                                class="group relative bg-white rounded-[20px] overflow-hidden border border-br transition-all hover:shadow-xl hover:shadow-[#0065fb]/10 hover:-translate-y-1">
-                                <div class="aspect-video relative overflow-hidden bg-[#F1F5F9]">
+                                class="group relative bg-white rounded-[20px] overflow-hidden border border-br transition-all hover:shadow-[#0065fb]/10 hover:-translate-y-1">
+                                <div class="aspect-[3/4] relative overflow-hidden bg-[#F1F5F9]">
                                     <ElImage
                                         v-if="MaterialTypeEnum.IMAGE == item.m_type"
                                         class="w-full h-full"
@@ -143,7 +143,7 @@
                                             {{ item.create_time }}
                                         </span>
                                         <div
-                                            class="flex items-center gap-1.5 bg-[#F8FAFC] px-2 py-0.5 rounded-md border border-[#F1F5F9]">
+                                            class="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-md border border-[#F1F5F9]">
                                             <Icon name="el-icon-Files" :size="10"></Icon>
                                             <span class="text-[10px] text-[#64748B] font-bold">
                                                 {{ formatFileSize(item.size) }}
@@ -176,7 +176,7 @@
 </template>
 
 <script setup lang="ts">
-import { uploadImage } from "@/api/app";
+import { uploadImage, videoTranscode } from "@/api/app";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { HandleMenuType } from "@/components/handle-menu/typings";
 import { getMaterialLibraryList, deleteMaterialLibrary, addMaterialLibrary, updateMaterialLibrary } from "@/api/matrix";
@@ -264,6 +264,7 @@ const handleUploadSuccess = async (result: any) => {
                 const res = await uploadImage({ file });
                 params.duration = duration;
                 params.pic = res.uri;
+                videoTranscode({ uri: res.uri });
             } catch (error) {}
         }
         await addMaterialLibrary(params);

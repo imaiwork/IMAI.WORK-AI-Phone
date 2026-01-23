@@ -18,7 +18,7 @@
         </template>
 
         <div class="h-full flex flex-col">
-            <div class="grow min-h-0 bg-[#F8FAFC]">
+            <div class="grow min-h-0 bg-slate-50">
                 <ElScrollbar>
                     <div class="space-y-8 pb-20 px-8">
                         <div class="grid grid-cols-3 gap-6">
@@ -72,7 +72,7 @@
                                 <h3 class="text-lg font-[900] text-[#0F172A]">候选人画像</h3>
                             </div>
                             <div class="bg-white rounded-[24px] border border-[#F1F5F9] overflow-hidden">
-                                <div class="grid grid-cols-4 bg-[#F8FAFC] border-b border-[#F1F5F9]">
+                                <div class="grid grid-cols-4 bg-slate-50 border-b border-[#F1F5F9]">
                                     <div
                                         v-for="cv in cvBasicInfo"
                                         :key="cv.label"
@@ -201,7 +201,7 @@
                 <span class="text-xs font-bold text-[#94A3B8]"
                     >面试起止时间：{{ detailData.start_time_text }} - {{ detailData.end_time_text }}</span
                 >
-                <ElButton class="!rounded-xl !px-8 !h-11 !font-black !bg-[#F8FAFC]" @click="handleClose"
+                <ElButton class="!rounded-xl !px-8 !h-11 !font-black !bg-slate-50" @click="handleClose"
                     >关闭报告</ElButton
                 >
             </div>

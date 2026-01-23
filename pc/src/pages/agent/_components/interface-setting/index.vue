@@ -1,5 +1,5 @@
 <template>
-    <div class="h-[full] flex flex-col bg-[#FFFFFF]">
+    <div class="h-full flex flex-col bg-[#FFFFFF]">
         <div class="grow min-h-[0]">
             <ElScrollbar>
                 <div class="px-[30px] py-[24px]">

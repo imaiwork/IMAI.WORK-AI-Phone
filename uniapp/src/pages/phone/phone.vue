@@ -14,7 +14,7 @@
                 </view>
                 <view
                     class="flex items-center px-[24rpx] gap-x-2 bg-white h-[70rpx] rounded-[20rpx]"
-                    @click="toPage('/packages/pages/rpa_code/rpa_code')">
+                    @click="toPage('/ai_modules/device/pages/rpa_code/rpa_code')">
                     <image src="/static/images/icons/device.svg" class="w-[24rpx] h-[24rpx]"></image>
                     <text class="font-bold">新增设备</text>
                 </view>
@@ -32,11 +32,11 @@
                 </view>
             </view>
             <navigator
-                url="/packages/pages/task_tutorial/task_tutorial"
+                url="/ai_modules/device/pages/task_tutorial/task_tutorial"
                 class="flex items-center gap-x-[4rpx]"
                 hover-class="none">
                 <u-icon name="play-circle" color="#AAAAAA" size="24"></u-icon>
-                <text class="text-[22rpx] text-[#000000]/50 font-bold">操作教程</text>
+                <text class="text-[22rpx] text-[#000000]/50 font-bold">演示流程</text>
             </navigator>
         </view>
         <view class="grow min-h-0 mt-5">
@@ -130,15 +130,57 @@
                                     </view>
                                     <view class="text-[#ff2442] font-bold" v-else> 未获取社媒账号 </view>
                                 </view>
-                                <view class="mt-[26rpx]">
+                                <view class="mt-[30rpx]" v-if="item.status == TaskStatusEnum.IDLE">
+                                    <view class="font-bold">当前任务（{{ item.task_count }}）</view>
+                                    <view class="flex gap-x-10 items-center" v-if="item.tasks?.length > 0">
+                                        <view class="flex-1">
+                                            <view
+                                                class="flex items-center gap-x-2 mt-[20rpx]"
+                                                :class="{
+                                                    'text-[#FF2442]': [3, 4].includes(task.status),
+                                                    'text-primary': [1].includes(task.status),
+                                                    'text-[#0000004d]': [0].includes(task.status),
+                                                    'text-[#00C08E]': [2].includes(task.status),
+                                                }"
+                                                v-for="task in item.tasks"
+                                                :key="task.id">
+                                                <view class="line-clamp-1 text-xs w-[60%]"
+                                                    ><text>•</text> {{ task.task_name }}</view
+                                                >
+                                                <view
+                                                    class="text-xs flex-shrink-0"
+                                                    :class="{
+                                                        'text-[#FF2442]': [3, 4].includes(task.status),
+                                                        'text-primary': [1].includes(task.status),
+                                                        'text-[#0000004d]': [0].includes(task.status),
+                                                        'text-[#00C08E]': [2].includes(task.status),
+                                                    }">
+                                                    {{ getTaskStatusText(task.status) }}
+                                                </view>
+                                            </view>
+                                        </view>
+                                        <view class="flex-shrink-0">
+                                            <circle-progress
+                                                :percent="getTaskStatusPercent(item)"
+                                                borderWidth="10rpx"
+                                                width="136rpx"
+                                                progressColor="#467EF9"
+                                                notProgressColor="#F1F1F1"></circle-progress>
+                                        </view>
+                                    </view>
+                                </view>
+                                <view class="flex items-center gap-x-2 mt-[26rpx]">
                                     <view
-                                        class="flex items-center gap-x-2 mt-[24rpx] font-bold"
-                                        :style="{ color: getDeviceStatusInfo(item.status).textColor }"
+                                        class="flex-1 flex items-center gap-x-2 font-bold h-[80rpx] border border-solid rounded-[10rpx] justify-center"
+                                        :style="{
+                                            color: getDeviceStatusInfo(TaskStatusEnum.OFFLINE).textColor,
+                                            borderColor: getDeviceStatusInfo(TaskStatusEnum.OFFLINE).borderColor,
+                                        }"
                                         v-if="item.status == TaskStatusEnum.OFFLINE">
                                         设备已离线，请检查
                                     </view>
                                     <view
-                                        class="h-[80rpx] flex items-center justify-center gap-x-1 bg-[#ff2442] rounded-[10rpx] text-white font-bold"
+                                        class="flex-1 h-[80rpx] flex items-center justify-center gap-x-1 bg-[#ff2442] rounded-[10rpx] text-white font-bold"
                                         v-else-if="item.accounts.length == 0"
                                         @click.stop="
                                             toPage('/ai_modules/device/pages/platform_detail/platform_detail', {
@@ -147,48 +189,9 @@
                                         ">
                                         去获取<u-icon name="arrow-right" color="#ffffff" size="16"></u-icon>
                                     </view>
-                                    <view v-else-if="item.status == TaskStatusEnum.IDLE">
-                                        <view class="font-bold">当前任务（{{ item.task_count }}）</view>
-                                        <view class="flex gap-x-10 items-center" v-if="item.tasks?.length > 0">
-                                            <view class="flex-1">
-                                                <view
-                                                    class="flex items-center gap-x-2 mt-[20rpx]"
-                                                    :class="{
-                                                        'text-[#FF2442]': [3, 4].includes(task.status),
-                                                        'text-primary': [1].includes(task.status),
-                                                        'text-[#0000004d]': [0].includes(task.status),
-                                                        'text-[#00C08E]': [2].includes(task.status),
-                                                    }"
-                                                    v-for="task in item.tasks"
-                                                    :key="task.id">
-                                                    <view class="line-clamp-1 text-xs w-[60%]"
-                                                        ><text>•</text> {{ task.task_name }}</view
-                                                    >
-                                                    <view
-                                                        class="text-xs flex-shrink-0"
-                                                        :class="{
-                                                            'text-[#FF2442]': [3, 4].includes(task.status),
-                                                            'text-primary': [1].includes(task.status),
-                                                            'text-[#0000004d]': [0].includes(task.status),
-                                                            'text-[#00C08E]': [2].includes(task.status),
-                                                        }">
-                                                        {{ getTaskStatusText(task.status) }}
-                                                    </view>
-                                                </view>
-                                            </view>
-                                            <view class="flex-shrink-0">
-                                                <circle-progress
-                                                    :percent="getTaskStatusPercent(item)"
-                                                    borderWidth="10rpx"
-                                                    width="136rpx"
-                                                    progressColor="#467EF9"
-                                                    notProgressColor="#F1F1F1"></circle-progress>
-                                            </view>
-                                        </view>
-                                    </view>
                                     <view
-                                        v-if="item.accounts.length > 0"
-                                        class="h-[80rpx] flex items-center justify-center gap-x-1 border border-solid border-[#0065fb33] rounded-[10rpx] mt-[30rpx]"
+                                        v-else
+                                        class="flex-1 h-[80rpx] flex items-center justify-center gap-x-1 border border-solid border-[#0065fb33] rounded-[10rpx]"
                                         @click.stop="
                                             toPage('/ai_modules/device/pages/choose_task_type/choose_task_type', {
                                                 device_code: item.device_code,
@@ -196,6 +199,18 @@
                                         ">
                                         <u-icon name="plus" color="#0065FB" size="16"></u-icon>
                                         <text class="text-xs text-primary font-bold">创建新任务</text>
+                                    </view>
+                                    <view
+                                        class="h-[80rpx] w-[144rpx] border border-solid border-[#0000001a] rounded-[16rpx] flex items-center justify-center gap-x-2"
+                                        @click.stop="
+                                            toPage('/ai_modules/device/pages/task_statement/task_statement', {
+                                                device_code: item.device_code,
+                                            })
+                                        ">
+                                        <image
+                                            src="/static/images/icons/statement.svg"
+                                            class="w-[28rpx] h-[28rpx]"></image>
+                                        <text class="font-bold">报表</text>
                                     </view>
                                 </view>
                             </template>
@@ -244,12 +259,17 @@
                                     </template>
                                     <template v-else>
                                         <view
-                                            v-if="item.is_auto_setting === 0 || item.is_empty === 1"
+                                            v-if="[0, 2].includes(item.is_auto_setting) || item.is_empty === 1"
                                             class="flex-1 h-[80rpx] bg-[#FF2442] rounded-[16rpx] flex items-center justify-center gap-x-2"
                                             @click.stop="
-                                                toPage('/ai_modules/device/pages/create_auto_task/create_auto_task', {
-                                                    device_code: item.device_code,
-                                                })
+                                                toPage(
+                                                    item.is_auto_setting == 0
+                                                        ? '/ai_modules/device/pages/create_auto_task/create_auto_task'
+                                                        : '/ai_modules/device/pages/auto_task/auto_task',
+                                                    {
+                                                        device_code: item.device_code,
+                                                    }
+                                                )
                                             ">
                                             <text class="text-white font-bold">去设置</text>
                                             <u-icon name="arrow-right" color="#ffffff" size="20"></u-icon>
@@ -264,28 +284,31 @@
                                             {{ item.status == TaskStatusEnum.WORKING ? "24h自动工作中" : "空闲中" }}
                                         </view>
                                     </template>
-                                    <template v-if="[1, 2].includes(item.is_auto_setting)">
-                                        <view
-                                            class="h-[80rpx] w-[144rpx] border border-solid border-[#0000001a] rounded-[16rpx] flex items-center justify-center gap-x-2"
-                                            @click.stop="toPage()">
-                                            <image
-                                                src="/static/images/icons/statement.svg"
-                                                class="w-[28rpx] h-[28rpx]"></image>
-                                            <text class="font-bold">报表</text>
-                                        </view>
-                                        <view
-                                            class="h-[80rpx] w-[144rpx] border border-solid border-[#0000001a] rounded-[16rpx] flex items-center justify-center gap-x-2"
-                                            @click.stop="
-                                                toPage('/ai_modules/device/pages/auto_task/auto_task', {
-                                                    device_code: item.device_code,
-                                                })
-                                            ">
-                                            <image
-                                                src="/static/images/icons/setting2.svg"
-                                                class="w-[28rpx] h-[28rpx]"></image>
-                                            <text class="font-bold">配置</text>
-                                        </view>
-                                    </template>
+                                    <view
+                                        v-if="[1, 2].includes(item.is_auto_setting)"
+                                        class="h-[80rpx] w-[144rpx] border border-solid border-[#0000001a] rounded-[16rpx] flex items-center justify-center gap-x-2"
+                                        @click.stop="
+                                            toPage('/ai_modules/device/pages/auto_task/auto_task', {
+                                                device_code: item.device_code,
+                                            })
+                                        ">
+                                        <image
+                                            src="/static/images/icons/setting2.svg"
+                                            class="w-[28rpx] h-[28rpx]"></image>
+                                        <text class="font-bold">配置</text>
+                                    </view>
+                                    <view
+                                        class="h-[80rpx] w-[144rpx] border border-solid border-[#0000001a] rounded-[16rpx] flex items-center justify-center gap-x-2"
+                                        @click.stop="
+                                            toPage('/ai_modules/device/pages/task_statement/task_statement', {
+                                                device_code: item.device_code,
+                                            })
+                                        ">
+                                        <image
+                                            src="/static/images/icons/statement.svg"
+                                            class="w-[28rpx] h-[28rpx]"></image>
+                                        <text class="font-bold">报表</text>
+                                    </view>
                                 </view>
                             </template>
                         </view>
@@ -298,7 +321,7 @@
                             class="w-[442rpx] h-[492rpx] mx-auto"></image>
                         <view
                             class="mx-auto mt-4 w-[300rpx] h-[84rpx] rounded-[16rpx] bg-black flex items-center justify-center gap-x-1 text-white font-bold text-[30rpx]"
-                            @click="toPage('/packages/pages/rpa_code/rpa_code')">
+                            @click="toPage('/ai_modules/device/pages/rpa_code/rpa_code')">
                             即刻新增设备<u-icon name="arrow-right" color="#ffffff" size="16"></u-icon>
                         </view>
                     </view>

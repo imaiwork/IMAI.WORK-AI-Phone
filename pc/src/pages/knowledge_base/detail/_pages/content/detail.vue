@@ -4,7 +4,7 @@
             <div class="flex-shrink-0 h-[72px] flex items-center justify-between px-8 border-b border-br">
                 <div class="flex items-center gap-3 cursor-pointer group transition-all" @click="emit('back')">
                     <div
-                        class="w-8 h-8 rounded-full bg-[#F8FAFC] flex items-center justify-center group-hover:bg-[#0065fb]/10 group-hover:text-primary transition-all">
+                        class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-[#0065fb]/10 group-hover:text-primary transition-all">
                         <Icon name="el-icon-ArrowLeft" :size="16"></Icon>
                     </div>
                     <div class="flex flex-col">
@@ -19,7 +19,7 @@
                 </ElButton>
             </div>
 
-            <div class="flex-shrink-0 h-[64px] flex items-center justify-between px-8 bg-[#F8FAFC]/50">
+            <div class="flex-shrink-0 h-[64px] flex items-center justify-between px-8 bg-slate-50/50">
                 <div class="flex items-center gap-2">
                     <div class="w-1.5 h-4 bg-primary rounded-full"></div>
                     <span class="text-[14px] font-[900] text-[#1E293B]">分段列表</span>
@@ -106,7 +106,7 @@
                 </Transition>
             </div>
 
-            <div class="flex-shrink-0 py-6 flex justify-center border-t border-[#F1F5F9] bg-[#F8FAFC]/30">
+            <div class="flex-shrink-0 py-6 flex justify-center border-t border-[#F1F5F9] bg-slate-50/30">
                 <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
             </div>
         </div>

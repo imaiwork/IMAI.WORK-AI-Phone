@@ -5,7 +5,7 @@
                 <img src="@/assets/images/date.png" class="w-6 h-6" />
             </div>
             <div class="flex flex-col">
-                <span class="text-primary font-[1000] text-lg tracking-tight">第 {{ item.day }} 天</span>
+                <span class="text-primary font-bold text-lg tracking-tight">第 {{ item.day }} 天</span>
                 <span class="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Push Schedule</span>
             </div>
         </div>

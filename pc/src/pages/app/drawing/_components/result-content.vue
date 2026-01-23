@@ -25,7 +25,7 @@
             </div>
         </div>
 
-        <div class="grow min-h-0 bg-[#F8FAFC]">
+        <div class="grow min-h-0 bg-slate-50">
             <ElScrollbar v-if="resultLists.length > 0">
                 <div class="p-6 space-y-10">
                     <div v-for="(item, idx) in resultLists" :key="idx" class="relative">

@@ -1,8 +1,9 @@
 import { ChooseResult, chooseFile } from "@/components/file-upload/choose-file";
-import { uploadImage, uploadFile } from "@/api/app";
+import { uploadImage, uploadFile, videoTranscoding } from "@/api/app";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 
 interface Options {
+    isTranscode?: boolean;
     size?: number; // 单位M
     widthResolution?: number[];
     heightResolution?: number[];
@@ -74,6 +75,7 @@ export const uploadLimit: any = {
 
 export const useUpload = (options: Options) => {
     const {
+        isTranscode = false,
         size = 100,
         widthResolution = [0, 2048],
         heightResolution = [0, 2048],
@@ -150,6 +152,9 @@ export const useUpload = (options: Options) => {
         try {
             await uploadImageFn(file.thumbTempFilePath);
             await uploadVideo(file.tempFilePath);
+            if (isTranscode && uploadResult.url) {
+                videoTranscoding(uploadResult.url);
+            }
             onSuccess?.(uploadResult);
         } catch (error: any) {
             console.log(error);

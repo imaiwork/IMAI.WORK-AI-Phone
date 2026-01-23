@@ -10,7 +10,7 @@
             </div>
 
             <div
-                class="h-[calc(100vh-40px)] my-5 flex-1 flex flex-col bg-[#F8FAFC] rounded-l-[40px] shadow-[-20px_0_60px_rgba(0,0,0,0.1)] overflow-hidden">
+                class="h-[calc(100vh-40px)] my-5 flex-1 flex flex-col bg-slate-50 rounded-l-[40px] shadow-[-20px_0_60px_rgba(0,0,0,0.1)] overflow-hidden">
                 <div class="flex-shrink-0 bg-white px-8 pt-8 pb-6 relative">
                     <div class="flex items-start justify-between">
                         <div class="flex items-center gap-x-6">
@@ -23,7 +23,7 @@
                             </div>
                             <div>
                                 <div class="flex items-center gap-3 mb-1">
-                                    <h2 class="text-slate-800 text-[24px] font-[1000]">{{ friendInfo.nickname }}</h2>
+                                    <h2 class="text-slate-800 text-[24px] font-bold">{{ friendInfo.nickname }}</h2>
                                     <span
                                         class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[11px] font-black rounded-md uppercase">
                                         {{ AccountTypeMap[AccountTypeEnum.Personal] }}
@@ -318,12 +318,12 @@ defineExpose({
         .el-tabs__item {
             @apply h-14 text-[15px] font-bold text-slate-400 transition-all;
             &.is-active {
-                @apply text-primary font-[1000] text-[16px];
+                @apply text-primary font-bold text-[16px];
             }
         }
     }
     :deep(.el-tabs__content) {
-        @apply flex-1 overflow-hidden bg-[#F8FAFC];
+        @apply flex-1 overflow-hidden bg-slate-50;
     }
 }
 

@@ -19,6 +19,10 @@ return [
             'prefix'     => 'la',
             // 缓存有效期 0表示永久缓存
             'expire'     => 0,
+            // 缓存目录权限
+            'path_mode'  => 0777,
+            // 缓存文件权限
+            'file_mode'  => 0777,
             // 缓存标签前缀
             'tag_prefix' => 'tag:',
             // 序列化机制 例如 ['serialize', 'unserialize']

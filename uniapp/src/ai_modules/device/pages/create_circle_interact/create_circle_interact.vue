@@ -392,7 +392,11 @@ onLoad(() => {
             formData.accounts = data.map((item: any) => ({ id: item.id, account: item.account, type: item.type }));
         }
         if (type === ListenerTypeEnum.CHOOSE_DATE) {
-            if (data.length === 0) return;
+            if (data.length === 0) {
+                currentFrequency.value = 0;
+                formData.custom_date = [];
+                return;
+            }
             formData.custom_date = data;
             currentFrequency.value = 5;
         }

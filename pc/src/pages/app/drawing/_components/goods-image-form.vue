@@ -1,5 +1,5 @@
 <template>
-    <div class="h-full bg-[#F8FAFC]">
+    <div class="h-full bg-slate-50">
         <ElScrollbar>
             <div class="p-4 space-y-3">
                 <div class="bg-white rounded-[24px] p-2 border border-[#F1F5F9]">
@@ -34,7 +34,7 @@
                     <div
                         v-if="generateType === GenerateTypeEnum.PLATFORM_CHOICE"
                         class="animate-in fade-in slide-in-from-top-2">
-                        <div class="bg-[#F8FAFC] rounded-[20px] py-2 border border-[#F1F5F9] space-y-4">
+                        <div class="bg-slate-50 rounded-[20px] py-2 border border-[#F1F5F9] space-y-4">
                             <div class="flex items-center gap-2 overflow-x-auto no-scrollbar px-2">
                                 <div
                                     v-for="item in optionsData.template.categories"
@@ -139,7 +139,7 @@
                                     :value="item.label" />
                             </ElSelect>
                             <div
-                                class="flex-1 flex items-center gap-2 px-4 h-11 bg-[#F8FAFC] border border-[#F1F5F9] rounded-xl text-[12px] font-bold text-[#64748B]">
+                                class="flex-1 flex items-center gap-2 px-4 h-11 bg-slate-50 border border-[#F1F5F9] rounded-xl text-[12px] font-bold text-[#64748B]">
                                 <span class="opacity-40">W</span> {{ getResolutionSize.width }}
                                 <span class="mx-1 opacity-20">|</span>
                                 <span class="opacity-40">H</span> {{ getResolutionSize.height }}
@@ -320,6 +320,6 @@ defineExpose({
 }
 
 .tool-btn {
-    @apply flex items-center px-2.5 py-1 rounded-lg bg-[#F8FAFC] text-[#94A3B8] hover:text-primary hover:bg-[#F5F7FF] transition-all cursor-pointer;
+    @apply flex items-center px-2.5 py-1 rounded-lg bg-slate-50 text-[#94A3B8] hover:text-primary hover:bg-[#F5F7FF] transition-all cursor-pointer;
 }
 </style>

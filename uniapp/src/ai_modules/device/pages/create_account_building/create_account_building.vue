@@ -6,7 +6,6 @@
             :show-accounts="true"
             :current-frequency="currentFrequency"
             :platform-types="[AppTypeEnum.XHS, AppTypeEnum.DOUYIN, AppTypeEnum.KUAISHOU]"
-            :multiple="0"
             @change-frequency="currentFrequency = $event" />
         <view class="mt-[50rpx]" v-if="taskErrorMsg">
             <view class="font-bold">任务冲突：</view>
@@ -118,7 +117,11 @@ onLoad(() => {
             formData.accounts = data.map((item: any) => ({ id: item.id, account: item.account, type: item.type }));
         }
         if (type === ListenerTypeEnum.CHOOSE_DATE) {
-            if (data.length === 0) return;
+            if (data.length === 0) {
+                currentFrequency.value = 0;
+                formData.custom_date = [];
+                return;
+            }
             formData.custom_date = data;
             currentFrequency.value = 5;
         }

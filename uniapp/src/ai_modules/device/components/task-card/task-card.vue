@@ -39,8 +39,6 @@
 </template>
 
 <script setup lang="ts">
-import { useDevice } from "@/ai_modules/device/hooks/useDevice";
-
 const props = defineProps<{
     item: any;
 }>();
@@ -50,7 +48,22 @@ const emit = defineEmits<{
     (e: "edit-name", item: any): void;
 }>();
 
-const { getTaskStatusText } = useDevice();
+const getTaskStatusText = (status: number) => {
+    switch (status) {
+        case 0:
+            return "等待中";
+        case 1:
+            return "执行中";
+        case 2:
+            return "执行完成";
+        case 3:
+            return "执行失败";
+        case 4:
+            return "中断";
+        default:
+            return "-";
+    }
+};
 
 const getCardStyle = (status: number) => {
     switch (status) {

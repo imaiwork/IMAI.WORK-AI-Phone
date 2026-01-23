@@ -43,19 +43,7 @@
                                     </view>
                                 </view>
                             </view>
-                            <anchor-video
-                                :item="{
-                                    id: item.id,
-                                    name: item.name,
-                                    pic: item.pic,
-                                    status: item.status,
-                                    url: item.result_url,
-                                    remark: item.remark,
-                                    source_type: item.source_type,
-                                }"
-                                @delete="handleDelete"
-                                @play="handlePlay">
-                            </anchor-video>
+                            <anchor-video :item="item" @delete="handleDelete" @play="handlePlay"> </anchor-video>
                         </view>
                     </view>
                     <view class="flex flex-col gap-2" v-if="currentTab == 1">

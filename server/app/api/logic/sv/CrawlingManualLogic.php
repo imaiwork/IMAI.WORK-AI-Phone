@@ -75,6 +75,7 @@ class CrawlingManualLogic extends SvBaseLogic
                         'day' => date('Y-m-d',$time['start_time']),
                         'start_time' => $time['start_time'],
                         'end_time' => $time['end_time'],
+                        'time_config' => $params['time_config'],
                         'sub_task_id' => $task->id,
                         'source' => DeviceEnum::TASK_SOURCE_FRIENDS,//sv_crawling_manual_task
                         'create_time' => time(),

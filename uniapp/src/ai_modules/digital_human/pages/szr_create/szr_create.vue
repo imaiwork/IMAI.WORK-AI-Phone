@@ -3,7 +3,6 @@
         <view class="grow min-h-0">
             <scroll-view class="h-full" scroll-y>
                 <view class="pb-[32rpx] h-full flex flex-col">
-                    <!-- 形象选择区域 -->
                     <view
                         class="bg-white px-[44rpx]"
                         :class="{
@@ -18,7 +17,6 @@
                                 <text class="text-[#000000cc] text-[26rpx]">选择形象</text>
                             </view>
                         </view>
-                        <!-- 形象列表区域 -->
                         <view
                             class="py-4"
                             :class="[
@@ -87,7 +85,6 @@
                                     <u-icon name="arrow-right" color="#00000020" size="22"></u-icon>
                                 </view>
                             </view>
-                            <!-- 音色选择区域 -->
                             <view class="flex items-center justify-between h-[80rpx] gap-x-2">
                                 <text class="font-bold flex-shrink-0">选择声音</text>
                                 <view class="flex items-center gap-x-2" @click="openChooseTone()">
@@ -105,7 +102,6 @@
                                     <u-icon name="arrow-right" color="#00000020" size="22"></u-icon>
                                 </view>
                             </view>
-                            <!-- 背景音乐选择区域 -->
                             <view v-if="clipConfig.is_open">
                                 <view class="flex items-center justify-between h-[80rpx] gap-x-2">
                                     <text class="font-bold flex-shrink-0">Ai智剪</text>
@@ -145,7 +141,7 @@
                         </view>
                     </view>
                     <!-- 文案编辑区域 -->
-                    <view class="bg-white px-[44rpx] mt-[16rpx]">
+                    <view class="bg-white px-[44rpx] pb-[40rpx] mt-[16rpx]">
                         <view class="flex items-center -mx-[24rpx] gap-x-2 py-[8rpx]">
                             <view class="util-item" @click="randomCopywriter()">
                                 <view class="w-[30rpx] h-[30rpx]">
@@ -168,8 +164,18 @@
                                     <text class="text-xs font-bold">智能文案</text>
                                 </view>
                             </navigator>
+                            <view class="h-[20rpx] w-[1rpx] bg-[#EDEDED]"></view>
+                            <view class="util-item" @click="showAudioType = true">
+                                <view class="w-[30rpx] h-[30rpx]">
+                                    <image
+                                        src="@/ai_modules/digital_human/static/icons/sound.svg"
+                                        class="w-full h-full"></image>
+                                </view>
+                                <text class="text-xs font-bold">使用音频</text>
+                            </view>
                         </view>
                         <navigator
+                            v-if="formData.audio_type == CreateTypeEnum.TEXT"
                             :url="`/ai_modules/digital_human/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
                             hover-class="none"
                             class="border-[1rpx] border-solid border-[#E5E5E5] border-l-0 border-r-0 border-b-0 py-[32rpx] relative">
@@ -180,11 +186,49 @@
                                 {{ formData.msg.length }}/{{ textLimit }}
                             </view>
                         </navigator>
+                        <view class="bg-[#F6F7FA] rounded-[20rpx] p-[32rpx] relative" v-else>
+                            <view
+                                class="absolute top-[24rpx] right-[20rpx] w-[40rpx] h-[40rpx] rounded-full bg-[#E9EAED] flex items-center justify-center"
+                                @click="clearAudioData()">
+                                <u-icon name="close" size="20"></u-icon>
+                            </view>
+                            <template v-if="audioLoading">
+                                <view class="font-bold text-[30rpx]">录制的音频</view>
+                                <view class="flex flex-col items-center justify-center mt-4">
+                                    <view class="rotate">
+                                        <u-icon name="reload" color="#ACACAF" size="40"></u-icon>
+                                    </view>
+                                    <text class="mt-2 text-[30rpx] font-bold">正在提取中...</text>
+                                    <text class="text-xs font-bold text-[#000000]/30">请勿熄屏或切换应用</text>
+                                </view>
+                            </template>
+                            <template v-else>
+                                <view class="flex items-center gap-x-2">
+                                    <view @click="handlePlayAudio">
+                                        <u-icon
+                                            :name="isPlaying ? 'pause-circle' : 'play-circle'"
+                                            color="#0065fb"
+                                            size="50"></u-icon>
+                                    </view>
+                                    <text class="font-bold text-[30rpx]">录制的音频</text>
+                                    <text class="text-[#000000]50"
+                                        >{{ formatAudioTime(currDuration) }}/{{
+                                            formatAudioTime(formData.audio_duration)
+                                        }}</text
+                                    >
+                                </view>
+                                <navigator
+                                    class="mt-[40rpx] pb-3"
+                                    :url="`/ai_modules/digital_human/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
+                                    hover-class="none">
+                                    {{ formData.msg }}
+                                </navigator>
+                            </template>
+                        </view>
                     </view>
                 </view>
             </scroll-view>
         </view>
-        <!-- 底部操作区域 -->
         <view class="bg-white px-4 pt-2 pb-[64rpx] flex items-center justify-between gap-x-[40rpx]">
             <view>
                 <view class="flex flex-col items-center gap-y-2" @click="openModelRule()">
@@ -222,25 +266,40 @@
     <create-panel ref="createPanelRef" :formData="formData" @success="confirmCreate" @recharge="recharge" />
     <agreement :show-agreement="showAgreement" @agree="agreeCreate" @close="showAgreement = false" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
+    <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
+    <recorder-control
+        v-if="showRecorder"
+        v-model="showRecorder"
+        ref="recorderRef"
+        @close="showRecorder = false"
+        @success="recorderSuccess" />
+    <choose-audio-type v-model="showAudioType" @recorder="openRecorder" @file="uploadAndProcessFiles('file')" />
 </template>
 
 <script setup lang="ts">
+import Cache from "@/utils/cache";
 import { createTask, getPublicAnchorList } from "@/api/digital_human";
 import { getClipConfig } from "@/api/app";
+import { lpSceneSpeechToText } from "@/api/ladder_player";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
-import Cache from "@/utils/cache";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { ModeTypeEnum, CreateTypeEnum, ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { ClipStyleEnum } from "@/ai_modules/digital_human/enums";
+import useUpload from "@/hooks/useUpload";
+import { useAudio } from "@/hooks/useAudio";
+import { formatAudioTime } from "@/utils/util";
+import { createVideoCopywriter } from "@/ai_modules/digital_human/config/copywriter";
 import SelectAnchor from "@/ai_modules/digital_human/components/choose-anchor/choose-anchor.vue";
 import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
 import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
 import ModelRule from "@/ai_modules/digital_human/components/model-rule/model-rule.vue";
 import Agreement from "@/ai_modules/digital_human/components/agreement/agreement.vue";
 import CreatePanel from "@/ai_modules/digital_human/components/create-panel/create-panel.vue";
-import { ClipStyleEnum } from "../../enums";
-import { createVideoCopywriter } from "../../config/copywriter";
+import RecorderControl from "@/ai_modules/digital_human/components/recorder-control/recorder-control.vue";
+import ChooseAudioType from "@/ai_modules/digital_human/components/choose-audio-type/choose-audio-type.vue";
+
 // 定义锚点数据接口
 interface AnchorItem {
     name: string;
@@ -282,6 +341,7 @@ const formData = reactive<any>({
     gender: "male",
     model_version: "" as unknown as DigitalHumanModelVersionEnum,
     audio_type: CreateTypeEnum.TEXT,
+    audio_url: "",
     voice_id: "-1",
     voice_type: 1,
     voice_name: "",
@@ -305,9 +365,13 @@ const showChooseTone = ref(false);
 const currCopywriterIndex = ref(-1);
 const showModelRule = ref(false);
 const showAgreement = ref(false);
+const showAudioType = ref(false);
+const audioLoading = ref(false);
+const showRecorder = ref(false);
+
 const createPanelRef = shallowRef<InstanceType<typeof CreatePanel>>();
 const rechargePopupRef = ref();
-
+const recorderRef = shallowRef<InstanceType<typeof RecorderControl>>();
 // 计算属性
 const textLimit = computed(() => {
     const limits: Record<DigitalHumanModelVersionEnum, number> | any = {
@@ -417,11 +481,16 @@ const openChooseTone = () => {
 
 const handleChooseTone = (data: { voice_id: string; name: string; type: number }) => {
     const { voice_id, name, type } = data;
+    if (!data.voice_id) {
+        formData.voice_id = "-1";
+        formData.voice_name = "";
+        formData.voice_type = 1;
+    } else {
+        formData.voice_id = voice_id;
+        formData.voice_name = name;
+        formData.voice_type = type;
+    }
     showChooseTone.value = false;
-    if (formData.voice_id === voice_id) return;
-    formData.voice_id = voice_id;
-    formData.voice_name = name;
-    formData.voice_type = type;
 };
 
 // 文案相关方法
@@ -429,6 +498,75 @@ const randomCopywriter = () => {
     if (!createVideoCopywriter.length) return;
     currCopywriterIndex.value = (currCopywriterIndex.value + 1) % createVideoCopywriter.length;
     formData.msg = createVideoCopywriter[currCopywriterIndex.value];
+    formData.audio_type = CreateTypeEnum.TEXT;
+};
+
+const { uploadAndProcessFiles, showUploadProgress, uploadMaterialList } = useUpload({
+    count: 1,
+    fileAccept: ["mp3", "wav", "m4a", "MP3", "WAV", "M4A"],
+    fileSize: 100,
+    onSuccess: async (res: any) => {
+        const { url } = res[0];
+        formData.audio_type = CreateTypeEnum.AUDIO;
+        showAudioType.value = false;
+        audioLoading.value = true;
+        try {
+            const { message, audio_duration } = await lpSceneSpeechToText({
+                audio: url,
+            });
+            formData.msg = message;
+            formData.audio_url = url;
+            formData.audio_duration = audio_duration;
+        } catch (error: any) {
+            uni.showToast({
+                title: error,
+                icon: "none",
+                duration: 3000,
+            });
+        } finally {
+            audioLoading.value = false;
+        }
+    },
+});
+
+const { play, pause, currentTime: currDuration, isPlaying, destroy } = useAudio();
+
+const handlePlayAudio = () => {
+    if (isPlaying.value) {
+        pause();
+    } else {
+        play(formData.audio_url);
+    }
+};
+
+const openRecorder = async () => {
+    showAudioType.value = false;
+    await recorderRef.value?.authorize(recorderRef.value.proxy);
+    showRecorder.value = true;
+};
+
+const recorderSuccess = (res: any) => {
+    const { link, duration, message } = res;
+    formData.msg = message;
+    formData.audio_url = link;
+    formData.audio_type = CreateTypeEnum.AUDIO;
+    formData.audio_duration = duration;
+    showRecorder.value = false;
+};
+
+const clearAudioData = () => {
+    uni.showModal({
+        title: "提示",
+        content: "删除该音频后，将无法找回，确认删除？",
+        success: (res: any) => {
+            if (res.confirm) {
+                formData.msg = "";
+                formData.audio_url = "";
+                formData.audio_type = CreateTypeEnum.TEXT;
+                destroy();
+            }
+        },
+    });
 };
 
 // 算力规则相关方法
@@ -474,9 +612,10 @@ const confirmCreate = async () => {
     }
     // 判断文案是否超出限制
     if (formData.msg?.length > textLimit.value) {
-        uni.$u.toast("文案超出限制，请重新输入");
+        uni.$u.toast("文案超出限制，请重新编辑文案");
         return;
     }
+
     showAgreement.value = false;
     try {
         uni.showLoading({
@@ -517,6 +656,7 @@ const confirmCreate = async () => {
             voice_name: formData.voice_name,
             voice_type: formData.voice_type,
             audio_type: formData.audio_type,
+            audio_url: formData.audio_url,
             model_version: formData.model_version,
             automatic_clip: formData.automatic_clip,
             clip_type: formData.clip_type,
@@ -554,12 +694,7 @@ const getModelLists = async () => {
         });
         if (lists && lists.length) {
             anchorLists.value = lists;
-            const index = lists.findIndex((item: any) =>
-                item.source_type == "public_anchor" ? item.status == 2 : item.status == 1
-            );
-            if (index !== -1) {
-                chooseAnchor(index);
-            }
+            chooseAnchor(0);
         }
     } finally {
         loading.value = false;
@@ -593,6 +728,7 @@ onLoad(async (options: any) => {
             if (formData.msg?.length > textLimit.value) {
                 formData.msg = formData.msg.slice(0, textLimit.value);
             }
+            formData.audio_type = CreateTypeEnum.TEXT;
         }
         if (type === ListenerTypeEnum.CHOOSE_STYLES) {
             // formData.styles = data;
@@ -603,10 +739,27 @@ onLoad(async (options: any) => {
         }
     });
 });
+
+onUnload(() => {
+    destroy();
+});
 </script>
 
 <style scoped lang="scss">
 .util-item {
     @apply flex  items-center gap-x-1   py-1 px-2 rounded transition-all duration-300 h-[80rpx];
+}
+.rotate {
+    animation: rotate 1s linear infinite;
+}
+
+// 转圈动画
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 </style>

@@ -58,7 +58,7 @@
                 <transition name="el-zoom-in-top">
                     <div
                         v-if="formData.strategy === 2"
-                        class="bg-[#F8FAFC] rounded-[20px] p-5 border border-[#F1F5F9] space-y-5 mt-4">
+                        class="bg-slate-50 rounded-[20px] p-5 border border-[#F1F5F9] space-y-5 mt-4">
                         <ElFormItem label="切割符号" prop="separator" class="!mb-0">
                             <ElSelect
                                 v-model="formData.separator"
@@ -235,7 +235,7 @@ defineExpose({ open, setFormData });
 :deep(.custom-select),
 :deep(.custom-input) {
     .el-input__wrapper {
-        @apply rounded-xl bg-[#F8FAFC] shadow-[none] border border-[#F1F5F9] h-11 transition-all;
+        @apply rounded-xl bg-slate-50 shadow-[none] border border-[#F1F5F9] h-11 transition-all;
         &.is-focus {
             @apply bg-white border-[#0065fb] shadow-[0_0_0_4px_rgba(79,70,229,0.06)] !important;
         }

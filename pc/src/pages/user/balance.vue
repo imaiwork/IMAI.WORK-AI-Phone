@@ -1,5 +1,5 @@
 <template>
-    <div class="p-6 h-full bg-[#F8FAFC]">
+    <div class="p-6 h-full bg-slate-50">
         <div class="bg-white h-full flex rounded-[20px] flex-col p-8 border border-br">
             <div class="flex justify-between items-center gap-x-8 mb-6">
                 <div class="grow flex items-center gap-6">

@@ -25,7 +25,7 @@
         </div>
 
         <div class="grow min-h-0 mt-4 flex gap-x-4" v-if="data.length > 0">
-            <div class="w-1/4 h-full flex flex-col bg-[#F8FAFC] rounded-[20px] border border-br overflow-hidden">
+            <div class="w-1/4 h-full flex flex-col bg-slate-50 rounded-[20px] border border-br overflow-hidden">
                 <div class="p-4 border-b border-br bg-white flex items-center justify-between">
                     <span class="text-[13px] font-[900] text-[#1E293B]">待解析列表</span>
                     <span class="text-[11px] font-black text-primary bg-[#F0F6FF] px-2 py-0.5 rounded-md">
@@ -74,7 +74,7 @@
                     </div>
                 </div>
 
-                <div class="grow min-h-0 bg-[#F8FAFC]">
+                <div class="grow min-h-0 bg-slate-50">
                     <ElScrollbar>
                         <div class="p-5 space-y-3">
                             <div
@@ -211,7 +211,7 @@ const selectStage = (index: number) => {
 <style scoped lang="scss">
 :deep(.custom-upload) {
     .el-upload-dragger {
-        @apply bg-[#F8FAFC] border-2 border-dashed border-br rounded-[24px] transition-all;
+        @apply bg-slate-50 border-2 border-dashed border-br rounded-[24px] transition-all;
         &:hover {
             @apply border-primary bg-[#0065fb]/[0.02];
         }

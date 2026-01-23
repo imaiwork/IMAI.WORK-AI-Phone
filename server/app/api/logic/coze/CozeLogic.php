@@ -12,7 +12,6 @@ use app\common\model\user\User;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Utils;
-use think\facade\Log;
 
 class CozeLogic extends ApiLogic
 {
@@ -28,6 +27,9 @@ class CozeLogic extends ApiLogic
             $cfg = $cfg->where('source_id', $sourceId);
         };
         $cfg = $cfg->findOrEmpty()->toArray();
+        if ($source == 0 && $sourceId == 0){
+            $cfg['secret_token'] = \app\common\service\ToolsService::Automation()::TOKEN;
+        }
         if (!$cfg) {
             throw new \Exception('Coze 配置不存在');
         }

@@ -27,7 +27,7 @@
             <div class="grow min-h-0 flex flex-col p-5 relative">
                 <div class="flex items-center justify-between mb-6 flex-shrink-0">
                     <div class="flex flex-col">
-                        <h3 class="text-slate-800 font-[1000] text-[18px] tracking-tight">文案创作</h3>
+                        <h3 class="text-slate-800 font-bold text-[18px] tracking-tight">文案创作</h3>
                         <p class="text-slate-400 text-[12px] font-bold uppercase tracking-widest">Copywriting Studio</p>
                     </div>
 
@@ -111,7 +111,7 @@
                 </div>
             </div>
 
-            <div class="p-8 bg-[#F8FAFC]">
+            <div class="p-8 bg-slate-50">
                 <div class="space-y-6">
                     <div class="bg-white p-5 rounded-2xl border border-br">
                         <label

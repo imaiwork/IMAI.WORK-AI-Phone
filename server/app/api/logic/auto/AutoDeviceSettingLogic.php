@@ -7,7 +7,6 @@ use app\api\logic\service\TokenLogService;
 use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
-use app\common\model\auto\AutoDeviceConfig;
 use app\common\model\auto\AutoDeviceSetting;
 use app\common\model\hd\HdPuzzle;
 use app\common\model\hd\HdPuzzleSetting;
@@ -17,8 +16,8 @@ use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\sv\SvVideoSetting;
 use app\common\model\sv\SvVideoTask;
 use app\common\model\user\User;
-use think\facade\Db;
 use Exception;
+use think\facade\Db;
 
 /**
  * 自动设备设置逻辑类
@@ -57,6 +56,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                 }
                 $find->update_time = time();
                 $find->save();
+
                 self::$returnData = $find->toArray();
             } else {
                 $params['create_time'] = time();

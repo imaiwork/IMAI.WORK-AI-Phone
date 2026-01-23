@@ -10,6 +10,7 @@
 <script setup lang="ts">
 import Sidebar from "../_components/sidebar.vue";
 import SzrCreate from "./_pages/szr_create/index.vue";
+import MontageCreate from "./_pages/montage_create/index.vue";
 import Model from "./_pages/model/index.vue";
 import Tone from "./_pages/tone/index.vue";
 import Audio from "./_pages/audio/index.vue";
@@ -22,7 +23,12 @@ const { sidebar, sidebarIndex, getComponents, getSliderIndex } = useSidebar();
 
 sidebar.value = [
     { name: "数字人纯口播视频", components: markRaw(SzrCreate), type: SidebarTypeEnum.DIGITAL_HUMAN_PURE_BOUQUET },
-    { name: "数字人口播混剪", components: markRaw(Model), type: SidebarTypeEnum.BOUQUET_MIXING, disabled: true },
+    {
+        name: "数字人口播混剪",
+        components: markRaw(MontageCreate),
+        type: SidebarTypeEnum.BOUQUET_MIXING,
+        disabled: true,
+    },
     { name: "真人口播视频混剪", components: markRaw(Tone), type: SidebarTypeEnum.REAL_PERSON_MIXING, disabled: true },
     { name: "素材混剪神器", components: markRaw(Audio), type: SidebarTypeEnum.MATERIAL_MIXING, disabled: true },
     { name: "新闻体视频", components: markRaw(Video), type: SidebarTypeEnum.NEWS_VIDEO, disabled: true },

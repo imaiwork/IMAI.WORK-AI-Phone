@@ -27,7 +27,7 @@
                 </div>
             </div>
 
-            <div class="px-6 py-4 bg-[#F8FAFC] border-b border-[#F1F5F9]">
+            <div class="px-6 py-4 bg-slate-50 border-b border-[#F1F5F9]">
                 <div
                     class="flex items-center rounded-full h-[52px] bg-white border border-br px-1.5 transition-all focus-within:border-[#0065fb]">
                     <ElInput
@@ -62,7 +62,7 @@
                 </div>
             </div>
 
-            <div class="h-[550px] bg-[#F8FAFC]">
+            <div class="h-[550px] bg-slate-50">
                 <ElScrollbar :distance="20" @end-reached="load">
                     <div class="p-5" v-loading="pager.loading">
                         <div v-if="pager.lists.length > 0">

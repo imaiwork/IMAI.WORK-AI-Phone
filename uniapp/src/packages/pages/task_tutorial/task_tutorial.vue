@@ -68,7 +68,7 @@ const richMenuList = ref([
     {
         title: "发布图文",
         icon: "photo",
-        tag: "Publish",
+        tag: "Publish IMAGE",
         color: "#0065fb",
         lightColor: "#E6EFFF",
         key: MenuKey.IMAGE_PUBLISH,
@@ -76,7 +76,7 @@ const richMenuList = ref([
     {
         title: "发布视频",
         icon: "play-circle",
-        tag: "Video",
+        tag: "Publish VIDEO",
         color: "#0065fb",
         lightColor: "#E6EFFF",
         key: MenuKey.VIDEO_PUBLISH,
@@ -84,7 +84,7 @@ const richMenuList = ref([
     {
         title: "自动获线索",
         icon: "search",
-        tag: "AI Smart",
+        tag: "AI Get CLUE",
         color: "#7C4DFF",
         lightColor: "#F2EEFF",
         key: MenuKey.CLUE_AUTO,
@@ -92,7 +92,7 @@ const richMenuList = ref([
     {
         title: "私聊接管",
         icon: "chat",
-        tag: "Message",
+        tag: "Chat Management",
         color: "#00BFA5",
         lightColor: "#E6F9F6",
         key: MenuKey.CHAT_MANAGE,
@@ -100,7 +100,7 @@ const richMenuList = ref([
     {
         title: "评论获客",
         icon: "edit-pen",
-        tag: "Social",
+        tag: "Comment Marketing",
         color: "#FF6D00",
         lightColor: "#FFF2E6",
         key: MenuKey.COMMENT_MARKETING,
@@ -108,7 +108,7 @@ const richMenuList = ref([
     {
         title: "私信获客",
         icon: "email",
-        tag: "Social",
+        tag: "DM Marketing",
         color: "#FF6D00",
         lightColor: "#FFF2E6",
         key: MenuKey.DM_MARKETING,
@@ -116,7 +116,7 @@ const richMenuList = ref([
     {
         title: "自动加好友",
         icon: "account-fill",
-        tag: "Traffic",
+        tag: "Friend Add",
         color: "#F50057",
         lightColor: "#FFE6EE",
         key: MenuKey.FRIEND_ADD,
@@ -124,7 +124,7 @@ const richMenuList = ref([
     {
         title: "自动养号",
         icon: "thumb-up",
-        tag: "System",
+        tag: "Account Maintain",
         color: "#3F51B5",
         lightColor: "#ECEDF9",
         key: MenuKey.ACCOUNT_MAINTAIN,

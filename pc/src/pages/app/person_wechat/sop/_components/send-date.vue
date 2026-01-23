@@ -2,7 +2,7 @@
     <div class="grid grid-cols-5 gap-3 p-1">
         <div class="flex flex-col items-center w-full group" v-for="(item, index) in dateList" :key="index">
             <div
-                class="w-full text-center py-1.5 rounded-lg bg-slate-50 text-[11px] font-[1000] text-slate-500 group-hover:bg-[#0065fb]/10 group-hover:text-primary transition-colors">
+                class="w-full text-center py-1.5 rounded-lg bg-slate-50 text-[11px] font-bold text-slate-500 group-hover:bg-[#0065fb]/10 group-hover:text-primary transition-colors">
                 Day {{ item.order_day }}
             </div>
 

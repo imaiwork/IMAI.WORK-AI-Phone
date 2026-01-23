@@ -39,7 +39,7 @@
                 </div>
             </div>
 
-            <div class="p-10 bg-[#F8FAFC]">
+            <div class="p-10 bg-slate-50">
                 <div class="bg-white rounded-[32px] p-8 border border-br flex flex-col items-center">
                     <div
                         class="w-24 h-24 rounded-[24px] bg-[#F1F5F9] flex items-center justify-center mb-6 shadow-inner">

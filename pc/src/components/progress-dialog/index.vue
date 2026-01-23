@@ -12,24 +12,27 @@
         :show-close="false"
         @close="close">
         <div class="dialog-body">
-            <div class="progress-wrapper">
-                <div class="percentage-display">
-                    <span class="number">{{ currentPercentage }}</span>
-                    <span class="unit">%</span>
-                </div>
+            <DefineTemplate v-slot="{ percentage }">
+                <div class="progress-wrapper">
+                    <div class="percentage-display">
+                        <span class="number">{{ percentage }}</span>
+                        <span class="unit">%</span>
+                    </div>
 
-                <div class="premium-progress-track">
-                    <div
-                        class="premium-progress-fill"
-                        :style="{
-                            width: currentPercentage + '%',
-                            background: progressGradient,
-                        }">
-                        <div class="inner-stripe"></div>
-                        <div class="progress-head-glow"></div>
+                    <div class="premium-progress-track">
+                        <div
+                            class="premium-progress-fill"
+                            :style="{
+                                width: percentage + '%',
+                                background: progressGradient(percentage),
+                            }">
+                            <div class="inner-stripe"></div>
+                            <div class="progress-head-glow"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </DefineTemplate>
+            <UseTemplate v-for="percentage in getPercentage" :percentage="percentage" />
         </div>
 
         <Transition name="slide-up">
@@ -41,6 +44,8 @@
 </template>
 
 <script setup lang="ts">
+import { createReusableTemplate } from "@vueuse/core";
+
 const props = withDefaults(
     defineProps<{
         percentage: number | number[];
@@ -58,6 +63,10 @@ const emit = defineEmits<{
 
 const popupRef = shallowRef();
 
+const getPercentage = computed(() => {
+    return Array.isArray(props.percentage) ? props.percentage : [props.percentage];
+});
+
 const currentPercentage = computed(() => {
     if (Array.isArray(props.percentage)) {
         return props.percentage.reduce((acc, curr) => acc + curr, 0) / props.percentage.length || 0;
@@ -68,13 +77,17 @@ const currentPercentage = computed(() => {
 const isFinished = computed(() => currentPercentage.value === 100);
 
 // 动态渐变色计算
-const progressGradient = computed(() => {
-    if (isFinished.value) return "linear-gradient(90deg, #10b981, #34d399)";
+const progressGradient = (percentage: number) => {
+    if (percentage === 100) return "linear-gradient(90deg, #10b981, #34d399)";
     return "linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)";
-});
+};
 
 const open = () => popupRef.value.open();
-const close = () => emit("close");
+const close = () => {
+    emit("close");
+};
+
+const [DefineTemplate, UseTemplate] = createReusableTemplate();
 
 defineExpose({ open, close });
 </script>

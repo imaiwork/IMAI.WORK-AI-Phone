@@ -8,6 +8,7 @@
     "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
     "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
     "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
-    "popup-bottom": "../../../../components/popup-bottom/popup-bottom"
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
+    "account-get": "../../components/account-get/account-get"
   }
 }

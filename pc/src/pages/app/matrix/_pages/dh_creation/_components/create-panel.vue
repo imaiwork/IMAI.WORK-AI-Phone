@@ -2,7 +2,7 @@
     <VoiceDefineTemplate>
         <div class="flex flex-col gap-y-3 p-1">
             <div
-                class="group flex items-center gap-x-4 p-3 rounded-xl border border-[transparent] hover:border-[#0065fb]/20 hover:bg-[#F8FAFC] transition-all cursor-pointer"
+                class="group flex items-center gap-x-4 p-3 rounded-xl border border-[transparent] hover:border-[#0065fb]/20 hover:bg-slate-50 transition-all cursor-pointer"
                 @click="handleSelectVoice">
                 <div
                     class="flex-shrink-0 w-10 h-10 rounded-xl bg-[#EEF2FF] flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
@@ -28,7 +28,7 @@
                 :show-file-list="false"
                 @success="getUploadVoiceSuccess">
                 <div
-                    class="group flex items-center gap-x-4 p-3 rounded-xl border border-transparent hover:border-[#0065fb]/20 hover:bg-[#F8FAFC] transition-all cursor-pointer text-left">
+                    class="group flex items-center gap-x-4 p-3 rounded-xl border border-transparent hover:border-[#0065fb]/20 hover:bg-slate-50 transition-all cursor-pointer text-left">
                     <div
                         class="flex-shrink-0 w-10 h-10 rounded-xl bg-[#F0FDF4] flex items-center justify-center text-[#10B981] group-hover:bg-[#10B981] group-hover:text-white transition-colors">
                         <Icon name="local-icon-upload" :size="20"></Icon>
@@ -42,7 +42,7 @@
         </div>
     </VoiceDefineTemplate>
     <div class="h-full rounded-[20px] min-w-[1000px]">
-        <div class="h-full bg-[#F8FAFC] rounded-[24px] overflow-hidden flex flex-col">
+        <div class="h-full bg-slate-50 rounded-[24px] overflow-hidden flex flex-col">
             <div
                 class="flex-shrink-0 flex items-center justify-between px-8 h-[80px] bg-white border-b border-[#F1F5F9] z-10">
                 <div class="flex items-center gap-6">
@@ -63,7 +63,7 @@
 
                 <div class="flex items-center gap-3">
                     <ElButton
-                        class="!rounded-xl !h-10 !px-8 !border-br !bg-white !text-[#475569] font-bold hover:!bg-[#F8FAFC]"
+                        class="!rounded-xl !h-10 !px-8 !border-br !bg-white !text-[#475569] font-bold hover:!bg-slate-50"
                         @click="handleCancel"
                         >取消</ElButton
                     >
@@ -94,7 +94,7 @@
                     </div>
                     <ElTooltip placement="left">
                         <div
-                            class="flex items-center gap-x-2 px-3 py-1.5 bg-[#F8FAFC] rounded-lg border border-br cursor-help">
+                            class="flex items-center gap-x-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-br cursor-help">
                             <span class="text-[12px] font-bold text-[#64748B]">扣费规则</span>
                             <Icon name="local-icon-tips2" :size="14"></Icon>
                         </div>
@@ -160,7 +160,7 @@
                                     <div
                                         v-for="(item, index) in formData.copywriting"
                                         :key="index"
-                                        class="group border border-[#F1F5F9] bg-[#F8FAFC] p-4 rounded-[20px] transition-all hover:border-[#0065fb]/30 hover:bg-white">
+                                        class="group border border-[#F1F5F9] bg-slate-50 p-4 rounded-[20px] transition-all hover:border-[#0065fb]/30 hover:bg-white">
                                         <div class="flex justify-between items-center mb-3">
                                             <span
                                                 class="w-6 h-6 rounded-full bg-white flex items-center justify-center text-[11px] font-black text-primary group-hover:bg-primary group-hover:text-white transition-colors">
@@ -315,7 +315,7 @@
                                     :show-arrow="false">
                                     <template #reference>
                                         <div
-                                            class="w-full h-12 rounded-xl border-2 border-dashed border-br flex items-center justify-center gap-x-2 text-[#64748B] hover:border-[#0065fb] hover:text-primary hover:bg-[#F8FAFC] transition-all cursor-pointer group active:scale-[0.98]"
+                                            class="w-full h-12 rounded-xl border-2 border-dashed border-br flex items-center justify-center gap-x-2 text-[#64748B] hover:border-[#0065fb] hover:text-primary hover:bg-slate-50 transition-all cursor-pointer group active:scale-[0.98]"
                                             @click="handleAddVoice">
                                             <Icon name="local-icon-upload3"></Icon>
                                             <span class="text-[13px] font-black">添加音色库</span>
@@ -908,7 +908,7 @@ defineExpose({
 }
 
 .card-header {
-    @apply px-5 py-4 bg-[#F8FAFC] border-b border-[#F1F5F9] items-center;
+    @apply px-5 py-4 bg-slate-50 border-b border-[#F1F5F9] items-center;
     .title {
         @apply text-[14px] font-black text-[#1E293B] tracking-tight;
     }

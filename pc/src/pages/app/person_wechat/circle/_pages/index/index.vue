@@ -2,7 +2,7 @@
     <div class="w-full h-full">
         <div class="h-full flex gap-x-3">
             <div class="flex-1 flex bg-white rounded-[20px] border border-br overflow-hidden" ref="containerRef">
-                <div class="w-[84px] flex-shrink-0 border-r border-[#F1F5F9] bg-[#F8FAFC]">
+                <div class="w-[84px] flex-shrink-0 border-r border-[#F1F5F9] bg-slate-50">
                     <SidebarPanel
                         ref="sidebarPanelRef"
                         :current-wechat="currentWechat"

@@ -98,6 +98,7 @@
                         </template>
                     </template>
                 </el-table-column>
+                <el-table-column label="备注" min-width="140" prop="remark"></el-table-column>
                 <el-table-column label="创作时间" prop="create_time" min-width="180" />
                 <el-table-column label="操作" width="120" fixed="right">
                     <template #default="{ row }">

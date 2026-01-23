@@ -4,6 +4,7 @@ namespace app\api\logic\material;
 
 use app\api\logic\ApiLogic;
 use app\common\model\material\FfmpegFile;
+use app\common\service\ConfigService;
 use app\common\service\FileService;
 
 class FfmpegFileLogic extends ApiLogic
@@ -132,9 +133,21 @@ class FfmpegFileLogic extends ApiLogic
                     if (empty($task['uri'])) {
                         throw new \Exception("文件URI为空");
                     }
-
+                    $command = 'ffmpeg -version';
+                    $output = shell_exec($command);
+                    $mediaInfo = $finalUrl = '';
+                    if ($output !== null && strpos($output, 'ffmpeg version') !== false) {
+                    $host = config('app.app_host');
+   
+                    $url = FileService::getFileUrl($task['uri']);
+                    $is_local = strpos($url, $host) === 0;
+                    if (!$is_local) {
+                        $tempFilePath = \app\common\service\UploadService::downloadRemoteFile($url);
+                    }else{
+                        $tempFilePath = $task['uri'];
+                    }
                     // 步骤1：下载远程文件到本地临时目录
-                    $tempFilePath = \app\common\service\UploadService::downloadRemoteFile($task['uri']);
+                 
                     
                     // 步骤2：获取媒体文件信息
                     $mediaInfo = \app\common\service\UploadService::getMediaInfo($tempFilePath);
@@ -143,17 +156,17 @@ class FfmpegFileLogic extends ApiLogic
                     $processedFilePath = \app\common\service\UploadService::standardizeMedia($tempFilePath);
                     // 步骤4：上传处理后的文件到云存储
                     $finalUrl = FileService::getFileUrl($processedFilePath);
-                    
-                    // 步骤5：更新数据库记录
+                
+                     } 
+        
                     $updateData = [
                         'status' => 2, // 成功
                         'tries' => $task['tries'] + 1,
                         'remark' => '处理成功 - ' . json_encode([
                             'processed_at' => date('Y-m-d H:i:s')
                         ]),
-//                        'uri' => $finalUrl
                     ];
-                    
+                
                     FfmpegFile::where('id', $task['id'])->update($updateData);
                     
                     $result['success'] = true;
@@ -177,12 +190,15 @@ class FfmpegFileLogic extends ApiLogic
                     $result['message'] = $e->getMessage();
                     $result['error_code'] = $e->getCode();
                 } finally {
-                    // 清理临时文件
-                    if ($tempFilePath && file_exists($tempFilePath)) {
-                        unlink($tempFilePath);
-                    }
-                    if ($processedFilePath && file_exists($processedFilePath)) {
-                        unlink($processedFilePath);
+                    $default = ConfigService::get('storage', 'default', 'local');
+                        if ($default != 'local') {
+                        // 清理临时文件
+                        if ($tempFilePath && file_exists($tempFilePath)) {
+                            unlink($tempFilePath);
+                        }
+                        if ($processedFilePath && file_exists($processedFilePath)) {
+                            unlink($processedFilePath);
+                        }
                     }
                 }
                 

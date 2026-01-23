@@ -554,9 +554,6 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             $requestdata = [
                                 'styleId' => $task->clip_id,
                                 'virtualmanId' => $task->anchor_id,
-                                'title' => $task->title,
-                                'content' => $task->msg,
-                                'speakerId' => $task->voice_id,
                                 'packRules' => [
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
@@ -568,6 +565,16 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     "watermarkShow" => false,
                                 ]
                                 ];
+                            if ( $task->title != '') {
+                                $requestdata['title'] = $task->title;
+                            }
+                            if ( $task->audio_url != '') {
+                                $requestdata['audioUrl'] = $task->audio_url;
+                            }else{
+                                $requestdata['speakerId'] =  $task->voice_id;
+                                $requestdata['content'] =  $task->msg;
+
+                            }
                             if($task->card_name != ''){
                                 $requestdata['introduceCard'] = [
                                     'name' => $task->card_name,
@@ -712,9 +719,6 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
                             $requestdata = [
                                 'styleId' => $task->clip_id,
-                                'title' => $task->title,
-                                'content' => $task->msg,
-                                'speakerId' => $task->voice_id,
                                 'packRules' => [
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
@@ -726,6 +730,17 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     "watermarkShow" => false,
                                 ]
                             ];
+
+                            if ( $task->title != '') {
+                                $requestdata['title'] = $task->title;
+                            }
+                            if ( $task->audio_url != '') {
+                                $requestdata['audioUrl'] = $task->audio_url;
+                            }else{
+                                $requestdata['speakerId'] =  $task->voice_id;
+                                $requestdata['content'] =  $task->msg;
+
+                            }
                             if($task->card_name != ''){
                                 $requestdata['introduceCard'] = [
                                     'name' => $task->card_name,

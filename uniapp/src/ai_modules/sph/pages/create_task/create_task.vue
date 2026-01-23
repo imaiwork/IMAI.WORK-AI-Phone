@@ -391,7 +391,7 @@
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-[32rpx]">
+                        <view class="mt-[32rpx]" v-if="formData.add_type == '1'">
                             <view class="text-[30rpx] font-bold"> 【加微任务】时间设置 </view>
                             <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
                                 <u-radio-group v-model="formData.wechat_time_type">
@@ -452,16 +452,18 @@
                                                     <picker
                                                         mode="time"
                                                         class="w-full"
-                                                        :value="formData.time_config[0]"
-                                                        @change="handleStartTimeChange">
+                                                        :value="formData.wechat_time_config[0]"
+                                                        @change="handleWechatStartTimeChange">
                                                         <view class="flex items-center justify-between h-[70rpx]">
                                                             <text
                                                                 :class="[
-                                                                    formData.time_config[0]
+                                                                    formData.wechat_time_config[0]
                                                                         ? 'text-primary font-bold'
                                                                         : 'text-[#00000033]',
                                                                 ]"
-                                                                >{{ formData.time_config[0] || "开始时间" }}</text
+                                                                >{{
+                                                                    formData.wechat_time_config[0] || "开始时间"
+                                                                }}</text
                                                             >
                                                             <u-icon
                                                                 name="arrow-right"
@@ -476,18 +478,20 @@
                                                     <picker
                                                         mode="time"
                                                         class="w-full"
-                                                        :value="formData.time_config[1]"
-                                                        :disabled="!formData.time_config[0]"
+                                                        :value="formData.wechat_time_config[1]"
+                                                        :disabled="!formData.wechat_time_config[0]"
                                                         @click="handleWechatEndTimeClick"
                                                         @change="handleWechatEndTimeChange">
                                                         <view class="flex items-center justify-between h-[70rpx]">
                                                             <text
                                                                 :class="[
-                                                                    formData.time_config[1]
+                                                                    formData.wechat_time_config[1]
                                                                         ? 'text-primary font-bold'
                                                                         : 'text-[#00000033]',
                                                                 ]"
-                                                                >{{ formData.time_config[1] || "结束时间" }}</text
+                                                                >{{
+                                                                    formData.wechat_time_config[1] || "结束时间"
+                                                                }}</text
                                                             >
                                                             <u-icon
                                                                 name="arrow-right"
@@ -921,6 +925,14 @@ const handleEndTimeClick = () => {
     }
 };
 
+const handleWechatStartTimeChange = (e: any) => {
+    const { value } = e.detail;
+    const endTime = new Date(`2000/01/01 ${value}`);
+    formData.wechat_time_config[0] = value;
+    endTime.setMinutes(endTime.getMinutes() + timeInterval);
+    formData.wechat_time_config[1] = uni.$u.timeFormat(endTime, "hh:MM");
+};
+
 const handleWechatEndTimeChange = (e: any) => {
     const { value } = e.detail;
     // 这里需要判断结束时间是否大于开始时间，并且要大于开始
@@ -1009,7 +1021,16 @@ onLoad(({ type }: any) => {
             formData.device_codes = data;
         }
         if (type === ListenerTypeEnum.CHOOSE_DATE) {
-            if (data.length === 0) return;
+            if (data.length === 0) {
+                if (customDateType.value == 1) {
+                    currentFrequency.value = 0;
+                    formData.custom_date = [];
+                } else {
+                    currentWechatFrequency.value = 0;
+                    formData.wechat_custom_date = [];
+                }
+                return;
+            }
             if (customDateType.value == 1) {
                 currentFrequency.value = 5;
                 formData.custom_date = data;

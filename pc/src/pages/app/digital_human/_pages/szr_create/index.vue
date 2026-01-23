@@ -1,6 +1,6 @@
 <template>
     <div class="flex gap-x-3 h-full min-w-[1000px] overflow-hidden">
-        <div class="flex-1 flex gap-6 flex-col overflow-hidden bg-white rounded-[32px] border border-br py-6">
+        <div class="flex-1 flex gap-6 flex-col overflow-hidden bg-white rounded-[20px] border border-br py-6">
             <div class="w-full flex flex-col px-6">
                 <div class="upload-container" v-if="!formData.url">
                     <div class="upload-content">
@@ -35,44 +35,37 @@
 
                 <div class="grow min-h-0">
                     <ElScrollbar :distance="20" @end-reached="loadMoreAnchor">
-                        <div class="flex flex-wrap gap-2 px-8 py-4">
+                        <div class="grid grid-cols-4 xl:grid-cols-5 gap-3 p-4">
                             <div
-                                class="bg-[#F8FAFC] w-[120px] h-[160px] flex flex-col items-center justify-center gap-4 flex-shrink-0 rounded-[24px] border-2 border-dashed border-br cursor-pointer hover:border-primary/50 hover:bg-[#0065fb]/10 transition-all group"
+                                class="aspect-[4/5] rounded-[24px] border-2 border-dashed border-slate-200 bg-[#f8fafc]/50 hover:border-primary hover:bg-[#0065fb]/5 transition-all cursor-pointer flex flex-col items-center justify-center gap-3 group"
                                 @click="toCloneAnchor()">
                                 <div
-                                    class="w-10 h-10 rounded-xl bg-white shadow-light flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <Icon name="el-icon-Plus" color="#0065FB" :size="20"></Icon>
+                                    class="w-10 h-10 rounded-2xl bg-white shadow-light flex items-center justify-center group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
+                                    <Icon name="el-icon-Plus" :size="24" />
                                 </div>
-                                <div
-                                    class="text-[12px] font-black text-[#64748B] group-hover:text-primary transition-colors">
-                                    形象克隆
-                                </div>
+                                <span class="text-[13px] font-black text-slate-500 group-hover:text-primary"
+                                    >形象克隆</span
+                                >
                             </div>
 
                             <div
-                                class="flex-shrink-0 w-[120px] h-[160px] cursor-pointer rounded-[24px] overflow-hidden relative border-2 transition-all group"
+                                class="aspect-[4/5] cursor-pointer rounded-[24px] overflow-hidden relative border-2 transition-all group"
                                 v-for="(item, index) in anchorPager.lists"
                                 :key="item.id"
-                                :class="
-                                    currentAnchorIndex === index
-                                        ? 'border-primary shadow-lg shadow-[#0065FB]/10'
-                                        : 'border-[transparent]'
-                                "
+                                :class="currentAnchorIndex === index ? 'border-primary ' : 'border-[transparent]'"
                                 @click="handleSelectAnchor(index)">
-                                <img
-                                    :src="item.pic"
-                                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                <ElImage :src="item.pic" fit="cover" lazy class="w-full h-full" />
 
                                 <div
                                     class="w-7 h-7 flex items-center justify-center absolute bottom-2 right-2 z-[10] rounded-full bg-black/20 backdrop-blur-md text-white hover:bg-primary transition-colors"
                                     @click.stop="openVideo(item.result_url)">
                                     <Icon name="local-icon-play2" :size="28"></Icon>
                                 </div>
-
-                                <div class="absolute top-2 right-2 z-[10]" v-if="currentAnchorIndex == index">
-                                    <Icon name="local-icon-success_fill" color="#0065FB" :size="20"></Icon>
+                                <div
+                                    v-if="currentAnchorIndex == index"
+                                    class="absolute top-3 right-3 w-7 h-7 bg-primary rounded-full flex items-center justify-center border-2 border-white z-20 animate-in zoom-in duration-300">
+                                    <Icon name="el-icon-Check" color="#fff" :size="16" />
                                 </div>
-
                                 <div
                                     class="absolute inset-0 bg-black/60 backdrop-blur-[1px] z-[20] flex items-center justify-center p-2 text-center"
                                     v-if="item.status == 0">
@@ -89,9 +82,13 @@
                 </div>
             </div>
         </div>
-        <div class="w-[380px] bg-white flex flex-col relative flex-shrink-0 rounded-[32px] p-6 border border-br">
+        <div class="w-[380px] bg-white flex flex-col relative flex-shrink-0 rounded-[20px] p-6 border border-br">
             <template v-if="!loading">
-                <div class="px-5 py-2 rounded-2xl flex items-center gap-x-3 bg-[#F8FAFC] border border-br mb-6">
+                <header class="mb-5">
+                    <h2 class="text-[24px] font-bold text-slate-800 tracking-tight">生成设置</h2>
+                    <div class="h-1 w-12 bg-primary rounded-full mt-2"></div>
+                </header>
+                <div class="px-5 py-2 rounded-2xl flex items-center gap-x-3 bg-slate-50 border border-br mb-6">
                     <div class="text-[13px] font-black text-[#64748B]">视频名称</div>
                     <div class="w-[1px] h-3 bg-[#E2E8F0]"></div>
                     <div class="flex-1">
@@ -111,7 +108,7 @@
                             <div class="text-[15px] font-[900] text-[#1E293B] mb-3 flex items-center gap-2">
                                 <Icon name="el-icon-Document" color="var(--el-color-primary)" /> 文案输入
                             </div>
-                            <div class="border border-br rounded-2xl p-4 bg-[#F8FAFC] group">
+                            <div class="border border-br rounded-2xl p-4 bg-slate-50 group">
                                 <ElInput
                                     v-model="formData.msg"
                                     class="custom-textarea"
@@ -124,12 +121,12 @@
                                     <div class="flex gap-2">
                                         <button
                                             @click="handleRandomCopywriter"
-                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-br rounded-lg text-[12px] font-bold hover:border-primary hover:text-primary transition-all">
+                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-br rounded-2xl text-[12px] font-bold hover:border-primary hover:text-primary transition-all">
                                             随机
                                         </button>
                                         <button
                                             @click="openGeneratePrompt"
-                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-[#0065FB]/5 text-primary rounded-lg text-[12px] font-black hover:bg-[#0065FB]/10 transition-all">
+                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-[#0065FB]/5 text-primary rounded-2xl text-[12px] font-black hover:bg-[#0065FB]/10 transition-all">
                                             AI 生成
                                         </button>
                                     </div>
@@ -192,7 +189,7 @@
                             </ElSelect>
                         </div>
 
-                        <div class="bg-[#F8FAFC] border border-br rounded-2xl p-5" v-if="clipConfig.is_open">
+                        <div class="bg-slate-50 border border-br rounded-2xl p-5" v-if="clipConfig.is_open">
                             <div class="flex justify-between items-center">
                                 <div class="text-[15px] font-[900] text-[#1E293B]">AI 智能剪辑</div>
                                 <ElSwitch v-model="formData.automatic_clip" active-value="1" inactive-value="0" />

@@ -56,7 +56,7 @@
                         </div>
                     </div>
 
-                    <div class="bg-[#F8FAFC] rounded-[24px] border border-br p-6 space-y-6">
+                    <div class="bg-slate-50 rounded-[24px] border border-br p-6 space-y-6">
                         <div class="text-[14px] font-[900] text-[#1E293B] flex items-center gap-2 mb-2">
                             <Icon name="el-icon-Files" :size="20" /> 附加素材内容
                         </div>

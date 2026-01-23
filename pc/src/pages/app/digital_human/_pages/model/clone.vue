@@ -26,13 +26,11 @@
                             :accept="commonUploadLimit.videoExtension.join(',')"
                             :show-file-list="false"
                             :max-size="commonUploadLimit.size"
-                            :video-max-width="commonUploadLimit.maxWidthResolution"
-                            :video-max-height="commonUploadLimit.maxHeightResolution"
                             :max-duration="commonUploadLimit.videoMaxDuration"
                             :min-duration="commonUploadLimit.videoMinDuration"
                             @change="handleUploadChange($event, 'anchor')">
                             <div
-                                class="bg-[#F8FAFC] min-h-[260px] flex flex-col items-center justify-center p-6 group transition-all w-full"
+                                class="bg-slate-50 min-h-[260px] flex flex-col items-center justify-center p-6 group transition-all w-full"
                                 v-loading="anchorParseLoading">
                                 <div
                                     class="w-full h-full relative rounded-xl overflow-hidden shadow-inner"
@@ -97,10 +95,8 @@
                             :max-size="commonUploadLimit.size"
                             :max-duration="120"
                             :min-duration="1"
-                            :video-max-width="commonUploadLimit.maxWidthResolution"
-                            :video-max-height="commonUploadLimit.maxHeightResolution"
                             @change="handleUploadChange($event, 'auth')">
-                            <div class="bg-[#F8FAFC] min-h-[220px] p-8 w-full" v-loading="authParseLoading">
+                            <div class="bg-slate-50 min-h-[220px] p-8 w-full" v-loading="authParseLoading">
                                 <div
                                     class="w-full h-full relative rounded-xl overflow-hidden shadow-inner"
                                     v-if="authData.url">
@@ -119,7 +115,7 @@
                                             <span class="text-[13px] font-[900]">请录制以下授权文案</span>
                                         </div>
                                         <p
-                                            class="text-[13px] text-[#64748B] leading-relaxed font-medium bg-[#F8FAFC] p-4 rounded-xl italic border-l-4 border-[#0065FB]/20">
+                                            class="text-[13px] text-[#64748B] leading-relaxed font-medium bg-slate-50 p-4 rounded-xl italic border-l-4 border-[#0065FB]/20">
                                             “我是xxx(真实姓名)，我授权{{
                                                 shanjianAuth
                                             }}使用视频中的肖像、声音，生成定制数字人，并在本人账号中创作使用。”
@@ -192,7 +188,7 @@
                     <div class="space-y-3">
                         <div
                             v-for="(item, index) in uploadTemplateContentLists"
-                            class="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]/50">
+                            class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-[#E2E8F0]/50">
                             <span class="text-[12px] font-bold text-[#64748B]">{{ item.name }}</span>
                             <span class="text-[12px] font-black text-[#1E293B]">{{ item.value }}</span>
                         </div>
@@ -207,8 +203,8 @@ import * as MP4Box from "@/assets/js/mp4box.all.js";
 import dayjs from "dayjs";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
-import { uploadImage, videoTranscode } from "@/api/app";
-import { batchCloneAnchor, createShanjianAnchor } from "@/api/digital_human";
+import { uploadImage } from "@/api/app";
+import { batchCloneAnchor } from "@/api/digital_human";
 import { commonUploadLimit } from "@/pages/app/digital_human/_hooks/useUpload";
 import { TokensSceneEnum, PolicyAgreementEnum } from "@/enums/appEnums";
 import { getApiUrl } from "@/utils/env";
@@ -281,6 +277,15 @@ const handleUploadChange = async (res: any, type: "anchor" | "auth") => {
         const { raw, response } = res;
 
         const { uri } = response.data;
+        // checkIsH264(raw).then((res) => {
+        //     if (type == "anchor") {
+        //         anchorData.isH264 = res;
+        //     }
+        //     if (type == "auth") {
+        //         authData.isH264 = res;
+        //     }
+        // });
+
         const { file, width, height } = await getVideoFirstFrame(uri);
         const imageRes = await uploadImage({
             file,

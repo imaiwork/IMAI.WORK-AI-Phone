@@ -95,7 +95,9 @@ class LeadScrapingLogic extends SvBaseLogic
                 self::setError('时间不能为空');
                 return false;
             }
-
+            if (isset($params['ip_address']) && is_array($params['ip_address'])) {
+                $params['ip_address'] = json_encode($params['ip_address'], JSON_UNESCAPED_UNICODE);
+            } 
             // 更新
             SvLeadScrapingSetting::where('id', $leadScraping->id)->update($params);
             $result = $leadScraping->refresh()->toArray();
@@ -175,6 +177,7 @@ class LeadScrapingLogic extends SvBaseLogic
                             'task_name'    => $result['name'] . ' - ' . self::formatType((int)$account['type']),
                             'status'       => 0,
                             'day'          => date('Y-m-d', $startTime),
+                            'time_config'  => $params['time_config'],
                             'start_time'   => $startTime,
                             'end_time'     => $endTime,
                             'sub_task_id'  => $subTask->id,

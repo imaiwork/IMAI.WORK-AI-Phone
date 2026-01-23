@@ -1,5 +1,5 @@
 <template>
-    <div class="w-full h-full flex bg-[#F8FAFC]">
+    <div class="w-full h-full flex bg-slate-50">
         <div class="w-[380px] flex-shrink-0 border-r border-[#F1F5F9] bg-white py-6 flex flex-col">
             <div class="px-6 mb-6">
                 <div class="flex items-center gap-2 mb-2">
@@ -59,7 +59,7 @@
                                             @remove="handleUploadRemove($event, field.fields)"
                                             @success="handleUploadSuccess($event, field.fields)">
                                             <div
-                                                class="h-[120px] rounded-2xl border-2 border-dashed border-br group-hover:border-primary group-hover:bg-[#0065fb]/10 transition-all flex flex-col items-center justify-center relative bg-[#F8FAFC]">
+                                                class="h-[120px] rounded-2xl border-2 border-dashed border-br group-hover:border-primary group-hover:bg-[#0065fb]/10 transition-all flex flex-col items-center justify-center relative bg-slate-50">
                                                 <div
                                                     class="w-10 h-10 rounded-xl bg-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
                                                     <Icon
@@ -116,7 +116,7 @@
                                     :key="key"
                                     class="bg-white rounded-[24px] border border-br overflow-hidden transition-all hover:border-primary/30">
                                     <div
-                                        class="flex items-center justify-between px-6 py-4 bg-[#F8FAFC]/50 border-b border-[#F1F5F9]">
+                                        class="flex items-center justify-between px-6 py-4 bg-slate-50/50 border-b border-[#F1F5F9]">
                                         <div class="flex items-center gap-3">
                                             <span class="text-[14px] font-[900] text-[#1E293B]">{{
                                                 getOutputParams[key]?.name || key
@@ -184,7 +184,7 @@
 
                                             <template v-else>
                                                 <div
-                                                    class="text-[14px] text-[#475569] leading-[1.8] font-medium bg-[#F8FAFC] p-4 rounded-xl border border-[#F1F5F9] whitespace-pre-wrap break-all">
+                                                    class="text-[14px] text-[#475569] leading-[1.8] font-medium bg-slate-50 p-4 rounded-xl border border-[#F1F5F9] whitespace-pre-wrap break-all">
                                                     {{ item }}
                                                 </div>
                                             </template>
@@ -359,7 +359,7 @@ watch(
 :deep(.workflow-textarea) {
     .el-input__wrapper,
     .el-textarea__inner {
-        @apply rounded-xl bg-[#F8FAFC] shadow-[none] border border-br px-4 transition-all duration-300;
+        @apply rounded-xl bg-slate-50 shadow-[none] border border-br px-4 transition-all duration-300;
         &:hover {
             @apply border-[#CBD5E1];
         }

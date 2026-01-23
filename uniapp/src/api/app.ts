@@ -106,3 +106,8 @@ export function deleteVideoCreationRecord(data: any) {
 export function updateVideoCreationRecord(data: any) {
     return request.post({ url: "/video/creationRecordUpdate", data });
 }
+
+// 视频转码
+export function videoTranscoding(url: string) {
+    return request.post({ url: "/file/videoTranscoding", data: { uri: url } });
+}

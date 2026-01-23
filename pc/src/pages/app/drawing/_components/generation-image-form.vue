@@ -1,5 +1,5 @@
 <template>
-    <div class="h-full w-full flex flex-col bg-[#F8FAFC]">
+    <div class="h-full w-full flex flex-col bg-slate-50">
         <div class="shrink-0 px-6 h-[72px] flex items-center bg-white border-b border-[#F1F5F9]">
             <div class="flex p-1 rounded-[16px] w-full bg-[#F1F5F9]">
                 <div
@@ -344,7 +344,7 @@ defineExpose({
 .ratio-card {
     @apply flex flex-col items-center justify-center p-3 rounded-xl border-2 border-[#F1F5F9] cursor-pointer transition-all;
     &:hover {
-        @apply border-[#0065fb]/30 bg-[#F8FAFC];
+        @apply border-[#0065fb]/30 bg-slate-50;
     }
     &.is-active {
         @apply border-[#0065fb] bg-[#F5F7FF] text-primary;

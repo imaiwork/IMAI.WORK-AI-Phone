@@ -419,7 +419,7 @@ onBeforeUnmount(() => {
 </script>
 <style scoped lang="scss">
 .kanban-column {
-    @apply w-[280px] bg-[#F8FAFC] border border-br flex flex-col shrink-0 rounded-[16px] overflow-hidden transition-all duration-300;
+    @apply w-[280px] bg-slate-50 border border-br flex flex-col shrink-0 rounded-[16px] overflow-hidden transition-all duration-300;
 
     &:hover {
         @apply border-primary-light-8 shadow-light;

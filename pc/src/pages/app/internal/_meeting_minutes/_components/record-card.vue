@@ -38,17 +38,13 @@
                         v-else-if="item.status == TurnStatus.ERROR"
                         class="absolute inset-0 flex items-center justify-center p-6">
                         <div
-                            class="w-full h-full rounded-xl bg-red-50/50 border border-red-100 flex flex-col items-center justify-center gap-3">
+                            class="w-full h-full rounded-xl bg-[#fef2f2]/50 border border-red-100 flex flex-col items-center justify-center gap-3">
                             <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center shadow-sm">
                                 <Icon name="el-icon-WarningFilled" :size="24" color="#F56C6C" />
                             </div>
                             <div class="flex flex-col items-center gap-1">
                                 <span class="text-sm font-black text-red-600">转写服务异常</span>
                                 <span class="text-[11px] text-red-400 font-medium">请尝试重新提交该任务</span>
-                            </div>
-                            <div
-                                class="mt-1 px-3 py-1 rounded-full bg-white border border-red-200 text-[10px] text-red-500 font-bold uppercase tracking-wider">
-                                Click to retry
                             </div>
                         </div>
                     </div>
@@ -97,7 +93,10 @@
                     </div>
 
                     <div class="flex items-center gap-1">
-                        <ElPopover placement="bottom-end" :show-arrow="false" popper-class="custom-action-popper">
+                        <ElPopover
+                            placement="bottom-end"
+                            :show-arrow="false"
+                            popper-class="!rounded-[16px] !border-[#F1F5F9] !p-1.5 !shadow-light">
                             <template #reference>
                                 <div
                                     class="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer"
@@ -109,12 +108,14 @@
                             <div class="flex flex-col p-1 gap-1">
                                 <div
                                     v-if="item.status == TurnStatus.ERROR"
-                                    class="action-item"
+                                    class="table-action-item"
                                     @click.stop="emit('again', item.id)">
-                                    <Icon name="el-icon-Refresh" :size="14" color="#4F46E5" />
+                                    <Icon name="el-icon-Refresh" :size="14" />
                                     <span>重试任务</span>
                                 </div>
-                                <div class="action-item !text-red-500" @click.stop="emit('delete', item.id)">
+                                <div
+                                    class="table-action-item !text-red-500 hover:!bg-red-50"
+                                    @click.stop="emit('delete', item.id)">
                                     <Icon name="el-icon-Delete" :size="14" />
                                     <span>删除记录</span>
                                 </div>
@@ -129,7 +130,6 @@
 
 <script setup lang="ts">
 import { formatAudioTime } from "@/utils/util";
-import { Delete, Refresh, DocumentAdd } from "@element-plus/icons-vue";
 import { dayjs } from "element-plus";
 import { TurnStatus } from "../_enums";
 import useHandleApi from "../_hooks/useHandleApi";
@@ -139,8 +139,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(["delete", "again", "train"]);
-
-const router = useRouter();
 
 const { formatName, handleItem, handleTrain } = useHandleApi();
 

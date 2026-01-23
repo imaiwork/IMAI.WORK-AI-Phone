@@ -37,7 +37,7 @@
 
     <div class="grid grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4 gap-4">
         <div v-for="(item, index) in materialList" :key="index" class="material-card group">
-            <div class="relative w-full h-full overflow-hidden rounded-[18px] bg-[#F8FAFC]">
+            <div class="relative w-full h-full overflow-hidden rounded-[18px] bg-slate-50">
                 <video
                     v-if="type == PublishTaskTypeEnum.VIDEO"
                     :src="item.url"
@@ -217,7 +217,7 @@ const [DefineMaterialMenuTemplate, MaterialTemplate] = createReusableTemplate();
 .material-item-add {
     @apply h-[180px] rounded-[24px] border-2 border-dashed border-[#E5E7EB] 
            flex flex-col items-center justify-center cursor-pointer 
-           transition-all duration-300 hover:border-[#0065fb] hover:bg-[#F8FAFC];
+           transition-all duration-300 hover:border-[#0065fb] hover:bg-slate-50;
 }
 
 /* 素材卡片基础容器 */

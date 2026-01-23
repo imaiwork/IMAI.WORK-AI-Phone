@@ -32,7 +32,7 @@
             </div>
         </div>
 
-        <div class="grow min-h-0 flex flex-col bg-[#F8FAFC] rounded-[24px] border border-[#F1F5F9] overflow-hidden">
+        <div class="grow min-h-0 flex flex-col bg-slate-50 rounded-[24px] border border-[#F1F5F9] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#F1F5F9] bg-white flex items-center justify-between">
                 <div class="text-[13px] font-[900] text-[#1E293B]">解析结果明细</div>
                 <div class="text-[12px] font-bold text-primary bg-[#F0F6FF] px-2 py-0.5 rounded">

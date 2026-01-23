@@ -17,7 +17,7 @@
                 </view>
                 <view class="flex items-center gap-x-1 mt-[32rpx]">
                     <text class="text-[#FF3C26]">*</text>
-                    <text>所有素材只支持H.264编码</text>
+                    <text>所有素材只支持H.264、H.265编码</text>
                 </view>
                 <view class="flex items-center gap-x-1 mt-[32rpx]">
                     <text class="text-[#FF3C26]">*</text>

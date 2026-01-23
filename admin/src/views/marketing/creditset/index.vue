@@ -187,12 +187,16 @@ const getPhoneAutoConfig = computed(() => {
             "automation_wechat_add_friend",
             "automation_social_media_obtain",
             "automation_social_media_nursing",
+            "automation_ocr_local",
+            "automation_ocr_img",
         ].includes(item.scene)
     );
 });
 
 const getOtherConfig = computed(() => {
-    return tableData.value.filter((item) => ["video_clip", "matrix_copywriting"].includes(item.scene));
+    return tableData.value.filter((item) =>
+        ["video_clip", "matrix_copywriting", "automation_account_ip_analysis"].includes(item.scene)
+    );
 });
 
 const getConfig = async () => {

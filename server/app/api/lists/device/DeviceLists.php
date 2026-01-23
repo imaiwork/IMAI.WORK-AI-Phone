@@ -13,6 +13,8 @@ use app\common\model\sv\SvDeviceRpa;
 use app\common\model\wechat\AiWechat;
 use think\facade\Cache;
 
+use app\common\model\auto\AutoDeviceConfig;
+
 use app\common\model\kb\KbRobot;
 
 
@@ -206,6 +208,10 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
                 'task_status' => ($status = \app\common\model\auto\AutoDeviceAddWechatConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->value('status')) !== null ? $status : 0,
                 'is_config' => \app\common\model\auto\AutoDeviceAddWechatConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1,
             ],
+            'analysis' => [
+                'task_status' => 2,
+                'is_config' => self::checkAnalysis($find),
+            ]
         );
         $status = [];
         $isConfig = [];
@@ -226,6 +232,28 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
         $is_config = count($isConfig) > 1 ? 2 : ($isConfig[0] == 1 ? 1 : 0);
         return [$setting, $task_status($status), $is_config];
     }
+
+    private static function checkAnalysis(SvDevice $device): int
+    {
+        $find = AutoDeviceConfig::where('user_id', $device->user_id)->where('device_code', $device->device_code)->findOrEmpty();
+        if($find->isEmpty()){
+            return 0;
+        }
+        if(empty($find->analysis)){
+            return 0;
+        }
+        $analysis = json_decode($find->analysis, true);
+
+        $is_config = 1;
+        foreach ($analysis as $key => $value) {
+            if ($value == '') {
+                $is_config = 0;
+                break;
+            }
+        }
+        return $is_config;
+    }
+
     private  function addDeviceRpa(SvDevice $device)
     {
         $maps = array(

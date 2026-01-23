@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "选择视频风格",
+  "usingComponents": {
+    "u-tabs": "../../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "video-preview": "../../../../components/video-preview/video-preview"
+  }
+}
