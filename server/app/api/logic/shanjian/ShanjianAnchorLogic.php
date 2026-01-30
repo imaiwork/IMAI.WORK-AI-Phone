@@ -24,57 +24,55 @@ class ShanjianAnchorLogic extends ApiLogic
 
     public static function add(array $params)
     {
-        Log::channel('shanjian')->write('定时任务闪剪111');
-        $user_id = $params['user_id'] ?? self::$uid;
-        $dh_id   = $params['dh_id'] ?? 0;
-        $name    = $params['name'] ?? '形象合成' . date('YmdHi');
-        try {
-            $task_id               = generate_unique_task_id();
-            $param['task_id']      = $task_id;
-            $param['user_id']      = $user_id;
-            $param['videoUrl']     = $params['anchor_url'] ?? "";
-            $param['authVideoUrl'] = $params['authorized_url'] ?? "";
-            $param['authText']     = ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI');
-            $scene                 = self::SHANJIAN_AVATAR;
-            Log::channel('shanjian')->write('定时任务闪剪222');
-            $response              = self::requestUrl($param, $scene, $user_id, $task_id);
-            Log::channel('shanjian')->write('定时任务闪剪333');
-            Log::channel('shanjian')->write('闪剪形象' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-            if (isset($response['code']) && $response['code'] == 10000) {
-                //闪剪返回成功时公共形象id
-                $dhUpdate = [
-                    'task_ids'   => json_encode([
-                                                    'shanjian' => ['task_id' => $task_id, 'status' => 0],
-                                                    'weiju'    => ['task_id' => '', 'status' => 0],
-                                                    'chanjing' => ['task_id' => '', 'status' => 0]
-                                                ]),
-                    'result_url' => $params['anchor_url'] ?? ''
-                ];
-                DigitalHumanAnchor::update($dhUpdate, ['id' => $dh_id]);
+        Log::channel('shanjian')->write('定时任务闪剪');
+        $user_id      = $params['user_id'] ?? self::$uid;
+        $dh_id        = $params['dh_id'];
+        $digitalHuman = DigitalHumanAnchor::where('id', $dh_id)->findOrEmpty();
+        $task_ids     = json_decode($digitalHuman->task_ids, true);
+        if ($digitalHuman->isEmpty()) {
+            Log::channel('shanjian')->write('公共形象未找到');
+            return false;
+        }
 
-                $data  = [
-                    'user_id'        => $user_id,
-                    'task_id'        => $task_id,
-                    'pic'            => $params['pic'] ?? '',
-                    'name'           => $name,
-                    'anchor_url'     => $params['anchor_url'] ?? '',
-                    'authorized_pic' => $params['authorized_pic'] ?? '',
-                    'authorized_url' => $params['authorized_url'] ?? '',
-                    'create_time'    => time(),
-                    'dh_id'          => $dh_id,
-                ];
-                $model = new ShanjianAnchor();
-                $model->save($data);
-                $data['id']       = $model->id;
-                self::$returnData = $data;
-                return true;
-            } else {
-                $msg = $response['message'] ?? '检验失败';
-                self::setError($msg);
-                return false;
-            }
-        } catch (\Exception $e) {
-            self::setError($e->getMessage());
+        $name                            = $params['name'] ?? '形象合成' . date('YmdHi');
+        $task_id                         = generate_unique_task_id();
+        $task_ids['shanjian']['task_id'] = $task_id;
+        $param['task_id']                = $task_id;
+        $param['user_id']                = $user_id;
+        $param['videoUrl']               = $params['anchor_url'] ?? "";
+        $param['authVideoUrl']           = $params['authorized_url'] ?? "";
+        $param['authText']               = ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI');
+        $scene                           = self::SHANJIAN_AVATAR;
+        $response                        = self::requestUrl($param, $scene, $user_id, $task_id);
+        if (isset($response['code']) && $response['code'] == 10000) {
+            $digitalHuman->task_ids = json_encode($task_ids);
+            $digitalHuman->save();
+
+            $data  = [
+                'user_id'        => $user_id,
+                'task_id'        => $task_id,
+                'pic'            => $params['pic'] ?? '',
+                'name'           => $name,
+                'anchor_url'     => $params['anchor_url'] ?? '',
+                'authorized_pic' => $params['authorized_pic'] ?? '',
+                'authorized_url' => $params['authorized_url'] ?? '',
+                'create_time'    => time(),
+                'dh_id'          => $dh_id,
+            ];
+            $model = new ShanjianAnchor();
+            $model->save($data);
+            $data['id']       = $model->id;
+            self::$returnData = $data;
+            return true;
+        } else {
+            $msg = $response['message'] ?? '检验失败';
+            Log::channel('shanjian')->write('定时任务闪剪形象创建失败，' . $msg);
+            $task_ids['shanjian']['status'] = 2;
+            $digitalHuman->task_ids         = json_encode($task_ids);
+            $digitalHuman->remark           = $msg;
+            $digitalHuman->status           = 3;
+            $digitalHuman->save();
+            self::setError($msg);
             return false;
         }
     }

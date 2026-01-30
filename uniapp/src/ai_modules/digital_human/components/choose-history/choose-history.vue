@@ -8,8 +8,8 @@
                         class="h-full"
                         ref="pagingRef"
                         v-model="dataLists"
-                        :auto="false"
                         :fixed="false"
+                        :auto="false"
                         :safe-area-inset-bottom="true"
                         @query="queryList">
                         <view class="grid grid-cols-3 gap-2 px-[30rpx]">
@@ -61,7 +61,10 @@
 <script setup lang="ts">
 import { getVideoCreationRecord } from "@/api/app";
 
-const props = defineProps<{ modelValue: boolean; type: number }>();
+const props = withDefaults(defineProps<{ modelValue: boolean; type?: number; limit?: number }>(), {
+    modelValue: false,
+    limit: 9,
+});
 
 const emit = defineEmits<{ (e: "update:modelValue", value: boolean): void; (e: "select", value: any[]): void }>();
 
@@ -95,11 +98,24 @@ const isChoose = (data: any) => {
 };
 
 const handleSelect = (data: any) => {
-    if (isChoose(data)) {
+    const isSelected = isChoose(data);
+
+    if (isSelected) {
         chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
-    } else {
-        chooseLists.value.push(data);
+        return;
     }
+
+    if (props.limit === 1) {
+        chooseLists.value = [data];
+        return;
+    }
+
+    if (chooseLists.value.length >= props.limit) {
+        uni.$u.toast(`最多选择${props.limit}个视频`);
+        return;
+    }
+
+    chooseLists.value.push(data);
 };
 
 const toggleSelect = () => {
@@ -119,13 +135,18 @@ const confirm = () => {
     emit("select", chooseLists.value);
     chooseLists.value = [];
 };
-
-watch(show, async () => {
-    if (show.value) {
-        await nextTick();
-        pagingRef.value?.reload();
+watch(
+    () => props.modelValue,
+    async (newVal) => {
+        if (newVal) {
+            await nextTick();
+            pagingRef.value?.reload();
+        }
+    },
+    {
+        immediate: true,
     }
-});
+);
 </script>
 
 <style scoped></style>

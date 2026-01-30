@@ -129,19 +129,6 @@
 					}
 				},
 				{
-					"path": "pages/creation_record/creation_record",
-					"style": {
-						"navigationBarTitleText": "创建记录",
-						"navigationStyle": "custom",
-						"enablePullDownRefresh": false,
-						"disableScroll": true
-					},
-					"meta": {
-						"share": true,
-						"auth": true
-					}
-				},
-				{
 					"path": "pages/user_balance/user_balance",
 					"style": {
 						"navigationBarTitleText": "变化记录",

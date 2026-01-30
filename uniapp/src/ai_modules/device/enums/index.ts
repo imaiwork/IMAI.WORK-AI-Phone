@@ -37,7 +37,7 @@ export enum CreateTypeEnum {
     CLUE_AUTO = "CLUE_AUTO", // 自动获线索
     CHAT_MANAGE = "CHAT_MANAGE", // 私聊接管
     COMMENT_MARKETING = "COMMENT_MARKETING", // 评论获客
-    DM_MARKETING = "DM_MARKETING", // 私信获客
+    COLLECT_MARKETING = "COLLECT_MARKETING", // 留痕获客
     FRIEND_ADD = "FRIEND_ADD", // 自动加好友
     ACCOUNT_MAINTAIN = "ACCOUNT_MAINTAIN", // 自动养号
     PRIVATE_MESSAGE = "PRIVATE_MESSAGE", // 私信获客

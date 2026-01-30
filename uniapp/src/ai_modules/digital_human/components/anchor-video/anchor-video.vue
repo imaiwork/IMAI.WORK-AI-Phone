@@ -105,8 +105,7 @@ const getStatus = (data: Record<string, any>): number => {
             default: 0,
         },
     };
-
-    return anchorStatusMapping[source_type][status] || anchorStatusMapping[source_type]["default"];
+    return anchorStatusMapping?.[source_type]?.[status] || anchorStatusMapping?.[source_type]?.["default"];
 };
 
 const handlePlay = (url: string) => {

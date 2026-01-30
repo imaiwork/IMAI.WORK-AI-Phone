@@ -2,14 +2,17 @@
 
 namespace app\api\logic\sora;
 
+use app\api\controller\VideoInfoController;
 use app\api\logic\ApiLogic;
 use app\api\logic\service\TokenLogService;
+use app\api\logic\WechatLogic;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\ModelConfig;
 use app\common\model\sora\SoraVideoSetting;
 use app\common\model\sora\SoraVideoTask;
 use app\common\model\user\User;
+use app\common\model\user\UserAuth;
 use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
 use think\facade\Db;
@@ -47,39 +50,40 @@ class SoraVideoTaskLogic extends ApiLogic
                     throw new \Exception('关联的视频设置不存在');
                 }
                 $num = $SoraVideoSetting->video_count - $SoraVideoSetting->success_num - $SoraVideoSetting->error_num;
-                if ($data['model_version'] == 2){
+                if ($data['model_version'] == 2) {
                     $typeID = AccountLogEnum::TOKENS_DEC_SORA_PRO_VIDEO;
-                    $scene = 'sora_pro_video_create';
-                }else{
+                    $scene  = 'sora_pro_video_create';
+                } else {
                     $typeID = AccountLogEnum::TOKENS_DEC_SORA_VIDEO;
-                    $scene = 'sora_video_create';
+                    $scene  = 'sora_video_create';
                 }
 
                 $remark = '一句话生成视频';
                 switch ($data['state']) {
                     case 'error':
-                        if ($num == 1 && $SoraVideoSetting->error_num > 0){
+                        $status = '生成失败';
+                        if ($num == 1 && $SoraVideoSetting->error_num > 0) {
                             $SoraVideoSetting->status = 4;
                         }
                         $task->status = 2;
                         $task->remark = $data['message'] ?? '处理失败';
-                        if (str_contains($task->remark,'containing photorealistic people')){
+                        if (str_contains($task->remark, 'containing photorealistic people')) {
                             $task->remark = '目前不支持上传包含真人的图像';
                         }
-                        if (str_contains($task->remark,'system error')){
+                        if (str_contains($task->remark, 'system error')) {
                             $task->remark = '系统错误生成失败，请重新生成';
                         }
-                        if (str_contains($task->remark,'third-party') || str_contains($task->remark,'content policies')){
+                        if (str_contains($task->remark, 'third-party') || str_contains($task->remark, 'content policies')) {
                             $task->remark = '此内容违反第三方肖像权、内容相似性的防护规定，请重新生成';
                         }
-                        if (str_contains($task->remark,'please try again') || str_contains($task->remark,'task timeout') || str_contains($task->remark,'You already have')){
+                        if (str_contains($task->remark, 'please try again') || str_contains($task->remark, 'task timeout') || str_contains($task->remark, 'You already have')) {
                             $task->remark = '任务超时，请稍后再试';
                         }
                         $SoraVideoSetting->error_num += 1;
                         $SoraVideoSetting->save();
                         $userId = $task->user_id;
                         $taskId = $task->task_id;
-                        $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
+                        $count  = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
                         //查询是否已返还
                         if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
                             $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
@@ -87,30 +91,61 @@ class SoraVideoTaskLogic extends ApiLogic
                         }
                         break;
                     case 'succeeded':
+                        $status = '生成成功';
                         $task->status = 3;
                         if (isset($data['data']['videos'])) {
                             $video_result_url = FileService::downloadFileBySource($data['data']['videos'][0]['url'], 'video');
-                            $old = '没有';
-                            $urldata = [
+                            $old              = '没有';
+                            $urldata          = [
                                 'old' => $old,
                                 'new' => $video_result_url
                             ];
                             Log::channel('sora')->write('获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                             $task->video_result_url = $video_result_url;
                         }
-                        if ($num == 1 && $SoraVideoSetting->error_num > 0){
+                        if ($num == 1 && $SoraVideoSetting->error_num > 0) {
                             $SoraVideoSetting->status = 4;
                         }
-                        if ($num == 1 && $SoraVideoSetting->error_num < 1){
+                        if ($num == 1 && $SoraVideoSetting->error_num < 1) {
                             $SoraVideoSetting->status = 3;
                         }
                         $SoraVideoSetting->success_num += 1;
                         $SoraVideoSetting->save();
-                        $unit = ModelConfig::where('scene', $scene)->value('score', 0);
-                        $points = $unit;
+                        $unit              = ModelConfig::where('scene', $scene)->value('score', 0);
+                        $points            = $unit;
                         $task->video_token = $points;
+                        //生成缩略图
+                        if ($task->width == '16') {
+                            $width  = 960;
+                            $height = 540;
+                        } else {
+                            $width  = 540;
+                            $height = 960;
+                        }
+                        $videos          = [
+                            'video_url' => FileService::getFileUrl($video_result_url),
+                            'time'      => 1.0,
+                            'options'   => [
+                                'width'   => $width,
+                                'height'  => $height,
+                                'quality' => 2
+                            ]
+                        ];
+                        $thumbnailResult = (new VideoInfoController())->videoThumbnail($videos);
+                        if ($thumbnailResult['result']) {
+                            $task->pic = $thumbnailResult['url'];
+                        }
                         break;
                 }
+
+                $mnpMessage = [
+                    'openid'   => UserAuth::where('user_id', $task->user_id)->order('id', 'desc')->value('openid'),
+                    'scene_id' => 402,
+                    'name'     => $task->name,
+                    'time'     => date('Y-m-d H:i:s', time()),
+                    'status'   => $status
+                ];
+                WechatLogic::sendMnpMessage($mnpMessage);
             }
 
             $task->update_time = time();
@@ -173,12 +208,13 @@ class SoraVideoTaskLogic extends ApiLogic
         return true;
     }
 
-    public static function status($data){
+    public static function status($data)
+    {
         $taskId = $data['task_id'] ?? '';
-        if (!$taskId){
+        if (!$taskId) {
             message('参数错误');
         }
-        $scene   = self::SORA_VIDEO_STATUS;
+        $scene = self::SORA_VIDEO_STATUS;
         if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
             self::$returnData = $result;
         } else {
@@ -188,33 +224,34 @@ class SoraVideoTaskLogic extends ApiLogic
         return true;
     }
 
-    public static function checkStatus(){
+    public static function checkStatus()
+    {
 
-        $tasks = SoraVideoTask::where('status', '=',0)->where('create_time', '<', time() - 2400)->select()->toArray();
+        $tasks = SoraVideoTask::where('status', '=', 0)->where('create_time', '<', time() - 2400)->select()->toArray();
         Log::channel('sora')->write('超过40分钟无回调的任务' . json_encode($tasks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        $result = [];
+        $result   = [];
         $response = \app\common\service\ToolsService::sora();
-        foreach ($tasks as $task){
-            if (!empty($task['extra']['video_id'])){
+        foreach ($tasks as $task) {
+            if (!empty($task['extra']['video_id'])) {
                 $result = $response->status(['task_id' => $task['extra']['video_id']]);
             }
             Log::channel('sora')->write('超过40分钟无回调的任务处理' . json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             // 超过40分钟无回调的任务处理
             if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
-                if (isset($result['data']['videos'])){
+                if (isset($result['data']['videos'])) {
                     $video_result_url = FileService::downloadFileBySource($result['data']['videos'][0]['url'], 'video');
-                    $urldata = [
+                    $urldata          = [
                         'old' => '没有',
                         'new' => $video_result_url
                     ];
                     Log::channel('sora')->write('定时任务查询获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-                    $scene = $task['model_version'] == 2? self::SORA_PRO_VIDEO_CREATE : self::SORA_VIDEO_CREATE;
-                    $unit = ModelConfig::where('scene', '=', $scene )->value('score', 0);
+                    $scene  = $task['model_version'] == 2 ? self::SORA_PRO_VIDEO_CREATE : self::SORA_VIDEO_CREATE;
+                    $unit   = ModelConfig::where('scene', '=', $scene)->value('score', 0);
                     $update = [
                         'video_result_url' => $video_result_url,
-                        'video_token' => (int)$unit,
-                        'status' => 3,
-                        'update_time' => time()
+                        'video_token'      => (int)$unit,
+                        'status'           => 3,
+                        'update_time'      => time()
                     ];
                     SoraVideoTask::where('id', $task['id'])->update($update);
                     $setting = SoraVideoSetting::where('id', $task['video_setting_id'])->findOrEmpty();
@@ -222,17 +259,17 @@ class SoraVideoTaskLogic extends ApiLogic
                         $setting->inc('success_num')->save();
                     }
                     continue;
-                }else{
+                } else {
                     $errorUpdate = [
-                        'status' => 2,
-                        'remark' => $result['data']['message'] ?? '请求超时',
+                        'status'      => 2,
+                        'remark'      => $result['data']['message'] ?? '请求超时',
                         'update_time' => time()
                     ];
                 }
-            }else{
+            } else {
                 $errorUpdate = [
-                    'status' => 2,
-                    'remark' => '请求超时',
+                    'status'      => 2,
+                    'remark'      => '请求超时',
                     'update_time' => time()
                 ];
             }
@@ -240,9 +277,9 @@ class SoraVideoTaskLogic extends ApiLogic
             //失败返还算力
             $userId = $task['user_id'];
             $taskId = $task['task_id'];
-            if ($task['model_version'] == 2){
+            if ($task['model_version'] == 2) {
                 $typeID = AccountLogEnum::TOKENS_DEC_SORA_PRO_VIDEO;
-            }else{
+            } else {
                 $typeID = AccountLogEnum::TOKENS_DEC_SORA_VIDEO;
             }
             $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
@@ -261,7 +298,7 @@ class SoraVideoTaskLogic extends ApiLogic
 
         return true;
     }
-    
+
 
     private static function requestUrl(array $request, string $scene, int $userId, string $taskId)
     {
@@ -271,8 +308,8 @@ class SoraVideoTaskLogic extends ApiLogic
             [$tokenScene, $tokenCode] = match ($scene) {
                 self::COPYWRITING_CREATE => ['sora_copywriting_create', AccountLogEnum::TOKENS_DEC_SORA_COPYWRITING],
                 self::SORA_VIDEO_CREATE  => ['sora_video_create', AccountLogEnum::TOKENS_DEC_SORA_VIDEO],
-            };                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        //计费
-            $unit               = TokenLogService::checkToken($userId, $tokenScene);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    // 添加辅助参数
+            };                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          //计费
+            $unit               = TokenLogService::checkToken($userId, $tokenScene);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    // 添加辅助参数
             $request['task_id'] = $taskId;
             $request['user_id'] = $userId;
             $request['now']     = time();
@@ -290,7 +327,7 @@ class SoraVideoTaskLogic extends ApiLogic
             //成功响应，需要扣费
             if (isset($response['code']) && $response['code'] == 10000) {
                 $duration = $response['data']['data']['duration'] ?? 0;
-                $points   = $unit*$request['duration'];
+                $points   = $unit * $request['duration'];
                 if ($points > 0) {
                     $extra = [];
                     switch ($scene) {
@@ -327,9 +364,9 @@ class SoraVideoTaskLogic extends ApiLogic
 
             if (is_string($id)) {
                 $task = SoraVideoTask::where('id', $id)
-                                         ->where('user_id', self::$uid)
-                                         ->whereIn('status', [2, 3]) // 只能删除失败或成功的任务
-                                         ->find();
+                                     ->where('user_id', self::$uid)
+                                     ->whereIn('status', [2, 3]) // 只能删除失败或成功的任务
+                                     ->find();
 
                 if (!$task) {
                     self::setError('视频任务不存在或状态不允许删除');
@@ -338,8 +375,8 @@ class SoraVideoTaskLogic extends ApiLogic
                 SoraVideoTask::where('id', $id)->select()->delete();
             } else {
                 $task = SoraVideoTask::whereIn('id', $id)->where(['user_id' => self::$uid])
-                                         ->whereIn('status', [2, 3]) // 只能删除失败或成功的任务
-                                         ->column('id');
+                                     ->whereIn('status', [2, 3]) // 只能删除失败或成功的任务
+                                     ->column('id');
                 if (!$task) {
                     self::setError('视频任务不存在或状态不允许删除');
                     return false;
@@ -363,8 +400,8 @@ class SoraVideoTaskLogic extends ApiLogic
     {
         try {
             $task = SoraVideoTask::where('id', $id)
-                                     ->where('user_id', self::$uid)
-                                     ->find();
+                                 ->where('user_id', self::$uid)
+                                 ->find();
 
             if (!$task) {
                 self::setError('视频任务不存在');

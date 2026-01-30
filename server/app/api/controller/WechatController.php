@@ -45,4 +45,5 @@ class WechatController extends BaseApiController
         }
         return $this->data(WechatLogic::getReturnData());
     }
+
 }

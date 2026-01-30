@@ -8,8 +8,8 @@ use app\common\enum\FileEnum;
 use app\common\model\audio\Audio;
 use app\common\model\file\File;
 use app\common\service\ConfigService;
-use app\common\service\storage\Driver as StorageDriver;
 use app\common\service\FileService;
+use app\common\service\storage\Driver as StorageDriver;
 use Exception;
 use think\facade\Log;
 
@@ -111,15 +111,19 @@ class UploadService
                 ];
             if ($ffmpeg == 1){
                     $standardizedPath = public_path() . $saveDir . '/' . str_replace("\\", "/", $fileName);
-
+                $default = ConfigService::get('storage', 'default', 'local');
                 try {
                     $url = self::standardizeMedia($standardizedPath, null);
                 } catch (Exception $e) {
                     Log::channel('ffmpeg')->write('图片标准化失败'. $e->getMessage());
-                    $url = self::uploadToOSS($standardizedPath, $saveDir);
+                    if ($default != 'local') {
+                        $url = self::uploadToOSS($standardizedPath, $saveDir);
+                    }
                 }
-                $return['url'] = $url;
-                $return['uri'] = FileService::getFileUrl($url);
+                if ($default != 'local') {
+                    $return['url'] = $url;
+                    $return['uri'] = FileService::getFileUrl($url);
+                }
             }
            
             return $return;
@@ -265,15 +269,19 @@ class UploadService
             
             if ($ffmpeg == 1) {
                 $standardizedPath = public_path() . $saveDir . '/' . str_replace("\\", "/", $fileName);
-
+                $default = ConfigService::get('storage', 'default', 'local');
                 try {
                     $url = self::standardizeMedia($standardizedPath, null);
                 } catch (Exception $e) {
                     Log::channel('ffmpeg')->write('视频标准化失败'. $e->getMessage());
-                    $url = self::uploadToOSS($standardizedPath, $saveDir);
+                    if ($default != 'local') {
+                        $url = self::uploadToOSS($standardizedPath, $saveDir);
+                    }
                 }
-                $return['url'] = $url;
-                $return['uri'] = FileService::getFileUrl($url);
+                if ($default != 'local') {
+                    $return['url'] = $url;
+                    $return['uri'] = FileService::getFileUrl($url);
+                }
             }
 
             return $return;
@@ -434,16 +442,23 @@ class UploadService
             ];
             
             if ($ffmpeg == 1) {
+                $default = ConfigService::get('storage', 'default', 'local');
                 $standardizedPath = public_path() . $saveDir . '/' . str_replace("\\", "/", $fileName);
 
                 try {
                     $url = self::standardizeMedia($standardizedPath, null);
                 } catch (Exception $e) {
                     Log::channel('ffmpeg')->write('文件标准化失败'. $e->getMessage());
-                    $url = self::uploadToOSS($standardizedPath, $saveDir);
+                    if ($default != 'local') {
+                        $url = self::uploadToOSS($standardizedPath, $saveDir);
+
+                    }
                 }
-                $return['url'] = $url;
-                $return['uri'] = FileService::getFileUrl($url);
+                if ($default != 'local'){
+                    $return['url'] = $url;
+                    $return['uri'] = FileService::getFileUrl($url);
+                }
+
             }
 
             return $return;

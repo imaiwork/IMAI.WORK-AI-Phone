@@ -50,6 +50,11 @@ class CommentToMsgHandler extends BaseMessageHandler
     private function recordMsg(array $content)
     {
         try {
+            if((int)$content['task_id'] == 0){
+                return [
+                    'isProceed' => 1, //是否处理 1是 0 否
+                ];
+            }
 
             $task = SvLeadScrapingSettingAccount::where('id', $content['task_id'])
                 ->where('device_code', $this->payload['deviceId'])
@@ -57,7 +62,7 @@ class CommentToMsgHandler extends BaseMessageHandler
                 ->where('account_type', $this->appType)
                 ->findOrEmpty();
             if ($task->isEmpty()) {
-                throw new \Exception($this->platform[$this->appType] . '截流获客评论区私信任务不存在');
+                throw new \Exception($this->platform[$this->appType] . '截流获客评论区私信任务不存在: ' . \think\facade\Db::getLastSql());
             }
 
             $setting = SvLeadScrapingSetting::where('id', $task->scraping_id)->findOrEmpty();
@@ -101,6 +106,8 @@ class CommentToMsgHandler extends BaseMessageHandler
                 'task_id'             => $content['task_id'],
                 'content'             => $content['content'],
                 'exec_time'           => time(),
+                'address'             => $content['address'] ?? '',
+                'pusher_timer'         => $content['pusherTimer'] ?? 0,
             ];
             SvLeadScrapingRecord::create($insert);
             $autoType = SvDevice::where('device_code', $this->payload['deviceId'])->value('auto_type') ?? 0;

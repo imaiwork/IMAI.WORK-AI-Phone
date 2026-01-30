@@ -28,14 +28,14 @@ class ConfigLogic
         $hdList = ConfigService::get('hd', 'list', []);
         $default = ConfigService::get('storage', 'default', 'local');
         $storage = ConfigService::get('storage', $default);
-        $ossDomain = $storage ?  $storage['domain'].'/' : (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://'.$_SERVER['HTTP_HOST'] : 'http://'.$_SERVER['HTTP_HOST']).'/';
+        $ossDomain = $storage ?  $storage['domain'] . '/' : (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://' . $_SERVER['HTTP_HOST'] : 'http://' . $_SERVER['HTTP_HOST']) . '/';
         $chatModels = ConfigService::get('chat', 'ai_model', []);
-        foreach ($chatModels['channel'] as $key=>$value){
+        foreach ($chatModels['channel'] as $key => $value) {
             $chatModels['channel'][$key]['logo'] = isset($value['logo']) ? FileService::getFileUrl($value['logo']) : '';
         }
         //视频案例
         $videoCases = ConfigService::get('digital_human', 'video_case', []);
-        foreach ($videoCases as $key=> $videoCase){
+        foreach ($videoCases as $key => $videoCase) {
             $videoCases[$key]['image'] = FileService::getFileUrl($videoCase['image']);
             $videoCases[$key]['video_case_url'] = FileService::getFileUrl($videoCase['video_case_url']);
         }
@@ -44,9 +44,9 @@ class ConfigLogic
         //配置按模块分类，配置放到对应的模块里面，不要单独写，或者写到别的模块里面
         return [
             // 文件域名
-//            'oss_domain' => FileService::getFileUrl(),
+            //            'oss_domain' => FileService::getFileUrl(),
             'oss_domain' => $ossDomain,
-            'is_robot_show' => ConfigService::get('assistants', 'is_robot_show',0),
+            'is_robot_show' => ConfigService::get('assistants', 'is_robot_show', 0),
             // 网站名称
             'web_name' => ConfigService::get('website', 'name'),
             // 网站图标
@@ -95,7 +95,7 @@ class ConfigLogic
             ],
             'app_config' => ConfigService::get('app_config', 'redbook', []),
             'ai_live' =>  ConfigService::get('ai_live', 'config', []),
-            'by_name'=>  self::getByName(),
+            'by_name' =>  self::getByName(),
             'ai_model' =>  $chatModels,
             'wechat_remarks' => ConfigService::get('add_remark', 'wechat', []),
         ];
@@ -163,7 +163,7 @@ class ConfigLogic
         //视频案例配置
         if ($type == 'digital_human' && $name == 'video_case') {
             if (!empty($params)) {
-                foreach ($params as $key => $value){
+                foreach ($params as $key => $value) {
                     $params[$key]['name'] = $value['name'];
                     $params[$key]['image'] = FileService::setFileUrl($value['image']);
                     $params[$key]['video_case_url'] = FileService::setFileUrl($value['video_case_url']);
@@ -223,6 +223,29 @@ class ConfigLogic
 
         $castLists = $response['data']['cast_list'] ?? [];
 
+        $result = [];
+        foreach ($castLists as $key => $value) {
+
+            $info = ModelConfig::where('scene', $value['code'])->where('scene', 'not in', [
+                'human_avatar_pro',
+                'human_voice_pro',
+                'human_audio_pro',
+                'human_video_pro',
+                'knowledge_chat'
+            ])->field('*')->findOrEmpty();
+            if ($info->isEmpty()) {
+                unset($castLists[$key]);
+                continue;
+            }
+            $info->cast_price = $value['cast_price'];
+            $info->cast_unit  = $value['cast_unit'];
+            $info->description = $value['description'];
+            $result[$key] = $info->toArray();
+        }
+
+        array_multisort(array_column($result, 'code'), SORT_ASC, $result);
+        return array_values($result);
+
         return ModelConfig::select()
             ->each(function ($item) use ($castLists) {
 
@@ -232,7 +255,7 @@ class ConfigLogic
 
                         $item['cast_price'] = $value['cast_price'];
                         $item['cast_unit']  = $value['cast_unit'];
-                        $item['description']= $value['description'];
+                        $item['description'] = $value['description'];
                     }
                 }
             })
@@ -374,9 +397,8 @@ class ConfigLogic
 
     public static function getByName()
     {
-           $response =  \app\common\service\ToolsService::Auth()->checkby();;
+        $response =  \app\common\service\ToolsService::Auth()->checkby();;
 
-          return  $response['byname'] ?? '';
-     }
-
+        return  $response['byname'] ?? '';
+    }
 }

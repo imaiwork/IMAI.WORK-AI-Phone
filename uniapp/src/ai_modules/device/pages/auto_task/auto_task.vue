@@ -502,7 +502,7 @@ const toTaskConfig = (item: any) => {
     }
     const urls: any = {
         [TaskKeyEnum.CLUES_SETTING]: "/ai_modules/device/pages/setting_clue/setting_clue",
-        [TaskKeyEnum.AUTO_ACCOUNT]: "/ai_modules/device/pages/setting_auto_account/setting_auto_account",
+        // [TaskKeyEnum.AUTO_ACCOUNT]: "/ai_modules/device/pages/setting_auto_account/setting_auto_account",
         [TaskKeyEnum.PUBLISH_SETTING]: "/ai_modules/device/pages/setting_publish/setting_publish",
         [TaskKeyEnum.TAKEOVER_SETTING]: "/ai_modules/device/pages/setting_private_take/setting_private_take",
         [TaskKeyEnum.CIRCLE_INTERACTION]: "/ai_modules/device/pages/setting_circle/setting_circle",
@@ -516,6 +516,7 @@ const toTaskConfig = (item: any) => {
     if (key === TaskKeyEnum.TOUCH_SETTING) {
         params.account_type = item.platform[0].type;
     }
+
     if (urls[key]) {
         uni.$u.route({
             url: urls[key],

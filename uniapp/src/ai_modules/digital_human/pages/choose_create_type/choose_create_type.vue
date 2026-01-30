@@ -74,7 +74,7 @@ const typeList = [
     {
         key: "dh",
         title: "数字人纯口播视频",
-        desc: "输出无任何标题字幕包装的数字人口播视频，适合专业剪辑大神二次创作",
+        desc: "可输出带有任何标题字幕包装的数字人口播视频",
         is_dh: true,
         path: "/ai_modules/digital_human/pages/szr_create/szr_create",
         videoUrl: config.baseUrl + "static/videos/dh/dh1.mp4",

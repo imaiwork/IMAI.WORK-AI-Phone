@@ -116,7 +116,7 @@
                                     :key="key"
                                     class="bg-white rounded-[24px] border border-br overflow-hidden transition-all hover:border-primary/30">
                                     <div
-                                        class="flex items-center justify-between px-6 py-4 bg-slate-50/50 border-b border-[#F1F5F9]">
+                                        class="flex items-center justify-between px-6 py-4 bg-[#f8fafc]/50 border-b border-[#F1F5F9]">
                                         <div class="flex items-center gap-3">
                                             <span class="text-[14px] font-[900] text-[#1E293B]">{{
                                                 getOutputParams[key]?.name || key

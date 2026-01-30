@@ -218,7 +218,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
      */
     public static function notify(array $data): bool
     {
-        $setPublish = false;
+        $notice = $setPublish = false;
         if (!isset($data['task_id']) || empty($data['task_id'])) {
             self::setError('缺少任务ID');
             return false;
@@ -273,6 +273,8 @@ class ShanjianVideoTaskLogic extends ApiLogic
                 $remark = $remarkArray[$task->shanjian_type] ?? '数字人口播混剪视频';
                 switch ($data['status']) {
                     case 'failed':
+                        $notice = true;
+                        $statusmsg = '合成失败';
                         $setPublish = self::updateVideoSettingStatus($task->video_setting_id, false);
                         $task->status = 2;
                         $task->remark = $data['errorMessage'] ?? '处理失败';
@@ -288,6 +290,8 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         }
                         break;
                     case 'succeed':
+                        $notice = true;
+                        $statusmsg = '合成成功';
                         $task->status = 3;
                         if (isset($data['result']['videoUrl'])) {
                             $video_result_url = FileService::downloadFileBySource($data['result']['videoUrl'], 'video');
@@ -388,7 +392,13 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
             $task->update_time = time();
             $task->save();
-
+            if ($notice){
+                ApiLogic::sendNotice([
+                    'userId' => $task->user_id,
+                    'content' => $task->name,
+                    'status' => $statusmsg
+                ], 'video');
+            }
             Db::commit();
 
             if ($setPublish){

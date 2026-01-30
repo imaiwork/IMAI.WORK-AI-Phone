@@ -21,6 +21,7 @@ class CircleLogic extends WechatBaseLogic
     public static function check(array $params)
     {
         try {
+            self::checkAutoDevice($params);
             $wechatIds = array_unique($params['wechat_ids'] ?? []);
             $times = \app\api\logic\device\TaskLogic::getTimes([$params['time_config']], $params['date'], 1);
             foreach ($wechatIds as $wechatId) {
@@ -53,6 +54,7 @@ class CircleLogic extends WechatBaseLogic
     {
         Db::startTrans();
         try {
+            self::checkAutoDevice($params);
             $params['status'] = (empty($params['wechat_ids']) || empty($params['time_config'])) ? 0 : 1;
             $params['user_id'] = self::$uid;
             $params['task_name'] = $params['task_name'] ?? '朋友圈发布任务' . date('YmdHis');

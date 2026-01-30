@@ -157,7 +157,7 @@
                 </template>
             </ElTable>
         </div>
-        <div class="h-[72px] px-8 flex items-center justify-between">
+        <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
             <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 个分发任务已就绪</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>

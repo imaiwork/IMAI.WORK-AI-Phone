@@ -140,3 +140,13 @@ export const addShanjianPerson = (params: Record<string, any>) => {
 export const getShanjianAnchorList = (params: Record<string, any>) => {
     return $request.get({ url: "/shanjian.shanjianAnchor/lists", params });
 };
+
+// 新闻体文案生成
+export const generateNewsBodyPrompt = (params: Record<string, any>) => {
+    return $request.post({ url: "/shanjian.tools/getNewsMixcutTittle", params });
+};
+
+// 闪剪口播文案生成
+export const generateShanjianPrompt = (params: Record<string, any>) => {
+    return $request.post({ url: "/shanjian.shanjianVideoTask/copywriting", params }, { ignoreCancel: true });
+};

@@ -107,13 +107,13 @@ const contentPost = async () => {
         uni.$u.toast("算力不足，请充值！");
         return;
     }
-
+    const chatContent = reactive({
+        content: "",
+        status: "pending",
+    });
     try {
         isGenerating.value = true;
-        const chatContent = reactive({
-            content: "",
-            status: "pending",
-        });
+
         chatContentList.value.unshift(chatContent);
         // 这里要根据生成数量来请求接口, 要并发请求
         const results = await generateSoraPrompt({
@@ -122,8 +122,10 @@ const contentPost = async () => {
         chatContent.content = results.message;
         chatContent.status = "success";
         isGenerating.value = false;
+        userStore.getUser();
     } catch (err: any) {
         isGenerating.value = false;
+        chatContentList.value = [];
         uni.showToast({
             title: err || "生成失败，请重试",
             icon: "none",

@@ -9,7 +9,7 @@
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">智能文案库</div>
                         <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
-                            Total: {{ pager.lists.length }} Scripts
+                            总文案: {{ pager.count }} 个
                         </div>
                     </div>
                 </div>

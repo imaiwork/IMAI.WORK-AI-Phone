@@ -111,3 +111,18 @@ export function updateVideoCreationRecord(data: any) {
 export function videoTranscoding(url: string) {
     return request.post({ url: "/file/videoTranscoding", data: { uri: url } });
 }
+
+// 获取视频信息
+export function getVideoInfoByUrl(data: any) {
+    return request.post({ url: "/videoInfo/getInfo", data });
+}
+
+// 批量获取视频信息
+export function batchGetVideoInfoByUrl(data: any) {
+    return request.post({ url: "/videoInfo/batchGetInfo", data });
+}
+
+// 获取小程序通知模板列表
+export function getMnpNoticeTemplateList(data: any) {
+    return request.get({ url: "/notice.notice/settingMnpLists", data });
+}

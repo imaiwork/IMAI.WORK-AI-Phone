@@ -30,7 +30,7 @@
             </view>
         </view>
         <view class="grow min-h-0 mt-[24rpx]">
-            <view v-if="step === 1" class="flex flex-col h-full">
+            <view v-show="step === 1" class="flex flex-col h-full">
                 <view class="px-4">
                     <view
                         class="flex items-center justify-center gap-x-2 bg-primary h-[100rpx] rounded-[10rpx]"
@@ -63,7 +63,7 @@
                     </view>
                 </view>
             </view>
-            <view v-if="step === 2" class="h-full">
+            <view v-show="step === 2" class="h-full">
                 <scroll-view class="h-full" scroll-y>
                     <view class="px-4 pb-[100rpx]">
                         <view>
@@ -172,7 +172,7 @@
                     </view>
                 </scroll-view>
             </view>
-            <scroll-view v-if="step === 3" scroll-y class="h-full">
+            <scroll-view v-show="step === 3" scroll-y class="h-full">
                 <view class="px-4 pb-[100rpx]">
                     <base-setting
                         v-model="formData"
@@ -251,6 +251,8 @@
 </template>
 
 <script setup lang="ts">
+import config from "@/config";
+import WechatOA from "@/utils/wechat";
 import { createManualAddWechat } from "@/api/device";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { chooseFile } from "@/components/file-upload/choose-file";
@@ -258,13 +260,15 @@ import { uploadFile } from "@/api/app";
 import { useAppStore } from "@/stores/app";
 import { getWeChatLists } from "@/api/person_wechat";
 import { useDictOptions } from "@/hooks/useDictOptions";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
+import { useCopy } from "@/hooks/useCopy";
 import ClueCard from "@/ai_modules/device/components/clue-card/clue-card.vue";
 import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
-import { useEventBusManager } from "@/hooks/useEventBusManager";
-
 const { on } = useEventBusManager();
 
 const appStore = useAppStore();
+
+const { copy } = useCopy();
 
 // 步骤
 const steps = ref([
@@ -436,9 +440,11 @@ const handleTimeInterval = (item: number, index: number) => {
 
 const handleAddTask = () => {
     uni.showActionSheet({
-        itemList: ["从聊天记录中选择文件（需要符合模板）", "从获客任务中选择线索"],
+        itemList: ["复制模版链接", "从聊天记录中选择文件（需要符合模板）", "从获客任务中选择线索"],
         success: async (res) => {
             if (res.tapIndex === 0) {
+                copy(config.baseUrl + "static/file/template/wechatidcsv.csv");
+            } else if (res.tapIndex === 1) {
                 try {
                     uploadMaterialList.value = [];
                     const { tempFiles } = await chooseFile({
@@ -480,7 +486,7 @@ const handleAddTask = () => {
                     uploadMaterialList.value = [];
                     showUploadProgress.value = false;
                 }
-            } else {
+            } else if (res.tapIndex === 2) {
                 uni.navigateTo({
                     url: "/ai_modules/device/pages/wechat_clue/wechat_clue",
                 });
@@ -560,14 +566,29 @@ const handleCreateTask = async () => {
         });
         uni.hideLoading();
         showCreateTaskSuccessDialog.value = true;
+        WechatOA.notify();
     } catch (error: any) {
-        taskErrorMsg.value = error;
         uni.hideLoading();
-        uni.showToast({
-            title: error,
-            icon: "none",
-            duration: 3000,
-        });
+        if (error.indexOf("24小时自动执行任务") > -1) {
+            uni.showModal({
+                title: "提示",
+                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
+                success: (res) => {
+                    if (res.confirm) {
+                        uni.$u.route({
+                            url: "/pages/phone/phone",
+                        });
+                    }
+                },
+            });
+        } else {
+            taskErrorMsg.value = error;
+            uni.showToast({
+                title: error,
+                icon: "none",
+                duration: 3000,
+            });
+        }
     }
 };
 

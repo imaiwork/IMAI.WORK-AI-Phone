@@ -16,7 +16,6 @@
         "pages/robot_chat/robot_chat",
         "pages/coze_chat/coze_chat",
         "pages/recharge/recharge",
-        "pages/creation_record/creation_record",
         "pages/user_balance/user_balance",
         "pages/recharge_record/recharge_record",
         "pages/tokens_rule/tokens_rule",

@@ -18,7 +18,7 @@
                 <div
                     class="origin-center cursor-pointer w-full h-full flex items-center justify-center"
                     :class="[horizontal ? 'rotate-0' : 'rotate-90']">
-                    <Icon name="el-icon-MoreFilled" :color="getTheme.showIconColor"></Icon>
+                    <Icon name="el-icon-MoreFilled"></Icon>
                 </div>
             </template>
             <div class="flex flex-col gap-2 text-white">

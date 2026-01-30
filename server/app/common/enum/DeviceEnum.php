@@ -131,6 +131,19 @@ class DeviceEnum
     }
 
 
+    public static function getTaskStatusDesc($type)
+    {
+        $desc = [
+            self::TASK_STATUS_WAIT => '待执行',
+            self::TASK_STATUS_RUNNING => '执行中',
+            self::TASK_STATUS_FINISHED => '已完成',
+            self::TASK_STATUS_FAILED => '失败',
+            self::TASK_STATUS_INTERRUPTED => '中断',
+        ];
+        return $desc[$type] ?? '';
+    }
+
+
     public static function getTaskTypeDesc($type, $flag = false)
     {
         $desc = [

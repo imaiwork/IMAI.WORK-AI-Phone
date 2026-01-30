@@ -222,8 +222,10 @@ const contentPost = async (userInput: string) => {
             topic: item.topic,
             status: "success",
         }));
+        userStore.getUser();
     } catch (err: any) {
         isGenerating.value = false;
+        chatContentList.value = [];
         uni.showToast({
             title: err || "生成失败，请重试",
             icon: "none",

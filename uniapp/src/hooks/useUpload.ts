@@ -12,6 +12,7 @@ const defaultOptions = {
     fileAccept: ["jpg", "png", "jpeg", "mp4", "mov"],
     fileSize: 200,
     sizeType: ["original", "compressed"],
+    sourceType: ["album"],
 };
 export default function useUpload(options: {
     isTranscode?: boolean;
@@ -25,6 +26,7 @@ export default function useUpload(options: {
     fileAccept?: string[];
     fileSize?: number;
     sizeType?: ("original" | "compressed")[];
+    sourceType?: ("album" | "camera")[];
     onSuccess?: (materials: any[]) => void;
 }) {
     const {
@@ -39,6 +41,7 @@ export default function useUpload(options: {
         fileAccept = defaultOptions.fileAccept,
         fileSize = defaultOptions.fileSize,
         sizeType = defaultOptions.sizeType,
+        sourceType = defaultOptions.sourceType,
         onSuccess,
     } = options;
     const uploadMaterialList = ref<any[]>([]);
@@ -54,7 +57,7 @@ export default function useUpload(options: {
             const { tempFiles } = await chooseFile({
                 type: fileType,
                 count,
-                sourceType: ["album"],
+                sourceType,
                 extension: isImage ? imageAccept : isVideo ? videoAccept : fileAccept,
                 sizeType,
             });
@@ -130,19 +133,24 @@ export default function useUpload(options: {
                           formData: { ffmpeg: isTranscode ? 1 : 0 },
                       })
                     : {};
-
+                if (isTranscode && (isVideo || isImage)) {
+                    uni.showLoading({
+                        title: "素材处理中",
+                        mask: true,
+                    });
+                }
                 const fileRes: any = await uploadFile(
                     isAll ? "file" : fileType,
-                    { filePath: item.tempFilePath },
+                    { filePath: item.tempFilePath, formData: { ffmpeg: isTranscode && (isVideo || isImage) ? 1 : 0 } },
                     (progress) => progressCallback(progress, item)
                 );
-                if (isTranscode && fileRes.uri) {
-                    const isVideoUrl =
-                        fileRes.uri.includes(".mp4") || fileRes.uri.includes(".mov") || fileRes.uri.includes(".m4a");
-                    if (isVideo || isVideoUrl) {
-                        videoTranscoding(fileRes.uri);
-                    }
-                }
+                // if (isTranscode && fileRes.uri) {
+                //     const isVideoUrl =
+                //         fileRes.uri.includes(".mp4") || fileRes.uri.includes(".mov") || fileRes.uri.includes(".m4a");
+                //     if (isVideo || isVideoUrl) {
+                //         videoTranscoding(fileRes.uri);
+                //     }
+                // }
                 uploadedFilesData.push({
                     name: item.name,
                     url: fileRes.uri,
@@ -157,10 +165,16 @@ export default function useUpload(options: {
             if (uploadMaterialList.value.every((item) => item.progress === 100)) {
                 showUploadProgress.value = false;
                 onSuccess?.(uploadedFilesData);
+                uni.hideLoading();
             }
         } catch (error: any) {
+            uni.hideLoading();
             if (!error?.errMsg?.includes("cancel")) {
-                uni.$u.toast(error?.errMsg || error);
+                uni.showToast({
+                    title: error?.errMsg || error,
+                    icon: "none",
+                    duration: 3000,
+                });
             }
             uploadMaterialList.value = [];
             showUploadProgress.value = false;

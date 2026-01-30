@@ -29,6 +29,7 @@ class NoticeLogic extends BaseLogic
         if (empty($noticeSetting)) {
             return [];
         }
+        $noticeSetting['system_notice']['tips'] = NoticeEnum::getOperationTips(NoticeEnum::SYSTEM, $noticeSetting['scene_id']);
         if (empty($noticeSetting['system_notice'])) {
             $noticeSetting['system_notice'] = [
                 'title' => '',
@@ -36,7 +37,7 @@ class NoticeLogic extends BaseLogic
                 'status' => 0,
             ];
         }
-        $noticeSetting['system_notice']['tips'] = NoticeEnum::getOperationTips(NoticeEnum::SYSTEM, $noticeSetting['scene_id']);
+        $noticeSetting['sms_notice']['tips'] = NoticeEnum::getOperationTips(NoticeEnum::SMS, $noticeSetting['scene_id']);
         if (empty($noticeSetting['sms_notice'])) {
             $noticeSetting['sms_notice'] = [
                 'template_id' => '',
@@ -44,7 +45,7 @@ class NoticeLogic extends BaseLogic
                 'status' => 0,
             ];
         }
-        $noticeSetting['sms_notice']['tips'] = NoticeEnum::getOperationTips(NoticeEnum::SMS, $noticeSetting['scene_id']);
+        $noticeSetting['oa_notice']['tips'] = NoticeEnum::getOperationTips(NoticeEnum::MNP, $noticeSetting['scene_id']);
         if (empty($noticeSetting['oa_notice'])) {
             $noticeSetting['oa_notice'] = [
                 'template_id' => '',
@@ -56,7 +57,7 @@ class NoticeLogic extends BaseLogic
                 'status' => 0,
             ];
         }
-        $noticeSetting['oa_notice']['tips'] = NoticeEnum::getOperationTips(NoticeEnum::MNP, $noticeSetting['scene_id']);
+        $noticeSetting['mnp_notice']['tips'] = NoticeEnum::getOperationTips(NoticeEnum::MNP, $noticeSetting['scene_id']);
         if (empty($noticeSetting['mnp_notice'])) {
             $noticeSetting['mnp_notice'] = [
                 'template_id' => '',
@@ -66,7 +67,6 @@ class NoticeLogic extends BaseLogic
                 'status' => 0,
             ];
         }
-        $noticeSetting['mnp_notice']['tips'] = NoticeEnum::getOperationTips(NoticeEnum::MNP, $noticeSetting['scene_id']);
         $noticeSetting['system_notice']['is_show'] = in_array(NoticeEnum::SYSTEM, explode(',', $noticeSetting['support']));
         $noticeSetting['sms_notice']['is_show'] = in_array(NoticeEnum::SMS, explode(',', $noticeSetting['support']));
         $noticeSetting['oa_notice']['is_show'] = in_array(NoticeEnum::OA, explode(',', $noticeSetting['support']));
@@ -119,7 +119,8 @@ class NoticeLogic extends BaseLogic
             throw new \Exception('通知配置不存在');
         }
 
-        if (!isset($params['template']) || !is_array($params['template']) || count($params['template']) == 0) {
+//        if (!isset($params['template']) || !is_array($params['template']) || count($params['template']) == 0) {
+        if (!isset($params['template'])) {
             throw new \Exception('模板配置不存在或格式错误');
         }
 

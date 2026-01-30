@@ -13,6 +13,7 @@
     "agreement": "../../components/agreement/agreement",
     "create-panel": "../../components/create-panel/create-panel",
     "recorder-control": "../../components/recorder-control/recorder-control",
-    "choose-audio-type": "../../components/choose-audio-type/choose-audio-type"
+    "choose-audio-type": "../../components/choose-audio-type/choose-audio-type",
+    "create-success-pop": "../../components/create-success-pop/create-success-pop"
   }
 }

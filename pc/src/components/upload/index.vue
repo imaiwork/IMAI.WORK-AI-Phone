@@ -26,7 +26,7 @@
             v-if="showProgress && visible"
             ref="progressDialogRef"
             :show-confirm-button="false"
-            :percentage="fileList.map((item) => item.percentage)"
+            :percentage="fileList.map((item) => item)"
             @close="handleClose" />
     </div>
 </template>
@@ -93,7 +93,7 @@ export default defineComponent({
         },
         maxSize: {
             type: Number,
-            default: Infinity, // MB
+            default: 9999, // MB
         },
         minSize: {
             type: Number,
@@ -111,19 +111,19 @@ export default defineComponent({
         // 视频分辨率
         videoMaxWidth: {
             type: Number,
-            default: Infinity,
+            default: 99999,
         },
         videoMinWidth: {
             type: Number,
-            default: 360,
+            default: 1,
         },
         videoMaxHeight: {
             type: Number,
-            default: Infinity,
+            default: 99999,
         },
         videoMinHeight: {
             type: Number,
-            default: 360,
+            default: 1,
         },
         // 视频时长
         minDuration: {
@@ -132,7 +132,7 @@ export default defineComponent({
         },
         maxDuration: {
             type: Number,
-            default: Infinity,
+            default: 999999,
         },
     },
     emits: ["change", "error", "remove", "success", "on-progress"],

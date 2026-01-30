@@ -7,10 +7,10 @@
                 </ElTabs>
 
                 <div
-                    class="flex items-center gap-[8px] px-[12px] py-[8px] bg-blue-50/50 rounded-[8px] mb-[16px] border border-blue-50">
-                    <span class="text-primary opacity-80">
+                    class="flex items-center gap-[8px] px-[12px] py-[8px] bg-[#eff6ff]/50 rounded-[8px] mb-[16px] border border-blue-50">
+                    <span class="text-primary opacity-80 flex items-center gap-x-2">
                         <Icon name="el-icon-InfoFilled" />
-                        <span class="text-[12px] text-primary/80 font-bold">
+                        <span class="text-xs text-[#0065fb]/80 font-bold">
                             提示：除文本外，其余格式目前仅支持个微环境使用
                         </span>
                     </span>
@@ -24,6 +24,7 @@
                             type="textarea"
                             :autosize="{ minRows: 6, maxRows: 10 }"
                             placeholder="请输入消息文本内容..."
+                            maxlength="500"
                             class="custom-textarea" />
                         <div class="absolute bottom-[10px] left-[12px] flex items-center gap-[8px]">
                             <ElPopover placement="top-start" width="400" trigger="click" popper-class="emoji-popper">
@@ -160,10 +161,10 @@
                                     <div class="type-tag" :class="`type-${item.type}`">
                                         {{ getTypeName(item.type).replace("消息", "") }}
                                     </div>
-                                    <div class="flex-1 truncate text-[13px] text-tx-primary font-medium">
-                                        <template v-if="item.type == MaterialTypeEnum.TEXT">{{
-                                            item.content
-                                        }}</template>
+                                    <div class="flex-1 text-[13px] text-tx-primary font-medium">
+                                        <div class="line-clamp-1 break-all" v-if="item.type == MaterialTypeEnum.TEXT">
+                                            {{ item.content }}
+                                        </div>
                                         <template v-else-if="item.type == MaterialTypeEnum.IMAGE">[图片素材]</template>
                                         <template v-else-if="item.type == MaterialTypeEnum.VIDEO">[视频素材]</template>
                                         <template v-else>{{ (item.content as any).name }}</template>
@@ -964,7 +965,7 @@ defineExpose({
 }
 
 .text-bubble {
-    @apply bg-white p-[10px] rounded-[4px] rounded-tl-none text-[13px] leading-relaxed text-gray-950 relative shadow-light;
+    @apply bg-white p-[10px] rounded-[4px] rounded-tl-none text-[13px] truncate text-gray-950 relative shadow-light  break-all;
     &::after {
         content: "";
         @apply absolute -left-[6px] top-0 w-0 h-0 border-[6px] border-[transparent] border-t-white;

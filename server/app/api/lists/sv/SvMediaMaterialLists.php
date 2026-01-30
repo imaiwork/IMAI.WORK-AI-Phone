@@ -13,7 +13,7 @@ class SvMediaMaterialLists extends BaseApiDataLists implements ListsSearchInterf
     public function setSearch(): array
     {
         return [
-            '=' => ['type', 'm_type'],
+            '=' => ['type', 'm_type', 'group_id'],
             "%like%" => ['name'],
         ];
     }

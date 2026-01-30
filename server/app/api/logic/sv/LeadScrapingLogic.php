@@ -29,6 +29,7 @@ class LeadScrapingLogic extends SvBaseLogic
 
         Db::startTrans();
         try {
+            self::checkAutoDevice($params);
             TaskLogic::checkAccounts($params['accounts']);
             $insertData        = [
                 'user_id'   => self::$uid,
@@ -55,8 +56,12 @@ class LeadScrapingLogic extends SvBaseLogic
             if (isset($params['industry']) && !empty($params['industry'])) {
                 $params['industry'] = json_encode(explode(';', $params['industry']), JSON_UNESCAPED_UNICODE);
             } else {
-                self::setError('行业不能为空');
-                return false;
+                if ((int)$params['industry_type'] === 0) {
+                    self::setError('行业不能为空');
+                    return false;
+                }else{
+                   $params['industry'] = json_encode(explode(';', $params['industry']), JSON_UNESCAPED_UNICODE);
+                }
             }
 
             if (isset($params['content']) && is_array($params['content'])) {
@@ -97,7 +102,7 @@ class LeadScrapingLogic extends SvBaseLogic
             }
             if (isset($params['ip_address']) && is_array($params['ip_address'])) {
                 $params['ip_address'] = json_encode($params['ip_address'], JSON_UNESCAPED_UNICODE);
-            } 
+            }
             // 更新
             SvLeadScrapingSetting::where('id', $leadScraping->id)->update($params);
             $result = $leadScraping->refresh()->toArray();
@@ -143,6 +148,8 @@ class LeadScrapingLogic extends SvBaseLogic
                 //                        $taskType = DeviceEnum::TASK_COMMENT_TO_MARK_CLUE;
                 //                }
                 foreach (json_decode($result['accounts'], true) as $account) {
+                    $find = SvAccount::where('account', $account['account'])->where('type', $account['type'])->where('user_id', self::$uid)->limit(1)->find()->toArray();
+                    $account = array_merge($account, $find);
                     foreach ($times as $time) {
                         //判断时间是否冲突
                         list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_TOUCH, $time['start_time'], $time['end_time'], self::$uid);

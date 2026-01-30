@@ -629,7 +629,7 @@ trait DeviceTaskTrait
     public static function cluesAddWechatFriendTask(SvDeviceTask $dtask, Output $output, bool $isFirst, callable $callback)
     {
         try {
-            self::$logtitle = "自动加好友任务[{$dtask->device_code}]";
+            self::$logtitle = "自动批量加好友任务[{$dtask->device_code}]";
             self::checkOnline($dtask->device_code, 'ws');
 
             $records = SvCrawlingManualTaskRecord::alias('a')
@@ -646,7 +646,7 @@ trait DeviceTaskTrait
 
             //print_r(Db::getLastSql()); die;
             $sendWechatIds = [];
-            $add_interval_time = 0;
+            $add_interval_time = 10;
             foreach ($records as $record) {
                 $task = SvCrawlingManualTask::where('id', $record['task_id'])->findOrEmpty();
                 if ($task->isEmpty()) {
@@ -668,7 +668,7 @@ trait DeviceTaskTrait
                     $task->save();
                 }
 
-                $add_interval_time = (int)$record['add_interval_time'] > $add_interval_time ? (int)$record['add_interval_time'] : $add_interval_time;
+                $add_interval_time = (int)$record['add_interval_time'] > 0 ? (int)$record['add_interval_time'] : $add_interval_time;
 
                 $wxPattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
                 if (preg_match($wxPattern, $record['clue_wechat'])) {
@@ -910,7 +910,7 @@ trait DeviceTaskTrait
 
             //print_r(Db::getLastSql());die;
             $sendWechatIds = [];
-            $add_interval_time = 0;
+            $add_interval_time = 10;
             foreach ($records as $record) {
                 $task = SvCrawlingTask::where('id', $record['crawling_task_id'])->findOrEmpty();
                 if ($task->isEmpty()) {
@@ -929,7 +929,7 @@ trait DeviceTaskTrait
                     continue;
                 }
 
-                $add_interval_time = (int)$record['add_interval_time'] > $add_interval_time ? (int)$record['add_interval_time'] : $add_interval_time;
+                $add_interval_time = (int)$record['add_interval_time'] > 0 ? (int)$record['add_interval_time'] : $add_interval_time;
                 $wxPattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
                 if (preg_match($wxPattern, $record['reg_wechat'])) {
                     $response = \app\common\service\ToolsService::Sv()->queryResult([
@@ -1417,22 +1417,25 @@ trait DeviceTaskTrait
                     'startTime' => $dtask->start_time,
                     'endTime' => $dtask->end_time,
                     'timeInterval' => ($dtask->end_time - $dtask->start_time) / 60,
-                    'keyword' => json_decode($setting->industry, true),
+                    'keyword' => self::getKeywords($setting->industry, $setting->city ?? ''),
                     'gender' => $setting->gender ?? '不限',
                     'hasLiked' => $setting->is_like,
                     'hasFollowed' => $setting->is_follow,
                     'commentContents' => !empty($setting->content) ? json_decode($setting->content, true) : [],
-                    'filteredKeywords' => !empty($setting->filter) ? json_decode($setting->filter, true) : [],
+                    'filteredKeywords' => !empty($setting->filter) ? json_decode($setting->filter, true) : [],// ,
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
-                    'industryType' => $setting->industry_type ?? 0,
+                    'industry_type' => $setting->industry_type ?? 0,
                     'city' => $setting->city ?? '',
-                    'isContentAuthor' => $setting->is_content_author ?? 0,
-                    'isExecedClues' => $setting->is_execed_clues ?? 0,
-                    'contentPublishDay' => $setting->content_publish_day ?? 0,
-                    'commentPublishDay' => $setting->comment_publish_day ?? 0,
-                    'ipAddress' => $setting->ip_address ?? [],
+                    'is_content_author' => $setting->is_content_author ?? 0,
+                    'is_execed_clues' => $setting->is_execed_clues ?? 0,
+                    'is_touch_like' => $setting->is_like ?? 0,
+                    'is_touch_follow' => $setting->is_follow ?? 0,
+                    'content_publish_day' => $setting->content_publish_day ?? 0,
+                    'comment_publish_day' => $setting->comment_publish_day ?? 0,
+                    'ip_address' => $setting->ip_address ?? [],
+                    'is_note_like' => $setting->is_like ?? 0,
                     'msg' => '评论区评论任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1480,6 +1483,7 @@ trait DeviceTaskTrait
 
 
 
+
     // 评论区私信任务
     public static function touchCommentToMsgTask(SvDeviceTask $dtask, Output $output, callable $callback)
     {
@@ -1513,22 +1517,23 @@ trait DeviceTaskTrait
                     'startTime' => $dtask->start_time,
                     'endTime' => $dtask->end_time,
                     'timeInterval' => ($dtask->end_time - $dtask->start_time) / 60,
-                    'keyword' => json_decode($setting->industry, true),
+                    'keyword' => self::getKeywords($setting->industry, $setting->city ?? ''),
                     'gender' => $setting->gender ?? '不限',
-                    'hasLiked' => $setting->is_like,
-                    'hasFollowed' => $setting->is_follow,
                     'commentContents' => !empty($setting->content) ? json_decode($setting->content, true) : [],
-                    'filteredKeywords' => !empty($setting->filter) ? json_decode($setting->filter, true) : [],
+                    'filteredKeywords' => !empty($setting->filter) ? json_decode($setting->filter, true) : [],// ,
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
-                    'industryType' => $setting->industry_type ?? 0,
+                    'industry_type' => $setting->industry_type ?? 0,
                     'city' => $setting->city ?? '',
-                    'isContentAuthor' => $setting->is_content_author ?? 0,
-                    'isExecedClues' => $setting->is_execed_clues ?? 0,
-                    'contentPublishDay' => $setting->content_publish_day ?? 0,
-                    'commentPublishDay' => $setting->comment_publish_day ?? 0,
-                    'ipAddress' => $setting->ip_address ?? [],
+                    'is_content_author' => $setting->is_content_author ?? 0,
+                    'is_execed_clues' => $setting->is_execed_clues ?? 0,
+                    'is_touch_like' => $setting->is_like ?? 0,
+                    'is_touch_follow' => $setting->is_follow ?? 0,
+                    'content_publish_day' => $setting->content_publish_day ?? 0,
+                    'comment_publish_day' => $setting->comment_publish_day ?? 0,
+                    'ip_address' => $setting->ip_address ?? [],
+                    'is_note_like' => $setting->is_like ?? 0,
                     'msg' => '评论区私信任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1616,6 +1621,7 @@ trait DeviceTaskTrait
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
+                    'is_note_like' => $setting->is_like ?? 0,
                     'msg' => '留痕获客任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1659,6 +1665,15 @@ trait DeviceTaskTrait
             }
             throw new \Exception($th->getMessage(), $th->getCode());
         }
+    }
+
+    public static function getKeywords(string $keywords, string $city): array
+    {
+        $keywords = json_decode($keywords, true) ?? [];
+        foreach($keywords as $key => $item){
+            $keywords[$key] = "{$city}{$item}";
+        }
+        return $keywords;
     }
 
     private static function _sendChannelAddWechatMessage(array $payload, AiWechat $wechat, array $record)

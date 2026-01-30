@@ -136,6 +136,9 @@ export enum TokensSceneEnum {
     SPH_LOCAL_OCR = "sph_local_ocr",
     SPH_AI_CLUE = "sph_search_terms",
     KEYWORD_TO_COPYWRITING = "keyword_to_copywriting",
+    NEWS_MIX_CUT_TITLE = "news_mixcut_title",
+    SHANJIAN_COPYWRITING_CREATE = "shanjian_copywriting_create",
+    AI_SHANJIAN_AUTHORIZED_VIDEO = "ai_shanjian_authorized_video",
 }
 
 // 应用类型

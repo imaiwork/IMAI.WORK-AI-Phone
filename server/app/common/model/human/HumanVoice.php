@@ -211,6 +211,7 @@ class HumanVoice extends BaseModel
 
                 unset($voice[$key]);
             }
+            $voice[$key]['url'] = config('app.app_host') . '/static/audio/voice/' . $value['code'] . '.wav';
         }
 
         $info['voice'] = array_values($voice);

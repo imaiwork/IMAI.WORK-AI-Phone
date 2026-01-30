@@ -28,12 +28,26 @@ export function editMaterialLibrary(data: any) {
     return request.post({ url: "/sv.mediaMaterial/edit", data });
 }
 
+// 素材分组列表
+export function getMaterialLibraryGroupList(data: any) {
+    return request.get({ url: "/sv.mediaMaterialGroup/lists", data });
+}
 // 更新素材分组
 export function updateMaterialLibraryGroup(data: any) {
-    return request.get({ url: "/sv.mediaMaterial/detail", data });
+    return request.post({ url: "/sv.mediaMaterialGroup/update", data });
+}
+
+// 批量更新素材到分组
+export function batchUpdateMaterialToGroup(data: any) {
+    return request.post({ url: "/sv.mediaMaterial/batchUpdate", data });
 }
 
 // 添加素材组
 export function addMaterialLibraryGroup(data: any) {
-    return request.post({ url: "/sv.mediaMaterial/addGroup", data });
+    return request.post({ url: "/sv.mediaMaterialGroup/add", data });
+}
+
+// 删除素材组
+export function deleteMaterialLibraryGroup(data: any) {
+    return request.post({ url: "/sv.mediaMaterialGroup/delete", data });
 }

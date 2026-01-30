@@ -551,27 +551,32 @@ trait DeviceAutoTaskTrait
                 ->field('r.*, t.add_number, t.add_interval_time, t.add_friends_prompt, t.add_remark_enable, t.remarks, t.wechat_id, t.wechat_reg_type')
                 ->join('sv_crawling_task t', 'r.crawling_task_id = t.id and t.delete_time is null')
                 ->where('r.device_code', $dtask->device_code)
-                ->where('t.add_type', 1)
+                //->where('t.add_type', 1)
                 ->where('t.auto_type', 1)
                 ->where('r.channel', 1)
                 ->where('r.status', 'in', [3, 4, 5])
                 ->where('t.wechat_id', 'not in', ['', null]) // 过滤掉wechat_id为空的记录
                 //->where('t.status', 'in', [1, 2]) // 过滤掉已完成、已暂停、已删除的任务
-                ->whereRaw('t.exec_add_count > t.completed_add_count') // 过滤掉已执行加微次数大于等于注册类型的记录
+                //->whereRaw('t.exec_add_count > t.completed_add_count') // 过滤掉已执行加微次数大于等于注册类型的记录
                 //->limit(10)
+                ->where('r.create_time', 'between', [strtotime(date('Y-m-d 00:00:00')), strtotime(date('Y-m-d 23:59:59'))])
                 ->order('r.id', 'desc')
                 ->select()
                 ->toArray();
 
             //print_r(Db::getLastSql()); die;
             $sendWechatIds = [];
-            $add_interval_time = 0;
+            $add_interval_time = 10;
             foreach ($records as $record) {
                 $task = SvCrawlingTask::where('id', $record['crawling_task_id'])->findOrEmpty();
                 if ($task->isEmpty()) {
                     self::setLog("线索任务不存在:\n" . Db::getLastSql(), 'add_wechat');
                     $output->writeln("线索任务不存在:\n" . Db::getLastSql());
                     continue;
+                }
+                if($task->exec_add_count == 0){
+                    $task->exec_add_count = 10;
+                    $task->save();
                 }
                 if ($task->completed_add_count >= $task->exec_add_count) {
                     $task->status = 3;
@@ -587,7 +592,7 @@ trait DeviceAutoTaskTrait
                     $task->save();
                 }
 
-                $add_interval_time = (int)$record['add_interval_time'] > $add_interval_time ? (int)$record['add_interval_time'] : $add_interval_time;
+                $add_interval_time = (int)$record['add_interval_time'] > 0 ? (int)$record['add_interval_time'] : $add_interval_time;
                 $wxPattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
                 if (preg_match($wxPattern, $record['reg_wechat'])) {
                     $response = \app\common\service\ToolsService::Sv()->queryResult([
@@ -965,15 +970,16 @@ trait DeviceAutoTaskTrait
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
-                    'industryType' => $setting->industry_type ?? 0,
+                    'industry_type' => $setting->industry_type ?? 0,
                     'city' => $setting->city ?? '',
-                    'isContentAuthor' => $setting->is_content_author ?? 0,
-                    'isExecedClues' => $setting->is_execed_clues ?? 0,
-                    'isTouchLike' => $setting->is_touch_like ?? 0,
-                    'isTouchFollow' => $setting->is_touch_follow ?? 0,
-                    'contentPublishDay' => $setting->content_publish_day ?? 0,
-                    'commentPublishDay' => $setting->comment_publish_day ?? 0,
-                    'ipAddress' => $setting->ip_address ?? [],
+                    'is_content_author' => $setting->is_content_author ?? 0,
+                    'is_execed_clues' => $setting->is_execed_clues ?? 0,
+                    'is_touch_like' => $setting->is_touch_like ?? 0,
+                    'is_touch_follow' => $setting->is_touch_follow ?? 0,
+                    'content_publish_day' => $setting->content_publish_day ?? 0,
+                    'comment_publish_day' => $setting->comment_publish_day ?? 0,
+                    'ip_address' => $setting->ip_address ?? [],
+                    'is_note_like' => $setting->is_like ?? 0,   
                     'msg' => '评论区评论任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -997,8 +1003,8 @@ trait DeviceAutoTaskTrait
             $account->status = DeviceEnum::TASK_STATUS_RUNNING;
             $account->update_time = time();
             $account->save();
-            $scene = AutomationEnum::SHUT_OFF_COMMENTS;
-            self::requestUrl($data,$scene, $setting->user_id, $dtask->id,  $dtask->device_code);
+//            $scene = AutomationEnum::SHUT_OFF_COMMENTS;
+//            self::requestUrl($data,$scene, $setting->user_id, $dtask->id,  $dtask->device_code);
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
@@ -1061,15 +1067,16 @@ trait DeviceAutoTaskTrait
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
-                    'industryType' => $setting->industry_type ?? 0,
+                    'industry_type' => $setting->industry_type ?? 0,
                     'city' => $setting->city ?? '',
-                    'isContentAuthor' => $setting->is_content_author ?? 0,
-                    'isExecedClues' => $setting->is_execed_clues ?? 0,
-                    'isTouchLike' => $setting->is_touch_like ?? 0,
-                    'isTouchFollow' => $setting->is_touch_follow ?? 0,
-                    'contentPublishDay' => $setting->content_publish_day ?? 0,
-                    'commentPublishDay' => $setting->comment_publish_day ?? 0,
-                    'ipAddress' => $setting->ip_address ?? [],
+                    'is_content_author' => $setting->is_content_author ?? 0,
+                    'is_execed_clues' => $setting->is_execed_clues ?? 0,
+                    'is_touch_like' => $setting->is_touch_like ?? 0,
+                    'is_touch_follow' => $setting->is_touch_follow ?? 0,
+                    'content_publish_day' => $setting->content_publish_day ?? 0,
+                    'comment_publish_day' => $setting->comment_publish_day ?? 0,
+                    'ip_address' => $setting->ip_address ?? [],
+                    'is_note_like' => $setting->is_like ?? 0,   
                     'msg' => '评论区私信任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1157,6 +1164,7 @@ trait DeviceAutoTaskTrait
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
+                    'is_note_like' => $setting->is_like ?? 0,
                     'msg' => '留痕获客任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1302,26 +1310,26 @@ trait DeviceAutoTaskTrait
                 'Remark' => $payload['Remark'] ?? '',
             ];
             self::setLog($request, 'add_wechat');
-            $content = \app\common\workerman\wechat\handlers\client\AddFriendsTaskHandler::handle($request);
-            $message = new \Jubo\JuLiao\IM\Wx\Proto\TransportMessage();
-            $message->setMsgType($content['MsgType']);
-            $any = new \Google\Protobuf\Any();
-            $any->pack($content['Content']);
-            $message->setContent($any);
-            $pushMessage = $message->serializeToString();
+            // $content = \app\common\workerman\wechat\handlers\client\AddFriendsTaskHandler::handle($request);
+            // $message = new \Jubo\JuLiao\IM\Wx\Proto\TransportMessage();
+            // $message->setMsgType($content['MsgType']);
+            // $any = new \Google\Protobuf\Any();
+            // $any->pack($content['Content']);
+            // $message->setContent($any);
+            // $pushMessage = $message->serializeToString();
 
-            $channel = "socket.{$payload['DeviceCode']}.message";
-            self::setLog('channel: ' . $channel, 'add_wechat');
+            // $channel = "socket.{$payload['DeviceCode']}.message";
+            // self::setLog('channel: ' . $channel, 'add_wechat');
 
-            \Channel\Client::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
-            \Channel\Client::publish($channel, [
-                'data' => is_array($pushMessage) ? json_encode($pushMessage) : $pushMessage
-            ]);
-            //$wechat->add_num += 1;
-            $wechat->is_cooling = 0;
-            $wechat->cooling_time = 0;
-            $wechat->update_time = time();
-            $wechat->save();
+            // \Channel\Client::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+            // \Channel\Client::publish($channel, [
+            //     'data' => is_array($pushMessage) ? json_encode($pushMessage) : $pushMessage
+            // ]);
+            // //$wechat->add_num += 1;
+            // $wechat->is_cooling = 0;
+            // $wechat->cooling_time = 0;
+            // $wechat->update_time = time();
+            // $wechat->save();
 
             AiWechatLog::create([
                 'user_id' => $wechat->user_id,

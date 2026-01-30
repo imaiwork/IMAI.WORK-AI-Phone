@@ -57,7 +57,7 @@
                                 <view
                                     v-if="getStatus(item) == 1"
                                     class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center z-[22]"
-                                    @click="handlePlay(item.clip_result_url || item.clip_result_url, item.pic)">
+                                    @click="handlePlay(item.clip_result_url || item.video_result_url, item.pic)">
                                     <image src="/static/images/icons/play.svg" class="w-[58rpx] h-[58rpx]"></image>
                                     <view
                                         class="text-white text-center text-[22rpx] mt-[16rpx]"
@@ -176,7 +176,7 @@ const showVideoPreview = ref(false);
 const utils_1 = [
     { label: "一句话生成", key: MenuKey.SORA, icon: VideoMixIcon },
     { label: "数字人克隆", key: MenuKey.ANCHOR_CLONE, icon: AnchorCloneIcon },
-    { label: "我的克隆", key: MenuKey.TONE_CLONE, icon: ToneCloneIcon },
+    { label: "配置声音", key: MenuKey.TONE_CLONE, icon: ToneCloneIcon },
     { label: "文案提取", key: MenuKey.TEXT_EXTRACT, icon: TextExtractIcon, disabled: true },
 ];
 

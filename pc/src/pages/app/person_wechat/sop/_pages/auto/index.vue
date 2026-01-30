@@ -132,10 +132,8 @@
             </ElTable>
         </div>
 
-        <div class="flex justify-between items-center px-8 py-5 bg-slate-50">
-            <span class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider"
-                >共 {{ pager.count }} 个自动化方案</span
-            >
+        <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
+            <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个自动化方案</span>
             <pagination v-model="pager" @change="getLists"></pagination>
         </div>
     </div>

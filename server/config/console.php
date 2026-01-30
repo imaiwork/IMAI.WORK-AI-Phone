@@ -66,10 +66,13 @@ return [
         'auto_device_frist_create_cron' => 'app\common\command\AutoDeviceFristCreateCron',
         //设备自动任务调度
         'auto_task:scheduler' => 'app\common\command\DeviceAutoTaskScheduler',
+        //ai授权视频数字人形象任务
+        'ai_digital_human_anchor_cron' => 'app\common\command\AiDigitalHumanAnchorCron',
         //文件处理
         'ffmpeg_cron' => 'app\common\command\FFmpegFileCron',
         //公共数字人形象任务
         'digital_human_anchor_cron' => 'app\common\command\DigitalHumanAnchorCron',
+
     ],
 
     

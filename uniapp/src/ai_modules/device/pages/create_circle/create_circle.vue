@@ -129,6 +129,7 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { createCircleTask } from "@/api/device";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
@@ -296,6 +297,7 @@ const handleCreateTask = async () => {
 
         if (circleList.value.length === 0) {
             showCreateTaskSuccessDialog.value = true;
+            WechatOA.notify();
         } else {
             uni.showToast({
                 title: `部分任务创建失败，请检查`,
@@ -305,7 +307,25 @@ const handleCreateTask = async () => {
         }
     } catch (error: any) {
         uni.hideLoading();
-        uni.showToast({ title: error, icon: "none", duration: 3000 });
+        if (error.indexOf("24小时自动执行任务") > -1) {
+            uni.showModal({
+                title: "提示",
+                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
+                success: (res) => {
+                    if (res.confirm) {
+                        uni.$u.route({
+                            url: "/pages/phone/phone",
+                        });
+                    }
+                },
+            });
+        } else {
+            uni.showToast({
+                title: error,
+                icon: "none",
+                duration: 3000,
+            });
+        }
     }
 };
 

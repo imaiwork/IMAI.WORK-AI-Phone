@@ -155,12 +155,18 @@ const confirm = () => {
     chooseLists.value = [];
 };
 
-watch(show, async () => {
-    if (show.value) {
-        await nextTick();
-        pagingRef.value?.reload();
+watch(
+    () => props.modelValue,
+    async (newVal) => {
+        if (newVal) {
+            await nextTick();
+            pagingRef.value?.reload();
+        }
+    },
+    {
+        immediate: true,
     }
-});
+);
 </script>
 
 <style scoped></style>

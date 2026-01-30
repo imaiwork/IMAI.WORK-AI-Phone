@@ -140,7 +140,7 @@
                 </template>
             </ElTable>
         </div>
-        <div class="h-[72px] px-8 flex items-center justify-between bg-slate-50/50">
+        <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
             <span class="text-xs font-bold text-[#94A3B8]"
                 >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条朋友圈任务</span
             >

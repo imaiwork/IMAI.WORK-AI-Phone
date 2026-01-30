@@ -26,7 +26,7 @@
             </div>
         </div>
         <div class="preview-content-container">
-            <div class="bg-slate-50/50 rounded-[24px] p-6 border border-slate-100">
+            <div class="bg-[#f8fafc]/50 rounded-[24px] p-6 border border-slate-100">
                 <send-date :date-list="dateList" class="!grid-cols-7 gap-4" @edit="handleEdit" />
             </div>
 

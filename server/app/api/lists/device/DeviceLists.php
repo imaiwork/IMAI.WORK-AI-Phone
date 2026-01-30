@@ -193,8 +193,8 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
                 'is_config' => \app\common\model\auto\AutoDeviceTouchConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1,
             ],
             'takeover_setting' => [
-                'task_status' => ($status = \app\common\model\auto\AutoDeviceTakeOverConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->value('status')) !== null ? $status : 0,
-                'is_config' => \app\common\model\auto\AutoDeviceTakeOverConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1,
+                'task_status' => ($status = \app\common\model\auto\AutoDeviceTakeOverConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->where('robot_id', '>', 0)->value('status')) !== null ? $status : 0,
+                'is_config' => \app\common\model\auto\AutoDeviceTakeOverConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->where('robot_id', '>', 0)->findOrEmpty()->isEmpty() ? 0 : 1,
             ],
             // 'active_setting' => [
             //     'task_status' => ($status = \app\common\model\auto\AutoDeviceActiveConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->value('status')) !== null ? $status : 0,

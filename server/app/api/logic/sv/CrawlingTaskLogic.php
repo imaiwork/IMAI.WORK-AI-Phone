@@ -37,6 +37,7 @@ class CrawlingTaskLogic extends SvBaseLogic
     {
         try {
             Db::startTrans();
+            self::checkAutoDevice($params);
             $params['user_id'] = self::$uid;
             $device_codes = $params['device_codes'];
             $keywords = $params['keywords'];

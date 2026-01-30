@@ -61,11 +61,11 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
 
 const chooseUploadType = () => {
     uni.showActionSheet({
-        itemList: ['从"微信聊天"中选择', '从"素材库"中选择', '从"手机相册"中选择', '从"创作中心"中选择'],
+        itemList: ["从微信聊天中选择", "从相册选择图片", "从素材库中选择", "从创作库选择素材"],
         success: (res) => {
             if (res.tapIndex === 0) uploadAndProcessFiles("file");
-            else if (res.tapIndex === 1) showChooseMaterial.value = true;
-            else if (res.tapIndex === 2) uploadAndProcessFiles("image");
+            else if (res.tapIndex === 1) uploadAndProcessFiles("image");
+            else if (res.tapIndex === 2) showChooseMaterial.value = true;
             else if (res.tapIndex === 3) showHistory.value = true;
         },
     });

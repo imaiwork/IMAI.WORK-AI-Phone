@@ -23,7 +23,9 @@ class CrawlingManualRecordLists extends BaseApiDataLists implements ListsSearchI
     {
         $this->searchWhere[] = ['user_id', '=', $this->userId];
         $this->searchWhere[] = ['task_id', '=', $this->params['id']];
-        return SvCrawlingManualTaskRecord::where($this->searchWhere)->select()->toArray();
+        return SvCrawlingManualTaskRecord::where($this->searchWhere)
+            ->limit($this->limitOffset, $this->limitLength)
+            ->select()->toArray();
     }
     public function count(): int
     {

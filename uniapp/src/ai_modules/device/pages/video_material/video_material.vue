@@ -14,7 +14,7 @@
                     <view
                         v-for="(item, index) in dataList"
                         :key="index"
-                        class="aspect-[3/4] relative rounded-[12rpx]"
+                        class="aspect-[3/4] relative rounded-[12rpx] leading-[0]"
                         @click="handlePreview(item)">
                         <image :src="item.pic" class="w-full h-full rounded-[12rpx]" mode="aspectFill"></image>
                         <view
@@ -52,14 +52,14 @@
         </view>
     </view>
     <choose-history v-model="showHistory" :type="showHistoryType" :limit="9999" @select="handleSelectHistory" />
-    <choose-material v-model="showChooseMaterial" type="video" @select="handleChooseMaterial" />
+    <choose-material v-model="showChooseMaterial" :type="showHistoryType" @select="handleChooseMaterial" />
     <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <video-preview v-model="showVideoPreview" :video-url="playData.url" :poster="playData.pic"></video-preview>
 </template>
 
 <script setup lang="ts">
 import useMaterialStore from "@/ai_modules/device/stores/material";
-import useMontageMaterial from "@/hooks/useMontageMaterial";
+import useUpload from "@/hooks/useUpload";
 import ChooseHistory from "@/ai_modules/device/components/choose-history/choose-history.vue";
 
 const materialStore = useMaterialStore();
@@ -72,7 +72,7 @@ const showHistoryType = ref<"video" | "image">("video");
 const showVideoPreview = ref(false);
 const playData = ref<{ url: string; pic: string }>({ url: "", pic: "" });
 
-const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useMontageMaterial({
+const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
     count: 9,
     onSuccess: (res: any[]) => {
@@ -87,12 +87,14 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useMon
 
 const chooseUploadType = () => {
     uni.showActionSheet({
-        itemList: ["选择图片素材", "选择视频素材", '从"创作中心视频素材"中选择', '从"创作中心图片素材"中选择'],
+        itemList: ["从相册选择图片", "从相册选择视频", "从图片素材库选择", "从视频素材库选择", "从创作库选择"],
         success: (res) => {
-            if (res.tapIndex === 0) uploadAndProcessFiles("image");
-            else if (res.tapIndex === 1) uploadAndProcessFiles("video");
-            else if (res.tapIndex === 2 || res.tapIndex === 3) {
-                showHistoryType.value = res.tapIndex === 2 ? "video" : "image";
+            const { tapIndex } = res;
+            if ([0, 1].includes(tapIndex)) uploadAndProcessFiles(tapIndex === 0 ? "image" : "video");
+            else if ([2, 3].includes(tapIndex)) {
+                showHistoryType.value = tapIndex === 3 ? "video" : "image";
+                showChooseMaterial.value = true;
+            } else if (tapIndex === 4) {
                 showHistory.value = true;
             }
         },
@@ -109,39 +111,26 @@ const handleChooseMaterial = (list: any[]) => {
 };
 
 const handleSelectHistory = (list: any[]) => {
-    if (replaceMaterialIndex.value !== -1) {
-        if (showHistoryType.value === "video") {
-            dataList.value[replaceMaterialIndex.value] = list.map((item) => ({
-                pic: item.pic,
-                url: item.clip_result_url || item.video_result_url,
-                type: "video",
-            }));
-        } else {
-            dataList.value[replaceMaterialIndex.value] = list.map((item) => ({
-                pic: item.pic,
-                url: item.content,
-                type: "image",
-            }));
-        }
+    const isVideo = showHistoryType.value === "video";
+    const index = replaceMaterialIndex.value;
+
+    const newList = list.map((item) => ({
+        pic: item.pic || item.image,
+        url: isVideo ? item.clip_result_url || item.video_result_url : item.content || item.image,
+        type: showHistoryType.value,
+    }));
+
+    if (index !== -1) {
+        dataList.value.splice(index, 1, ...newList);
     } else {
-        if (showHistoryType.value === "video") {
-            dataList.value.push(
-                ...list.map((item) => ({
-                    pic: item.pic,
-                    url: item.clip_result_url || item.video_result_url,
-                    type: "video",
-                }))
-            );
-        } else {
-            dataList.value.push(...list.map((item) => ({ pic: item.image, url: item.image, type: "image" })));
-        }
+        dataList.value.push(...newList);
     }
+
     replaceMaterialIndex.value = -1;
 };
 
 const handleReplace = (index: number) => {
     replaceMaterialIndex.value = index;
-
     chooseUploadType();
 };
 

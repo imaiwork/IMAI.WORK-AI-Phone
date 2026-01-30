@@ -9,7 +9,7 @@
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">数字人视频</div>
                         <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
-                            Total: {{ pager.count }} Assets
+                            总数字人视频: {{ pager.count }} 个
                         </div>
                     </div>
                 </div>

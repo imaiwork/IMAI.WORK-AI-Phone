@@ -433,7 +433,7 @@
                 </div>
             </div>
 
-            <div class="bg-slate-50/50 rounded-[24px] border border-slate-100 p-6 flex flex-col items-center">
+            <div class="bg-[#f8fafc]/50 rounded-[24px] border border-slate-100 p-6 flex flex-col items-center">
                 <div class="text-[13px] text-slate-500 font-black mb-4 flex items-center gap-2">
                     <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
                     设定每日发布总量

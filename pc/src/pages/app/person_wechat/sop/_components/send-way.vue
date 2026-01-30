@@ -44,7 +44,7 @@
             <div class="flex-1 h-[1px] bg-slate-100"></div>
         </div>
 
-        <div class="bg-slate-50/50 rounded-[24px] p-8 border border-slate-100">
+        <div class="bg-[#f8fafc]/50 rounded-[24px] p-8 border border-slate-100">
             <ElForm :model="formData" ref="formRef" :rules="rules" label-position="top">
                 <div class="max-w-xl mx-auto">
                     <template v-if="formData?.type == SendWayEnum.SPECIFIED_PROCESS">

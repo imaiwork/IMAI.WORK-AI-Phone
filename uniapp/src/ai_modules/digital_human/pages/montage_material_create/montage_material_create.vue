@@ -90,7 +90,7 @@
                     </view>
                 </view>
             </view>
-            <view v-if="step === 2" class="h-full flex flex-col">
+            <view v-show="step === 2" class="h-full flex flex-col">
                 <view class="flex justify-center mb-3">
                     <view class="bg-white rounded-[16rpx] px-[8rpx]">
                         <view class="w-[360rpx] grid grid-cols-2 relative h-[80rpx]">
@@ -189,7 +189,7 @@
                     </scroll-view>
                 </view>
             </view>
-            <scroll-view class="h-full" scroll-y v-if="step == 3">
+            <scroll-view class="h-full" scroll-y v-show="step == 3">
                 <view class="px-4 pb-[150rpx]">
                     <view class="text-[30rpx] font-bold">视频名称</view>
                     <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4 h-[100rpx] flex items-center">
@@ -229,7 +229,7 @@
                             class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
                             <view class="text-[30rpx] font-bold">选择音色</view>
                             <view class="flex items-center gap-x-1" @click="showChooseTone = true">
-                                <view :class="[voiceValue.name ? 'text-primary' : 'text-[#B2B2B2]']">
+                                <view :class="[voiceValue.name ? 'text-primary font-bold' : 'text-[#B2B2B2]']">
                                     {{ voiceValue.name || "请选择音色" }}
                                 </view>
                                 <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
@@ -237,7 +237,7 @@
                         </view>
                         <view class="flex items-center justify-between h-[106rpx]">
                             <view class="text-[30rpx] font-bold">素材视频原声</view>
-                            <u-switch v-model="formData.extra" inactive-color="#E5E5E5" :size="40" />
+                            <u-switch v-model="formData.extra.soundSwitch" inactive-color="#E5E5E5" :size="40" />
                         </view>
                         <view class="flex items-center justify-between h-[106rpx]">
                             <view class="text-[30rpx] font-bold">背景音乐</view>
@@ -444,6 +444,7 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { createShanjianTask } from "@/api/digital_human";
 import { lpSceneSpeechToText } from "@/api/ladder_player";
 import { useUserStore } from "@/stores/user";
@@ -481,6 +482,7 @@ const formData = reactive<{
     voice: string;
     music: any[];
     extra: {
+        soundSwitch: boolean;
         volume: number;
         music: number;
         clip: number;
@@ -497,6 +499,7 @@ const formData = reactive<{
     voice: "",
     music: [],
     extra: {
+        soundSwitch: true,
         volume: 0.5,
         music: 0,
         clip: 0,
@@ -714,13 +717,13 @@ const handleSelectTone = (tone: any) => {
 const handleMinusVideoCount = (type: "minus" | "add") => {
     if (type === "minus") {
         if (formData.extra.video_count <= 1) {
-            uni.$u.toast("数量最少为1");
+            uni.$u.toast("视频数量最少为1");
             return;
         }
         formData.extra.video_count--;
     } else {
         if (formData.extra.video_count >= 99) {
-            uni.$u.toast("数量最多为99");
+            uni.$u.toast("视频数量最多为99");
             return;
         }
         formData.extra.video_count++;
@@ -740,6 +743,14 @@ const handleCreateVideo = async () => {
     if (!formData.voice) {
         uni.$u.toast("请选择音色");
         showChooseTone.value = true;
+        return;
+    }
+    if (formData.extra.video_count <= 0) {
+        uni.$u.toast("请输入视频数量");
+        return;
+    }
+    if (formData.extra.video_count > 99) {
+        uni.$u.toast("视频数量最多为99");
         return;
     }
     if (formData.extra.clip === 1 && formData.clip.length === 0) {
@@ -772,6 +783,7 @@ const handleCreateVideo = async () => {
         uni.hideLoading();
         createResult.value = res;
         showCreateSuccess.value = true;
+        WechatOA.notify();
     } catch (error: any) {
         uni.hideLoading();
         uni.showToast({
@@ -797,6 +809,10 @@ const toRecord = () => {
     uni.$u.route({
         url: "/packages/pages/creation/creation",
         type: "redirect",
+        params: {
+            source: "1",
+            type: 4,
+        },
     });
 };
 

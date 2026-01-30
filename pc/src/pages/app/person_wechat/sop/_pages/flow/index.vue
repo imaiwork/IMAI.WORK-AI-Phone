@@ -2,11 +2,12 @@
     <div class="h-full flex flex-col bg-white rounded-[20px] border border-br overflow-hidden" v-if="!isCreate">
         <header class="flex items-center justify-between px-[24px] py-[24px] border-b border-br-extra-light">
             <div class="flex items-center gap-[12px]">
-                <div class="w-[6px] h-[24px] rounded-full bg-primary shadow-sm"></div>
-                <div class="flex flex-col">
-                    <h3 class="text-[18px] font-[900] text-primary leading-none">客户生命周期流程</h3>
-                </div>
-                <ElButton type="primary" class="!rounded-lg !h-[36px] px-[16px] !font-bold" @click="handleAddFlow">
+                <div class="w-1.5 h-6 rounded-full bg-primary shadow-[0_0_10px_rgba(0,101,251,0.4)]"></div>
+                <h3 class="text-xl font-[900] text-[#0F172A] tracking-tight">客户生命周期流程</h3>
+                <ElButton
+                    type="primary"
+                    class="!rounded-xl !h-10 !px-6 !font-black hover:scale-105 transition-transform ml-2"
+                    @click="handleAddFlow">
                     <Icon name="el-icon-Plus" />
                     <span class="ml-1">新建流程</span>
                 </ElButton>

@@ -1,4 +1,5 @@
 import { getWxCodeUrl } from "@/api/account";
+import { getMnpNoticeTemplateList } from "@/api/app";
 import { isAndroid } from "./client";
 import { wxJsConfig } from "@/api/app";
 import { objectToQuery } from "./util";
@@ -176,6 +177,27 @@ const wechatOa = {
                         reject(res);
                     },
                 });
+            });
+        });
+    },
+    async notify() {
+        const { lists } = await getMnpNoticeTemplateList({
+            page_size: 10,
+            page_no: 1,
+            recipient: 1,
+            type: 1,
+            support: 4,
+        });
+        const tempIds = lists.map((item: any) => item.mnp_notice?.template_id);
+        return new Promise((resolve, reject) => {
+            wx.requestSubscribeMessage({
+                tmplIds: tempIds,
+                success: (res: any) => {
+                    resolve(res);
+                },
+                fail: (res: any) => {
+                    reject(res);
+                },
             });
         });
     },

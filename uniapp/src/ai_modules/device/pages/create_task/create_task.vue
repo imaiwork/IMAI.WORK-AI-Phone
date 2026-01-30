@@ -11,7 +11,7 @@
         <view class="flex-shrink-0 h-[150rpx] flex items-center">
             <view class="grid grid-cols-3 w-full px-4">
                 <view
-                    v-for="item in STEPS"
+                    v-for="item in steps"
                     :key="item.step"
                     class="common-step-item"
                     :class="{ active: currentStep == item.step }"
@@ -24,7 +24,7 @@
                     <view class="common-step-item-icon" v-else> </view>
                     <text class="common-step-item-title">{{ item.title }}</text>
                     <view
-                        v-if="item.step !== STEPS.length"
+                        v-if="item.step !== steps.length"
                         class="common-step-item-line"
                         :class="{ '!border-primary': currentStep > item.step }"></view>
                 </view>
@@ -32,7 +32,7 @@
         </view>
 
         <view class="grow min-h-0 mt-[24rpx]">
-            <view v-if="currentStep === 1" class="flex flex-col h-full">
+            <view v-show="currentStep === 1" class="flex flex-col h-full">
                 <view class="flex items-center justify-between px-4">
                     <text class="font-bold">
                         {{ taskType == TaskType.IMAGE ? "图组列表" : "视频素材" }}（{{
@@ -143,7 +143,7 @@
                 </view>
             </view>
 
-            <view v-if="currentStep === 2" class="flex flex-col h-full">
+            <view v-show="currentStep === 2" class="flex flex-col h-full">
                 <view class="flex items-center px-4 gap-x-2">
                     <navigator
                         url="/ai_modules/device/pages/task_copywriter/task_copywriter"
@@ -199,7 +199,7 @@
                 </view>
             </view>
 
-            <view v-if="currentStep === 3" class="h-full">
+            <view v-show="currentStep === 3" class="h-full">
                 <scroll-view scroll-y class="h-full">
                     <view class="px-4 pb-[100rpx]">
                         <view>
@@ -422,7 +422,7 @@
 
         <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 pb-5">
             <view class="flex items-center justify-between px-4 h-[140rpx]">
-                <template v-if="currentStep != STEPS.length">
+                <template v-if="currentStep != steps.length">
                     <view
                         v-if="currentStep === 1"
                         class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
@@ -508,6 +508,7 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { getVideoCreationRecord } from "@/api/app";
 import { createMatrixTask, publishDeviceTask } from "@/api/device";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
@@ -554,7 +555,7 @@ interface FormData {
 }
 
 // --- 常量配置 ---
-const STEPS = [
+const steps = [
     { step: 1, title: "选择素材" },
     { step: 2, title: "填写文案" },
     { step: 3, title: "设定时间" },
@@ -1035,13 +1036,31 @@ const handleCreateTask = async () => {
             scene: 2,
             data_type: 0,
         });
-
-        showCreateTaskSuccessDialog.value = true;
-    } catch (error: any) {
-        taskErrorMsg.value = typeof error === "string" ? error : error.message || "创建失败";
-        uni.showToast({ title: taskErrorMsg.value, icon: "none", duration: 3000 });
-    } finally {
         uni.hideLoading();
+        showCreateTaskSuccessDialog.value = true;
+        WechatOA.notify();
+    } catch (error: any) {
+        uni.hideLoading();
+        if (error.indexOf("24小时自动执行任务") > -1) {
+            uni.showModal({
+                title: "提示",
+                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
+                success: (res) => {
+                    if (res.confirm) {
+                        uni.$u.route({
+                            url: "/pages/phone/phone",
+                        });
+                    }
+                },
+            });
+        } else {
+            taskErrorMsg.value = error;
+            uni.showToast({
+                title: error,
+                icon: "none",
+                duration: 3000,
+            });
+        }
     }
 };
 
@@ -1161,7 +1180,7 @@ onLoad(async (options: any) => {
 .material-image-item {
     @apply rounded-[20rpx] bg-white p-[28rpx] relative;
     .image-item {
-        @apply h-[146rpx] rounded-[10rpx];
+        @apply aspect-[3/4] rounded-[10rpx];
     }
 }
 

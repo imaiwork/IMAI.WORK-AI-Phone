@@ -32,7 +32,7 @@
         </div>
 
         <div class="grow min-h-0 bg-white rounded-[20px] flex flex-col border border-br overflow-hidden">
-            <div class="px-6 bg-slate-50/50 border-b border-[#F1F5F9]">
+            <div class="px-6 bg-[#f8fafc]/50 border-b border-[#F1F5F9]">
                 <ElTabs v-model="sceneSubIndex" class="custom-tabs" @tab-click="handleSceneSubTab">
                     <ElTabPane
                         v-for="(tab, index) in sceneSubList"

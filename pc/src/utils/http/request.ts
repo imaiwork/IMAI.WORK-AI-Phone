@@ -225,6 +225,9 @@ export class Request {
     ) {
         const formData = this.buildFormData(params);
 
+        let mergeOptions = merge({}, this.fetchOptions, options);
+        const { ignoreCancel = false } = mergeOptions.requestOptions || {};
+
         // 如果没有提供进度回调，则使用原来的方法
         if (!onProgress) {
             return this.request({
@@ -234,31 +237,37 @@ export class Request {
             });
         }
 
-        // 使用 XMLHttpRequest 实现进度监听
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            let mergeOptions = merge({}, this.fetchOptions, options);
 
             const { requestInterceptorsHook } = this.requestOptions;
             if (requestInterceptorsHook && isFunction(requestInterceptorsHook)) {
                 mergeOptions = requestInterceptorsHook(mergeOptions);
             }
-            // 构建完整URL
+
             const url = `${mergeOptions.baseURL}${mergeOptions.url}`;
 
-            // 打开连接
+            const method = RequestMethodsEnum.POST;
+            const requestParams = options.params || {};
+            let requestKey =
+                params.requestKey || CancelTokenManager.generateRequestKey(url, method, requestParams, ignoreCancel);
+
+            const controller = {
+                abort: (reason?: any) => {
+                    xhr.abort();
+                },
+            } as AbortController;
+            cancelTokenManager.addRequest(requestKey, controller, ignoreCancel);
+
             xhr.open(RequestMethodsEnum.POST, url, true);
 
-            // 设置请求头
             const headers = { ...options.headers, ...mergeOptions.headers };
             Object.keys(headers).forEach((key) => {
-                // 对于文件上传，不要设置 Content-Type，让浏览器自动设置
                 if (key.toLowerCase() !== "content-type") {
                     xhr.setRequestHeader(key, headers[key]);
                 }
             });
 
-            // 注册上传进度事件
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable) {
                     const percent = Math.round((e.loaded / e.total) * 100);
@@ -266,8 +275,9 @@ export class Request {
                 }
             };
 
-            // 注册完成事件
             xhr.onload = () => {
+                cancelTokenManager.removeRequest(requestKey);
+
                 if (xhr.status >= 200 && xhr.status < 300) {
                     let response;
                     try {
@@ -283,34 +293,17 @@ export class Request {
                 }
             };
 
-            // 注册错误事件
             xhr.onerror = () => {
+                cancelTokenManager.removeRequest(requestKey);
                 reject(new Error("网络错误，上传失败"));
             };
 
-            // 注册中止事件
             xhr.onabort = () => {
+                cancelTokenManager.removeRequest(requestKey);
                 reject(new Error("上传已取消"));
             };
 
-            // 发送请求
             xhr.send(formData);
-
-            // 生成请求唯一标识并注册到取消令牌管理器
-            const method = RequestMethodsEnum.POST;
-            const requestParams = options.params || {};
-            // 使用传入的requestKey或生成新的requestKey
-            const requestKey = params.requestKey || CancelTokenManager.generateRequestKey(url, method, requestParams);
-
-            // 创建一个可以取消XHR请求的控制器
-            const controller = {
-                abort: (reason?: any) => {
-                    xhr.abort();
-                },
-            } as AbortController;
-
-            // 注册到取消令牌管理器
-            cancelTokenManager.addRequest(requestKey, controller);
         });
     }
     /**
@@ -323,15 +316,19 @@ export class Request {
         mergeOptions.signal = this.controller.signal;
         mergeOptions.requestOptions = merge({}, this.requestOptions, requestOptions);
 
+        const { ignoreCancel = false } = mergeOptions.requestOptions;
+
         // 生成请求唯一标识
         const url = `${mergeOptions.baseURL || ""}${mergeOptions.requestOptions.apiPrefix}${mergeOptions.url}`;
         const method = mergeOptions.method || "GET";
-        this.requestKey = CancelTokenManager.generateRequestKey(url, method, fetchOptions.params || {});
+        this.requestKey = CancelTokenManager.generateRequestKey(url, method, fetchOptions.params || {}, ignoreCancel);
 
-        // 注册到取消令牌管理器
-        cancelTokenManager.addRequest(this.requestKey, this.controller);
+        // 注册到取消令牌管理器，传入ignoreCancel参数
+        cancelTokenManager.addRequest(this.requestKey, this.controller, ignoreCancel);
+
         const { requestInterceptorsHook, responseInterceptorsHook, responseInterceptorsCatchHook } =
             this.requestOptions;
+
         if (requestInterceptorsHook && isFunction(requestInterceptorsHook)) {
             mergeOptions = requestInterceptorsHook(mergeOptions);
         }

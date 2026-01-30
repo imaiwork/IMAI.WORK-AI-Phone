@@ -4,12 +4,15 @@
             <div class="flex items-center gap-4">
                 <div class="w-1.5 h-6 rounded-full bg-primary shadow-[0_0_10px_rgba(0,101,251,0.4)]"></div>
                 <h3 class="text-lg font-[900] text-[#0F172A]">自动标签规则</h3>
-                <ElButton type="primary" class="!h-11 !px-6 !rounded-xl !font-bold" @click="handleAdd">
+                <ElButton
+                    type="primary"
+                    class="!rounded-xl !h-10 !px-6 !font-black hover:scale-105 transition-transform ml-2"
+                    @click="handleAdd">
                     <Icon name="el-icon-Plus" />
                     <span class="ml-2">添加匹配标签</span>
                 </ElButton>
                 <ElButton
-                    class="!h-11 !px-6 !rounded-xl font-bold border-[#E2E8F0] hover:!bg-slate-50 transition-all"
+                    class="!h-10 !px-6 !rounded-xl font-bold border-[#E2E8F0] hover:!bg-slate-50 transition-all"
                     @click="handleImport">
                     <Icon name="el-icon-Upload" />
                     <span class="ml-2">批量导入</span>
@@ -99,7 +102,7 @@
                 </template>
             </ElTable>
         </div>
-        <div class="h-[72px] px-8 flex items-center justify-between bg-slate-50/50">
+        <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
             <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个自动标签规则</span>
             <pagination v-model="pager" @change="getLists" />
         </div>

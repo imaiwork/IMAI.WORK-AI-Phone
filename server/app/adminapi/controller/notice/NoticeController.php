@@ -4,6 +4,7 @@
 namespace app\adminapi\controller\notice;
 
 use app\adminapi\controller\BaseAdminController;
+use app\adminapi\lists\notice\NoticeMnpSettingLists;
 use app\adminapi\lists\notice\NoticeSettingLists;
 use app\adminapi\logic\notice\NoticeLogic;
 use app\adminapi\validate\notice\NoticeValidate;
@@ -24,6 +25,17 @@ class NoticeController extends BaseAdminController
     public function settingLists()
     {
         return $this->dataLists(new NoticeSettingLists());
+    }
+
+    /**
+     * @notes 查看通知设置列表
+     * @return \think\response\Json
+     * @author 段誉
+     * @date 2022/3/29 11:18
+     */
+    public function settingMnpLists()
+    {
+        return $this->dataLists(new NoticeMnpSettingLists());
     }
 
 

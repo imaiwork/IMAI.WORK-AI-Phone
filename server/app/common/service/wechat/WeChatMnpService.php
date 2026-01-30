@@ -5,6 +5,7 @@ namespace app\common\service\wechat;
 
 use EasyWeChat\Kernel\Exceptions\Exception;
 use EasyWeChat\MiniApp\Application;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 
 /**
@@ -151,5 +152,28 @@ class WeChatMnpService
             ],
         ])->toArray();
 
+    }
+
+    /**
+     * @desc 发送订阅消息
+     * https://developers.weixin.qq.com/miniprogram/dev/server/API/mp-message-management/subscribe-message/api_sendmessage.html
+     * @param $openid
+     * @param $template_id
+     * @param $page
+     * @param $data
+     * @date 2026/1/22 11:07
+     * @throws TransportExceptionInterface
+     * @author Rick
+     */
+    public function sendTemplateMessage($openid, $template_id, $page, $data)
+    {
+        return $this->app->getClient()->postJson('cgi-bin/message/subscribe/send', [
+            'touser' => $openid,
+            'template_id' => $template_id,
+            'page' => $page,
+            'data' => $data,
+            'miniprogram_state' => 'formal',
+            'lang' => 'zh_CN',
+        ]);
     }
 }

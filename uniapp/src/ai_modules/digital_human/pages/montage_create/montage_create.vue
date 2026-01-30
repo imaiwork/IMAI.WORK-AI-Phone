@@ -30,7 +30,7 @@
             </view>
         </view>
         <view class="grow min-h-0 mt-[24rpx]">
-            <view v-if="step === 1" class="flex flex-col h-full">
+            <view v-show="step === 1" class="flex flex-col h-full">
                 <view class="flex items-center justify-between px-4">
                     <text class="font-bold">选择形象</text>
                     <view class="flex items-center gap-x-1" @click="handleCreateAnchor">
@@ -106,7 +106,7 @@
                 </view>
             </view>
             <view
-                v-if="step === 2"
+                v-show="step === 2"
                 class="bg-white rounded-[16rpx] px-4 py-[28rpx] shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] mx-4">
                 <text class="font-bold">身份信息</text>
                 <view class="mt-[28rpx]">
@@ -118,6 +118,8 @@
                                 placeholder-style="font-size: 24rpx;"
                                 placeholder="请输入人物名称"
                                 maxlength="20"
+                                type="textarea"
+                                height="30"
                                 @change="isCharacter = false" />
                         </view>
                     </view>
@@ -131,6 +133,8 @@
                                 placeholder-style="font-size: 24rpx;"
                                 placeholder="请输入人物介绍"
                                 maxlength="50"
+                                type="textarea"
+                                height="30"
                                 @change="isCharacter = false" />
                         </view>
                     </view>
@@ -146,7 +150,7 @@
                     </view>
                 </view>
             </view>
-            <view v-if="step === 3" class="h-full flex flex-col">
+            <view v-show="step === 3" class="h-full flex flex-col">
                 <view class="flex justify-center mb-3">
                     <view class="bg-white rounded-[16rpx] px-[8rpx]">
                         <view class="w-[360rpx] grid grid-cols-2 relative h-[80rpx]">
@@ -245,7 +249,7 @@
                     </scroll-view>
                 </view>
             </view>
-            <view v-if="step === 4" class="h-full flex flex-col">
+            <view v-show="step === 4" class="h-full flex flex-col">
                 <view class="mx-4">
                     <text class="font-bold">混剪素材（共{{ formData.materialList.length }}个）</text>
                     <view class="mt-1 text-xs text-[#0000004d]">
@@ -300,7 +304,7 @@
                     </scroll-view>
                 </view>
             </view>
-            <scroll-view scroll-y class="h-full" v-if="step === 5">
+            <scroll-view scroll-y class="h-full" v-show="step === 5">
                 <view class="px-4 pb-[150rpx]">
                     <view>
                         <view class="text-[30rpx] font-bold">视频名称</view>
@@ -388,7 +392,7 @@
                                     class="text-[20rpx] text-primary bg-[#DDF3FF] rounded font-bold p-1">
                                     视频原音
                                 </view>
-                                <view v-else class="text-primary">
+                                <view v-else class="text-primary font-bold">
                                     {{ voiceValue.name }}
                                 </view>
                                 <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
@@ -582,7 +586,16 @@
         </view>
     </view>
     <choose-character v-if="showCharacter" v-model="showCharacter" @select="handleSelectCharacter" />
-    <upload-rule-pop v-if="showUploadTip" v-model="showUploadTip" @handle-upload="chooseUploadType" />
+    <choose-material
+        v-model="showMaterialLibrary"
+        :limit="uploadMaterialType == 'image' ? 9 : 1"
+        :type="uploadMaterialType"
+        @select="handleSelectMaterial" />
+    <choose-history v-model="showChooseHistory" :limit="1" @select="handleSelectHistory"></choose-history>
+    <upload-rule-pop
+        v-if="showUploadTip"
+        v-model="showUploadTip"
+        @handle-upload="uploadAndProcessFiles(uploadMaterialType)" />
     <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <upload-progress
         v-if="showUploadAudioProgress"
@@ -624,17 +637,20 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { getShanjianAnchorList, createShanjianTask, addShanjianPerson } from "@/api/digital_human";
 import { lpSceneSpeechToText } from "@/api/ladder_player";
 import { useUserStore } from "@/stores/user";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum, MontageTypeEnum, MontageStylesType } from "@/ai_modules/digital_human/enums";
-import useMontageMaterial, { montageConfig } from "@/hooks/useMontageMaterial";
-import { useEventBusManager } from "@/hooks/useEventBusManager";
 import useUpload from "@/hooks/useUpload";
+import { montageConfig } from "@/ai_modules/digital_human/config";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { useAudio } from "@/hooks/useAudio";
+import { useMaterial } from "@/ai_modules/digital_human/hooks/useMaterial";
 import UploadRulePop from "@/ai_modules/digital_human/components/upload-rule-pop/upload-rule-pop.vue";
 import ChooseCharacter from "@/ai_modules/digital_human/components/choose-character/choose-character.vue";
+import ChooseHistory from "@/ai_modules/digital_human/components/choose-history/choose-history.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
@@ -704,6 +720,9 @@ const anchorPagingRef = ref();
 const showCharacter = ref(false);
 const isCharacter = ref(false);
 const editCopywriterIndex = ref(-1);
+const showChooseHistory = ref(false);
+const showMaterialLibrary = ref(false);
+const uploadMaterialType = ref<any>();
 const replaceMaterialIndex = ref(-1);
 const copywriterTypeIndex = ref(0);
 const showAudioType = ref(false);
@@ -732,30 +751,29 @@ const canStepProceed = (stepNumber: number) => {
         2: () => true,
         3: () => {
             if (copywriterTypeIndex.value === 0) {
-                // 这里要检查口播文案是不是有小于3个字的
-                if (formData.copywriterList.some((item: any) => item.content.trim().length < 3)) {
-                    uni.$u.toast("口播文案包含内容不能少于3个字");
-                    return false;
-                }
-                return formData.copywriterList.length > 0;
+                return (
+                    formData.copywriterList.length > 0 &&
+                    !formData.copywriterList.some((item: any) => item.content.trim().length < 3)
+                );
             } else {
                 return formData.audio.length > 0;
             }
         },
         4: () => {
             if (formData.materialList.length === 0) return true;
-            const totalDuration =
-                formData.materialList.reduce((acc, item) => (item.type === "video" ? acc + item.duration : acc), 0) +
-                formData.materialList.filter((item: any) => item.type === "image").length * montageConfig.imageDuration;
-            if (totalDuration > montageConfig.materialTotalDuration * 60) {
-                uni.$u.toast(`素材总时长不能超过${montageConfig.materialTotalDuration}分钟`);
-                return false;
-            }
-            return true;
+            const totalDuration = getMaterialTotalDuration();
+            return totalDuration <= montageConfig.materialTotalDuration * 60;
         },
         5: () => true,
     };
     return strategy[stepNumber]?.() ?? false;
+};
+
+const getMaterialTotalDuration = () => {
+    return (
+        formData.materialList.reduce((acc, item) => (item.type === "video" ? acc + item.duration : acc), 0) +
+        formData.materialList.filter((item: any) => item.type === "image").length * montageConfig.imageDuration
+    );
 };
 
 // 计算当前步骤是否可以点击“下一步”
@@ -773,12 +791,26 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
         if (canNext.value) {
             step.value++;
         } else {
-            const messages: { [key: number]: string } = {
-                1: "请至少选择一个形象",
-                2: "请填写人物名称和介绍",
-                3: copywriterTypeIndex.value === 0 ? "请至少添加一条文案" : "请至少添加一条音频",
+            const messages: Record<number, () => string> = {
+                1: () => "请至少选择一个形象",
+                3: () => {
+                    if (copywriterTypeIndex.value === 0) {
+                        if (formData.copywriterList.some((item: any) => item.content.trim().length < 3)) {
+                            return "口播文案包含内容不能少于3个字";
+                        }
+                        return "请至少添加一条文案";
+                    } else {
+                        return "请至少添加一条音频";
+                    }
+                },
+                4: () => {
+                    const totalDuration = getMaterialTotalDuration();
+                    if (totalDuration > montageConfig.materialTotalDuration * 60)
+                        return `素材总时长不能超过${montageConfig.materialTotalDuration}分钟`;
+                    return "";
+                },
             };
-            uni.$u.toast(messages[step.value] || "请完成当前步骤");
+            uni.$u.toast(messages[step.value]?.() || "请完成当前步骤");
         }
         return;
     }
@@ -799,6 +831,8 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
     }
     destroy();
 };
+
+const { processAndAppend } = useMaterial(toRef(formData, "materialList"));
 
 const handleAnchorSelect = (val: any) => {
     if (val.status === 0) {
@@ -919,12 +953,7 @@ const recorderSuccess = (res: any) => {
     showRecorder.value = false;
 };
 
-const {
-    showUploadProgress,
-    uploadMaterialList,
-    uploadAndProcessFiles,
-    handleDeleteMaterial: handleDeleteMaterialFromHook,
-} = useMontageMaterial({
+const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
     onSuccess: (materials: any[]) => {
         if (replaceMaterialIndex.value !== -1) {
@@ -937,20 +966,53 @@ const {
 });
 
 const chooseUploadType = () => {
-    if (isFirstOpen.value) {
-        isFirstOpen.value = false;
-        showUploadTip.value = true;
-        return;
-    }
     showUploadTip.value = false;
     uni.showActionSheet({
-        itemList: ["选择图片素材", "选择视频素材"],
+        itemList: ["从相册选择图片", "从相册选择视频", "从图片素材库选择", "从视频素材库选择", "从创作库选择"],
         success: (res) => {
-            if (res.tapIndex === 0) uploadAndProcessFiles("image");
-            else if (res.tapIndex === 1) {
-                uploadAndProcessFiles("video");
+            const { tapIndex } = res;
+            if ([0, 1].includes(tapIndex)) {
+                uploadMaterialType.value = tapIndex === 0 ? "image" : "video";
+
+                if (isFirstOpen.value) {
+                    isFirstOpen.value = false;
+                    showUploadTip.value = true;
+                    return;
+                }
+                uploadAndProcessFiles(uploadMaterialType.value);
+            } else if ([2, 3].includes(tapIndex)) {
+                uploadMaterialType.value = tapIndex === 2 ? "image" : "video";
+                showMaterialLibrary.value = true;
+            } else if (tapIndex === 4) {
+                showChooseHistory.value = true;
             }
         },
+    });
+};
+
+const handleSelectMaterial = async (res: any[]) => {
+    const type = uploadMaterialType.value;
+    await processAndAppend({
+        rawList: res,
+        urlField: "content",
+        type: type as "video" | "image",
+        replaceIndex: replaceMaterialIndex.value,
+        onSuccess: () => (showMaterialLibrary.value = false),
+    });
+};
+
+const handleSelectHistory = async (res: any[]) => {
+    const normalized = res.map((item) => ({
+        ...item,
+        actualUrl: item.clip_result_url || item.video_result_url,
+    }));
+
+    await processAndAppend({
+        rawList: normalized,
+        urlField: "actualUrl",
+        type: "video",
+        replaceIndex: replaceMaterialIndex.value,
+        onSuccess: () => (showChooseHistory.value = false),
     });
 };
 
@@ -974,7 +1036,6 @@ const handleReplaceMaterial = (index: number) => {
 
 const handleDeleteMaterial = (id: number) => {
     formData.materialList = formData.materialList.filter((item: any) => item.id !== id);
-    handleDeleteMaterialFromHook(id);
 };
 
 const handleSelectTone = (tone: any) => {
@@ -996,13 +1057,13 @@ const handleSelectTone = (tone: any) => {
 const handleMinusVideoCount = (type: "minus" | "add") => {
     if (type === "minus") {
         if (formData.extra.video_count <= 1) {
-            uni.$u.toast("数量最多为1");
+            uni.$u.toast("视频数量最少为1");
             return;
         }
         formData.extra.video_count--;
     } else {
         if (formData.extra.video_count >= 99) {
-            uni.$u.toast("数量最多为99");
+            uni.$u.toast("视频数量最多为99");
             return;
         }
         formData.extra.video_count++;
@@ -1023,6 +1084,14 @@ const handleCreateVideo = async () => {
     }
     if (formData.voice.length === 0) {
         showChooseTone.value = true;
+        return;
+    }
+    if (formData.extra.video_count <= 0) {
+        uni.$u.toast("请输入视频数量");
+        return;
+    }
+    if (formData.extra.video_count > 99) {
+        uni.$u.toast("视频数量最多为99");
         return;
     }
     if (formData.extra.clip === 1 && formData.clip.length === 0) {
@@ -1065,6 +1134,7 @@ const handleCreateVideo = async () => {
         uni.hideLoading();
         createResult.value = res;
         showCreateSuccess.value = true;
+        WechatOA.notify();
     } catch (error: any) {
         uni.hideLoading();
         uni.showToast({
@@ -1093,6 +1163,10 @@ const toRecord = () => {
     uni.$u.route({
         url: "/packages/pages/creation/creation",
         type: "redirect",
+        params: {
+            source: "1",
+            type: 2,
+        },
     });
 };
 

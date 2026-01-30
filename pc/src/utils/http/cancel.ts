@@ -26,12 +26,19 @@ export class CancelTokenManager {
      * 添加请求控制器
      * @param key 请求的唯一标识
      * @param controller 请求的控制器
+     * @param ignoreCancel 是否忽略取消重复请求
      */
-    public addRequest(key: string, controller: AbortController): void {
-        // 如果已存在相同key的请求，先取消旧请求
-        if (this.requestMap.has(key)) {
+    public addRequest(key: string, controller: AbortController, ignoreCancel: boolean = false): void {
+        // 如果不忽略取消且已存在相同key的请求，先取消旧请求
+        if (!ignoreCancel && this.requestMap.has(key)) {
             this.cancelRequest(key);
         }
+
+        // 如果忽略取消，为key添加唯一后缀以避免冲突
+        if (ignoreCancel && this.requestMap.has(key)) {
+            key = `${key}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+
         this.requestMap.set(key, controller);
     }
 
@@ -96,10 +103,15 @@ export class CancelTokenManager {
      * 生成请求的唯一标识
      * @param url 请求URL
      * @param method 请求方法
-     * @returns 请求的唯一标识
+     * @param params 请求参数
+     * @param ignoreCancel 是否忽略取消（影响key的生成策略）
      */
-    public static generateRequestKey(url: string, method: string, params: any): string {
-        return `${method}:${url}:${Date.now()}`;
+    public static generateRequestKey(url: string, method: string, params: any, ignoreCancel: boolean = false): string {
+        const paramsStr = params ? JSON.stringify(params) : "";
+        const baseKey = `${method}:${url}:${paramsStr}`;
+
+        // 如果忽略取消，每次都生成唯一的key
+        return ignoreCancel ? `${baseKey}:${Date.now()}` : baseKey;
     }
 
     /**

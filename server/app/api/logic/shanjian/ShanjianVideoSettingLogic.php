@@ -456,8 +456,6 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     // 音频驱动模式
                     $audioItem = $audioData[$dataIndex % count($audioData)] ?? null;
                     if ($audioItem) {
-                        $taskContent['title'] = '';
-                        $taskContent['content'] = '';
                         // 支持音频数据格式：字符串或对象
                         if (is_string($audioItem)) {
                             $taskContent['audio_url'] = trim($audioItem, " `'\"`");
@@ -489,9 +487,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     'video_index_in_source' => $videoIndex
                 ];
                 $mergedArray = array_merge($extra, $extraData);
-
+//                $taskname = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($globalTaskIndex + 1);
+                $taskname = $taskContent['title'] ?? date('YmdHis'). '数字人口播混剪';
+            
                 $taskItem = [
-                    'name' => ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($globalTaskIndex + 1),
+                    'name' => $taskname,
                     'pic' => $selectedAnchor['pic'] ?? '',
                     'task_id' => generate_unique_task_id(),
                     'status' => 0, // 待处理
@@ -826,9 +826,9 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     ]
                 ];
                 $mergedArray = array_merge($extra, $extraData);
-
+               // $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_形象' . ($anchorIndex + 1) . '_视频' . ($videoIndex + 1);
                 // 生成视频名称时包含素材和视频信息
-                $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_形象' . ($anchorIndex + 1) . '_视频' . ($videoIndex + 1);
+                $videoName = date('YmdHis'). '真人口播混剪';
                 $modeSuffix = '';
                 if ($humanMode == 0) $modeSuffix .= 'H';
                 if ($musicMode == 0) $modeSuffix .= 'M';
@@ -1157,7 +1157,6 @@ class ShanjianVideoSettingLogic extends ApiLogic
                         'voice_id' => $voice ?? '',
                         'card_name' => '',
                         'card_introduced' => '',
-                        'title' =>  '',
                         'msg' =>  '',
                         'material' => $materialJson,
                         'music_url' => $music_url,
@@ -1198,12 +1197,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     $taskItem['extra'] = json_encode($mergedExtra, JSON_UNESCAPED_UNICODE);
                 }
                 // 生成视频名称
-                $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_素材' . ($materialIndex + 1) . '_视频' . ($videoIndex + 1);
-                $modeSuffix = $contentMode == 1 ? 'S' : 'R'; // S=顺序，R=随机
-                $videoName .= '_' . $modeSuffix;
+             //   $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_素材' . ($materialIndex + 1) . '_视频' . ($videoIndex + 1);
+//                $modeSuffix = $contentMode == 1 ? 'S' : 'R'; // S=顺序，R=随机
+//                $videoName .= '_' . $modeSuffix;
 
-                $taskItem['name'] = $videoName;
-
+                $taskItem['name'] = $taskItem['title'] ??  date('YmdHis') . "素材混剪";
                 $taskData[] = $taskItem;
             } // 内层循环结束
         } // 外层循环结束
@@ -2062,11 +2060,10 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 }
 
                 // 生成视频名称
-                $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_素材' . ($materialIndex + 1) . '_视频' . ($videoIndex + 1);
-                $modeSuffix = $contentMode == 1 ? 'S' : 'R'; // S=顺序，R=随机
-                $videoName .= '_' . $modeSuffix;
-
-                $taskItem['name'] = $videoName;
+//                $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_素材' . ($materialIndex + 1) . '_视频' . ($videoIndex + 1);
+//                $modeSuffix = $contentMode == 1 ? 'S' : 'R'; // S=顺序，R=随机
+//                $videoName .= '_' . $modeSuffix;
+                $taskItem['name'] = $taskItem['title'] ??  date('YmdHis') . '新闻体';
 
                 $taskData[] = $taskItem;
             } // 内层循环结束

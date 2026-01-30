@@ -15,7 +15,9 @@
             class="flex flex-col items-center justify-center bg-no-repeat bg-center bg-cover relative py-[60rpx]"
             :style="{ backgroundImage: `url(${config.baseUrl}static/images/recharge_img1.png)` }">
             <view class="text-[30rpx] font-bold text-white">当前算力</view>
-            <text class="font-digital-number font-bold text-white text-[48rpx] mt-[60rpx]"> {{ userTokens }}</text>
+            <text class="font-digital-number font-bold text-white text-[48rpx] mt-[60rpx] indent-[-20rpx]">
+                {{ userTokens }}</text
+            >
         </view>
         <view class="relative grow min-h-0">
             <scroll-view scroll-y class="h-full">
@@ -342,6 +344,7 @@ const payment = (() => {
             const res = await pay.payment(data.pay_way, data.config);
             return res;
         } catch (error: any) {
+            uni.hideLoading();
             uni.showToast({
                 title: error || "支付失败",
                 icon: "none",

@@ -73,26 +73,6 @@ export function deleteCopywritingMaterial(params: any) {
     return $request.post({ url: "/sv.mediaSetting/delete", params });
 }
 
-// 素材库列表
-export function getMaterialLibraryList(params: any) {
-    return $request.get({ url: "/sv.mediaMaterial/lists", params });
-}
-
-// 素材库新增
-export function addMaterialLibrary(params: any) {
-    return $request.post({ url: "/sv.mediaMaterial/add", params });
-}
-
-// 素材库更新
-export function updateMaterialLibrary(params: any) {
-    return $request.post({ url: "/sv.mediaMaterial/update", params });
-}
-
-// 素材库删除
-export function deleteMaterialLibrary(params: any) {
-    return $request.post({ url: "/sv.mediaMaterial/delete", params });
-}
-
 // 数字人新增
 export function addDigitalHuman(params: any) {
     return $request.post({ url: "/sv.videoSetting/add", params });

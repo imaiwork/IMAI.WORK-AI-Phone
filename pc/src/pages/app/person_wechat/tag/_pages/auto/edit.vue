@@ -41,13 +41,7 @@
                     </ElFormItem>
                 </div>
 
-                <ElFormItem prop="match_keywords">
-                    <template #label>
-                        <div class="flex items-center justify-between w-full">
-                            <span class="font-black text-tx-primary">匹配关键词</span>
-                            <span class="text-[11px] text-tx-placeholder font-bold uppercase">Keywords</span>
-                        </div>
-                    </template>
+                <ElFormItem prop="match_keywords" label="匹配关键词">
                     <div class="relative w-full">
                         <ElInput
                             v-model="formData.match_keywords"
@@ -63,13 +57,7 @@
                     </div>
                 </ElFormItem>
 
-                <ElFormItem prop="tag_name">
-                    <template #label>
-                        <div class="flex items-center justify-between w-full">
-                            <span class="font-black text-tx-primary">赋予标签名称</span>
-                            <span class="text-[11px] text-tx-placeholder font-bold uppercase">Target Tag</span>
-                        </div>
-                    </template>
+                <ElFormItem prop="tag_name" label="赋予标签名称">
                     <ElInput
                         v-model="formData.tag_name"
                         placeholder="例如：高意向客户、咨询售后等"
@@ -137,7 +125,7 @@ const close = () => {
 defineExpose({
     open,
     setFormData: (data: any) => {
-        Object.assign(formData, data);
+        setFormData(data, formData);
     },
 });
 </script>

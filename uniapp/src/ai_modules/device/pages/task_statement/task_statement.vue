@@ -422,7 +422,9 @@ const getPlatformName = (app_type: number) => {
 };
 
 onLoad((options: any) => {
-    deviceCode.value = options.device_code;
+    if (options.device_code) {
+        deviceCode.value = options.device_code;
+    }
 });
 </script>
 

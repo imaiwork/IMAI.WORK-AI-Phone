@@ -33,7 +33,11 @@ class AutoDeviceFristCreateCron extends Command
     {
         try {
 
-            $devices = AutoDeviceConfig::where('is_first', 0)->select();
+            $devices = AutoDeviceConfig::where('is_first', 0)
+                ->where('device_code', 'in', function ($query) {
+                    $query->name('sv_device')->field('device_code')->where('auto_type', '=', 1);
+                })
+                ->select();
             foreach ($devices as $device) {
                 if (!$this->getAutoConfigStatus($device)) {
                     continue;
@@ -88,7 +92,7 @@ class AutoDeviceFristCreateCron extends Command
             'publish_setting' => $publish_setting,
             'add_wechat_setting' => $add_wechat_setting,
         );
-        Log::channel('auto')->info(json_encode($msg, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
+        Log::channel('auto')->info(json_encode($msg, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
         return false;
     }
 }

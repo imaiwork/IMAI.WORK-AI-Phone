@@ -17,13 +17,6 @@
                             批量数字人控制台
                         </h1>
                         <div class="flex items-center gap-2 mt-2">
-                            <div
-                                class="flex items-center px-2 py-0.5 rounded-full bg-[#F0FDF4] border border-[#DCFCE7]">
-                                <span class="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse"></span>
-                                <span class="ml-1.5 text-[11px] text-[#166534] font-black uppercase tracking-wider"
-                                    >Live Processing</span
-                                >
-                            </div>
                             <p class="text-[13px] text-[#64748B] font-bold">
                                 当前共有 <span class="text-primary mx-0.5">{{ pager.count }}</span> 个创作任务正在运行
                             </p>

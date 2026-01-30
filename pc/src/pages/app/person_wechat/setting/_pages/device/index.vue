@@ -4,7 +4,10 @@
             <div class="flex items-center gap-4">
                 <div class="w-1.5 h-6 rounded-full bg-primary shadow-[0_0_10px_rgba(0,101,251,0.4)]"></div>
                 <h3 class="text-lg font-[900] text-[#0F172A]">终端设备管理</h3>
-                <ElButton type="primary" class="!rounded-xl !h-10 !font-bold" @click="openAddDevicePopup">
+                <ElButton
+                    type="primary"
+                    class="!rounded-xl !h-10 !px-6 !font-black hover:scale-105 transition-transform ml-2"
+                    @click="openAddDevicePopup">
                     <Icon name="el-icon-Plus" />
                     <span class="ml-1">新增设备绑定</span>
                 </ElButton>
@@ -94,7 +97,7 @@
                 </template>
             </ElTable>
         </div>
-        <div class="h-[72px] px-8 flex items-center justify-between bg-slate-50/50">
+        <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
             <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个终端设备</span>
             <pagination v-model="pager" @change="getLists" />
         </div>

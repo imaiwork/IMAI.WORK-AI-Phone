@@ -336,6 +336,7 @@ const getAiPersonConfig = computed(() => {
             "sora_copywriting_create",
             "human_avatar_sora",
             "sora_draw_avatar",
+            "ai_shanjian_authorized_video",
         ].includes(item.scene)
     );
 });

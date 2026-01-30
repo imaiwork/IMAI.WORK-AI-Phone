@@ -10,7 +10,7 @@
                 <section>
                     <div class="flex items-center gap-3 mb-3">
                         <div
-                            class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">
+                            class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-sm shadow-lg shadow-[#0065FB]/20">
                             1
                         </div>
                         <h2 class="text-lg font-[900] text-[#1E293B]">训练形象视频</h2>
@@ -77,15 +77,34 @@
                 </section>
 
                 <section>
-                    <div class="flex items-center gap-3 mb-6">
-                        <div
-                            class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-sm shadow-lg shadow-primary/20">
-                            2
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-sm shadow-lg shadow-[#0065FB]/20">
+                                2
+                            </div>
+                            <h2 class="text-lg font-[900] text-[#1E293B]">人身核验与授权</h2>
                         </div>
-                        <h2 class="text-lg font-[900] text-[#1E293B]">人身核验与授权</h2>
+                        <div class="bg-slate-100 p-1 rounded-[18px] flex w-[150px]">
+                            <button
+                                v-for="opt in [
+                                    { label: '手动授权', val: 'manual' },
+                                    { label: 'AI授权', val: 'ai' },
+                                ]"
+                                :key="opt.val"
+                                @click="authMethod = opt.val as 'manual' | 'ai'"
+                                :class="[
+                                    'flex-1 py-2 text-sm font-black rounded-[14px] transition-all duration-300',
+                                    authMethod === opt.val
+                                        ? 'bg-white text-primary shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700',
+                                ]">
+                                {{ opt.label }}
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="rounded-2xl overflow-hidden">
+                    <div class="rounded-2xl overflow-hidden" v-if="authMethod === 'manual'">
                         <upload
                             drag
                             type="video"
@@ -134,7 +153,7 @@
                 <div class="pt-6 border-t border-br">
                     <button
                         class="w-full h-[60px] rounded-2xl bg-[#1E293B] text-white font-[900] text-lg flex items-center justify-center gap-3 transition-all hover:bg-black active:scale-[0.98] disabled:opacity-30 disabled:grayscale"
-                        :disabled="!anchorData.url || !authData.url"
+                        :disabled="!anchorData.url || (authMethod === 'manual' && !authData.url)"
                         @click="lockFn">
                         <Icon v-if="isLock" name="el-icon-Loading" />
                         立即开启克隆
@@ -240,12 +259,21 @@ const authData = reactive<any>({
 const anchorParseLoading = ref<boolean>(false);
 const authParseLoading = ref<boolean>(false);
 
+// 授权方式控制
+const authMethod = ref<"manual" | "ai">("manual");
+
 const shanjianAuth = computed(() => appStore.getDigitalHumanConfig.shanjian_auth);
 const getToken = computed(() => {
     const token1 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN)?.score;
     const token2 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_CHANJING)?.score;
     const token3 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR)?.score;
-    return parseFloat(token1) + parseFloat(token2) + parseFloat(token3);
+    const token4 = userStore.getTokenByScene(TokensSceneEnum.AI_SHANJIAN_AUTHORIZED_VIDEO)?.score;
+    return (
+        parseFloat(token1) +
+        parseFloat(token2) +
+        parseFloat(token3) +
+        (authMethod.value === "ai" ? parseFloat(token4) : 0)
+    );
 });
 
 // 上传模板内容列表
@@ -349,19 +377,15 @@ const checkIsH264 = async (file: File): Promise<boolean> => {
 
         // 执行检测流
         (async () => {
-            // 第一阶段：尝试读取头部 512KB (涵盖 95% 的 Fast-start 视频)
             await readChunk(0, 512 * 1024);
 
-            // 给解析留一点 CPU 时间
             await new Promise((r) => setTimeout(r, 100));
 
-            // 第二阶段：如果头部没读到 moov，尝试读取尾部 1MB (针对非 Fast-start 视频)
             if (!isResolved && file.size > 512 * 1024) {
                 const tailStart = Math.max(512 * 1024, file.size - 1024 * 1024);
                 await readChunk(tailStart, file.size);
             }
 
-            // 第三阶段：如果还没读到，最后的倔强，读取文件中间（可选，通常前两步就够了）
             // 3秒后还没结果，直接返回 false
             setTimeout(() => {
                 if (!isResolved) {
@@ -398,9 +422,10 @@ const handleClone = async () => {
             width: anchorData.width,
             height: anchorData.height,
             anchor_url: anchorData.url,
-            authorized_url: authData.url,
+            authorized_url: authMethod.value === "manual" ? authData.url : "",
             pic: anchorData.pic,
-            authorized_pic: authData.pic,
+            authorized_pic: authMethod.value === "manual" ? authData.pic : "",
+            ai_type: authMethod.value === "manual" ? 0 : 1,
         });
         useNuxtApp().$confirm({
             title: "提示",

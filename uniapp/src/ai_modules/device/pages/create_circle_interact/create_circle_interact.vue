@@ -30,7 +30,7 @@
             </view>
         </view>
         <view class="grow min-h-0 mt-[24rpx]">
-            <scroll-view scroll-y v-if="step === 1" class="h-full">
+            <scroll-view scroll-y v-show="step === 1" class="h-full">
                 <view class="px-4 pb-[100rpx]">
                     <view class="bg-white rounded-[20rpx] px-[40rpx] py-[30rpx]">
                         <view class="border-[0] border-b-[1rpx] border-solid border-[#E5E5E5] pb-[26rpx]">
@@ -147,7 +147,7 @@
                     </view>
                 </view>
             </scroll-view>
-            <view v-if="step === 2" class="h-full">
+            <view v-show="step === 2" class="h-full">
                 <scroll-view scroll-y class="h-full">
                     <view class="px-4 pb-[100rpx]">
                         <base-setting
@@ -216,6 +216,7 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { createCircleLikeTask } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
@@ -365,14 +366,29 @@ const handleCreateTask = async () => {
         });
         uni.hideLoading();
         showCreateTaskSuccessDialog.value = true;
+        WechatOA.notify();
     } catch (error: any) {
-        taskErrorMsg.value = error;
         uni.hideLoading();
-        uni.showToast({
-            title: error || "创建失败",
-            icon: "none",
-            duration: 3000,
-        });
+        if (error.indexOf("24小时自动执行任务") > -1) {
+            uni.showModal({
+                title: "提示",
+                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
+                success: (res) => {
+                    if (res.confirm) {
+                        uni.$u.route({
+                            url: "/pages/phone/phone",
+                        });
+                    }
+                },
+            });
+        } else {
+            taskErrorMsg.value = error;
+            uni.showToast({
+                title: error,
+                icon: "none",
+                duration: 3000,
+            });
+        }
     }
 };
 

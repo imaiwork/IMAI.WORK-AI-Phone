@@ -32,21 +32,25 @@ class AutoDeviceCreateCron extends Command
     protected function execute(Input $input, Output $output)
     {
         try {
-            $devices = AutoDeviceConfig::where('is_first', 1)->select();
+            $devices = AutoDeviceConfig::where('is_first', 1)
+                ->where('device_code', 'in', function ($query) {
+                    $query->name('sv_device')->field('device_code')->where('auto_type', '=', 1);
+                })
+                ->select();
             foreach ($devices as $device) {
-                
+
                 ActiveLogic::detail([
                     'user_id' => $device->user_id,
                     'device_code' => $device->device_code,
                     'exec_date' => \app\common\model\auto\AutoDeviceClueConfig::where('user_id', $device->user_id)->where('device_code', $device->device_code)->value('exec_date'),
                 ]);
-                
+
                 ClueLogic::autoClueTaskCron(0, $device->device_code); //自动视频号获客任务
                 TouchLogic::autoTouchTaskCron(0, $device->device_code); //截流获客任务
                 TakeOverLogic::autoTakeoverTaskCron(0, $device->device_code); //自动私信接管任务
-                ActiveLogic::autoActiveTaskCron(0, $device->device_code);//自动养号任务
+                ActiveLogic::autoActiveTaskCron(0, $device->device_code); //自动养号任务
                 AddWechatLogic::autoAddWechatTaskCron(0, $device->device_code); //自动添加微信任务
-                AutoDeviceSettingLogic::processHumanImageData($device->device_code);//自动创建发布任务
+                AutoDeviceSettingLogic::processHumanImageData($device->device_code); //自动创建发布任务
             }
 
             return true;

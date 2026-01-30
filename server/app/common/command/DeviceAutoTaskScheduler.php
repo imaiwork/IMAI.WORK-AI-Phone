@@ -18,6 +18,7 @@ use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceTask;
 use app\common\enum\DeviceEnum;
 use app\common\traits\DeviceAutoTaskTrait;
+use app\api\logic\ApiLogic;
 
 class DeviceAutoTaskScheduler extends Command
 {
@@ -111,7 +112,7 @@ class DeviceAutoTaskScheduler extends Command
         $pendingTasks = SvDeviceTask::alias('t')
             ->field('t.*, FROM_UNIXTIME(t.start_time) as start_time_str, FROM_UNIXTIME(t.end_time) as end_time_str')
             ->where('t.status', '=', 0) // 只处理已标记为执行中的任务
-            ->where('device_code', 'in', function($query){
+            ->where('device_code', 'in', function ($query) {
                 $query->name('sv_device')->field('device_code')->where('auto_type', '=', 1);
             })
             ->where('t.auto_type', '=', 1) // 只处理自动任务
@@ -147,10 +148,10 @@ class DeviceAutoTaskScheduler extends Command
      */
     protected function checkRunningTasks($currentTime, Output $output)
     {
-        $runningTasks = SvDeviceTask::field('*')
+        $runningTasks = SvDeviceTask::field('*, FROM_UNIXTIME(start_time) as start_time_str, FROM_UNIXTIME(end_time) as end_time_str')
             ->where('status', 1) // 只处理已标记为执行中的任务
             ->where('auto_type', '=', 1) // 只处理自动任务
-            ->where('device_code', 'in', function($query){
+            ->where('device_code', 'in', function ($query) {
                 $query->name('sv_device')->field('device_code')->where('auto_type', '=', 1);
             })
             ->select();
@@ -179,7 +180,7 @@ class DeviceAutoTaskScheduler extends Command
     {
         $timeoutTasks = SvDeviceTask::field('*')
             ->where('status', 0) // 只处理已标记为执行中的任务
-            ->where('device_code', 'in', function($query){
+            ->where('device_code', 'in', function ($query) {
                 $query->name('sv_device')->field('device_code')->where('auto_type', '=', 1);
             })
             ->where('auto_type', '=', 1) // 只处理自动任务
@@ -327,6 +328,14 @@ class DeviceAutoTaskScheduler extends Command
             $task->update_time = time();
             $task->save();
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvCrawlingTask::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
         });
 
         $this->setTaskLog("获客任务执行中: ID={$task->id}, 设备={$task->device_code}");
@@ -351,9 +360,17 @@ class DeviceAutoTaskScheduler extends Command
                 $task->save();
                 \app\common\model\sv\SvCrawlingTask::where('id', $task->sub_task_id)->update(['status' => 3, 'update_time' => time()]);
                 $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+                ApiLogic::sendNotice([
+                    'userId' => $task->user_id,
+                    'startTime' => $task->start_time_str,
+                    'endTime' => $task->end_time_str,
+                    'content' => \app\common\model\sv\SvCrawlingTask::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                    'status' => $task->status,
+                    'autoType' => $task->auto_type,
+                ]);
             });
             $this->setTaskLog("获客任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
@@ -379,6 +396,14 @@ class DeviceAutoTaskScheduler extends Command
                     $task->update_time = time();
                     $task->save();
                     $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+                    ApiLogic::sendNotice([
+                        'userId' => $task->user_id,
+                        'startTime' => $task->start_time_str,
+                        'endTime' => $task->end_time_str,
+                        'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                        'status' => $task->status,
+                        'autoType' => $task->auto_type,
+                    ]);
                 }
             });
         } else {
@@ -390,6 +415,14 @@ class DeviceAutoTaskScheduler extends Command
                     $task->update_time = time();
                     $task->save();
                     $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+                    ApiLogic::sendNotice([
+                        'userId' => $task->user_id,
+                        'startTime' => $task->start_time_str,
+                        'endTime' => $task->end_time_str,
+                        'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                        'status' => $task->status,
+                        'autoType' => $task->auto_type,
+                    ]);
                 }
             });
         }
@@ -432,6 +465,14 @@ class DeviceAutoTaskScheduler extends Command
                 }
             }
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
             $this->setTaskLog("执行发布任务完成: ID={$task->id}, 设备={$task->device_code}");
         } else {
 
@@ -450,6 +491,14 @@ class DeviceAutoTaskScheduler extends Command
                         $task->update_time = time();
                         $task->save();
                         $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+                        ApiLogic::sendNotice([
+                            'userId' => $task->user_id,
+                            'startTime' => $task->start_time_str,
+                            'endTime' => $task->end_time_str,
+                            'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                            'status' => $task->status,
+                            'autoType' => $task->auto_type,
+                        ]);
                     }
                 });
             } else {
@@ -461,6 +510,14 @@ class DeviceAutoTaskScheduler extends Command
                         $task->update_time = time();
                         $task->save();
                         $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+                        ApiLogic::sendNotice([
+                            'userId' => $task->user_id,
+                            'startTime' => $task->start_time_str,
+                            'endTime' => $task->end_time_str,
+                            'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                            'status' => $task->status,
+                            'autoType' => $task->auto_type,
+                        ]);
                     }
                 });
             }
@@ -472,7 +529,8 @@ class DeviceAutoTaskScheduler extends Command
     /**
      * 执行3客户互动任务
      */
-    protected function executeWechatCircleTask(SvDeviceTask $task, Output $output) {
+    protected function executeWechatCircleTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行客户互动任务 - 设备: {$task->device_code}");
         }
@@ -484,6 +542,14 @@ class DeviceAutoTaskScheduler extends Command
                 $task->update_time = time();
                 $task->save();
                 $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+                ApiLogic::sendNotice([
+                    'userId' => $task->user_id,
+                    'startTime' => $task->start_time_str,
+                    'endTime' => $task->end_time_str,
+                    'content' => \app\common\model\wechat\AiWechatCircleTaskConfig::where('id', $task->sub_task_id)->findOrEmpty()->task_name ?? $task->task_name,
+                    'status' => $task->status,
+                    'autoType' => $task->auto_type,
+                ]);
             }
         });
 
@@ -492,7 +558,8 @@ class DeviceAutoTaskScheduler extends Command
     /**
      * 执行3客户互动任务完成逻辑
      */
-    protected function executeWechatCircleCompletedTask(SvDeviceTask $task, Output $output) {
+    protected function executeWechatCircleCompletedTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行客户互动任务 - 设备: {$task->device_code}");
         }
@@ -505,17 +572,26 @@ class DeviceAutoTaskScheduler extends Command
             $task->remark = '发布任务完成';
             $task->update_time = time();
             $task->save();
-            
+
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\wechat\AiWechatCircleTaskConfig::where('id', $task->sub_task_id)->findOrEmpty()->task_name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
             $this->setTaskLog("执行发布任务完成: ID={$task->id}, 设备={$task->device_code}");
-        } 
+        }
     }
 
 
     /**
      * 执行评论区获客任务
      */
-    protected function executeCommentClueTask(SvDeviceTask $task, Output $output) {
+    protected function executeCommentClueTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行截流获客任务 - 设备: {$task->device_code}");
         }
@@ -550,7 +626,8 @@ class DeviceAutoTaskScheduler extends Command
         $this->setTaskLog("截流获客任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
 
-    protected function executeCommentToCommentTask(SvDeviceTask $task, Output $output) {
+    protected function executeCommentToCommentTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行评论区评论任务 - 设备: {$task->device_code}");
         }
@@ -561,12 +638,21 @@ class DeviceAutoTaskScheduler extends Command
             $task->update_time = time();
             $task->save();
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvLeadScrapingSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
         });
 
         $this->setTaskLog("评论区评论任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
 
-    protected function executeCommentToMsgTask(SvDeviceTask $task, Output $output) {
+    protected function executeCommentToMsgTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行评论区私信任务 - 设备: {$task->device_code}");
         }
@@ -577,12 +663,21 @@ class DeviceAutoTaskScheduler extends Command
             $task->update_time = time();
             $task->save();
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvLeadScrapingSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
         });
 
         $this->setTaskLog("评论区私信任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
 
-    protected function executeCommentToMarkClueTask(SvDeviceTask $task, Output $output) {
+    protected function executeCommentToMarkClueTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行留痕获客任务 - 设备: {$task->device_code}");
         }
@@ -593,6 +688,14 @@ class DeviceAutoTaskScheduler extends Command
             $task->update_time = time();
             $task->save();
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvLeadScrapingSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
         });
 
         $this->setTaskLog("留痕获客任务执行中: ID={$task->id}, 设备={$task->device_code}");
@@ -600,7 +703,8 @@ class DeviceAutoTaskScheduler extends Command
     /**
      * 执行评论区获客任务完成逻辑
      */
-    protected function executeCommentClueCompletedTask(SvDeviceTask $task, Output $output) {
+    protected function executeCommentClueCompletedTask(SvDeviceTask $task, Output $output)
+    {
         if ($this->isDev) {
             $output->writeln("执行评论区评论任务 - 设备: {$task->device_code}");
         }
@@ -632,7 +736,6 @@ class DeviceAutoTaskScheduler extends Command
 
             throw $th; // 重新抛出异常，让上层捕获
         }
-
     }
 
     protected function executeCommentToCommentCompletedTask(SvDeviceTask $task, Output $output)
@@ -668,7 +771,15 @@ class DeviceAutoTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("评论区评论任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvLeadScrapingSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
@@ -706,7 +817,15 @@ class DeviceAutoTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("评论区私信任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvLeadScrapingSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
@@ -744,7 +863,15 @@ class DeviceAutoTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("留痕获客任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvLeadScrapingSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
@@ -765,6 +892,14 @@ class DeviceAutoTaskScheduler extends Command
             $task->update_time = time();
             $task->save();
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
         });
         $this->setTaskLog("加微任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
@@ -783,33 +918,32 @@ class DeviceAutoTaskScheduler extends Command
             $task->remark = '加微任务完成';
             $task->update_time = time();
             $task->save();
-
-            $find = SvDeviceTask::where('sub_task_id', $task->sub_task_id)
-                ->where('id', '<>', $task->id)
-                ->where('task_type', DeviceEnum::TASK_TYPE_FRIENDS)
-                ->where('status', DeviceEnum::TASK_STATUS_WAIT)
-                ->where('source', DeviceEnum::TASK_SOURCE_FRIENDS)
-                ->findOrEmpty();
-            if ($find->isEmpty()) {
-                \app\common\model\sv\SvCrawlingManualTask::where('id', $task->sub_task_id)->update(['status' => 3, 'update_time' => time()]);
-            }
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("加微任务完成: ID={$task->id}, 设备={$task->device_code}");
-        } else {
-            if ($this->isDev) {
-                $output->writeln("执行加微任务 - 设备: {$task->device_code}");
-            }
-            // TODO: 实现具体的加好友完成逻辑
-            self::cluesAddWechatFriendTask($task, $output, function ($result) use ($task) {
-                $task->status = $result['status'];
-                $task->remark = $result['remark'];
-                $task->update_time = time();
-                $task->save();
-                $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
-            });
-            $this->setTaskLog("加微任务执行中: ID={$task->id}, 设备={$task->device_code}");
-        }
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        } 
+        // else {
+        //     if ($this->isDev) {
+        //         $output->writeln("执行加微任务 - 设备: {$task->device_code}");
+        //     }
+        //     // TODO: 实现具体的加好友完成逻辑
+        //     self::cluesAddWechatFriendTask($task, $output, function ($result) use ($task) {
+        //         $task->status = $result['status'];
+        //         $task->remark = $result['remark'];
+        //         $task->update_time = time();
+        //         $task->save();
+        //         $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        //     });
+        //     $this->setTaskLog("加微任务执行中: ID={$task->id}, 设备={$task->device_code}");
+        // }
     }
 
 
@@ -828,6 +962,14 @@ class DeviceAutoTaskScheduler extends Command
             $task->update_time = time();
             $task->save();
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvDeviceActiveAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
         });
 
         $this->setTaskLog("养号任务执行中: ID={$task->id}, 设备={$task->device_code}");
@@ -845,7 +987,7 @@ class DeviceAutoTaskScheduler extends Command
             }
             // TODO: 实现具体的养号完成逻辑
             //self::rpaMaintainAccountEndTask($task, $output, function ($result) use ($task) {});
-            if($task->auto_type == 1){
+            if ($task->auto_type == 1) {
                 $taskId = generate_unique_task_id();
                 $start_time = $task->start_time;
                 $end_time = $task->end_time;
@@ -860,11 +1002,11 @@ class DeviceAutoTaskScheduler extends Command
                 $request['user_id'] = $task->user_id;
                 $request['time_difference_minutes'] = $time_difference_minutes;
                 $response = \app\common\service\ToolsService::Automation()->socialMediaNursing($request);
-                $extra = [ '执行时长（分钟）' => $request['time_difference_minutes'],'算力单价' => $unit, '实际消耗算力' => $points];
+                $extra = ['执行时长（分钟）' => $request['time_difference_minutes'], '算力单价' => $unit, '实际消耗算力' => $points];
                 if (isset($response['code']) && $response['code'] == 10000) {
                     if ($points > 0) {
                         //token扣除
-                        User::userTokensChange( $task->user_id, $points);
+                        User::userTokensChange($task->user_id, $points);
                         //记录日志
                         AccountLogLogic::recordUserTokensLog(true, $task->user_id, AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_NURSING, $points, $taskId, $extra);
                     }
@@ -893,7 +1035,15 @@ class DeviceAutoTaskScheduler extends Command
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
             $this->setTaskLog("养号任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvDeviceActiveAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }
@@ -908,7 +1058,7 @@ class DeviceAutoTaskScheduler extends Command
 
 
 
-        /**
+    /**
      * 执行接管任务
      */
     protected function executeTakeoverTask(SvDeviceTask $task, Output $output)
@@ -924,8 +1074,16 @@ class DeviceAutoTaskScheduler extends Command
             $task->update_time = time();
             $task->save();
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvDeviceTakeOverTaskAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
         });
-        $this->setTaskLog("接管任务执行中: ID={$task->id}, 设备={$task->device_code}");
+        $this->setTaskLog("私信接管任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
 
     /**
@@ -963,8 +1121,16 @@ class DeviceAutoTaskScheduler extends Command
             }
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
 
-            $this->setTaskLog("接管任务完成: ID={$task->id}, 设备={$task->device_code}");
-        }else{
+            $this->setTaskLog("私信接管任务完成: ID={$task->id}, 设备={$task->device_code}");
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvDeviceTakeOverTaskAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
         }
     }

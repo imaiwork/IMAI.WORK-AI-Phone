@@ -44,13 +44,18 @@ class CommentToMarkClueHandler extends BaseMessageHandler
     private function recordMarkClue(array $content)
     {
         try {
+            if((int)$content['task_id'] == 0){
+                return [
+                    'isProceed' => 1, //是否处理 1是 0 否
+                ];
+            }
             $task = SvLeadScrapingSettingAccount::where('id', $content['task_id'])
                 ->where('device_code', $this->payload['deviceId'])
                 ->where('task_type', 3)
                 ->where('account_type', $this->appType)
                 ->findOrEmpty();
             if($task->isEmpty()){
-                throw new \Exception($this->platform[$this->appType] . '截流获客留痕获客任务不存在');
+                throw new \Exception($this->platform[$this->appType] . '截流获客留痕获客任务不存在: ' . \think\facade\Db::getLastSql());
             }
 
 

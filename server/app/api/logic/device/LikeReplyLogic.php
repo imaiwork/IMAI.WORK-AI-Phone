@@ -24,6 +24,7 @@ class LikeReplyLogic extends ApiLogic
         // 开启事务
         Db::startTrans();
         try {
+            self::checkAutoDevice($params);
             TaskLogic::checkAccounts($params['accounts']);
             $times = TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
             $params['user_id'] = self::$uid;

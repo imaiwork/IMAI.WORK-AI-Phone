@@ -40,6 +40,7 @@ class PublishLogic extends SvBaseLogic
         Db::startTrans();
         try {
             $params['user_id'] = self::$uid;
+            self::checkAutoDevice($params);
             self::checkPublishTime($params);
             if (isset($params['accounts']) && is_array($params['accounts'])) {
                 $params['accounts'] = json_encode($params['accounts'], JSON_UNESCAPED_UNICODE);

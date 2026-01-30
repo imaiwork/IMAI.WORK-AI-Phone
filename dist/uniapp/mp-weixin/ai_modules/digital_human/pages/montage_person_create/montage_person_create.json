@@ -7,6 +7,7 @@
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "choose-material": "../../../../components/choose-material/choose-material",
     "upload-progress": "../../../../components/upload-progress/upload-progress",
     "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
     "upload-rule-pop": "../../components/upload-rule-pop/upload-rule-pop",

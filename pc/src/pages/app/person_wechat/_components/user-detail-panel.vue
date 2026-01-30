@@ -48,7 +48,7 @@
                         </div>
                     </div>
 
-                    <div class="mt-8 grid grid-cols-4 gap-6 p-5 bg-slate-50/50 rounded-[24px] border border-slate-100">
+                    <div class="mt-8 grid grid-cols-4 gap-6 p-5 bg-[#f8fafc]/50 rounded-[24px] border border-slate-100">
                         <div class="space-y-1">
                             <div class="text-[11px] text-slate-400 font-bold uppercase">出生日期</div>
                             <div class="text-[13px] text-slate-700 font-black">

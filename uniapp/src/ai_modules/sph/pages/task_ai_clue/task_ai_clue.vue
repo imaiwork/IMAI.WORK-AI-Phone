@@ -175,6 +175,7 @@ const contentPost = async (userInput: string) => {
                 content: item.trim(),
                 status: "success",
             }));
+        userStore.getUser();
     } catch (err: any) {
         isGenerating.value = false;
         uni.showToast({

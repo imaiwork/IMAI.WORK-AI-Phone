@@ -133,10 +133,10 @@ class FfmpegFileLogic extends ApiLogic
                     if (empty($task['uri'])) {
                         throw new \Exception("文件URI为空");
                     }
-                    $command = 'ffmpeg -version';
+                    $command = 'ffmpeg6 -version';
                     $output = shell_exec($command);
                     $mediaInfo = $finalUrl = '';
-                    if ($output !== null && strpos($output, 'ffmpeg version') !== false) {
+                    if ($output !== null && strpos($output, 'ffmpeg6 version') !== false) {
                     $host = config('app.app_host');
    
                     $url = FileService::getFileUrl($task['uri']);

@@ -26,6 +26,7 @@ class CrawlingManualLogic extends SvBaseLogic
     public static function add(array $params)
     {
         try {
+            self::checkAutoDevice($params);
             Db::startTrans();
             $devices = SvDevice::where('device_code', 'in', $params['device_codes'])->select()->toArray();
             //$wechats = AiWechat::where('wechat_id', 'in', $params['wechat_id'])->select()->toArray();
@@ -542,13 +543,10 @@ class CrawlingManualLogic extends SvBaseLogic
                 self::setError('子任务不存在');
                 return false;
             }
-            var_dump($record);
             $where = [
                 'wechat_no' => $record[0]['wechat_no']
             ];
             $info['account_info'] = AiWechat::where($where)->findOrEmpty()->toArray();
-
-            dd($info);
             $info['task_name'] = $params['task_name'];
             $info['task_category'] = $params['task_category'];
             $bind['keywords'] = json_decode($bind['keywords'], JSON_UNESCAPED_UNICODE);

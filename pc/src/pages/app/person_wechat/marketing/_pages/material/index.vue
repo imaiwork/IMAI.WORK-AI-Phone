@@ -44,7 +44,7 @@
             </div>
 
             <div class="grow min-h-0 bg-white rounded-[20px] border border-br overflow-hidden flex flex-col">
-                <div class="p-5 border-b border-[#F8FAFC] flex items-center justify-between bg-slate-50/50">
+                <div class="p-5 border-b border-[#F8FAFC] flex items-center justify-between bg-[#f8fafc]/50">
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                         <span class="text-[14px] font-bold text-tx-primary">素材库清单</span>

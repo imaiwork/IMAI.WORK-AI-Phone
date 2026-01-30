@@ -21,6 +21,7 @@ class SvMediaMaterialLogic extends SvBaseLogic
                 'm_type'=> $params['m_type'],
                 'type'=>$params['type'],
                 'size'=>$params['size'] ?? 0,
+                'group_id'=>$params['group_id'] ?? 0,
                 'duration'=>$params['duration'] ?? 0,
             ];
 
@@ -39,13 +40,14 @@ class SvMediaMaterialLogic extends SvBaseLogic
         try {
             $material = SvMediaMaterial::where('id',$params['id'])->where('user_id', self::$uid)
                 ->findOrEmpty();
-            if (!$material) {
+            if ($material->isEmpty()) {
                 self::setError('素材不存在');
                 return false;
             }
             $data['name'] = $params['name'];
             $data['id'] = $params['id'];
             $data['pic'] = $params['pic'] ?? '';
+            $data['group_id'] = $params['group_id'] ?? 0;
             $material->update($data);
             self::$returnData = $material->refresh()->toArray();
             return true;
@@ -83,6 +85,34 @@ class SvMediaMaterialLogic extends SvBaseLogic
         self::$returnData = $material;
         return true;
     }
+
+
+    public static function batchUpdateSvMediaMaterial(array $params)
+    {
+        // 批量更新素材逻辑
+        try {
+            if (!isset($params['ids']) || !is_array($params['ids'])) {
+                self::setError('请选择要操作的素材');
+                return false;
+            }
+            $ids = $params['ids'];
+            $material = SvMediaMaterial::whereIn('id', $ids)->where('user_id', self::$uid)
+                ->select();
+            if ($material->isEmpty()) {
+                self::setError('素材不存在');
+                return false;
+            }
+            $updateData = [
+                'group_id' => $params['group_id'] ?? 0,
+            ];
+            SvMediaMaterial::whereIn('id', $ids)->where('user_id', self::$uid)->update($updateData);
+            return true;
+        } catch (\Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
 
 
 }

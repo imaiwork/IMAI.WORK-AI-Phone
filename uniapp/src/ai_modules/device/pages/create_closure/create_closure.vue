@@ -2,7 +2,7 @@
     <view class="h-screen device-bg flex flex-col">
         <u-navbar
             title-bold
-            :title="isComment ? '评论获客' : '私信获客'"
+            title="截流获客"
             :border-bottom="false"
             :is-fixed="false"
             :background="{
@@ -30,92 +30,131 @@
             </view>
         </view>
         <view class="grow min-h-0 mt-[24rpx]">
-            <scroll-view class="h-full" scroll-y v-if="step === 1">
+            <scroll-view class="h-full" scroll-y v-show="step === 1">
                 <view class="px-4 pb-[100rpx]">
-                    <view class="font-bold text-[30rpx]"> 获客行业线索词 </view>
-                    <view class="mt-[20rpx] bg-white rounded-[20rpx] px-[40rpx] py-[30rpx]">
-                        <view class="flex items-center gap-x-2">
-                            <view class="flex-1 bg-[#F3F3F3] rounded-[10rpx] h-[80rpx] flex items-center px-4">
-                                <u-input
-                                    class="w-full"
-                                    v-model="industryInput"
-                                    placeholder="请输入，如：服装设计、女装"
-                                    maxlength="100"
-                                    clearable
-                                    placeholder-style="font-size: 26rpx;" />
-                            </view>
-                            <view
-                                class="w-[160rpx] h-[80rpx] flex items-center justify-center bg-black rounded-[10rpx] text-white font-bold"
-                                @click="handleAddIndustry"
-                                >添加</view
-                            >
-                        </view>
-                        <view class="mt-[30rpx] bg-[#F3F3F3] rounded-[16rpx]">
-                            <scroll-view
-                                class="max-h-[300rpx]"
-                                ref="industryScrollViewRef"
-                                scroll-y
-                                :scroll-into-view="scrollToIndustryId"
-                                scroll-with-animation="true"
-                                v-if="formData.industry.length > 0">
-                                <view class="flex flex-wrap gap-2 p-[24rpx]">
+                    <view class="px-[40rpx] py-[30rpx] bg-white rounded-[20rpx]">
+                        <view class="font-bold text-[30rpx]">获客方式</view>
+                        <view class="mt-[20rpx]">
+                            <u-radio-group v-model="formData.customer_type">
+                                <view
+                                    v-for="item in [
+                                        { value: 0, label: '自由获客' },
+                                        { value: 1, label: '同城获客' },
+                                    ]"
+                                    :key="item.value">
+                                    <u-radio label-size="26" :size="28" :name="item.value">
+                                        {{ item.label }}
+                                    </u-radio>
                                     <view
-                                        v-for="(item, index) in formData.industry"
-                                        :key="index"
-                                        :id="'industry_' + index"
-                                        class="bg-white rounded-[50rpx] px-[24rpx] relative py-[10rpx] text-xs"
-                                        @click="handleEditClue(index)">
-                                        {{ item }}
-                                        <view
-                                            class="absolute right-[-10rpx] top-[-10rpx] w-[32rpx] h-[32rpx] flex items-center justify-center rounded-full bg-[#0000004d]"
-                                            @click.stop="handleDeleteClue(index)">
-                                            <u-icon name="close" color="#ffffff" size="16"></u-icon>
-                                        </view>
+                                        class="inline-block mt-[6rpx]"
+                                        v-if="item.value === 1"
+                                        @click.stop="showTemp = true">
+                                        <u-icon name="question-circle-fill" color="#CCCCCC" size="24"></u-icon>
                                     </view>
                                 </view>
-                            </scroll-view>
-                            <view v-else class="px-[24rpx] py-[50rpx] text-[#0000004d] text-center">
-                                输入或AI生成获客行业
-                            </view>
-                            <view class="p-[24rpx]">
-                                <view
-                                    class="w-[160rpx] h-[64rpx] flex items-center justify-center gap-1 bg-white rounded-[10rpx]"
-                                    @click="showClueGenPopup = true">
-                                    <image
-                                        src="@/ai_modules/device/static/icons/gen.svg"
-                                        class="w-[24rpx] h-[24rpx]"></image>
-                                    <text class="font-bold text-primary">AI生成 </text>
+                            </u-radio-group>
+                        </view>
+                        <view class="mt-[36rpx]" v-if="formData.customer_type === 0">
+                            <view class="font-bold">目标地区</view>
+                            <view
+                                class="mt-[16rpx] h-[90rpx] flex items-center justify-between gap-x-2 px-[26rpx] bg-[#F3F3F3] rounded-[10rpx]"
+                                @click="showRegionFormPopup = true">
+                                <view class="font-bold" :class="{ 'text-primary': formData.region }">
+                                    {{ formData.region || "无限制" }}
+                                </view>
+                                <view class="flex items-center gap-x-1 text-primary font-bold">
+                                    修改
+                                    <u-icon name="arrow-right" color="#0065fb" size="24"></u-icon>
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-[30rpx]" v-if="historyIndustry.length > 0">
-                            <view class="flex items-center justify-between">
-                                <view class="font-bold">历史记录</view>
-                                <view class="font-bold" @click="showHistoryIndustryPopup = true">
-                                    更多
-                                    <u-icon name="arrow-right" color="#B2B2B2" size="24"></u-icon>
+                    </view>
+                    <view class="mt-[30rpx]" v-if="formData.customer_type === 0">
+                        <view class="font-bold text-[30rpx]"> 获客线索词 </view>
+                        <view class="mt-[20rpx] bg-white rounded-[20rpx] px-[40rpx] py-[30rpx]">
+                            <view class="flex items-center gap-x-2">
+                                <view class="flex-1 bg-[#F3F3F3] rounded-[10rpx] h-[80rpx] flex items-center px-4">
+                                    <u-input
+                                        class="w-full"
+                                        v-model="industryInput"
+                                        placeholder="请输入，如：服装设计、女装"
+                                        maxlength="100"
+                                        clearable
+                                        placeholder-style="font-size: 26rpx;" />
+                                </view>
+                                <view
+                                    class="w-[160rpx] h-[80rpx] flex items-center justify-center bg-black rounded-[10rpx] text-white font-bold"
+                                    @click="handleAddIndustry"
+                                    >添加</view
+                                >
+                            </view>
+                            <view class="mt-[30rpx] bg-[#F3F3F3] rounded-[16rpx]">
+                                <scroll-view
+                                    class="max-h-[300rpx]"
+                                    ref="industryScrollViewRef"
+                                    scroll-y
+                                    :scroll-into-view="scrollToIndustryId"
+                                    scroll-with-animation="true"
+                                    v-if="formData.industry.length > 0">
+                                    <view class="flex flex-wrap gap-2 p-[24rpx]">
+                                        <view
+                                            v-for="(item, index) in formData.industry"
+                                            :key="index"
+                                            :id="'industry_' + index"
+                                            class="bg-white rounded-[50rpx] px-[24rpx] relative py-[10rpx] text-xs"
+                                            @click="handleEditClue(index)">
+                                            {{ item }}
+                                            <view
+                                                class="absolute right-[-10rpx] top-[-10rpx] w-[32rpx] h-[32rpx] flex items-center justify-center rounded-full bg-[#0000004d]"
+                                                @click.stop="handleDeleteClue(index)">
+                                                <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                            </view>
+                                        </view>
+                                    </view>
+                                </scroll-view>
+                                <view v-else class="px-[24rpx] py-[50rpx] text-[#0000004d] text-center">
+                                    输入或AI生成获客行业
+                                </view>
+                                <view class="p-[24rpx]">
+                                    <view
+                                        class="w-[160rpx] h-[64rpx] flex items-center justify-center gap-1 bg-white rounded-[10rpx]"
+                                        @click="showClueGenPopup = true">
+                                        <image
+                                            src="@/ai_modules/device/static/icons/gen.svg"
+                                            class="w-[24rpx] h-[24rpx]"></image>
+                                        <text class="font-bold text-primary">AI生成 </text>
+                                    </view>
                                 </view>
                             </view>
-                            <view class="mt-[20rpx]">
-                                <view class="flex flex-wrap gap-[20rpx]">
-                                    <view
-                                        v-for="(item, index) in historyIndustry.slice(0, 5)"
-                                        :key="index"
-                                        class="rounded-full px-[24rpx] relative py-[10rpx] shadow-[0_0_0_2rpx_#0000001a]"
-                                        @click="handleSelectHistoryIndustry(item.keyword)">
-                                        {{ item.keyword }}
+                            <view class="mt-[30rpx]" v-if="historyIndustry.length > 0">
+                                <view class="flex items-center justify-between">
+                                    <view class="font-bold">历史记录</view>
+                                    <view class="font-bold" @click="showHistoryIndustryPopup = true">
+                                        更多
+                                        <u-icon name="arrow-right" color="#B2B2B2" size="24"></u-icon>
+                                    </view>
+                                </view>
+                                <view class="mt-[20rpx]">
+                                    <view class="flex flex-wrap gap-[20rpx]">
                                         <view
-                                            class="absolute right-[-14rpx] top-[-14rpx] w-[32rpx] h-[32rpx] flex items-center justify-center rounded-full bg-[#0000004d]"
-                                            @click.stop="handleDeleteHistoryIndustry(index)">
-                                            <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                            v-for="(item, index) in historyIndustry.slice(0, 5)"
+                                            :key="index"
+                                            class="rounded-full px-[24rpx] relative py-[10rpx] shadow-[0_0_0_2rpx_#0000001a]"
+                                            @click="handleSelectHistoryIndustry(item.keyword)">
+                                            {{ item.keyword }}
+                                            <view
+                                                class="absolute right-[-14rpx] top-[-14rpx] w-[32rpx] h-[32rpx] flex items-center justify-center rounded-full bg-[#0000004d]"
+                                                @click.stop="handleDeleteHistoryIndustry(index)">
+                                                <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                            </view>
                                         </view>
                                     </view>
                                 </view>
                             </view>
                         </view>
                     </view>
-                    <view class="mt-[50rpx]">
-                        <view class="text-[30rpx] font-bold">每个行业看笔记的数量</view>
+                    <view class="mt-[50rpx]" v-if="formData.customer_type === 0">
+                        <view class="text-[30rpx] font-bold">每条线索词浏览作品的数量</view>
                         <view class="mt-[28rpx]">
                             <view class="flex flex-wrap gap-[20rpx]">
                                 <view
@@ -150,9 +189,9 @@
                     </view>
                 </view>
             </scroll-view>
-            <scroll-view class="h-full" scroll-y v-if="step === 2">
+            <scroll-view class="h-full" scroll-y v-show="step === 2">
                 <view class="px-4 pb-[100rpx]">
-                    <view>
+                    <view v-if="formData.customer_type === 0">
                         <view class="font-bold text-[30rpx]"> 评论词筛选 </view>
                         <view
                             class="mt-[36rpx] bg-white rounded-[20rpx] px-[40rpx] py-[24rpx]"
@@ -188,40 +227,67 @@
                         </view>
                     </view>
                     <view class="mt-[50rpx]">
-                        <view class="font-bold text-[30rpx]"> {{ isComment ? "评论内容" : "私信内容" }} (随机) </view>
-                        <view
-                            class="mt-[18rpx] rounded-[20rpx] bg-white px-[30rpx] py-[28rpx] flex flex-wrap gap-2"
-                            v-if="formData.comment_content_list.length > 0">
-                            <view
-                                v-for="(item, index) in formData.comment_content_list"
-                                :key="index"
-                                class="border border-solid border-[#E5E5E5] rounded-[20rpx] px-2 h-[60rpx] flex items-center gap-x-2 break-all"
-                                @click="handleEditCommentContent(index)">
-                                {{ item }}
-                                <view
-                                    class="flex-shrink-0 rounded-full flex item-center justify-center w-4 h-4 bg-[#0000004C]"
-                                    @click.stop="handleCommentContentDelete(index)">
-                                    <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                        <view class="font-bold text-[30rpx]"> 触达方式和话术 </view>
+                        <view class="mt-[18rpx] rounded-[20rpx] bg-white px-[30rpx] py-[28rpx]">
+                            <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-fit">
+                                <view class="w-[360rpx] grid grid-cols-2 relative h-[72rpx]">
+                                    <view
+                                        v-for="(item, index) in ['发送评论', '发送私信']"
+                                        :key="index"
+                                        class="rounded-[12rpx] font-bold flex items-center justify-center z-10 transition-colors duration-500"
+                                        :class="{ 'text-primary': commentIndex === index }"
+                                        @click="commentIndex = index">
+                                        {{ item }}
+                                    </view>
+                                    <view
+                                        class="tab-slider"
+                                        :style="{
+                                            transform: `translateX(${commentIndex * 100}%)`,
+                                        }"></view>
                                 </view>
                             </view>
-                            <view
-                                class="border border-solid border-[#0065FB] rounded-[12rpx] px-[28rpx] h-[60rpx] flex items-center justify-center"
-                                @click="handleEditCommentContent(-1)">
-                                <u-icon name="plus" color="#0065FB" size="20"></u-icon>
-                                <text class="text-primary font-bold ml-1">添加</text>
+                            <view class="mt-[30rpx] px-2" v-if="false">
+                                <u-radio-group v-model="formData.touch_type" class="w-full">
+                                    <view class="flex justify-between w-full">
+                                        <u-radio
+                                            v-for="(item, index) in [
+                                                { value: 1, label: '固定话术' },
+                                                { value: 2, label: 'AI回复', disabled: true },
+                                                { value: 3, label: 'AI根据固话优化', disabled: true },
+                                            ]"
+                                            :key="index"
+                                            :name="item.value"
+                                            :disabled="item.disabled"
+                                            :size="28">
+                                            <text class="text-base">{{ item.label }}</text>
+                                        </u-radio>
+                                    </view>
+                                </u-radio-group>
                             </view>
-                        </view>
-                        <view v-else class="mt-10">
-                            <view
-                                class="border border-solid rounded-[20rpx] w-fit px-4 h-[88rpx] flex items-center justify-center mx-auto"
-                                @click="handleEditCommentContent(-1)">
-                                <u-icon name="plus" size="20"></u-icon>
-                                <text class="font-bold ml-1">添加{{ isComment ? "评论" : "私信" }}内容</text>
+                            <view class="flex flex-wrap gap-2 mt-[28rpx]" v-if="formData.touch_type === 1">
+                                <view
+                                    v-for="(item, index) in formData.comment_content_list"
+                                    :key="index"
+                                    class="border border-solid border-[#E5E5E5] rounded-[20rpx] px-2 h-[60rpx] flex items-center gap-x-2 break-all"
+                                    @click="handleEditCommentContent(index)">
+                                    {{ item }}
+                                    <view
+                                        class="flex-shrink-0 rounded-full flex item-center justify-center w-4 h-4 bg-[#0000004C]"
+                                        @click.stop="handleCommentContentDelete(index)">
+                                        <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                    </view>
+                                </view>
+                                <view
+                                    class="border border-solid border-[#0065FB] rounded-[12rpx] px-[28rpx] h-[60rpx] flex items-center justify-center"
+                                    @click="handleEditCommentContent(-1)">
+                                    <u-icon name="plus" color="#0065FB" size="20"></u-icon>
+                                    <text class="text-primary font-bold ml-1">添加</text>
+                                </view>
                             </view>
                         </view>
                     </view>
                     <view class="mt-[50rpx]">
-                        <view class="text-[30rpx] font-bold">{{ isComment ? "评论数量上限" : "私信数量上限" }}</view>
+                        <view class="text-[30rpx] font-bold">触达数量上限</view>
                         <view class="mt-[28rpx]">
                             <view class="flex flex-wrap gap-[20rpx]">
                                 <view
@@ -259,88 +325,134 @@
                     </view>
                 </view>
             </scroll-view>
-            <scroll-view class="h-full" scroll-y v-if="step === 3">
+            <scroll-view class="h-full" scroll-y v-show="step === 3">
                 <view class="px-4 pb-[100rpx]">
                     <view class="font-bold text-[30rpx]">高级设置</view>
                     <view class="mt-[20rpx] rounded-[20rpx] bg-white px-[36rpx]">
                         <view
+                            v-if="formData.customer_type === 0"
                             class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2]">
-                            <text class="font-bold">{{ isComment ? "评论附带点赞" : "私信附带点赞" }}</text>
+                            <view>
+                                <view class="font-bold">跳过内容作者</view>
+                                <view class="text-[22rpx] font-bold text-[#000000]/30 mt-1">
+                                    开启后，将不会对内容作者的评论触达
+                                </view>
+                            </view>
+                            <u-switch v-model="formData.skip_author" active-value="1" inactive-value="0" :size="40" />
+                        </view>
+                        <view
+                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2]">
+                            <view>
+                                <view class="font-bold">过滤已执行客户</view>
+                                <view class="text-[22rpx] font-bold text-[#000000]/30 mt-1">
+                                    开启后，将不会对客户池内的客户重复触达
+                                </view>
+                            </view>
+                            <u-switch
+                                v-model="formData.filter_executed_customer"
+                                active-value="1"
+                                inactive-value="0"
+                                :size="40" />
+                        </view>
+                        <view
+                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2]">
+                            <view>
+                                <view class="font-bold">触达时顺带点赞</view>
+                                <view class="text-[22rpx] font-bold text-[#000000]/30 mt-1">
+                                    开启后，将会对触达内容进行点赞
+                                </view>
+                            </view>
                             <u-switch v-model="formData.comment_like" active-value="1" inactive-value="0" :size="40" />
                         </view>
-                        <view class="flex items-center justify-between py-[28rpx]" v-if="!isComment">
-                            <text class="font-bold">{{ isComment ? "评论附带关注" : "私信附带关注" }}</text>
+                        <view
+                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2]">
+                            <view>
+                                <view class="font-bold">触达时顺带关注</view>
+                                <view class="text-[22rpx] font-bold text-[#000000]/30 mt-1">
+                                    开启后，将会对触达用户进行关注
+                                </view>
+                            </view>
                             <u-switch
                                 v-model="formData.comment_follow"
                                 active-value="1"
                                 inactive-value="0"
                                 :size="40" />
                         </view>
-                        <template v-if="false">
-                            <view
-                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                                @click="showCommentTimePopup = true">
-                                <text class="font-bold flex-shrink-0">{{ isComment ? "评论时间" : "私信时间" }}</text>
-                                <view class="flex items-center gap-x-1">
-                                    <text
-                                        class="line-clamp-1 break-all"
-                                        :class="
-                                            formData.comment_time > -1 ? 'text-primary font-bold' : 'text-[#B2B2B2]'
-                                        "
-                                        >{{ getCommentTimeLabel || "请选择" }}</text
-                                    >
-                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
-                                </view>
+                        <view
+                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                            @click="handleChangeTime('content')">
+                            <text class="font-bold flex-shrink-0">内容发布时间</text>
+                            <view class="flex items-center gap-x-1">
+                                <text
+                                    class="line-clamp-1 break-all"
+                                    :class="formData.comment_time > -1 ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
+                                    >{{ getTimeLabel("content") }}</text
+                                >
+                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
                             </view>
-                            <view
-                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                                @click="showChooseRegionPopup = true">
-                                <text class="font-bold flex-shrink-0">地区筛选</text>
-                                <view class="flex items-center gap-x-1">
-                                    <text
-                                        class="line-clamp-1 break-all"
-                                        :class="formData.comment_region ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
-                                        >{{ formData.comment_region || "请选择" }}</text
-                                    >
-                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
-                                </view>
+                        </view>
+                        <view
+                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                            @click="handleChangeTime('comment')">
+                            <text class="font-bold flex-shrink-0">评论发布时间</text>
+                            <view class="flex items-center gap-x-1">
+                                <text
+                                    class="line-clamp-1 break-all"
+                                    :class="formData.comment_time > -1 ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
+                                    >{{ getTimeLabel("comment") }}</text
+                                >
+                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
                             </view>
-                            <view
-                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                                @click="handleEditCommentGender">
-                                <text class="font-bold flex-shrink-0">用户性别</text>
-                                <view class="flex items-center gap-x-1">
-                                    <text
-                                        class="font-bold line-clamp-1 break-all"
-                                        :class="formData.comment_gender ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
-                                        >{{ formData.comment_gender || "请选择" }}</text
-                                    >
-                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
-                                </view>
+                        </view>
+                        <view
+                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                            @click="showChooseRegionPopup = true">
+                            <text class="font-bold flex-shrink-0">客户地区</text>
+                            <view class="flex items-center gap-x-1">
+                                <text class="line-clamp-1 break-all text-primary font-bold">{{
+                                    formData.comment_region.length > 0 ? formData.comment_region.join(";") : "不限"
+                                }}</text>
+                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
                             </view>
-                            <view
-                                class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
-                                @click="handleEditCommentAge">
-                                <text class="font-bold flex-shrink-0">用户年龄</text>
-                                <view class="flex items-center gap-x-1">
-                                    <text class="line-clamp-1 break-all text-primary font-bold">{{
-                                        formData.comment_age
-                                    }}</text>
-                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
-                                </view>
+                        </view>
+                        <view
+                            v-if="false"
+                            class="flex items-center justify-between py-[28rpx] gap-2"
+                            @click="handleEditCommentGender">
+                            <text class="font-bold flex-shrink-0">客户性别</text>
+                            <view class="flex items-center gap-x-1">
+                                <text
+                                    class="font-bold line-clamp-1 break-all"
+                                    :class="formData.comment_gender ? 'text-primary font-bold' : 'text-[#B2B2B2]'"
+                                    >{{ formData.comment_gender || "请选择" }}</text
+                                >
+                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
                             </view>
-                            <view
-                                class="flex items-center justify-between py-[28rpx] gap-2"
-                                @click="handleEditCommentAccountFeature">
-                                <text class="font-bold flex-shrink-0">账号特征</text>
-                                <view class="flex items-center gap-x-1">
-                                    <text class="line-clamp-1 break-all text-primary font-bold">{{
-                                        formData.comment_account_feature == "0" ? "全部" : "跳过认证号"
-                                    }}</text>
-                                    <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
-                                </view>
+                        </view>
+                        <view
+                            v-if="false"
+                            class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
+                            @click="handleEditCommentAge">
+                            <text class="font-bold flex-shrink-0">用户年龄</text>
+                            <view class="flex items-center gap-x-1">
+                                <text class="line-clamp-1 break-all text-primary font-bold">{{
+                                    formData.comment_age
+                                }}</text>
+                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
                             </view>
-                        </template>
+                        </view>
+                        <view
+                            v-if="false"
+                            class="flex items-center justify-between py-[28rpx] gap-2"
+                            @click="handleEditCommentAccountFeature">
+                            <text class="font-bold flex-shrink-0">账号特征</text>
+                            <view class="flex items-center gap-x-1">
+                                <text class="line-clamp-1 break-all text-primary font-bold">{{
+                                    formData.comment_account_feature == "0" ? "全部" : "跳过认证号"
+                                }}</text>
+                                <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
+                            </view>
+                        </view>
                     </view>
                 </view>
             </scroll-view>
@@ -414,7 +526,7 @@
             </view>
         </view>
     </u-popup>
-
+    <region-form v-model="showRegionFormPopup" :region="formData.region" @confirm="handleRegionConfirm" />
     <clue-gen-pop v-model="showClueGenPopup" @confirm="handleClueGenConfirm" />
     <keywords-edit
         ref="keywordsEditRef"
@@ -434,7 +546,7 @@
     <choose-age ref="chooseAgeRef" v-model="showAgePopup" @confirm="handleAgeConfirm" />
     <choose-comment-time
         v-model="showCommentTimePopup"
-        :value="formData.comment_time_index"
+        :value="commentTimeType === 'content' ? formData.content_time_index : formData.comment_time_index"
         :list="commentTimeList"
         @confirm="handleCommentTimeConfirm" />
     <popup-bottom
@@ -466,9 +578,51 @@
             </view>
         </template>
     </popup-bottom>
+    <popup-bottom v-model="showTemp" title="同城获客需知" custom-class="bg-[#F3F3F3]">
+        <template #content>
+            <scroll-view scroll-y class="h-full">
+                <view class="p-4">
+                    <view class="text-[30rpx] text-[#000000]/70 font-bold">
+                        为保证某音平台的同城功能顺畅运行，需将【所在城市】放置推荐的左侧
+                    </view>
+                    <view class="bg-white rounded-[20rpx] p-[38rpx] mt-[50rpx]">
+                        <view class="flex items-center gap-x-2">
+                            <view
+                                class="w-[40rpx] h-[40rpx] flex items-center justify-center rounded-full bg-primary text-white font-bold text-[30rpx]"
+                                >1</view
+                            >
+                            <view class="text-[30rpx] font-bold text-[#000000]/90"
+                                >在AI手机中打开某音平台，长按上方频道</view
+                            >
+                        </view>
+                        <image
+                            src="@/ai_modules/device/static/images/common/closure_step1.png"
+                            mode="widthFix"
+                            class="w-full mt-[50rpx]"></image>
+                    </view>
+                    <view class="bg-white rounded-[20rpx] p-[38rpx] mt-[50rpx]">
+                        <view class="flex items-center gap-x-2">
+                            <view
+                                class="w-[40rpx] h-[40rpx] flex items-center justify-center rounded-full bg-primary text-white font-bold text-[30rpx]"
+                                >2</view
+                            >
+                            <view class="text-[30rpx] font-bold text-[#000000]/90"
+                                >将所在城市拖放到置顶（推荐的下方）</view
+                            >
+                        </view>
+                        <image
+                            src="@/ai_modules/device/static/images/common/closure_step2.png"
+                            mode="widthFix"
+                            class="w-full mt-[50rpx]"></image>
+                    </view>
+                </view>
+            </scroll-view>
+        </template>
+    </popup-bottom>
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { createClosureTask, getClosureIndustryHistory, deleteClosureIndustryHistory } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { useAppStore } from "@/stores/app";
@@ -481,6 +635,7 @@ import BaseSetting from "@/ai_modules/device/components/base-setting/base-settin
 import ChooseRegion from "@/ai_modules/device/components/choose-region/choose-region.vue";
 import ChooseAge from "@/ai_modules/device/components/choose-age/choose-age.vue";
 import ChooseCommentTime from "@/ai_modules/device/components/choose-comment-time/choose-comment-time.vue";
+import RegionForm from "@/ai_modules/device/components/region-form/region-form.vue";
 
 const { on } = useEventBusManager();
 const appStore = useAppStore();
@@ -497,34 +652,49 @@ const step = ref(1);
 
 const formData = reactive<{
     name: string;
+    // 获客方式
+    customer_type: number;
+    region: string;
+    touch_type: number;
     industry: string[];
     industryNum: number;
     commentNum: number;
     comment_filter_list: { value: string; checked: boolean; id: number }[];
     comment_content_list: string[];
+    skip_author: 0 | 1;
+    filter_executed_customer: 0 | 1;
     comment_like: string;
     comment_follow: string;
     comment_time_index: number[];
-    comment_region: string;
+    comment_region: string[];
     comment_gender: string;
     comment_age: string;
     comment_account_feature: string;
     comment_time: number;
+    content_time_index: number[];
+    content_time: number;
     accounts: string[];
     task_frep: number;
     custom_date: string[];
     time_config: string[];
 }>({
     name: "",
+    region: "",
+    customer_type: 0,
+    touch_type: 1,
     industry: [],
     industryNum: 1,
     commentNum: 1,
     comment_filter_list: [],
     comment_content_list: [],
+    skip_author: 1,
+    filter_executed_customer: 1,
     comment_like: "1",
     comment_follow: "1",
     comment_time_index: [0],
-    comment_region: "不限",
+    content_time_index: [0],
+    content_time: 0,
+    comment_region: [],
     comment_gender: "不限",
     comment_age: "不限",
     comment_account_feature: "0",
@@ -535,10 +705,15 @@ const formData = reactive<{
     time_config: ["09:00", "09:30"],
 });
 
-const isComment = computed(() => createType.value === CreateTypeEnum.COMMENT_MARKETING);
+const isComment = computed(() => commentIndex.value === 0);
+
+const showTemp = ref(false);
+const showRegionFormPopup = ref(false);
 
 const industryHistory = ref<string[]>([]);
 const industryHistoryPagingRef = shallowRef();
+
+const commentIndex = ref(0);
 
 const showKeywordsEdit = ref(false);
 const keywordsEditRef = ref<InstanceType<typeof KeywordsEdit>>();
@@ -564,13 +739,13 @@ const showHistoryIndustryPopup = ref(false);
 const industryInput = ref<string>("");
 const scrollToIndustryId = ref<string>("");
 const showCommentFilterEdit = ref<boolean>(false);
-
 const showAgePopup = ref(false);
 const chooseAgeRef = ref<InstanceType<typeof ChooseAge>>();
 
 const currentFrequency = ref(0);
 const showChooseRegionPopup = ref(false);
 const showCreateTaskSuccessDialog = ref(false);
+const commentTimeType = ref<"content" | "comment">("comment");
 const taskErrorMsg = ref<string>("");
 
 const commonPopup = reactive({
@@ -589,9 +764,28 @@ const getKeywordsTitle = computed(() => {
     return titles[keywordsEditType.value];
 });
 
-const getCommentTimeLabel = computed(() => {
-    return formData.comment_time > -1 ? commentTimeList[formData.comment_time_index[0]].label : "请选择";
-});
+const handleChangeTime = (type: "content" | "comment") => {
+    commentTimeType.value = type;
+    if (type === "content") {
+        showCommentTimePopup.value = true;
+    } else {
+        showCommentTimePopup.value = true;
+        commentIndex.value = 0;
+    }
+};
+
+const getTimeLabel = (type: "content" | "comment") => {
+    if (type === "content") {
+        return formData.content_time > -1 ? commentTimeList[formData.content_time_index[0]].label : "不限";
+    } else {
+        return formData.comment_time > -1 ? commentTimeList[formData.comment_time_index[0]].label : "不限";
+    }
+};
+
+const handleRegionConfirm = (region: string) => {
+    formData.region = region;
+    showRegionFormPopup.value = false;
+};
 
 const handleSelectHistoryIndustry = (keyword: string) => {
     if (formData.industry.includes(keyword)) {
@@ -603,8 +797,13 @@ const handleSelectHistoryIndustry = (keyword: string) => {
 };
 
 const handleCommentTimeConfirm = (res: any) => {
-    formData.comment_time_index = res;
-    formData.comment_time = commentTimeList[formData.comment_time_index[0]].value;
+    if (commentTimeType.value === "content") {
+        formData.content_time_index = res;
+        formData.content_time = commentTimeList[formData.content_time_index[0]].value;
+    } else {
+        formData.comment_time_index = res;
+        formData.comment_time = commentTimeList[formData.comment_time_index[0]].value;
+    }
 };
 
 const handleEditCommentAge = () => {
@@ -677,7 +876,7 @@ const canNext = computed(() => canStepProceed(step.value));
 const canStepProceed = (stepNumber: number) => {
     switch (stepNumber) {
         case 1:
-            return formData.industry.length > 0;
+            return formData.customer_type === 0 ? formData.industry.length > 0 : true;
         case 2:
             return formData.comment_filter_list.length > 0 && formData.comment_content_list.length > 0;
         case 3:
@@ -828,9 +1027,9 @@ const handleCommentContentDelete = (index: number) => {
 
 const handleChooseRegionConfirm = (data: any) => {
     if (data.isAll || data.regionList.length === 0) {
-        formData.comment_region = "不限";
+        formData.comment_region = [];
     } else {
-        formData.comment_region = data.regionList.join(";");
+        formData.comment_region = data.regionList;
     }
     showChooseRegionPopup.value = false;
 };
@@ -881,10 +1080,12 @@ const handleCreateTask = async () => {
     });
     try {
         await createClosureTask({
-            name: formData.name,
+            name: `${isComment.value ? "评论" : "私信"}获客任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`,
             accounts: formData.accounts,
+            city: formData.region,
+            industry_type: formData.customer_type,
             task_frep: formData.task_frep,
-            task_type: isComment.value ? 1 : 2,
+            task_type: commentIndex.value === 0 ? 1 : 2,
             time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
             task_date: formData.custom_date,
             industry: formData.industry.join(";"),
@@ -894,22 +1095,40 @@ const handleCreateTask = async () => {
             send_num: formData.commentNum,
             is_like: formData.comment_like,
             is_follow: formData.comment_follow,
-            send_time: formData.comment_time,
             gender: formData.comment_gender,
             old: formData.comment_age,
-            region: formData.comment_region,
-            account_feature: formData.comment_account_feature,
+            is_content_author: formData.skip_author,
+            is_execed_clues: formData.filter_executed_customer,
+            content_publish_day: formData.content_time,
+            comment_publish_day: formData.comment_time,
+            ip_address: formData.comment_region,
         });
         uni.hideLoading();
         showCreateTaskSuccessDialog.value = true;
+        WechatOA.notify();
     } catch (error: any) {
         taskErrorMsg.value = error;
         uni.hideLoading();
-        uni.showToast({
-            title: error || "创建失败",
-            icon: "none",
-            duration: 3000,
-        });
+        if (error.indexOf("24小时自动执行任务") > -1) {
+            uni.showModal({
+                title: "提示",
+                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
+                success: (res) => {
+                    if (res.confirm) {
+                        uni.$u.route({
+                            url: "/pages/phone/phone",
+                        });
+                    }
+                },
+            });
+        } else {
+            taskErrorMsg.value = error;
+            uni.showToast({
+                title: error,
+                icon: "none",
+                duration: 3000,
+            });
+        }
     }
 };
 
@@ -951,7 +1170,6 @@ watch(
 
 onLoad((options: any) => {
     createType.value = options.type as CreateTypeEnum;
-    formData.name = `${isComment.value ? "评论" : "私信"}获客任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`;
     on("confirm", (res: any) => {
         const { type, data } = res;
         if (type === ListenerTypeEnum.CHOOSE_DATE) {
@@ -970,3 +1188,8 @@ onLoad((options: any) => {
     });
 });
 </script>
+<style lang="scss" scoped>
+.tab-slider {
+    @apply h-[calc(100%-10rpx)] w-[50%] rounded-[16rpx] bg-white absolute top-[5rpx] left-0 transition-all duration-500;
+}
+</style>

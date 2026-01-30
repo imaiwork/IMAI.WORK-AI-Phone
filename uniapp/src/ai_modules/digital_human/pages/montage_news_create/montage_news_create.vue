@@ -30,7 +30,7 @@
             </view>
         </view>
         <view class="grow min-h-0 mt-[24rpx]">
-            <view class="h-full flex flex-col" v-if="step == 1">
+            <view class="h-full flex flex-col" v-show="step == 1">
                 <view class="px-4 flex items-center justify-between">
                     <view class="text-[30rpx] font-bold">素材图组</view>
                     <view
@@ -91,7 +91,7 @@
                 </view>
             </view>
             <view
-                v-if="step === 2"
+                v-show="step === 2"
                 class="bg-white rounded-[16rpx] px-4 py-[28rpx] shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] mx-4">
                 <text class="font-bold">身份信息</text>
                 <view class="mt-[28rpx]">
@@ -103,6 +103,8 @@
                                 placeholder-style="font-size: 24rpx;"
                                 placeholder="请输入人物名称"
                                 maxlength="20"
+                                type="textarea"
+                                height="30"
                                 @change="isCharacter = false" />
                         </view>
                     </view>
@@ -116,6 +118,8 @@
                                 placeholder-style="font-size: 24rpx;"
                                 placeholder="请输入人物介绍"
                                 maxlength="50"
+                                type="textarea"
+                                height="30"
                                 @change="isCharacter = false" />
                         </view>
                     </view>
@@ -131,7 +135,7 @@
                     </view>
                 </view>
             </view>
-            <view class="h-full flex flex-col" v-if="step == 3">
+            <view class="h-full flex flex-col" v-show="step == 3">
                 <view class="flex items-center gap-x-2 px-4">
                     <view
                         class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
@@ -178,7 +182,7 @@
                     </scroll-view>
                 </view>
             </view>
-            <scroll-view class="h-full" scroll-y v-if="step == 4">
+            <scroll-view class="h-full" scroll-y v-show="step == 4">
                 <view class="px-4 pb-[150rpx]">
                     <view class="text-[30rpx] font-bold">作品名称</view>
                     <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4 h-[100rpx] flex items-center">
@@ -408,6 +412,7 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { addShanjianPerson, createShanjianTask } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
 import { ListenerTypeEnum, MontageTypeEnum, MontageStylesType } from "@/ai_modules/digital_human/enums";
@@ -621,6 +626,14 @@ const handleCreateVideo = async () => {
         uni.$u.toast("请输入视频名称");
         return;
     }
+    if (formData.extra.video_count <= 0) {
+        uni.$u.toast("请输入视频数量");
+        return;
+    }
+    if (formData.extra.video_count > 99) {
+        uni.$u.toast("视频数量最多为99");
+        return;
+    }
 
     if (formData.extra.clip === 1 && formData.clip.length === 0) {
         uni.$u.toast("请选择视频风格");
@@ -663,6 +676,7 @@ const handleCreateVideo = async () => {
         uni.hideLoading();
         createResult.value = res;
         showCreateSuccess.value = true;
+        WechatOA.notify();
     } catch (error: any) {
         uni.hideLoading();
         uni.showToast({
@@ -689,6 +703,10 @@ const toRecord = () => {
     uni.$u.route({
         url: "/packages/pages/creation/creation",
         type: "redirect",
+        params: {
+            source: "1",
+            type: 5,
+        },
     });
 };
 

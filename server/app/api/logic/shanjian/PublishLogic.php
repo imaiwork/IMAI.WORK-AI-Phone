@@ -37,6 +37,7 @@ class PublishLogic extends SvBaseLogic
     {
 
         // 启动事务
+
         Db::startTrans();
         try {
             $params['user_id'] = self::$uid;

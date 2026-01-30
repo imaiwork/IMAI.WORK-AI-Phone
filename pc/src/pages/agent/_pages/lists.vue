@@ -48,7 +48,7 @@
             </div>
         </div>
         <div class="grow min-h-0 flex flex-col bg-white rounded-[20px] border border-br mt-4 overflow-hidden">
-            <div class="px-6 bg-slate-50/50 border-b border-[#F1F5F9]">
+            <div class="px-6 bg-[#f8fafc]/50 border-b border-[#F1F5F9]">
                 <ElTabs v-model="currentTab" class="custom-tabs" @tab-click="handleTabClick">
                     <ElTabPane v-for="item in tabs" :key="item.value" :label="item.label" :name="item.value">
                     </ElTabPane>

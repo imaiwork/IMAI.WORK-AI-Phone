@@ -15,7 +15,7 @@
             </div>
 
             <ElForm ref="formRef" :model="formData" :rules="rules" label-position="top" class="modern-form">
-                <div class="bg-slate-50/50 border border-slate-100 rounded-[20px] p-5 space-y-5">
+                <div class="bg-[#f8fafc]/50 border border-slate-100 rounded-[20px] p-5 space-y-5">
                     <ElFormItem label="判定触发逻辑" prop="status">
                         <ElSelect v-model="formData.status" class="custom-select w-full" :show-arrow="false">
                             <template #prefix>

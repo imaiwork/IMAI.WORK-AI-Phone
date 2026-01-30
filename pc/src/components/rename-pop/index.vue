@@ -16,7 +16,7 @@
                     <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-[#0065fb]/10 text-primary">
                         <Icon name="el-icon-EditPen" :size="16"></Icon>
                     </div>
-                    <div class="text-[16px] text-[#1E293B] font-black tracking-tight">重命名</div>
+                    <div class="text-[16px] text-[#1E293B] font-black tracking-tight">{{ title }}</div>
                 </div>
                 <div class="w-7 h-7" @click="close">
                     <close-btn />
@@ -56,12 +56,14 @@ const props = withDefaults(
         maxlength?: number;
         nameKey?: string;
         placeholder?: string;
+        title?: string;
         fetchFn: (data: any) => Promise<any>;
     }>(),
     {
         maxlength: 50,
         nameKey: "name",
         placeholder: "请输入名称",
+        title: "重命名",
         fetchFn: () => Promise.resolve(),
     }
 );
@@ -84,13 +86,16 @@ const confirm = async () => {
         return;
     }
     try {
-        await props.fetchFn({
+        const result = await props.fetchFn({
             ...formData,
             ...extraParams.value,
             [props.nameKey]: formData.name,
         });
         feedback.msgSuccess("修改成功");
-        emit("success", formData);
+        emit("success", {
+            ...formData,
+            ...result,
+        });
         close();
     } catch (error) {
         feedback.msgWarning(error);

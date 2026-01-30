@@ -30,7 +30,7 @@
             </view>
         </view>
         <view class="grow min-h-0 mt-[24rpx]">
-            <view class="h-full flex flex-col" v-if="step == 1">
+            <view class="h-full flex flex-col" v-show="step == 1">
                 <view class="mx-4 text-[30rpx] font-bold"> 上传口播视频({{ formData.anchorLists.length }}) </view>
                 <view class="grow min-h-0">
                     <scroll-view scroll-y class="h-full">
@@ -67,7 +67,7 @@
                 </view>
             </view>
             <view
-                v-if="step === 2"
+                v-show="step === 2"
                 class="bg-white rounded-[16rpx] px-4 py-[28rpx] shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] mx-4">
                 <text class="font-bold">身份信息</text>
                 <view class="mt-[28rpx]">
@@ -79,6 +79,8 @@
                                 placeholder-style="font-size: 24rpx;"
                                 placeholder="请输入人物名称"
                                 maxlength="20"
+                                type="textarea"
+                                height="30"
                                 @change="isCharacter = false" />
                         </view>
                     </view>
@@ -92,6 +94,8 @@
                                 placeholder-style="font-size: 24rpx;"
                                 placeholder="请输入人物介绍"
                                 maxlength="50"
+                                type="textarea"
+                                height="30"
                                 @change="isCharacter = false" />
                         </view>
                     </view>
@@ -107,7 +111,7 @@
                     </view>
                 </view>
             </view>
-            <view class="h-full flex flex-col" v-if="step == 3">
+            <view class="h-full flex flex-col" v-show="step == 3">
                 <view class="px-4">
                     <view class="text-[30rpx] font-bold">参考素材</view>
                     <view class="mt-1 text-xs text-[#0000004d]">
@@ -162,7 +166,7 @@
                     </scroll-view>
                 </view>
             </view>
-            <scroll-view class="h-full" scroll-y v-if="step == 4">
+            <scroll-view class="h-full" scroll-y v-show="step == 4">
                 <view class="px-4 pb-[150rpx]">
                     <view>
                         <view class="text-[30rpx] font-bold">视频名称</view>
@@ -389,12 +393,18 @@
             </view>
         </view>
     </view>
-    <choose-history v-if="showHistory" v-model="showHistory" :type="3" @select="handleSelectHistory" />
+    <choose-history v-model="showHistory" :limit="uploadSource == 0 ? 9 : 1" @select="handleSelectHistory" />
     <choose-character v-if="showCharacter" v-model="showCharacter" @select="handleSelectCharacter" />
+    <choose-material
+        v-if="showMaterialLibrary"
+        v-model="showMaterialLibrary"
+        :limit="uploadMaterialType == 'image' ? 9 : 1"
+        :type="uploadMaterialType"
+        @select="handleSelectMaterial" />
     <upload-rule-pop
         v-if="showUploadTip"
         v-model="showUploadTip"
-        @handle-upload="uploadAndProcessFiles('video')"
+        @handle-upload="uploadAndProcessFiles(uploadMaterialType)"
         @close="isFirstOpen = false" />
     <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <video-preview
@@ -418,9 +428,11 @@
 import { createShanjianTask, addShanjianPerson } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
 import { MontageTypeEnum, MontageStylesType } from "@/ai_modules/digital_human/enums";
-import useMontageMaterial, { montageConfig } from "@/hooks/useMontageMaterial";
+import useUpload from "@/hooks/useUpload";
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
+import { useMaterial } from "@/ai_modules/digital_human/hooks/useMaterial";
+import { montageConfig } from "@/ai_modules/digital_human/config";
 import UploadRulePop from "@/ai_modules/digital_human/components/upload-rule-pop/upload-rule-pop.vue";
 import ChooseHistory from "@/ai_modules/digital_human/components/choose-history/choose-history.vue";
 import ChooseCharacter from "@/ai_modules/digital_human/components/choose-character/choose-character.vue";
@@ -477,29 +489,22 @@ const formData = reactive<{
     audio: [],
     clip: [],
 });
-
+const showHistory = ref(false);
+const isCharacter = ref(false);
+const showCharacter = ref(false);
 const isFirstOpen = ref(true);
 const showUploadTip = ref(false);
-// 替换素材索引
+const uploadMaterialType = ref<any>();
+const showMaterialLibrary = ref(false);
+
 const replaceMaterialIndex = ref(-1);
-const uploadType = ref<"image" | "video">("video");
 const uploadSource = ref<0 | 1>(0);
-const showHistory = ref(false);
 
 const playItem = reactive({
     pic: "",
     url: "",
 });
 const showVideoPreview = ref(false);
-
-const showCharacter = ref(false);
-const isCharacter = ref(false);
-
-const videoPreview = reactive({
-    poster: "",
-    url: "",
-});
-
 const showCreateSuccess = ref(false);
 const createResult = ref<any>(null);
 const showTokensCost = ref(false);
@@ -512,14 +517,19 @@ const canStepProceed = (stepNumber: number) => {
         2: () => true,
         3: () => {
             if (formData.materialList.length === 0) return true;
-            const totalDuration =
-                formData.materialList.reduce((acc, item) => (item.type === "video" ? acc + item.duration : acc), 0) +
-                formData.materialList.filter((item: any) => item.type === "image").length * montageConfig.imageDuration;
+            const totalDuration = getMaterialTotalDuration();
             return totalDuration <= montageConfig.materialTotalDuration * 60;
         },
         4: () => true,
     };
     return strategy[stepNumber]?.() ?? false;
+};
+
+const getMaterialTotalDuration = () => {
+    return (
+        formData.materialList.reduce((acc, item) => (item.type === "video" ? acc + item.duration : acc), 0) +
+        formData.materialList.filter((item: any) => item.type === "image").length * montageConfig.imageDuration
+    );
 };
 
 // 计算当前步骤是否可以点击“下一步”
@@ -537,12 +547,16 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
         if (canNext.value) {
             step.value++;
         } else {
-            const messages: { [key: number]: string } = {
-                1: "请上传视频",
-                2: "请填写人物名称和介绍",
-                3: "请上传至少3个素材",
+            const messages: Record<number, () => string> = {
+                1: () => "请上传视频",
+                3: () => {
+                    const totalDuration = getMaterialTotalDuration();
+                    if (totalDuration > montageConfig.materialTotalDuration * 60)
+                        return `素材总时长不能超过${montageConfig.materialTotalDuration}分钟`;
+                    return "";
+                },
             };
-            uni.$u.toast(messages[step.value] || "请完成当前步骤");
+            uni.$u.toast(messages[step.value]?.() || "请完成当前步骤");
         }
         return;
     }
@@ -563,29 +577,19 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
     }
 };
 
-const {
-    showUploadProgress,
-    uploadMaterialList,
-    uploadAndProcessFiles,
-    handleDeleteMaterial: handleDeleteMaterialFromHook,
-} = useMontageMaterial({
+const { processAndAppend } = useMaterial(toRef(formData, "materialList"));
+
+const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
     onSuccess: (materials: any[]) => {
-        if (uploadSource.value == 0) {
-            if (replaceMaterialIndex.value !== -1) {
-                formData.anchorLists[replaceMaterialIndex.value] = materials[0];
-            } else {
-                formData.anchorLists = formData.anchorLists.concat(materials);
-            }
-            replaceMaterialIndex.value = -1;
+        const targetList = uploadSource.value === 0 ? "anchorLists" : "materialList";
+        const index = replaceMaterialIndex.value;
+        if (index !== -1) {
+            formData[targetList][index] = materials[0];
         } else {
-            if (replaceMaterialIndex.value !== -1) {
-                formData.materialList[replaceMaterialIndex.value] = materials[0];
-            } else {
-                formData.materialList = formData.materialList.concat(materials);
-            }
-            replaceMaterialIndex.value = -1;
+            formData[targetList] = [...formData[targetList], ...materials];
         }
+        replaceMaterialIndex.value = -1;
     },
 });
 
@@ -611,34 +615,70 @@ const chooseUploadType = (type: 0 | 1) => {
     }
     if (type == 1) {
         uni.showActionSheet({
-            itemList: ["选择图片素材", "选择视频素材"],
+            itemList: ["从相册选择图片", "从相册选择视频", "从图片素材库选择", "从视频素材库选择", "从创作库选择"],
             success: async (res) => {
-                uploadType.value = res.tapIndex == 0 ? "image" : "video";
-                if (isFirstOpen.value) {
-                    isFirstOpen.value = false;
-                    showUploadTip.value = true;
-                    return;
+                const { tapIndex } = res;
+                if ([0, 1].includes(tapIndex)) {
+                    uploadMaterialType.value = tapIndex === 0 ? "image" : "video";
+
+                    if (isFirstOpen.value) {
+                        isFirstOpen.value = false;
+                        showUploadTip.value = true;
+                        return;
+                    }
+                    uploadAndProcessFiles(uploadMaterialType.value);
+                } else if ([2, 3].includes(tapIndex)) {
+                    uploadMaterialType.value = tapIndex === 2 ? "image" : "video";
+                    showMaterialLibrary.value = true;
+                } else if (tapIndex === 4) {
+                    showHistory.value = true;
                 }
-                uploadAndProcessFiles(uploadType.value);
             },
         });
     }
 };
 
-const handleSelectHistory = (lists: any[]) => {
+const handleSelectHistory = async (lists: any[]) => {
     const data = lists.map((item: any) => ({
         pic: item.pic,
-        url: item.video_result_url,
+        url: item.clip_result_url || item.video_result_url,
         name: item.name,
         duration: item.duration,
     }));
-    if (replaceMaterialIndex.value !== -1) {
-        formData.anchorLists[replaceMaterialIndex.value] = data[0];
-    } else {
-        formData.anchorLists = formData.anchorLists.concat(data);
+    if (uploadSource.value == 0) {
+        if (replaceMaterialIndex.value !== -1) {
+            formData.anchorLists[replaceMaterialIndex.value] = data[0];
+        } else {
+            formData.anchorLists = formData.anchorLists.concat(data);
+        }
+        replaceMaterialIndex.value = -1;
+        showHistory.value = false;
     }
-    replaceMaterialIndex.value = -1;
-    showHistory.value = false;
+    if (uploadSource.value == 1) {
+        const normalized = data.map((item) => ({
+            ...item,
+            actualUrl: item.url,
+        }));
+
+        await processAndAppend({
+            rawList: normalized,
+            urlField: "actualUrl",
+            type: "video",
+            replaceIndex: replaceMaterialIndex.value,
+            onSuccess: () => (showHistory.value = false),
+        });
+    }
+};
+
+const handleSelectMaterial = async (res: any[]) => {
+    const type = uploadMaterialType.value;
+    await processAndAppend({
+        rawList: res,
+        urlField: "content",
+        type: type as "video" | "image",
+        replaceIndex: replaceMaterialIndex.value,
+        onSuccess: () => (showMaterialLibrary.value = false),
+    });
 };
 
 const handleVideoPlay = (item: any) => {
@@ -654,11 +694,9 @@ const handleReplaceMaterial = (index: number, type: 0 | 1) => {
 
 const handleDeleteAnchor = (id: number) => {
     formData.anchorLists = formData.anchorLists.filter((item) => item.id !== id);
-    handleDeleteMaterialFromHook(id);
 };
 const handleDeleteMaterial = (id: number) => {
     formData.materialList = formData.materialList.filter((item) => item.id !== id);
-    handleDeleteMaterialFromHook(id);
 };
 
 const handleSelectCharacter = (item: any) => {
@@ -675,8 +713,8 @@ const previewMaterial = (item: any) => {
             urls: [pic],
         });
     } else {
-        videoPreview.poster = pic;
-        videoPreview.url = url;
+        playItem.pic = pic;
+        playItem.url = url;
         showVideoPreview.value = true;
     }
 };
@@ -684,13 +722,13 @@ const previewMaterial = (item: any) => {
 const handleMinusVideoCount = (type: "minus" | "add") => {
     if (type === "minus") {
         if (formData.extra.video_count <= 1) {
-            uni.$u.toast("数量最少为1");
+            uni.$u.toast("视频数量最少为1");
             return;
         }
         formData.extra.video_count--;
     } else {
         if (formData.extra.video_count >= 99) {
-            uni.$u.toast("数量最多为99");
+            uni.$u.toast("视频数量最多为99");
             return;
         }
         formData.extra.video_count++;
@@ -705,6 +743,14 @@ const handleCreateVideo = async () => {
     }
     if (!formData.name) {
         uni.$u.toast("请输入视频名称");
+        return;
+    }
+    if (formData.extra.video_count <= 0) {
+        uni.$u.toast("请输入视频数量");
+        return;
+    }
+    if (formData.extra.video_count > 99) {
+        uni.$u.toast("视频数量最多为99");
         return;
     }
     if (formData.extra.clip === 1 && formData.clip.length === 0) {
@@ -776,6 +822,10 @@ const toRecord = () => {
     uni.$u.route({
         url: "/packages/pages/creation/creation",
         type: "redirect",
+        params: {
+            source: "1",
+            type: 3,
+        },
     });
 };
 

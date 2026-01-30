@@ -9,7 +9,7 @@
             <view class="mt-4">
                 <u-input
                     v-model="formData.content"
-                    placeholder="粘贴你的口播文案或者输入内容"
+                    placeholder="请输入您的文案..."
                     type="textarea"
                     height="400"
                     placeholder-style="color: #C0C3C4;"

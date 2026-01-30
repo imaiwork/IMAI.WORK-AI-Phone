@@ -244,9 +244,6 @@ const handleUtils = (type: string) => {
             }
 
             break;
-        case "creation_record":
-            pathUrl = "/packages/pages/creation/creation";
-            break;
     }
     uni.$u.route({
         url: pathUrl,

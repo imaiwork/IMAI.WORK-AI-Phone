@@ -299,14 +299,11 @@
                     <view class="text-[24rpx] text-[#64748b]">请选择您需要保存到本地的视频</view>
                 </view>
 
-                <!-- 按钮区域 -->
                 <view class="flex gap-3">
-                    <!-- 选项1：下载生成视频 (次要操作 - 浅灰底) -->
                     <view
                         class="flex-1 py-4 px-2 flex flex-col items-center justify-center gap-1 rounded-[24rpx] bg-[#f1f5f9] active:bg-[#e2e8f0] transition-all border border-[transparent] active:border-[#cbd5e1]"
                         hover-class="opacity-80"
                         @click="handleDownload(1)">
-                        <!-- 图标 -->
                         <view class="w-8 h-8 rounded-full bg-white flex items-center justify-center mb-1 shadow-sm">
                             <text class="text-[#64748b] text-[24rpx] font-bold">原</text>
                         </view>
@@ -314,17 +311,14 @@
                         <text class="text-[#94a3b8] text-[20rpx] scale-90">原始版本</text>
                     </view>
 
-                    <!-- 选项2：下载剪辑视频 (主要操作 - 蓝底) -->
                     <view
-                        v-if="operateItem.clip_result_url"
+                        v-if="operateItem.clip_result_url && operateItem.automatic_clip"
                         class="flex-1 py-4 px-2 flex flex-col items-center justify-center gap-1 rounded-[24rpx] bg-primary active:bg-[#0055d4] transition-all shadow-lg shadow-[#3b82f6]/30"
                         hover-class="opacity-90"
                         @click="handleDownload(2)">
-                        <!-- 装饰纹理 -->
                         <view
                             class="absolute top-0 right-0 w-12 h-12 bg-[#ffffff]/10 rounded-bl-[32rpx] pointer-events-none"></view>
 
-                        <!-- 图标 -->
                         <view
                             class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mb-1 backdrop-blur-sm border border-solid border-[#ffffff]/20">
                             <text class="text-white text-[24rpx] font-bold">AI</text>
@@ -626,7 +620,7 @@ const showVideoActions = (item: any, index: number) => {
                     uni.$u.toast("视频未生成");
                     return;
                 }
-                if (item.clip_result_url) {
+                if (item.clip_result_url && item.automatic_clip) {
                     showDownload.value = true;
                 } else {
                     handleDownload(1);
@@ -706,11 +700,10 @@ const handleEditConfirm = async () => {
 };
 
 const handleDownload = async (type: 1 | 2) => {
-    const { video_result_url, clip_result_url } = operateItem.value;
+    const { video_result_url, clip_result_url, automatic_clip } = operateItem.value;
     const urlToSave = type === 1 ? video_result_url : clip_result_url;
     try {
         await saveVideoToPhotosAlbum(urlToSave);
-    } catch (error) {
     } finally {
         showDownload.value = false;
     }
@@ -868,6 +861,12 @@ onMounted(() => {
 onLoad((options: any) => {
     if (options?.tab) {
         currentTab.value = parseInt(options?.tab);
+    }
+    if (options?.source == "1") {
+        currentType.value = parseInt(options?.type);
+    }
+    if (options?.source == "2") {
+        currentType.value = parseInt(options?.type);
     }
 });
 

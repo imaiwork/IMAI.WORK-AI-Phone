@@ -167,7 +167,8 @@
 </template>
 
 <script setup lang="ts">
-import { getMaterialLibraryList, getDigitalHumanVideo } from "~/api/matrix";
+import { getMaterialLibraryList } from "@/api/material";
+import { getDigitalHumanVideo } from "@/api/matrix";
 import { getVideoList as getDigitalHumanVideoList } from "@/api/digital_human";
 import Popup from "@/components/popup/index.vue";
 import { MaterialTypeEnum } from "../_enums";

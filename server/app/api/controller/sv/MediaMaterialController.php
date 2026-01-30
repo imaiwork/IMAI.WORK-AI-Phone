@@ -75,4 +75,18 @@ class MediaMaterialController extends BaseApiController
         return $this->dataLists(new SvMediaMaterialLists());
     }
 
+
+    public function batchUpdate()
+    {
+        try {
+            $params = $this->request->post();;
+            $result = SvMediaMaterialLogic::batchUpdateSvMediaMaterial($params);
+            if ($result) {
+                return $this->success('更新成功');
+            }
+            return $this->fail(SvMediaMaterialLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
 }

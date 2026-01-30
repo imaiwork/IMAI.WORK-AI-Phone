@@ -33,7 +33,7 @@ class TaskCompletedHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }
@@ -41,6 +41,15 @@ class TaskCompletedHandler extends BaseMessageHandler
     private function completeTask(array $content)
     {
         try {
+            if ((int)$content['task_id'] == 0) {
+                return [
+                    'deviceId' => $this->payload['deviceId'],
+                    'task_id' =>  $content['task_id'],
+                    'status' => 3,
+                    'time' => date('Y-m-d H:i:s'),
+                    'msg' => '任务完成设置成功',
+                ];
+            }
             $find = SvCrawlingTask::where('id', $content['task_id'])->findOrEmpty();
 
             if ($find->isEmpty()) {
@@ -80,7 +89,7 @@ class TaskCompletedHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }

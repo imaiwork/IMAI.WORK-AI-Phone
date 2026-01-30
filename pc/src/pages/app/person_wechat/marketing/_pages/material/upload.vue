@@ -56,7 +56,7 @@
                 </template>
 
                 <template v-else-if="currentCate === MaterialTypeEnum.LINK">
-                    <div class="bg-slate-50/50 p-5 rounded-[20px] border border-slate-100 mb-6 space-y-4">
+                    <div class="bg-[#f8fafc]/50 p-5 rounded-[20px] border border-slate-100 mb-6 space-y-4">
                         <ElFormItem label="链接地址" prop="link">
                             <ElInput v-model="formData.link" placeholder="https://" class="custom-input" />
                         </ElFormItem>
@@ -79,7 +79,7 @@
                 </template>
 
                 <template v-else-if="currentCate === MaterialTypeEnum.MINI_PROGRAM">
-                    <div class="bg-slate-50/50 p-5 rounded-[20px] border border-slate-100 mb-6 space-y-4">
+                    <div class="bg-[#f8fafc]/50 p-5 rounded-[20px] border border-slate-100 mb-6 space-y-4">
                         <ElFormItem label="小程序标题" prop="mini_program_name">
                             <ElInput
                                 v-model="formData.mini_program_name"

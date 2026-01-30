@@ -126,7 +126,7 @@
             </ElTable>
         </div>
 
-        <div class="h-[72px] px-8 flex items-center justify-between bg-slate-50/50">
+        <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
             <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个营销任务</span>
             <pagination v-model="pager" @change="getLists" />
         </div>

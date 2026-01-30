@@ -11,7 +11,6 @@ use app\common\model\hd\HdPuzzleSetting;
 use app\common\model\ModelConfig;
 use app\common\model\user\User;
 use app\common\service\FileService;
-use think\facade\Db;
 use think\facade\Log;
 
 /**
@@ -179,7 +178,8 @@ class HdPuzzleLogic extends ApiLogic
 
         try {
             foreach ($tasks as $task) {
-
+                $notice = false;
+                $statusmsg = '合成失败';
                 // 为每个任务单独开启事务
                 \think\facade\Db::startTrans();
                 $setPublish = false;
@@ -210,7 +210,8 @@ class HdPuzzleLogic extends ApiLogic
                     Log::channel('puzzle')->write('拼图结果 ' . $task->task_id . ': ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                     
                     if (isset($response['code']) && $response['code'] == 10000) {
-                        
+                        $notice = true;
+                        $statusmsg = '合成成功';
                         $image_count = $response['data']['image_count'] ?? 0;
                         $unit = ModelConfig::where('scene', 'combined_picture')->value('score', 0);
                         $points = $unit * $image_count;
@@ -235,6 +236,8 @@ class HdPuzzleLogic extends ApiLogic
 
                         } elseif ($resultnum < 1) {
                             $task->status = 2;
+                            $notice = true;
+                            $statusmsg = '合成失败';
                             $puzzleSetting->error_num += 1;
                             $puzzleSetting->status = 2;
                         }
@@ -279,6 +282,8 @@ class HdPuzzleLogic extends ApiLogic
                             $task->tries++;
                             if ($task->tries >= 10) {
                                 $task->status = 2;
+                                $notice = true;
+                                $statusmsg = '合成失败';
                                 $puzzleSetting->error_num += 1;
                             }
                             $task->remark = $e->getMessage();
@@ -302,6 +307,13 @@ class HdPuzzleLogic extends ApiLogic
                             Log::channel('puzzle')->write('更新失败状态出错：' . $task->task_id . '，原因：' . $updateEx->getMessage());
                         }
                     }
+                }
+                if ($notice){
+                    ApiLogic::sendNotice([
+                        'userId' => $task->user_id,
+                        'content' => $task->name,
+                        'status' => $statusmsg
+                    ], 'video');
                 }
 
                if ($setPublish && $task->auto_type == 1){

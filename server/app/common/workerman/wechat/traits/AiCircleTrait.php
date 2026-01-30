@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace app\common\workerman\wechat\traits;
 
-use app\common\model\wechat\AiWechatDevice;
-use app\common\model\wechat\AiWechatLog;
-use app\common\model\wechat\AiWechatCircleReplyLikeStrategy;
-use app\common\model\wechat\AiWechatFriendTag;
-use app\common\model\wechat\AiWechatRobot;
-use app\common\model\kb\KbRobot;
+use app\api\logic\ChatLogic;
 use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
-use app\api\logic\ChatLogic;
-use app\common\model\user\User;
 use app\common\logic\AccountLogLogic;
+use app\common\model\kb\KbRobot;
+use app\common\model\user\User;
+use app\common\model\wechat\AiWechatCircleReplyLikeStrategy;
+use app\common\model\wechat\AiWechatDevice;
+use app\common\model\wechat\AiWechatFriendTag;
+use app\common\model\wechat\AiWechatLog;
 
 /**
  * 自动微信朋友圈点赞评论
@@ -260,6 +259,7 @@ trait AiCircleTrait
                     'scene' => '评论朋友圈聊天',
                     'model' => $robot->model,
                     'robot' => $robot->toArray(),
+                    'kb_id' => explode(',',$robot->kb_ids) ?? [],
                 ]);
                 if ($chatStatus === false) {
                     $this->withChannel('wechat_socket')->withLevel('notice')->withTitle('队列请求知识库失败:')->withContext([

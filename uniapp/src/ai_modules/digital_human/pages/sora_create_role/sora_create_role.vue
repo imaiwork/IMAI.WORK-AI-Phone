@@ -241,6 +241,7 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { createSoraRole } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
 import useUpload from "@/hooks/useUpload";
@@ -497,6 +498,7 @@ const handleCreateRole = async () => {
         });
         uni.hideLoading();
         showCreateSuccess.value = true;
+        WechatOA.notify();
     } catch (error: any) {
         uni.hideLoading();
         uni.showToast({

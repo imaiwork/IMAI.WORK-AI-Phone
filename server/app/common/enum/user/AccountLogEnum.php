@@ -173,6 +173,7 @@ class AccountLogEnum
     const TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN_ADD = 5038;
     const TOKENS_DEC_NEWS_MIXCUT_SHANJIAN_ADD = 5039;
 
+    const TOKENS_DEC_AI_SHANJIAN_AUTHORIZED_VIDEO = 5040;
 
 
     const TOKENS_DEC_HUMAN_EXT = 5060;
@@ -345,6 +346,7 @@ class AccountLogEnum
         self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN_ADD,
         self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN_ADD,
         self::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN_ADD,
+        self::TOKENS_DEC_AI_SHANJIAN_AUTHORIZED_VIDEO,
 
 
 
@@ -537,6 +539,7 @@ class AccountLogEnum
             self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN_ADD  => '真人口播混剪视频预扣费补足费用补扣',
             self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN_ADD  => '素材混剪视频预扣费补足费用补扣',
             self::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN_ADD  => '新闻体混剪视频预扣费补足费用补扣',
+            self::TOKENS_DEC_AI_SHANJIAN_AUTHORIZED_VIDEO  => 'AI自动生成授权形象视频扣费减少算力',
 
 
 

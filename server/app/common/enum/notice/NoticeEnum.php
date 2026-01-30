@@ -26,6 +26,11 @@ class NoticeEnum
     const CHANGE_MOBILE_CAPTCHA = 103;
     const FIND_LOGIN_PASSWORD_CAPTCHA = 104;
 
+    /**
+     * 小程序通知场景
+     */
+    const MNP_TASK_NOTIFICATION = 401;
+    const MNP_COMPOSITION_NOTIFICATION = 402;
 
     /**
      * 验证码场景
@@ -126,6 +131,8 @@ class NoticeEnum
             self::BIND_MOBILE_CAPTCHA => '验证码:code',
             self::CHANGE_MOBILE_CAPTCHA => '验证码:code',
             self::FIND_LOGIN_PASSWORD_CAPTCHA => '验证码:code',
+            self::MNP_TASK_NOTIFICATION => 'RPA任务名称:thing1 开始时间:time2 结束时间:time3 状态:phrase4',
+            self::MNP_COMPOSITION_NOTIFICATION => '视频合成任务名称:thing1 时间:time2 状态:phrase4',
         ];
 
         if ($flag) {
@@ -205,13 +212,28 @@ class NoticeEnum
      * @notes 获取小程序订阅消息示例
      * @param $sceneId
      * @param false $flag
-     * @return array|mixed
+     * @return array
      * @author 段誉
      * @date 2022/3/29 11:33
      */
     public static function getMnpExample($sceneId, $flag = false)
     {
-        $desc = [];
+        $desc = [
+            self::MNP_TASK_NOTIFICATION => ['RPA任务名称
+            {{thing1.DATA}}
+            开始时间
+            {{time2.DATA}}
+            结束时间
+            {{time3.DATA}}
+            状态
+            {{phrase4.DATA}}'],
+            self::MNP_COMPOSITION_NOTIFICATION => ['视频合成任务名称
+            {{thing1.DATA}}
+            时间
+            {{time2.DATA}}
+            状态
+            {{phrase4.DATA}}'],
+        ];
 
         if ($flag) {
             return $desc;
@@ -250,7 +272,7 @@ class NoticeEnum
                 $example = self::getOaExample($sceneId);
                 break;
             case self::MNP:
-                $other[] = '配置路径：小程序后台 > 功能 > 订阅消息';
+                $other[] = '生效条件：1、微信小程序后台完成模板设置。';
                 $example = self::getMnpExample($sceneId);
                 break;
         }

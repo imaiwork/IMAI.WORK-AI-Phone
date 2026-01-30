@@ -39,21 +39,21 @@ class DeviceLogic extends ApiLogic
                 $find->update_time     = time();
                 $find->conversation_id = $params['conversation_id'] ?? '';
                 $find->analysis        = json_encode([
-                                                  "operation_persona" => $params['operation_persona'] ?? "", //运营人设
-                                                  "business_type"     => $params["business_type"] ?? "", //业务类型
-                                                  "account_stage"     => $params["account_stage"] ?? "", //账号阶段
-                                                  "target_audience"   => $params["target_audience"] ?? "", //客户对象
-                                                  "core_pain"         => $params["core_pain"] ?? "", //客户核心痛点
-                                                  "main_platform"     => $params["main_platform"] ?? "", //主要运营平台
-                                                  "platform_focus"    => $params["platform_focus"] ?? "", //平台侧重点
-                                                  "content_style"     => $params["content_style"] ?? "", //内容风格倾向
-                                                  "main_block"        => $params["main_block"] ?? "", //当前最大运营卡点
-                                                  "risk_tolerance"    => $params["risk_tolerance"] ?? "", //账号风险承受度
-                                                  "benchmark_account" => $params["benchmark_account"] ?? "" //对标账号
-                                              ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    "operation_persona" => $params['operation_persona'] ?? "", //运营人设
+                    "business_type"     => $params["business_type"] ?? "", //业务类型
+                    "account_stage"     => $params["account_stage"] ?? "", //账号阶段
+                    "target_audience"   => $params["target_audience"] ?? "", //客户对象
+                    "core_pain"         => $params["core_pain"] ?? "", //客户核心痛点
+                    "main_platform"     => $params["main_platform"] ?? "", //主要运营平台
+                    "platform_focus"    => $params["platform_focus"] ?? "", //平台侧重点
+                    "content_style"     => $params["content_style"] ?? "", //内容风格倾向
+                    "main_block"        => $params["main_block"] ?? "", //当前最大运营卡点
+                    "risk_tolerance"    => $params["risk_tolerance"] ?? "", //账号风险承受度
+                    "benchmark_account" => $params["benchmark_account"] ?? "" //对标账号
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 $find->save();
 
-                if (!empty($find->conversation_id) && !empty($find->analysis)){
+                if (!empty($find->conversation_id) && !empty($find->analysis)) {
                     AutoNeedsAnalysis::where('conversation_id', $params['conversation_id'])->update(['is_draft' => 0]);
                 }
                 $result                      = $find->toArray();
@@ -78,18 +78,18 @@ class DeviceLogic extends ApiLogic
                 $params['video_theme']     = $params['target_audience'] ?? '';
                 $params['text_theme']      = $params['main_platform'] ?? '';
                 $params['analysis']        = json_encode([
-                                                             "operation_persona" => $params['operation_persona'] ?? "", //运营人设
-                                                             "business_type"     => $params["business_type"] ?? "", //业务类型
-                                                             "account_stage"     => $params["account_stage"] ?? "", //账号阶段
-                                                             "target_audience"   => $params["target_audience"] ?? "", //客户对象
-                                                             "core_pain"         => $params["core_pain"] ?? "", //客户核心痛点
-                                                             "main_platform"     => $params["main_platform"] ?? "", //主要运营平台
-                                                             "platform_focus"    => $params["platform_focus"] ?? "", //平台侧重点
-                                                             "content_style"     => $params["content_style"] ?? "", //内容风格倾向
-                                                             "main_block"        => $params["main_block"] ?? "", //当前最大运营卡点
-                                                             "risk_tolerance"    => $params["risk_tolerance"] ?? "", //账号风险承受度
-                                                             "benchmark_account" => $params["benchmark_account"] ?? "" //对标账号
-                                                         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    "operation_persona" => $params['operation_persona'] ?? "", //运营人设
+                    "business_type"     => $params["business_type"] ?? "", //业务类型
+                    "account_stage"     => $params["account_stage"] ?? "", //账号阶段
+                    "target_audience"   => $params["target_audience"] ?? "", //客户对象
+                    "core_pain"         => $params["core_pain"] ?? "", //客户核心痛点
+                    "main_platform"     => $params["main_platform"] ?? "", //主要运营平台
+                    "platform_focus"    => $params["platform_focus"] ?? "", //平台侧重点
+                    "content_style"     => $params["content_style"] ?? "", //内容风格倾向
+                    "main_block"        => $params["main_block"] ?? "", //当前最大运营卡点
+                    "risk_tolerance"    => $params["risk_tolerance"] ?? "", //账号风险承受度
+                    "benchmark_account" => $params["benchmark_account"] ?? "" //对标账号
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 $result = AutoDeviceConfig::create($params);
                 $result = $result->toArray();
                 $analysis                    = !empty($result['analysis']) ? json_decode($result['analysis'], true) : [];
@@ -170,7 +170,7 @@ class DeviceLogic extends ApiLogic
         }
     }
 
-    
+
 
 
 
@@ -404,7 +404,10 @@ class DeviceLogic extends ApiLogic
                         'hasLiked' => 1,
                         'hasFollowed' => 1,
                         'commentContents' => ['oi'],
-                        'filteredKeywords' => \app\common\service\ConfigService::get('touch_clue',  'comment_screening',  []),
+                        'filteredKeywords' => array_merge(
+                            \app\common\service\ConfigService::get('touch_clue',  'comment_screening',  []),
+                            [',', '.', '?', '!', '，', '。', '！', '？', '多', '少', '钱', '可', '以', '吗']
+                        ),
                         'commentCount' => 1,
                         'dmCount' => 1,
                         'noteViewCount' => 5,
@@ -443,7 +446,10 @@ class DeviceLogic extends ApiLogic
                         'hasLiked' => 1,
                         'hasFollowed' => 1,
                         'commentContents' => ['oi'],
-                        'filteredKeywords' => \app\common\service\ConfigService::get('touch_clue',  'comment_screening',  []),
+                        'filteredKeywords' => array_merge(
+                            \app\common\service\ConfigService::get('touch_clue',  'comment_screening',  []),
+                            [',', '.', '?', '!', '，', '。', '！', '？', '多', '少', '钱', '可', '以', '吗']
+                        ),
                         'commentCount' => 1,
                         'dmCount' => 1,
                         'noteViewCount' => 5,

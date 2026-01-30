@@ -4,12 +4,15 @@ namespace app\api\logic\sora;
 
 use app\api\logic\ApiLogic;
 use app\api\logic\service\TokenLogService;
+use app\api\logic\WechatLogic;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
+use app\common\model\notice\NoticeRecord;
 use app\common\model\sora\SoraAnchor;
 use app\common\model\sora\SoraVideoSetting;
 use app\common\model\sora\SoraVideoTask;
 use app\common\model\user\User;
+use app\common\model\user\UserAuth;
 use think\facade\Db;
 use think\facade\Log;
 
@@ -26,6 +29,9 @@ class SoraVideoSettingLogic extends ApiLogic
 
     public static function add(array $params): bool
     {
+        if (empty($params['content'])){
+            message('请输入提示词');
+        }
         $successNum   = 0;
         $errorNum     = 0;
         $name         = $params['name'] ?? '';
@@ -35,6 +41,9 @@ class SoraVideoSettingLogic extends ApiLogic
         $image_urls   = $params['image_urls'] ?? [];
         $frequency    = $params['frequency'] ?? '';                             //镜头切换频率
         $aspect_ratio = $params['aspect_ratio'] == '9:16' ? '9:16' : '16:9';    //输出比例
+        $proportion   = explode(':', $aspect_ratio);
+        $width        = $proportion[0];
+        $height       = $proportion[1];
         $duration     = !empty($params['duration']) ? $params['duration'] : 10; //输出时长
         $style        = $params['style'] ?? '';                                 //视频风格
         $number       = $params['number'] ?? 1;                                 //生成视频数量
@@ -42,20 +51,6 @@ class SoraVideoSettingLogic extends ApiLogic
         $ai_type      = $params['ai_type'] ?? 0;
         $model        = $params['model'] == 'sora-2-pro' ? 2 : 1;
         $anchor_ids   = $params['anchor_ids'] ?? [];
-        $keywords = '视频细节：【' . $content . '】
-        镜头切换频率：【' . $frequency . '】
-        输出比例：【' . $aspect_ratio . '】
-        输出时长：【' . $duration . 's】';
-        if (!empty($anchor_ids)){
-            foreach ($anchor_ids as $anchor_id){
-                $anchor = SoraAnchor::where('anchor_id','=', $anchor_id)->where('status', '=', 1)->findOrEmpty();
-                if ($anchor->isEmpty()){
-                    message('角色不存在');
-                }
-                $keywords = str_replace($anchor['name'],' @'.$anchor['anchor_id'].' ',$keywords);
-            }
-        }
-
 //        $keywords = '视频类型：【' . $theme . '】
 //        视频细节：【' . $content . '】
 //        人物性别：【' . $gender . '】
@@ -63,6 +58,17 @@ class SoraVideoSettingLogic extends ApiLogic
 //        镜头切换频率：【' . $frequency . '】
 //        输出比例：【' . $aspect_ratio . '】
 //        输出时长：【' . $duration . 's】';
+        $keywords = $content;
+        if (!empty($anchor_ids)) {
+            foreach ($anchor_ids as $anchor_id) {
+                $anchor = SoraAnchor::where('anchor_id', '=', $anchor_id)->where('status', '=', 1)->findOrEmpty();
+                if ($anchor->isEmpty()) {
+                    message('角色不存在');
+                }
+                $keywords = str_replace($anchor['name'], ' @' . $anchor['anchor_id'] . ' ', $keywords);
+            }
+        }
+
         if (empty($name) || empty($number)) {
             message('参数错误');
         }
@@ -126,6 +132,8 @@ class SoraVideoSettingLogic extends ApiLogic
                     'create_time'      => time(),
                     'update_time'      => time(),
                     'model_version'    => $model,
+                    'width'            => $width,
+                    'height'           => $height,
                 ];
                 $result      = self::requestUrl($request, $scene, self::$uid, $videoTaskId);
                 if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
@@ -150,13 +158,21 @@ class SoraVideoSettingLogic extends ApiLogic
             $update                          = [
                 'extra'       => json_encode([
                                                  'image_urls' => $image_urls,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    'image_counts' => count($image_urls)
                                              ], JSON_UNESCAPED_UNICODE),
                 'status'      => $errorNum == 0 ? 2 : ($errorNum == $number ? 4 : 5),
                 'success_num' => $successNum,
                 'error_num'   => $errorNum
             ];
             SoraVideoSetting::update($update, ['id' => $setting->id]);
+
+            $mnpMessage = [
+                'openid'   => UserAuth::where('user_id', self::$uid)->order('id', 'desc')->value('openid'),
+                'scene_id' => 402,
+                'name'     => $name,
+                'time'     => date('Y-m-d H:i:s', time()),
+                'status'   => '开始'
+            ];
+            WechatLogic::sendMnpMessage($mnpMessage);
             Db::commit();
             return true;
         } catch (\Exception $e) {
@@ -186,7 +202,7 @@ class SoraVideoSettingLogic extends ApiLogic
 
     public static function copywriting(array $params)
     {
-        $message = '帮我创作一段适合SORA生成视频的文案，视频描述如下：' . $params['keywords'];
+        $message = '创作一段适合SORA生成视频的文案，你只需要回答生成的文案内容，视频描述如下：' . $params['keywords'];
         $number  = $params['number'] ?? 1;
         if (empty($message) || empty($number)) {
             message('参数错误');
@@ -353,12 +369,33 @@ class SoraVideoSettingLogic extends ApiLogic
         foreach ($settings as $setting) {
             $num = $setting['success_num'] + $setting['error_num'];
             if ($setting['video_count'] == $num) {
+                $send = false;
                 if ($setting['error_num'] > 0 && $setting['error_num'] < $num) {
                     SoraVideoSetting::where('id', $setting['id'])->update(['status' => 5]);
                 } else if ($setting['error_num'] > 0 && $setting['error_num'] == $num) {
                     SoraVideoSetting::where('id', $setting['id'])->update(['status' => 4]);
+                    $send = true;
+                    $status = '生成失败';
                 } else {
                     SoraVideoSetting::where('id', $setting['id'])->update(['status' => 3]);
+                    $send = true;
+                    $status = '生成成功';
+                }
+                //发送小程序消息通知
+                if ($send) {
+                    $old = NoticeRecord::where('title','like','%'.$setting['name'].'%')->findOrEmpty();
+                    //回调时已通知，避免重复通知
+                    if(!$old->isEmpty()){
+                        return true;
+                    }
+                    $mnpMessage = [
+                        'openid'   => UserAuth::where('user_id', $setting['user_id'])->order('id', 'desc')->value('openid'),
+                        'scene_id' => 402,
+                        'name'     => $setting['name'],
+                        'time'     => date('Y-m-d H:i:s', time()),
+                        'status'   => $status
+                    ];
+                    WechatLogic::sendMnpMessage($mnpMessage);
                 }
             }
         }

@@ -133,7 +133,14 @@ class WorkbenchLogic extends BaseLogic
         $data = $response['data']['cast_list'];
         foreach ($data as $key => $value) {
 
-            $info = ModelConfig::where('scene', $value['code'])->field('name,unit,score,code,scene,description')->findOrEmpty();
+            $info = ModelConfig::where('scene', $value['code'])
+                ->where('scene', 'not in', [
+                    'human_avatar_pro',
+                    'human_voice_pro',
+                    'human_audio_pro',
+                    'human_video_pro',
+                    'knowledge_chat'
+                ])->field('name,unit,score,code,scene,description')->findOrEmpty();
 
             if ($info->isEmpty()) {
 
@@ -149,8 +156,9 @@ class WorkbenchLogic extends BaseLogic
             $data[$key]['scene']        = $info['scene'];
             $data[$key]['description']  = $value['description'];
         }
-
-        return array_values($data);
+        $result = array_values($data);
+        array_multisort(array_column($result, 'code'), SORT_ASC, $result);
+        return $result;
     }
 
     /**

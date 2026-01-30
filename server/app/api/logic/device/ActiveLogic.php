@@ -24,6 +24,7 @@ class ActiveLogic extends ApiLogic
     {
         Db::startTrans();
         try {
+            self::checkAutoDevice($params);
             TaskLogic::checkAccounts($params['accounts']);
             
             $times = TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
@@ -35,13 +36,8 @@ class ActiveLogic extends ApiLogic
             $task = SvDeviceActive::create($params);
             $allTaskInstall = [];
             foreach ($accounts as $account) {
-                if ($account['type'] == 1) {
-                    $find = AiWechat::where('wechat_id', $account['account'])->where('user_id', self::$uid)->limit(1)->find()->toArray();
-                    $account = array_merge($account, $find);
-                } else {
-                    $find = SvAccount::where('account', $account['account'])->where('user_id', self::$uid)->limit(1)->find()->toArray();
-                    $account = array_merge($account, $find);
-                }
+                $find = SvAccount::where('account', $account['account'])->where('user_id', self::$uid)->limit(1)->find()->toArray();
+                $account = array_merge($account, $find);
 
                 foreach ($times as $time) {
                     list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_ACTIVE, $time['start_time'], $time['end_time'], self::$uid);

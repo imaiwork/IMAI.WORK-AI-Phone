@@ -66,7 +66,7 @@
                     </DynamicScroller>
                 </div>
 
-                <div class="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col gap-2">
+                <div class="p-4 bg-[#f8fafc]/50 border-t border-slate-100 flex flex-col gap-2">
                     <ElButton type="primary" class="!rounded-xl !h-10 !font-bold" @click="openTagEditPopup">
                         <Icon name="el-icon-Plus" />
                         <span class="ml-1"> 新增标签 </span>

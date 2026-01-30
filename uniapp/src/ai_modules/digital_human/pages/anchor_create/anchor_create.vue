@@ -26,7 +26,7 @@
                             </view>
                         </view>
 
-                        <view class="h-[420rpx] rounded-[24rpx] overflow-hidden relative group">
+                        <view class="h-[440rpx] rounded-[24rpx] overflow-hidden relative group">
                             <view
                                 v-if="!anchorData.pic"
                                 class="flex flex-col items-center justify-center h-full bg-[#F8F9FB] rounded-[24rpx] border-2 border-dashed border-[#E1E4E8] transition-all active:bg-[#F0F2F5]"
@@ -87,53 +87,78 @@
                                 <text class="font-bold text-[32rpx] text-[#1A1A1A]">上传授权视频</text>
                                 <text class="text-[#FF3C26] text-[32rpx]">*</text>
                             </view>
-                            <view
-                                v-if="authData.pic"
-                                class="text-[26rpx] px-3 py-1 bg-[#F5F7FA] rounded-full text-[#666]"
-                                @click="handleUploadAuthVideo">
-                                更换视频
+                            <view class="flex items-center gap-x-2">
+                                <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-fit">
+                                    <view class="w-[268rpx] grid grid-cols-2 relative h-[60rpx]">
+                                        <view
+                                            v-for="(item, index) in ['手动授权', 'AI授权']"
+                                            :key="index"
+                                            class="rounded-[12rpx] text-xs font-bold flex items-center justify-center z-10 transition-colors duration-500"
+                                            :class="authIndex === index ? 'text-primary' : 'text-[#000000]/50'"
+                                            @click="authIndex = index">
+                                            {{ item }}
+                                        </view>
+                                        <view
+                                            class="tab-slider"
+                                            :style="{
+                                                transform: `translateX(${authIndex * 100}%)`,
+                                            }"></view>
+                                    </view>
+                                </view>
+                                <view @click="showAuthHelp = true">
+                                    <u-icon name="question-circle-fill" color="#CCCCCC" size="24"></u-icon>
+                                </view>
                             </view>
                         </view>
-
-                        <view class="h-[420rpx] rounded-[24rpx] overflow-hidden relative">
-                            <view
-                                v-if="!authData.pic"
-                                class="flex flex-col items-center justify-center h-full bg-[#F8F9FB] rounded-[24rpx] border-2 border-dashed border-[#E1E4E8] transition-all active:bg-[#F0F2F5]"
-                                @click="handleUploadAuthVideo">
+                        <template v-if="authIndex === 0">
+                            <view class="h-[420rpx] rounded-[24rpx] overflow-hidden relative">
                                 <view
-                                    class="w-[88rpx] h-[88rpx] bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/icons/add2.svg"
-                                        class="w-[48rpx] h-[48rpx]"></image>
-                                </view>
-                                <text class="upload-text text-[30rpx]">点击上传授权视频</text>
+                                    v-if="!authData.pic"
+                                    class="flex flex-col items-center justify-center h-full bg-[#F8F9FB] rounded-[24rpx] border-2 border-dashed border-[#E1E4E8] transition-all active:bg-[#F0F2F5]"
+                                    @click="handleUploadAuthVideo">
+                                    <view
+                                        class="w-[88rpx] h-[88rpx] bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
+                                        <image
+                                            src="@/ai_modules/digital_human/static/icons/add2.svg"
+                                            class="w-[48rpx] h-[48rpx]"></image>
+                                    </view>
+                                    <text class="upload-text text-[30rpx]">点击上传授权视频</text>
 
-                                <view class="mt-6 px-4 py-3 bg-[#ffffff]/60 rounded-[16rpx] w-[90%] backdrop-blur-sm">
-                                    <view class="flex flex-col gap-y-1.5">
-                                        <view class="info-item">
-                                            <text class="info-dot"></text>
-                                            <text>视频时长：小于{{ AUTH_VIDEO_MAX_DURATION / 60 }}分钟</text>
-                                        </view>
-                                        <view class="info-item">
-                                            <text class="info-dot"></text>
-                                            <text>视频编码：h264</text>
-                                        </view>
-                                        <view class="info-item">
-                                            <text class="info-dot"></text>
-                                            <text class="text-[#FF3C26]">确保本人出镜授权，保证声音清晰</text>
+                                    <view
+                                        class="mt-6 px-4 py-3 bg-[#ffffff]/60 rounded-[16rpx] w-[90%] backdrop-blur-sm">
+                                        <view class="flex flex-col gap-y-1.5">
+                                            <view class="info-item">
+                                                <text class="info-dot"></text>
+                                                <text>视频时长：小于{{ AUTH_VIDEO_MAX_DURATION / 60 }}分钟</text>
+                                            </view>
+                                            <view class="info-item">
+                                                <text class="info-dot"></text>
+                                                <text>视频编码：h264</text>
+                                            </view>
+                                            <view class="info-item">
+                                                <text class="info-dot"></text>
+                                                <text class="text-[#FF3C26]">确保本人出镜授权，保证声音清晰</text>
+                                            </view>
                                         </view>
                                     </view>
                                 </view>
+                                <view v-else class="w-full h-full relative bg-black">
+                                    <video
+                                        :src="authData.url"
+                                        :poster="authData.pic"
+                                        class="w-full h-full object-cover"></video>
+                                    <view
+                                        class="absolute inset-0 pointer-events-none border border-[#000000]/5 rounded-[24rpx]"></view>
+                                </view>
                             </view>
-                            <view v-else class="w-full h-full relative bg-black">
-                                <video
-                                    :src="authData.url"
-                                    :poster="authData.pic"
-                                    class="w-full h-full object-cover"></video>
+                            <view class="flex items-center justify-end mt-4" v-if="authData.pic">
                                 <view
-                                    class="absolute inset-0 pointer-events-none border border-[#000000]/5 rounded-[24rpx]"></view>
+                                    class="text-[26rpx] px-3 py-1 bg-[#F5F7FA] rounded-full text-[#666]"
+                                    @click="handleUploadAuthVideo">
+                                    更换视频
+                                </view>
                             </view>
-                        </view>
+                        </template>
                     </view>
                 </view>
             </scroll-view>
@@ -149,7 +174,7 @@
             </view>
             <view
                 class="flex-1 h-[96rpx] text-white flex items-center justify-center rounded-full font-bold text-[30rpx] shadow-lg active:scale-[0.98] transition-all"
-                :class="[isCreate ? 'bg-[#1A1A1A] shadow-black/20' : 'bg-[#E1E4E8] text-[#999] shadow-none']"
+                :class="[isCreate ? 'bg-[#1A1A1A] shadow-[#000000]/20' : 'bg-[#E1E4E8] text-[#999] shadow-[none]']"
                 @click="handleCreateAnchor">
                 开始克隆 <text class="text-[24rpx] font-normal ml-1 opacity-80"> (消耗{{ getToken }}算力)</text>
             </view>
@@ -249,6 +274,23 @@
         </template>
     </popup-bottom>
 
+    <u-popup v-model="showAuthHelp" mode="center" border-radius="20" width="85%">
+        <view class="bg-white px-[54rpx] py-[44rpx]">
+            <view class="text-[30rpx] font-bold"> AI授权是什么？ </view>
+            <view class="mt-[32rpx] text-[#000000]/70 font-bold leading-6">
+                启用后，无需自行录制授权视频，系统将自动使用您已上传的训练视频生成一段带口型同步的授权声明视频。
+            </view>
+            <view class="mt-[32rpx] text-[#000000]/70 font-bold leading-6">
+                该功能按次收费，每次生成会消耗对应算力/金额。 建议在确认训练视频无误后再使用，可减少重复扣费。
+            </view>
+            <view
+                class="mt-[70rpx] w-[320rpx] h-[90rpx] mx-auto bg-[#F3F3F3] rounded-[20rpx] text-center leading-[90rpx] text-[30rpx] font-bold"
+                @click="showAuthHelp = false">
+                我已知晓
+            </view>
+        </view>
+    </u-popup>
+
     <upload-loading
         v-if="showUploadProgress"
         :progress="uploadProgressNum"
@@ -280,8 +322,6 @@ const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
 const appStore = useAppStore();
 
-const isOssTranscode = computed(() => appStore.config?.is_oss_transcode);
-
 const anchorData = reactive<any>({
     name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM"),
     pic: "",
@@ -296,6 +336,8 @@ const authData = reactive<any>({
     pic: "",
     url: "",
 });
+const authIndex = ref(0);
+const showAuthHelp = ref(false);
 
 const detail = ref<any>({});
 const showCreateStatus = ref(false);
@@ -327,11 +369,14 @@ const getToken = computed(() => {
     const token1 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN)?.score;
     const token2 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_CHANJING)?.score;
     const token3 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR)?.score;
-    return parseFloat(token1) + parseFloat(token2) + parseFloat(token3);
+    const token4 = userStore.getTokenByScene(TokensSceneEnum.AI_SHANJIAN_AUTHORIZED_VIDEO)?.score;
+    return (
+        parseFloat(token1) + parseFloat(token2) + parseFloat(token3) + (authIndex.value === 1 ? parseFloat(token4) : 0)
+    );
 });
 
 const isCreate = computed(() => {
-    return authData.url && anchorData.url;
+    return anchorData.url && (authIndex.value !== 0 || authData.url);
 });
 
 const handleUploadAnchorVideo = () => {
@@ -498,18 +543,10 @@ const handleCreateAnchor = async () => {
     }
 
     if (!anchorData.url) {
-        uni.showToast({
-            title: "请上传形象视频",
-            icon: "none",
-            duration: 3000,
-        });
+        uni.$u.toast("请上传形象视频");
         return;
-    } else if (!authData.url) {
-        uni.showToast({
-            title: "请上传授权视频",
-            icon: "none",
-            duration: 3000,
-        });
+    } else if (authIndex.value === 0 && !authData.url) {
+        uni.$u.toast("请上传授权视频");
         return;
     }
 
@@ -524,9 +561,10 @@ const handleCreateAnchor = async () => {
             width: anchorData.width,
             height: anchorData.height,
             anchor_url: anchorData.url,
-            authorized_url: authData.url,
+            authorized_url: authIndex.value === 0 ? authData.url : "",
             pic: anchorData.pic,
-            authorized_pic: authData.pic,
+            authorized_pic: authIndex.value === 0 ? authData.pic : "",
+            ai_type: authIndex.value,
         });
         uni.hideLoading();
         showCreateStatus.value = true;
@@ -591,6 +629,10 @@ onUnload(() => {
 </script>
 
 <style scoped lang="scss">
+.tab-slider {
+    @apply h-[calc(100%-10rpx)] w-[50%] rounded-[16rpx] bg-white absolute top-[5rpx] left-0 transition-all duration-500;
+}
+
 .upload-text {
     background: linear-gradient(90deg, rgba(71, 213, 159, 1) 0%, rgba(55, 204, 237, 1) 100%);
     font-weight: bold;

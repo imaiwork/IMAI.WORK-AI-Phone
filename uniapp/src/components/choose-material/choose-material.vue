@@ -8,9 +8,9 @@
                         class="h-full"
                         ref="pagingRef"
                         v-model="dataLists"
-                        :auto="false"
                         :fixed="false"
-                        :default-page-size="50"
+                        :auto="false"
+                        :default-page-size="20"
                         :safe-area-inset-bottom="true"
                         @query="queryList">
                         <view
@@ -122,22 +122,23 @@ const isChoose = (data: any) => {
 };
 
 const handleSelect = (data: any) => {
-    if (props.multiple === false || (props.multiple === true && props.limit === 1)) {
-        if (isChoose(data)) {
-            chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
-        } else {
-            chooseLists.value = [data];
-        }
+    const isSelected = isChoose(data);
+
+    if (isSelected) {
+        chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
+        return;
+    }
+
+    const isSingleMode = !props.multiple || props.limit === 1;
+
+    if (isSingleMode) {
+        chooseLists.value = [data];
     } else {
-        if (isChoose(data)) {
-            chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
-        } else {
-            if (props.limit && chooseLists.value.length >= props.limit) {
-                uni.$u.toast(`最多选择${props.limit}个素材`);
-                return;
-            }
-            chooseLists.value.push(data);
+        if (props.limit && chooseLists.value.length >= props.limit) {
+            uni.$u.toast(`最多选择${props.limit}个素材`);
+            return;
         }
+        chooseLists.value.push(data);
     }
 };
 
@@ -159,12 +160,19 @@ const confirm = () => {
     chooseLists.value = [];
 };
 
-watch(show, async () => {
-    if (show.value) {
-        await nextTick();
-        pagingRef.value?.reload();
+watch(
+    () => props.modelValue,
+    async (newVal) => {
+        if (newVal) {
+            await nextTick();
+            pagingRef.value?.reload();
+        }
+    },
+    {
+        immediate: true,
+        deep: true,
     }
-});
+);
 </script>
 
 <style scoped></style>

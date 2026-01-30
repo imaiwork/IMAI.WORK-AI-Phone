@@ -27,6 +27,7 @@ export function createRequest(opt?: Partial<FetchOptions>) {
             isReturnDefaultResponse: false,
             withToken: true,
             isParamsToData: true,
+            ignoreCancel: false,
             requestInterceptorsHook(options) {
                 const { apiPrefix, isParamsToData, withToken } = options.requestOptions;
                 // 拼接请求前缀

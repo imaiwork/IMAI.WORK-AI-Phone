@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model="show" title="选择评论时间" height="40%" @close="close">
+    <popup-bottom v-model="show" title="选择评论时间" height="40%" @close="close" :is-disabled-touch="true">
         <template #content>
             <view class="h-full flex flex-col">
                 <view class="grow min-h-0 flex flex-col items-center justify-center">
@@ -85,6 +85,13 @@ const close = () => {
     show.value = false;
     emit("close");
 };
+
+watch(
+    () => props.value,
+    (newVal) => {
+        commentTimeIndex.value = newVal;
+    }
+);
 </script>
 
 <style scoped lang="scss">

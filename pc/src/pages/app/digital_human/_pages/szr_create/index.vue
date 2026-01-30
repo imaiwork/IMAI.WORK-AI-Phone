@@ -8,8 +8,7 @@
                         <div class="text-[14px] text-white/90 mt-[12px] font-medium tracking-wide">
                             开始创作，打造您的专属数字人分身
                         </div>
-                        <ElButton
-                            type="primary"
+                        <ElButton type="primary"
                             class="mt-8 !h-[54px] !w-[220px] !rounded-full !text-base !font-black shadow-2xl hover:scale-105 transition-all active:scale-95"
                             @click="toAnchorCreate">
                             定制形象
@@ -36,43 +35,33 @@
                 <div class="grow min-h-0">
                     <ElScrollbar :distance="20" @end-reached="loadMoreAnchor">
                         <div class="grid grid-cols-4 xl:grid-cols-5 gap-3 p-4">
-                            <div
-                                class="aspect-[4/5] rounded-[24px] border-2 border-dashed border-slate-200 bg-[#f8fafc]/50 hover:border-primary hover:bg-[#0065fb]/5 transition-all cursor-pointer flex flex-col items-center justify-center gap-3 group"
+                            <div class="aspect-[4/5] rounded-[24px] border-2 border-dashed border-slate-200 bg-[#f8fafc]/50 hover:border-primary hover:bg-[#0065fb]/5 transition-all cursor-pointer flex flex-col items-center justify-center gap-3 group"
                                 @click="toCloneAnchor()">
                                 <div
                                     class="w-10 h-10 rounded-2xl bg-white shadow-light flex items-center justify-center group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
                                     <Icon name="el-icon-Plus" :size="24" />
                                 </div>
-                                <span class="text-[13px] font-black text-slate-500 group-hover:text-primary"
-                                    >形象克隆</span
-                                >
+                                <span class="text-[13px] font-black text-slate-500 group-hover:text-primary">形象克隆</span>
                             </div>
 
-                            <div
-                                class="aspect-[4/5] cursor-pointer rounded-[24px] overflow-hidden relative border-2 transition-all group"
-                                v-for="(item, index) in anchorPager.lists"
-                                :key="item.id"
+                            <div class="aspect-[4/5] cursor-pointer rounded-[24px] overflow-hidden relative border-2 transition-all group"
+                                v-for="(item, index) in anchorPager.lists" :key="item.id"
                                 :class="currentAnchorIndex === index ? 'border-primary ' : 'border-[transparent]'"
                                 @click="handleSelectAnchor(index)">
                                 <ElImage :src="item.pic" fit="cover" lazy class="w-full h-full" />
 
-                                <div
-                                    class="w-7 h-7 flex items-center justify-center absolute bottom-2 right-2 z-[10] rounded-full bg-black/20 backdrop-blur-md text-white hover:bg-primary transition-colors"
+                                <div class="w-7 h-7 flex items-center justify-center absolute bottom-2 right-2 z-[10] rounded-full bg-black/20 backdrop-blur-md text-white hover:bg-primary transition-colors"
                                     @click.stop="openVideo(item.result_url)">
                                     <Icon name="local-icon-play2" :size="28"></Icon>
                                 </div>
-                                <div
-                                    v-if="currentAnchorIndex == index"
+                                <div v-if="currentAnchorIndex == index"
                                     class="absolute top-3 right-3 w-7 h-7 bg-primary rounded-full flex items-center justify-center border-2 border-white z-20 animate-in zoom-in duration-300">
                                     <Icon name="el-icon-Check" color="#fff" :size="16" />
                                 </div>
-                                <div
-                                    class="absolute inset-0 bg-black/60 backdrop-blur-[1px] z-[20] flex items-center justify-center p-2 text-center"
+                                <div class="absolute inset-0 bg-black/60 backdrop-blur-[1px] z-[20] flex items-center justify-center p-2 text-center"
                                     v-if="item.status == 0">
                                     <span
-                                        class="bg-primary text-[10px] font-black text-white px-2 py-1 rounded-full animate-pulse"
-                                        >训练中</span
-                                    >
+                                        class="bg-primary text-[10px] font-black text-white px-2 py-1 rounded-full animate-pulse">训练中</span>
                                 </div>
                             </div>
                         </div>
@@ -92,11 +81,7 @@
                     <div class="text-[13px] font-black text-[#64748B]">视频名称</div>
                     <div class="w-[1px] h-3 bg-[#E2E8F0]"></div>
                     <div class="flex-1">
-                        <ElInput
-                            v-model="formData.name"
-                            class="custom-input"
-                            placeholder="请输入名称"
-                            maxlength="20"
+                        <ElInput v-model="formData.name" class="custom-input" placeholder="请输入名称" maxlength="20"
                             :input-style="{ textAlign: 'right', fontSize: '15px', fontWeight: '900', color: '#1E293B' }"
                             clearable />
                     </div>
@@ -109,23 +94,15 @@
                                 <Icon name="el-icon-Document" color="var(--el-color-primary)" /> 文案输入
                             </div>
                             <div class="border border-br rounded-2xl p-4 bg-slate-50 group">
-                                <ElInput
-                                    v-model="formData.msg"
-                                    class="custom-textarea"
-                                    type="textarea"
-                                    placeholder="请输入播报文案..."
-                                    resize="none"
-                                    :maxlength="textLimit"
-                                    :rows="10" />
+                                <ElInput v-model="formData.msg" class="custom-textarea" type="textarea"
+                                    placeholder="请输入您的文案..." resize="none" :maxlength="textLimit" :rows="10" />
                                 <div class="flex items-center justify-between mt-4">
                                     <div class="flex gap-2">
-                                        <button
-                                            @click="handleRandomCopywriter"
+                                        <button @click="handleRandomCopywriter"
                                             class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-br rounded-2xl text-[12px] font-bold hover:border-primary hover:text-primary transition-all">
                                             随机
                                         </button>
-                                        <button
-                                            @click="openGeneratePrompt"
+                                        <button @click="openGeneratePrompt"
                                             class="flex items-center gap-1.5 px-3 py-1.5 bg-[#0065FB]/5 text-primary rounded-2xl text-[12px] font-black hover:bg-[#0065FB]/10 transition-all">
                                             AI 生成
                                         </button>
@@ -139,17 +116,10 @@
 
                         <div class="mb-6">
                             <div class="text-[15px] font-[900] text-[#1E293B] mb-3">训练模型</div>
-                            <ElSelect
-                                v-model="formData.model_version"
-                                class="w-full custom-select"
-                                placeholder="请选择训练模型"
-                                :show-arrow="false"
-                                :disabled="!isPublicAnchor"
+                            <ElSelect v-model="formData.model_version" class="w-full custom-select"
+                                placeholder="请选择训练模型" :show-arrow="false" :disabled="!isPublicAnchor"
                                 @change="handleModelChange">
-                                <ElOption
-                                    v-for="item in modelChannel"
-                                    :key="item.id"
-                                    :value="item.id"
+                                <ElOption v-for="item in modelChannel" :key="item.id" :value="item.id"
                                     :label="item.name">
                                     <div class="flex items-center gap-2">
                                         <img :src="item.icon" class="w-4 h-4" />
@@ -164,24 +134,13 @@
 
                         <div class="mb-6">
                             <div class="text-[15px] font-[900] text-[#1E293B] mb-3">音色选择</div>
-                            <ElSelect
-                                v-model="voiceId"
-                                class="w-full custom-select"
-                                placeholder="请选择声音"
-                                :show-arrow="false"
-                                @change="handleVoiceChange">
-                                <ElOption
-                                    v-for="item in voiceList"
-                                    :key="item.id"
-                                    :value="item.id"
-                                    :label="item.name"
+                            <ElSelect v-model="voiceId" class="w-full custom-select" placeholder="请选择声音"
+                                :show-arrow="false" @change="handleVoiceChange">
+                                <ElOption v-for="item in voiceList" :key="item.id" :value="item.id" :label="item.name"
                                     :show-arrow="false">
                                     <div class="flex items-center justify-between w-full">
                                         <span class="font-bold">{{ item.name }}</span>
-                                        <ElTag
-                                            size="small"
-                                            :type="item.id == -1 ? 'success' : 'info'"
-                                            round
+                                        <ElTag size="small" :type="item.id == -1 ? 'success' : 'info'" round
                                             effect="light">
                                             {{ item.builtin === 0 ? "系统" : item.id == -1 ? "原生" : "定制" }}
                                         </ElTag>
@@ -198,15 +157,12 @@
 
                             <div class="mt-4 pt-4 border-t border-[#E2E8F0]" v-if="false">
                                 <div class="text-[12px] font-black text-[#94A3B8] uppercase mb-3">背景音乐 (BGM)</div>
-                                <button
-                                    v-if="!formData.music_url"
-                                    @click="openChooseMusic"
+                                <button v-if="!formData.music_url" @click="openChooseMusic"
                                     class="w-full h-11 rounded-xl border-2 border-dashed border-[#E2E8F0] flex items-center justify-center gap-2 text-[#94A3B8] hover:text-primary hover:border-primary transition-all">
                                     <Icon name="local-icon-upload3" :size="14" />
                                     <span>添加音乐素材</span>
                                 </button>
-                                <div
-                                    v-else
+                                <div v-else
                                     class="flex items-center justify-between p-3 bg-white rounded-xl border border-primary/20">
                                     <div class="flex items-center gap-2 overflow-hidden">
                                         <Icon name="local-icon-music" class="text-primary" />
@@ -214,8 +170,7 @@
                                             formData.music_name
                                         }}</span>
                                     </div>
-                                    <button
-                                        @click="handleDeleteMusic"
+                                    <button @click="handleDeleteMusic"
                                         class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 text-[#CBD5E1] hover:text-red-500 transition-all">
                                         <Icon name="el-icon-Close" :size="12" />
                                     </button>
@@ -236,33 +191,16 @@
             </div>
         </div>
     </div>
-    <upload-form
-        v-if="showUpload"
-        ref="uploadFormRef"
-        @create="handleAnchorCreate"
-        @close="showUpload = false"
+    <upload-form v-if="showUpload" ref="uploadFormRef" @create="handleAnchorCreate" @close="showUpload = false"
         @play-video="openVideo"></upload-form>
-    <preview-video
-        v-if="showExampleVideo"
-        ref="videoPreviewPlayerRef"
+    <preview-video v-if="showExampleVideo" ref="videoPreviewPlayerRef"
         @close="showExampleVideo = false"></preview-video>
-    <choose-tone
-        v-if="showChooseTone"
-        ref="chooseToneRef"
-        :is_show_original="isShowOriginalTone"
-        @close="showChooseTone = false"
-        @confirm="getChooseTone"></choose-tone>
-    <choose-music
-        v-if="showChooseMusic"
-        ref="chooseMusicRef"
-        @close="showChooseMusic = false"
+    <choose-tone v-if="showChooseTone" ref="chooseToneRef" :is_show_original="isShowOriginalTone"
+        @close="showChooseTone = false" @confirm="getChooseTone"></choose-tone>
+    <choose-music v-if="showChooseMusic" ref="chooseMusicRef" @close="showChooseMusic = false"
         @confirm="getChooseMusic"></choose-music>
-    <generate-prompt
-        v-model="showGeneratePrompt"
-        :prompt-type="CopywritingTypeEnum.AI_DIGITAL_HUMAN_COPYWRITING"
-        :max-size="textLimit"
-        @close="showGeneratePrompt = false"
-        @use-content="getGenerateContent"></generate-prompt>
+    <generate-prompt v-model="showGeneratePrompt" :prompt-type="CopywritingTypeEnum.AI_DIGITAL_HUMAN_COPYWRITING"
+        :max-size="textLimit" @close="showGeneratePrompt = false" @use-content="getGenerateContent"></generate-prompt>
 </template>
 <script setup lang="ts">
 import { useAppStore } from "@/stores/app";
@@ -351,6 +289,15 @@ const handleModelChange = (value: number) => {
     formData.voice_id = -1;
     formData.voice_name = "";
     voiceId.value = -1;
+    const {
+        anchor_ids: { chanjing_anchor_id, shanjian_anchor_id, weiju_anchor_id },
+    } = anchorPager.lists[currentAnchorIndex.value];
+    const anchorIds = {
+        [DigitalHumanModelVersionEnum.CHANJING]: chanjing_anchor_id,
+        [DigitalHumanModelVersionEnum.SHANJIAN]: shanjian_anchor_id,
+        [DigitalHumanModelVersionEnum.STANDARD]: weiju_anchor_id,
+    };
+    formData.anchor_id = anchorIds[value];
     getVoiceList();
 };
 
@@ -429,23 +376,49 @@ const currentAnchor = computed(() => {
 });
 
 const isPublicAnchor = computed(() => {
-    if (anchorPager.lists.length === 0) return false;
+    if (anchorPager.lists.length === 0 || currentAnchorIndex.value === -1) return false;
     const { model_version } = anchorPager.lists[currentAnchorIndex.value];
     return model_version === 0;
 });
 
+const getAnchorStatus = (status: number, source_type: string) => {
+    const anchorStatusMapping: Record<string, any> = {
+        human_anchor: {
+            1: 1,
+            2: 2,
+            default: 0,
+        },
+        public_anchor: {
+            1: 0,
+            2: 1,
+            3: 2,
+            default: 0,
+        },
+    };
+    return anchorStatusMapping[source_type][status] || anchorStatusMapping[source_type]?.["default"];
+};
+
 // 选择形象
 const handleSelectAnchor = (index: number) => {
     // 更新当前选中的形象索引
-    currentAnchorIndex.value = index;
     const {
+        status,
         model_version,
         name,
         result_url,
         pic,
-        extra_info: { width, height },
+        width,
+        height,
+        source_type,
         anchor_ids: { chanjing_anchor_id, shanjian_anchor_id, weiju_anchor_id },
     } = anchorPager.lists[index];
+    const anchorStatus = getAnchorStatus(status, source_type);
+    if (anchorStatus != 1) {
+        feedback.msgWarning("该形象正在克隆中，请稍后再试");
+        return;
+    }
+    currentAnchorIndex.value = index;
+
     // 如果模型版本不同,重置相关数据
     if (formData.model_version != model_version) {
         formData.voice_id = -1;
@@ -466,8 +439,8 @@ const handleSelectAnchor = (index: number) => {
         formData.model_version == DigitalHumanModelVersionEnum.CHANJING
             ? chanjing_anchor_id
             : formData.model_version == DigitalHumanModelVersionEnum.SHANJIAN
-            ? shanjian_anchor_id
-            : weiju_anchor_id;
+                ? shanjian_anchor_id
+                : weiju_anchor_id;
     // 重新请求音色
     getVoiceList();
 };
@@ -663,14 +636,22 @@ const toAnchorCreate = () => {
 
 const loading = ref(true);
 const init = async () => {
+
     try {
         await getAnchorLists();
-        await getVoiceList();
-        await getClipConfigData();
         // 初始化形象列表
         if (anchorPager.lists.length > 0) {
-            handleSelectAnchor(0);
+            const index = anchorPager.lists.findIndex((item: any) => getAnchorStatus(item.status, item.source_type) == 1);
+            if (index != -1) {
+                handleSelectAnchor(index);
+            } else {
+                handleSelectAnchor(0);
+            }
         }
+        await getVoiceList();
+        await getClipConfigData();
+
+
     } finally {
         loading.value = false;
     }
@@ -710,11 +691,14 @@ init();
 .animate-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
 @keyframes pulse {
+
     0%,
     100% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.5;
     }
@@ -735,6 +719,7 @@ init();
     0% {
         transform: rotate(0deg);
     }
+
     100% {
         transform: rotate(360deg);
     }

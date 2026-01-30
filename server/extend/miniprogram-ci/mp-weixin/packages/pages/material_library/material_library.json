@@ -3,9 +3,9 @@
   "disableScroll": true,
   "usingComponents": {
     "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "empty": "../../../components/empty/empty",
     "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
     "video-preview": "../../../components/video-preview/video-preview",
+    "empty": "../../../components/empty/empty",
     "popup-bottom": "../../../components/popup-bottom/popup-bottom",
     "u-input": "../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "u-popup": "../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",

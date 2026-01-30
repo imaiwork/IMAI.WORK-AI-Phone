@@ -146,6 +146,18 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
+        'notice' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/notice/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'digital' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/digital/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
         // 其它日志通道配置
     ],
 

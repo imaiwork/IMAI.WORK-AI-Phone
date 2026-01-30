@@ -368,6 +368,7 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { getDeviceList, updateDevice } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import config from "@/config";
@@ -558,6 +559,7 @@ const handleTaskConfirm = async () => {
 };
 
 const switchTaskMode = (item: any) => {
+    WechatOA.notify();
     currentDevice.value = item;
     currentTaskMode.value = item.auto_type == 1 ? 0 : 1;
     handleTaskConfirm();

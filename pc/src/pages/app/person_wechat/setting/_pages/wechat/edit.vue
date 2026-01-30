@@ -26,7 +26,7 @@
                     <Icon name="el-icon-Operation" class="mr-2" />
                     核心状态控制
                 </div>
-                <div class="grid grid-cols-2 gap-6 bg-slate-50/50 p-5 rounded-[20px] border border-slate-100">
+                <div class="grid grid-cols-2 gap-6 bg-[#f8fafc]/50 p-5 rounded-[20px] border border-slate-100">
                     <ElFormItem label="AI 总功能开关" prop="open_ai" class="!mb-0">
                         <div class="flex items-center h-[40px] gap-3">
                             <ElSwitch
@@ -59,7 +59,7 @@
                     <Icon name="el-icon-Cpu" class="mr-2" />
                     智能接管配置
                 </div>
-                <div class="bg-slate-50/50 p-5 rounded-[20px] border border-slate-100 space-y-5">
+                <div class="bg-[#f8fafc]/50 p-5 rounded-[20px] border border-slate-100 space-y-5">
                     <ElFormItem label="接管模式选择" prop="takeover_mode">
                         <ElRadioGroup v-model="formData.takeover_mode" class="modern-segmented-control">
                             <ElRadioButton :value="1">AI 自动接管</ElRadioButton>

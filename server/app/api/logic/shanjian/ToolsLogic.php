@@ -80,7 +80,10 @@ class ToolsLogic extends BaseLogic
                     self::setError('生成失败');
                     return false;
                 }
-            } else {
+            } elseif($res['code'] == 10005){
+                self::setError('抱歉，系统暂时无法处理您的请求。如您需要继续操作，请联系站点管理员。');
+                return false;
+            }else {
                 self::setError('生成失败2');
                 return false;
             }

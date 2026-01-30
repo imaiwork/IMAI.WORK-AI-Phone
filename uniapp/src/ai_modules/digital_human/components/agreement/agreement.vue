@@ -1,16 +1,16 @@
 <template>
-    <u-mask :show="showAgreement">
+    <u-mask :show="show">
         <view class="h-full flex flex-col justify-center items-center">
             <view class="flex flex-col gap-2 rounded-lg h-[70vh] bg-white w-[80%]">
                 <view class="text-xl font-bold text-center pt-4"> 克隆协议 </view>
                 <view class="grow min-h-0">
-                    <scroll-view scroll-y class="h-full p">
+                    <scroll-view scroll-y class="h-full">
                         <view class="px-4 text-xs whitespace-pre-wrap">
                             <rich-text :nodes="getPrivacy"></rich-text>
                         </view>
                     </scroll-view>
                 </view>
-                <view class="h-[100rpx] flex items-center flex-shrink-0" style="border-top: 1px solid #f0f0f0">
+                <view class="h-[100rpx] flex items-center flex-shrink-0 bg-white" style="border-top: 1px solid #f0f0f0">
                     <view
                         class="flex-1 text-center h-full flex items-center justify-center font-bold"
                         @click="closeAgreement()">
@@ -32,7 +32,7 @@
 import { useAppStore } from "@/stores/app";
 
 const props = defineProps<{
-    showAgreement: boolean;
+    modelValue: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -43,7 +43,7 @@ const emit = defineEmits<{
 
 const show = computed({
     get() {
-        return props.showAgreement;
+        return props.modelValue;
     },
     set(value) {
         emit("update:modelValue", value);

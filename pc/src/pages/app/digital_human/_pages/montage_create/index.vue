@@ -188,7 +188,7 @@
             </div>
         </div>
 
-        <div class="w-[380px] bg-white flex flex-col relative flex-shrink-0 rounded-[20px] p-6 border border-br">
+        <div class="w-[450px] bg-white flex flex-col relative flex-shrink-0 rounded-[20px] p-6 border border-br">
             <header class="mb-5">
                 <h2 class="text-[24px] font-bold text-slate-800 tracking-tight">生成设置</h2>
                 <div class="h-1 w-12 bg-primary rounded-full mt-2"></div>
@@ -238,44 +238,117 @@
                                 resize="none" />
                         </div>
                     </section>
-                    <section class="bg-slate-50 rounded-[20px] p-3 border border-br">
-                        <div class="flex items-center justify-between mb-5">
-                            <label class="text-[14px] font-bold flex items-center gap-2">
-                                <Icon name="el-icon-Microphone" /> 口播内容配置
-                            </label>
-                            <button
-                                @click="openAiGenerateContent"
-                                class="bg-primary text-white px-4 py-2 rounded-[14px] text-xs font-bold flex items-center gap-2 shadow-lg shadow-[#0065fb]/30 hover:scale-105 transition-transform">
-                                <Icon name="el-icon-MagicStick" /> AI 智能生成
-                            </button>
+                    <section class="bg-slate-50 rounded-[24px] border border-br overflow-hidden flex flex-col">
+                        <div
+                            class="px-6 py-4 border-b border-slate-50 bg-[#f8fafc]/50 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <h3 class="text-sm font-[1000] text-slate-800 flex items-center gap-2">
+                                    口播内容配置
+                                    <span
+                                        class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-500 text-[10px] font-black">
+                                        {{ formData.copywriting.length }}
+                                    </span>
+                                </h3>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button
+                                    @click="handleAddManual"
+                                    class="h-9 px-4 rounded-xl border border-br text-slate-500 text-xs font-black hover:border-[#0065fb]/30 hover:text-primary transition-all flex items-center gap-2 bg-white">
+                                    <Icon name="el-icon-Plus" /> 手动添加
+                                </button>
+                                <button
+                                    @click="openAiGenerateContent"
+                                    class="h-9 px-4 bg-primary text-white rounded-xl text-xs font-[500] flex items-center gap-2 shadow-light shadow-[#0065fb]/20 hover:scale-105 transition-all">
+                                    <Icon name="el-icon-MagicStick" /> AI 生成
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="space-y-4">
-                            <div>
-                                <span class="text-[11px] font-black text-slate-400 uppercase ml-2 mb-1 block"
-                                    >口播标题</span
-                                >
-                                <ElInput
-                                    v-model="formData.title"
-                                    maxlength="50"
-                                    placeholder="请输入口播标题..."
-                                    class="custom-input !h-11" />
+                        <div class="flex h-[420px]">
+                            <div class="w-48 border-r border-slate-50 flex flex-col bg-[#f8fafc]/30">
+                                <div class="grow overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                                    <div
+                                        v-for="(item, index) in formData.copywriting"
+                                        :key="index"
+                                        @click="currentActiveIndex = index"
+                                        :class="[
+                                            'group px-3 py-3 rounded-xl cursor-pointer transition-all relative',
+                                            currentActiveIndex === index
+                                                ? 'bg-white shadow-sm ring-1 ring-slate-100'
+                                                : 'hover:bg-white/50',
+                                        ]">
+                                        <div
+                                            v-if="currentActiveIndex === index"
+                                            class="absolute left-0 top-3 bottom-3 w-1 bg-primary rounded-full"></div>
+                                        <div class="flex flex-col gap-1">
+                                            <span
+                                                :class="[
+                                                    'text-[11px] font-black uppercase',
+                                                    currentActiveIndex === index ? 'text-primary' : 'text-slate-400',
+                                                ]">
+                                                #{{ (index + 1).toString().padStart(2, "0") }}
+                                            </span>
+                                            <span class="text-xs font-bold text-slate-600 truncate w-full">
+                                                {{ item.title || "未命名文案" }}
+                                            </span>
+                                        </div>
+                                        <button
+                                            v-if="formData.copywriting.length > 1"
+                                            @click.stop="handleRemoveContent(index)"
+                                            class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 w-5 h-5 rounded-md hover:bg-red-50 hover:text-red-500 text-slate-300 transition-all">
+                                            <Icon name="el-icon-Close" :size="12" />
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        v-if="formData.copywriting.length === 0"
+                                        class="h-full flex flex-col items-center justify-center p-4 text-center">
+                                        <div class="text-[10px] font-black text-slate-300 uppercase leading-relaxed">
+                                            请添加内容
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <span class="text-[11px] font-black text-slate-400 uppercase ml-2 mb-1 block"
-                                    >口播内容</span
-                                >
-                                <ElInput
-                                    v-model="formData.content"
-                                    type="textarea"
-                                    :rows="8"
-                                    placeholder="输入口播内容..."
-                                    class="custom-textarea"
-                                    resize="none" />
-                                <div class="flex justify-end mt-2">
-                                    <span class="text-[11px] font-black text-slate-300"
-                                        >{{ formData.content.length }}/{{ contentLimit }}</span
-                                    >
+
+                            <div class="flex-1 p-3 overflow-y-auto custom-scrollbar">
+                                <template v-if="formData.copywriting[currentActiveIndex]">
+                                    <div class="space-y-6 animate-in fade-in duration-300">
+                                        <div class="space-y-2">
+                                            <label
+                                                class="text-[11px] font-black text-slate-400 uppercase tracking-wider ml-1"
+                                                >口播标题</label
+                                            >
+                                            <ElInput
+                                                v-model="formData.copywriting[currentActiveIndex].title"
+                                                placeholder="输入口播标题..."
+                                                maxlength="30"
+                                                show-word-limit />
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label
+                                                class="text-[11px] font-black text-slate-400 uppercase tracking-wider ml-1"
+                                                >口播内容</label
+                                            >
+                                            <ElInput
+                                                v-model="formData.copywriting[currentActiveIndex].content"
+                                                type="textarea"
+                                                :rows="10"
+                                                placeholder="在这里输入或调整您的口播脚本内容..."
+                                                resize="none"
+                                                maxlength="500" />
+                                            <div class="flex justify-end pr-2">
+                                                <span class="text-[10px] font-black text-slate-300 italic">
+                                                    {{ formData.copywriting[currentActiveIndex].content?.length || 0 }}
+                                                    / 500
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div v-else class="h-full flex flex-col items-center justify-center space-y-4">
+                                    <!-- <img src="@/assets/images/empty_content.png" class="w-24 opacity-20" /> -->
+                                    <p class="text-xs font-bold text-slate-300">点击“手动添加”开始编写内容</p>
                                 </div>
                             </div>
                         </div>
@@ -357,6 +430,11 @@
         v-if="showVideoPreview"
         ref="videoPreviewPlayerRef"
         @close="showVideoPreview = false"></preview-video>
+    <montage-ai-copywriter
+        v-if="showMontageAiCopywriter"
+        ref="montageAiCopywriterRef"
+        :type="1"
+        @close="showMontageAiCopywriter = false" />
 </template>
 <script setup lang="ts">
 import dayjs from "dayjs";
@@ -367,6 +445,7 @@ import { uploadImage } from "@/api/app";
 import { MontageTypeEnum, SidebarTypeEnum } from "@/pages/app/digital_human/_enums";
 import { montageUploadConfig } from "@/pages/app/digital_human/_config";
 import ChooseAudio from "@/pages/app/_components/choose-audio.vue";
+import MontageAiCopywriter from "@/pages/app/digital_human/_components/montage-ai-copywriter.vue";
 
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
@@ -375,6 +454,7 @@ const { userTokens } = toRefs(userStore);
 const formData = reactive<{
     anchorLists: any[];
     materialList: any[];
+    copywriting: any[];
     name: string;
     person_name: string;
     person_introduction: string;
@@ -382,20 +462,17 @@ const formData = reactive<{
     shanjian_type: MontageTypeEnum;
     music: any[];
     extra: { volume: number; soundSwitch: boolean };
-    content: string;
-    title: string;
 }>({
+    name: dayjs().format("YYYYMMDDHHmm") + "口播混剪",
     anchorLists: [],
     materialList: [],
-    name: dayjs().format("YYYYMMDDHHmm") + "口播混剪",
+    copywriting: [],
     person_name: "",
     person_introduction: "",
     video_count: 1,
     shanjian_type: MontageTypeEnum.REAL_PERSON_AI,
     music: [],
     extra: { volume: 0.5, soundSwitch: false },
-    content: "",
-    title: "",
 });
 
 const anchorQueryParams = reactive({
@@ -408,10 +485,13 @@ const showVideoPreview = ref(false);
 const videoPreviewPlayerRef = shallowRef();
 const chooseAudioRef = ref<InstanceType<typeof ChooseAudio>>();
 const contentLimit = 500;
+const currentActiveIndex = ref(0);
 
 // 状态控制
 const showCharacter = ref(false);
 const showMusicDialog = ref(false);
+const showMontageAiCopywriter = ref(false);
+const montageAiCopywriterRef = shallowRef<InstanceType<typeof MontageAiCopywriter>>();
 
 const { pager: anchorPager, getLists: getAnchorLists } = usePaging({
     fetchFun: getShanjianAnchorList,
@@ -518,8 +598,38 @@ const handleSelectCharacter = (item: any) => {
 };
 
 // AI生成文案
-const openAiGenerateContent = () => {
-    console.log("AI生成文案");
+const openAiGenerateContent = async () => {
+    showMontageAiCopywriter.value = true;
+    await nextTick();
+    montageAiCopywriterRef.value?.open();
+};
+
+// 手动添加
+const handleAddManual = () => {
+    if (!formData.copywriting) formData.copywriting = [];
+    formData.copywriting.push({
+        title: "",
+        content: "",
+    });
+    currentActiveIndex.value = formData.copywriting.length - 1;
+};
+
+// 删除某条
+const handleRemoveContent = (index: number) => {
+    formData.copywriting.splice(index, 1);
+    if (currentActiveIndex.value >= formData.copywriting.length) {
+        currentActiveIndex.value = Math.max(0, formData.copywriting.length - 1);
+    }
+};
+
+// AI 回显逻辑（供你参考）
+const onAiGenerated = (list: any[]) => {
+    // 将 AI 生成的列表直接赋值给回显区域
+    formData.copywriting = list.map((item) => ({
+        title: item.title,
+        content: item.content,
+    }));
+    currentActiveIndex.value = 0; // 默认选中第一条
 };
 
 // 音乐选择

@@ -286,7 +286,7 @@ class HumanController extends BaseApiController
             $type = $this->request->param('human_type');
             $modelVersion = $this->request->param('model_version');
             $data = $this->request->all();
-            Log::channel('human')->write('接收数字人参数'.json_encode($data));
+            Log::channel('human')->write('接收数字人参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
             if (isset($data['data'])) {
 
@@ -311,7 +311,7 @@ class HumanController extends BaseApiController
 
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('human')->write('数字人参数'.json_encode($data).'数字人回调失败'.$e->getMessage());
+            Log::channel('human')->write('数字人参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).'数字人回调失败'.$e->getMessage());
             return $this->success('fail');
         }
     }
@@ -336,7 +336,7 @@ class HumanController extends BaseApiController
 
         try {
             $data = $this->request->all();
-            Log::channel('clip')->write('剪辑视频接收数字人参数'.json_encode($data));
+            Log::channel('clip')->write('剪辑视频接收数字人参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             $result = HumanLogic::updateClipVideo($data);
             if (!$result){
                 return   $this->fail(HumanLogic::getError());

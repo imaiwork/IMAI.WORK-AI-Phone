@@ -131,6 +131,7 @@ const contentPost = async (userInput: string) => {
         });
         chatContentList.value.push(content);
         uni.hideLoading();
+        userStore.getUser();
     } catch (err: any) {
         uni.hideLoading();
         uni.showToast({

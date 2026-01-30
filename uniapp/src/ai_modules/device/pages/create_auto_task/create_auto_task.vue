@@ -1,7 +1,7 @@
 <template>
     <view class="h-screen flex flex-col" v-if="!loading">
         <view class="grow min-h-0">
-            <scroll-view ref="chatScrollRef" scroll-y class="h-full" :scroll-top="scrollTop" v-if="step === 1">
+            <scroll-view ref="chatScrollRef" scroll-y class="h-full" :scroll-top="scrollTop" v-show="step === 1">
                 <view class="p-4 content-box">
                     <view v-for="(item, index) in contentList" :key="index">
                         <view class="flex items-start mb-6" v-if="item.type == 2">
@@ -34,7 +34,7 @@
                 ref="formScrollRef"
                 scroll-y
                 class="h-full"
-                v-if="step === 2"
+                v-show="step === 2"
                 :scroll-into-view="formScrollIntoView">
                 <view class="p-4 pb-[350rpx]">
                     <view class="mb-6">
@@ -72,7 +72,7 @@
                     </view>
                 </view>
             </scroll-view>
-            <scroll-view scroll-y class="h-full" v-if="step === 3">
+            <scroll-view scroll-y class="h-full" v-show="step === 3">
                 <view class="p-4 pb-[150rpx]">
                     <view class="rounded-[20rpx] bg-white px-[36rpx] py-[22rpx] relative">
                         <view class="flex items-center justify-between">
@@ -815,8 +815,8 @@ const toPage = (page: string) => {
 
 const handleConfirmStep3 = async () => {
     // 这里要判断平台有一个激活了,如果不是则弹窗拉取
-    const isAllActive = sortedPlatform.value.every((item) => item.status == 2);
-    if (!isAllActive) {
+    const isSomeActive = sortedPlatform.value.some((item) => item.status == 2);
+    if (!isSomeActive) {
         uni.$u.toast("请先激活相关平台，再进行下一步操作");
         showGetAccountPopup.value = true;
         return;

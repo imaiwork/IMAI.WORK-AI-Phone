@@ -229,6 +229,7 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { createSoraVideo } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
 import useUpload from "@/hooks/useUpload";
@@ -260,7 +261,7 @@ const formData = reactive<{
     materialList: [],
     videoStyle: 1,
     videoResolution: 1,
-    aspect_ratio: "16:9",
+    aspect_ratio: "9:16",
     videoDuration: 10,
     videoSwitchFrequency: 1,
     video_count: 1,
@@ -307,14 +308,10 @@ const handleConfirmRole = (role: any) => {
     formData.content += role.name;
 };
 
-const handleFocusContent = (e: any) => {
-    // 记录光标位置
-    contentCursorPosition.value = e.detail.cursor;
-};
-
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
     count: 1,
+    sourceType: ["album", "camera"],
     onSuccess: (materials: any[]) => {
         if (replaceMaterialIndex.value !== -1) {
             formData.materialList[replaceMaterialIndex.value] = materials[0];
@@ -355,13 +352,13 @@ const handleDeleteMaterial = (id: number) => {
 const handleMinusVideoCount = (type: "minus" | "add") => {
     if (type === "minus") {
         if (formData.video_count <= 1) {
-            uni.$u.toast("最少生成1个视频哦");
+            uni.$u.toast("视频数量最少为1");
             return;
         }
         formData.video_count--;
     } else {
         if (formData.video_count >= 99) {
-            uni.$u.toast("最多生成99个视频哦");
+            uni.$u.toast("视频数量最多为99");
             return;
         }
         formData.video_count++;
@@ -378,8 +375,16 @@ const handleCreateVideo = async () => {
         uni.$u.toast("请输入视频名称");
         return;
     }
+    if (!formData.content) {
+        uni.$u.toast("请输入提示词");
+        return;
+    }
     if (formData.video_count <= 0) {
-        uni.$u.toast("请输入生成视频数量");
+        uni.$u.toast("请输入视频数量");
+        return;
+    }
+    if (formData.video_count > 99) {
+        uni.$u.toast("视频数量最多为99");
         return;
     }
     uni.showLoading({
@@ -404,6 +409,7 @@ const handleCreateVideo = async () => {
         uni.hideLoading();
         createResult.value = res;
         showCreateSuccess.value = true;
+        WechatOA.notify();
     } catch (error: any) {
         uni.hideLoading();
         uni.showToast({
@@ -438,6 +444,10 @@ const toRecord = () => {
     uni.$u.route({
         url: "/packages/pages/creation/creation",
         type: "redirect",
+        params: {
+            source: "1",
+            type: 6,
+        },
     });
 };
 

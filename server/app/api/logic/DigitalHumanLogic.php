@@ -3,6 +3,7 @@
 namespace app\api\logic;
 
 use app\api\logic\material\FfmpegFileLogic;
+use app\api\logic\service\TokenLogService;
 use app\api\logic\shanjian\ShanjianAnchorLogic;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
@@ -11,6 +12,7 @@ use app\common\model\file\File;
 use app\common\model\human\HumanAnchor;
 use app\common\model\material\FfmpegFile;
 use app\common\model\shanjian\ShanjianAnchor;
+use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
 use think\db\exception\DbException;
@@ -84,6 +86,8 @@ class DigitalHumanLogic extends ApiLogic
                                      'result_url', // 视频链接
                                      'create_time',
                                      'update_time',
+                                     'width',
+                                     'height',
                                      Db::raw("'public_anchor' as source_type"), // 标记数据来源：公共表
                                      Db::raw("0 as dh_id"), // 公共表无外键，默认0
                                      Db::raw("0 as model_version"), // 公共表无模型版本，默认0
@@ -106,6 +110,8 @@ class DigitalHumanLogic extends ApiLogic
                                     'url as result_url',
                                     'create_time',
                                     'update_time',
+                                    'width',
+                                    'height',
                                     Db::raw("'human_anchor' as source_type"),
                                     'dh_id',
                                     'model_version',
@@ -116,6 +122,7 @@ class DigitalHumanLogic extends ApiLogic
                         ->where($humanWhere)
                         ->where('model_version', 'in', [1, 7])
                         ->where('dh_id', '=', 0)
+                        ->where('create_time', '<', 1767249134) //只兼容2026年1月1日前的旧数据
                         ->buildSql();
         //闪剪形象
         $queryShanjian = Db::name('shanjian_anchor')
@@ -130,6 +137,8 @@ class DigitalHumanLogic extends ApiLogic
                                        'anchor_url as result_url',
                                        'create_time',
                                        'update_time',
+                                       Db::raw("0 as width"),
+                                       Db::raw("0 as height"),
                                        Db::raw("'shanjian_anchor' as source_type"), // 标记数据来源：闪剪表
                                        'dh_id',
                                        Db::raw("8 as model_version"), // 公共表无模型版本，默认0
@@ -139,6 +148,7 @@ class DigitalHumanLogic extends ApiLogic
                            ->where($commonWhere)
                            ->where($shanjianWhere)
                            ->where('dh_id', '=', 0)
+                           ->where('create_time', '<', 1767249134) //只兼容2026年1月1日前的旧数据
                            ->buildSql();
 
         // 4. 合并三个子查询（UNION ALL）+ 分页 + 排序
@@ -176,13 +186,23 @@ class DigitalHumanLogic extends ApiLogic
     public static function createPublicAnchor(array $params)
     {
         try {
-            if (empty($params['name']) || empty($params['anchor_url']) || empty($params['authorized_url'])) {
-                throw new \Exception('参数错误');
+            $ai_type = $params['ai_type'] ?? 0;
+            if (empty($params['name']) || empty($params['anchor_url'])|| empty($params['pic']) ) {
+                throw new \Exception('缺少形象视频或者图片');
             }
-            $res = DigitalHumanAnchor::where('name', $params['name'])->findOrEmpty();
-            if (!$res->isEmpty()) {
-                throw new \Exception('名称已存在');
+            if ($ai_type == 0 && (empty($params['authorized_url']) || empty($params['authorized_pic']))) {
+                throw new \Exception('缺少授权形象视频或者授权图片');
             }
+            $unit = 0;
+            if ($ai_type == 1){
+                $unit = TokenLogService::checkToken(self::$uid, 'ai_shanjian_authorized_video');
+            }
+            //无需名称验证
+//            $res = DigitalHumanAnchor::where('name', $params['name'])->findOrEmpty();
+//            if (!$res->isEmpty()) {
+//                throw new \Exception('名称已存在');
+//            }
+            $task_id = generate_unique_task_id();
             $dhInsert         = [
                 'user_id'        => self::$uid,
                 'name'           => $params['name'],
@@ -193,27 +213,45 @@ class DigitalHumanLogic extends ApiLogic
                                                     'chanjing' => ['task_id' => '', 'status' => 0]
                                                 ]),
                 'status'         => 0,
+                'task_id'        => '',
+                'ai_type'        => $ai_type,
                 'result_url'     => FileService::setFileUrl($params['anchor_url']),
-                'authorized_url' => FileService::setFileUrl($params['authorized_url']),
                 'width'          => $params['width'] ?? 0,
                 'height'         => $params['height'] ?? 0,
             ];
+
+            if ($ai_type == 0) {
+                $dhInsert['authorized_url'] = FileService::setFileUrl($params['authorized_url']);
+                $dhInsert['authorized_pic'] = FileService::setFileUrl($params['authorized_pic']);
+                $authData         = [
+                    'user_id' => self::$uid,
+                    'file_id' => File::where('uri', $dhInsert['authorized_url'])->value('id'),
+                    'type'    => 20,
+                    'uri'     => $params['authorized_url']
+                ];
+                FfmpegFileLogic::addFfmpegFile($authData);
+            }else{
+                $response = \app\common\service\ToolsService::Shanjian()->aiAuthoried($dhInsert);
+                if (isset($response['code']) && $response['code'] == 10000) {
+                    $points = $unit;
+                    if ($points > 0) {
+                        $extra = [];
+                        //token扣除
+                        User::userTokensChange(self::$uid, $points);
+                        //记录日志
+                        AccountLogLogic::recordUserTokensLog(true, self::$uid, AccountLogEnum::TOKENS_DEC_AI_SHANJIAN_AUTHORIZED_VIDEO, $points,  $task_id, $extra);
+                    }
+                }
+            }
             $dh               = DigitalHumanAnchor::create($dhInsert);
-            self::$returnData = $dh->refresh()->toArray();
             $anchorData       = [
                 'user_id' => self::$uid,
                 'file_id' => File::where('uri', $dhInsert['result_url'])->value('id'),
                 'type'    => 20,
                 'uri'     => $params['anchor_url']
             ];
-            $authData         = [
-                'user_id' => self::$uid,
-                'file_id' => File::where('uri', $dhInsert['authorized_url'])->value('id'),
-                'type'    => 20,
-                'uri'     => $params['authorized_url']
-            ];
             FfmpegFileLogic::addFfmpegFile($anchorData);
-            FfmpegFileLogic::addFfmpegFile($authData);
+            self::$returnData = $dh->refresh()->toArray();
             return true;
         } catch (\Exception $exception) {
             self::setError($exception->getMessage());
@@ -243,7 +281,7 @@ class DigitalHumanLogic extends ApiLogic
     public static function createDigitalHumanAnchorCron()
     {
         try {
-            $lists = DigitalHumanAnchor::where('status', '=', 0)->select();
+            $lists = DigitalHumanAnchor::where('status', 0)->where('ai_type',0)->select();
             if ($lists->isEmpty()) {
                 return true;
             }
@@ -293,10 +331,14 @@ class DigitalHumanLogic extends ApiLogic
                     'height'        => $item['height'],
                     'model_version' => 7
                 ];
-                ShanjianAnchorLogic::add($shanjianData);
-                HumanLogic::createAnchor($weijuData);
-                HumanLogic::createAnchor($chanjingData);
-
+                //先合成禅镜和微聚
+                $bool = HumanLogic::createAnchor($weijuData);
+                if ($bool){
+                    $bool = HumanLogic::createAnchor($chanjingData);
+                    if ($bool){
+                        ShanjianAnchorLogic::add($shanjianData);
+                    }
+                }
             }
             return true;
         } catch (\Exception $exception) {
@@ -341,6 +383,31 @@ class DigitalHumanLogic extends ApiLogic
         return true;
     }
 
+    //1小时以上的失败任务处理
+    public static function getDigitalHumanAnchorFailedStatusCron()
+    {
+        $lists = DigitalHumanAnchor::where('status', 'in', [0,1])->where('create_time', '<', time() - 3600)->select();
+        if ($lists->isEmpty()) {
+            return true;
+        }
+        $lists = $lists->toArray();
+        foreach ($lists as $item) {
+            $task_ids = json_decode($item['task_ids'], true) ?? [];
+            if (empty($task_ids)) {
+                continue;
+            }
+            $shanjian = ShanjianAnchor::where('dh_id', $item['id'])->findOrEmpty();
+            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->findOrEmpty();
+            $chanjing = HumanAnchor::where('model_version', 7)->where('dh_id', $item['id'])->findOrEmpty();
+            if ($weiju->isEmpty() || $chanjing->isEmpty() || $shanjian->isEmpty()) {
+                $update['status'] = 3;
+                $update['remark'] = '形象生成失败';
+                DigitalHumanAnchor::where('id', $item['id'])->update($update);
+            }
+        }
+        return true;
+    }
+
     /**
      * 公共数字人失败退费
      */
@@ -359,9 +426,9 @@ class DigitalHumanLogic extends ApiLogic
             if (empty($task_ids)) {
                 continue;
             }
-            $shanjian = ShanjianAnchor::where('dh_id', $item['id'])->find();
-            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->find();
-            $chanjing = HumanAnchor::where('model_version', 7)->where('dh_id', $item['id'])->find();
+            $shanjian = ShanjianAnchor::where('dh_id', $item['id'])->findOrEmpty();
+            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->findOrEmpty();
+            $chanjing = HumanAnchor::where('model_version', 7)->where('dh_id', $item['id'])->findOrEmpty();
             if ($shanjian->isEmpty() || $weiju->isEmpty() || $chanjing->isEmpty()) {
                 continue;
             }
@@ -493,8 +560,8 @@ class DigitalHumanLogic extends ApiLogic
         }
 
         $countPublic   = Db::name('digital_human_anchor')->where($where)->where($publicWhere)->count();
-        $countHuman    = Db::name('human_anchor')->where($where)->where($humanWhere)->where('dh_id', '=', 0)->where('model_version', 'in', [1, 7])->count();
-        $countShanjian = Db::name('shanjian_anchor')->where($where)->where($shanjianWhere)->where('dh_id', '=', 0)->count();
+        $countHuman    = Db::name('human_anchor')->where($where)->where($humanWhere)->where('dh_id', '=', 0)->where('create_time', '<', 1767249134)->where('model_version', 'in', [1, 7])->count();
+        $countShanjian = Db::name('shanjian_anchor')->where($where)->where($shanjianWhere)->where('dh_id', '=', 0)->where('create_time', '<', 1767249134)->count();
 
         if ($filter == 1) {
             $total = $countPublic + $countShanjian;
@@ -541,5 +608,59 @@ class DigitalHumanLogic extends ApiLogic
         unset($item);
 
         return $lists;
+    }
+
+    public static function createDigitalHumanAnchorAiCron()
+    {
+        try {
+            $lists = DigitalHumanAnchor::where('status', 0)->where('ai_type',1)->select();
+            if ($lists->isEmpty()) {
+                return true;
+            }
+            $lists = $lists->toArray();
+            Log::channel('digital')->write('ai授权视频生成定时任务开启：' . json_encode($lists, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            foreach ($lists as $item) {
+                $anchorFile = FfmpegFile::where('uri', '=', FileService::setFileUrl($item['result_url']))->findOrEmpty();
+                if ($anchorFile->isEmpty()) {
+                    continue;
+                }
+
+                if ( in_array($anchorFile->status, [0, 1, "0", "1"])) {
+                    continue;
+                }
+
+                Log::channel('digital')->write('ai授权视频定时任务执行：' . $item['id']);
+                $weijuData    = [
+                    'user_id'       => $item['user_id'],
+                    'dh_id'         => $item['id'],
+                    'name'          => $item['name'],
+                    'url'           => FileService::getFileUrl($item['result_url']),
+                    'pic'           => FileService::getFileUrl($item['image']),
+                    'width'         => $item['width'],
+                    'height'        => $item['height'],
+                    'model_version' => 1
+                ];
+
+                $chanjingData = [
+                    'user_id'       => $item['user_id'],
+                    'dh_id'         => $item['id'],
+                    'name'          => $item['name'],
+                    'url'           => FileService::getFileUrl($item['result_url']),
+                    'pic'           => FileService::getFileUrl($item['image']),
+                    'width'         => $item['width'],
+                    'height'        => $item['height'],
+                    'model_version' => 7
+                ];
+                $weiju = HumanLogic::createAnchor($weijuData);
+                $chanjian = HumanLogic::createAnchor($chanjingData);
+                $update['status'] = 4;
+                DigitalHumanAnchor::where('id', $item['id'])->update($update);
+            }
+            return true;
+        } catch (\Exception $exception) {
+            Log::channel('digital')->write('ai授权视频定时失败：' . $exception->getMessage());
+            echo $exception->getMessage();
+            return false;
+        }
     }
 }

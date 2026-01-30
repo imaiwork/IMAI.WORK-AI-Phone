@@ -183,6 +183,7 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { createShanjianPublish, createSoraPublishTask } from "@/api/digital_human";
 import { isJson } from "@/utils/util";
 import { ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
@@ -369,6 +370,7 @@ const createTask = async () => {
             time_config: formData.time_config.map((item) => `${item.start_time}-${item.end_time}`),
         });
         showCreate.value = true;
+        WechatOA.notify();
         uni.hideLoading();
     } catch (error: any) {
         taskErrorMsg.value = error;

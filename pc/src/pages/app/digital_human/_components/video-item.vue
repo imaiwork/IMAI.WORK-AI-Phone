@@ -135,10 +135,9 @@
                                 </div>
                                 <span class="text-[11px] text-slate-400 font-bold mt-1">包含智能字幕、转场与BGM</span>
                             </div>
-                            <Icon
-                                name="el-icon-Download"
-                                class="text-slate-300 group-hover:text-primary transition-colors"
-                                :size="18" />
+                            <div class="text-slate-300 group-hover:text-primary transition-colors leading-[0]">
+                                <Icon name="el-icon-Download" :size="18" />
+                            </div>
                         </div>
                     </div>
 
@@ -149,13 +148,13 @@
                                 <Icon name="local-icon-video" :size="20" />
                             </div>
                             <div class="flex flex-col flex-1">
-                                <span class="text-[15px] font-black text-slate-700">下载数字人原片</span>
+                                <span class="text-[15px] font-black text-slate-700">下载视频原片</span>
                                 <span class="text-[11px] text-slate-400 font-bold mt-1">原始纯净画面，无后期处理</span>
                             </div>
-                            <Icon
-                                name="el-icon-Download"
-                                class="text-slate-300 group-hover:text-slate-500 transition-colors"
-                                :size="18" />
+
+                            <div class="text-slate-300 group-hover:text-slate-500 transition-colors">
+                                <Icon name="el-icon-Download" :size="18" />
+                            </div>
                         </div>
                     </div>
                 </div>

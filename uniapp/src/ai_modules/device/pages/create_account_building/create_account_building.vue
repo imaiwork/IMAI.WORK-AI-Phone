@@ -33,6 +33,7 @@
 </template>
 
 <script setup lang="ts">
+import WechatOA from "@/utils/wechat";
 import { addGrowthAccountTask } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
@@ -99,14 +100,29 @@ const handleSubmit = async () => {
         });
         uni.hideLoading();
         showCreateTaskSuccessDialog.value = true;
+        WechatOA.notify();
     } catch (error: any) {
-        taskErrorMsg.value = error;
         uni.hideLoading();
-        uni.showToast({
-            title: error || "创建失败",
-            icon: "none",
-            duration: 3000,
-        });
+        if (error.indexOf("24小时自动执行任务") > -1) {
+            uni.showModal({
+                title: "提示",
+                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
+                success: (res) => {
+                    if (res.confirm) {
+                        uni.$u.route({
+                            url: "/pages/phone/phone",
+                        });
+                    }
+                },
+            });
+        } else {
+            taskErrorMsg.value = error;
+            uni.showToast({
+                title: error || "创建失败",
+                icon: "none",
+                duration: 3000,
+            });
+        }
     }
 };
 onLoad(() => {

@@ -1864,6 +1864,9 @@ class KnowledgeLogic extends ApiLogic
             $vector = '';
             $response = [];
             if ($robot != null && $robot['kb_type'] == 2) {
+                if (is_string($params['kb_id']) && str_contains($params['kb_id'], ',')){
+                    $params['kb_id'] = explode(',', $params['kb_id']);
+                }
                 if (is_array($params['kb_id']) && count($params['kb_id']) > 1) {
                     $num   = 1;
                     foreach ($params['kb_id'] as $kb_id) {

@@ -21,8 +21,11 @@ class NoticeSetting extends BaseModel
      */
     public function getSmsStatusDescAttr($value, $data)
     {
-        if ($data['sms_notice']) {
+        if (!empty($data['sms_notice'])) {
             $sms_text = json_decode($data['sms_notice'], true);
+            return DefaultEnum::getEnableDesc($sms_text['status']);
+        }else if (!empty($data['mnp_notice'])) {
+            $sms_text = json_decode($data['mnp_notice'], true);
             return DefaultEnum::getEnableDesc($sms_text['status']);
         } else {
             return '停用';

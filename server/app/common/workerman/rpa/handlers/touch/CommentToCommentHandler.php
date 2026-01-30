@@ -3,6 +3,7 @@
 namespace app\common\workerman\rpa\handlers\touch;
 
 use app\api\logic\service\TokenLogService;
+use app\common\enum\AutomationEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\sv\SvDevice;
@@ -13,6 +14,7 @@ use app\common\model\sv\SvLeadScrapingSetting;
 use app\common\model\user\User;
 use app\common\workerman\rpa\BaseMessageHandler;
 use app\common\workerman\rpa\WorkerEnum;
+use think\facade\Log;
 use Workerman\Connection\TcpConnection;
 
 
@@ -51,13 +53,18 @@ class CommentToCommentHandler extends BaseMessageHandler
     private function recordComment(array $content)
     {
         try {
+            if((int)$content['task_id'] == 0){
+                return [
+                    'isProceed' => 1, //是否处理 1是 0 否
+                ];
+            }
             $task = SvLeadScrapingSettingAccount::where('id', $content['task_id'])
                 ->where('device_code', $this->payload['deviceId'])
                 ->where('task_type', 1)
                 ->where('account_type', $this->appType)
                 ->findOrEmpty();
             if ($task->isEmpty()) {
-                throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务不存在');
+                throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务不存在: ' . \think\facade\Db::getLastSql());
             }
             
             $setting = SvLeadScrapingSetting::where('id', $task->scraping_id)->findOrEmpty();
@@ -93,6 +100,8 @@ class CommentToCommentHandler extends BaseMessageHandler
                 'task_type'           => 1,
                 'scraping_id'         => $task->scraping_id,
                 'scraping_account_id' => $task->id,
+                'address'             => $content['address'] ?? '',
+                'pusher_timer'         => $content['pusherTimer'] ?? 0,
                 'status'              => 3,
                 'account_name'        => $content['author_name'],
                 'account_type'        => $this->appType,
@@ -103,6 +112,8 @@ class CommentToCommentHandler extends BaseMessageHandler
                 'exec_time'           => time(),
             ];
             SvLeadScrapingRecord::create($insert);
+            $scene = AutomationEnum::SHUT_OFF_COMMENTS;
+            self::requestUrl($insert,$scene, $task->user_id, $content['task_id'],  $this->payload['deviceId']);
             return [
                 'isProceed' => 1, //是否处理 1是 0 否
             ];
@@ -120,5 +131,85 @@ class CommentToCommentHandler extends BaseMessageHandler
         } finally {
             unset($content);
         }
+    }
+
+    private static function requestUrl(array $request, string $scene, int $userId,  $taskId,$device_code)
+    {
+        $autoType = SvDevice::where('device_code', $device_code)->value('auto_type') ?? 0;
+        if ($autoType == 0){
+            return [];
+        }
+        Log::channel('socket')->write('自动化扣费' . $scene.'----设备号--'.$device_code.'----任务id--'.$taskId);
+        $requestService = \app\common\service\ToolsService::Automation();
+
+        [$tokenScene, $tokenCode] = match ($scene) {
+            // 自动化功能场景
+            AutomationEnum::SOCIAL_MEDIA_RELEASED => ['automation_social_media_released', AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED],
+            AutomationEnum::SHUT_OFF_COMMENTS => ['automation_shut_off_comments', AccountLogEnum::TOKENS_DEC_AUTOMATION_SHUT_OFF_COMMENTS],
+            AutomationEnum::SHUT_OFF_OBTAIN => ['automation_shut_off_obtain', AccountLogEnum::TOKENS_DEC_AUTOMATION_SHUT_OFF_OBTAIN],
+            AutomationEnum::SHUT_OFF_PRIVATE_LETTER => ['automation_shut_off_private_letter', AccountLogEnum::TOKENS_DEC_AUTOMATION_SHUT_OFF_PRIVATE_LETTER],
+            AutomationEnum::FRIENDS_CIRCLE_COMMENTS => ['automation_friends_circle_comments', AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS],
+            AutomationEnum::FRIENDS_CIRCLE_RELEASED => ['automation_friends_circle_released', AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_RELEASED],
+            AutomationEnum::FRIENDS_CIRCLE_PRAISE => ['automation_friends_circle_praise', AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_PRAISE],
+            AutomationEnum::WECHAT_ADD_FRIEND => ['automation_wechat_add_friend', AccountLogEnum::TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND],
+            AutomationEnum::SOCIAL_MEDIA_OBTAIN => ['automation_social_media_obtain', AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN],
+            AutomationEnum::SOCIAL_MEDIA_NURSING => ['automation_social_media_nursing', AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_NURSING],
+            AutomationEnum::OCR_LOCAL => ['automation_orc_local', AccountLogEnum::TOKENS_DEC_AUTOMATION_OCR_LOCAL],
+            AutomationEnum::OCR_IMG => ['automation_orc_img', AccountLogEnum::TOKENS_DEC_AUTOMATION_OCR_IMG],
+        };
+
+        //计费
+        $unit = TokenLogService::checkToken($userId, $tokenScene);
+        $points = $unit;
+        // 添加辅助参数
+        $request['task_id'] = $taskId;
+        $request['user_id'] = $userId;
+        $request['now'] = time();
+        $extra = [ '算力单价' => $unit, '实际消耗算力' => $unit];
+        switch ($scene) {
+            // 自动化功能处理
+            case AutomationEnum::SOCIAL_MEDIA_RELEASED:
+                $response = $requestService->socialMediaReleased($request);
+                break;
+            case AutomationEnum::SHUT_OFF_COMMENTS:
+                $response = $requestService->shutOffComments($request);
+                break;
+            case AutomationEnum::SHUT_OFF_OBTAIN:
+                $response = $requestService->shutOffObtain($request);
+                break;
+            case AutomationEnum::SHUT_OFF_PRIVATE_LETTER:
+                $response = $requestService->shutOffPrivateLetter($request);
+                break;
+
+            case AutomationEnum::FRIENDS_CIRCLE_RELEASED:
+                $response = $requestService->friendsCircleReleased($request);
+                break;
+
+            case AutomationEnum::WECHAT_ADD_FRIEND:
+                $response = $requestService->wechatAddFriend($request);
+                break;
+            case AutomationEnum::SOCIAL_MEDIA_OBTAIN:
+                $response = $requestService->socialMediaObtain($request);
+                break;
+            case AutomationEnum::SOCIAL_MEDIA_NURSING:
+                $points = $request['time_difference_minutes'] * $unit;
+                $extra = [ '执行时长（分钟）' => $request['time_difference_minutes'],'算力单价' => $unit, '实际消耗算力' => $points];
+                $response = $requestService->socialMediaNursing($request);
+                break;
+
+            default:
+        }
+
+        //成功响应，需要扣费
+        if (isset($response['code']) && $response['code'] == 10000) {
+            if ($points > 0) {
+                //token扣除
+                User::userTokensChange($userId, $points);
+                //记录日志
+                AccountLogLogic::recordUserTokensLog(true, $userId, $tokenCode, $points, $taskId, $extra);
+            }
+        }
+
+        return $response['data'] ?? [];
     }
 }

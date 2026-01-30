@@ -19,7 +19,7 @@
                 </ElButton>
             </div>
 
-            <div class="flex-shrink-0 h-[64px] flex items-center justify-between px-8 bg-slate-50/50">
+            <div class="flex-shrink-0 h-[64px] flex items-center justify-between px-8 bg-[#f8fafc]/50">
                 <div class="flex items-center gap-2">
                     <div class="w-1.5 h-4 bg-primary rounded-full"></div>
                     <span class="text-[14px] font-[900] text-[#1E293B]">分段列表</span>
