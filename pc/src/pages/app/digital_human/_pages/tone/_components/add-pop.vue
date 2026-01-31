@@ -123,9 +123,7 @@ const modelChannel = computed(() => {
             item.id = parseInt(item.id);
             if (
                 item.status == 1 &&
-                (DigitalHumanModelVersionEnum.SHANJIAN == item.id ||
-                    DigitalHumanModelVersionEnum.CHANJING == item.id ||
-                    DigitalHumanModelVersionEnum.STANDARD == item.id)
+                (DigitalHumanModelVersionEnum.SHANJIAN == item.id || DigitalHumanModelVersionEnum.CHANJING == item.id)
             ) {
                 return item;
             }

@@ -1,0 +1,1 @@
+import{r as n}from"./index.a07c0495.js";function t(e){return n.get({url:"/knowledge.knowledge/lists",params:e})}function r(e){return n.post({url:"/knowledge.knowledge/delete",params:e})}function l(e){return n.get({url:"/kb.know/lists",params:e})}function s(e){return n.post({url:"/kb.know/del",params:e})}export{s as a,r as b,t as c,l as k};

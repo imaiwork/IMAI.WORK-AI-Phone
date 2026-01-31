@@ -120,7 +120,9 @@ class DigitalHumanLogic extends ApiLogic
                                 ])
                         ->where($commonWhere)
                         ->where($humanWhere)
-                        ->where('model_version', 'in', [1, 7])
+                        //隐藏微聚
+//                        ->where('model_version', 'in', [1, 7])
+                        ->where('model_version', '=', 7)
                         ->where('dh_id', '=', 0)
                         ->where('create_time', '<', 1767249134) //只兼容2026年1月1日前的旧数据
                         ->buildSql();
@@ -311,16 +313,17 @@ class DigitalHumanLogic extends ApiLogic
                     'authorized_url' => FileService::getFileUrl($item['authorized_url']),
                     'authorized_pic' => empty($item['authorized_pic']) ? '' : FileService::getFileUrl($item['authorized_pic']),
                 ];
-                $weijuData    = [
-                    'user_id'       => $item['user_id'],
-                    'dh_id'         => $item['id'],
-                    'name'          => $item['name'],
-                    'url'           => FileService::getFileUrl($item['result_url']),
-                    'pic'           => FileService::getFileUrl($item['image']),
-                    'width'         => $item['width'],
-                    'height'        => $item['height'],
-                    'model_version' => 1
-                ];
+                //隐藏微聚
+//                $weijuData    = [
+//                    'user_id'       => $item['user_id'],
+//                    'dh_id'         => $item['id'],
+//                    'name'          => $item['name'],
+//                    'url'           => FileService::getFileUrl($item['result_url']),
+//                    'pic'           => FileService::getFileUrl($item['image']),
+//                    'width'         => $item['width'],
+//                    'height'        => $item['height'],
+//                    'model_version' => 1
+//                ];
                 $chanjingData = [
                     'user_id'       => $item['user_id'],
                     'dh_id'         => $item['id'],
@@ -332,13 +335,14 @@ class DigitalHumanLogic extends ApiLogic
                     'model_version' => 7
                 ];
                 //先合成禅镜和微聚
-                $bool = HumanLogic::createAnchor($weijuData);
-                if ($bool){
+                //隐藏微聚
+//                $bool = HumanLogic::createAnchor($weijuData);
+//                if ($bool){
                     $bool = HumanLogic::createAnchor($chanjingData);
                     if ($bool){
                         ShanjianAnchorLogic::add($shanjianData);
                     }
-                }
+//                }
             }
             return true;
         } catch (\Exception $exception) {
@@ -360,7 +364,8 @@ class DigitalHumanLogic extends ApiLogic
                 continue;
             }
             $shanjian                        = ShanjianAnchor::where('dh_id', $item['id'])->find();
-            $weiju                           = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->find();
+            //隐藏微聚
+//            $weiju                           = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->find();
             $chanjing                        = HumanAnchor::where('model_version', 7)->where('dh_id', $item['id'])->find();
             $task_ids['shanjian']['task_id'] = $shanjian['task_id'] ?? '';
             $task_ids['shanjian']['status']  = $shanjian['status'] ?? 0;
@@ -370,7 +375,9 @@ class DigitalHumanLogic extends ApiLogic
             $task_ids['chanjing']['status']  = $chanjing['status'] ?? 0;
 
             $update['task_ids'] = json_encode($task_ids);
-            if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 1) {
+            //隐藏微聚
+//            if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 1) {
+            if ($task_ids['shanjian']['status'] == 6 && $task_ids['chanjing']['status'] == 1) {
                 $update['status']   = 2;
                 $update['task_ids'] = json_encode($task_ids);
             }
@@ -397,9 +404,12 @@ class DigitalHumanLogic extends ApiLogic
                 continue;
             }
             $shanjian = ShanjianAnchor::where('dh_id', $item['id'])->findOrEmpty();
-            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->findOrEmpty();
+            //隐藏微聚
+//            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->findOrEmpty();
             $chanjing = HumanAnchor::where('model_version', 7)->where('dh_id', $item['id'])->findOrEmpty();
-            if ($weiju->isEmpty() || $chanjing->isEmpty() || $shanjian->isEmpty()) {
+            //隐藏微聚
+//            if ($weiju->isEmpty() || $chanjing->isEmpty() || $shanjian->isEmpty()) {
+            if ($chanjing->isEmpty() || $shanjian->isEmpty()) {
                 $update['status'] = 3;
                 $update['remark'] = '形象生成失败';
                 DigitalHumanAnchor::where('id', $item['id'])->update($update);
@@ -560,7 +570,9 @@ class DigitalHumanLogic extends ApiLogic
         }
 
         $countPublic   = Db::name('digital_human_anchor')->where($where)->where($publicWhere)->count();
-        $countHuman    = Db::name('human_anchor')->where($where)->where($humanWhere)->where('dh_id', '=', 0)->where('create_time', '<', 1767249134)->where('model_version', 'in', [1, 7])->count();
+        //隐藏微聚
+//        $countHuman    = Db::name('human_anchor')->where($where)->where($humanWhere)->where('dh_id', '=', 0)->where('create_time', '<', 1767249134)->where('model_version', 'in', [1, 7])->count();
+        $countHuman    = Db::name('human_anchor')->where($where)->where($humanWhere)->where('dh_id', '=', 0)->where('create_time', '<', 1767249134)->where('model_version', '=', 7)->count();
         $countShanjian = Db::name('shanjian_anchor')->where($where)->where($shanjianWhere)->where('dh_id', '=', 0)->where('create_time', '<', 1767249134)->count();
 
         if ($filter == 1) {
@@ -651,7 +663,8 @@ class DigitalHumanLogic extends ApiLogic
                     'height'        => $item['height'],
                     'model_version' => 7
                 ];
-                $weiju = HumanLogic::createAnchor($weijuData);
+                //隐藏微聚
+//                $weiju = HumanLogic::createAnchor($weijuData);
                 $chanjian = HumanLogic::createAnchor($chanjingData);
                 $update['status'] = 4;
                 DigitalHumanAnchor::where('id', $item['id'])->update($update);

@@ -1,0 +1,1 @@
+UPDATE `la_system_menu` SET `pid` = 362, `type` = 'C', `name` = '文件列表', `icon` = '', `sort` = 0, `perms` = 'ai_application.kn/files', `paths` = 'files', `component` = 'ai_application/knowledge_base/files', `selected` = '', `params` = '', `is_cache` = 0, `is_show` = 1, `is_disable` = 0, `create_time` = 1745498795, `update_time` = 1745598855 WHERE `id` = 365;
