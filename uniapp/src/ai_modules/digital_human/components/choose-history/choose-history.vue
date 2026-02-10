@@ -37,7 +37,7 @@
                     </z-paging>
                 </view>
                 <view class="flex items-center justify-between gap-2 mt-[20rpx] mb-4 px-[30rpx]">
-                    <view class="flex items-center gap-x-2" @click="toggleSelect">
+                    <view class="flex items-center gap-x-2" @click="toggleSelect" v-if="limit && limit > 1">
                         <view class="w-[32rpx] h-[32rpx]">
                             <image
                                 v-if="chooseLists.length > 0 && chooseLists.length == dataLists.length"
@@ -48,7 +48,7 @@
                         <view>全选</view>
                     </view>
                     <view
-                        class="text-white font-bold text-[30rpx] rounded-[20rpx] bg-primary h-[90rpx] w-[460rpx] flex items-center justify-center"
+                        class="flex-1 text-white font-medium text-[30rpx] rounded-[20rpx] bg-primary h-[90rpx] w-[460rpx] flex items-center justify-center"
                         @click="confirm">
                         确定选择
                     </view>
@@ -85,7 +85,7 @@ const queryList = async (page_no: number, page_size: number) => {
         const { lists } = await getVideoCreationRecord({
             page_no,
             page_size,
-            type: props.type,
+            type: props.type || "",
         });
         pagingRef.value?.complete(lists.filter((item: any) => item.status == 3));
     } catch (error) {
@@ -122,7 +122,7 @@ const toggleSelect = () => {
     if (chooseLists.value.length == dataLists.value.length) {
         chooseLists.value = [];
     } else {
-        chooseLists.value = dataLists.value;
+        chooseLists.value = dataLists.value.slice(0, props.limit || dataLists.value.length);
     }
 };
 

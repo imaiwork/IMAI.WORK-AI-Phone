@@ -84,7 +84,7 @@
                 <ElTableColumn label="时间安排" width="180">
                     <template #default="{ row }">
                         <div class="flex flex-col">
-                            <span class="text-[11px] text-[#94A3B8] font-bold">推送：{{ row.push_day || "-" }}</span>
+                            <span class="text-[11px] text-[#94A3B8] font-medium">推送：{{ row.push_day || "-" }}</span>
                             <span class="text-[11px] text-[#CBD5E1] font-medium">创建：{{ row.create_time }}</span>
                         </div>
                     </template>
@@ -127,7 +127,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
-            <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个营销任务</span>
+            <span class="text-xs font-medium text-[#94A3B8]">共计 {{ pager.count }} 个营销任务</span>
             <pagination v-model="pager" @change="getLists" />
         </div>
     </div>

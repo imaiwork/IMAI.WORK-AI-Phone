@@ -37,7 +37,7 @@
 
         <div class="flex items-center gap-4 py-2">
             <div class="flex-1 h-[1px] bg-slate-100"></div>
-            <div class="flex items-center gap-2 text-slate-400 text-[12px] font-bold">
+            <div class="flex items-center gap-2 text-slate-400 text-[12px] font-medium">
                 <Icon name="el-icon-Setting" />
                 <span>配置触发细节</span>
             </div>

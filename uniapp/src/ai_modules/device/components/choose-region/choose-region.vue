@@ -8,7 +8,7 @@
                         <view
                             v-for="item in regionList"
                             :key="item"
-                            class="bg-white rounded-[20rpx] py-[18rpx] text-center font-bold"
+                            class="bg-white rounded-[20rpx] py-[18rpx] text-center font-medium"
                             :class="isChoose(item) ? 'text-primary shadow-[0_0_0_2rpx_#0065FB]' : ''"
                             @click="handleSelect(item)">
                             {{ item }}
@@ -27,7 +27,7 @@
                         <view>全选</view>
                     </view>
                     <view
-                        class="text-white font-bold text-[30rpx] rounded-[20rpx] bg-primary h-[90rpx] w-[460rpx] flex items-center justify-center"
+                        class="text-white font-medium text-[30rpx] rounded-[20rpx] bg-primary h-[90rpx] w-[460rpx] flex items-center justify-center"
                         @click="confirm">
                         确定选择
                     </view>

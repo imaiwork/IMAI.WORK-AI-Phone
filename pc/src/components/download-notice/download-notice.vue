@@ -11,7 +11,7 @@
                 <img :src="websiteConfig.pc_logo" class="w-full h-full object-contain rounded-xl" />
             </div>
             <div class="ml-2">
-                <div class="font-bold text-xs">下载体验更多强大的 AI 应用！</div>
+                <div class="font-medium text-xs">下载体验更多强大的 AI 应用！</div>
                 <div class="text-[rgba(0,0,0,0.3)] text-xs">助力企业降本增效，打造核心竞争力。</div>
             </div>
             <div class="ml-[10px]">
@@ -37,7 +37,7 @@
                 <close-btn></close-btn>
             </div>
             <div class="download-notice-cover h-[366px] p-6 flex flex-col justify-end rounded-t-3xl">
-                <div class="font-bold text-white">
+                <div class="font-medium text-white">
                     立即下载 <br />
                     畅享智能新体验！
                 </div>
@@ -55,7 +55,7 @@
                                 </div>
                                 <div class="text-[11px]">
                                     <div class="text-[rgba(255,255,255,0.5)] text-[10px]">下载工具</div>
-                                    <div class="text-white font-bold text-[11px]">{{ title }}</div>
+                                    <div class="text-white font-medium text-[11px]">{{ title }}</div>
                                 </div>
                             </div>
                             <div class="leading-[0]">

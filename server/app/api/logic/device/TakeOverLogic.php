@@ -73,6 +73,8 @@ class TakeOverLogic extends ApiLogic
                         'source' => DeviceEnum::TASK_SOURCE_TAKEOVER, //sv_device_take_over_task_account
                         'create_time' => time(),
                     ]);
+
+                    \app\api\logic\device\TaskLogic::updateWechatRpaTaskTime($account['device_code'], $time['start_time']);
                 }
             }
             //print_r($allTaskInstall);die;

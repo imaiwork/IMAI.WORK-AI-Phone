@@ -5,7 +5,7 @@
                 <span class="bg-[#1E293B] text-white px-2 py-0.5 rounded text-[10px] font-black italic">
                     #{{ (index + 1).toString().padStart(2, "0") }}
                 </span>
-                <span class="text-[12px] font-bold text-[#94A3B8] truncate max-w-[200px]">
+                <span class="text-[12px] font-medium text-[#94A3B8] truncate max-w-[200px]">
                     {{ name }}
                 </span>
             </div>
@@ -54,7 +54,7 @@
             </div>
         </div>
 
-        <div v-if="isEdit" class="mt-2 text-[11px] font-bold text-primary flex items-center gap-1">
+        <div v-if="isEdit" class="mt-2 text-[11px] font-medium text-primary flex items-center gap-1">
             <Icon name="el-icon-Edit" /> 正在编辑此条目，修改后点击上方保存
         </div>
     </div>

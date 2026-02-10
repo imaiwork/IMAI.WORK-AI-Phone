@@ -35,7 +35,7 @@
                     </div>
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">视频预览播放</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             Video Stream Player
                         </div>
                     </div>
@@ -60,7 +60,7 @@
                     <div v-if="!videoLoaded" class="absolute inset-0 flex items-center justify-center bg-slate-900">
                         <div class="flex flex-col items-center">
                             <div class="loading-dot"></div>
-                            <span class="text-white/40 text-[12px] mt-4 font-bold tracking-widest uppercase"
+                            <span class="text-white/40 text-[12px] mt-4 font-medium tracking-widest uppercase"
                                 >Buffering</span
                             >
                         </div>
@@ -70,7 +70,7 @@
                 <div class="mt-6 flex items-center justify-between px-2">
                     <div class="flex items-center gap-2 text-[#64748B]">
                         <Icon name="el-icon-Monitor" :size="14" />
-                        <span class="text-[13px] font-bold">内容预览</span>
+                        <span class="text-[13px] font-medium">内容预览</span>
                     </div>
                 </div>
             </div>

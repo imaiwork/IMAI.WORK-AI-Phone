@@ -9,7 +9,7 @@
                             {{ isRag ? "RAG ENGINE" : "VECTOR DB" }}
                         </span>
                     </div>
-                    <div class="text-[13px] font-bold text-[#94A3B8]">
+                    <div class="text-[13px] font-medium text-[#94A3B8]">
                         修改知识库的基本属性、可见权限以及底层检索参数配置。
                     </div>
                 </div>
@@ -62,7 +62,7 @@
                                     </div>
                                     <div class="flex-1">
                                         <div class="text-[14px] font-[900] text-[#1E293B]">语义向量检索</div>
-                                        <div class="text-[12px] font-bold text-[#94A3B8] mt-1">
+                                        <div class="text-[12px] font-medium text-[#94A3B8] mt-1">
                                             通过 Embedding 模型生成向量，检索余弦相似度最高的内容分段。
                                         </div>
                                     </div>
@@ -84,7 +84,7 @@
                                         class="w-10 h-10 rounded-lg bg-[#F1F5F9] flex items-center justify-center text-[#94A3B8]">
                                         <Icon name="local-icon-list_search" :size="20"></Icon>
                                     </div>
-                                    <div class="text-[13px] font-bold text-[#475569]">全文关键字检索 (已禁用)</div>
+                                    <div class="text-[13px] font-medium text-[#475569]">全文关键字检索 (已禁用)</div>
                                 </div>
                             </div>
                         </div>
@@ -199,7 +199,7 @@ onMounted(() => {
 .param-box {
     @apply bg-white border border-br rounded-xl p-3;
     .p-label {
-        @apply text-[11px] font-bold text-[#94A3B8] mb-1;
+        @apply text-[11px] font-medium text-[#94A3B8] mb-1;
     }
     .p-value {
         @apply text-[16px] font-black text-primary;

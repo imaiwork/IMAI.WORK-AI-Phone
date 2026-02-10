@@ -6,7 +6,7 @@
                     <view
                         v-for="(item, index) in modelTypes"
                         :key="index"
-                        class="rounded-[12rpx] font-bold flex items-center justify-center z-10 transition-colors duration-500"
+                        class="rounded-[12rpx] font-medium flex items-center justify-center z-10 transition-colors duration-500"
                         :class="{ 'text-white': modelIndex === index }"
                         @click="modelIndex = index">
                         {{ item.name }}
@@ -21,11 +21,11 @@
                     <template v-if="modelIndex === 0">
                         <view>
                             <view class="flex items-center justify-between">
-                                <view class="text-[30rpx] font-bold">
+                                <view class="text-[30rpx] font-medium">
                                     <text class="text-[#FF2442]">*</text>
                                     数字人形象({{ easyModeData.anchorList.length }})
                                 </view>
-                                <view class="text-xs font-bold text-[#00000080]" @click="toPage('anchor_material')">
+                                <view class="text-xs font-medium text-[#00000080]" @click="toPage('anchor_material')">
                                     全部<u-icon name="arrow-right" color="#00000080" size="20"></u-icon>
                                 </view>
                             </view>
@@ -50,7 +50,7 @@
                                 </view>
                                 <view v-else class="flex flex-col items-center justify-center gap-y-[20rpx] py-4">
                                     <view class="text-center text-[#0000004d]">你还没有添加数字人形象</view>
-                                    <view class="text-primary font-bold" @click="toPage('anchor_material')">
+                                    <view class="text-primary font-medium" @click="toPage('anchor_material')">
                                         去添加
                                     </view>
                                 </view>
@@ -58,11 +58,11 @@
                         </view>
                         <view>
                             <view class="flex items-center justify-between">
-                                <view class="text-[30rpx] font-bold">
+                                <view class="text-[30rpx] font-medium">
                                     <text class="text-[#FF2442]">*</text>
                                     视频剪辑素材({{ easyModeData.videoList.length }})
                                 </view>
-                                <view class="text-xs font-bold text-[#00000080]" @click="toPage('video_material')">
+                                <view class="text-xs font-medium text-[#00000080]" @click="toPage('video_material')">
                                     全部<u-icon name="arrow-right" color="#00000080" size="20"></u-icon>
                                 </view>
                             </view>
@@ -100,7 +100,7 @@
                                 </view>
                                 <view v-else class="flex flex-col items-center justify-center gap-y-[20rpx] py-4">
                                     <view class="text-center text-[#0000004d]">你还没有添加视频剪辑素材</view>
-                                    <view class="text-primary font-bold" @click="toPage('video_material')">
+                                    <view class="text-primary font-medium" @click="toPage('video_material')">
                                         去添加
                                     </view>
                                 </view>
@@ -108,11 +108,11 @@
                         </view>
                         <view>
                             <view class="flex items-center justify-between">
-                                <view class="text-[30rpx] font-bold">
+                                <view class="text-[30rpx] font-medium">
                                     <text class="text-[#FF2442]">*</text>
                                     图文剪辑素材({{ easyModeData.imageList.length }})
                                 </view>
-                                <view class="text-xs font-bold text-[#00000080]" @click="toPage('image_material')">
+                                <view class="text-xs font-medium text-[#00000080]" @click="toPage('image_material')">
                                     全部<u-icon name="arrow-right" color="#00000080" size="20"></u-icon>
                                 </view>
                             </view>
@@ -130,7 +130,7 @@
                                 </view>
                                 <view v-else class="flex flex-col items-center justify-center gap-y-[20rpx] py-4">
                                     <view class="text-center text-[#0000004d]">你还没有添加图文剪辑素材</view>
-                                    <view class="text-primary font-bold" @click="toPage('image_material')">
+                                    <view class="text-primary font-medium" @click="toPage('image_material')">
                                         去添加
                                     </view>
                                 </view>
@@ -138,11 +138,13 @@
                         </view>
                         <view v-if="false">
                             <view class="flex items-center justify-between">
-                                <view class="text-[30rpx] font-bold">
+                                <view class="text-[30rpx] font-medium">
                                     <text class="text-[#FF2442]">*</text>
                                     营销主题({{ easyModeData.marketingList.length }})
                                 </view>
-                                <view class="text-xs font-bold text-[#00000080]" @click="toPage('marketing_material')">
+                                <view
+                                    class="text-xs font-medium text-[#00000080]"
+                                    @click="toPage('marketing_material')">
                                     全部<u-icon name="arrow-right" color="#00000080" size="20"></u-icon>
                                 </view>
                             </view>
@@ -151,7 +153,7 @@
                                     <view
                                         v-for="(item, index) in easyModeData.marketingList.slice(0, 5)"
                                         :key="index"
-                                        class="relative rounded-[20rpx] border border-solid border-[#E5E5E5] px-2 py-[12rpx] flex items-center gap-x-2 font-bold"
+                                        class="relative rounded-[20rpx] border border-solid border-[#E5E5E5] px-2 py-[12rpx] flex items-center gap-x-2 font-medium"
                                         >{{ item }}
                                         <view
                                             class="flex-shrink-0 rounded-full flex item-center justify-center w-4 h-4 bg-[#0000004C]"
@@ -161,7 +163,7 @@
                                 </view>
                                 <view v-else class="flex flex-col items-center justify-center gap-y-[20rpx] py-4">
                                     <view class="text-center text-[#0000004d]">你还没有添加营销主题</view>
-                                    <view class="text-primary font-bold" @click="toPage('marketing_material')">
+                                    <view class="text-primary font-medium" @click="toPage('marketing_material')">
                                         去添加
                                     </view>
                                 </view>
@@ -177,7 +179,7 @@
                                 </view>
                                 <view>
                                     <text
-                                        class="font-bold text-xs"
+                                        class="font-medium text-xs"
                                         :class="[item.materialList.every((material: any) => material.list.length > 0) ? 'text-primary' : 'text-[#FF2442]']"
                                         >{{
                                             item.materialList.every((material: any) => material.list.length > 0)
@@ -204,10 +206,10 @@
                                             materialList: material.list,
                                         })
                                     ">
-                                    <text class="font-bold text-[28rpx]">{{ material.name }} </text>
+                                    <text class="font-medium text-[28rpx]">{{ material.name }} </text>
                                     <view class="flex items-center gap-x-1">
                                         <text
-                                            class="font-bold text-xs"
+                                            class="font-medium text-xs"
                                             :class="[material.list.length > 0 ? 'text-primary' : 'text-[#FF2442]']"
                                             >{{ material.list.length ? `${material.list.length}(个)` : "未配置" }}</text
                                         >
@@ -219,7 +221,7 @@
                     </template>
                     <view class="flex flex-col gap-y-[50rpx] pb-[400rpx]" v-if="false">
                         <view>
-                            <view class="font-bold text-[30rpx]"
+                            <view class="font-medium text-[30rpx]"
                                 ><text class="text-[#FF2442]">*</text>您创作的视频营销主题是</view
                             >
                             <view class="mt-[18rpx] rounded-[20rpx] bg-white px-[30rpx] py-[24rpx]">
@@ -239,7 +241,7 @@
                             </view>
                         </view>
                         <view>
-                            <view class="font-bold text-[30rpx]"
+                            <view class="font-medium text-[30rpx]"
                                 ><text class="text-[#FF2442]">*</text>您创作的图文营销主题是</view
                             >
                             <view class="mt-[18rpx] rounded-[20rpx] bg-white px-[30rpx] py-[24rpx] flex flex-col">
@@ -264,7 +266,7 @@
         </view>
         <view class="bg-white flex-shrink-0 pb-5 pt-4 px-6">
             <view
-                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-bold flex items-center justify-center"
+                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-medium flex items-center justify-center"
                 @click="handleSaveConfig">
                 确定保存
             </view>

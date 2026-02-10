@@ -83,7 +83,7 @@
                     </span>
                     <div class="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-md border border-[#F1F5F9]">
                         <Icon name="el-icon-Files" :size="10"></Icon>
-                        <span class="text-[10px] text-[#64748B] font-bold">
+                        <span class="text-[10px] text-[#64748B] font-medium">
                             {{ formatFileSize(item.size) }}
                         </span>
                     </div>
@@ -101,7 +101,7 @@
                     </div>
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">素材管理中心</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             总素材: {{ pager.count }} 个
                             <span v-if="batchMode && selectedItems.length > 0" class="text-primary ml-2">
                                 | 已选择: {{ selectedItems.length }} 个
@@ -160,7 +160,7 @@
                             </ElInput>
                             <ElButton
                                 type="primary"
-                                class="!rounded-full !h-[32px] !px-4 !text-xs !font-bold"
+                                class="!rounded-full !h-[32px] !px-4 !text-xs !font-medium"
                                 @click="handleSearch">
                                 搜索
                             </ElButton>
@@ -214,7 +214,7 @@
                                                 : 'el-icon-Folder'
                                         "
                                         :size="16" />
-                                    <span class="text-[13px] font-bold truncate">{{ group.name }}</span>
+                                    <span class="text-[13px] font-medium truncate">{{ group.name }}</span>
                                 </div>
 
                                 <div class="flex items-center gap-2 z-10 relative min-w-0">
@@ -284,7 +284,7 @@
                         <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4">
                             <Icon name="el-icon-FolderOpened" :size="40" color="#CBD5E1"></Icon>
                         </div>
-                        <p class="text-[#94A3B8] text-sm font-bold">暂无素材内容，点击右上角上传</p>
+                        <p class="text-[#94A3B8] text-sm font-medium">暂无素材内容，点击右上角上传</p>
                     </div>
                 </div>
 
@@ -293,7 +293,9 @@
                     class="absolute bottom-0 left-0 right-0 bg-white border-t border-br p-4 flex items-center justify-between shadow-light z-[1002]">
                     <div class="flex items-center gap-2">
                         <Icon name="el-icon-Select" color="#0065fb" :size="16"></Icon>
-                        <span class="text-sm font-bold text-[#1E293B]"> 已选择 {{ selectedItems.length }} 个素材 </span>
+                        <span class="text-sm font-medium text-[#1E293B]">
+                            已选择 {{ selectedItems.length }} 个素材
+                        </span>
                     </div>
                     <div class="flex items-center gap-3">
                         <ElButton type="default" class="!rounded-full !h-10 !px-4" @click="clearSelection">
@@ -335,7 +337,8 @@
                         <div class="w-1 h-4 bg-primary rounded-full"></div>
                         <span class="text-[15px] font-black text-slate-800">
                             待转移素材
-                            <span class="ml-1 text-primary text-xs bg-[#0065fb]/10 px-2 py-0.5 rounded-full font-bold">
+                            <span
+                                class="ml-1 text-primary text-xs bg-[#0065fb]/10 px-2 py-0.5 rounded-full font-medium">
                                 {{ selectedItems.length }}
                             </span>
                         </span>
@@ -364,7 +367,7 @@
                         <div class="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center mb-3">
                             <Icon name="el-icon-FolderOpened" :size="32" color="#94A3B8" />
                         </div>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">暂无素材</p>
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-widest">暂无素材</p>
                     </div>
                 </div>
             </div>
@@ -390,14 +393,14 @@
                         <div class="flex items-center justify-between w-full">
                             <div class="flex items-center gap-2">
                                 <Icon :name="group.id ? 'el-icon-Folder' : 'el-icon-Files'" :size="16" />
-                                <span class="font-bold text-sm">{{ group.name }}</span>
+                                <span class="font-medium text-sm">{{ group.name }}</span>
                             </div>
                             <span class="text-[10px] text-slate-300 font-black">ID: {{ group.id || "N/A" }}</span>
                         </div>
                     </ElOption>
                 </ElSelect>
 
-                <p class="mt-3 text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                <p class="mt-3 text-[10px] text-slate-400 font-medium flex items-center gap-1">
                     <Icon name="el-icon-Warning" :size="12" />
                     转移后，原分组将不再保留这些素材。
                 </p>

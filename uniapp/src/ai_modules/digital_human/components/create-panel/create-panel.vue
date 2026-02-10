@@ -114,7 +114,7 @@
                     @click="handleConfirm()">
                     <view class="flex items-center gap-2">
                         <image src="@/ai_modules/digital_human/static/icons/video.svg" class="w-6 h-6"></image>
-                        <text class="text-white text-xl font-bold"> 开始生成视频 </text>
+                        <text class="text-white text-xl font-medium"> 开始生成视频 </text>
                     </view>
                 </u-button>
                 <view class="text-center text-primary mt-2" @click="close"> 取消 </view>

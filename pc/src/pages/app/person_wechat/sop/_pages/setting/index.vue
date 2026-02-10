@@ -34,7 +34,7 @@
                                         :min="0"
                                         class="!w-full custom-number-input"
                                         controls-position="right" />
-                                    <span class="shrink-0 text-[13px] font-bold text-tx-secondary">分钟后</span>
+                                    <span class="shrink-0 text-[13px] font-medium text-tx-secondary">分钟后</span>
                                 </div>
                             </ElFormItem>
 
@@ -43,11 +43,11 @@
                             <ElFormItem label="对方打招呼是否回复">
                                 <ElRadioGroup v-model="formData.friend_greet_is_reply" class="custom-radio-stack">
                                     <ElRadio :value="1" class="strategy-radio">
-                                        <span class="font-bold">静默</span>
+                                        <span class="font-medium">静默</span>
                                         <span class="text-[11px] block opacity-60 font-normal">不再打招呼</span>
                                     </ElRadio>
                                     <ElRadio :value="0" class="strategy-radio">
-                                        <span class="font-bold">强制执行</span>
+                                        <span class="font-medium">强制执行</span>
                                         <span class="text-[11px] block opacity-60 font-normal">按原计划发送内容</span>
                                     </ElRadio>
                                 </ElRadioGroup>
@@ -58,13 +58,13 @@
                                     <ElRadio :value="1" class="strategy-radio">
                                         <div class="flex items-center gap-1">
                                             <Icon name="el-icon-Cpu" :size="14" />
-                                            <span class="font-bold">AI 智能接管</span>
+                                            <span class="font-medium">AI 智能接管</span>
                                         </div>
                                     </ElRadio>
                                     <ElRadio :value="0" class="strategy-radio">
                                         <div class="flex items-center gap-1">
                                             <Icon name="el-icon-User" :size="14" />
-                                            <span class="font-bold">人工手动接管</span>
+                                            <span class="font-medium">人工手动接管</span>
                                         </div>
                                     </ElRadio>
                                 </ElRadioGroup>

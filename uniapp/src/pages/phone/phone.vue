@@ -2,21 +2,21 @@
     <view class="h-screen flex flex-col">
         <view class="px-[26rpx] mt-2 flex justify-between items-center gap-x-2">
             <view>
-                <view class="text-[40rpx] font-bold">设备管理</view>
-                <view class="text-xs text-[#0000004d] font-bold">{{ getDate }}</view>
+                <view class="text-[40rpx] font-medium">设备管理</view>
+                <view class="text-xs text-[#0000004d] font-medium">{{ getDate }}</view>
             </view>
             <view class="flex items-center gap-x-2">
                 <view
                     class="flex items-center px-[24rpx] gap-x-2 bg-white h-[70rpx] rounded-[20rpx]"
                     @click="toPage('/ai_modules/device/pages/task_calendar/task_calendar')">
                     <image src="/static/images/icons/calendar.svg" class="w-[24rpx] h-[24rpx]"></image>
-                    <text class="font-bold">任务日历</text>
+                    <text class="font-medium">任务日历</text>
                 </view>
                 <view
                     class="flex items-center px-[24rpx] gap-x-2 bg-white h-[70rpx] rounded-[20rpx]"
                     @click="toPage('/ai_modules/device/pages/rpa_code/rpa_code')">
                     <image src="/static/images/icons/device.svg" class="w-[24rpx] h-[24rpx]"></image>
-                    <text class="font-bold">新增设备</text>
+                    <text class="font-medium">新增设备</text>
                 </view>
             </view>
         </view>
@@ -26,7 +26,7 @@
                     <view
                         class="w-[10rpx] h-[10rpx] rounded-full"
                         :style="{ backgroundColor: getDeviceStatusInfo(item.status).textColor }"></view>
-                    <text class="text-[22rpx] text-[#000000b3] font-bold"
+                    <text class="text-[22rpx] text-[#000000b3] font-medium"
                         >{{ getDeviceStatusInfo(item.status).text }} {{ item.count }}
                     </text>
                 </view>
@@ -36,7 +36,7 @@
                 class="flex items-center gap-x-[4rpx]"
                 hover-class="none">
                 <u-icon name="play-circle" color="#AAAAAA" size="24"></u-icon>
-                <text class="text-[22rpx] text-[#000000]/50 font-bold">演示流程</text>
+                <text class="text-[22rpx] text-[#000000]/50 font-medium">演示流程</text>
             </navigator>
         </view>
         <view class="grow min-h-0 mt-5">
@@ -79,11 +79,11 @@
                                         </view>
                                     </view>
                                     <view class="mr-4">
-                                        <view class="line-clamp-1 text-[30rpx] font-bold break-all"
+                                        <view class="line-clamp-1 text-[30rpx] font-medium break-all"
                                             >{{ item.device_name || "-" }}
                                         </view>
                                         <view class="flex items-center gap-x-2">
-                                            <view class="text-xs font-bold text-[#000000b3]">{{
+                                            <view class="text-xs font-medium text-[#000000b3]">{{
                                                 item.auto_type === 0 ? "手动任务" : "24h自动"
                                             }}</view>
                                             <view class="flex items-center gap-x-1 mt-[4rpx]"
@@ -93,7 +93,7 @@
                                                         backgroundColor: getDeviceStatusInfo(item.status).textColor,
                                                     }"></view>
                                                 <view
-                                                    class="font-bold"
+                                                    class="font-medium"
                                                     :style="{ color: getDeviceStatusInfo(item.status).textColor }"
                                                     >{{ getDeviceStatusInfo(item.status).text }}</view
                                                 >
@@ -105,7 +105,7 @@
                                     class="shrink-0 h-fit rounded-[100rpx] bg-[#F3F3F3] flex items-center p-[4rpx]"
                                     @click.stop="switchTaskMode(item)">
                                     <view
-                                        class="px-[12rpx] h-[40rpx] flex items-center justify-center text-center rounded-[100rpx] text-[22rpx] font-bold"
+                                        class="px-[12rpx] h-[40rpx] flex items-center justify-center text-center rounded-[100rpx] text-[22rpx] font-medium"
                                         :class="[
                                             item.auto_type == taskMode.value
                                                 ? 'text-white bg-primary'
@@ -120,7 +120,7 @@
                             <template v-if="item.auto_type === 0">
                                 <view
                                     class="mt-[34rpx] flex items-center border-[0] border-b-[2rpx] border-solid border-[#0000000d] pb-4">
-                                    <view class="font-bold">账号：</view>
+                                    <view class="font-medium">账号：</view>
                                     <view class="flex flex-wrap items-center gap-1" v-if="item.accounts.length > 0">
                                         <image
                                             :src="getDeviceIcon(account.type)"
@@ -128,10 +128,10 @@
                                             v-for="(account, index) in item.accounts"
                                             :key="index"></image>
                                     </view>
-                                    <view class="text-[#ff2442] font-bold" v-else> 未获取社媒账号 </view>
+                                    <view class="text-[#ff2442] font-medium" v-else> 未获取社媒账号 </view>
                                 </view>
                                 <view class="mt-[30rpx]" v-if="item.status == TaskStatusEnum.IDLE">
-                                    <view class="font-bold">当前任务（{{ item.task_count }}）</view>
+                                    <view class="font-medium">当前任务（{{ item.task_count }}）</view>
                                     <view class="flex gap-x-10 items-center" v-if="item.tasks?.length > 0">
                                         <view class="flex-1">
                                             <view
@@ -171,7 +171,7 @@
                                 </view>
                                 <view class="flex items-center gap-x-2 mt-[26rpx]">
                                     <view
-                                        class="flex-1 flex items-center gap-x-2 font-bold h-[80rpx] border border-solid rounded-[10rpx] justify-center"
+                                        class="flex-1 flex items-center gap-x-2 font-medium h-[80rpx] border border-solid rounded-[10rpx] justify-center"
                                         :style="{
                                             color: getDeviceStatusInfo(TaskStatusEnum.OFFLINE).textColor,
                                             borderColor: getDeviceStatusInfo(TaskStatusEnum.OFFLINE).borderColor,
@@ -180,7 +180,7 @@
                                         设备已离线，请检查
                                     </view>
                                     <view
-                                        class="flex-1 h-[80rpx] flex items-center justify-center gap-x-1 bg-[#ff2442] rounded-[10rpx] text-white font-bold"
+                                        class="flex-1 h-[80rpx] flex items-center justify-center gap-x-1 bg-[#ff2442] rounded-[10rpx] text-white font-medium"
                                         v-else-if="item.accounts.length == 0"
                                         @click.stop="
                                             toPage('/ai_modules/device/pages/platform_detail/platform_detail', {
@@ -198,7 +198,7 @@
                                             })
                                         ">
                                         <u-icon name="plus" color="#0065FB" size="16"></u-icon>
-                                        <text class="text-xs text-primary font-bold">创建新任务</text>
+                                        <text class="text-xs text-primary font-medium">创建新任务</text>
                                     </view>
                                     <view
                                         class="h-[80rpx] w-[144rpx] border border-solid border-[#0000001a] rounded-[16rpx] flex items-center justify-center gap-x-2"
@@ -210,7 +210,7 @@
                                         <image
                                             src="/static/images/icons/statement.svg"
                                             class="w-[28rpx] h-[28rpx]"></image>
-                                        <text class="font-bold">报表</text>
+                                        <text class="font-medium">报表</text>
                                     </view>
                                 </view>
                             </template>
@@ -219,7 +219,7 @@
                                     <view class="flex items-center justify-between">
                                         <template v-if="item.is_auto_setting === 0">
                                             <view
-                                                class="text-[#FF2442] font-bold"
+                                                class="text-[#FF2442] font-medium"
                                                 @click.stop="
                                                     toPage(
                                                         '/ai_modules/device/pages/create_auto_task/create_auto_task',
@@ -232,13 +232,13 @@
                                             >
                                         </template>
                                         <template v-else-if="item.tasks.length > 0">
-                                            <view class="text-primary font-bold">{{ item.tasks[0].task_name }}</view>
-                                            <view class="text-primary font-bold">
+                                            <view class="text-primary font-medium">{{ item.tasks[0].task_name }}</view>
+                                            <view class="text-primary font-medium">
                                                 {{ getTaskStatusPercent(item) }}%
                                             </view>
                                         </template>
                                         <template v-else>
-                                            <view class="text-[#0000004d] font-bold">等待执行</view>
+                                            <view class="text-[#0000004d] font-medium">等待执行</view>
                                         </template>
                                     </view>
                                     <view class="mt-[4rpx]">
@@ -254,7 +254,7 @@
                                     <template v-if="item.status === TaskStatusEnum.OFFLINE">
                                         <view
                                             class="flex-1 h-[80rpx] border border-solid border-[#ff244233] rounded-[16rpx] flex items-center justify-center gap-x-2">
-                                            <text class="text-[#FF2442] font-bold">设备已离线</text>
+                                            <text class="text-[#FF2442] font-medium">设备已离线</text>
                                         </view>
                                     </template>
                                     <template v-else>
@@ -271,12 +271,12 @@
                                                     }
                                                 )
                                             ">
-                                            <text class="text-white font-bold">去设置</text>
+                                            <text class="text-white font-medium">去设置</text>
                                             <u-icon name="arrow-right" color="#ffffff" size="20"></u-icon>
                                         </view>
                                         <view
                                             v-else
-                                            class="flex-1 h-[80rpx] flex items-center justify-center bg-[#0065fb0d] rounded-[16rpx] font-bold"
+                                            class="flex-1 h-[80rpx] flex items-center justify-center bg-[#0065fb0d] rounded-[16rpx] font-medium"
                                             :style="{
                                                 color: getDeviceStatusInfo(item.status).textColor,
                                                 backgroundColor: getDeviceStatusInfo(item.status).iconBgColor,
@@ -295,7 +295,7 @@
                                         <image
                                             src="/static/images/icons/setting2.svg"
                                             class="w-[28rpx] h-[28rpx]"></image>
-                                        <text class="font-bold">配置</text>
+                                        <text class="font-medium">配置</text>
                                     </view>
                                     <view
                                         class="h-[80rpx] w-[144rpx] border border-solid border-[#0000001a] rounded-[16rpx] flex items-center justify-center gap-x-2"
@@ -307,7 +307,7 @@
                                         <image
                                             src="/static/images/icons/statement.svg"
                                             class="w-[28rpx] h-[28rpx]"></image>
-                                        <text class="font-bold">报表</text>
+                                        <text class="font-medium">报表</text>
                                     </view>
                                 </view>
                             </template>
@@ -320,7 +320,7 @@
                             :src="`${config.baseUrl}static/images/device_empty.png`"
                             class="w-[442rpx] h-[492rpx] mx-auto"></image>
                         <view
-                            class="mx-auto mt-4 w-[300rpx] h-[84rpx] rounded-[16rpx] bg-black flex items-center justify-center gap-x-1 text-white font-bold text-[30rpx]"
+                            class="mx-auto mt-4 w-[300rpx] h-[84rpx] rounded-[16rpx] bg-black flex items-center justify-center gap-x-1 text-white font-medium text-[30rpx]"
                             @click="toPage('/ai_modules/device/pages/rpa_code/rpa_code')">
                             即刻新增设备<u-icon name="arrow-right" color="#ffffff" size="16"></u-icon>
                         </view>
@@ -346,7 +346,7 @@
                 <view class="grow min-h-0 bg-white flex flex-col justify-center py-2">
                     <view
                         v-for="(item, index) in taskModeList"
-                        class="text-center flex-1 flex items-center justify-center gap-x-2 relative text-[30rpx] font-bold"
+                        class="text-center flex-1 flex items-center justify-center gap-x-2 relative text-[30rpx] font-medium"
                         :key="item.value"
                         :class="{
                             'text-primary': currentDevice.auto_type == item.value,
@@ -361,7 +361,7 @@
                         {{ item.name }}
                     </view>
                 </view>
-                <view class="py-4 text-center mt-2 bg-white text-[30rpx] font-bold">取消</view>
+                <view class="py-4 text-center mt-2 bg-white text-[30rpx] font-medium">取消</view>
             </view>
         </template>
     </popup-bottom>

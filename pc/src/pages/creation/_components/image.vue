@@ -28,7 +28,7 @@
                                 <div class="relative aspect-[3/4] overflow-hidden rounded-[20px] bg-[#F1F5F9]">
                                     <div
                                         class="absolute top-2.5 right-2.5 z-10 px-2 py-1 rounded-[6px] bg-[#000000]/30 backdrop-blur-md border border-[#ffffff]/10 pointer-events-none">
-                                        <span class="text-[10px] font-bold text-white tracking-wide">
+                                        <span class="text-[10px] font-medium text-white tracking-wide">
                                             {{ getTypeName(item.draw_type || item.type) }}
                                         </span>
                                     </div>
@@ -70,7 +70,7 @@
                                         <span class="text-[11px] font-black text-[#64748B] tracking-tight">
                                             {{ item.create_time.split(" ")[0] }}
                                         </span>
-                                        <span class="text-[10px] font-bold text-[#94A3B8] mt-0.5">
+                                        <span class="text-[10px] font-medium text-[#94A3B8] mt-0.5">
                                             {{ item.create_time.split(" ")[1] }}
                                         </span>
                                     </div>

@@ -12,7 +12,7 @@
             </div>
         </template>
         <div>
-            <div class="font-bold text-[#00000cc]">
+            <div class="font-medium text-[#00000cc]">
                 <div>强大算力，</div>
                 <div>赋能每一次智能进化</div>
             </div>
@@ -21,7 +21,7 @@
             </div>
             <ElDivider class="!my-4 !border-token-primary" />
             <div>
-                <div class="font-bold text-[#00000cc]">相关下载</div>
+                <div class="font-medium text-[#00000cc]">相关下载</div>
                 <div class="mt-[15px] grid grid-cols-2 gap-[10px]">
                     <DefineTemplate v-slot="{ img, title, clientKey }">
                         <div class="client-item" @click="handleDownload(clientKey)">
@@ -31,7 +31,7 @@
                                 </div>
                                 <div class="text-[11px]">
                                     <div class="text-[rgba(255,255,255,0.5)] text-[10px]">下载工具</div>
-                                    <div class="text-white font-bold text-[11px]">{{ title }}</div>
+                                    <div class="text-white font-medium text-[11px]">{{ title }}</div>
                                 </div>
                             </div>
                             <div class="leading-[0]">

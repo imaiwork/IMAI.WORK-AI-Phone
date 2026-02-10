@@ -34,7 +34,7 @@ class AccountLists extends BaseApiDataLists implements ListsSearchInterface
 
         return SvAccount::alias('w')
             ->field('w.user_id,w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,w.update_time,w.extra,w.type,
-             s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id, d.device_name,d.device_model')
+             s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id, d.device_name,d.device_model,d.mode')
             ->join('sv_device d', 'd.device_code = w.device_code', 'left')
             ->leftJoin('sv_setting s', 's.account = w.account')
             ->where($this->searchWhere)

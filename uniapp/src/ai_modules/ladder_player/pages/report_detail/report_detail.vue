@@ -20,7 +20,7 @@
                         :id="'tab-' + item.id"
                         class="relative z-10 flex-1 h-[62rpx] text-center flex items-center justify-center rounded-full text-white transition-all duration-300"
                         :class="{
-                            '!text-primary font-bold': previewActiveTab === item.id,
+                            '!text-primary font-medium': previewActiveTab === item.id,
                         }"
                         @click="handlePreviewTab(item.id)">
                         {{ item.label }}

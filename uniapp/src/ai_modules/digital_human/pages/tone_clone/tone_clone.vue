@@ -1,9 +1,14 @@
 <template>
     <view class="h-screen flex flex-col relative bg-[#F3F4FB]">
         <view class="relative z-30">
-            <u-navbar :border-bottom="false" :is-fixed="false" :background="{
-                background: 'transparent',
-            }" title="音色克隆" title-bold>
+            <u-navbar
+                :border-bottom="false"
+                :is-fixed="false"
+                :background="{
+                    background: 'transparent',
+                }"
+                title="音色克隆"
+                title-bold>
             </u-navbar>
         </view>
         <view class="grow min-h-0 relative z-30">
@@ -11,12 +16,16 @@
                 <view class="px-4 pb-[100rpx]">
                     <!-- 声音名称 -->
                     <view class="flex items-center gap-1">
-                        <text class="text-[#E33C64] text-xl font-bold">*</text>
-                        <text class="text-[30rpx] font-bold">声音名称</text>
+                        <text class="text-[#E33C64] text-xl font-medium">*</text>
+                        <text class="text-[30rpx] font-medium">声音名称</text>
                     </view>
                     <view class="mt-2">
                         <view class="bg-white rounded-[16rpx] px-[34rpx] py-1">
-                            <u-input v-model="formData.name" placeholder="请输入音色名称" maxlength="50" clearable></u-input>
+                            <u-input
+                                v-model="formData.name"
+                                placeholder="请输入音色名称"
+                                maxlength="50"
+                                clearable></u-input>
                         </view>
                     </view>
 
@@ -25,8 +34,8 @@
                         <view class="flex flex-col gap-4">
                             <!-- 使用模型 -->
                             <view class="flex items-center gap-1">
-                                <text class="text-[#E33C64] text-xl font-bold">*</text>
-                                <text class="text-[30rpx] font-bold">使用模型</text>
+                                <text class="text-[#E33C64] text-xl font-medium">*</text>
+                                <text class="text-[30rpx] font-medium">使用模型</text>
                             </view>
                             <view
                                 class="bg-white rounded-[16rpx] px-[16rpx] py-[28rpx] flex items-center justify-between"
@@ -39,12 +48,12 @@
                             <!-- 音色性别 -->
                             <!-- <view v-if="formData.model_version != DigitalHumanModelVersionEnum.SHANJIAN">
                                 <view class="flex items-center gap-1">
-                                    <text class="text-[#E33C64] text-xl font-bold">*</text>
-                                    <text class="text-[30rpx] font-bold">音色性别</text>
+                                    <text class="text-[#E33C64] text-xl font-medium">*</text>
+                                    <text class="text-[30rpx] font-medium">音色性别</text>
                                 </view>
                                 <view class="flex items-center gap-2 mt-2">
                                     <view
-                                        class="flex-1 flex items-center justify-center gap-2 border border-solid rounded-lg p-2 h-[80rpx] font-bold bg-white"
+                                        class="flex-1 flex items-center justify-center gap-2 border border-solid rounded-lg p-2 h-[80rpx] font-medium bg-white"
                                         :class="[
                                             formData.gender === item.value
                                                 ? 'border-[#0065FB] text-primary'
@@ -69,64 +78,77 @@
 
                     <!-- 音频文件 -->
                     <view class="mt-[40rpx]">
-                        <view class="text-[30rpx] font-bold mb-[18rpx]">音频文件</view>
+                        <view class="text-[30rpx] font-medium mb-[18rpx]">音频文件</view>
                         <view v-if="formData.url">
                             <!-- 已上传音频显示 -->
                             <view class="bg-white rounded-[16rpx] px-[26rpx] h-[170rpx] flex items-center gap-x-2">
                                 <view class="flex items-center gap-x-3 flex-1">
-                                    <image src="@/ai_modules/digital_human/static/images/common/audio_icon.png"
+                                    <image
+                                        src="@/ai_modules/digital_human/static/images/common/audio_icon.png"
                                         class="w-[68rpx] h-[68rpx] flex-shrink-0"></image>
                                     <view class="line-clamp-1 break-all"> {{ fileName }} </view>
                                 </view>
                                 <view
                                     class="flex items-center justify-center gap-x-1 bg-[#EBF3FE] rounded-[10rpx] flex-shrink-0 w-[116rpx] h-[60rpx]"
                                     @click="toggleAudioPlayback()">
-                                    <image v-if="!isPlaying" src="@/ai_modules/digital_human/static/icons/play2.svg"
+                                    <image
+                                        v-if="!isPlaying"
+                                        src="@/ai_modules/digital_human/static/icons/play2.svg"
                                         class="w-[24rpx] h-[24rpx]"></image>
-                                    <image v-else src="@/ai_modules/digital_human/static/icons/stop.svg"
+                                    <image
+                                        v-else
+                                        src="@/ai_modules/digital_human/static/icons/stop.svg"
                                         class="w-[24rpx] h-[24rpx]"></image>
                                     <text class="text-xs text-primary">{{ isPlaying ? "暂停" : "试听" }}</text>
                                 </view>
                             </view>
-                            <view class="mt-[50rpx] text-center text-[26rpx] font-bold text-[#00000080]" @click="
-                                resetAudio;
-                            formData.url = '';
-                            fileName = '';
-                            ">重新录音</view>
+                            <view
+                                class="mt-[50rpx] text-center text-[26rpx] font-medium text-[#00000080]"
+                                @click="
+                                    resetAudio;
+                                    formData.url = '';
+                                    fileName = '';
+                                "
+                                >重新录音</view
+                            >
                         </view>
 
                         <!-- 上传音频选项 -->
                         <template v-else>
                             <view class="flex items-center gap-x-2">
-                                <view class="rounded-lg flex flex-col items-center justify-center bg-white p-4"
+                                <view
+                                    class="rounded-lg flex flex-col items-center justify-center bg-white p-4"
                                     @click="openRecorder">
                                     <view
                                         class="w-[80rpx] h-[80rpx] flex items-center justify-center rounded-[14rpx] bg-primary">
-                                        <image src="@/ai_modules/digital_human/static/icons/microphone.svg"
+                                        <image
+                                            src="@/ai_modules/digital_human/static/icons/microphone.svg"
                                             class="w-[50rpx] h-[50rpx]"></image>
                                     </view>
-                                    <view class="text-[30rpx] mt-[32rpx] font-bold">录制自己的声音</view>
+                                    <view class="text-[30rpx] mt-[32rpx] font-medium">录制自己的声音</view>
                                     <view class="text-[22rpx] text-[#B4B4B4] mt-[26rpx] text-center">
                                         点击录制语音，建议录制15-60秒的长度
                                     </view>
                                     <view
-                                        class="mt-[40rpx] w-[200rpx] h-[60rpx] flex items-center justify-center rounded-[14rpx] bg-[#0065fb1a] text-primary text-[26rpx] font-bold">
+                                        class="mt-[40rpx] w-[200rpx] h-[60rpx] flex items-center justify-center rounded-[14rpx] bg-[#0065fb1a] text-primary text-[26rpx] font-medium">
                                         去录制
                                     </view>
                                 </view>
-                                <view class="rounded-lg flex flex-col items-center justify-center bg-white p-4"
+                                <view
+                                    class="rounded-lg flex flex-col items-center justify-center bg-white p-4"
                                     @click="uploadFromWeChat">
                                     <view
                                         class="w-[80rpx] h-[80rpx] flex items-center justify-center rounded-[14rpx] bg-[#28C445]">
-                                        <image src="@/ai_modules/digital_human/static/icons/wechat.svg"
+                                        <image
+                                            src="@/ai_modules/digital_human/static/icons/wechat.svg"
                                             class="w-[50rpx] h-[50rpx]"></image>
                                     </view>
-                                    <view class="text-[30rpx] mt-[32rpx] font-bold">微信上传音频</view>
+                                    <view class="text-[30rpx] mt-[32rpx] font-medium">微信上传音频</view>
                                     <view class="text-[22rpx] text-[#B4B4B4] mt-[26rpx] text-center">
                                         选择微信聊天记录里时长30秒以上的音频上传
                                     </view>
                                     <view
-                                        class="mt-[40rpx] w-[200rpx] h-[60rpx] flex items-center justify-center rounded-[14rpx] bg-[#00c08c1a] text-[#00C08E] text-[26rpx] font-bold">
+                                        class="mt-[40rpx] w-[200rpx] h-[60rpx] flex items-center justify-center rounded-[14rpx] bg-[#00c08c1a] text-[#00C08E] text-[26rpx] font-medium">
                                         去上传
                                     </view>
                                 </view>
@@ -134,28 +156,31 @@
 
                             <!-- 声音克隆要求 -->
                             <view class="mt-5">
-                                <view class="text-[30rpx] font-bold">声音克隆要求</view>
+                                <view class="text-[30rpx] font-medium">声音克隆要求</view>
                                 <view class="leading-6 mt-2">
                                     <view class="flex gap-x-4">
-                                        <view class="font-bold text-[#00000080] py-2">音频时长</view>
+                                        <view class="font-medium text-[#00000080] py-2">音频时长</view>
                                         <view
                                             class="flex-1 text-[#00000080] border-[0] border-b-[1rpx] border-solid border-[#0000000d] py-2">
-                                            建议为30秒以上</view>
+                                            建议为{{ minDuration }}秒以上，{{ maxDuration }}秒以内</view
+                                        >
                                     </view>
                                     <view class="flex gap-x-4">
-                                        <view class="font-bold text-[#00000080] py-2">文件大小</view>
+                                        <view class="font-medium text-[#00000080] py-2">文件大小</view>
                                         <view
                                             class="flex-1 text-[#00000080] border-[0] border-b-[1rpx] border-solid border-[#0000000d] py-2">
-                                            20MB以内</view>
+                                            20MB以内</view
+                                        >
                                     </view>
                                     <view class="flex gap-x-4">
-                                        <view class="font-bold text-[#00000080] py-2">文件格式</view>
+                                        <view class="font-medium text-[#00000080] py-2">文件格式</view>
                                         <view
                                             class="flex-1 text-[#00000080] border-[0] border-b-[1rpx] border-solid border-[#0000000d] py-2">
-                                            {{ getUploadAudioFormat().join("、") }}</view>
+                                            {{ getUploadAudioFormat().join("、") }}</view
+                                        >
                                     </view>
                                     <view class="flex gap-x-4">
-                                        <view class="font-bold text-[#00000080] py-2 flex-shrink-0">录制说明</view>
+                                        <view class="font-medium text-[#00000080] py-2 flex-shrink-0">录制说明</view>
                                         <view
                                             class="flex-1 text-[#00000080] border-[0] border-b-[1rpx] border-solid border-[#0000000d] py-2">
                                             尽量在同一声学环境下录制，避免过于喧哗的背景音和噪音。录制过程中不要长时间不说话，尽量保持语速平稳，不要声音语调时高时低，需保持音量均衡。避免多人同时说话，说话人发音及音质越清晰，克隆的质量越高
@@ -172,7 +197,7 @@
         <!-- 开始克隆按钮 -->
         <view class="mt-4 mx-4 p-4">
             <view
-                class="h-[100rpx] w-[90%] mx-auto rounded-md bg-black text-white text-[30rpx] font-bold flex items-center justify-center"
+                class="h-[100rpx] w-[90%] mx-auto rounded-md bg-black text-white text-[30rpx] font-medium flex items-center justify-center"
                 @click="startVoiceCloning()">
                 开始克隆<template v-if="tokensRequired">（消耗{{ tokensRequired }}算力）</template>
             </view>
@@ -182,7 +207,12 @@
     <!-- 弹窗组件 -->
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
     <choose-model v-model="showChooseModel" @confirm="handleModelSelection" />
-    <popup-bottom v-model="showRecorder" title="录制声音" custom-class="bg-[#F6F6F6]" :show-footer="false" height="80%"
+    <popup-bottom
+        v-model="showRecorder"
+        title="录制声音"
+        custom-class="bg-[#F6F6F6]"
+        :show-footer="false"
+        height="80%"
         @close="resetAudio">
         <template #content>
             <view class="flex flex-col h-full">
@@ -191,7 +221,7 @@
                         <view class="px-[26rpx]">
                             <view class="bg-white px-5 py-[32rpx] rounded-[20rpx]">
                                 <view class="pb-[26rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                                    <view class="font-bold text-[30rpx]"> 参考阅读文案 </view>
+                                    <view class="font-medium text-[30rpx]"> 参考阅读文案 </view>
                                     <view class="text-xs text-[#0000004d] mt-1">
                                         如果没想好录音说什么，可以挑选示例文案录音
                                     </view>
@@ -201,11 +231,12 @@
                                 </view>
                                 <view class="flex items-center gap-x-1 mt-5" @click="generateRandomCopywriter">
                                     <u-icon name="reload" color="#0065FB"></u-icon>
-                                    <text class="text-primary font-bold">随机</text>
+                                    <text class="text-primary font-medium">随机</text>
                                 </view>
                             </view>
                             <view class="mt-4 flex flex-col items-center justify-center">
-                                <view class="font-bold text-[44rpx] flex items-center gap-x-2 h-[40rpx] leading-[40rpx]"
+                                <view
+                                    class="font-medium text-[44rpx] flex items-center gap-x-2 h-[40rpx] leading-[40rpx]"
                                     v-if="isRecording">
                                     {{ formatAudioTime(recordDuration) }}
                                 </view>
@@ -215,16 +246,17 @@
                                 <view class="flex items-center gap-6 mt-[70rpx]">
                                     <view v-if="!isRecording" class="flex flex-col" @click="startRecording">
                                         <view class="transcribe-start">
-                                            <image src="@/ai_modules/digital_human/static/icons/microphone_white.svg"
+                                            <image
+                                                src="@/ai_modules/digital_human/static/icons/microphone_white.svg"
                                                 class="w-[96rpx] h-[96rpx]"></image>
                                         </view>
-                                        <view class="mt-[20rpx] text-center text-[30rpx] font-bold">开始录音</view>
+                                        <view class="mt-[20rpx] text-center text-[30rpx] font-medium">开始录音</view>
                                     </view>
                                     <view v-else class="flex flex-col" @click="stopRecording">
                                         <view class="transcribe-stop">
                                             <view class="w-[42rpx] h-[42rpx] rounded-[10rpx] bg-white"></view>
                                         </view>
-                                        <view class="mt-[20rpx] text-center text-[30rpx] font-bold">结束录音</view>
+                                        <view class="mt-[20rpx] text-center text-[30rpx] font-medium">结束录音</view>
                                     </view>
                                 </view>
                             </view>
@@ -233,7 +265,9 @@
                 </view>
                 <view
                     class="mt-2 mb-5 w-[330rpx] h-[90rpx] rounded-[50rpx] bg-white mx-auto text-[30rpx] flex items-center justify-center text-[#00000080]"
-                    @click="cancelRecording">取消</view>
+                    @click="cancelRecording"
+                    >取消</view
+                >
             </view>
         </template>
     </popup-bottom>
@@ -324,6 +358,8 @@ const { setUrl, isPlaying, play, pause, destroy } = useAudio({
 });
 
 // 录音hook
+const maxDuration = 120;
+const minDuration = 10;
 const { authorize, isRecording, start, stop, close } = useRecorder(
     {
         onstart: () => {
@@ -332,7 +368,7 @@ const { authorize, isRecording, start, stop, close } = useRecorder(
         onstop: async (result: any) => {
             if (isCancel.value) return;
             const { tempFilePath, fileSize } = result;
-            if (recordDuration.value < 15) return;
+            if (recordDuration.value < minDuration) return;
             if (!validateAudioSize(fileSize)) {
                 return;
             }
@@ -345,7 +381,7 @@ const { authorize, isRecording, start, stop, close } = useRecorder(
         },
     },
     {
-        duration: 1000 * 60, // 60秒
+        duration: 1000 * maxDuration,
     }
 );
 
@@ -410,7 +446,6 @@ const processSelectedFile = async (filesResult: ChooseResult) => {
         uni.$u.toast(`请上传${getUploadAudioFormat().join("、")}格式的音频文件`);
         return;
     }
-
     // 验证文件大小
     if (!validateAudioSize(size)) {
         return;

@@ -12,19 +12,19 @@
                     class="h-[80rpx] flex items-center justify-center gap-2 bg-[#E4EAF8] rounded-full w-full"
                     @click="openFile('record')">
                     <u-icon name="/static/images/icons/weixin.svg" :size="32"></u-icon>
-                    <text class="font-bold text-xl">从微信聊天记录选择文件</text>
+                    <text class="font-medium text-xl">从微信聊天记录选择文件</text>
                 </view>
                 <view
                     class="h-[80rpx] flex items-center justify-center gap-2 bg-[#E4EAF8] rounded-full w-full"
                     @click="openFile('album')"
                     v-if="sumImage > 0">
-                    <text class="font-bold text-xl">从相册选择图片</text>
+                    <text class="font-medium text-xl">从相册选择图片</text>
                 </view>
                 <view
                     class="h-[80rpx] flex items-center justify-center gap-2 bg-[#E4EAF8] rounded-full w-full"
                     @click="openFile('camera')"
                     v-if="sumImage > 0">
-                    <text class="font-bold text-xl">拍照</text>
+                    <text class="font-medium text-xl">拍照</text>
                 </view>
             </view>
         </view>

@@ -5,7 +5,7 @@
                 <view @click="prevWeek">
                     <u-icon name="arrow-left" size="28" color="#606266"></u-icon>
                 </view>
-                <view class="text-[30rpx] font-bold text-center" @click="goToToday">{{ getDisplayMonthYear }}</view>
+                <view class="text-[30rpx] font-medium text-center" @click="goToToday">{{ getDisplayMonthYear }}</view>
                 <view @click="nextWeek">
                     <u-icon name="arrow-right" size="28" color="#606266"></u-icon>
                 </view>
@@ -14,7 +14,7 @@
                 url="/ai_modules/device/pages/task_calendar_full/task_calendar_full"
                 hover-class="none"
                 class="flex items-center gap-x-1">
-                <text class="text-primary font-bold">完整日历</text>
+                <text class="text-primary font-medium">完整日历</text>
                 <u-icon name="arrow-right" color="#0065FB"></u-icon>
             </navigator>
         </view>
@@ -23,7 +23,7 @@
                 class="flex items-center border-[0] border-t-[1rpx] border-b-[1rpx] border-solid border-[#00000008] h-[58rpx]">
                 <view
                     v-for="(item, index) in weekDays"
-                    class="text-[18rpx] font-bold text-center flex-1"
+                    class="text-[18rpx] font-medium text-center flex-1"
                     :key="index"
                     :class="{
                         'text-[#0000004d]': index == 0 || index == weekDays.length - 1,
@@ -153,7 +153,7 @@ const selectDate = (date: string) => {
 }
 
 .grid-item {
-    @apply w-[86rpx] h-[86rpx] flex items-center justify-center rounded-full font-bold relative;
+    @apply w-[86rpx] h-[86rpx] flex items-center justify-center rounded-full font-medium relative;
 }
 .selected {
     @apply bg-primary text-white;

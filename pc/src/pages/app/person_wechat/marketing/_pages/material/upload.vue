@@ -30,7 +30,7 @@
                             @success="handleFileUploadSuccess">
                             <div class="upload-drop-zone">
                                 <div class="icon-box"><Icon name="local-icon-upload_cloud" :size="32" /></div>
-                                <div class="text-sm font-bold text-tx-regular mt-3">
+                                <div class="text-sm font-medium text-tx-regular mt-3">
                                     拖拽{{ materialTypeName }}至此 或 <span class="text-primary">点击上传</span>
                                 </div>
                                 <div class="text-[12px] text-tx-placeholder mt-1">
@@ -115,7 +115,7 @@
                             class="w-full">
                             <div class="upload-drop-zone h-[120px]">
                                 <Icon name="local-icon-upload_cloud" :size="32" color="var(--color-primary)" />
-                                <div class="text-[13px] font-bold mt-2">点击上传办公文档</div>
+                                <div class="text-[13px] font-medium mt-2">点击上传办公文档</div>
                                 <div class="text-[11px] text-tx-placeholder">支持 PDF、Word、Excel、TXT 等</div>
                             </div>
                         </upload>
@@ -139,7 +139,7 @@
                                             class="w-full h-full object-cover" />
                                         <template v-else>
                                             <Icon name="el-icon-Plus" :size="20" />
-                                            <span class="text-[11px] mt-1 font-bold">上传封面</span>
+                                            <span class="text-[11px] mt-1 font-medium">上传封面</span>
                                         </template>
                                     </div>
                                 </upload>

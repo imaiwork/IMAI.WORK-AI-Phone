@@ -3,7 +3,7 @@
         <div class="flex-shrink-0 px-8 h-[88px] flex items-center justify-between">
             <div class="flex flex-col">
                 <h1 class="text-xl font-[900] text-gray-950">发布任务管理</h1>
-                <p class="text-[12px] text-tx-placeholder font-bold mt-0.5">监控所有账号的视频与图文发布进度</p>
+                <p class="text-[12px] text-tx-placeholder font-medium mt-0.5">监控所有账号的视频与图文发布进度</p>
             </div>
 
             <div class="flex items-center gap-3">
@@ -62,7 +62,7 @@
                             <div
                                 class="flex justify-center items-center gap-2 px-2 py-1 rounded-lg bg-gray-50 border border-br-extra-light w-fit">
                                 <img :src="getPlatform(row.account_type)?.icon" class="w-4 h-4 object-contain" />
-                                <span class="text-xs font-bold text-tx-regular line-clamp-1">{{ row.account }}</span>
+                                <span class="text-xs font-medium text-tx-regular line-clamp-1">{{ row.account }}</span>
                             </div>
                         </div>
                     </template>
@@ -73,13 +73,13 @@
                         <div class="flex justify-center items-center flex-col gap-0.5">
                             <div class="flex items-center gap-1.5">
                                 <span class="text-[11px] font-black text-tx-placeholder uppercase">类型:</span>
-                                <span class="text-xs font-bold text-tx-secondary">{{
+                                <span class="text-xs font-medium text-tx-secondary">{{
                                     row.auto_type == 0 ? "手动" : "24h任务"
                                 }}</span>
                             </div>
                             <div class="flex items-center gap-1.5">
                                 <span class="text-[11px] font-black text-tx-placeholder uppercase">素材:</span>
-                                <span class="text-xs font-bold text-primary">{{
+                                <span class="text-xs font-medium text-primary">{{
                                     row.media_type == 1 ? "视频" : "图片"
                                 }}</span>
                             </div>
@@ -100,11 +100,11 @@
                     <template #default="{ row }">
                         <div class="flex justify-center items-center flex-col text-[11px]">
                             <div class="flex items-center gap-1 text-tx-secondary">
-                                <span class="font-bold">{{ row.publish_start }}</span>
+                                <span class="font-medium">{{ row.publish_start }}</span>
                                 <span class="text-tx-placeholder">始</span>
                             </div>
                             <div class="flex items-center gap-1 text-tx-secondary">
-                                <span class="font-bold">{{ row.publish_end }}</span>
+                                <span class="font-medium">{{ row.publish_end }}</span>
                                 <span class="text-tx-placeholder">终</span>
                             </div>
                         </div>
@@ -118,7 +118,7 @@
                                 {{ row.published_count }}<span class="text-tx-placeholder font-medium mx-0.5">/</span
                                 >{{ row.count }}
                             </div>
-                            <div class="text-[10px] font-bold text-primary bg-[#0065fb]/10 px-1.5 rounded">
+                            <div class="text-[10px] font-medium text-primary bg-[#0065fb]/10 px-1.5 rounded">
                                 {{ getPublishCycle(row) }}
                             </div>
                         </div>
@@ -158,7 +158,7 @@
             </ElTable>
         </div>
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-            <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 个分发任务已就绪</div>
+            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 个分发任务已就绪</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>

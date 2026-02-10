@@ -16,7 +16,7 @@
                         <ElButton type="primary" link @click="clearSelectTags" class="!text-xs">重置</ElButton>
                     </div>
                     <div class="bg-[#0065fb]/5 rounded-xl p-3 flex items-center justify-between">
-                        <div class="text-[11px] text-primary font-bold">已选标签</div>
+                        <div class="text-[11px] text-primary font-medium">已选标签</div>
                         <div class="flex items-center gap-1">
                             <span class="text-[14px] font-black text-primary">{{ selectedTags.length }}</span>
                             <span class="text-[10px] text-[#0065fb]/60">个</span>
@@ -41,7 +41,7 @@
                                             <Icon name="el-icon-PriceTag" :size="14" />
                                         </span>
                                         <template v-if="!isEditMode || item.id === 0">
-                                            <span class="truncate text-[13px] font-bold">{{ item.tag_name }}</span>
+                                            <span class="truncate text-[13px] font-medium">{{ item.tag_name }}</span>
                                         </template>
                                         <ElInput
                                             v-else
@@ -67,14 +67,14 @@
                 </div>
 
                 <div class="p-4 bg-[#f8fafc]/50 border-t border-slate-100 flex flex-col gap-2">
-                    <ElButton type="primary" class="!rounded-xl !h-10 !font-bold" @click="openTagEditPopup">
+                    <ElButton type="primary" class="!rounded-xl !h-10 !font-medium" @click="openTagEditPopup">
                         <Icon name="el-icon-Plus" />
                         <span class="ml-1"> 新增标签 </span>
                     </ElButton>
                     <ElButton
                         link
                         :type="isEditMode ? 'warning' : 'info'"
-                        class="!text-[12px] !font-bold"
+                        class="!text-[12px] !font-medium"
                         @click="isEditMode = !isEditMode">
                         <Icon :name="isEditMode ? 'el-icon-CircleClose' : 'el-icon-Edit'" />
                         <span class="ml-1">
@@ -133,7 +133,9 @@
                                     shape="square"
                                     class="rounded-lg shadow-light" />
                                 <div class="flex flex-col">
-                                    <span class="text-[14px] font-bold text-tx-primary">{{ row.friend_nickname }}</span>
+                                    <span class="text-[14px] font-medium text-tx-primary">{{
+                                        row.friend_nickname
+                                    }}</span>
                                     <span class="text-[11px] text-tx-placeholder font-mono"
                                         >ID: {{ row.friend_id }}</span
                                     >

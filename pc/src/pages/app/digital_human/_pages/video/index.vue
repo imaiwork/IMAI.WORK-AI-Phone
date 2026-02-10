@@ -8,7 +8,7 @@
                     </div>
                     <div>
                         <div class="text-[16px] text-[#1E293B] font-black tracking-tight">视频创作记录</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             Video Creation Record
                         </div>
                     </div>
@@ -53,7 +53,7 @@
             </ElScrollbar>
         </div>
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between border-t border-br">
-            <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 条视频创作记录</div>
+            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条视频创作记录</div>
         </div>
     </div>
 </template>

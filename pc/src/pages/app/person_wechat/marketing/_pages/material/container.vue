@@ -2,7 +2,7 @@
     <div class="flex flex-col w-full h-full bg-white">
         <div class="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-br-extra-light">
             <div class="flex items-center gap-3">
-                <ElButton type="primary" class="!rounded-xl !h-[36px] !font-bold" @click="openUploadModal">
+                <ElButton type="primary" class="!rounded-xl !h-[36px] !font-medium" @click="openUploadModal">
                     <Icon name="el-icon-Plus" />
                     <span class="ml-1">添加素材</span>
                 </ElButton>
@@ -10,7 +10,7 @@
                     v-if="selectIds.length"
                     type="danger"
                     plain
-                    class="!rounded-xl !h-[36px] !font-bold"
+                    class="!rounded-xl !h-[36px] !font-medium"
                     @click="handleBatchDelete">
                     <Icon name="el-icon-Delete" />
                     <span class="ml-1">批量删除 ({{ selectIds.length }})</span>
@@ -110,7 +110,7 @@
 
                                     <div class="card-footer">
                                         <div class="flex-1 min-w-0">
-                                            <div class="text-[13px] font-bold text-tx-primary truncate">
+                                            <div class="text-[13px] font-medium text-tx-primary truncate">
                                                 {{ item.file_name }}
                                             </div>
                                             <div class="text-[11px] text-tx-placeholder mt-0.5">

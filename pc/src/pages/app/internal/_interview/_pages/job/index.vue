@@ -4,7 +4,7 @@
             class="rounded-[20px] px-8 h-[100px] bg-[#FFFFFF] border border-br flex items-center justify-between shadow-sm">
             <div class="flex flex-col gap-1">
                 <div class="text-2xl font-[900] text-[#0F172A] tracking-tight">岗位管理</div>
-                <div class="text-[13px] text-[#64748B] font-bold">创建岗位并开启全自动 AI 招聘流程</div>
+                <div class="text-[13px] text-[#64748B] font-medium">创建岗位并开启全自动 AI 招聘流程</div>
             </div>
             <div class="flex items-center gap-3">
                 <ElButton
@@ -39,7 +39,7 @@
                             class="absolute right-12 top-4 z-[10] opacity-0 group-hover:opacity-100 transition-opacity"
                             @click.stop="handleCopyLink(item.id)">
                             <div
-                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F1F0FF] text-[#4F46E5] text-[11px] font-bold hover:bg-[#4F46E5] hover:text-[#FFFFFF] transition-colors">
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F1F0FF] text-[#4F46E5] text-[11px] font-medium hover:bg-[#4F46E5] hover:text-[#FFFFFF] transition-colors">
                                 <Icon name="el-icon-Link" :size="12" />
                                 <span>复制链接</span>
                             </div>
@@ -61,7 +61,7 @@
                         </div>
 
                         <div class="flex items-center justify-between mt-4 pt-4 border-t border-[#F8FAFC]">
-                            <div class="flex items-center gap-2 text-[11px] font-bold text-[#94A3B8]">
+                            <div class="flex items-center gap-2 text-[11px] font-medium text-[#94A3B8]">
                                 <Icon name="el-icon-Calendar" :size="12" color="#CBD5E1" />
                                 <span>{{ dayjs(item.create_time).format("YYYY/MM/DD") }} 发布</span>
                             </div>

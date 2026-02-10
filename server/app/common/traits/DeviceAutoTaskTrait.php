@@ -9,6 +9,7 @@ use app\common\enum\DeviceEnum;
 use app\common\enum\AutomationEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
+use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvAddWechatRecord;
 use app\common\model\sv\SvCrawlingManualTask;
 use app\common\model\sv\SvCrawlingManualTaskRecord;
@@ -71,7 +72,7 @@ trait DeviceAutoTaskTrait
                 self::setLog("暂时没有需要执行的设备：\n" . Db::getLastSql(), 'clues');
                 throw new \Exception('暂时没有需要执行的设备');
             }
-            
+
             $task = [
                 'id' => $find['id'],
                 'task_id' => $task->id,
@@ -208,15 +209,7 @@ trait DeviceAutoTaskTrait
     {
         try {
             self::$logtitle = "视频号发布任务[{$task->device_code}]";
-            $wechat = AiWechat::where('wechat_id', $task->account)->where('user_id', $task->user_id)->findOrEmpty();
-            if ($wechat->isEmpty()) {
-                return $callback([
-                    'status' => 1,
-                    'remark' => '微信账号不存在',
-                ]);
-            }
-
-            self::checkOnline($wechat->device_code, 'wx');
+            self::checkOnline($task->device_code, 'ws');
 
             $publish = SvPublishSettingDetail::alias('ps')
                 ->field('ps.*')
@@ -238,98 +231,48 @@ trait DeviceAutoTaskTrait
                 ]);
             }
 
-            if(is_null($publish['material_url'])){
+            if (is_null($publish['material_url'])) {
                 self::setLog('视频号发布任务素材url为空', 'publish');
                 self::setLog(Db::getLastSql(), 'publish');
                 throw new \Exception('视频号发布任务素材url为空');
             }
 
-
-
-            $output->writeln(Db::getLastSql());
+            $material_url = explode(',', $publish['material_url']);
+            if (count($material_url) > 12) {
+                $material_url = array_slice($material_url, 0, 12);
+            }
 
             $payload = array(
                 'appType' => $task->account_type,
                 'messageId' => 0,
-                'type' => 60,
+                'type' => 5,
                 'deviceId' => $task->device_code,
                 'appVersion' => '2.4.0',
                 'content' => json_encode([
-                    'deviceId' => $task->device_code,
-                    'taskId' => $publish['id'],
-                    'auto_type' => $task->auto_type,
-                    'msg' => '执行视频号发布,拉起app',
-
+                    'publish_platform' => DeviceEnum::PUBLISH_PLATFORM_SPH,
+                    'material_id' => $publish['id'],
+                    'title' => $publish['material_title'],
+                    'type' => $publish['material_type'] ?? 1,
+                    'list' => $material_url,
+                    'isLocation' => !empty($publish['poi']) ? 1 : 0,
+                    'location' => $publish['poi'],
+                    'isScheduledTime' => true,
+                    'scheduledTime' => $publish['publish_time'],
+                    'taskId' => $publish['task_id'],
+                    'body' => $publish['material_subtitle'],
+                    'tag' => $publish['material_tag'] ?? ''
                 ], JSON_UNESCAPED_UNICODE)
             );
+
             self::setLog(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'publish');
-            $channel = "device.{$task->device_code}.message";
+            $channel = "device.{$publish['device_code']}.message";
             ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
             ChannelClient::publish($channel, [
                 'data' => json_encode($payload)
             ]);
-            sleep(2);
-
-            $interval_find = \app\common\model\wechat\AiWechatLog::where('user_id', $publish['user_id'])
-                ->where('log_type', \app\common\model\wechat\AiWechatLog::TYPE_SPH_POST)
-                ->where('wechat_id', $publish['account'])
-                ->order('id', 'desc')
-                ->limit(1)
-                //->fetchSql(true)
-                ->findOrEmpty();
-            if (!$interval_find->isEmpty() && ((time() - strtotime($interval_find->create_time)) < 150)) {
-                $output->writeln('间隔时间未到');
-                self::setLog('间隔时间未到', 'publish');
-                return $callback([
-                    'status' => 1,
-                    'remark' => '间隔时间未到',
-                ]);
-            }
-            $payload = [
-                'WeChatId' => $publish['account'],
-                'Content' => $publish['material_subtitle'],
-                'MediaType' => 1,
-                'Medias' => explode(',', $publish['material_url']),
-                'Cover' => FileService::getFileUrl($publish['pic']),
-                'TaskId' => $publish['sub_task_id'],
-                'Poi' => [],
-            ];
+            self::setRpaPublishStatus($publish);
 
 
-
-            self::setLog($payload, 'publish');
-            $output->writeln(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-            // 3. 构建消息发送请求
-            $content = \app\common\workerman\wechat\handlers\client\SphPostTaskHandler::handle($payload);
-            // 4. 构建protobuf消息
-            $message = new \Jubo\JuLiao\IM\Wx\Proto\TransportMessage();
-            $message->setMsgType($content['MsgType']);
-            $any = new \Google\Protobuf\Any();
-            $any->pack($content['Content']);
-            $message->setContent($any);
-            $data = $message->serializeToString();
-            // 5. 发送到设备端
-            $channel = "socket.{$wechat['device_code']}.message";
-            \Channel\Client::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
-            \Channel\Client::publish($channel, [
-                'data' => $data
-            ]);
-            // 6. 更新发布记录
-            SvPublishSettingDetail::where('id', $publish['id'])->update([
-                'status' => 3,
-                'exec_time' => time(),
-                'update_time' => time(),
-            ]);
-            \app\common\model\wechat\AiWechatLog::create([
-                'user_id' => $publish['user_id'],
-                'wechat_id' => $publish['account'],
-                'log_type' => \app\common\model\wechat\AiWechatLog::TYPE_SPH_POST,
-                'friend_id' => $payload['WeChatId'],
-                'create_time' => time()
-            ]);
-
-            $scene = AutomationEnum::SOCIAL_MEDIA_RELEASED;
-            self::requestUrl($payload,$scene, $publish['user_id'],$task->id,  $task->device_code);
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
@@ -357,7 +300,7 @@ trait DeviceAutoTaskTrait
             self::$logtitle = "RPA [{$accountTypeName}]发布任务[{$task->device_code}]";
 
             self::checkOnline($task->device_code, 'ws');
-            
+
             $publish = SvPublishSettingDetail::alias('ps')
                 ->field('ps.*')
                 ->join('sv_publish_setting_account s', 's.id = ps.publish_account_id')
@@ -373,19 +316,7 @@ trait DeviceAutoTaskTrait
                 ->limit(1)
                 ->findOrEmpty();
 
-            if (!$publish->isEmpty()) {
-                self::setWsSelect();
-                self::redis()->set("xhs:device:" . $task->device_code . ":taskStatus", json_encode([
-                    'taskStatus' => 'running',
-                    'taskType' => 'setCrontab',
-                    'scene' => 'xhs',
-                    'msg' => '小红书正在发布笔记内容',
-                    'duration' => 90,
-                    'time' => date('Y-m-d H:i:s', time()),
-                ], JSON_UNESCAPED_UNICODE));
-            } else {
-                // self::setLog('暂时没有可发布的内容', 'publish');
-                // self::setLog(Db::getLastSql(), 'publish');
+            if ($publish->isEmpty()) {
                 if (is_callable($callback)) {
                     return $callback([
                         'status' => -1,
@@ -394,7 +325,7 @@ trait DeviceAutoTaskTrait
                 }
             }
 
-            if(is_null($publish['material_url'])){
+            if (is_null($publish['material_url'])) {
                 self::setLog('发布任务素材url为空', 'publish');
                 self::setLog(Db::getLastSql(), 'publish');
                 throw new \Exception('发布任务素材url为空');
@@ -411,6 +342,7 @@ trait DeviceAutoTaskTrait
                 'deviceId' => $task->device_code,
                 'appVersion' => '2.4.0',
                 'content' => json_encode([
+                    'publish_platform' => $task->account_type,
                     'material_id' => $publish['id'],
                     'auto_type' => $task->auto_type,
                     'title' => $publish['material_title'],
@@ -458,7 +390,7 @@ trait DeviceAutoTaskTrait
     {
         try {
             self::$logtitle = "微圈发布任务[{$task->device_code}]";
-            
+
             self::checkOnline($task->device_code, 'ws');
 
             $publish = AiWechatCircleTask::where('id', $task->sub_data_id)->where('send_status', 0)->where('auto_type', $task->auto_type)->findOrEmpty();
@@ -469,7 +401,7 @@ trait DeviceAutoTaskTrait
                     'remark' => '微圈发布任务不存在',
                 ]);
             }
-            
+
             $payload = array(
                 'appType' => $task->account_type,
                 'messageId' => 0,
@@ -477,6 +409,7 @@ trait DeviceAutoTaskTrait
                 'deviceId' => $task->device_code,
                 'appVersion' => '2.4.0',
                 'content' => json_encode([
+                    'publish_platform' => DeviceEnum::PUBLISH_PLATFORM_WX,
                     'material_id' => $publish['id'],
                     'title' => $publish['title'] ?? '',
                     'type' => $publish['attachment_type'] === 1 ? 2 : 1,
@@ -503,13 +436,13 @@ trait DeviceAutoTaskTrait
             $publish->update_time = time();
             $publish->save();
 
-            
+
             AiWechatCircleTaskConfig::where('id', $publish['task_config_id'])->update([
                 'status' => 2,
                 'update_time' => time(),
             ]);
             $scene = AutomationEnum::FRIENDS_CIRCLE_RELEASED;
-            self::requestUrl($payload,$scene, $publish['user_id'],$task->id,  $task->device_code);
+            self::requestUrl($payload, $scene, $publish['user_id'], $task->id,  $task->device_code);
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
@@ -574,7 +507,7 @@ trait DeviceAutoTaskTrait
                     $output->writeln("线索任务不存在:\n" . Db::getLastSql());
                     continue;
                 }
-                if($task->exec_add_count == 0){
+                if ($task->exec_add_count == 0) {
                     $task->exec_add_count = 10;
                     $task->save();
                 }
@@ -703,35 +636,26 @@ trait DeviceAutoTaskTrait
                 //     continue;
                 // }
 
-                $wechat_device_code = SvDevice::where('device_code', $dtask->device_code)->limit(1)->value('wechat_device_code');
-                if(is_null($wechat_device_code) || empty($wechat_device_code)){
-                    SvAddWechatRecord::where('id', $record['id'])->update([
-                        'status' => 0,
-                        'result' => '设备' . $dtask->device_code .' 没有绑定微信',
-                        'update_time' => time(),
-                    ]);
-                    continue;
-                }
 
-                $wechat = AiWechat::where('device_code', $wechat_device_code)->limit(1)->findOrEmpty();
-                if($wechat->isEmpty()){
+                $wechat = SvAccount::where('device_code', $dtask->device_code)->where('type', 1)->limit(1)->findOrEmpty();
+                if ($wechat->isEmpty()) {
                     SvAddWechatRecord::where('id', $record['id'])->update([
                         'status' => 0,
-                        'result' => '设备' . $dtask->device_code .' 没有获取微信信息',
+                        'result' => '设备' . $dtask->device_code . ' 没有获取微信信息',
                         'update_time' => time(),
                     ]);
                     continue;
                 }
                 $addRemark = self::_createGreetingMessage($record, $dtask);
                 self::_sendChannelAddWechatMessage([
-                    'WechatId' => $wechat['wechat_id'],
+                    'WechatId' => $wechat['account'],
                     'DeviceCode' => $wechat['device_code'],
                     'Phones' => $record['reg_wechat'],
                     'message' =>  $addRemark, //ai生成打招呼消息
                 ], $wechat, $record);
 
                 array_push($sendWechatIds, [
-                    // 'wechatId' => $wechat['wechat_id'],
+                    // 'wechatId' => $wechat['account'],
                     // 'deviceCode' => $wechat['device_code'],
                     'friendWechatId' => $record['reg_wechat'],
                     'message' => $addRemark, //ai生成打招呼消息
@@ -777,7 +701,7 @@ trait DeviceAutoTaskTrait
                     'data' => json_encode($data)
                 ]);
             }
-            
+
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
@@ -810,7 +734,7 @@ trait DeviceAutoTaskTrait
                 self::setLog('养号任务不存在：' . Db::getLastSql(), 'active');
                 throw new \Exception('养号任务不存在');
             }
-            
+
             $data = array(
                 'type' => DeviceEnum::getMaintainAccountType($dtask->account_type), // 养号任务启动
                 'appType' => $dtask->account_type,
@@ -949,7 +873,7 @@ trait DeviceAutoTaskTrait
                 self::setLog('评论区评论任务设置不存在：' . Db::getLastSql(), 'comment');
                 throw new \Exception('评论区评论任务设置不存在');
             }
-            
+
             $data = array(
                 'type' => DeviceEnum::TASK_COMMENT_TO_COMMENT, // 评论区评论任务启动
                 'appType' => $dtask->account_type,
@@ -965,8 +889,8 @@ trait DeviceAutoTaskTrait
                     'keyword' => json_decode($setting->industry, true),
                     'hasLiked' => $setting->is_like,
                     'hasFollowed' => $setting->is_follow,
-                    'commentContents' => !empty($setting->content) ? json_decode($setting->content,true) : [],
-                    'filteredKeywords' => !empty($setting->filter) ? json_decode($setting->filter,true) : [],
+                    'commentContents' => !empty($setting->content) ? json_decode($setting->content, true) : [],
+                    'filteredKeywords' => !empty($setting->filter) ? json_decode($setting->filter, true) : [],
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
@@ -979,7 +903,7 @@ trait DeviceAutoTaskTrait
                     'content_publish_day' => $setting->content_publish_day ?? 0,
                     'comment_publish_day' => $setting->comment_publish_day ?? 0,
                     'ip_address' => $setting->ip_address ?? [],
-                    'is_note_like' => $setting->is_like ?? 0,   
+                    'is_note_like' => $setting->is_like ?? 0,
                     'msg' => '评论区评论任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1003,8 +927,8 @@ trait DeviceAutoTaskTrait
             $account->status = DeviceEnum::TASK_STATUS_RUNNING;
             $account->update_time = time();
             $account->save();
-//            $scene = AutomationEnum::SHUT_OFF_COMMENTS;
-//            self::requestUrl($data,$scene, $setting->user_id, $dtask->id,  $dtask->device_code);
+            //            $scene = AutomationEnum::SHUT_OFF_COMMENTS;
+            //            self::requestUrl($data,$scene, $setting->user_id, $dtask->id,  $dtask->device_code);
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
@@ -1023,7 +947,7 @@ trait DeviceAutoTaskTrait
             throw new \Exception($th->getMessage(), $th->getCode());
         }
     }
-    
+
 
 
     // 评论区私信任务
@@ -1046,7 +970,7 @@ trait DeviceAutoTaskTrait
                 self::setLog('评论区私信任务设置不存在：' . Db::getLastSql(), 'msg');
                 throw new \Exception('评论区私信任务设置不存在');
             }
-            
+
             $data = array(
                 'type' => DeviceEnum::TASK_COMMENT_TO_MSG, // 评论区私信任务启动
                 'appType' => $dtask->account_type,
@@ -1062,8 +986,8 @@ trait DeviceAutoTaskTrait
                     'keyword' => json_decode($setting->industry, true),
                     'hasLiked' => $setting->is_like,
                     'hasFollowed' => $setting->is_follow,
-                    'commentContents' => !empty($setting->content) ? json_decode($setting->content,true) : [],
-                    'filteredKeywords' => !empty($setting->filter) ? json_decode($setting->filter,true) : [],
+                    'commentContents' => !empty($setting->content) ? json_decode($setting->content, true) : [],
+                    'filteredKeywords' => !empty($setting->filter) ? json_decode($setting->filter, true) : [],
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
@@ -1071,12 +995,12 @@ trait DeviceAutoTaskTrait
                     'city' => $setting->city ?? '',
                     'is_content_author' => $setting->is_content_author ?? 0,
                     'is_execed_clues' => $setting->is_execed_clues ?? 0,
-                    'is_touch_like' => $setting->is_touch_like ?? 0,
-                    'is_touch_follow' => $setting->is_touch_follow ?? 0,
+                    'is_touch_like' => $setting->is_like ?? 0,
+                    'is_touch_follow' => $setting->is_follow ?? 0,
                     'content_publish_day' => $setting->content_publish_day ?? 0,
                     'comment_publish_day' => $setting->comment_publish_day ?? 0,
                     'ip_address' => $setting->ip_address ?? [],
-                    'is_note_like' => $setting->is_like ?? 0,   
+                    'is_note_like' => $setting->is_like ?? 0,
                     'msg' => '评论区私信任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1102,7 +1026,7 @@ trait DeviceAutoTaskTrait
             $account->save();
 
             $scene = AutomationEnum::SHUT_OFF_OBTAIN;
-            self::requestUrl($data,$scene, $setting->user_id,$dtask->id,  $dtask->device_code);
+            self::requestUrl($data, $scene, $setting->user_id, $dtask->id,  $dtask->device_code);
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 1,
@@ -1121,7 +1045,7 @@ trait DeviceAutoTaskTrait
             throw new \Exception($th->getMessage(), $th->getCode());
         }
     }
-    
+
 
     // 留痕获客任务
     public static function touchCommentToMarkClueTask(SvDeviceTask $dtask, Output $output, callable $callback)
@@ -1136,14 +1060,14 @@ trait DeviceAutoTaskTrait
                 self::setLog('留痕获客任务不存在：' . Db::getLastSql(), 'mark');
                 throw new \Exception('留痕获客任务不存在');
             }
-            
+
             $setting = SvLeadScrapingSetting::where('id', $account->scraping_id)->where('task_type', 3)->findOrEmpty();
             if ($setting->isEmpty()) {
                 $output->writeln(Db::getLastSql());
                 self::setLog('留痕获客任务设置不存在：' . Db::getLastSql(), 'mark');
                 throw new \Exception('留痕获客任务设置不存在');
             }
-            
+
             $data = array(
                 'type' => DeviceEnum::TASK_COMMENT_TO_MARK_CLUE, // 留痕获客任务启动
                 'appType' => $dtask->account_type,
@@ -1159,12 +1083,25 @@ trait DeviceAutoTaskTrait
                     'keyword' => json_decode($setting->industry, true),
                     'hasLiked' => $setting->is_like,
                     'hasFollowed' => $setting->is_follow,
-                    'commentContents' => !empty($setting->content) ? json_decode($setting->content,true) : [],
-                    'filteredKeywords' => !empty($setting->filter) ? json_decode($setting->filter,true) : [],
+                    'commentContents' => !empty($setting->content) ? json_decode($setting->content, true) : [],
+                    'filteredKeywords' => !empty($setting->filter) ? json_decode($setting->filter, true) : [],
                     'commentCount' => $setting->send_num ?? 30,
                     'dmCount' => $setting->send_num ?? 30,
                     'noteViewCount' => $setting->industry_num ?? 5,
-                    'is_note_like' => $setting->is_like ?? 0,
+                    'industry_type' => $setting->industry_type ?? 0,
+                    'city' => $setting->city ?? '',
+                    'is_content_author' => $setting->is_content_author ?? 0,
+                    'is_execed_clues' => $setting->is_execed_clues ?? 0,
+                    'is_touch_like' => $setting->is_touch_like ?? 0,
+                    'is_touch_follow' => $setting->is_touch_follow ?? 0,
+                    'content_publish_day' => $setting->content_publish_day ?? 0,
+                    'comment_publish_day' => $setting->comment_publish_day ?? 0,
+                    'ip_address' => $setting->ip_address ?? [],
+                    'is_touch_like' => in_array(1, $setting->marker_method) ? 1 : 0,
+                    'is_touch_follow' => in_array(2, $setting->marker_method) ? 1 : 0,
+                    'is_note_like' => in_array(3, $setting->marker_method) ? 1 : 0, //点赞作品
+                    'is_note_comment' => in_array(4, $setting->marker_method) ? 1 : 0, //评论作品
+                    'is_note_collect' => in_array(5, $setting->marker_method) ? 1 : 0, //收藏作品
                     'msg' => '留痕获客任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1211,7 +1148,7 @@ trait DeviceAutoTaskTrait
     }
 
 
-        // 接管任务
+    // 接管任务
     public static function rpaTakeoverTask(SvDeviceTask $dtask, Output $output, callable $callback)
     {
         try {
@@ -1233,8 +1170,6 @@ trait DeviceAutoTaskTrait
                     'robot_id' => $account->robot_id,
                 ]);
 
-            // self::sendAppExec($account->device_code, $account->account_type, $output);
-            // usleep(200 * 1000); //200毫秒
 
             $data = array(
                 'type' => DeviceEnum::getTakeOverType($dtask->account_type), // 接管任务启动
@@ -1292,12 +1227,12 @@ trait DeviceAutoTaskTrait
             throw new \Exception($th->getMessage(), $th->getCode());
         }
     }
-    
 
 
 
 
-    private static function _sendChannelAddWechatMessage(array $payload, AiWechat $wechat, array $record)
+
+    private static function _sendChannelAddWechatMessage(array $payload, SvAccount $wechat, array $record)
     {
         try {
             //进程通信
@@ -1333,14 +1268,14 @@ trait DeviceAutoTaskTrait
 
             AiWechatLog::create([
                 'user_id' => $wechat->user_id,
-                'wechat_id' => $wechat->wechat_id,
+                'wechat_id' => $wechat->account,
                 'log_type' => 0,
                 'friend_id' => $payload['Phones'],
                 'create_time' => time()
             ]);
             SvAddWechatRecord::where('id', $record['id'])->update([
-                'wechat_no' => $wechat->wechat_id,
-                'wechat_name' => $wechat->wechat_nickname,
+                'wechat_no' => $wechat->account,
+                'wechat_name' => $wechat->nickname,
                 'status' => 2,
                 'result' => '执行中',
                 'update_time' => time(),
@@ -1348,15 +1283,15 @@ trait DeviceAutoTaskTrait
 
             $scene = AutomationEnum::WECHAT_ADD_FRIEND;
             self::requestUrl([
-                'wechat_no' => $wechat->wechat_id,
-                'wechat_name' => $wechat->wechat_nickname,
+                'wechat_no' => $wechat->account,
+                'wechat_name' => $wechat->nickname,
                 'remark' => $request['Message'],
                 'exec_task_id' => $request['TaskId'],
                 'exec_time' => date('Y-m-d H:i:s', time()),
                 'status' => 2,
                 'result' => '执行中',
                 'update_time' => time(),
-            ],$scene, $wechat->user_id,$request['TaskId'],$payload['DeviceCode']);
+            ], $scene, $wechat->user_id, $request['TaskId'], $payload['DeviceCode']);
 
             $completed_add_count = SvCrawlingTask::where('id', $record['crawling_task_id'])->value('completed_add_count');
             SvCrawlingTask::where('id', $record['crawling_task_id'])->update([
@@ -1413,7 +1348,7 @@ trait DeviceAutoTaskTrait
                 ]);
                 $scene = AutomationEnum::SOCIAL_MEDIA_RELEASED;
                 $request = $detail->toArray();
-                self::requestUrl($request,$scene,$detail['user_id'],$detail['task_id'],$detail['device_code']);
+                self::requestUrl($request, $scene, $detail['user_id'], $detail['task_id'], $detail['device_code']);
 
                 self::setLog('发布账号数据更新成功:' . $publish['publish_account_id'], 'publish');
             } else {
@@ -1449,7 +1384,7 @@ trait DeviceAutoTaskTrait
             throw new \Exception($th->getMessage(), $th->getCode());
         }
     }
-    
+
     private static function redis(): Redis
     {
         self::$redisInstance = new Redis([
@@ -1492,12 +1427,12 @@ trait DeviceAutoTaskTrait
      * @return array
      * @throws \Exception
      */
-    private static function requestUrl(array $request, string $scene, int $userId,  $taskId,$device_code)
+    private static function requestUrl(array $request, string $scene, int $userId,  $taskId, $device_code)
     {
         $autoType = SvDevice::where('device_code', $device_code)->value('auto_type') ?? 0;
 
-        self::setLog('自动化扣费' . $scene.'----设备号--'.$device_code.'----任务id--'.$taskId);
-        if ($autoType == 0){
+        self::setLog('自动化扣费' . $scene . '----设备号--' . $device_code . '----任务id--' . $taskId);
+        if ($autoType == 0) {
             return [];
         }
         $requestService = \app\common\service\ToolsService::Automation();
@@ -1525,7 +1460,7 @@ trait DeviceAutoTaskTrait
         $request['task_id'] = $taskId;
         $request['user_id'] = $userId;
         $request['now'] = time();
-        $extra = [ '算力单价' => $unit, '实际消耗算力' => $unit];
+        $extra = ['算力单价' => $unit, '实际消耗算力' => $unit];
         switch ($scene) {
             // 自动化功能处理
             case AutomationEnum::SOCIAL_MEDIA_RELEASED:
@@ -1540,11 +1475,11 @@ trait DeviceAutoTaskTrait
             case AutomationEnum::SHUT_OFF_PRIVATE_LETTER:
                 $response = $requestService->shutOffPrivateLetter($request);
                 break;
-           
+
             case AutomationEnum::FRIENDS_CIRCLE_RELEASED:
                 $response = $requestService->friendsCircleReleased($request);
                 break;
-       
+
             case AutomationEnum::WECHAT_ADD_FRIEND:
                 $response = $requestService->wechatAddFriend($request);
                 break;
@@ -1552,11 +1487,11 @@ trait DeviceAutoTaskTrait
                 $response = $requestService->socialMediaObtain($request);
                 break;
             case AutomationEnum::SOCIAL_MEDIA_NURSING:
-                   $points = $request['time_difference_minutes'] * $unit;
-                   $extra = [ '执行时长（分钟）' => $request['time_difference_minutes'],'算力单价' => $unit, '实际消耗算力' => $points];
+                $points = $request['time_difference_minutes'] * $unit;
+                $extra = ['执行时长（分钟）' => $request['time_difference_minutes'], '算力单价' => $unit, '实际消耗算力' => $points];
                 $response = $requestService->socialMediaNursing($request);
                 break;
-        
+
             default:
         }
 

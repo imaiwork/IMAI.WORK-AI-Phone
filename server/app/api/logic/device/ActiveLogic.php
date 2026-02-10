@@ -74,6 +74,7 @@ class ActiveLogic extends ApiLogic
                         'source' => DeviceEnum::TASK_SOURCE_ACTIVE,//sv_device_active_account
                         'create_time' => time(),
                     ]);
+                    TaskLogic::updateWechatRpaTaskTime($account['device_code'], $time['start_time']);
                 }
             }
             //print_r($allTaskInstall);die;

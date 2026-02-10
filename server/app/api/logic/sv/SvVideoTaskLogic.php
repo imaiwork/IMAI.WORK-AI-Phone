@@ -1084,6 +1084,15 @@ class SvVideoTaskLogic extends SvBaseLogic
                 if (in_array($item->model_version,[4,6])) { //高级版
                    //这里对应 status=3 或 status=4） 3成功 4失败
                     if (in_array($data['status'], [3,4])) {
+                        if ($data['status'] == 3){
+                            $duration = $data['duration'] ?? 0;
+                            if ($duration == 0){
+                                $item->duration = 0;
+                            }else{
+                                $item->duration = $duration / 1000;
+                            }
+
+                        }
                         $item->status = ($data['status'] == 3) ? 6 : 5;
                         $scene = $item->model_version == 4 ? "human_video_ym" : "human_video_ymt";
                     } else {
@@ -1103,6 +1112,7 @@ class SvVideoTaskLogic extends SvBaseLogic
                     if ($status == 30){
                         $item->video_result_url   = FileService::downloadFileBySource($data['video_url'], 'video');
                         $item->audio_url   = FileService::downloadFileBySource($data['audio_urls'][0], 'audio');
+                        $item->duration   = $data['duration'] ?? 0;
                     }
                     $item->remark       = $data['msg'] ?? '';
                 }

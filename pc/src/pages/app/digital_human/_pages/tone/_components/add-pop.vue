@@ -19,7 +19,7 @@
                     <path d="M14 8V12" stroke="white" stroke-width="1.2" />
                     <path d="M10 6V14" stroke="white" stroke-width="1.2" />
                 </svg>
-                <span class="font-bold text-[20px]">上传本地音频</span>
+                <span class="font-medium text-[20px]">上传本地音频</span>
             </div>
             <div class="flex items-center gap-x-1 rounded-full p-1 mt-5 w-fit">
                 <Icon name="local-icon-tips2" :size="16"></Icon>

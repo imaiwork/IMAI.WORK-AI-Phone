@@ -8,7 +8,7 @@
                     <div class="text-[20px] font-[900] text-[#1E293B] mb-1">
                         {{ ToolEnumMap[ToolEnum.DEVICE] }}管理中枢
                     </div>
-                    <div class="text-base font-bold text-[#64748B]">
+                    <div class="text-base font-medium text-[#64748B]">
                         一键绑定跨平台设备，激活智能流程引擎。在这里您可以监控设备实时状态并同步各个平台的账号信息。
                     </div>
                 </div>
@@ -36,7 +36,7 @@
                         @click="getLists()"
                         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#F1F5F9] transition-all text-[#64748B] hover:text-primary">
                         <Icon name="el-icon-Refresh" :size="16" />
-                        <span class="text-[13px] font-bold">同步状态</span>
+                        <span class="text-[13px] font-medium">同步状态</span>
                     </button>
                 </div>
             </div>
@@ -72,7 +72,7 @@
 
                     <ElTableColumn prop="device_model" label="型号/系统" width="160">
                         <template #default="{ row }">
-                            <div class="text-[13px] font-bold text-[#475569]">{{ row.device_model }}</div>
+                            <div class="text-[13px] font-medium text-[#475569]">{{ row.device_model }}</div>
                             <div class="text-[11px] text-[#94A3B8]">SDK: {{ row.sdk_version }}</div>
                         </template>
                     </ElTableColumn>
@@ -101,7 +101,7 @@
 
                     <ElTableColumn prop="create_time" label="绑定周期" width="180">
                         <template #default="{ row }">
-                            <span class="text-[13px] font-bold text-[#64748B]">{{ row.create_time }}</span>
+                            <span class="text-[13px] font-medium text-[#64748B]">{{ row.create_time }}</span>
                         </template>
                     </ElTableColumn>
 
@@ -155,7 +155,7 @@
             </div>
 
             <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
-                <span class="text-[12px] font-bold text-[#94A3B8]"
+                <span class="text-[12px] font-medium text-[#94A3B8]"
                     >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条设备数据</span
                 >
                 <pagination v-model="pager" @change="getLists"></pagination>

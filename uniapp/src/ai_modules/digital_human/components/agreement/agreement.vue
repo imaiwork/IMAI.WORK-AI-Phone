@@ -2,7 +2,7 @@
     <u-mask :show="show">
         <view class="h-full flex flex-col justify-center items-center">
             <view class="flex flex-col gap-2 rounded-lg h-[70vh] bg-white w-[80%]">
-                <view class="text-xl font-bold text-center pt-4"> 克隆协议 </view>
+                <view class="text-xl font-medium text-center pt-4"> 克隆协议 </view>
                 <view class="grow min-h-0">
                     <scroll-view scroll-y class="h-full">
                         <view class="px-4 text-xs whitespace-pre-wrap">
@@ -12,13 +12,13 @@
                 </view>
                 <view class="h-[100rpx] flex items-center flex-shrink-0 bg-white" style="border-top: 1px solid #f0f0f0">
                     <view
-                        class="flex-1 text-center h-full flex items-center justify-center font-bold"
+                        class="flex-1 text-center h-full flex items-center justify-center font-medium"
                         @click="closeAgreement()">
                         关闭
                     </view>
                     <view class="w-[2rpx] h-full bg-[#f0f0f0]"> </view>
                     <view
-                        class="flex-1 text-center h-full flex items-center justify-center text-[#0065FB] font-bold"
+                        class="flex-1 text-center h-full flex items-center justify-center text-[#0065FB] font-medium"
                         @click="agreeClone()">
                         同意并使用
                     </view>

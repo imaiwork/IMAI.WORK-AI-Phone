@@ -14,7 +14,7 @@
                 <view class="h-full flex flex-col items-center pt-[15%] px-4">
                     <view class="rounded-[48rpx] bg-primary w-full">
                         <view class="px-[48rpx] pt-[60rpx] pb-[150rpx]">
-                            <view class="text-white font-bold">登录后，体验更多 AI功能</view>
+                            <view class="text-white font-medium">登录后，体验更多 AI功能</view>
                             <view class="text-white text-[26rpx] opacity-50 mt-2">
                                 专为企业打造的下一代 AI 工具，助你抢占先机。
                             </view>
@@ -23,7 +23,7 @@
                     <view
                         class="-mt-[100rpx] rounded-[48rpx] bg-white w-full px-4 py-[60rpx]"
                         style="box-shadow: 0px 0px 6px 4px rgba(0, 0, 0, 0.1)">
-                        <view class="text-[30rpx] font-bold"> {{ isCodeLogin ? "验证码登录" : "手机号登录" }} </view>
+                        <view class="text-[30rpx] font-medium"> {{ isCodeLogin ? "验证码登录" : "手机号登录" }} </view>
                         <view class="mt-[60rpx]">
                             <view
                                 class="account-ipt form-ipt"

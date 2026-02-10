@@ -22,7 +22,7 @@
                 </div>
                 <div class="flex items-center gap-x-2 mt-4">
                     <Icon name="local-icon-success_fill" color="var(--color-primary)" :size="18"></Icon>
-                    <span class="text-lg text-white font-bold">视频要求（{{ getModelName }}）</span>
+                    <span class="text-lg text-white font-medium">视频要求（{{ getModelName }}）</span>
                 </div>
                 <div class="mt-[15px]">
                     <div class="flex gap-4">
@@ -40,7 +40,7 @@
                     <div class="mt-2">
                         <div class="flex items-center gap-x-2 mt-4">
                             <Icon name="local-icon-error_fill" color="#ffffff" :size="18"></Icon>
-                            <span class="text-lg text-white font-bold">错误示例</span>
+                            <span class="text-lg text-white font-medium">错误示例</span>
                         </div>
                         <img src="../../../_assets/images/video_upload_error_temp.png" class="mt-[15px]" />
                     </div>
@@ -80,7 +80,7 @@
                                 }"
                                 @click="changeModel(item.id)">
                                 <img :src="item.icon" class="w-5 h-5" />
-                                <div class="text-white font-bold">
+                                <div class="text-white font-medium">
                                     {{ item.name }}
                                 </div>
                             </div>

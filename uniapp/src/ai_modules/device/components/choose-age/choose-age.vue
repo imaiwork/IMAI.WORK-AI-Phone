@@ -11,17 +11,17 @@
             :style="{ paddingBottom: dynamicHeight > 0 ? dynamicHeight + 'px' : 'env(safe-area-inset-bottom)' }">
             <view class="flex items-center justify-between mb-6">
                 <view class="text-[#0000004d]" @click="close">取消</view>
-                <view class="font-bold text-[32rpx]">选择用户年龄</view>
-                <view class="text-primary font-bold" @click="handleAgeConfirm">确定</view>
+                <view class="font-medium text-[32rpx]">选择用户年龄</view>
+                <view class="text-primary font-medium" @click="handleAgeConfirm">确定</view>
             </view>
 
             <view class="mb-6">
-                <view class="text-sm font-bold mb-3 text-gray-500">常用年龄段</view>
+                <view class="text-sm font-medium mb-3 text-gray-500">常用年龄段</view>
                 <view class="flex flex-wrap gap-3">
                     <view
                         v-for="(item, index) in agePresets"
                         :key="index"
-                        class="px-4 py-2 rounded-full text-xs font-bold border transition-all"
+                        class="px-4 py-2 rounded-full text-xs font-medium border transition-all"
                         :class="
                             isAgeSelected(item)
                                 ? 'bg-[#EBF5FF] text-primary border-primary'
@@ -34,7 +34,7 @@
             </view>
 
             <view class="mb-4" :class="{ 'mb-0': dynamicHeight > 0 }">
-                <view class="text-sm font-bold mb-3 text-gray-500">自定义范围</view>
+                <view class="text-sm font-medium mb-3 text-gray-500">自定义范围</view>
                 <view class="flex items-center gap-3">
                     <view class="flex-1 bg-[#F6F7F9] rounded-[12rpx] h-[80rpx] flex items-center px-3">
                         <u-input
@@ -45,7 +45,7 @@
                             placeholder-style="font-size: 26rpx"
                             :adjust-position="false" />
                     </view>
-                    <view class="text-gray-400 font-bold">-</view>
+                    <view class="text-gray-400 font-medium">-</view>
                     <view class="flex-1 bg-[#F6F7F9] rounded-[12rpx] h-[80rpx] flex items-center px-3">
                         <u-input
                             v-model="tempAgeMax"
@@ -55,7 +55,7 @@
                             placeholder-style="font-size: 26rpx"
                             :adjust-position="false" />
                     </view>
-                    <view class="text-sm font-bold text-gray-600">岁</view>
+                    <view class="text-sm font-medium text-gray-600">岁</view>
                 </view>
             </view>
 

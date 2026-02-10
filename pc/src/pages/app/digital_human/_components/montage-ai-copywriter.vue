@@ -92,7 +92,7 @@
                         class="w-full h-12 bg-primary rounded-xl text-white font-[1000] shadow-light shadow-[#0065fb]/20 hover:shadow-[#0065fb]/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-30 transition-all flex items-center justify-center gap-2"
                         @click="handleGenerate">
                         {{ isGenerating ? "生成中..." : "开始生成" }}
-                        <span class="text-[10px] opacity-60 font-bold">(消耗{{ getToken }}算力)</span>
+                        <span class="text-[10px] opacity-60 font-medium">(消耗{{ getToken }}算力)</span>
                     </button>
                 </div>
             </div>
@@ -125,7 +125,7 @@
                             class="w-20 h-20 mb-4 bg-slate-100 rounded-3xl flex items-center justify-center text-slate-200">
                             <Icon name="el-icon-ChatDotSquare" :size="40" />
                         </div>
-                        <p class="text-xs font-bold tracking-widest uppercase">在左侧输入主题并点击生成</p>
+                        <p class="text-xs font-medium tracking-widest uppercase">在左侧输入主题并点击生成</p>
                     </div>
 
                     <div class="space-y-4">
@@ -165,14 +165,14 @@
                                         <ElDivider class="!my-1" />
                                         <textarea
                                             v-model="item.content"
-                                            class="w-full text-xs font-bold text-slate-500 border-none focus:ring-0 p-0 leading-relaxed bg-[transparent]"
+                                            class="w-full text-xs font-medium text-slate-500 border-none focus:ring-0 p-0 leading-relaxed bg-[transparent]"
                                             rows="5" />
                                     </template>
                                     <template v-else>
                                         <div v-for="(val, valIndex) in item.content" :key="valIndex" class="mb-2">
                                             <input
                                                 v-model="item.content[valIndex]"
-                                                class="w-full text-xs font-bold text-slate-600 bg-slate-50 p-3 rounded-xl border-none focus:bg-white focus:ring-2 focus:ring-[#0065fb]/10 transition-all" />
+                                                class="w-full text-xs font-medium text-slate-600 bg-slate-50 p-3 rounded-xl border-none focus:bg-white focus:ring-2 focus:ring-[#0065fb]/10 transition-all" />
                                         </div>
                                     </template>
                                 </div>

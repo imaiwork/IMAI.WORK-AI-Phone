@@ -8,7 +8,7 @@
                     <span class="text-tx-regular group-hover:text-primary leading-[0]">
                         <Icon name="el-icon-ArrowLeft"></Icon>
                     </span>
-                    <span class="text-slate-600 font-bold text-[14px] group-hover:text-primary">返回计划列表</span>
+                    <span class="text-slate-600 font-medium text-[14px] group-hover:text-primary">返回计划列表</span>
                 </div>
                 <div class="w-[1px] h-6 bg-slate-100 mx-2"></div>
                 <div class="text-[18px] font-black text-slate-800">推送日志</div>
@@ -34,7 +34,7 @@
                     <template #default="{ row }">
                         <div class="flex flex-col">
                             <span class="font-black text-slate-800 text-[14px]">{{ row.nickname }}</span>
-                            <span class="text-[11px] text-slate-400 font-bold uppercase tracking-tighter"
+                            <span class="text-[11px] text-slate-400 font-medium uppercase tracking-tighter"
                                 >ID: {{ row.friend_id }}</span
                             >
                         </div>
@@ -43,7 +43,7 @@
 
                 <ElTableColumn label="计划推送点" width="200">
                     <template #default="{ row }">
-                        <div class="flex items-center gap-1 text-slate-500 font-bold text-[13px]">
+                        <div class="flex items-center gap-1 text-slate-500 font-medium text-[13px]">
                             <Icon name="el-icon-Timer" :size="14" color="var(--slate-300)"></Icon>
                             {{ row.push_time || "-" }}
                         </div>
@@ -77,7 +77,7 @@
                         <ElButton
                             type="danger"
                             link
-                            class="!font-bold hover:!text-red-600"
+                            class="!font-medium hover:!text-red-600"
                             @click="handleDelete(row.id)">
                             删除
                         </ElButton>
@@ -96,7 +96,7 @@
             </ElTable>
         </div>
         <div class="flex justify-between items-center px-8 py-5 bg-slate-50">
-            <div class="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">共 {{ pager.count }} 条记录</div>
+            <div class="text-xs font-medium text-[#94A3B8] uppercase tracking-wider">共 {{ pager.count }} 条记录</div>
             <pagination v-model="pager" @change="getLists"></pagination>
         </div>
     </div>

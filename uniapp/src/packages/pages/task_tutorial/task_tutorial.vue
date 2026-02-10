@@ -3,7 +3,7 @@
         <view class="mb-8 px-2">
             <view class="flex items-center gap-2">
                 <view class="w-2 h-6 bg-primary rounded-full"></view>
-                <text class="text-[44rpx] font-bold text-[#1A202C]">矩阵工作台</text>
+                <text class="text-[44rpx] font-medium text-[#1A202C]">矩阵工作台</text>
             </view>
             <text class="text-[24rpx] text-[#A0AEC0] mt-2 block">Matrix Marketing Workspace</text>
         </view>
@@ -29,7 +29,7 @@
                     </view>
 
                     <view>
-                        <text class="text-[32rpx] font-bold text-[#2D3748]">{{ item.title }}</text>
+                        <text class="text-[32rpx] font-medium text-[#2D3748]">{{ item.title }}</text>
                         <view class="flex items-center mt-1">
                             <text
                                 class="text-[20rpx] uppercase tracking-wider font-medium"

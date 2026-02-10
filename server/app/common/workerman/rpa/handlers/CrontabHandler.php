@@ -62,17 +62,7 @@ class CrontabHandler extends BaseMessageHandler
                 ->select()->toArray();
 
             if (count($publishes) > 0) {
-                //判断当前rpa是否在操作小红书
-                // $app = SvDeviceRpa::where('device_code', $this->connection->deviceid)
-                //     ->where('app_type', 3)
-                //     ->where('status', 1)
-                //     ->findOrEmpty();
-                // if ($app->isEmpty()) {
-                //     //将执行app直接改为小红书
-
-                // }
-                // $this->sendAppExec($this->connection->deviceid, 3);
-                // sleep(30);
+                
                 $this->service->getRedis()->set("xhs:device:" . $this->connection->deviceid . ":taskStatus", json_encode([
                     'taskStatus' => 'running',
                     'taskType' => 'setCrontab',
@@ -128,46 +118,7 @@ class CrontabHandler extends BaseMessageHandler
             $this->setLog('runing' . $e, 'error');
         }
     }
-
-    private function sendAppExec($deviceid, $appType)
-    {
-        try {
-            $app = SvDeviceRpa::where('device_code', $deviceid)->where('app_type', $appType)->findOrEmpty();
-            if ($app->isEmpty()) {
-                throw new \Exception('当前设备未绑定app:' . Db::getLastSql());
-            }
-            $payload = [
-                "messageId" => 2,
-                "type" => 90, //执行那个app指令
-                "appType" => $appType,
-                "content" => json_encode([
-                    "deviceId" => $deviceid,
-                    "appType" => $appType,
-                    'msg' => '小红书',
-                    'task_id' => $app->id
-                ], JSON_UNESCAPED_UNICODE),
-                'reply' => [
-                    "deviceId" => $deviceid,
-                    "appType" => $appType,
-                    'msg' => '小红书',
-                    'task_id' => $app->id
-                ],
-                "deviceId" => $deviceid,
-                "appVersion" => WorkerEnum::APP_VERSION,
-            ];
-
-            $this->sendResponse($this->connection->uid, $payload, $payload['reply']);
-
-            SvDeviceRpa::where('device_code', $deviceid)->where('app_type', '<>', $appType)->update(['status' => 0, 'update_time' => time()]);
-            SvDeviceRpa::where('device_code', $deviceid)->where('app_type', $appType)->update([
-                'status' => 1,
-                'update_time' => time(),
-                'start_time' => date('Y-m-d H:i:s', time()),
-            ]);
-        } catch (\Throwable $e) {
-            $this->setLog('sendAppExec' . $e, 'error');
-        }
-    }
+    
 
 
     private function _setPublishStatus($publish)

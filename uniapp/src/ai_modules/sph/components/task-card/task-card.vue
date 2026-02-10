@@ -2,7 +2,7 @@
     <view class="w-full h-full bg-white rounded-[40rpx]" @click="emit('detail', item.id)">
         <view
             class="h-[100rpx] px-[32rpx] flex justify-between items-center gap-x-2 border-solid border-[0] border-b-[1rpx] border-[#0000000d]">
-            <view class="flex-1 font-bold text-lg flex items-center gap-x-2" @click.stop="emit('edit', item)">
+            <view class="flex-1 font-medium text-lg flex items-center gap-x-2" @click.stop="emit('edit', item)">
                 <text class="line-clamp-2">{{ item.name }}</text>
                 <u-icon name="edit-pen" size="24" color="#00000080"></u-icon>
             </view>

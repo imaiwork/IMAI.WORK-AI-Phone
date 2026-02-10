@@ -7,7 +7,7 @@
                     <view class="w-2 h-2 bg-[#FF4D4F] rounded-full animate-pulse shadow-[0_0_8rpx_#FF4D4F]"></view>
                     <text class="text-[30rpx] font-black text-[#1E293B]">正在聆听...</text>
                 </view>
-                <text class="text-primary font-bold text-[28rpx]" @click="confirm">完成</text>
+                <text class="text-primary font-medium text-[28rpx]" @click="confirm">完成</text>
             </view>
 
             <view class="grow flex flex-col items-center justify-center mt-4">

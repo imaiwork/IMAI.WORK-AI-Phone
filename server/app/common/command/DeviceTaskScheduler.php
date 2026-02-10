@@ -186,9 +186,14 @@ class DeviceTaskScheduler extends Command
         foreach ($timeoutTasks as $task) {
             try {
                 // 更新任务状态为执行失败（超时未执行）
+                if ($task->task_type == DeviceEnum::TASK_TYPE_WECHAT_RPA) {
+                    $task->status = 2;
+                    $task->remark = '任务执行完成';
+                } else {
+                    $task->status = 3;
+                    $task->remark = '任务超时未执行';
+                }
 
-                $task->status = 3;
-                $task->remark = '任务超时未执行';
                 $task->update_time = $currentTime;
                 $task->save();
                 if ($this->isDev) {
@@ -239,6 +244,9 @@ class DeviceTaskScheduler extends Command
                     break;
                 case DeviceEnum::TASK_TYPE_CLUES_WECHAT: // 获客加微任务
                     $this->executeCluesWechatTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_WECHAT_RPA: // 微账号RPA任务
+                    $this->executeWechatRPATask($task, $output);
                     break;
                 default:
                     throw new \Exception("未知的任务类型: {$task->task_type}");
@@ -294,6 +302,9 @@ class DeviceTaskScheduler extends Command
                 case DeviceEnum::TASK_TYPE_CLUES_WECHAT:
                     $this->executeCluesWechatCompletedTask($task, $output);
                     break;
+                case DeviceEnum::TASK_TYPE_WECHAT_RPA: // 微账号RPA任务
+                    $this->executeWechatRPACompletedTask($task, $output);
+                    break;
                 default:
                     throw new \Exception("未知的任务类型: {$task->task_type}");
             }
@@ -310,6 +321,61 @@ class DeviceTaskScheduler extends Command
             }
 
             throw $e; // 重新抛出异常，让上层捕获
+        }
+    }
+
+    protected function executeWechatRPATask(SvDeviceTask $task, Output $output)
+    {
+        if ($this->isDev) {
+            $output->writeln("执行微账号RPA任务 - 设备: {$task->device_code}");
+        }
+
+        // TODO: 实现具体的加微逻辑
+        self::wechatRPATask($task, $output, function ($result) use ($task) {
+            $task->status = $result['status'];
+            $task->remark = $result['remark'];
+            $task->update_time = time();
+            $task->save();
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvWechatStrategy::where('id', $task->sub_task_id)->findOrEmpty()->task_name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        });
+        $this->setTaskLog("微账号RPA任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
+
+    protected function executeWechatRPACompletedTask(SvDeviceTask $task, Output $output)
+    {
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行微账号RPA任务完成 - 设备: {$task->device_code}");
+            }
+            $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+            $task->remark = '微账号RPA任务完成';
+            $task->update_time = time();
+            $task->save();
+
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+
+            $this->setTaskLog("微账号RPA任务完成: ID={$task->id}, 设备={$task->device_code}");
+
+            \app\common\model\sv\SvWechatStrategy::where('id', $task->sub_task_id)->update([
+                'status' => 2,
+                'update_time' => time(),
+            ]);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvWechatStrategy::where('id', $task->sub_task_id)->findOrEmpty()->task_name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
         }
     }
 
@@ -360,7 +426,7 @@ class DeviceTaskScheduler extends Command
                 'status' => $task->status,
                 'autoType' => $task->auto_type,
             ]);
-        } 
+        }
         // else {
         //     if ($this->isDev) {
         //         $output->writeln("执行加微任务 - 设备: {$task->device_code}");
@@ -390,45 +456,24 @@ class DeviceTaskScheduler extends Command
 
         // TODO: 实现具体的发布逻辑
         // 例如：调用设备服务发布内容
-        if ($task->account_type == DeviceEnum::ACCOUNT_TYPE_SPH) {
-            self::sphPublishTask($task, $output, function ($result) use ($task) {
-                if ($result['status'] !== -1) {
-                    $task->status = $result['status'];
-                    $task->remark = $result['remark'];
-                    $task->sub_data_id = $result['publish_id'] ?? 0;
-                    $task->update_time = time();
-                    $task->save();
-                    $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
-                    ApiLogic::sendNotice([
-                        'userId' => $task->user_id,
-                        'startTime' => $task->start_time_str,
-                        'endTime' => $task->end_time_str,
-                        'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
-                        'status' => $task->status,
-                        'autoType' => $task->auto_type,
-                    ]);
-                }
-            });
-        } else {
-            self::rpaPublishTask($task, $output, function ($result) use ($task) {
-                if ($result['status'] !== -1) {
-                    $task->status = $result['status'];
-                    $task->remark = $result['remark'];
-                    $task->sub_data_id = $result['publish_id'] ?? 0;
-                    $task->update_time = time();
-                    $task->save();
-                    $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
-                    ApiLogic::sendNotice([
-                        'userId' => $task->user_id,
-                        'startTime' => $task->start_time_str,
-                        'endTime' => $task->end_time_str,
-                        'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
-                        'status' => $task->status,
-                        'autoType' => $task->auto_type,
-                    ]);
-                }
-            });
-        }
+        self::rpaPublishTask($task, $output, function ($result) use ($task) {
+            if ($result['status'] !== -1) {
+                $task->status = $result['status'];
+                $task->remark = $result['remark'];
+                $task->sub_data_id = $result['publish_id'] ?? 0;
+                $task->update_time = time();
+                $task->save();
+                $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+                ApiLogic::sendNotice([
+                    'userId' => $task->user_id,
+                    'startTime' => $task->start_time_str,
+                    'endTime' => $task->end_time_str,
+                    'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                    'status' => $task->status,
+                    'autoType' => $task->auto_type,
+                ]);
+            }
+        });
         // 模拟任务执行
         $this->setTaskLog("发布任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
@@ -447,6 +492,19 @@ class DeviceTaskScheduler extends Command
             $task->remark = '发布任务完成';
             $task->update_time = time();
             $task->save();
+
+            $publish =  \app\common\model\sv\SvPublishSettingDetail::where('id', $task->sub_data_id)->where('status', 3)->findOrEmpty();
+            if (!$publish->isEmpty()) {
+                $publish->status = 2;
+                $publish->remark = '发布失败';
+                $publish->update_time = time();
+                $publish->save();
+
+                $task->status = DeviceEnum::TASK_STATUS_FAILED;
+                $task->remark = '发布失败';
+                $task->update_time = time();
+                $task->save();
+            }
 
             $find = SvDeviceTask::where('sub_task_id', $task->sub_task_id)
                 ->where('id', '<>', $task->id)
@@ -485,45 +543,24 @@ class DeviceTaskScheduler extends Command
 
             // TODO: 实现具体的发布逻辑
             // 例如：调用设备服务发布内容
-            if ($task->account_type == DeviceEnum::ACCOUNT_TYPE_SPH) {
-                self::sphPublishTask($task, $output, function ($result) use ($task) {
-                    if ($result['status'] !== -1) {
-                        $task->status = $result['status'];
-                        $task->remark = $result['remark'];
-                        $task->sub_data_id = $result['publish_id'] ?? 0;
-                        $task->update_time = time();
-                        $task->save();
-                        $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
-                        ApiLogic::sendNotice([
-                            'userId' => $task->user_id,
-                            'startTime' => $task->start_time_str,
-                            'endTime' => $task->end_time_str,
-                            'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
-                            'status' => $task->status,
-                            'autoType' => $task->auto_type,
-                        ]);
-                    }
-                });
-            } else {
-                self::rpaPublishTask($task, $output, function ($result) use ($task) {
-                    if ($result['status'] !== -1) {
-                        $task->status = $result['status'];
-                        $task->remark = $result['remark'];
-                        $task->sub_data_id = $result['publish_id'] ?? 0;
-                        $task->update_time = time();
-                        $task->save();
-                        $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
-                        ApiLogic::sendNotice([
-                            'userId' => $task->user_id,
-                            'startTime' => $task->start_time_str,
-                            'endTime' => $task->end_time_str,
-                            'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
-                            'status' => $task->status,
-                            'autoType' => $task->auto_type,
-                        ]);
-                    }
-                });
-            }
+            self::rpaPublishTask($task, $output, function ($result) use ($task) {
+                if ($result['status'] !== -1) {
+                    $task->status = $result['status'];
+                    $task->remark = $result['remark'];
+                    $task->sub_data_id = $result['publish_id'] ?? 0;
+                    $task->update_time = time();
+                    $task->save();
+                    $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+                    ApiLogic::sendNotice([
+                        'userId' => $task->user_id,
+                        'startTime' => $task->start_time_str,
+                        'endTime' => $task->end_time_str,
+                        'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                        'status' => $task->status,
+                        'autoType' => $task->auto_type,
+                    ]);
+                }
+            });
             // 模拟任务执行
             $this->setTaskLog("发布任务执行中: ID={$task->id}, 设备={$task->device_code}");
         }
@@ -812,7 +849,7 @@ class DeviceTaskScheduler extends Command
                 'status' => $task->status,
                 'autoType' => $task->auto_type,
             ]);
-        } 
+        }
         // else {
         //     if ($this->isDev) {
         //         $output->writeln("执行加微任务 - 设备: {$task->device_code}");

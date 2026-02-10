@@ -22,7 +22,7 @@
             </view>
             <view class="px-[36rpx] pt-5">
                 <view class="flex justify-between items-center gap-x-2">
-                    <view class="font-bold"> {{ currentPlatformItem?.name }}账号 </view>
+                    <view class="font-medium"> {{ currentPlatformItem?.name }}账号 </view>
                     <view
                         v-if="currentPlatformAccount.account"
                         class="flex items-center gap-x-1"
@@ -37,25 +37,25 @@
                             :src="currentPlatformAccount.avatar"
                             class="w-[140rpx] h-[140rpx] rounded-full flex-shrink-0"></image>
                         <view class="flex-1">
-                            <view class="font-bold text-[30rpx]">{{ currentPlatformAccount.nickname }}</view>
+                            <view class="font-medium text-[30rpx]">{{ currentPlatformAccount.nickname }}</view>
                             <view class="text-xs text-[#0000004d] mt-[4rpx]"
                                 >({{ currentPlatformAccount.account }})</view
                             >
                             <view class="flex items-center justify-between mt-[28rpx] w-[70%]">
                                 <view class="flex flex-col text-center">
-                                    <view class="text-[32rpx] font-bold">{{
+                                    <view class="text-[32rpx] font-medium">{{
                                         formatNumberToWanOrYi(currentPlatformAccount.followers || 0)
                                     }}</view>
                                     <view class="text-xs text-[#0000004d] mt-1">关注</view>
                                 </view>
                                 <view class="flex flex-col text-center">
-                                    <view class="text-[32rpx] font-bold">{{
+                                    <view class="text-[32rpx] font-medium">{{
                                         formatNumberToWanOrYi(currentPlatformAccount.fans || 0)
                                     }}</view>
                                     <view class="text-xs text-[#0000004d] mt-1">粉丝</view>
                                 </view>
                                 <view class="flex flex-col text-center">
-                                    <view class="text-[32rpx] font-bold">{{
+                                    <view class="text-[32rpx] font-medium">{{
                                         formatNumberToWanOrYi(currentPlatformAccount.thumbup_collect || 0)
                                     }}</view>
                                     <view class="text-xs text-[#0000004d] mt-1">点赞</view>
@@ -63,34 +63,30 @@
                             </view>
                         </view>
                     </view>
-                    <template v-if="currentPlatform != AppTypeEnum.WECHAT">
-                        <view
-                            class="flex items-center justify-between gap-2 h-[80rpx] border-[0] border-b border-t border-solid border-[#00000008]">
-                            <view class="font-bold flex-shrink-0">私信开关</view>
-                            <view class="">
-                                <u-switch
-                                    v-model="currentPlatformAccount.open_ai"
-                                    :active-value="1"
-                                    :inactive-value="0"
-                                    :size="32"
-                                    @change="handleOpenAiChange"></u-switch>
+                    <view
+                        class="flex items-center justify-between gap-2 h-[80rpx] border-[0] border-b border-t border-solid border-[#00000008]">
+                        <view class="font-medium flex-shrink-0">私信开关</view>
+                        <view class="">
+                            <u-switch
+                                v-model="currentPlatformAccount.open_ai"
+                                :active-value="1"
+                                :inactive-value="0"
+                                :size="32"
+                                @change="handleOpenAiChange"></u-switch>
+                        </view>
+                    </view>
+                    <template v-if="currentPlatformAccount.open_ai == 1">
+                        <view class="flex items-center justify-between gap-2 h-[80rpx]">
+                            <view class="font-medium flex-shrink-0">私信智能体</view>
+                            <view class="flex-1 flex items-center justify-end gap-x-2" @click="showRobotPopup = true">
+                                <view
+                                    class="line-clamp-1 break-all"
+                                    :class="{ 'text-[#00000080]': currentPlatformAccount.robot_name }"
+                                    >{{ currentPlatformAccount.robot_name || "未配置" }}</view
+                                >
+                                <u-icon name="arrow-right" color="#B2B2B2"></u-icon>
                             </view>
                         </view>
-                        <template v-if="currentPlatformAccount.open_ai == 1">
-                            <view class="flex items-center justify-between gap-2 h-[80rpx]">
-                                <view class="font-bold flex-shrink-0">私信智能体</view>
-                                <view
-                                    class="flex-1 flex items-center justify-end gap-x-2"
-                                    @click="showRobotPopup = true">
-                                    <view
-                                        class="line-clamp-1 break-all"
-                                        :class="{ 'text-[#00000080]': currentPlatformAccount.robot_name }"
-                                        >{{ currentPlatformAccount.robot_name || "未配置" }}</view
-                                    >
-                                    <u-icon name="arrow-right" color="#B2B2B2"></u-icon>
-                                </view>
-                            </view>
-                        </template>
                     </template>
                     <view
                         class="flex items-center justify-between gap-x-2 py-[22rpx] border-[0] border-t border-solid border-[#00000008]">
@@ -106,7 +102,7 @@
                 <view class="py-5" v-else>
                     <view class="text-center text-[#0000004d]">您还未获取平台账号</view>
                     <view
-                        class="mx-auto w-[220rpx] h-[80rpx] flex items-center justify-center text-white bg-primary font-bold rounded-[20rpx] text-[30rpx] mt-[30rpx]"
+                        class="mx-auto w-[220rpx] h-[80rpx] flex items-center justify-center text-white bg-primary font-medium rounded-[20rpx] text-[30rpx] mt-[30rpx]"
                         @click="handleUpdateAccount(DeviceEventAction.ADD_ACCOUNT)">
                         立即获取
                     </view>
@@ -135,7 +131,7 @@
                                 <view class="absolute right-2 top-2">
                                     <view
                                         v-if="getPublishStatusText(item.status)"
-                                        class="px-[20rpx] py-[6rpx] rounded-[12rpx] font-bold text-[22rpx]"
+                                        class="px-[20rpx] py-[6rpx] rounded-[12rpx] font-medium text-[22rpx]"
                                         :class="getPublishStatusStyle(item.status)">
                                         {{ getPublishStatusText(item.status) }}
                                     </view>
@@ -160,7 +156,7 @@
                                 </view>
                                 <view class="flex-1 flex flex-col justify-between">
                                     <view class="mr-14">
-                                        <view class="font-bold text-[#000000e6] line-clamp-2">
+                                        <view class="font-medium text-[#000000e6] line-clamp-2">
                                             {{ item.material_title }}
                                         </view>
                                         <view class="text-[#00000080] mt-1 text-xs line-clamp-2">{{
@@ -189,7 +185,7 @@
                     </template>
                     <template v-if="currentTab === 1">
                         <view v-for="(item, index) in getPrivateChatRecordList" :key="index" class="private-item">
-                            <view class="text-xs text-[#00000080] font-bold"> {{ item.date_text }} </view>
+                            <view class="text-xs text-[#00000080] font-medium"> {{ item.date_text }} </view>
                             <view class="mt-[34rpx] flex flex-col gap-y-[36rpx]">
                                 <view v-for="(val, key) in item.list" :key="key" class="private-item-content">
                                     <view class="mt-1 flex-shrink-0 relative">
@@ -198,8 +194,11 @@
                                             class="absolute top-[38rpx] left-[6rpx] w-[2rpx] h-[90%] bg-[#0000000d]"></view>
                                     </view>
                                     <view>
-                                        <view class="flex gap-x-1 text-xs">
-                                            <view class="flex-shrink-0 text-[#00C08E] font-bold">客户：</view>
+                                        <view class="text-[30rpx] text-[#00000080] font-medium">
+                                            {{ val.author_name }}
+                                        </view>
+                                        <view class="flex gap-x-1 text-xs mt-3">
+                                            <view class="flex-shrink-0 text-[#00C08E] font-medium">客户：</view>
                                             <view>
                                                 <view class="break-all">{{ val.message_content || "-" }}</view>
                                                 <view class="text-[22rpx] text-[#00000033] mt-[4rpx]">{{
@@ -208,7 +207,7 @@
                                             </view>
                                         </view>
                                         <view class="flex gap-x-1 text-xs mt-3">
-                                            <view class="flex-shrink-0 text-[#00000033] font-bold">回复：</view>
+                                            <view class="flex-shrink-0 text-[#00000033] font-medium">回复：</view>
                                             <view>
                                                 <view class="break-all">{{ val.reply_content || "-" }}</view>
                                                 <view class="text-[22rpx] text-[#00000033] mt-[4rpx]">{{
@@ -230,18 +229,18 @@
     </view>
     <u-popup v-model="showUpdate" mode="center" border-radius="20" width="80%" @close="showUpdate = false">
         <view class="rounded-[20rpx] bg-white p-5">
-            <view class="text-[30rpx] font-bold text-center">提示</view>
+            <view class="text-[30rpx] font-medium text-center">提示</view>
             <view class="text-xs text-[#00000080] mt-[32rpx] text-center">
                 当前如果有任务执行中，该任务会中断并且不再执行，手机将等待下一时间段任务再开始执行，确认是否还要继续？
             </view>
             <view class="flex items-center gap-x-5 mt-[56rpx]">
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium"
                     @click="showUpdate = false">
                     取消
                 </view>
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-bold text-white"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
                     @click="handleAccountConfirm"
                     >确定</view
                 >
@@ -282,15 +281,15 @@
                     </view>
                     <view class="h-[80rpx]">
                         <view
-                            class="font-bold"
+                            class="font-medium"
                             :class="{
                                 'text-[#0000004d]': item.status == 0,
                             }">
                             {{ item.title }}
                         </view>
                         <view class="mt-1">
-                            <text class="text-primary font-bold text-xs" v-if="item.status == 1">获取中...</text>
-                            <text class="text-[#FF2442] font-bold text-xs" v-if="item.status == 3">获取失败</text>
+                            <text class="text-primary font-medium text-xs" v-if="item.status == 1">获取中...</text>
+                            <text class="text-[#FF2442] font-medium text-xs" v-if="item.status == 3">获取失败</text>
                         </view>
                     </view>
                 </view>
@@ -337,7 +336,7 @@
                                     <image :src="item.image" class="w-[96rpx] h-[96rpx] rounded-full"></image>
                                 </view>
                                 <view class="flex-1">
-                                    <view class="font-bold text-[#000000e6] text-[30rpx]">
+                                    <view class="font-medium text-[#000000e6] text-[30rpx]">
                                         {{ item.name }}
                                     </view>
                                     <view class="text-xs text-[#00000080] mt-1">

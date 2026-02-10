@@ -7,7 +7,7 @@
             :custom-back="back"
             :background="{ background: 'transparent' }">
             <template #custom-back-icon>
-                <view class="whitespace-nowrap text-[32rpx] font-bold text-[#19C979]">完成</view>
+                <view class="whitespace-nowrap text-[32rpx] font-medium text-[#19C979]">完成</view>
             </template>
         </u-navbar>
         <view class="px-4 mt-4">
@@ -19,7 +19,7 @@
                     :class="{
                         'mb-[28rpx] ': index < formData.length - 1,
                     }">
-                    <view class="text-[28rpx] font-bold mb-2">{{ index == 0 ? "主标题" : "副标题" }}</view>
+                    <view class="text-[28rpx] font-medium mb-2">{{ index == 0 ? "主标题" : "副标题" }}</view>
                     <u-input v-model="formData[index]" placeholder-style="color: #7C7E80; " maxlength="100"></u-input>
                 </view>
             </view>

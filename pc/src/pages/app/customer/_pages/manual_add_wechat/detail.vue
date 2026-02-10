@@ -19,10 +19,10 @@
                 :class="isExpanded ? 'max-h-[80px]' : 'max-h-[500px]'">
                 <div class="grid grid-cols-1 gap-y-4 text-sm">
                     <div class="flex items-start">
-                        <span class="w-24 text-tx-secondary font-bold">执行设备：</span>
+                        <span class="w-24 text-tx-secondary font-medium">执行设备：</span>
                         <div class="flex flex-wrap gap-2 flex-1">
                             <span
-                                class="px-3 py-1 rounded-lg bg-white border border-br-light text-tx-regular text-xs font-bold shadow-sm"
+                                class="px-3 py-1 rounded-lg bg-white border border-br-light text-tx-regular text-xs font-medium shadow-sm"
                                 v-for="item in formatDeviceCodes(detail?.device_codes)"
                                 :key="item"
                                 >{{ item }}</span
@@ -31,12 +31,12 @@
                     </div>
 
                     <div class="flex items-start">
-                        <span class="w-24 text-tx-secondary font-bold">执行微信：</span>
+                        <span class="w-24 text-tx-secondary font-medium">执行微信：</span>
                         <div class="flex flex-wrap gap-2 flex-1">
                             <div
                                 v-for="item in detail?.wechat_id"
                                 :key="item"
-                                class="flex items-center gap-x-2 px-3 py-1 rounded-lg bg-white border border-br-light text-tx-regular text-xs font-bold shadow-sm">
+                                class="flex items-center gap-x-2 px-3 py-1 rounded-lg bg-white border border-br-light text-tx-regular text-xs font-medium shadow-sm">
                                 <img src="@/assets/images/wechat_icon.png" class="w-3.5 h-3.5" /> {{ item }}
                             </div>
                         </div>
@@ -45,7 +45,7 @@
                     <div class="grid grid-cols-3 gap-4 p-4 bg-white rounded-xl border border-br-extra-light">
                         <div class="flex flex-col gap-1">
                             <span class="text-[11px] text-tx-placeholder uppercase font-black">加微规则</span>
-                            <span class="text-tx-regular font-bold">{{
+                            <span class="text-tx-regular font-medium">{{
                                 detail?.wechat_reg_type == 1
                                     ? "微信号优先"
                                     : detail?.wechat_reg_type == 2
@@ -55,18 +55,18 @@
                         </div>
                         <div class="flex flex-col gap-1">
                             <span class="text-[11px] text-tx-placeholder uppercase font-black">加微频率</span>
-                            <span class="text-tx-regular font-bold"
+                            <span class="text-tx-regular font-medium"
                                 >当天{{ detail?.add_number }}次 / 间隔{{ detail?.add_interval_time }}min</span
                             >
                         </div>
                         <div class="flex flex-col gap-1">
                             <span class="text-[11px] text-tx-placeholder uppercase font-black">任务进度</span>
-                            <span class="text-primary font-bold">{{ pager.count }} 条待执行线索</span>
+                            <span class="text-primary font-medium">{{ pager.count }} 条待执行线索</span>
                         </div>
                     </div>
 
                     <div class="flex items-start">
-                        <span class="w-24 text-tx-secondary font-bold">申请备注：</span>
+                        <span class="w-24 text-tx-secondary font-medium">申请备注：</span>
                         <div class="flex flex-wrap gap-2 flex-1">
                             <span
                                 class="px-3 py-1 rounded-lg bg-gray-100 text-tx-regular text-xs font-medium"
@@ -85,7 +85,7 @@
             <div
                 class="flex items-center justify-center mt-4 cursor-pointer text-primary hover:text-blue-700 transition-all"
                 @click="isExpanded = !isExpanded">
-                <span class="text-xs font-bold mr-1">{{ !isExpanded ? "收起参数" : "展开配置详情" }}</span>
+                <span class="text-xs font-medium mr-1">{{ !isExpanded ? "收起参数" : "展开配置详情" }}</span>
                 <Icon :name="!isExpanded ? 'el-icon-ArrowUp' : 'el-icon-ArrowDown'" :size="12"></Icon>
             </div>
         </div>
@@ -151,7 +151,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-            <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 条加微详情数据</div>
+            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条加微详情数据</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>
@@ -235,7 +235,7 @@ onMounted(init);
 
 <style lang="scss" scoped>
 .status-pill {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border;
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border;
     .dot {
         @apply w-1.5 h-1.5 rounded-full bg-[currentColor];
     }

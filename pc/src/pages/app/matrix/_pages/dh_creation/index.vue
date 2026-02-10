@@ -17,7 +17,7 @@
                             批量数字人控制台
                         </h1>
                         <div class="flex items-center gap-2 mt-2">
-                            <p class="text-[13px] text-[#64748B] font-bold">
+                            <p class="text-[13px] text-[#64748B] font-medium">
                                 当前共有 <span class="text-primary mx-0.5">{{ pager.count }}</span> 个创作任务正在运行
                             </p>
                         </div>
@@ -99,7 +99,7 @@
 
                                 <div class="flex-1 ml-6 flex flex-col py-1">
                                     <h3
-                                        class="text-lg font-bold text-[#111827] line-clamp-1 mb-2 group-hover:text-primary transition-colors">
+                                        class="text-lg font-medium text-[#111827] line-clamp-1 mb-2 group-hover:text-primary transition-colors">
                                         {{ item.name }}
                                     </h3>
 
@@ -109,7 +109,7 @@
                                                 color: getStatusHex(item.status),
                                                 backgroundColor: getStatusHex(item.status) + '15',
                                             }"
-                                            class="px-3 py-1 rounded-xl text-[12px] font-bold border border-transparent">
+                                            class="px-3 py-1 rounded-xl text-[12px] font-medium border border-transparent">
                                             {{ statusMap[item.status] }}
                                         </span>
                                         <span class="text-[#9CA3AF] text-xs font-medium italic"
@@ -121,7 +121,7 @@
                                         <div
                                             class="bg-[#F9FAFB] rounded-2xl p-3 border border-[#F3F4F6] transition-colors group-hover:bg-white group-hover:border-[#EEF2FF]">
                                             <p
-                                                class="text-[10px] text-[#9CA3AF] uppercase font-bold tracking-wider mb-1">
+                                                class="text-[10px] text-[#9CA3AF] uppercase font-medium tracking-wider mb-1">
                                                 成功生成
                                             </p>
                                             <div class="flex items-end gap-1">
@@ -134,7 +134,7 @@
                                         <div
                                             class="bg-[#F9FAFB] rounded-2xl p-3 border border-[#F3F4F6] transition-colors group-hover:bg-white group-hover:border-[#FEF2F2]">
                                             <p
-                                                class="text-[10px] text-[#9CA3AF] uppercase font-bold tracking-wider mb-1">
+                                                class="text-[10px] text-[#9CA3AF] uppercase font-medium tracking-wider mb-1">
                                                 异常中断
                                             </p>
                                             <span
@@ -151,7 +151,7 @@
                                         </span>
                                         <button
                                             @click.stop="handlePreviewVideoResult(item.id)"
-                                            class="px-5 py-2 rounded-xl bg-[#1F2937] text-white text-[12px] font-bold hover:bg-primary transition-all active:scale-95">
+                                            class="px-5 py-2 rounded-xl bg-[#1F2937] text-white text-[12px] font-medium hover:bg-primary transition-all active:scale-95">
                                             查看成果
                                         </button>
                                     </div>
@@ -222,7 +222,7 @@ const PlaceholderStyle = defineComponent({
                 h("i", { class: "el-icon-picture-outline text-4xl text-[#CBD5E1] mb-3 relative z-10" }),
                 h(
                     "span",
-                    { class: "text-[11px] font-bold text-[#94A3B8] tracking-widest uppercase relative z-10" },
+                    { class: "text-[11px] font-medium text-[#94A3B8] tracking-widest uppercase relative z-10" },
                     "No Preview"
                 ),
             ]

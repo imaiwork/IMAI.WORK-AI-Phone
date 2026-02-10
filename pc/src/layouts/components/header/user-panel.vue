@@ -21,7 +21,7 @@
                     <div class="flex flex-col">
                         <span class="font-[900] text-[#0F172A] text-base leading-tight">{{ userInfo.nickname }}</span>
                         <div class="flex items-center gap-1.5 mt-1">
-                            <span class="text-[11px] text-[#94A3B8] font-bold">SN: {{ userInfo.sn }}</span>
+                            <span class="text-[11px] text-[#94A3B8] font-medium">SN: {{ userInfo.sn }}</span>
                         </div>
                     </div>
                 </div>
@@ -30,12 +30,12 @@
                     <div class="info-row group" @click="copy(userInfo.mobile)">
                         <div class="flex items-center gap-2">
                             <Icon name="el-icon-Phone" :size="12" color="#94A3B8" />
-                            <span class="text-[12px] font-bold text-[#64748B]">{{ userInfo.mobile }}</span>
+                            <span class="text-[12px] font-medium text-[#64748B]">{{ userInfo.mobile }}</span>
                         </div>
                         <span class="text-[#CBD5E1] group-hover:text-primary"><Icon name="local-icon-copy" /></span>
                     </div>
                     <div class="info-row">
-                        <div class="flex items-center gap-2 text-[11px] font-bold text-[#CBD5E1]">
+                        <div class="flex items-center gap-2 text-[11px] font-medium text-[#CBD5E1]">
                             <Icon name="el-icon-Calendar" :size="12" />
                             <span>注册于 {{ dayjs(userInfo.create_time).format("YYYY-MM-DD") }}</span>
                         </div>
@@ -145,7 +145,7 @@ const { copy } = useCopy();
     }
 
     .menu-text {
-        @apply text-[13px] font-bold text-[#475569] transition-colors;
+        @apply text-[13px] font-medium text-[#475569] transition-colors;
     }
 }
 

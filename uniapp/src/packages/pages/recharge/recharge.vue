@@ -14,8 +14,8 @@
         <view
             class="flex flex-col items-center justify-center bg-no-repeat bg-center bg-cover relative py-[60rpx]"
             :style="{ backgroundImage: `url(${config.baseUrl}static/images/recharge_img1.png)` }">
-            <view class="text-[30rpx] font-bold text-white">当前算力</view>
-            <text class="font-digital-number font-bold text-white text-[48rpx] mt-[60rpx] indent-[-20rpx]">
+            <view class="text-[30rpx] font-medium text-white">当前算力</view>
+            <text class="font-digital-number font-medium text-white text-[48rpx] mt-[60rpx] indent-[-20rpx]">
                 {{ userTokens }}</text
             >
         </view>
@@ -161,7 +161,7 @@
                                 v-if="cardCodeConfig.is_open == 1"
                                 url="/packages/pages/redeem/redeem"
                                 hover-class="none"
-                                class="bg-[#121420] flex-1 h-[100rpx] rounded-full flex items-center justify-center text-[#888990] text-[26rpx] font-bold">
+                                class="bg-[#121420] flex-1 h-[100rpx] rounded-full flex items-center justify-center text-[#888990] text-[26rpx] font-medium">
                                 卡密兑换
                             </navigator>
                             <!-- #ifdef MP-WEIXIN -->
@@ -177,7 +177,7 @@
                             </view>
                             <!-- #endif -->
                         </view>
-                        <view class="text-white text-[26rpx] text-center mt-[48rpx] font-bold">
+                        <view class="text-white text-[26rpx] text-center mt-[48rpx] font-medium">
                             点击查看<text class="text-primary ml-1" @click="showRecord = true">账单明细</text>
                         </view>
                     </template>

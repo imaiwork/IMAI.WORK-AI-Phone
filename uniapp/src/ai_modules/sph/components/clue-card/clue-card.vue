@@ -4,7 +4,7 @@
         @click="handleClick">
         <view class="flex justify-between items-start">
             <view class="flex items-center gap-x-2 flex-1 mr-2">
-                <view class="font-bold text-[30rpx] text-[#333] line-clamp-1">
+                <view class="font-medium text-[30rpx] text-[#333] line-clamp-1">
                     {{ item.username || "未知用户" }}
                 </view>
                 <view
@@ -40,7 +40,7 @@
                     <text class="text-[22rpx] text-[#999] mb-[2rpx]">
                         {{ item.clue_type == 2 ? "手机号码" : "微信号码" }}
                     </text>
-                    <text class="text-[30rpx] font-bold text-[#333] font-DIN truncate">
+                    <text class="text-[30rpx] font-medium text-[#333] font-DIN truncate">
                         {{ item.reg_content }}
                     </text>
                 </view>

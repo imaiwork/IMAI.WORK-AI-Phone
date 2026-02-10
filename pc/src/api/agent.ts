@@ -10,6 +10,11 @@ export function getCommonAgentList(params: any) {
     return $request.get({ url: "/kb.robot/commonLists", params });
 }
 
+// 获取全部智能体列表
+export function getAllAgentList(params: any) {
+    return $request.get({ url: "/kb.robot/all", params });
+}
+
 // 添加智能体
 export function addAgent(params: any) {
     return $request.post({ url: "/kb.robot/add", params });
@@ -88,6 +93,11 @@ export function cozeConfigDetail() {
 // coze智能体列表
 export function getCozeAgentList(params: any) {
     return $request.get({ url: "/coze.cozeAgent/lists", params });
+}
+
+// 获取系统智能体列表
+export function getSystemAgentList(params: any) {
+    return $request.get({ url: "/kb.robot/systemLists", params });
 }
 
 // 公共coze智能体列表
@@ -228,4 +238,9 @@ export function clearChatRecord(params: any, headers?: any) {
 // 智能体分类
 export function getAgentCategoryList(params: any) {
     return $request.get({ url: "/agent.agentCate/lists", params });
+}
+
+// 获取文案生成
+export function getCopyWritingGenerate(params: any) {
+    return $request.post({ url: "/kb.robot/getCopywriting", params });
 }

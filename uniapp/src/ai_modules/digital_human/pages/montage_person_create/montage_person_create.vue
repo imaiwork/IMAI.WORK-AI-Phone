@@ -31,7 +31,7 @@
         </view>
         <view class="grow min-h-0 mt-[24rpx]">
             <view class="h-full flex flex-col" v-show="step == 1">
-                <view class="mx-4 text-[30rpx] font-bold"> 上传口播视频({{ formData.anchorLists.length }}) </view>
+                <view class="mx-4 text-[30rpx] font-medium"> 上传口播视频({{ formData.anchorLists.length }}) </view>
                 <view class="grow min-h-0">
                     <scroll-view scroll-y class="h-full">
                         <view class="grid grid-cols-3 gap-[26rpx] p-4">
@@ -47,7 +47,7 @@
                                 </view>
                                 <view
                                     class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
-                                    @click="handleDeleteAnchor(item.id)">
+                                    @click="handleDeleteAnchor(index)">
                                     <u-icon name="close" color="#ffffff" size="16"></u-icon>
                                 </view>
                                 <view class="absolute bottom-2 w-full z-[33] flex justify-center">
@@ -69,15 +69,15 @@
             <view
                 v-show="step === 2"
                 class="bg-white rounded-[16rpx] px-4 py-[28rpx] shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] mx-4">
-                <text class="font-bold">身份信息</text>
+                <text class="font-medium">身份人设</text>
                 <view class="mt-[28rpx]">
-                    <view class="text-[#7C7E80]">人物名称</view>
+                    <view class="text-[#7C7E80]">人设名称</view>
                     <view class="mt-[12rpx]">
                         <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1">
                             <u-input
                                 v-model="formData.person_name"
                                 placeholder-style="font-size: 24rpx;"
-                                placeholder="请输入人物名称"
+                                placeholder="请输入人设名称"
                                 maxlength="20"
                                 type="textarea"
                                 height="30"
@@ -86,13 +86,13 @@
                     </view>
                 </view>
                 <view class="mt-[28rpx]">
-                    <view class="text-[#7C7E80]">人物介绍</view>
+                    <view class="text-[#7C7E80]">人设介绍</view>
                     <view class="mt-[12rpx]">
                         <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1">
                             <u-input
                                 v-model="formData.person_introduction"
                                 placeholder-style="font-size: 24rpx;"
-                                placeholder="请输入人物介绍"
+                                placeholder="请输入人设介绍"
                                 maxlength="50"
                                 type="textarea"
                                 height="30"
@@ -113,7 +113,7 @@
             </view>
             <view class="h-full flex flex-col" v-show="step == 3">
                 <view class="px-4">
-                    <view class="text-[30rpx] font-bold">参考素材</view>
+                    <view class="text-[30rpx] font-medium">参考素材</view>
                     <view class="mt-1 text-xs text-[#0000004d]">
                         总量限制：全部素材总时长不得超过{{ montageConfig.materialTotalDuration }}分钟 (图片按{{
                             montageConfig.imageDuration
@@ -145,7 +145,7 @@
                                 </view>
                                 <view
                                     class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
-                                    @click="handleDeleteMaterial(item.id)">
+                                    @click="handleDeleteMaterial(index)">
                                     <u-icon name="close" color="#ffffff" size="16"></u-icon>
                                 </view>
                                 <div class="absolute bottom-4 w-full z-[89] flex justify-center">
@@ -169,7 +169,7 @@
             <scroll-view class="h-full" scroll-y v-show="step == 4">
                 <view class="px-4 pb-[150rpx]">
                     <view>
-                        <view class="text-[30rpx] font-bold">视频名称</view>
+                        <view class="text-[30rpx] font-medium">视频名称</view>
                         <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4 h-[100rpx] flex items-center">
                             <u-input
                                 class="w-full"
@@ -182,10 +182,12 @@
                     </view>
                     <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4">
                         <view class="flex items-center justify-between py-2.5">
-                            <view class="text-[30rpx] font-bold">口播视频</view>
+                            <view class="text-[30rpx] font-medium">口播视频</view>
                             <view class="flex items-center gap-x-1" @click="handleStep(1)">
                                 <view>
-                                    共<text class="mx-1 text-primary font-bold">{{ formData.anchorLists.length }}</text
+                                    共<text class="mx-1 text-primary font-medium">{{
+                                        formData.anchorLists.length
+                                    }}</text
                                     >个
                                 </view>
                                 <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
@@ -208,7 +210,7 @@
                     <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4">
                         <view
                             class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                            <view class="text-[30rpx] font-bold">身份人设</view>
+                            <view class="text-[30rpx] font-medium">身份人设</view>
                             <view class="flex items-center gap-x-1" @click="handleStep(2)">
                                 <view
                                     class="line-clamp-1 min-w-[150rpx] text-end"
@@ -224,10 +226,12 @@
                         </view>
                         <view
                             class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                            <view class="text-[30rpx] font-bold">参考素材</view>
+                            <view class="text-[30rpx] font-medium">参考素材</view>
                             <view class="flex items-center gap-x-1" @click="handleStep(3)">
                                 <view>
-                                    共<text class="mx-1 text-primary font-bold">{{ formData.materialList.length }}</text
+                                    共<text class="mx-1 text-primary font-medium">{{
+                                        formData.materialList.length
+                                    }}</text
                                     >个
                                 </view>
                                 <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
@@ -235,7 +239,7 @@
                         </view>
 
                         <view class="flex items-center justify-between h-[106rpx]">
-                            <view class="text-[30rpx] font-bold">背景音乐</view>
+                            <view class="text-[30rpx] font-medium">背景音乐</view>
                             <navigator
                                 :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
                                     formData.music
@@ -244,7 +248,7 @@
                                 class="flex items-center gap-x-1">
                                 <view>
                                     <template v-if="formData.music.length > 0">
-                                        共<text class="mx-1 text-primary font-bold">{{ formData.music.length }}</text
+                                        共<text class="mx-1 text-primary font-medium">{{ formData.music.length }}</text
                                         >个
                                     </template>
                                     <text class="text-[#000000]/70" v-else>AI音乐库</text>
@@ -255,7 +259,7 @@
                     </view>
                     <view class="flex items-center justify-between bg-white mt-[22rpx] p-4 rounded-[20rpx]">
                         <view>
-                            <view class="text-[30rpx] font-bold">生成视频数量</view>
+                            <view class="text-[30rpx] font-medium">生成视频数量</view>
                             <view class="text-[#000000]/50"> 每条真人口播素材生成视频的数量 </view>
                         </view>
                         <view class="flex items-center gap-x-2">
@@ -283,13 +287,12 @@
                         </view>
                     </view>
                     <view class="mt-[22rpx] bg-white rounded-[20rpx] px-4">
-                        <view class="font-bold text-[30rpx] py-3">使用设置</view>
-
+                        <view class="font-medium text-[30rpx] py-3">使用设置</view>
                         <view
                             class="flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#00000008]">
                             <view
                                 class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                                <view class="font-bold">背景音乐使用</view>
+                                <view class="font-medium">背景音乐使用</view>
                             </view>
                             <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-[268rpx]">
                                 <view class="grid grid-cols-2 gap-x-1 h-[68rpx] relative">
@@ -313,7 +316,7 @@
                             class="flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#00000008]">
                             <view
                                 class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                                <view class="font-bold">视频风格</view>
+                                <view class="font-medium">视频风格</view>
                             </view>
                             <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-[268rpx]">
                                 <view class="grid grid-cols-2 gap-x-1 h-[68rpx] relative">
@@ -340,10 +343,10 @@
                             }&data=${JSON.stringify(formData.clip)}`"
                             hover-class="none"
                             class="flex items-center justify-between h-[106rpx]">
-                            <view class="text-[30rpx] font-bold">选择视频风格</view>
+                            <view class="text-[30rpx] font-medium">选择视频风格</view>
                             <view class="flex items-center">
                                 <view>
-                                    共<text class="mx-1 text-primary font-bold">{{ formData.clip.length }}</text
+                                    共<text class="mx-1 text-primary font-medium">{{ formData.clip.length }}</text
                                     >个
                                 </view>
                                 <u-icon name="arrow-right" :size="20" color="#C5CACA"></u-icon>
@@ -360,7 +363,7 @@
                         v-if="step === 1"
                         class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
                         :class="[formData.anchorLists.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
-                        <text class="font-bold text-[32rpx]">{{ formData.anchorLists.length }}</text>
+                        <text class="font-medium text-[32rpx]">{{ formData.anchorLists.length }}</text>
                         <text class="text-xs mt-1">已选</text>
                     </view>
                     <view v-else>
@@ -385,7 +388,7 @@
                         <text class="text-[#8C8C8C] text-[22rpx]">算力消耗</text>
                     </view>
                     <view
-                        class="rounded-[16rpx] w-[456rpx] h-[100rpx] bg-black text-white font-bold flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
+                        class="rounded-[16rpx] w-[456rpx] h-[100rpx] bg-black text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
                         @click="handleCreateVideo">
                         生成视频
                     </view>
@@ -393,12 +396,11 @@
             </view>
         </view>
     </view>
-    <choose-history v-model="showHistory" :limit="uploadSource == 0 ? 9 : 1" @select="handleSelectHistory" />
+    <choose-history v-model="showHistory" :limit="1" @select="handleSelectHistory" />
     <choose-character v-if="showCharacter" v-model="showCharacter" @select="handleSelectCharacter" />
     <choose-material
-        v-if="showMaterialLibrary"
         v-model="showMaterialLibrary"
-        :limit="uploadMaterialType == 'image' ? 9 : 1"
+        :limit="uploadMaterialType == 'image' || replaceMaterialIndex === -1 ? 9 : 1"
         :type="uploadMaterialType"
         @select="handleSelectMaterial" />
     <upload-rule-pop
@@ -436,7 +438,6 @@ import { montageConfig } from "@/ai_modules/digital_human/config";
 import UploadRulePop from "@/ai_modules/digital_human/components/upload-rule-pop/upload-rule-pop.vue";
 import ChooseHistory from "@/ai_modules/digital_human/components/choose-history/choose-history.vue";
 import ChooseCharacter from "@/ai_modules/digital_human/components/choose-character/choose-character.vue";
-import VideoPreview from "@/components/video-preview/video-preview.vue";
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
 
@@ -514,7 +515,12 @@ const rechargePopupRef = shallowRef();
 const canStepProceed = (stepNumber: number) => {
     const strategy: Record<number, () => boolean> = {
         1: () => formData.anchorLists.length > 0,
-        2: () => true,
+        2: () => {
+            if (!formData.person_introduction && !formData.person_name) {
+                return true;
+            }
+            return !!formData.person_introduction.trim() && !!formData.person_name.trim();
+        },
         3: () => {
             if (formData.materialList.length === 0) return true;
             const totalDuration = getMaterialTotalDuration();
@@ -549,6 +555,7 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
         } else {
             const messages: Record<number, () => string> = {
                 1: () => "请上传视频",
+                2: () => "填写完整的人设信息",
                 3: () => {
                     const totalDuration = getMaterialTotalDuration();
                     if (totalDuration > montageConfig.materialTotalDuration * 60)
@@ -674,7 +681,7 @@ const handleSelectMaterial = async (res: any[]) => {
     const type = uploadMaterialType.value;
     await processAndAppend({
         rawList: res,
-        urlField: "content",
+        urlField: "url",
         type: type as "video" | "image",
         replaceIndex: replaceMaterialIndex.value,
         onSuccess: () => (showMaterialLibrary.value = false),
@@ -692,11 +699,12 @@ const handleReplaceMaterial = (index: number, type: 0 | 1) => {
     chooseUploadType(type);
 };
 
-const handleDeleteAnchor = (id: number) => {
-    formData.anchorLists = formData.anchorLists.filter((item) => item.id !== id);
+const handleDeleteAnchor = (index: number) => {
+    formData.anchorLists.splice(index, 1);
 };
-const handleDeleteMaterial = (id: number) => {
-    formData.materialList = formData.materialList.filter((item) => item.id !== id);
+
+const handleDeleteMaterial = (index: number) => {
+    formData.materialList.splice(index, 1);
 };
 
 const handleSelectCharacter = (item: any) => {
@@ -848,14 +856,14 @@ onLoad(() => {
 .material-type-item {
     @apply flex items-center justify-center rounded-[16rpx] text-[hsla(0,0%,0%,1)] relative z-10 transition-colors duration-500;
     &.active {
-        @apply text-black font-bold relative;
+        @apply text-black font-medium relative;
     }
 }
 
 .type-item {
     @apply flex flex-col items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500 text-xs;
     &.active {
-        @apply text-primary font-bold relative;
+        @apply text-primary font-medium relative;
     }
 }
 .tab-slider {

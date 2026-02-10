@@ -50,7 +50,7 @@ class CommentToMsgHandler extends BaseMessageHandler
     private function recordMsg(array $content)
     {
         try {
-            if((int)$content['task_id'] == 0){
+            if ((int)$content['task_id'] == 0) {
                 return [
                     'isProceed' => 1, //是否处理 1是 0 否
                 ];
@@ -69,11 +69,15 @@ class CommentToMsgHandler extends BaseMessageHandler
             if ($setting->isEmpty()) {
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务配置不存在');
             }
+
+            $hash = hash('sha256', $content['task_id'] . $content['author_name'] . $content['content']);
+
             if ((int)$setting->is_execed_clues  === 1) {
                 $find = SvLeadScrapingRecord::where([
                     ['user_id', '=', $task->user_id],
                     ['task_type', '=', 2],
                     ['account_name', '=', $content['author_name']],
+                    ['hash', '=', $hash],
                 ])->findOrEmpty();
                 if (!$find->isEmpty()) {
                     return [
@@ -86,7 +90,8 @@ class CommentToMsgHandler extends BaseMessageHandler
                 ['user_id', '=', $task->user_id],
                 ['task_type', '=', 2],
                 ['account_name', '=', $content['author_name']],
-                ['content', 'like', '%' . $content['content'] . '%']
+                ['hash', '=', $hash],
+                //['content', 'like', '%' . $content['content'] . '%']
             ])->findOrEmpty();
             if (!$record->isEmpty()) {
                 return [
@@ -106,8 +111,19 @@ class CommentToMsgHandler extends BaseMessageHandler
                 'task_id'             => $content['task_id'],
                 'content'             => $content['content'],
                 'exec_time'           => time(),
+                'hash'                => $hash,
+                'image'               => $this->saveBase64ToImage($content['image'] ?? '', $hash, 'touch'),
                 'address'             => $content['address'] ?? '',
-                'pusher_timer'         => $content['pusherTimer'] ?? 0,
+                'pusher_timer'        => $content['pusherTimer'] ?? 0,
+                'account'             => $content['account'] ?? '',
+                'likes'               => $content['likes'] ?? 0,
+                'fans'                => $content['fans'] ?? 0,
+                'follows'             => $content['follows'] ?? 0,
+                'industry_keyword'    => $content['industry_keyword'] ?? '',
+                'notes'               => $content['notes'] ?? '',
+                'filter_keyword'      => $content['filter_keyword'] ?? '',
+                'comment_content'     => $content['comment_content'] ?? '',
+                'touch_content'       => $content['touch_content'] ?? '',
             ];
             SvLeadScrapingRecord::create($insert);
             $autoType = SvDevice::where('device_code', $this->payload['deviceId'])->value('auto_type') ?? 0;

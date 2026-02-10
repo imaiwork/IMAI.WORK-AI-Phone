@@ -1,7 +1,7 @@
 <template>
     <view class="h-screen flex flex-col pt-4">
         <view class="px-4">
-            <view class="font-bold text-[30rpx]">图片素材（共{{ imageList.length }}张）</view>
+            <view class="font-medium text-[30rpx]">图片素材（共{{ imageList.length }}张）</view>
             <view class="mt-1 text-xs text-[#0000004d]"> 最多可传{{ limit }}张图片 </view>
         </view>
         <view class="grow min-h-0">
@@ -149,7 +149,7 @@ const chooseUploadType = () => {
 };
 
 const handleSelectImgMaterial = async (res: any[]) => {
-    const uploadImages = res.map((item: any) => item.content);
+    const uploadImages = res.map((item: any) => item.url);
     if (replaceImageIndex.value !== -1) {
         imageList.value[replaceImageIndex.value] = uploadImages[0];
     } else {

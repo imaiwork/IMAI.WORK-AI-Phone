@@ -8,7 +8,7 @@
                     <div class="text-[20px] font-[900] text-[#1E293B] mb-1">
                         {{ ToolEnumMap[ToolEnum.DATABASE] }}
                     </div>
-                    <div class="text-base font-bold text-[#64748B]">
+                    <div class="text-base font-medium text-[#64748B]">
                         打通企业知识脉络，通过高精度的向量检索技术，让 AI 深入理解您的核心业务数据。
                     </div>
                 </div>
@@ -32,7 +32,7 @@
                                 </div>
                                 <div class="text-center">
                                     <div class="text-[16px] font-black text-[#1E293B]">新建知识库</div>
-                                    <div class="text-[12px] font-bold text-[#94A3B8] mt-1">只支持向量知识库</div>
+                                    <div class="text-[12px] font-medium text-[#94A3B8] mt-1">只支持向量知识库</div>
                                 </div>
                             </div>
                         </div>
@@ -82,7 +82,7 @@
                             </div>
 
                             <div class="mt-4 pt-4 border-t border-[#F1F5F9] flex items-center justify-between">
-                                <div class="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B]">
+                                <div class="flex items-center gap-1.5 text-[11px] font-medium text-[#64748B]">
                                     {{ item.create_time }}
                                 </div>
                                 <div

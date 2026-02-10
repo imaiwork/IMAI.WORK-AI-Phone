@@ -15,7 +15,7 @@
             <div class="flex items-center gap-3" v-if="detail?.status && detail?.status != 0">
                 <export-data :params="queryParams" :fetch-fun="getTaskClue" :export-fun="getTaskClue">
                     <template #trigger>
-                        <ElButton type="primary" class="!rounded-full !h-10 px-6 font-bold shadow-light">
+                        <ElButton type="primary" class="!rounded-full !h-10 px-6 font-medium shadow-light">
                             <Icon name="el-icon-Download"></Icon>
                             <span class="ml-1">导出线索</span>
                         </ElButton>
@@ -30,10 +30,10 @@
                 :class="isExpanded ? 'max-h-[80px]' : 'max-h-[500px]'">
                 <div class="grid grid-cols-1 gap-y-4 text-sm">
                     <div class="flex items-start">
-                        <span class="w-24 text-tx-secondary font-bold">执行设备：</span>
+                        <span class="w-24 text-tx-secondary font-medium">执行设备：</span>
                         <div class="flex flex-wrap gap-2 flex-1">
                             <span
-                                class="px-3 py-1 rounded-lg bg-white border border-br-light text-tx-regular text-xs font-bold shadow-sm"
+                                class="px-3 py-1 rounded-lg bg-white border border-br-light text-tx-regular text-xs font-medium shadow-sm"
                                 v-for="item in detail?.device_codes"
                                 :key="item"
                                 >{{ item }}</span
@@ -42,7 +42,7 @@
                     </div>
 
                     <div class="flex items-start border-t border-dashed border-br-light pt-4">
-                        <span class="w-24 text-tx-secondary font-bold"
+                        <span class="w-24 text-tx-secondary font-medium"
                             >关键词({{ detail?.keywords?.length || 0 }})：</span
                         >
                         <div class="flex-1 flex flex-wrap gap-1.5">
@@ -58,7 +58,7 @@
                     <div class="grid grid-cols-4 gap-4 p-4 bg-white rounded-xl border border-br-extra-light">
                         <div class="flex flex-col gap-1">
                             <span class="text-[11px] text-tx-placeholder uppercase font-black">线索识别</span>
-                            <span class="text-tx-regular font-bold">{{
+                            <span class="text-tx-regular font-medium">{{
                                 detail?.ocr_type == 1 ? "云端OCR识别" : "本地识别"
                             }}</span>
                         </div>
@@ -66,13 +66,13 @@
                             <span class="text-[11px] text-tx-placeholder uppercase font-black">自动加微</span>
                             <span
                                 :class="detail?.add_type == 1 ? 'text-green-600' : 'text-tx-placeholder'"
-                                class="font-bold">
+                                class="font-medium">
                                 {{ detail?.add_type == 1 ? "● 已开启" : "○ 已关闭" }}
                             </span>
                         </div>
                         <div class="flex flex-col gap-1">
                             <span class="text-[11px] text-tx-placeholder uppercase font-black">加微规则</span>
-                            <span class="text-tx-regular font-bold">{{
+                            <span class="text-tx-regular font-medium">{{
                                 detail?.wechat_reg_type == 1
                                     ? "微信号"
                                     : detail?.wechat_reg_type == 2
@@ -82,14 +82,14 @@
                         </div>
                         <div class="flex flex-col gap-1">
                             <span class="text-[11px] text-tx-placeholder uppercase font-black">加微频率</span>
-                            <span class="text-tx-regular font-bold"
+                            <span class="text-tx-regular font-medium"
                                 >{{ detail?.add_number }}次/天 · {{ detail?.add_interval_time }}min间隔</span
                             >
                         </div>
                     </div>
 
                     <div class="flex items-start">
-                        <span class="w-24 text-tx-secondary font-bold">加微备注：</span>
+                        <span class="w-24 text-tx-secondary font-medium">加微备注：</span>
                         <div class="flex flex-wrap gap-2 flex-1">
                             <span
                                 class="px-3 py-1 rounded-lg bg-gray-100 text-tx-regular text-xs"
@@ -109,7 +109,7 @@
             <div
                 class="flex items-center justify-center mt-4 cursor-pointer text-primary hover:text-blue-700 transition-all"
                 @click="isExpanded = !isExpanded">
-                <span class="text-xs font-bold mr-1">{{ !isExpanded ? "收起参数" : "展开任务参数" }}</span>
+                <span class="text-xs font-medium mr-1">{{ !isExpanded ? "收起参数" : "展开任务参数" }}</span>
                 <Icon :name="!isExpanded ? 'el-icon-ArrowUp' : 'el-icon-ArrowDown'" :size="12"></Icon>
             </div>
         </div>
@@ -120,10 +120,10 @@
                     <template #default="{ row }">
                         <div class="flex items-center gap-2">
                             <div
-                                class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-primary font-bold">
+                                class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-primary font-medium">
                                 {{ row.username?.charAt(0) || "U" }}
                             </div>
-                            <span class="font-bold text-gray-950">{{ row.username || "-" }}</span>
+                            <span class="font-medium text-gray-950">{{ row.username || "-" }}</span>
                         </div>
                     </template>
                 </ElTableColumn>
@@ -141,7 +141,7 @@
 
                 <ElTableColumn prop="reg_content" label="提取信息" min-width="180">
                     <template #default="{ row }">
-                        <span class="text-primary font-bold">{{ row.reg_content || "-" }}</span>
+                        <span class="text-primary font-medium">{{ row.reg_content || "-" }}</span>
                     </template>
                 </ElTableColumn>
 
@@ -175,7 +175,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-            <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 条线索数据</div>
+            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条线索数据</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>
@@ -240,7 +240,7 @@ onMounted(init);
 <style lang="scss" scoped>
 /* 线索状态指示器 */
 .status-indicator {
-    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold;
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium;
     .dot {
         @apply w-1.5 h-1.5 rounded-full;
     }

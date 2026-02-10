@@ -183,12 +183,28 @@ export function useChatAreaManager(options: UseChatAreaOptions) {
     };
 
     /**
+     * @description 手动插入文本
+     * @param text
+     */
+    const setText = (text: string) => {
+        chatAreaInstance.insertText(text);
+    };
+
+    /**
+     * @description 更新智能体列表。
+     */
+    const updateAgentList = async (agentList: Agent[]) => {
+        chatAreaInstance.updateUserList(agentList);
+    };
+
+    /**
      * @description 从API获取智能体列表。
      */
     const getAgentList = async () => {
         try {
             const { lists } = await getAgentListApi({ page_size: 1500, source: 1 });
             agentList.value = lists.map((item) => ({ name: item.name, id: item.id }));
+            updateAgentList(agentList.value);
         } catch (error) {
             console.error("获取智能体列表失败:", error);
         }
@@ -204,5 +220,6 @@ export function useChatAreaManager(options: UseChatAreaOptions) {
         getAgentList,
         isAgent,
         setAgent,
+        setText,
     };
 }

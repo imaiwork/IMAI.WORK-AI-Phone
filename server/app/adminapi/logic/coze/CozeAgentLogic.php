@@ -172,6 +172,7 @@ class CozeAgentLogic extends BaseLogic
                     return false;
                 }
                 CozeAgent::destroy(['id' => $id]);
+                CozeWorkflow::destroy(['coze_agent_id' => $id]);
                 CozeLog::where('bot_id',$bot_id)->select()->delete();
             } else {
                 $bot_id = CozeAgent::whereIn('id', $id)->column('coze_id');
@@ -180,6 +181,7 @@ class CozeAgentLogic extends BaseLogic
                     return false;
                 }
                 CozeAgent::whereIn('id', $id)->select()->delete();
+                CozeWorkflow::whereIn('coze_agent_id', $id)->select()->delete();
                 CozeLog::whereIn('bot_id',$bot_id)->select()->delete();
             }
             return true;

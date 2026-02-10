@@ -9,7 +9,7 @@
             backgroundColor: getTheme.bgColor,
         }">
         <div>
-            <div class="text-[15px] text-center font-bold text-inherit" :style="{ color: getTheme.titleColor }">
+            <div class="text-[15px] text-center font-medium text-inherit" :style="{ color: getTheme.titleColor }">
                 {{ title }}
             </div>
             <div

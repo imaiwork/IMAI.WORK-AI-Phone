@@ -12,7 +12,7 @@
             <div class="absolute w-6 h-6 right-4 top-4 cursor-pointer" @click="close">
                 <close-btn />
             </div>
-            <div class="text-2xl font-bold mb-5">生成海报</div>
+            <div class="text-2xl font-medium mb-5">生成海报</div>
             <!-- 海报预览区域 -->
             <div class="w-full h-[556px] rounded-[10px] overflow-hidden relative" ref="posterRef">
                 <img v-if="formData.bgUrl" class="object-cover w-full h-full" :src="formData.bgUrl" />
@@ -20,7 +20,7 @@
                     <!-- 二维码 -->
                     <vue-qr :text="link" :size="200" class="rounded-[10px]" :dot-scale="1" :margin="12" />
                     <!-- 海报文案 -->
-                    <div class="text-center text-white mt-[15px] text-[18px] font-bold">
+                    <div class="text-center text-white mt-[15px] text-[18px] font-medium">
                         <div>{{ formData.title }}</div>
                         <div>{{ formData.description }}</div>
                     </div>

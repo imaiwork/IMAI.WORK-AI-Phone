@@ -419,7 +419,7 @@ class HumanLogic extends ApiLogic
                     if ($status == 30){
                         $item->result_url   = FileService::downloadFileBySource($data['video_url'], 'video');
                         $item->audio_url   = FileService::downloadFileBySource($data['audio_urls'][0], 'audio');
-
+                        $item->duration   = $data['duration'] ?? 0;
                         $user = User::find( $item->user_id);
                         $unit = ModelConfig::where('scene', 'human_video_chanjing')->value('score', 0);
                         $duration = $data['duration'] ?? 1;

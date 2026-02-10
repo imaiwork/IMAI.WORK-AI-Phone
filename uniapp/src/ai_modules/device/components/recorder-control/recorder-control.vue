@@ -1,5 +1,5 @@
 <template>
-    <u-popup v-model="showModel" mode="bottom" :mask="true" border-radius="50" height="45%">
+    <u-popup v-model="showModel" mode="bottom" :mask="true" border-radius="50" height="72%">
         <view class="recorder-panel bg-white">
             <view class="flex items-center justify-between px-6 pt-5">
                 <text class="text-[#94A3B8] text-[28rpx]" @click="closePop">取消</text>
@@ -7,12 +7,19 @@
                     <view class="w-2 h-2 bg-[#FF4D4F] rounded-full animate-pulse shadow-[0_0_8rpx_#FF4D4F]"></view>
                     <text class="text-[30rpx] font-black text-[#1E293B]">正在聆听...</text>
                 </view>
-                <text class="text-primary font-bold text-[28rpx]" @click="confirm">完成</text>
+                <text class="text-primary font-medium text-[28rpx]" @click="confirm">完成</text>
+            </view>
+            <view class="px-6 mt-6">
+                <view class="text-[#64748B] text-[26rpx] mb-3 font-medium">💡 您可以试着这样说：</view>
+                <view class="bg-[#F8FAFC] rounded-[20rpx] p-4 border border-[#E2E8F0]">
+                    <text class="text-[#475569] text-[26rpx] leading-[1.6] block">
+                        我们叫"浮光咖啡"，是精品咖啡店。主理人Lena当IP，她是哥伦比亚咖啡品鉴师，风格专业权威+亲切邻家。目标客户是22-35岁上班族，男女各半。产品特点：自家烘焙豆子、手冲教学、社区活动空间。故事：Lena曾用一杯咖啡帮失恋客人振作起来。内容想做知识分享+幕后记录，不想做搞笑剧情。拿过上海咖啡大赛银奖，店在杭州西湖区。账号目前未启动。
+                    </text>
+                </view>
             </view>
 
             <view class="grow flex flex-col items-center justify-center mt-4">
                 <view class="relative w-full h-[140rpx] flex items-center justify-center">
-                    <view class="absolute w-[300rpx] h-[60rpx] bg-primary/5 blur-[40rpx] rounded-full"></view>
                     <canvas type="2d" class="audio-canvas w-full h-[120rpx] z-10" :height="100"></canvas>
                 </view>
 

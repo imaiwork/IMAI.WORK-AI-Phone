@@ -42,7 +42,7 @@
                         <view class="" v-for="(item, index) in dataLists" :key="index">
                             <view class="h-[388rpx] rounded-lg overflow-hidden relative">
                                 <image :src="item.pic || DefaultBg" class="h-full w-full" mode="aspectFill"></image>
-                                <view class="absolute bottom-1 px-2 text-[22rpx] text-white font-bold z-[33]">
+                                <view class="absolute bottom-1 px-2 text-[22rpx] text-white font-medium z-[33]">
                                     {{ item.create_time }}
                                 </view>
                                 <view
@@ -70,7 +70,7 @@
                                     class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center bg-[#0000004d] z-[22]">
                                     <template v-if="getStatus(item) == 2">
                                         <view
-                                            class="text-white bg-[#FF2442] text-[22rpx] font-bold rounded-[10rpx] w-[120rpx] h-[50rpx] flex items-center justify-center mx-auto"
+                                            class="text-white bg-[#FF2442] text-[22rpx] font-medium rounded-[10rpx] w-[120rpx] h-[50rpx] flex items-center justify-center mx-auto"
                                             >生成失败</view
                                         >
                                         <view class="mt-[16rpx] text-center text-[22rpx] text-white px-2">
@@ -190,7 +190,7 @@
             <template v-if="currentTab == 0">
                 <view
                     v-if="!isHandle"
-                    class="bg-black rounded-[16rpx] h-[90rpx] flex items-center justify-center text-white font-bold"
+                    class="bg-black rounded-[16rpx] h-[90rpx] flex items-center justify-center text-white font-medium"
                     @click="isHandle = true"
                     >创建发布任务</view
                 >
@@ -198,7 +198,7 @@
                     <view
                         class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
                         :class="[handleList.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
-                        <text class="font-bold text-[32rpx]">{{ handleList.length }}</text>
+                        <text class="font-medium text-[32rpx]">{{ handleList.length }}</text>
                         <text class="text-xs mt-1">已选</text>
                     </view>
                     <view class="flex items-center gap-x-2">
@@ -211,7 +211,7 @@
                             >取消</view
                         >
                         <view
-                            class="px-[58rpx] h-[90rpx] flex items-center rounded-[16rpx] text-white font-bold"
+                            class="px-[58rpx] h-[90rpx] flex items-center rounded-[16rpx] text-white font-medium"
                             :class="[handleList.length > 0 ? 'bg-black' : 'bg-[#787878CC]']"
                             @click="toPublish"
                             >去发布</view
@@ -268,7 +268,7 @@
         @update:show="showVideoPreview = false"></video-preview-v2>
     <u-popup v-model="showEditPopup" mode="center" width="90%" :border-radius="20">
         <view class="p-4 bg-white rounded-[20rpx]">
-            <view class="text-[30rpx] font-bold text-center mt-2">编辑名称</view>
+            <view class="text-[30rpx] font-medium text-center mt-2">编辑名称</view>
             <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
                 <u-input
                     v-model="newName"
@@ -279,12 +279,12 @@
             </view>
             <view class="flex items-center gap-x-5 mt-[56rpx]">
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold text-[#000000b3]"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
                     @click="showEditPopup = false">
                     取消
                 </view>
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-bold text-white"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
                     @click="handleEditConfirm"
                     >确定</view
                 >
@@ -295,7 +295,7 @@
         <view class="relative overflow-hidden bg-white w-full shadow-xl shadow-[#e2e8f0]/50">
             <view class="p-6">
                 <view class="flex flex-col items-center gap-1 mb-6">
-                    <view class="text-[32rpx] font-bold text-[#0f172a] tracking-wide">选择下载版本</view>
+                    <view class="text-[32rpx] font-medium text-[#0f172a] tracking-wide">选择下载版本</view>
                     <view class="text-[24rpx] text-[#64748b]">请选择您需要保存到本地的视频</view>
                 </view>
 
@@ -305,9 +305,9 @@
                         hover-class="opacity-80"
                         @click="handleDownload(1)">
                         <view class="w-8 h-8 rounded-full bg-white flex items-center justify-center mb-1 shadow-sm">
-                            <text class="text-[#64748b] text-[24rpx] font-bold">原</text>
+                            <text class="text-[#64748b] text-[24rpx] font-medium">原</text>
                         </view>
-                        <text class="text-[#334155] font-bold text-[26rpx]">生成视频</text>
+                        <text class="text-[#334155] font-medium text-[26rpx]">生成视频</text>
                         <text class="text-[#94a3b8] text-[20rpx] scale-90">原始版本</text>
                     </view>
 
@@ -321,9 +321,9 @@
 
                         <view
                             class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mb-1 backdrop-blur-sm border border-solid border-[#ffffff]/20">
-                            <text class="text-white text-[24rpx] font-bold">AI</text>
+                            <text class="text-white text-[24rpx] font-medium">AI</text>
                         </view>
-                        <text class="text-white font-bold text-[26rpx]">剪辑视频</text>
+                        <text class="text-white font-medium text-[26rpx]">剪辑视频</text>
                         <text class="text-[#dbeafe] text-[20rpx] scale-90">智能处理</text>
                     </view>
                 </view>
@@ -378,6 +378,22 @@
             </view>
         </view>
     </view>
+    <popup-bottom v-model="showPublishType" title="选择创建任务" height="30%">
+        <template #content>
+            <view class="space-y-4 p-4">
+                <view
+                    class="bg-black h-[90rpx] flex items-center justify-center text-white font-medium rounded-[16rpx]"
+                    @click="toCreatePublishTask('timer')">
+                    创建定时发布任务
+                </view>
+                <view
+                    class="bg-black h-[90rpx] flex items-center justify-center text-white font-medium rounded-[16rpx]"
+                    @click="toCreatePublishTask('qrcode')">
+                    创建发布视频二维码
+                </view>
+            </view>
+        </template>
+    </popup-bottom>
 </template>
 
 <script setup lang="ts">
@@ -459,7 +475,7 @@ const playData = reactive({
 const isHandle = ref(false);
 // 发布数据
 const handleList = ref<any[]>([]);
-
+const showPublishType = ref(false);
 // 根据不同的类型获取不同的status值
 const getStatus = (item: any) => {
     const { type, status } = item || {};
@@ -771,7 +787,7 @@ const handleDelete = async (index: number | number[]) => {
 const handlePreview = (item: any) => {
     const { draw_type, image, video_url } = item;
     if (draw_type == 6) {
-        operateItem.value.url = video_url;
+        playData.url = video_url;
         showVideoPreview.value = true;
     } else {
         uni.previewImage({
@@ -817,9 +833,16 @@ const toPublish = () => {
         uni.$u.toast("最多只能选择99个视频哦~");
         return;
     }
+    showPublishType.value = true;
+};
+
+const toCreatePublishTask = (type: "timer" | "qrcode") => {
     const ids = handleList.value.map((index: number) => dataLists.value[index].task_id);
     uni.$u.route({
-        url: "/ai_modules/device/pages/create_task/create_task?type=1",
+        url:
+            type == "timer"
+                ? "/ai_modules/device/pages/create_task/create_task?type=1"
+                : "/ai_modules/digital_human/pages/platform_publish/platform_publish",
         params: {
             source: "creation_video",
             ids: JSON.stringify(ids),
@@ -827,6 +850,7 @@ const toPublish = () => {
     });
     handleList.value = [];
     isHandle.value = false;
+    showPublishType.value = false;
 };
 
 // 获取types对应元素内容
@@ -879,7 +903,7 @@ onShow(async () => {
 <style scoped lang="scss">
 :deep(.u-tabs) {
     .u-tab-item {
-        @apply font-bold;
+        @apply font-medium;
     }
 }
 .radio-wrap {

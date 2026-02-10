@@ -1,10 +1,18 @@
 <template>
     <div class="h-full flex relative bg-white">
-        <div class="w-[220px] h-full fixed top-0 left-[var(--aside-width)] z-[888]" v-show="!hideSidebar">
-            <chat-history ref="chatHistoryRef" />
+        <div
+            class="w-[220px] h-full fixed top-0 left-[var(--aside-width)] z-[888] border-r border-[#e2e8f0]/60 bg-white transition-all"
+            v-show="!hideSidebar">
+            <div class="flex flex-col h-full">
+                <!-- <chat-agent />
+                <ElDivider class="!my-2 !border-t-[#e2e8f0]/60" /> -->
+                <div class="grow min-h-0">
+                    <chat-history ref="chatHistoryRef" />
+                </div>
+            </div>
         </div>
         <div class="h-full flex-1 relative" :class="{ 'ml-[220px]': !hideSidebar }">
-            <div class="h-full px-4 mx-auto">
+            <div class="h-full mx-auto">
                 <Chatting
                     ref="chattingRef"
                     :is-stop="isStopChat"
@@ -14,21 +22,26 @@
                     :is-network="true"
                     :is-new-chat="!!taskId"
                     :is-disabled-humanize="isAgent()"
+                    :is-quote="true"
+                    :is-share="true"
+                    :is-edit="true"
                     @close="stopStream"
                     @content-post="contentPost"
                     @update:file-list="(files) => (fileLists = files)"
                     @update:network="(value) => (isNetwork = value)"
-                    @new-chat="startNewChat">
+                    @new-chat="startNewChat"
+                    @quote="handleQuote"
+                    @update:inputContent="handleUpdateInputContent">
                     <template #content>
                         <div class="w-full h-full pt-[100px]">
                             <div class="md:max-w-3xl lg:max-w-[42rem] xl:max-w-[48rem] 2xl:max-w-[52rem] mx-auto">
-                                <div class="font-bold text-[32px]">Hello, 今天心情不错哟?</div>
+                                <div class="font-medium text-[32px]">Hello, 今天心情不错哟?</div>
                                 <div class="mt-6 flex flex-col xl:flex-row gap-4">
                                     <div class="flex-1 border border-[#EBEBEB] rounded-2xl px-5 relative">
                                         <div class="flex items-center justify-between py-3">
-                                            <div class="text-lg font-bold">AI获客</div>
+                                            <div class="text-lg font-medium">AI获客</div>
                                             <div
-                                                class="flex items-center text-primary gap-x-1 font-bold cursor-pointer"
+                                                class="flex items-center text-primary gap-x-1 font-medium cursor-pointer"
                                                 @click="toPage('customer')">
                                                 更多<Icon name="el-icon-ArrowRight"></Icon>
                                             </div>
@@ -40,7 +53,7 @@
                                                 :key="index"
                                                 @click="toPage(item.type)">
                                                 <img :src="item.icon" class="w-9 h-9" />
-                                                <div class="text-[14px] font-bold mt-2 truncate">{{ item.name }}</div>
+                                                <div class="text-[14px] font-medium mt-2 truncate">{{ item.name }}</div>
                                             </div>
                                         </div>
                                         <div class="absolute right-2 bottom-0">
@@ -49,9 +62,9 @@
                                     </div>
                                     <div class="flex-1 border border-[#EBEBEB] rounded-2xl px-5 pb-3 relative">
                                         <div class="flex items-center justify-between py-3">
-                                            <div class="text-lg font-bold">矩阵运营</div>
+                                            <div class="text-lg font-medium">矩阵运营</div>
                                             <div
-                                                class="flex items-center text-primary gap-x-1 font-bold cursor-pointer"
+                                                class="flex items-center text-primary gap-x-1 font-medium cursor-pointer"
                                                 @click="toPage('matrix')">
                                                 更多<Icon name="el-icon-ArrowRight"></Icon>
                                             </div>
@@ -61,7 +74,7 @@
                                                 class="h-[190px] bg-[#F9F9FA] rounded-[10px] relative cursor-pointer"
                                                 style="grid-row: span 2"
                                                 @click="toPage('sales')">
-                                                <div class="text-lg font-bold text-center mt-5">AI销售</div>
+                                                <div class="text-lg font-medium text-center mt-5">AI销售</div>
                                                 <div class="text-[#999999] text-xs mt-2 text-center w-[70%] mx-auto">
                                                     AI智能聊天、朋友圈自动点赞评论
                                                 </div>
@@ -72,7 +85,7 @@
                                             <div
                                                 class="bg-[#F9F9FA] rounded-[10px] px-[17px] py-[10px] h-[92px] cursor-pointer"
                                                 @click="toPage('matrix')">
-                                                <div class="text-lg font-bold">矩阵运营</div>
+                                                <div class="text-lg font-medium">矩阵运营</div>
                                                 <div class="text-[#999999] text-xs">多平台一键自动发布</div>
                                                 <div class="mt-2 flex items-center gap-2">
                                                     <img
@@ -85,7 +98,7 @@
                                                 class="bg-[#F9F9FA] rounded-[10px] h-[92px] relative cursor-pointer"
                                                 @click="toPage('dh')">
                                                 <div class="pl-[17px] pt-[11px] mr-[70px]">
-                                                    <div class="text-lg font-bold mb-1">数字人定制</div>
+                                                    <div class="text-lg font-medium mb-1">数字人定制</div>
                                                     <div class="text-[#999999] text-xs">形象克隆</div>
                                                     <div class="text-[#999999] text-xs">声音克隆</div>
                                                 </div>
@@ -102,11 +115,11 @@
                                     class="mt-[14px] px-5 border border-[#EBEBEB] rounded-[10px] h-[65px] flex items-center justify-between">
                                     <div class="flex items-center">
                                         <Icon name="local-icon-phone2" :size="22"></Icon>
-                                        <span class="text-lg font-bold ml-2">AI手机管理</span>
+                                        <span class="text-lg font-medium ml-2">AI手机管理</span>
                                         <span class="text-[#999999] ml-[28px]">绑定AI手机 / 激活设备码</span>
                                     </div>
                                     <div
-                                        class="flex items-center text-primary gap-x-1 font-bold cursor-pointer"
+                                        class="flex items-center text-primary gap-x-1 font-medium cursor-pointer"
                                         @click="toPage('device')">
                                         更多<Icon name="el-icon-ArrowRight"></Icon>
                                     </div>
@@ -132,6 +145,7 @@ import { useChatAreaManager } from "./_modules/composables/useChatAreaManager";
 import { useChatManager } from "./_modules/composables/useChatManager";
 import { useChatStore } from "./_modules/stores/chat";
 import ChatHistory from "./_components/chat-history.vue";
+import ChatAgent from "./_components/chat-agent.vue";
 import RedBookIcon from "@/assets/images/redbook_icon.png";
 import DouyinIcon from "@/assets/images/douyin_icon.png";
 import KuaishouIcon from "@/assets/images/kuaishou_icon.png";
@@ -164,9 +178,10 @@ const {
     stopStream,
 } = useChatManager();
 
-const { chatAreaRef, agent, setup, dispose, clear, getAgentList, isAgent, setAgent } = useChatAreaManager({
+const { chatAreaRef, agent, setup, dispose, clear, getAgentList, isAgent, setAgent, setText } = useChatAreaManager({
     onEnter: (text) => {
         contentPost(text);
+        chattingRef?.value?.triggerContentPushUp();
     },
     onInputChange: (text, isEmpty) => {
         if (chattingRef.value) {
@@ -205,19 +220,34 @@ const toPage = (type: string) => {
 };
 
 const contentPost = (text: string) => {
-    chatStore.setAgent(agent.value);
     sendMessage(text);
     clear();
+    chatStore.setAgent(agent.value);
     chatStore.clearFiles();
     chattingRef.value?.cleanInput();
 };
+
+const handleQuote = (text: string) => {
+    chatStore.setQuoteText(text);
+};
+
+const handleUpdateInputContent = (value: string) => {
+    setText(value);
+};
+
+watch(
+    () => chatStore.taskId,
+    () => {
+        chattingRef?.value?.clearQuote();
+    }
+);
 
 watch(
     () => route.fullPath,
     () => {
         initialize().then(async () => {
             await getAgentList();
-            await setup();
+
             if (Number(route.query.agent_id) > 0) {
                 setAgent({
                     id: route.query.agent_id as string,
@@ -228,6 +258,10 @@ watch(
     },
     { immediate: true }
 );
+
+onMounted(() => {
+    setup();
+});
 
 onUnmounted(() => {
     dispose();

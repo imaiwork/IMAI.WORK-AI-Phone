@@ -8,7 +8,7 @@
                     </div>
                     <div>
                         <div class="text-[16px] text-[#1E293B] font-black tracking-tight">形象管理</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             Model Management
                         </div>
                     </div>
@@ -21,7 +21,7 @@
                             </div>
                             <div class="w-[1px] h-4 bg-[#E2E8F0]"></div>
                             <ElCheckbox v-model="isAllSelect" @change="handleAllSelect" class="custom-checkbox">
-                                <span class="text-[#64748B] font-bold text-sm">全选所有素材</span>
+                                <span class="text-[#64748B] font-medium text-sm">全选所有素材</span>
                             </ElCheckbox>
                         </div>
                     </div>
@@ -42,7 +42,7 @@
                             <div class="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
                                 <ElButton
                                     link
-                                    class="!text-[#94A3B8] hover:!text-[#64748B] !font-bold !text-sm mr-2"
+                                    class="!text-[#94A3B8] hover:!text-[#64748B] !font-medium !text-sm mr-2"
                                     @click="handleExitDelete">
                                     <div class="flex items-center gap-1">
                                         <Icon name="el-icon-Close" :size="14"></Icon>
@@ -87,7 +87,7 @@
                                         remark: item.remark,
                                         source_type: item.source_type,
                                     }"
-                                    @delete="handleDelete" />
+                                    @delete="handleDelete(item.id, item.source_type)" />
                                 <div
                                     class="absolute top-0 right-0 z-[1000] w-full h-full bg-black/5 flex justify-end p-2 rounded-xl"
                                     v-if="isDelete">
@@ -111,7 +111,7 @@
             </ElScrollbar>
         </div>
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between border-t border-br">
-            <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 条形象数据</div>
+            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条形象数据</div>
         </div>
     </div>
 </template>
@@ -216,7 +216,11 @@ const handleDelete = async (id?: number, source_type?: string) => {
                     await deleteBySourceType("shanjian_anchor", deleteShanjianAnchor);
                     await deleteBySourceType("public_anchor", deletePublicAnchor);
                 }
-                pager.lists = pager.lists.filter((item, index) => !selectIndex.value.includes(index));
+                if (id) {
+                    pager.lists = pager.lists.filter((item) => item.id !== id);
+                } else {
+                    pager.lists = pager.lists.filter((item, index) => !selectIndex.value.includes(index));
+                }
                 selectIndex.value = [];
                 feedback.msgSuccess("删除成功");
             } catch (error) {

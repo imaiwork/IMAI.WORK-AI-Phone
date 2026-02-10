@@ -6,7 +6,7 @@
                     <view
                         v-for="item in tabs"
                         :key="item.value"
-                        class="px-[24rpx] py-[12rpx] rounded-[50rpx] text-[#959FAF] font-bold whitespace-nowrap"
+                        class="px-[24rpx] py-[12rpx] rounded-[50rpx] text-[#959FAF] font-medium whitespace-nowrap"
                         :class="{
                             'bg-primary text-white': item.value === activeTab,
                         }"
@@ -40,7 +40,7 @@
                             </view>
                             <view>
                                 <view class="flex items-center gap-x-2">
-                                    <view class="font-bold line-clamp-1">{{ item.nickname }}</view>
+                                    <view class="font-medium line-clamp-1">{{ item.nickname }}</view>
                                 </view>
                                 <view class="flex items-center gap-x-2 mt-[12rpx]">
                                     <image src="/static/images/icons/device.svg" class="w-[32rpx] h-[32rpx]"></image>

@@ -3,11 +3,11 @@
         <ElScrollbar>
             <div class="flex gap-x-5 pb-4 pr-4">
                 <div class="bg-white rounded-[20px] px-6 py-[18px] min-w-[800px] basis-1/2">
-                    <div class="text-lg font-bold">AI智能获客</div>
+                    <div class="text-lg font-medium">AI智能获客</div>
                     <div class="mt-[18px]">
                         <div class="flex gap-x-[15px]">
                             <div class="h-[230px] rounded-[10px] bg-[#F9F9FA] p-4">
-                                <div class="text-lg font-bold">主动获客</div>
+                                <div class="text-lg font-medium">主动获客</div>
                                 <div class="mt-[15px] grid grid-cols-4 gap-x-[17px]">
                                     <img
                                         class="w-[55px] h-[55px] transition-all duration-300 ease-in-out hover:scale-110"
@@ -33,7 +33,7 @@
                             </div>
                             <div
                                 class="h-[230px] w-[185px] rounded-[10px] bg-[#F9F9FA] p-4 flex flex-col items-center justify-center">
-                                <div class="text-lg font-bold">被动获客</div>
+                                <div class="text-lg font-medium">被动获客</div>
                                 <div class="grid grid-cols-2 gap-x-3 gap-y-[10px] mt-[15px]">
                                     <img
                                         src="@/assets/images/app/redbook2.png"
@@ -55,7 +55,7 @@
                                 </div>
                             </div>
                             <div class="h-[230px] w-[250px] rounded-[10px] bg-[#F9F9FA] p-4 relative">
-                                <div class="text-lg font-bold">AI个微助手</div>
+                                <div class="text-lg font-medium">AI个微助手</div>
                                 <div class="mt-[18px] text-xs text-[#00000080]">
                                     解决销售“人力高效率低、跟进不及时、客户流失严重等”的痛点，让销售告别繁琐重复劳动。
                                 </div>
@@ -74,14 +74,14 @@
                     </div>
                 </div>
                 <div class="bg-white rounded-[20px] px-6 py-[18px] min-w-[600px] basis-1/2">
-                    <div class="text-lg font-bold">AI内务</div>
+                    <div class="text-lg font-medium">AI内务</div>
                     <div class="mt-[26px]">
                         <div class="grid gap-x-2" :class="`grid-cols-${aiStaffLists.length}`">
                             <div v-for="item in aiStaffLists" class="flex flex-col justify-center items-center">
                                 <img
                                     :src="getCateImage(item.key)"
                                     class="w-[55px] h-[55px] transition-all duration-300 ease-in-out hover:scale-110" />
-                                <div class="mt-4 text-lg font-bold">{{ item.name }}</div>
+                                <div class="mt-4 text-lg font-medium">{{ item.name }}</div>
                                 <div class="text-xs text-[#00000080] mt-[23px] text-center">
                                     <div>{{ item.desc1 }}</div>
                                     <div>{{ item.desc2 }}</div>
@@ -101,7 +101,7 @@
         <ElScrollbar>
             <div class="mt-2 flex gap-x-5 pb-5 pr-4">
                 <div class="bg-white rounded-[20px] px-6 py-[18px] basis-1/3">
-                    <div class="text-lg font-bold">AI内容营销</div>
+                    <div class="text-lg font-medium">AI内容营销</div>
                     <div class="flex gap-x-6">
                         <div class="mt-5">
                             <div class="grid grid-cols-2 gap-x-10 min-w-[250px]">
@@ -109,7 +109,7 @@
                                     <img
                                         src="@/assets/images/app/post.png"
                                         class="w-[55px] h-[55px] transition-all duration-300 ease-in-out hover:scale-110" />
-                                    <div class="text-lg font-bold mt-4">发布图文/视频</div>
+                                    <div class="text-lg font-medium mt-4">发布图文/视频</div>
                                     <div
                                         class="w-[70px] h-7 rounded-[50px] bg-[#F6F7FA] mt-6 flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out hover:bg-gray-200"
                                         @click="handleStart(AppKeyEnum.MATRIX_PUBLISH)">
@@ -120,7 +120,7 @@
                                     <img
                                         src="@/assets/images/app/video.png"
                                         class="w-[55px] h-[55px] transition-all duration-300 ease-in-out hover:scale-110" />
-                                    <div class="text-lg font-bold mt-4">视频创作</div>
+                                    <div class="text-lg font-medium mt-4">视频创作</div>
                                     <div
                                         class="w-[70px] h-7 rounded-[50px] bg-[#F6F7FA] mt-6 flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out hover:bg-gray-200"
                                         @click="handleStart('matrix_dh')">
@@ -133,7 +133,7 @@
                             </div>
                         </div>
                         <div class="bg-[#F9F9FA] rounded-[10px] w-[250px] h-[255px] px-6 relative">
-                            <div class="pt-5 text-lg font-bold">数字人定制</div>
+                            <div class="pt-5 text-lg font-medium">数字人定制</div>
                             <div class="text-xs text-[#00000080] mt-[15px]">
                                 形象、声音1v1克隆 ，输入文本AI替您发言 ，自定台词精准匹配口型
                             </div>
@@ -151,13 +151,13 @@
                     </div>
                 </div>
                 <div class="bg-white rounded-[20px] px-6 py-[18px] basis-2/3">
-                    <div class="text-lg font-bold">AI工具</div>
+                    <div class="text-lg font-medium">AI工具</div>
                     <div class="mt-[26px] grid min-w-[700px] gap-x-2" :class="`grid-cols-${aiTools.length}`">
                         <div v-for="item in aiTools" class="flex flex-col justify-center items-center">
                             <img
                                 :src="getCateImage(item.key)"
                                 class="w-[55px] h-[55px] transition-all duration-300 ease-in-out hover:scale-110" />
-                            <div class="mt-4 text-lg font-bold">{{ item.name }}</div>
+                            <div class="mt-4 text-lg font-medium">{{ item.name }}</div>
                             <div class="text-xs text-[#00000080] mt-[23px] text-center">
                                 <div>{{ item.desc1 }}</div>
                                 <div>{{ item.desc2 }}</div>
@@ -176,7 +176,7 @@
         <ElScrollbar>
             <div class="mt-2 flex gap-x-5 pb-5 pr-5">
                 <div class="bg-white rounded-[10px] px-6 py-[18px] flex-1 min-w-[700px]">
-                    <div class="text-lg font-bold">持续开发中</div>
+                    <div class="text-lg font-medium">持续开发中</div>
                     <div class="mt-[25px] grid" :class="`grid-cols-${developingTools.length}`">
                         <div
                             v-for="(item, index) in developingTools"
@@ -185,12 +185,12 @@
                             <img
                                 class="w-[55px] h-[55px] transition-all duration-300 ease-in-out hover:scale-110"
                                 :src="getCateImage(item.key)" />
-                            <div class="mt-4 font-bold text-lg">{{ item.name }}</div>
+                            <div class="mt-4 font-medium text-lg">{{ item.name }}</div>
                         </div>
                     </div>
                 </div>
                 <div class="bg-white rounded-[10px] px-6 py-[18px] w-[500px] flex-shrink-0">
-                    <div class="text-lg font-bold">技术底座</div>
+                    <div class="text-lg font-medium">技术底座</div>
                     <div class="mt-[25px] grid" :class="`grid-cols-${technicalFoundationTools.length}`">
                         <div
                             v-for="(item, index) in technicalFoundationTools"
@@ -198,7 +198,7 @@
                             <img
                                 class="w-[55px] h-[55px] transition-all duration-300 ease-in-out hover:scale-110"
                                 :src="item.icon" />
-                            <div class="mt-4 font-bold text-lg">{{ item.name }}</div>
+                            <div class="mt-4 font-medium text-lg">{{ item.name }}</div>
                         </div>
                     </div>
                 </div>

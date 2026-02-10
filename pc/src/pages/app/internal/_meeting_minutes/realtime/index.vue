@@ -14,7 +14,7 @@
                 <div class="w-[880px] mx-auto pb-20">
                     <div class="text-center">
                         <h1 class="text-[36px] font-[900] text-[#0F172A] tracking-tight">会议实时记录</h1>
-                        <p class="mt-2 text-[#64748B] font-bold">语音即刻转文字 · 多语种翻译 · 智能区分发言人</p>
+                        <p class="mt-2 text-[#64748B] font-medium">语音即刻转文字 · 多语种翻译 · 智能区分发言人</p>
                     </div>
 
                     <div
@@ -32,7 +32,7 @@
                                             <div
                                                 v-for="item in languageList"
                                                 :key="item.code"
-                                                class="px-6 py-2 rounded-xl border-2 transition-all cursor-pointer font-bold text-sm"
+                                                class="px-6 py-2 rounded-xl border-2 transition-all cursor-pointer font-medium text-sm"
                                                 :class="
                                                     formData.language === item.code
                                                         ? 'bg-primary border-primary text-white shadow-light shadow-[#0065fb]/30'
@@ -73,7 +73,7 @@
                                             <div
                                                 v-for="item in speakerOptions"
                                                 :key="item.value"
-                                                class="px-8 py-2 rounded-xl border-2 transition-all cursor-pointer font-bold text-sm"
+                                                class="px-8 py-2 rounded-xl border-2 transition-all cursor-pointer font-medium text-sm"
                                                 :class="
                                                     formData.speaker === item.value
                                                         ? 'bg-[#F1F0FF] border-primary text-primary'
@@ -89,7 +89,7 @@
                                 <div class="pt-6 flex flex-col items-center gap-6">
                                     <ElTooltip placement="top">
                                         <template #content>
-                                            <span class="font-bold"
+                                            <span class="font-medium"
                                                 >{{ tokensValue.score }} {{ tokensValue.unit }} / 分钟</span
                                             >
                                         </template>
@@ -107,7 +107,7 @@
                                     <div
                                         class="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-lg border border-[#F1F5F9]">
                                         <Icon name="el-icon-InfoFilled" color="#94A3B8" :size="14" />
-                                        <span class="text-xs text-[#64748B] font-bold">
+                                        <span class="text-xs text-[#64748B] font-medium">
                                             当前算力预计可录制
                                             <span class="text-primary">{{ userRecordTimeLimit }}</span> 分钟
                                         </span>
@@ -125,14 +125,14 @@
 
                             <div class="mt-10 flex justify-center gap-4" v-if="isCreateError">
                                 <ElButton
-                                    class="!h-12 !px-8 !rounded-xl !font-bold"
+                                    class="!h-12 !px-8 !rounded-xl !font-medium"
                                     type="primary"
                                     :loading="isLock"
                                     @click="lockCreateTask"
                                     >重新上传</ElButton
                                 >
                                 <ElButton
-                                    class="!h-12 !px-8 !rounded-xl !bg-[#FEF2F2] !text-[#EF4444] !border-[#FEE2E2] !font-bold"
+                                    class="!h-12 !px-8 !rounded-xl !bg-[#FEF2F2] !text-[#EF4444] !border-[#FEE2E2] !font-medium"
                                     @click="reloadRecord"
                                     >放弃并重新录音</ElButton
                                 >
@@ -144,7 +144,7 @@
                         <div class="flex items-center justify-between mb-6">
                             <div class="text-xl font-[900] text-[#0F172A]">最近录音记录</div>
                             <div
-                                class="text-sm font-bold text-primary cursor-pointer hover:underline"
+                                class="text-sm font-medium text-primary cursor-pointer hover:underline"
                                 @click="router.push('/history')">
                                 查看全部
                             </div>
@@ -170,7 +170,7 @@
                                                                 ? 'bg-[#10B981]'
                                                                 : 'bg-[#F59E0B]'
                                                         "></div>
-                                                    <span class="text-[11px] font-bold text-[#64748B]">
+                                                    <span class="text-[11px] font-medium text-[#64748B]">
                                                         {{
                                                             item.status == TurnStatus.SUCCESS
                                                                 ? item.task_type == 1
@@ -191,7 +191,7 @@
                                         </div>
 
                                         <div
-                                            class="flex justify-between items-center border-t border-[#F8FAFC] pt-3 text-[11px] font-bold text-[#94A3B8]">
+                                            class="flex justify-between items-center border-t border-[#F8FAFC] pt-3 text-[11px] font-medium text-[#94A3B8]">
                                             <span>{{ dayjs(item.create_time).format("YYYY/MM/DD") }}</span>
                                             <span>{{ dayjs(item.create_time).format("HH:mm") }}</span>
                                         </div>

@@ -1,11 +1,14 @@
 <template>
     <view class="h-screen flex flex-col pt-4">
         <view class="px-4">
-            <view class="font-bold text-[30rpx]">素材（共{{ materialList.length }}张）</view>
+            <view class="font-medium text-[30rpx]">素材（共{{ materialList.length }}张）</view>
             <view class="mt-1 text-xs text-[#0000004d]">
-                总量限制：全部素材总时长不得超过{{ montageConfig.materialTotalDuration }}分钟 (图片按{{
-                    montageConfig.imageDuration
-                }}秒/张，视频按实际时长/个)
+                <template v-if="!isStoryboard">
+                    总量限制：全部素材总时长不得超过{{ montageConfig.materialTotalDuration }}分钟 (图片按{{
+                        montageConfig.imageDuration
+                    }}秒/张，视频按实际时长/个)
+                </template>
+                <template v-else> 总量限制：素材最多不能超过200个 </template>
             </view>
         </view>
         <view class="grow min-h-0">
@@ -22,7 +25,10 @@
                             <u-icon name="close" color="#ffffff" size="16"></u-icon>
                         </view>
                         <view class="relative leading-[0] rounded-[12rpx] overflow-hidden w-full h-full">
-                            <image :src="item.pic" class="w-full h-full rounded-[12rpx]" mode="aspectFill"></image>
+                            <image
+                                :src="item.pic || item.content"
+                                class="w-full h-full rounded-[12rpx]"
+                                mode="aspectFill"></image>
                             <view
                                 class="absolute bottom-0 h-[40rpx] w-full bg-[#00000080] flex items-center justify-center z-[88]">
                                 <image
@@ -34,9 +40,9 @@
                                     src="@/ai_modules/digital_human/static/icons/video.svg"
                                     class="w-[24rpx] h-[24rpx]"></image>
                             </view>
-                            <view class="absolute bottom-4 w-full z-[89] flex justify-center">
-                                <view class="dh-version-name" @click.stop="handleReplaceMaterial(index)"> 替换 </view>
-                            </view>
+                        </view>
+                        <view class="absolute bottom-4 w-full z-[89] flex justify-center">
+                            <view class="dh-version-name" @click.stop="handleReplaceMaterial(index)"> 替换 </view>
                         </view>
                     </view>
                     <view
@@ -62,7 +68,7 @@
     <choose-history v-model="showHistory" :limit="1" @select="handleSelectHistory" />
     <choose-material
         v-model="showMaterialLibrary"
-        :limit="uploadMaterialType == 'image' ? 9 : 1"
+        :limit="uploadMaterialType == 'image' || replaceMaterialIndex === -1 ? 9 : 1"
         :type="uploadMaterialType"
         @select="handleSelectMaterial" />
     <video-preview
@@ -86,6 +92,8 @@ import UploadRulePop from "@/ai_modules/digital_human/components/upload-rule-pop
 
 const { emit } = useEventBusManager();
 
+const materialType = ref("");
+
 const materialList = ref<any[]>([]);
 const isFirstUpload = ref(true);
 const showUploadTip = ref(false);
@@ -98,6 +106,9 @@ const playItem = reactive({
     url: "",
 });
 const showVideoPreview = ref(false);
+
+const isStoryboard = computed(() => materialType.value === "storyboard");
+
 // 获取当前素材总时长
 const getCurrentTotalDuration = computed(() => {
     const imageCount = materialList.value.filter((item: any) => item.type === "image").length;
@@ -165,7 +176,7 @@ const handleSelectMaterial = async (res: any[]) => {
     const type = uploadMaterialType.value;
     await processAndAppend({
         rawList: res,
-        urlField: "content",
+        urlField: "url",
         type: type as "video" | "image",
         replaceIndex: replaceMaterialIndex.value,
         onSuccess: () => (showMaterialLibrary.value = false),
@@ -183,7 +194,7 @@ const previewMaterial = (item: any) => {
             urls: [item.pic],
         });
     } else {
-        playItem.pic = item.pic;
+        playItem.pic = item.pic || item.content;
         playItem.url = item.url;
         showVideoPreview.value = true;
     }
@@ -194,7 +205,7 @@ const handleDeleteMaterial = (index: number) => {
 };
 
 const handleConfirm = () => {
-    if (getCurrentTotalDuration.value > montageConfig.materialTotalDuration * 60) {
+    if (!isStoryboard.value && getCurrentTotalDuration.value > montageConfig.materialTotalDuration * 60) {
         uni.$u.toast(`素材总时长不能超过${montageConfig.materialTotalDuration}分钟`);
         return;
     }
@@ -209,6 +220,7 @@ onLoad((options: any) => {
     if (options.materialList) {
         materialList.value = JSON.parse(options.materialList);
     }
+    materialType.value = options.type;
 });
 </script>
 

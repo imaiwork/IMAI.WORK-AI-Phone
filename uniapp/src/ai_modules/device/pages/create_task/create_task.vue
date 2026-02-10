@@ -34,14 +34,12 @@
         <view class="grow min-h-0 mt-[24rpx]">
             <view v-show="currentStep === 1" class="flex flex-col h-full">
                 <view class="flex items-center justify-between px-4">
-                    <text class="font-bold">
-                        {{ taskType == TaskType.IMAGE ? "图组列表" : "视频素材" }}（{{
-                            formData.materialLists.length
-                        }}）
+                    <text class="font-medium">
+                        {{ taskType == TaskType.IMAGE ? "图组列表" : "视频素材" }}（{{ formData.materialList.length }}）
                     </text>
                     <view
                         v-if="taskType == TaskType.IMAGE"
-                        class="px-[28rpx] py-[12rpx] bg-primary text-white rounded-[50rpx] font-bold"
+                        class="px-[28rpx] py-[12rpx] bg-primary text-white rounded-[50rpx] font-medium"
                         @click="handleEditMaterial()">
                         添加图组
                     </view>
@@ -49,18 +47,18 @@
 
                 <view class="grow min-h-0">
                     <template v-if="taskType == TaskType.IMAGE">
-                        <scroll-view scroll-y class="h-full" v-if="formData.materialLists.length > 0">
+                        <scroll-view scroll-y class="h-full" v-if="formData.materialList.length > 0">
                             <view class="p-4 flex flex-col gap-2">
                                 <view
-                                    v-for="(item, index) in formData.materialLists"
+                                    v-for="(item, index) in formData.materialList"
                                     :key="index"
                                     class="material-image-item">
                                     <view class="flex items-center justify-between">
-                                        <view class="font-bold">
+                                        <view class="font-medium">
                                             {{ `图组${index + 1 < 10 ? "0" + (index + 1) : index + 1}` }}
                                         </view>
                                         <view class="flex items-center gap-x-1" @click="handleEditMaterial(index)">
-                                            <view class="flex items-center gap-x-[4rpx] font-bold">
+                                            <view class="flex items-center gap-x-[4rpx] font-medium">
                                                 <text>{{ item.url.length }}</text>
                                                 <text class="text-[#0000004d]">张</text>
                                             </view>
@@ -93,7 +91,7 @@
                                     class="w-[220rpx] h-[88rpx] rounded-[20rpx] border border-solid flex items-center justify-center gap-x-2"
                                     @click="handleEditMaterial()">
                                     <u-icon name="plus" size="24"></u-icon>
-                                    <text class="font-bold">添加图组</text>
+                                    <text class="font-medium">添加图组</text>
                                 </view>
                             </view>
                         </view>
@@ -103,7 +101,7 @@
                         <scroll-view scroll-y class="h-full">
                             <view class="p-4 grid grid-cols-3 gap-2">
                                 <view
-                                    v-for="(item, index) in formData.materialLists"
+                                    v-for="(item, index) in formData.materialList"
                                     :key="index"
                                     class="material-video-item">
                                     <image
@@ -128,14 +126,14 @@
                                     </view>
                                 </view>
                                 <view
-                                    v-if="formData.materialLists.length < VIDEO_CONFIG.limit"
+                                    v-if="formData.materialList.length < VIDEO_CONFIG.limit"
                                     class="bg-white rounded-[20rpx] h-[288rpx] flex flex-col items-center justify-center"
                                     @click="triggerVideoUploadSelection">
                                     <view
                                         class="w-[32rpx] h-[32rpx] bg-[#00000066] flex items-center justify-center rounded-full">
                                         <u-icon name="plus" size="24" color="#ffffff"></u-icon>
                                     </view>
-                                    <text class="mt-3 font-bold text-[#00000066]">添加视频</text>
+                                    <text class="mt-3 font-medium text-[#00000066]">添加视频</text>
                                 </view>
                             </view>
                         </scroll-view>
@@ -151,7 +149,7 @@
                         class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
                         @click="editCopywriterIndex = -1">
                         <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="font-bold text-[32rpx]">添加文案...</text>
+                        <text class="font-medium text-[32rpx]">添加文案...</text>
                     </navigator>
                     <navigator
                         url="/ai_modules/device/pages/task_ai_copywriter/task_ai_copywriter"
@@ -159,10 +157,10 @@
                         class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-black rounded-[10rpx]"
                         @click="editCopywriterIndex = -1">
                         <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="text-white font-bold text-[32rpx]">AI生成</text>
+                        <text class="text-white font-medium text-[32rpx]">AI生成</text>
                     </navigator>
                 </view>
-                <view class="px-4 font-bold text-[30rpx] mt-[60rpx]">
+                <view class="px-4 font-medium text-[30rpx] mt-[60rpx]">
                     文案列表（{{ formData.copywriterList.length }}）
                 </view>
                 <view class="grow min-h-0 mt-[24rpx]">
@@ -173,11 +171,11 @@
                                 :key="index"
                                 class="copywriter-item"
                                 @click="handleEditCopywriter(index)">
-                                <view class="text-[30rpx] font-bold"> {{ item.title }} </view>
-                                <view class="font-bold mt-[26rpx]">
+                                <view class="text-[30rpx] font-medium"> {{ item.title }} </view>
+                                <view class="font-medium mt-[26rpx]">
                                     {{ item.content }}
                                 </view>
-                                <view class="mt-[50rpx] flex items-center flex-wrap gap-2">
+                                <view class="mt-[50rpx] flex items-center flex-wrap gap-2" v-if="item.topic.length > 0">
                                     <view
                                         v-for="(tag, tindex) in item.topic"
                                         :key="tindex"
@@ -203,7 +201,7 @@
                 <scroll-view scroll-y class="h-full">
                     <view class="px-4 pb-[100rpx]">
                         <view>
-                            <view class="text-[30rpx] font-bold"> 基础设置 </view>
+                            <view class="text-[30rpx] font-medium"> 基础设置 </view>
                             <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
                                 <view>
                                     <view class="text-[#7C7E80]">任务名称</view>
@@ -231,7 +229,7 @@
                                                 <text
                                                     :class="[
                                                         formData.accounts.length
-                                                            ? 'text-primary font-bold'
+                                                            ? 'text-primary font-medium'
                                                             : 'text-[#00000033]',
                                                     ]">
                                                     {{
@@ -242,6 +240,26 @@
                                                 </text>
                                                 <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
                                             </navigator>
+                                        </view>
+                                    </view>
+                                </view>
+                                <view class="mt-[28rpx]">
+                                    <view class="text-[#7C7E80]">标记地点(选填)</view>
+                                    <view class="mt-[12rpx]">
+                                        <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1">
+                                            <view
+                                                class="flex items-center justify-between h-[70rpx]"
+                                                @click="handleKeywordsEdit">
+                                                <text
+                                                    :class="[
+                                                        formData.location
+                                                            ? 'text-primary font-medium'
+                                                            : 'text-[#00000033]',
+                                                    ]">
+                                                    {{ formData.location || "点击编辑" }}
+                                                </text>
+                                                <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
+                                            </view>
                                         </view>
                                     </view>
                                 </view>
@@ -270,7 +288,7 @@
                         </view>
 
                         <view class="mt-[32rpx]">
-                            <view class="text-[30rpx] font-bold"> 时间设置 </view>
+                            <view class="text-[30rpx] font-medium"> 时间设置 </view>
                             <view
                                 class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx] shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.03)]">
                                 <view>
@@ -339,7 +357,7 @@
 
                         <view class="mt-[32rpx]">
                             <view class="flex items-center gap-x-2">
-                                <view class="text-[30rpx] font-bold"> 发布时间 </view>
+                                <view class="text-[30rpx] font-medium"> 发布时间 </view>
                                 <view class="text-[#E07B00] text-[22rpx]">
                                     {{ `(发布的间隔时间必须大于${TIME_INTERVAL}分钟)` }}
                                 </view>
@@ -348,7 +366,7 @@
                                 class="mt-4 rounded-[16rpx] px-4 py-[28rpx] bg-white"
                                 v-for="(item, index) in formData.time_config"
                                 :key="index">
-                                <view class="text-primary font-bold text-[30rpx]">{{ formatDate(item.date) }}</view>
+                                <view class="text-primary font-medium text-[30rpx]">{{ formatDate(item.date) }}</view>
                                 <view class="flex flex-col gap-y-[28rpx] mt-[30rpx]">
                                     <view v-for="(time, timeIndex) in item.times" :key="timeIndex">
                                         <view class="text-[#7C7E80]">第{{ timeIndex + 1 }}个内容任务发布时间</view>
@@ -364,9 +382,9 @@
                                                         <text
                                                             :class="[
                                                                 timeErrors[timeIndex]?.start_time
-                                                                    ? 'text-[#FF3C26] font-bold'
+                                                                    ? 'text-[#FF3C26] font-medium'
                                                                     : time.start_time
-                                                                    ? 'font-bold'
+                                                                    ? 'font-medium'
                                                                     : 'text-[#00000033]',
                                                             ]">
                                                             {{ time.start_time || "开始时间" }}
@@ -389,9 +407,9 @@
                                                         <text
                                                             :class="[
                                                                 timeErrors[timeIndex]?.end_time
-                                                                    ? 'text-[#FF3C26] font-bold'
+                                                                    ? 'text-[#FF3C26] font-medium'
                                                                     : time.end_time
-                                                                    ? 'font-bold'
+                                                                    ? 'font-medium'
                                                                     : 'text-[#00000033]',
                                                             ]">
                                                             {{ time.end_time || "结束时间" }}
@@ -426,8 +444,8 @@
                     <view
                         v-if="currentStep === 1"
                         class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
-                        :class="[formData.materialLists.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
-                        <text class="font-bold text-[32rpx]">{{ formData.materialLists.length }}</text>
+                        :class="[formData.materialList.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
+                        <text class="font-medium text-[32rpx]">{{ formData.materialList.length }}</text>
                         <text class="text-xs mt-1">已选</text>
                     </view>
                     <view v-else>
@@ -446,7 +464,7 @@
                 </template>
                 <template v-else>
                     <view
-                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-bold flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
+                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
                         @click="handleCreateTask">
                         创建任务
                     </view>
@@ -490,12 +508,12 @@
         v-model="showVideoMaterial"
         type="video"
         :multiple="replaceVideoIndex == -1"
-        :limit="replaceVideoIndex == -1 ? VIDEO_CONFIG.limit - formData.materialLists.length : 1"
+        :limit="replaceVideoIndex == -1 ? VIDEO_CONFIG.limit - formData.materialList.length : 1"
         @select="handleSelectVideoMaterial" />
     <choose-history
         v-model="showHistory"
         type="video"
-        :limit="replaceVideoIndex == -1 ? VIDEO_CONFIG.limit - formData.materialLists.length : 1"
+        :limit="replaceVideoIndex == -1 ? VIDEO_CONFIG.limit - formData.materialList.length : 1"
         @select="handleSelectHistory" />
     <number-pop
         v-model="showNumberPop"
@@ -505,6 +523,11 @@
         placeholder="请输入发布频率"
         confirmText="确定"
         @confirm="handleNumberPopConfirm" />
+    <keywords-edit
+        ref="keywordsEditRef"
+        v-model="showKeywordsEdit"
+        title="标记地点"
+        @confirm="handleKeywordsEditConfirm" />
 </template>
 
 <script setup lang="ts">
@@ -518,6 +541,7 @@ import useUpload from "@/hooks/useUpload";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import NumberPop from "@/ai_modules/device/components/number-pop/number-pop.vue";
 import ChooseHistory from "@/ai_modules/device/components/choose-history/choose-history.vue";
+import KeywordsEdit from "@/ai_modules/device/components/keywords-edit/keywords-edit.vue";
 
 const { on } = useEventBusManager();
 
@@ -546,12 +570,13 @@ interface FormData {
     name: string;
     introduction: string;
     copywriterList: CopywriterItem[];
-    materialLists: MaterialItem[];
+    materialList: MaterialItem[];
     time_config: TimeConfig[];
     accounts: any[];
     publish_frep: number;
     custom_date: string[];
     task_frep: number;
+    location: string;
 }
 
 // --- 常量配置 ---
@@ -579,12 +604,13 @@ const formData = reactive<FormData>({
     name: "",
     introduction: "",
     copywriterList: [],
-    materialLists: [],
+    materialList: [],
     time_config: [],
     accounts: [],
     publish_frep: 2,
     custom_date: [],
     task_frep: 1,
+    location: "",
 });
 
 // UI 控制状态
@@ -601,7 +627,8 @@ const editCopywriterIndex = ref<number>(-1);
 const showNumberPop = ref<boolean>(false);
 const showCreateTaskSuccessDialog = ref<boolean>(false);
 const isExpandDate = ref(false);
-
+const showKeywordsEdit = ref(false);
+const keywordsEditRef = ref<InstanceType<typeof KeywordsEdit>>();
 const playItem = reactive({ url: "", pic: "" });
 
 // 频率选择状态
@@ -628,7 +655,7 @@ const getVideoTipsContent = computed(
 const canProceedNext = computed(() => {
     switch (currentStep.value) {
         case 1:
-            return formData.materialLists.length > 0;
+            return formData.materialList.length > 0;
         case 2:
             return formData.copywriterList.length > 0;
         case 3:
@@ -682,7 +709,7 @@ const checkStepValidity = (stepNumber: number): boolean => {
     let isValid = false;
     let msg = "";
     if (stepNumber === 1) {
-        isValid = formData.materialLists.length > 0;
+        isValid = formData.materialList.length > 0;
         msg = "请至少选择一个图组";
     } else if (stepNumber === 2) {
         isValid = formData.copywriterList.length > 0;
@@ -703,9 +730,9 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
     onSuccess: (res: any[]) => {
         const data = res.map((item: any) => ({ url: [item.pic, item.url] }));
         if (replaceVideoIndex.value !== -1) {
-            formData.materialLists[replaceVideoIndex.value] = data[0];
+            formData.materialList[replaceVideoIndex.value] = data[0];
         } else {
-            formData.materialLists.push(...data);
+            formData.materialList.push(...data);
         }
         replaceVideoIndex.value = -1;
     },
@@ -736,7 +763,7 @@ const triggerVideoUploadSelection = () => {
 const handleSelectVideoMaterial = async (res: any[]) => {
     const validVideos = res
         .filter((item: any) => {
-            const suffix = item.content.split(".").pop()?.toLowerCase();
+            const suffix = item.url.split(".").pop()?.toLowerCase();
             const isValid =
                 VIDEO_CONFIG.format.includes(suffix || "") && parseInt(item.size) <= VIDEO_CONFIG.size * 1024 * 1024;
             if (!isValid) {
@@ -744,12 +771,12 @@ const handleSelectVideoMaterial = async (res: any[]) => {
             }
             return isValid;
         })
-        .map((item: any) => ({ url: [item.pic, item.content] }));
+        .map((item: any) => ({ url: [item.pic, item.url] }));
 
     if (replaceVideoIndex.value !== -1) {
-        if (validVideos.length) formData.materialLists[replaceVideoIndex.value] = validVideos[0];
+        if (validVideos.length) formData.materialList[replaceVideoIndex.value] = validVideos[0];
     } else {
-        formData.materialLists.push(...validVideos);
+        formData.materialList.push(...validVideos);
     }
     replaceVideoIndex.value = -1;
 };
@@ -759,18 +786,18 @@ const handleEditMaterial = (index?: number) => {
     uni.$u.route({
         url: "/ai_modules/device/pages/task_img_group/task_img_group",
         params: {
-            imgs: editImgIndex.value !== -1 ? JSON.stringify(formData.materialLists[editImgIndex.value].url) : "",
+            imgs: editImgIndex.value !== -1 ? JSON.stringify(formData.materialList[editImgIndex.value].url) : "",
         },
     });
 };
 
 const handleSelectHistory = (res: any[]) => {
     if (replaceVideoIndex.value !== -1) {
-        formData.materialLists[replaceVideoIndex.value] = {
+        formData.materialList[replaceVideoIndex.value] = {
             url: [res[0].pic, res[0].clip_result_url || res[0].video_result_url],
         };
     } else {
-        formData.materialLists.push(
+        formData.materialList.push(
             ...res.map((item: any) => ({ url: [item.pic, item.clip_result_url || item.video_result_url] }))
         );
     }
@@ -783,7 +810,7 @@ const handleDeleteMaterial = (index: number) => {
 };
 
 const handleDeleteMaterialConfirm = () => {
-    formData.materialLists.splice(deleteImgIndex.value, 1);
+    formData.materialList.splice(deleteImgIndex.value, 1);
     confirmDialogVisible.value = false;
     deleteImgIndex.value = -1;
 };
@@ -795,7 +822,7 @@ const handlePlayVideo = (item: string[]) => {
 };
 
 const handleDeleteVideo = (index: number) => {
-    formData.materialLists.splice(index, 1);
+    formData.materialList.splice(index, 1);
 };
 
 const handleReplaceVideo = (index: number) => {
@@ -814,6 +841,16 @@ const handleEditCopywriter = (index: number) => {
 
 const handleDeleteCopywriter = (index: number) => {
     formData.copywriterList.splice(index, 1);
+};
+
+const handleKeywordsEdit = () => {
+    showKeywordsEdit.value = true;
+    keywordsEditRef.value?.setFormData(formData.location);
+};
+
+const handleKeywordsEditConfirm = (value: string) => {
+    formData.location = value;
+    showKeywordsEdit.value = false;
 };
 
 // 时间配置相关逻辑
@@ -858,15 +895,6 @@ const handleCustomDate = () => {
         url: "/ai_modules/device/pages/custom_date/custom_date",
         params: { date: JSON.stringify(formData.custom_date) },
     });
-};
-
-const handleDeleteCustomDate = (index: number) => {
-    if (formData.custom_date.length === 1) {
-        uni.$u.toast("至少保留一个日期");
-        return;
-    }
-    formData.custom_date.splice(index, 1);
-    changeTimeConfig();
 };
 
 // 核心：重新生成时间配置
@@ -1018,7 +1046,7 @@ const handleCreateTask = async () => {
         const { id } = await createMatrixTask({
             name: formData.name,
             media_type: taskType.value,
-            media_url: formData.materialLists,
+            media_url: formData.materialList,
             copywriting: formData.copywriterList,
         });
 
@@ -1035,6 +1063,7 @@ const handleCreateTask = async () => {
             task_type: 3,
             scene: 2,
             data_type: 0,
+            poi: formData.location,
         });
         uni.hideLoading();
         showCreateTaskSuccessDialog.value = true;
@@ -1106,7 +1135,7 @@ onLoad(async (options: any) => {
             lists
                 .filter((item: any) => videoIds.includes(item.task_id))
                 .forEach((item: any) => {
-                    formData.materialLists.push({
+                    formData.materialList.push({
                         url: [item.pic, item.clip_result_url || item.video_result_url],
                     });
                 });
@@ -1118,7 +1147,7 @@ onLoad(async (options: any) => {
         const { lists } = await getPuzzleTaskResultList({ puzzle_setting_id: id, page_size: 999 });
         if (lists?.length) {
             const allImages = lists.flatMap((curr: any) => curr.puzzle_url);
-            formData.materialLists = createRandomImageGroups(allImages, Number(count));
+            formData.materialList = createRandomImageGroups(allImages, Number(count));
         }
     }
 
@@ -1128,7 +1157,8 @@ onLoad(async (options: any) => {
         if (!data || data.length === 0) {
             // 如果是编辑模式下清空了数据，则删除该项
             if (type === ListenerTypeEnum.CHOOSE_IMG && editImgIndex.value !== -1) {
-                formData.materialLists.splice(editImgIndex.value, 1);
+                formData.materialList.splice(editImgIndex.value, 1);
+                editImgIndex.value = -1;
             }
             if (type === ListenerTypeEnum.CHOOSE_DATE) {
                 currentDayFrequencyIdx.value = 0;
@@ -1142,15 +1172,17 @@ onLoad(async (options: any) => {
         switch (type) {
             case ListenerTypeEnum.CHOOSE_IMG:
                 if (editImgIndex.value !== -1) {
-                    formData.materialLists[editImgIndex.value].url = data;
+                    formData.materialList[editImgIndex.value].url = data;
+                    editImgIndex.value = -1;
                 } else {
-                    formData.materialLists.push({ url: data });
+                    formData.materialList.push({ url: data });
                 }
                 break;
             case ListenerTypeEnum.TASK_COPYWRITER:
             case ListenerTypeEnum.TASK_AI_COPYWRITER:
                 if (editCopywriterIndex.value !== -1) {
                     formData.copywriterList[editCopywriterIndex.value] = data[0];
+                    editCopywriterIndex.value = -1;
                 } else {
                     formData.copywriterList.push(...data);
                 }
@@ -1197,11 +1229,11 @@ onLoad(async (options: any) => {
 
     &.active {
         // 使用 primary 颜色变量
-        @apply text-primary shadow-[0_0_0_2rpx_#0065fb] font-bold bg-white;
+        @apply text-primary shadow-[0_0_0_2rpx_#0065fb] font-medium bg-white;
     }
 }
 .date-item {
-    @apply text-xs font-bold text-[#000000b3] rounded-[10rpx] px-[20rpx] py-[10rpx] bg-[#F6F6F6];
+    @apply text-xs font-medium text-[#000000b3] rounded-[10rpx] px-[20rpx] py-[10rpx] bg-[#F6F6F6];
 }
 .change-material-btn {
     @apply text-white text-[22rpx] mt-8 border border-[#ffffff1a] shadow-[0_0_0_1px_rgba(0,0,0,0.24)] rounded-[50rpx] w-full h-[88rpx] flex items-center justify-center;

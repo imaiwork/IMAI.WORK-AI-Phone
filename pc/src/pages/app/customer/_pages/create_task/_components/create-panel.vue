@@ -9,7 +9,7 @@
                         <Icon name="el-icon-ArrowLeft"></Icon>
                     </span>
                 </div>
-                <div class="text-sm font-bold text-tx-regular">返回列表</div>
+                <div class="text-sm font-medium text-tx-regular">返回列表</div>
             </div>
             <div class="flex items-center gap-3">
                 <ElButton
@@ -91,7 +91,7 @@
                                     <ElButton
                                         type="primary"
                                         link
-                                        class="!text-xs font-bold"
+                                        class="!text-xs font-medium"
                                         @click="handleAddKeyword('ai')">
                                         <Icon name="el-icon-MagicStick" />
                                         <span class="ml-1">AI 智能扩词</span>
@@ -99,7 +99,7 @@
                                     <ElButton
                                         type="info"
                                         link
-                                        class="!text-xs font-bold"
+                                        class="!text-xs font-medium"
                                         @click="handleAddKeyword('manual')">
                                         <Icon name="el-icon-Plus" />
                                         <span class="ml-1">手动添加</span>
@@ -113,7 +113,7 @@
                                     :key="index"
                                     class="flex items-center gap-3 bg-gray-50 p-2 rounded-xl border border-[transparent] hover:border-br-light hover:bg-white transition-all group">
                                     <div
-                                        class="w-8 h-8 flex-shrink-0 rounded-lg bg-white shadow-sm flex items-center justify-center text-xs font-bold text-tx-secondary group-hover:text-primary">
+                                        class="w-8 h-8 flex-shrink-0 rounded-lg bg-white shadow-sm flex items-center justify-center text-xs font-medium text-tx-secondary group-hover:text-primary">
                                         {{ index + 1 }}
                                     </div>
                                     <ElInput
@@ -137,12 +137,12 @@
 
                             <div class="space-y-6">
                                 <div>
-                                    <div class="text-sm font-bold text-tx-regular mb-4">执行周期</div>
+                                    <div class="text-sm font-medium text-tx-regular mb-4">执行周期</div>
                                     <div class="flex flex-wrap gap-2">
                                         <div
                                             v-for="item in [1, 3, 5, 10, 30]"
                                             :key="item"
-                                            class="px-5 py-2 rounded-xl cursor-pointer text-sm font-bold transition-all border"
+                                            class="px-5 py-2 rounded-xl cursor-pointer text-sm font-medium transition-all border"
                                             :class="
                                                 formData.task_frep == item && currentFrequency != 5
                                                     ? 'bg-primary text-white border-primary shadow-light'
@@ -152,7 +152,7 @@
                                             {{ item }}天
                                         </div>
                                         <div
-                                            class="px-5 py-2 rounded-xl cursor-pointer text-sm font-bold transition-all border"
+                                            class="px-5 py-2 rounded-xl cursor-pointer text-sm font-medium transition-all border"
                                             :class="
                                                 currentFrequency == 5
                                                     ? 'bg-primary text-white border-primary shadow-light'
@@ -174,7 +174,7 @@
                                 </div>
 
                                 <div class="pt-4 border-t border-dashed border-br-light">
-                                    <div class="text-sm font-bold text-tx-regular mb-4">每日执行时段</div>
+                                    <div class="text-sm font-medium text-tx-regular mb-4">每日执行时段</div>
                                     <ElTimePicker
                                         v-model="formData.time_config"
                                         type="time"
@@ -268,7 +268,7 @@
                                                     <div
                                                         v-for="item in [1, 3, 5, 10, 30]"
                                                         :key="item"
-                                                        class="px-5 py-2 rounded-xl cursor-pointer text-sm font-bold transition-all border"
+                                                        class="px-5 py-2 rounded-xl cursor-pointer text-sm font-medium transition-all border"
                                                         :class="
                                                             formData.wechat_task_frep == item &&
                                                             currentWechatFrequency != 5
@@ -279,7 +279,7 @@
                                                         {{ item }}天
                                                     </div>
                                                     <div
-                                                        class="px-5 py-2 rounded-xl cursor-pointer text-sm font-bold transition-all border"
+                                                        class="px-5 py-2 rounded-xl cursor-pointer text-sm font-medium transition-all border"
                                                         :class="
                                                             currentWechatFrequency == 5
                                                                 ? 'bg-primary text-white border-primary shadow-light'
@@ -310,7 +310,7 @@
                                                             class="text-[13px] font-black text-slate-500 mb-1 flex items-center gap-2">
                                                             <Icon name="el-icon-AlarmClock" :size="14" /> 每日执行时段
                                                         </div>
-                                                        <p class="text-[11px] text-slate-400 font-bold">
+                                                        <p class="text-[11px] text-slate-400 font-medium">
                                                             早于获客任务时，将在次日顺延执行
                                                         </p>
                                                     </div>
@@ -454,7 +454,7 @@
                                                 v-for="(item, index) in formData.remarks"
                                                 :key="index"
                                                 class="bg-white border border-slate-100 pl-3 pr-2 py-2 rounded-xl flex items-center shadow-sm group hover:border-primary transition-all cursor-pointer">
-                                                <span class="text-xs font-bold text-slate-600 mr-3">{{ item }}</span>
+                                                <span class="text-xs font-medium text-slate-600 mr-3">{{ item }}</span>
                                                 <button
                                                     @click.stop="handleDeleteRemark(index)"
                                                     class="w-5 h-5 rounded-md bg-slate-100 text-slate-400 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center">

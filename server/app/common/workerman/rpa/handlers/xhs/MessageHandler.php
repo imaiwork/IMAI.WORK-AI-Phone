@@ -20,6 +20,7 @@ use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvPrivateMessage;
 use app\common\model\sv\SvReplyStrategy;
 use app\common\model\sv\SvRobotKeyword;
+use app\common\model\sv\SvWechatStrategy;
 use app\common\model\user\User;
 use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatLog;
@@ -45,24 +46,13 @@ class MessageHandler extends BaseMessageHandler
 
     public function handle(TcpConnection $connection, string $uid, array $payload): void
     {
-        $this->setLog('新消息：' . json_encode($payload, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT), 'msg');
+        $this->setLog('新消息：' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'msg');
         $content = !is_array($payload['content']) ? json_decode($payload['content'], true) : $payload['content'];
         try {
             $this->msgType = WorkerEnum::DESC[$payload['type']] ?? $payload['type'];
             $this->uid = $uid;
             $this->payload = $payload;
             $this->appType = $payload['appType'] ?? 3;
-            $this->userId = $content['userId'] ?? 0;
-
-            // $this->service->getRedis()->set("xhs:device:" . $this->payload['deviceId'] . ":taskStatus", json_encode([
-            //     'taskStatus' => 'running',
-            //     'taskType' => 'setMessage',
-            //     'duration' => 30,
-            //     'scene' => 'xhs',
-            //     'msg' => '小红书正在回复聊天信息',
-            //     'time' => date('Y-m-d H:i:s', time()),
-            // ], JSON_UNESCAPED_UNICODE));
-
 
             $worker = $this->service->getWorker();
             $device_uid = $worker->devices[$this->payload['deviceId']] ?? '';
@@ -98,7 +88,7 @@ class MessageHandler extends BaseMessageHandler
             $this->sendError($this->connection,  $this->payload);
 
             $this->sendErrorResponse($content, $this->payload['reply']);
-        } finally{
+        } finally {
             unset($content);
         }
     }
@@ -226,7 +216,7 @@ class MessageHandler extends BaseMessageHandler
             list($autoStatus, $autoStrategy) = $this->autoAddWechatOperation($content, $account);
             if ($autoStatus) {
                 $this->setLog('加微后回复:' . $this->payload['deviceId'], 'msg');
-                $after_reply = !empty($autoStrategy->after_reply) ? $autoStrategy->after_reply : '好的.老板稍等,马上加您';
+                $after_reply = !empty($autoStrategy['after_reply']) ? $autoStrategy['after_reply'] : '好的.老板稍等,马上加您';
                 $this->payload['reply'] = array(
                     'type' => 1,
                     'content' => [$after_reply],
@@ -275,7 +265,14 @@ class MessageHandler extends BaseMessageHandler
                 $this->setLog('机器人:', 'msg');
                 $this->setLog($robot, 'msg');
                 //5 获取ai回复策略数据,未配置策略则提示
-                $reply = SvReplyStrategy::where('user_id', $robot->user_id)->where('robot_id', $robot->id)->findOrEmpty();
+                if ($this->appType == 1) {
+                    $reply = SvWechatStrategy::where('user_id', $account->user_id)->where('device_code', $this->payload['deviceId'])->where('account_type', $this->appType)->findOrEmpty();
+                    $reply->image_enable = $reply->image_reply_type == 3 ? 0 : 1;
+                    $reply->voice_enable = $reply->voice_reply_type == 1 ? 0 : 1;
+                } else {
+                    $reply = SvReplyStrategy::where('user_id', $robot->user_id)->where('robot_id', $robot->id)->findOrEmpty();
+                }
+
                 if ($reply->isEmpty()) {
                     $this->setLog('请先设置回复的配置:' . $this->payload['deviceId'], 'msg');
                     $this->setLog($account, 'msg');
@@ -310,6 +307,7 @@ class MessageHandler extends BaseMessageHandler
                     'model' => $robot->model ?? 'deepseek',
                     'robot' => $robot->toArray(),
                     'newMsgIds' => $newMsgIds,
+                    'replyStrategy' => $reply->toArray(),
                 ];
                 $keys = $this->checkCradKeyword($account, $request);
                 $request['message'] = empty($keys) ? $content['replyContent'] : $keys;
@@ -353,13 +351,68 @@ class MessageHandler extends BaseMessageHandler
 
                 //开启图片回复策略
                 if ($reply->image_enable == 1 && $request['message_type'] == 2) {
-                    $this->setLog('图片回复' . $this->payload['deviceId'], 'msg');
-                    $request['message']  = $reply->image_reply;
-                    $request['message_list'] = [$reply->image_reply];
-                    $request['message_type'] = 1;
-                    $this->send($request);
-                    $this->updatePrivateMessageStatus($account, $friend, $reply->image_reply);
-                    return;
+                    if (isset($reply->image_reply_type) && in_array($reply->image_reply_type, [1, 2])) {
+                        if ((int)$reply->image_reply_type === 2) {
+                            $this->setLog('图片AI识别回复' . $this->payload['deviceId'], 'msg');
+                            $request['message']  = '图片AI识别回复';
+                            $request['message_list'] = [
+                                '图片AI识别回复'
+                            ];
+                            $request['message_type'] = 1;
+                            $this->send($request);
+                            $this->updatePrivateMessageStatus($account, $friend, '图片AI识别回复');
+                            return;
+                        } elseif ((int)$reply->image_reply_type === 1) {
+                            $this->setLog('图片回复' . $this->payload['deviceId'], 'msg');
+                            $request['message']  = $reply->image_reply;
+                            $request['message_list'] = [$reply->image_reply];
+                            $request['message_type'] = 1;
+                            $this->send($request);
+                            $this->updatePrivateMessageStatus($account, $friend, $reply->image_reply);
+                            return;
+                        }
+                    } else {
+                        $this->setLog('图片回复' . $this->payload['deviceId'], 'msg');
+                        $request['message']  = $reply->image_reply;
+                        $request['message_list'] = [$reply->image_reply];
+                        $request['message_type'] = 1;
+                        $this->send($request);
+                        $this->updatePrivateMessageStatus($account, $friend, $reply->image_reply);
+                        return;
+                    }
+                }
+
+                //开启语音回复策略
+                if ($reply->voice_enable == 1 && $request['message_type'] == 4) {
+                    if (isset($reply->voice_reply_type) && in_array($reply->voice_reply_type, [2, 3])) {
+                        if ((int)$reply->voice_reply_type === 2) {
+                            $this->setLog('语音AI识别回复' . $this->payload['deviceId'], 'msg');
+                            $request['message']  = '语音AI识别回复';
+                            $request['message_list'] = [
+                                '语音AI识别回复'
+                            ];
+                            $request['message_type'] = 1;
+                            $this->send($request);
+                            $this->updatePrivateMessageStatus($account, $friend, '语音AI识别回复');
+                            return;
+                        } else {
+                            $this->setLog('语音回复' . $this->payload['deviceId'], 'msg');
+                            $request['message']  = $reply->voice_reply;
+                            $request['message_list'] = [$reply->voice_reply];
+                            $request['message_type'] = 3;
+                            $this->send($request);
+                            $this->updatePrivateMessageStatus($account, $friend, $reply->voice_reply);
+                            return;
+                        }
+                    } else {
+                        $this->setLog('语音回复' . $this->payload['deviceId'], 'msg');
+                        $request['message']  = $reply->voice_reply;
+                        $request['message_list'] = [$reply->voice_reply];
+                        $request['message_type'] = 3;
+                        $this->send($request);
+                        $this->updatePrivateMessageStatus($account, $friend, $reply->voice_reply);
+                        return;
+                    }
                 }
 
                 //兜底回复
@@ -429,11 +482,45 @@ class MessageHandler extends BaseMessageHandler
                         list($request['message'], $messageType) = $this->parseContent($request['message']);
                         if ($reply->image_enable == 1 && $messageType === 2) {
                             $this->setLog('图片回复' . $this->payload['deviceId'], 'msg');
-
-                            if ($this->connection->multipleType) {
-                                array_push($this->connection->replyMessage,  $reply->image_reply);
+                            $imageReply = '';
+                            if (isset($reply->image_reply_type) && in_array($reply->image_reply_type, [1, 2])) {
+                                if ((int)$reply->image_reply_type === 2) {
+                                    $imageReply = '图片AI识别回复';
+                                } elseif ((int)$reply->image_reply_type === 1) {
+                                    $imageReply = $reply->image_reply;
+                                }
+                            } else {
+                                $imageReply = $reply->image_reply;
                             }
-                            $this->updatePrivateMessageStatus($account, $friend, $reply->image_reply);
+
+                            if (!empty($imageReply)) {
+                                if ($this->connection->multipleType) {
+                                    array_push($this->connection->replyMessage,  $imageReply);
+                                }
+                                $this->updatePrivateMessageStatus($account, $friend, $imageReply);
+                            }
+                            continue;
+                        }
+
+                        if ($reply->voice_enable == 1 && $messageType === 4) {
+                            $this->setLog('语音回复' . $this->payload['deviceId'], 'msg');
+                            $voiceReply = '';
+                            if (isset($reply->voice_reply_type) && in_array($reply->voice_reply_type, [2, 3])) {
+                                if ((int)$reply->voice_reply_type === 2) {
+                                    $voiceReply = '语音AI识别回复';
+                                } elseif ((int)$reply->voice_reply_type === 3) {
+                                    $voiceReply = $reply->voice_reply;
+                                }
+                            } else {
+                                $voiceReply = $reply->voice_reply;
+                            }
+                            $this->setLog('语音回复内容:' . $voiceReply, 'msg');
+                            if (!empty($voiceReply)) {
+                                if ($this->connection->multipleType) {
+                                    array_push($this->connection->replyMessage,  $voiceReply);
+                                }
+                                $this->updatePrivateMessageStatus($account, $friend, $voiceReply);
+                            }
                             continue;
                         }
 
@@ -484,6 +571,7 @@ class MessageHandler extends BaseMessageHandler
                             'friend_id' => $request['friend_id'],
                             'payload' => $request['payload'],
                             'newMsgIds' => $request['newMsgIds'],
+                            'replyStrategy' => $request['replyStrategy'],
                         );
                         $this->send($sendData);
                     }
@@ -535,14 +623,50 @@ class MessageHandler extends BaseMessageHandler
                             $request['message'] = $lastMessage;
                             list($request['message'], $messageType) = $this->parseContent($request['message']);
                             if ($reply->image_enable == 1 && $messageType === 2) {
-                                $this->setLog('图片回复' . $this->payload['deviceId'], 'msg');
-                                $request['message']  = $reply->image_reply;
-                                $request['message_list'] = [$reply->image_reply];
-                                $request['message_type'] = 1;
-                                $this->send($request);
-                                $this->updatePrivateMessageStatus($account, $friend);
+                                $imageReply = '';
+                                if (isset($reply->image_reply_type) && in_array($reply->image_reply_type, [1, 2])) {
+                                    if ((int)$reply->image_reply_type === 2) {
+                                        $imageReply = '图片AI识别回复';
+                                    } elseif ((int)$reply->image_reply_type === 1) {
+                                        $imageReply = $reply->image_reply;
+                                    }
+                                } else {
+                                    $imageReply = $reply->image_reply;
+                                }
+                                if (!empty($imageReply)) {
+                                    $this->setLog('图片回复' . $this->payload['deviceId'], 'msg');
+                                    $request['message']  = $imageReply;
+                                    $request['message_list'] = [$imageReply];
+                                    $request['message_type'] = 1;
+                                    $this->send($request);
+                                    $this->updatePrivateMessageStatus($account, $friend, $imageReply);
+                                }
                                 return;
                             }
+
+                            if ($reply->voice_enable == 1 && $messageType === 4) {
+                                $voiceReply = '';
+                                if (isset($reply->voice_reply_type) && in_array($reply->voice_reply_type, [2, 3])) {
+                                    if ((int)$reply->voice_reply_type === 2) {
+                                        $voiceReply = '语音AI识别回复';
+                                    } elseif ((int)$reply->voice_reply_type === 3) {
+                                        $voiceReply = $reply->voice_reply;
+                                    }
+                                } else {
+                                    $voiceReply = $reply->voice_reply;
+                                }
+                                if (!empty($voiceReply)) {
+                                    $this->setLog('语音回复' . $this->payload['deviceId'], 'msg');
+                                    $request['message']  = $voiceReply;
+                                    $request['message_list'] = [$voiceReply];
+                                    $request['message_type'] = 1;
+                                    $this->send($request);
+                                    $this->updatePrivateMessageStatus($account, $friend, $voiceReply);
+                                }
+                                return;
+                            }
+
+
                             $matchAccount = $this->regularAccountKeyword($account, $request);
                             if ($matchAccount) {
                                 $this->setLog('固定话术匹配:' . $this->payload['deviceId'], 'msg');
@@ -596,24 +720,46 @@ class MessageHandler extends BaseMessageHandler
     {
         try {
             $this->setLog('----------autoAddWechatOperation-----------', 'msg');
-            $platformType = $this->PlatformTypeEn[$this->payload['appType'] ?? 3] ?? 'xhs';
-            $accountNo = $this->service->getRedis()->get("xhs:{$this->payload['deviceId']}:{$platformType}:accountNo");
-            if (empty($accountNo)) {
-                $this->setLog('设备未更新账号信息,请先更新账号信息', 'msg');
-                return;
+            // $platformType = $this->PlatformTypeEn[$this->payload['appType'] ?? 3] ?? 'xhs';
+            // $accountNo = $this->service->getRedis()->get("xhs:{$this->payload['deviceId']}:{$platformType}:accountNo");
+            // if (empty($accountNo)) {
+            //     $this->setLog('设备未更新账号信息,请先更新账号信息', 'msg');
+            //     return;
+            // }
+
+            $accountWechat = AiWechat::where('wechat_id', '=', function ($query) use ($account) {
+                $query->name('sv_account')->where('device_code', $account['device_code'])->where('type', 1)->where('user_id', $account['user_id'])->field('account');
+            })->where('user_id', $account['user_id'])->limit(1)->findOrEmpty();
+            if ($accountWechat->isEmpty()) {
+                $this->setLog('账号未绑定微信,请先绑定微信:' . Db::getLastSql(), 'msg');
+                return [false, []];
             }
-            $strategy = SvAddWechatStrategy::where('device_code', $this->payload['deviceId'])->where('account', $account['account'])->where('user_id', $account['user_id'])->limit(1)->findOrEmpty();
-            if ($strategy->isEmpty()) {
-                $strategy = [
-                    "account_type" => 3,
-                    "wechat_enable" => 0,
-                    "wechat_reg_type" => 0,
-                    "wechat_id" => '',
-                    "remark" => '您好',
-                    'after_reply' => '好的.老板稍等,马上加您'
-                ];
-            }
-            $this->setLog(is_array($strategy) ? $strategy : $strategy->toArray(), 'msg');
+
+
+            // $strategy = SvAddWechatStrategy::where('device_code', $this->payload['deviceId'])->where('account', $account['account'])->where('user_id', $account['user_id'])->limit(1)->findOrEmpty();
+            // if ($strategy->isEmpty()) {
+            //     $strategy = [
+            //         "account_type" => 3,
+            //         "wechat_enable" => 0,
+            //         "wechat_reg_type" => 0,
+            //         "wechat_id" => '',
+            //         "remark" => '您好',
+            //         'after_reply' => '好的.老板稍等,马上加您'
+            //     ];
+            // }
+
+            $strategy = [
+                'user_id' => $account['user_id'],
+                "account_type" => $account['type'],
+                "wechat_enable" => 1,
+                "wechat_reg_type" => 0,
+                "wechat_id" => $accountWechat['wechat_id'],
+                "remark" => '您好',
+                'after_reply' => '好的.老板稍等,马上加您'
+            ];
+
+
+            $this->setLog($strategy, 'msg');
             if ($strategy['wechat_enable'] == 1) {
 
                 $wechatPattern = '/[a-zA-Z][a-zA-Z0-9_-]{5,19}/';
@@ -859,7 +1005,7 @@ class MessageHandler extends BaseMessageHandler
     {
         try {
             $nickname = $content['targetRecipient'] ?? $content['replyName'];
-            $friendId = md5($account['user_id'] . $account['account'] . $account['device_code'] . $nickname);
+            $friendId = isset($content['friendId']) ? $content['friendId'] : md5($account['user_id'] . $account['account'] . $account['device_code'] . $nickname);
             $friend = SvAccountContact::where('account', $account['account'])->where('account_type', $account['type'])->where('friend_id', $friendId)->limit(1)->find();
             if (empty($friend)) {
                 $friend = SvAccountContact::create([
@@ -997,6 +1143,7 @@ class MessageHandler extends BaseMessageHandler
                 'max_tokens' => $modelSetting['max_tokens'] ?? 4096, //token上限
                 'context_num' => $modelSetting['context_num'] ?? 5, //上下文数
                 'newMsgIds' => $request['newMsgIds'],
+                'replyStrategy' => $request['replyStrategy'],
             ];
 
             // 任务数据
@@ -1009,6 +1156,7 @@ class MessageHandler extends BaseMessageHandler
                 'user_id' => $request['user_id'],
                 'request' => $request,
                 'robot' => $robot->toArray(),
+                'replyStrategy' => $request['replyStrategy'],
             ];
 
             $this->setLog('组合任务数据:', 'msg');
@@ -1077,22 +1225,21 @@ class MessageHandler extends BaseMessageHandler
                         }
                     }
                 } else {
-                    if($autoType == 0){
+                    if ($autoType == 0) {
                         if ($this->request['model'] == 'deepseek') {
                             $response = \app\common\service\ToolsService::Sv()->chat($this->request);
                         } else {
                             $this->request['stream'] = false;
                             $response = \app\common\service\ToolsService::Sv()->openaiChat($this->request);
                         }
-                    }else{
+                    } else {
                         if ($this->request['model'] != 'deepseek') {
                             $this->request['stream'] = false;
                         }
                         $response = \app\common\service\ToolsService::Automation()->socialMediaObtain($this->request);
-
                     }
                     // 执行微信AI消息处理
-                   
+
                     $response['msg'] = 'chat ai消息回复结果';
                     $this->setLog($response, 'msg');
                     if (isset($response['code']) && $response['code'] == 10000) {
@@ -1118,6 +1265,7 @@ class MessageHandler extends BaseMessageHandler
                 'friend_id' => $this->friendId,
                 'payload' => $this->request['payload'],
                 'newMsgIds' => $this->request['newMsgIds'],
+                'replyStrategy' => $this->request['replyStrategy'],
             );
             if ($this->connection->multipleType) {
                 array_push($this->connection->replyMessage, $reply);
@@ -1145,9 +1293,9 @@ class MessageHandler extends BaseMessageHandler
 
     {
         try {
-            if($autoType == 0){
-               $scene = $model == 'deepseek' ? 'ai_xhs' : 'openai_chat';
-            }else{
+            if ($autoType == 0) {
+                $scene = $model == 'deepseek' ? 'ai_xhs' : 'openai_chat';
+            } else {
                 $scene = 'automation_social_media_obtain';
             }
             //检查扣费
@@ -1173,9 +1321,9 @@ class MessageHandler extends BaseMessageHandler
             User::userTokensChange($this->userId, $points);
 
             $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points];
-            if($autoType == 0){
+            if ($autoType == 0) {
                 $desc = $model == 'deepseek' ? AccountLogEnum::TOKENS_DEC_AI_XHS : AccountLogEnum::TOKENS_DEC_OPENAI_CHAT;
-            }else{
+            } else {
                 $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN;
             }
             //扣费记录
@@ -1355,11 +1503,11 @@ class MessageHandler extends BaseMessageHandler
     }
 
 
-    private function regularMatchStopAI(SvReplyStrategy $reply, array $request)
+    private function regularMatchStopAI(SvReplyStrategy|SvWechatStrategy $reply, array $request)
     {
         $stop = false;
 
-        $keywords = explode(';', $reply->stop_keywords);
+        $keywords = !is_array($reply->stop_keywords) ? explode(';', $reply->stop_keywords) : $reply->stop_keywords;
         $messages = $request['message'];
         // 获取微信机器人设置的正关键词
         foreach ($keywords as $keyword) {
@@ -1482,8 +1630,8 @@ class MessageHandler extends BaseMessageHandler
     {
         try {
             $this->addReplyMessage($request);
-
             $payload = $request['payload'];
+            $this->setLog($request, 'msg');
             if (isset($request['message_type']) && $request['message_type'] == 5) { //小红书名片 需要特殊处理
                 $payload['reply'] = array(
                     'type' => 4,
@@ -1500,10 +1648,21 @@ class MessageHandler extends BaseMessageHandler
                     'content' => isset($request['message_list']) ? (is_array($request['message_list']) ? $request['message_list'] : [$request['message_list']]) : [$request['message']],
                     'link' => '',
                     'targetRecipient' => $request['content']['replyName'] ?? '',
-                    'lastMessageContent' => $request['content']['replyContent'] ?? ''
+                    'lastMessageContent' => $request['content']['replyContent'] ?? '',
+                    'reply_files' => $request['reply_files'] ?? [],
                 );
+                $payload['reply']['reply_files'] = $this->getReplyFiles($payload['reply']['content']);
 
-
+                if (isset($request['replyStrategy']['paragraph_enable']) && (int)$request['replyStrategy']['paragraph_enable'] === 1) {
+                    $tmpReply = [];
+                    foreach ($payload['reply']['content'] as $row) {
+                        $replies = explode("\n", $row);
+                        foreach ($replies as $reply) {
+                            array_push($tmpReply, $reply);
+                        }
+                    }
+                    $payload['reply']['content'] = $tmpReply;
+                }
                 $payload['type'] = 6;
             }
             $this->sendResponse($this->uid, $payload, $payload['reply']);
@@ -1514,6 +1673,18 @@ class MessageHandler extends BaseMessageHandler
         } catch (\Exception $e) {
             $this->setLog('send' . $e, 'error');
         }
+    }
+
+    private function getReplyFiles(array $contents): array
+    {
+        $replyFiles = [];
+        foreach ($contents as $reply) {
+            $images = extractAllImageUrls($reply);
+            foreach ($images as $ik => $image) {
+                $replyFiles[] = \app\common\service\FileService::getFileUrl($image);
+            }
+        }
+        return $replyFiles;
     }
 
     private function sendErrorResponse($request, $content)

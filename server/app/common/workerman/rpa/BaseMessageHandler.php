@@ -18,6 +18,8 @@ abstract class BaseMessageHandler
     protected int $userId;
     protected TcpConnection $connection;
 
+    protected int $publishPlatform = 0;
+
     protected array $platform = array(
         1 => '个微',
         3 => '小红书',
@@ -160,6 +162,30 @@ abstract class BaseMessageHandler
         // 保存文件
         if (file_put_contents($root_path . $output, $decoded)) {
             return Config::get('app.app_host') . '/' . $output;
+        }
+        return '';
+    }
+
+    public function saveBase64ToImage($content, $code, $type = 'ai')
+    {
+        if (!trim($content)) {
+            return '';
+        }
+        // 分离Base64头和数据
+        $data = explode(',', $content);
+        // 解码Base64数据
+        $decoded = base64_decode($data[1] ?? $data[0]);
+        $date = date('Ymd');
+        $output = 'uploads/images/' . $type . '/' . $date . '/' . $code . '.png';
+        $root_path = public_path();
+        // 创建目录（如果不存在）
+        if (!is_dir(dirname($root_path . $output))) {
+            mkdir(dirname($root_path . $output), 0777, true);
+        }
+
+        // 保存文件
+        if (file_put_contents($root_path . $output, $decoded)) {
+            return '/' . $output;
         }
         return '';
     }

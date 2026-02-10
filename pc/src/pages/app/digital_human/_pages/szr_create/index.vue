@@ -85,7 +85,7 @@
         <div class="w-[380px] bg-white flex flex-col relative flex-shrink-0 rounded-[20px] p-6 border border-br">
             <template v-if="!loading">
                 <header class="mb-5">
-                    <h2 class="text-[24px] font-bold text-slate-800 tracking-tight">生成设置</h2>
+                    <h2 class="text-[24px] font-medium text-slate-800 tracking-tight">生成设置</h2>
                     <div class="h-1 w-12 bg-primary rounded-full mt-2"></div>
                 </header>
                 <div class="px-5 py-2 rounded-2xl flex items-center gap-x-3 bg-slate-50 border border-br mb-6">
@@ -121,7 +121,7 @@
                                     <div class="flex gap-2">
                                         <button
                                             @click="handleRandomCopywriter"
-                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-br rounded-2xl text-[12px] font-bold hover:border-primary hover:text-primary transition-all">
+                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-br rounded-2xl text-[12px] font-medium hover:border-primary hover:text-primary transition-all">
                                             随机
                                         </button>
                                         <button
@@ -130,7 +130,7 @@
                                             AI 生成
                                         </button>
                                     </div>
-                                    <div class="text-[11px] font-bold text-[#CBD5E1]">
+                                    <div class="text-[11px] font-medium text-[#CBD5E1]">
                                         {{ formData.msg.length }}/{{ textLimit }}
                                     </div>
                                 </div>
@@ -153,11 +153,11 @@
                                     :label="item.name">
                                     <div class="flex items-center gap-2">
                                         <img :src="item.icon" class="w-4 h-4" />
-                                        <span class="font-bold">{{ item.name }}</span>
+                                        <span class="font-medium">{{ item.name }}</span>
                                     </div>
                                 </ElOption>
                             </ElSelect>
-                            <div v-if="!isPublicAnchor" class="text-[11px] text-orange-400 font-bold mt-2 ml-1">
+                            <div v-if="!isPublicAnchor" class="text-[11px] text-orange-400 font-medium mt-2 ml-1">
                                 提示：当前形象仅支持固定模型
                             </div>
                         </div>
@@ -177,7 +177,7 @@
                                     :label="item.name"
                                     :show-arrow="false">
                                     <div class="flex items-center justify-between w-full">
-                                        <span class="font-bold">{{ item.name }}</span>
+                                        <span class="font-medium">{{ item.name }}</span>
                                         <ElTag
                                             size="small"
                                             :type="item.id == -1 ? 'success' : 'info'"
@@ -210,7 +210,7 @@
                                     class="flex items-center justify-between p-3 bg-white rounded-xl border border-primary/20">
                                     <div class="flex items-center gap-2 overflow-hidden">
                                         <Icon name="local-icon-music" class="text-primary" />
-                                        <span class="text-[13px] font-bold text-[#1E293B] truncate">{{
+                                        <span class="text-[13px] font-medium text-[#1E293B] truncate">{{
                                             formData.music_name
                                         }}</span>
                                     </div>
@@ -708,7 +708,6 @@ const init = async () => {
                 handleSelectAnchor(0);
             }
         }
-        await getVoiceList();
         await getClipConfigData();
     } finally {
         loading.value = false;

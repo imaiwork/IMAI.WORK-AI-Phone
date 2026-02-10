@@ -7,7 +7,7 @@
                         <div class="w-1.5 h-4 bg-primary rounded-full"></div>
                         <span class="text-[16px] font-black text-slate-800">推送计划配置</span>
                     </div>
-                    <div class="text-[12px] text-slate-400 font-bold">
+                    <div class="text-[12px] text-slate-400 font-medium">
                         共 {{ formData.push_time_list.length }} 条计划
                     </div>
                 </div>
@@ -72,7 +72,7 @@
                     <div class="flex items-center justify-center h-full" v-else>
                         <div class="flex flex-col items-center gap-2">
                             <Icon name="el-icon-Calendar" :size="40" color="#CBD5E1"></Icon>
-                            <span class="text-slate-400 text-xs font-bold">暂无日期预览</span>
+                            <span class="text-slate-400 text-xs font-medium">暂无日期预览</span>
                         </div>
                     </div>
                 </div>

@@ -5,6 +5,7 @@ import { useAppStore } from "@/stores/app";
 import { useChatStore, type ChatMessage } from "../stores/chat";
 import { useChatEventBus } from "./useChatEventBus";
 import dayjs from "dayjs";
+import { cancelRequestsByUrl } from "@/utils/http/cancel";
 
 /**
  * @description useChatManager Composable
@@ -170,6 +171,7 @@ export function useChatManager() {
                 message: userInput,
                 form_avatar: userInfo.value.avatar,
                 fileList: fileLists.value,
+                quotes: extraParams.value.quotes,
             });
         }
         const botMessage: ChatMessage = {
@@ -184,6 +186,8 @@ export function useChatManager() {
         };
         chatStore.addMessage(botMessage);
         chatStore.startReceiving();
+        chattingRef.value?.clearQuote();
+        resetScroll();
         chatScrollToBottom();
 
         // 2. 发起API请求
@@ -215,10 +219,10 @@ export function useChatManager() {
                 }
             );
         } catch (error: any) {
-            const errorMessage = error || "消息发送失败";
-            chatStore.updateLastMessage({ error: errorMessage, loading: false });
-            feedback.msgError(errorMessage);
             chatStore.stopReceiving();
+            if (error?.type == "cancel") return;
+            const errorMessage = error?.type == "cancel" ? "用户已停止内容生成" : error || "消息发送失败";
+            chatStore.updateLastMessage({ error: errorMessage, loading: false });
         } finally {
             chatScrollToBottom();
         }
@@ -232,7 +236,7 @@ export function useChatManager() {
         chatStore.clearChat();
         resetURLPath();
         chattingRef.value?.cleanInput?.(); // 清理输入框组件的内容
-
+        chattingRef.value?.clearQuote?.(); // 清理引用内容
         // 如果有新会话的默认提示语，则自动发送
         if (chatConfig.value?.new_chat_prompt) {
             sendMessage(chatConfig.value.new_chat_prompt, true);
@@ -246,12 +250,14 @@ export function useChatManager() {
         if (streamReader.value) {
             await streamReader.value.cancel();
             streamReader.value = null;
+        } else {
+            cancelRequestsByUrl("/chat/commonChat");
         }
         if (isReceiving.value) {
             const lastMessage = chatContentList.value[chatContentList.value.length - 1];
             chatStore.updateLastMessage({
                 loading: false,
-                reply: lastMessage.reply || "用户已停止内容生成",
+                stop_reply: lastMessage.reply || "用户已停止内容生成",
             });
             chatStore.stopReceiving();
         }

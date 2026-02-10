@@ -10,7 +10,7 @@
                     class="flex items-center gap-[8px] px-[12px] py-[8px] bg-[#eff6ff]/50 rounded-[8px] mb-[16px] border border-blue-50">
                     <span class="text-primary opacity-80 flex items-center gap-x-2">
                         <Icon name="el-icon-InfoFilled" />
-                        <span class="text-xs text-[#0065fb]/80 font-bold">
+                        <span class="text-xs text-[#0065fb]/80 font-medium">
                             提示：除文本外，其余格式目前仅支持个微环境使用
                         </span>
                     </span>
@@ -64,7 +64,7 @@
                                     </div>
                                     <div class="text-[13px] text-tx-secondary mt-[12px]">
                                         点击上传或<span
-                                            class="text-primary font-bold cursor-pointer hover:underline mx-[4px]"
+                                            class="text-primary font-medium cursor-pointer hover:underline mx-[4px]"
                                             @click.stop="openMaterialLibrary"
                                             >从素材库选择</span
                                         >
@@ -132,7 +132,7 @@
                                 <Icon name="el-icon-FolderOpened" :size="32" />
                             </div>
                             <span
-                                class="text-primary font-bold cursor-pointer hover:underline mt-[12px]"
+                                class="text-primary font-medium cursor-pointer hover:underline mt-[12px]"
                                 @click.stop="openMaterialLibrary">
                                 点击进入素材库选择
                             </span>
@@ -140,7 +140,7 @@
                     </div>
 
                     <div class="flex justify-center mt-[24px]">
-                        <ElButton type="primary" class="add-material-btn" @click="handleAddInfo">
+                        <ElButton type="primary" @click="handleAddInfo">
                             <Icon name="el-icon-Plus" />
                             <span class="ml-1"> 确认添加至队列 </span>
                         </ElButton>
@@ -241,7 +241,7 @@
                                                 <Icon name="local-icon-mini_program_fill" :size="12" color="#0065fb" />
                                                 <span class="text-[10px]">小程序</span>
                                             </div>
-                                            <div class="text-[13px] font-bold line-clamp-2 mb-[8px]">
+                                            <div class="text-[13px] font-medium line-clamp-2 mb-[8px]">
                                                 {{ (item.content as any).name }}
                                             </div>
                                             <img
@@ -252,7 +252,7 @@
                                             v-if="item.type == MaterialTypeEnum.LINK"
                                             class="link-card-mini flex gap-[8px]">
                                             <div class="flex-1 min-w-0">
-                                                <div class="text-[13px] font-bold line-clamp-2">
+                                                <div class="text-[13px] font-medium line-clamp-2">
                                                     {{ (item.content as any).name }}
                                                 </div>
                                                 <div class="text-[11px] text-tx-secondary mt-[4px] line-clamp-2">
@@ -853,7 +853,7 @@ defineExpose({
         display: none;
     }
     .el-tabs__item {
-        @apply text-[14px] font-bold px-[16px];
+        @apply text-[14px] font-medium px-[16px];
     }
 }
 
@@ -893,7 +893,7 @@ defineExpose({
 }
 
 .add-material-btn {
-    @apply h-[42px] rounded-lg px-[24px] font-bold shadow-light;
+    @apply h-[42px] rounded-lg px-[24px] font-medium shadow-light;
 }
 
 .material-queue-item {
@@ -942,7 +942,7 @@ defineExpose({
 .wechat-header {
     @apply bg-[#EDEDED] border-b border-gray-200 shrink-0;
     .status-bar {
-        @apply flex justify-between px-[20px] py-[6px] text-[10px] font-bold text-gray-950;
+        @apply flex justify-between px-[20px] py-[6px] text-[10px] font-medium text-gray-950;
     }
     .title-bar {
         @apply flex items-center justify-between px-[12px] py-[10px] text-gray-950;
@@ -965,7 +965,7 @@ defineExpose({
 }
 
 .text-bubble {
-    @apply bg-white p-[10px] rounded-[4px] rounded-tl-none text-[13px] truncate text-gray-950 relative shadow-light  break-all;
+    @apply bg-white p-[10px] rounded-[4px] rounded-tl-none text-[13px] text-gray-950 relative shadow-light  break-all;
     &::after {
         content: "";
         @apply absolute -left-[6px] top-0 w-0 h-0 border-[6px] border-[transparent] border-t-white;

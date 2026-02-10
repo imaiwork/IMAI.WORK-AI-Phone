@@ -10,7 +10,7 @@
         <view class="flex items-center gap-x-2">
             <view class="flex-1">
                 <view class="flex items-center gap-x-2">
-                    <view class="line-clamp-1 text-[30rpx] font-bold break-all">
+                    <view class="line-clamp-1 text-[30rpx] font-medium break-all">
                         {{ item.name }}
                     </view>
                     <view class="p-1" @click.stop="handleEditName(item)">

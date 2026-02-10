@@ -363,7 +363,7 @@ function format_json($text)
 
     // 使用正则表达式匹配JSON部分
     $jsonPattern = '/\{(?:[^{}]|(?R))*\}/';
-    preg_match($jsonPattern,$text, $matches);
+    preg_match($jsonPattern, $text, $matches);
 
     // 输出匹配到的JSON字符串
     $jsonString = $matches[0] ?? 'No JSON found';
@@ -372,13 +372,13 @@ function format_json($text)
     return $result;
 }
 
-function clogger($log_content, $log_filename = 'log'){
+function clogger($log_content, $log_filename = 'log')
+{
     return '';
     $max_size = 500000;
-    $path = public_path().'/logs/knowledge';
+    $path = public_path() . '/logs/knowledge';
     !is_dir($path) && mkdir($path, 0777, true);
-    file_put_contents($path.'/'.date('Ymd').'_'.$log_filename.'.log', $log_content.PHP_EOL, FILE_APPEND);
-    
+    file_put_contents($path . '/' . date('Ymd') . '_' . $log_filename . '.log', $log_content . PHP_EOL, FILE_APPEND);
 }
 
 
@@ -402,7 +402,7 @@ function formatMarkdown(string $content): string
  * @author ljj
  * @date 2024/5/8 10:14 上午
  */
-function card_sn($table, $field, $prefix = 'K', $randSuffixLength = 6, $ruleType = 2) : string
+function card_sn($table, $field, $prefix = 'K', $randSuffixLength = 6, $ruleType = 2): string
 {
     $string = $prefix;
     $letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -453,4 +453,29 @@ function generate_random_str($length): string
     }
 
     return $str;
+}
+
+function extractAllImageUrls(string $content): array
+{
+    // 匹配各种格式的图片地址
+    $pattern = '/(https?:\/\/[^\s]+?\.(?:png|jpe?g|gif|webp|bmp))|(\/[^\s]*?\.(?:png|jpe?g|gif|webp|bmp))|(uploads\/images\/[^\s]*?\.(?:png|jpe?g|gif|webp|bmp))/i';
+    preg_match_all($pattern, $content, $matches, PREG_SET_ORDER);
+
+    $imageUrls = [];
+    foreach ($matches as $match) {
+        $url = '';
+        if (!empty($match[1])) {
+            $url = rtrim($match[1], '.)');
+        } elseif (!empty($match[2])) {
+            $url = rtrim($match[2], '.)');
+        } elseif (!empty($match[3])) {
+            $url = rtrim($match[3], '.)');
+        }
+
+        if ($url && !in_array($url, $imageUrls)) {
+            $imageUrls[] = $url;
+        }
+    }
+
+    return $imageUrls;
 }

@@ -9,7 +9,7 @@
                     </div>
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">高级设置</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             Advanced Configurations
                         </div>
                     </div>
@@ -75,7 +75,7 @@
                                                 class="w-7 h-7 flex items-center justify-center rounded-lg bg-[#F1F5F9] text-[#64748B]">
                                                 <Icon name="el-icon-Headset" :size="14"></Icon>
                                             </div>
-                                            <span class="text-[13px] font-bold text-[#475569] truncate">{{
+                                            <span class="text-[13px] font-medium text-[#475569] truncate">{{
                                                 item.name
                                             }}</span>
                                         </div>
@@ -90,14 +90,14 @@
                                         <div
                                             class="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-white border-2 border-dashed border-br text-[#64748B] hover:border-[#0065fb] hover:text-primary transition-all cursor-pointer">
                                             <Icon name="el-icon-Upload" :size="16"></Icon>
-                                            <span class="text-[13px] font-bold">本地上传</span>
+                                            <span class="text-[13px] font-medium">本地上传</span>
                                         </div>
                                     </upload>
                                     <div
                                         class="flex items-center justify-center gap-2 h-11 rounded-xl bg-[#0065fb]/10 text-primary border border-transparent hover:bg-[#0065fb]/10 transition-all cursor-pointer"
                                         @click="handleSelectAudio">
                                         <Icon name="el-icon-FolderOpened" :size="16"></Icon>
-                                        <span class="text-[13px] font-bold">音乐库选择</span>
+                                        <span class="text-[13px] font-medium">音乐库选择</span>
                                     </div>
                                 </div>
                             </div>

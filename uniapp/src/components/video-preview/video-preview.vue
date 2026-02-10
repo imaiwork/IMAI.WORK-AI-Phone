@@ -4,7 +4,7 @@
             <view class="absolute right-4 top-5" @click="showPopup = false">
                 <image src="/static/images/icons/close.svg" class="w-[48rpx] h-[48rpx]"></image>
             </view>
-            <view class="font-bold text-center mt-[24rpx] text-[30rpx]"> {{ title }} </view>
+            <view class="font-medium text-center mt-[24rpx] text-[30rpx]"> {{ title }} </view>
             <view
                 class="border-[4rpx] border-solid border-[#0065fb4d] rounded-[48rpx] h-[846rpx] mt-[40rpx] p-0.5 shadow-lg">
                 <video-player

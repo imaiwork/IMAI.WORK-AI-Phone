@@ -9,9 +9,9 @@
                 <div class="flex flex-col">
                     <span class="text-xl font-[900] text-[#0F172A]">面试评估报告</span>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <span class="text-xs font-bold text-[#94A3B8]">ID: {{ detailData.ai?.id || "-" }}</span>
+                        <span class="text-xs font-medium text-[#94A3B8]">ID: {{ detailData.ai?.id || "-" }}</span>
                         <div class="w-1 h-1 rounded-full bg-[#CBD5E1]"></div>
-                        <span class="text-xs font-bold text-primary">{{ detailData.ai?.job_name }}</span>
+                        <span class="text-xs font-medium text-primary">{{ detailData.ai?.job_name }}</span>
                     </div>
                 </div>
             </div>
@@ -32,10 +32,10 @@
                                         <span class="text-[56px] font-[900] text-primary leading-none">{{
                                             detailData.ai.score || 0
                                         }}</span>
-                                        <span class="text-lg font-bold text-[#CBD5E1]">/ 100</span>
+                                        <span class="text-lg font-medium text-[#CBD5E1]">/ 100</span>
                                     </div>
                                     <div
-                                        class="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-[#F0FDF4] text-[#16A34A] rounded-lg text-xs font-bold w-fit">
+                                        class="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-[#F0FDF4] text-[#16A34A] rounded-lg text-xs font-medium w-fit">
                                         <Icon name="el-icon-CircleCheckFilled" :size="14" />
                                         <span>符合岗位能力标准</span>
                                     </div>
@@ -43,7 +43,7 @@
                                 <div class="h-24 w-[1px] bg-[#F1F5F9]"></div>
                                 <div class="grid grid-cols-2 gap-x-12 gap-y-4">
                                     <div v-for="info in aiInfoList" :key="info.label" class="flex flex-col">
-                                        <span class="text-[11px] font-bold text-[#94A3B8]">{{ info.label }}</span>
+                                        <span class="text-[11px] font-medium text-[#94A3B8]">{{ info.label }}</span>
                                         <span class="text-base font-black text-[#0F172A]">{{ info.value }}</span>
                                     </div>
                                 </div>
@@ -77,7 +77,7 @@
                                         v-for="cv in cvBasicInfo"
                                         :key="cv.label"
                                         class="p-5 border-r border-[#F1F5F9] last:border-r-0">
-                                        <span class="text-[11px] font-bold text-[#94A3B8] uppercase block mb-1">{{
+                                        <span class="text-[11px] font-medium text-[#94A3B8] uppercase block mb-1">{{
                                             cv.label
                                         }}</span>
                                         <span class="text-sm font-black text-[#475569]">{{ cv.value }}</span>
@@ -132,7 +132,7 @@
                             <div v-for="(item, index) in detailData.dialogs" :key="index" class="space-y-6 mb-10">
                                 <div class="flex justify-center">
                                     <span
-                                        class="px-4 py-1 bg-[#F1F5F9] rounded-full text-[11px] font-bold text-[#94A3B8]">
+                                        class="px-4 py-1 bg-[#F1F5F9] rounded-full text-[11px] font-medium text-[#94A3B8]">
                                         轮次 {{ index + 1 }} · {{ item.out_reason }}
                                     </span>
                                 </div>
@@ -198,7 +198,7 @@
                 </ElScrollbar>
             </div>
             <div class="p-6 bg-[#FFFFFF] border-t border-[#F1F5F9] flex justify-end items-center gap-4 flex-shrink-0">
-                <span class="text-xs font-bold text-[#94A3B8]"
+                <span class="text-xs font-medium text-[#94A3B8]"
                     >面试起止时间：{{ detailData.start_time_text }} - {{ detailData.end_time_text }}</span
                 >
                 <ElButton class="!rounded-xl !px-8 !h-11 !font-black !bg-slate-50" @click="handleClose"

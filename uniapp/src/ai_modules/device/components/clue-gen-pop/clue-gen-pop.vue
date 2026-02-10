@@ -2,7 +2,7 @@
     <popup-bottom v-model="show" title="AI生成线索词" custom-class="bg-[#f3f3f3]" @close="close">
         <template #content>
             <view class="h-full flex flex-col">
-                <view class="text-[30rpx] font-bold mx-4 mt-2"> 您想获取的线索方向 </view>
+                <view class="text-[30rpx] font-medium mx-4 mt-2"> 您想获取的线索方向 </view>
                 <scroll-view class="grow min-h-0 mt-[20rpx]" scroll-y>
                     <view v-if="!isGenerating" class="p-4 bg-white rounded-[16rpx] mx-4">
                         <textarea
@@ -21,14 +21,14 @@
                         <view
                             v-for="(item, index) in chatContentList"
                             :key="index"
-                            class="relative rounded-[16rpx] bg-white shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] px-4 py-2 font-bold">
+                            class="relative rounded-[16rpx] bg-white shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] px-4 py-2 font-medium">
                             <view v-if="item.status === 'pending'">
                                 <view class="flex items-center gap-1">
                                     <image
                                         src="@/ai_modules/sph/static/icons/star2.svg"
                                         class="w-[24rpx] h-[24rpx]"></image>
 
-                                    <text class="font-bold">线索词{{ index + 1 }}生成中</text>
+                                    <text class="font-medium">线索词{{ index + 1 }}生成中</text>
                                 </view>
                                 <view class="mt-4">
                                     <view class="w-full h-[28rpx] bg-[#F7F8FC] rounded-[8rpx]"></view>
@@ -50,19 +50,19 @@
                 <view class="flex items-center gap-2 p-4">
                     <view
                         v-if="!isGenerating"
-                        class="flex-1 bg-black text-white rounded-[20rpx] h-[90rpx] flex items-center justify-center text-[30rpx] font-bold"
+                        class="flex-1 bg-black text-white rounded-[20rpx] h-[90rpx] flex items-center justify-center text-[30rpx] font-medium"
                         @click="generateClue(contentVal)">
                         立即生成（消耗{{ getToken }}算力）
                     </view>
                     <template v-else>
                         <view
                             v-if="isGenerated"
-                            class="w-[240rpx] h-[90rpx] flex items-center justify-center rounded-[20rpx] bg-white text-[30rpx] font-bold"
+                            class="w-[240rpx] h-[90rpx] flex items-center justify-center rounded-[20rpx] bg-white text-[30rpx] font-medium"
                             @click="handleReload">
                             重新生成
                         </view>
                         <view
-                            class="flex-1 bg-black text-white rounded-[20rpx] h-[90rpx] flex items-center justify-center text-[30rpx] font-bold"
+                            class="flex-1 bg-black text-white rounded-[20rpx] h-[90rpx] flex items-center justify-center text-[30rpx] font-medium"
                             @click="handleConfirm">
                             确定使用
                         </view>

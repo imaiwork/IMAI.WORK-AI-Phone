@@ -98,7 +98,7 @@
                             <div class="absolute bottom-3 right-3">
                                 <div class="tool-btn" @click="handleGeneratePrompt(CopywritingTypeEnum.AI_GOODS_IMAGE)">
                                     <Icon name="el-icon-MagicStick" :size="14"></Icon>
-                                    <span class="text-[11px] font-bold ml-1">随机灵感</span>
+                                    <span class="text-[11px] font-medium ml-1">随机灵感</span>
                                 </div>
                             </div>
                         </div>
@@ -139,7 +139,7 @@
                                     :value="item.label" />
                             </ElSelect>
                             <div
-                                class="flex-1 flex items-center gap-2 px-4 h-11 bg-slate-50 border border-[#F1F5F9] rounded-xl text-[12px] font-bold text-[#64748B]">
+                                class="flex-1 flex items-center gap-2 px-4 h-11 bg-slate-50 border border-[#F1F5F9] rounded-xl text-[12px] font-medium text-[#64748B]">
                                 <span class="opacity-40">W</span> {{ getResolutionSize.width }}
                                 <span class="mx-1 opacity-20">|</span>
                                 <span class="opacity-40">H</span> {{ getResolutionSize.height }}

@@ -16,7 +16,7 @@
             <Icon :name="item.icon" :size="18" />
         </div> -->
 
-        <span class="text-[14px] font-bold transition-colors">
+        <span class="text-[14px] font-medium transition-colors">
             {{ item.name }}
         </span>
 

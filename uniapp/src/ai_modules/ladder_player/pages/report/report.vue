@@ -31,26 +31,26 @@
                     <image
                         src="@/ai_modules/ladder_player/static/images/common/beautify_img1.png"
                         class="w-[42rpx] h-[42rpx]"></image>
-                    <view class="font-bold text-xs">
+                    <view class="font-medium text-xs">
                         已创建<text class="text-primary">{{ workbenchData.scene_count }}</text
                         >个场景
                     </view>
                 </view>
                 <view class="flex items-center gap-2 mt-3 mx-3">
                     <view class="h-[162rpx] w-[242rpx] flex flex-col items-center justify-center number-card">
-                        <view class="text-[48rpx] font-bold">
+                        <view class="text-[48rpx] font-medium">
                             {{ workbenchData.practice_scene_count }}
                         </view>
                         <view class="text-[#4F5259] text-xs mt-2">总共练习次数</view>
                     </view>
                     <view class="flex flex-col items-center justify-center flex-1">
-                        <view class="text-[36rpx] font-bold">
+                        <view class="text-[36rpx] font-medium">
                             {{ workbenchData.scene_count }}
                         </view>
                         <view class="text-[#4F5259] text-xs mt-2">场景数</view>
                     </view>
                     <view class="flex flex-col items-center justify-center flex-1">
-                        <view class="text-[36rpx] font-bold">
+                        <view class="text-[36rpx] font-medium">
                             {{ workbenchData.average_score }}
                         </view>
                         <view class="text-[#4F5259] text-xs mt-2">评价分数</view>
@@ -63,22 +63,22 @@
                 <view class="lists-card">
                     <view v-for="(item, index) in lists" :key="index" class="card-item" @click="handleClick(item)">
                         <view class="text-white relative z-10">
-                            <view class="font-bold">
+                            <view class="font-medium">
                                 {{ item.scene_name }}
                             </view>
-                            <view class="font-bold text-xl mt-1">
+                            <view class="font-medium text-xl mt-1">
                                 {{ formatDurationTime(item.duration) }}
                             </view>
                             <view class="text-xs mt-[12rpx]">{{ formatStartTime(item.start_time) }}</view>
                         </view>
                         <view class="flex items-center gap-2 flex-shrink-0" v-if="item.status == 2">
-                            <view class="font-bold text-white"> {{ item.total_score || 0 }}分 </view>
+                            <view class="font-medium text-white"> {{ item.total_score || 0 }}分 </view>
                             <view>
                                 <u-icon name="arrow-right" color="#ffffff"></u-icon>
                             </view>
                         </view>
                         <view class="flex items-center gap-2 flex-shrink-0" v-else-if="item.status == 3">
-                            <view class="font-bold text-white"> 分析失败 </view>
+                            <view class="font-medium text-white"> 分析失败 </view>
                             <view @click.stop="handleRetry(item.id)">
                                 <u-icon name="reload" color="#ffffff"></u-icon>
                             </view>

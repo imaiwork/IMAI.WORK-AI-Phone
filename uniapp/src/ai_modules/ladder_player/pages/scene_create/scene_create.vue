@@ -16,7 +16,7 @@
             <scroll-view scroll-y class="h-full">
                 <view class="mx-4 flex flex-col gap-4 pb-10">
                     <view>
-                        <view class="font-bold text-xl">对练者音色</view>
+                        <view class="font-medium text-xl">对练者音色</view>
                         <view class="mt-4">
                             <view class="grid grid-cols-2 gap-[24rpx]">
                                 <view
@@ -30,7 +30,7 @@
                                     <view class="w-[76rpx] h-[76rpx] rounded-full bg-white p-1">
                                         <image :src="item.logo" class="w-full h-full rounded-full"></image>
                                     </view>
-                                    <view class="font-bold flex-1 px-2 whitespace-nowrap">
+                                    <view class="font-medium flex-1 px-2 whitespace-nowrap">
                                         {{ item.name }}
                                     </view>
                                 </view>
@@ -38,7 +38,7 @@
                         </view>
                     </view>
                     <view>
-                        <view class="font-bold text-xl">
+                        <view class="font-medium text-xl">
                             <text class="text-[#FF4D4F]">*</text>
                             练习场景
                         </view>
@@ -52,7 +52,7 @@
                         </view>
                     </view>
                     <view>
-                        <view class="font-bold text-xl"> 挂载知识库 </view>
+                        <view class="font-medium text-xl"> 挂载知识库 </view>
                         <view class="mt-4">
                             <view
                                 class="px-4 py-1 bg-white rounded-lg flex items-center justify-between"
@@ -67,7 +67,7 @@
                         </view>
                     </view>
                     <view>
-                        <view class="font-bold text-xl">
+                        <view class="font-medium text-xl">
                             <text class="text-[#FF4D4F]">*</text>
                             场景简介
                         </view>
@@ -83,7 +83,7 @@
                         </view>
                     </view>
                     <view>
-                        <view class="font-bold text-xl">
+                        <view class="font-medium text-xl">
                             <text class="text-[#FF4D4F]">*</text>
                             陪练者名称
                         </view>
@@ -97,7 +97,7 @@
                         </view>
                     </view>
                     <view>
-                        <view class="font-bold text-xl">陪练者情感</view>
+                        <view class="font-medium text-xl">陪练者情感</view>
                         <view class="mt-4">
                             <view class="flex flex-wrap gap-[24rpx]">
                                 <view
@@ -114,7 +114,7 @@
                         </view>
                     </view>
                     <view>
-                        <view class="font-bold text-xl">陪练者情感投入度</view>
+                        <view class="font-medium text-xl">陪练者情感投入度</view>
                         <view class="mt-4">
                             <view class="flex flex-wrap gap-[24rpx]">
                                 <view
@@ -131,7 +131,7 @@
                         </view>
                     </view>
                     <view>
-                        <view class="font-bold text-xl">
+                        <view class="font-medium text-xl">
                             <text class="text-[#FF4D4F]">*</text>
                             陪练画像描述
                         </view>
@@ -147,7 +147,7 @@
                         </view>
                     </view>
                     <view>
-                        <view class="font-bold text-xl">
+                        <view class="font-medium text-xl">
                             <text class="text-[#FF4D4F]">*</text>
                             我的角色
                         </view>
@@ -180,7 +180,7 @@
                             <image
                                 class="w-[48rpx] h-[48rpx]"
                                 src="@/ai_modules/ladder_player/static/icons/tips.svg"></image>
-                            <text class="text-xl font-bold">马上创建并开始进行练习</text>
+                            <text class="text-xl font-medium">马上创建并开始进行练习</text>
                         </template>
                     </view>
                 </u-button>
@@ -197,7 +197,7 @@
         <view class="h-full flex flex-col">
             <view class="flex items-center justify-center gap-2 h-[112rpx]">
                 <u-icon name="info-circle" color="#FE975F" :size="32"></u-icon>
-                <text class="text-[#2C2C36] text-xl font-bold">确定删除场景吗？</text>
+                <text class="text-[#2C2C36] text-xl font-medium">确定删除场景吗？</text>
             </view>
             <view>
                 <u-line />

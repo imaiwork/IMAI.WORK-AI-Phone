@@ -9,7 +9,7 @@
                             <span class="text-[14px] font-[900] text-[#1E293B]">生成模型</span>
                         </div>
                         <div
-                            class="flex items-center gap-1 text-[12px] font-bold text-primary cursor-pointer hover:opacity-80 transition-opacity"
+                            class="flex items-center gap-1 text-[12px] font-medium text-primary cursor-pointer hover:opacity-80 transition-opacity"
                             @click="fillExample">
                             <Icon name="el-icon-MagicStick" :size="14"></Icon>
                             <span>填入示例</span>

@@ -29,7 +29,7 @@
                                     <span class="text-[14px] font-[900] text-[#1E293B]">{{ row.wechat_nickname }}</span>
                                     <span
                                         v-if="row.remark"
-                                        class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-bold">
+                                        class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-medium">
                                         {{ row.remark }}
                                     </span>
                                 </div>
@@ -48,7 +48,7 @@
                                     {{ row.takeover_mode === 1 ? "AI 接管中" : "人工介入" }}
                                 </div>
                             </div>
-                            <div class="text-[10px] text-slate-400 font-bold pl-1">
+                            <div class="text-[10px] text-slate-400 font-medium pl-1">
                                 类型：{{ ["全部", "私聊", "群聊"][row.takeover_type] }}
                             </div>
                         </div>
@@ -59,7 +59,7 @@
                     <template #default="{ row }">
                         <div
                             v-if="row.robot_name"
-                            class="flex items-center justify-center gap-2 text-primary font-bold">
+                            class="flex items-center justify-center gap-2 text-primary font-medium">
                             <div class="w-2 h-2 rounded-full bg-primary/40 animate-pulse"></div>
                             <span class="text-[13px]">{{ row.robot_name }}</span>
                         </div>
@@ -130,7 +130,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
-            <span class="text-xs font-bold text-[#94A3B8]"
+            <span class="text-xs font-medium text-[#94A3B8]"
                 >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条微信账号数据</span
             >
             <pagination v-model="pager" @change="getLists" />
@@ -374,7 +374,7 @@ onMounted(() => {
 
 /* 状态标签样式 */
 .status-badge {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-bold;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
     .pulse-dot {
         @apply w-1.5 h-1.5 rounded-full mr-2;
     }
@@ -396,7 +396,7 @@ onMounted(() => {
     @apply bg-slate-100 p-1 rounded-xl border-[none] gap-3;
     :deep(.el-radio-button__inner) {
         border: none;
-        @apply bg-[transparent] rounded-lg text-[13px] font-bold text-slate-500 h-8 flex items-center px-4 transition-all;
+        @apply bg-[transparent] rounded-lg text-[13px] font-medium text-slate-500 h-8 flex items-center px-4 transition-all;
         &:hover {
             @apply text-primary;
         }

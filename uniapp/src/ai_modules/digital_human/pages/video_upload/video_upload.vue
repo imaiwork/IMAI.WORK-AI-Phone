@@ -8,7 +8,7 @@
                             <image
                                 src="@/ai_modules/digital_human/static/icons/video_upload_tips_1.svg"
                                 class="w-[36rpx] h-[36rpx]"></image>
-                            <text class="text-[30rpx] font-bold text-[#000000cc]">视频教程</text>
+                            <text class="text-[30rpx] font-medium text-[#000000cc]">视频教程</text>
                         </view>
                         <view class="mt-[36rpx]">
                             <view class="h-[384rpx] rounded-[40rpx] relative">
@@ -27,7 +27,7 @@
                             <image
                                 src="@/ai_modules/digital_human/static/icons/video_upload_tips_2.svg"
                                 class="w-[36rpx] h-[36rpx]"></image>
-                            <text class="text-[30rpx] font-bold text-[#000000cc]">视频要求</text>
+                            <text class="text-[30rpx] font-medium text-[#000000cc]">视频要求</text>
                         </view>
                         <view class="mt-[30rpx] flex items-center gap-x-4">
                             <image
@@ -56,7 +56,7 @@
                             <image
                                 src="@/ai_modules/digital_human/static/icons/video_upload_tips_3.svg"
                                 class="w-[36rpx] h-[36rpx]"></image>
-                            <text class="text-[30rpx] font-bold text-[#000000cc]">错误示例</text>
+                            <text class="text-[30rpx] font-medium text-[#000000cc]">错误示例</text>
                         </view>
                         <view class="mt-[30rpx]">
                             <image

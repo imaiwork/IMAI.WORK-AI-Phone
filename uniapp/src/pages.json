@@ -323,7 +323,7 @@
 					}
 				},
 				{
-					"path": "pages/ai_copywriter/ai_copywriter",
+					"path": "pages/szr_ai_copywriter/szr_ai_copywriter",
 					"style": {
 						"navigationBarTitleText": "AI生成文案",
 						"navigationBarBackgroundColor": "#F9FAFB"
@@ -560,6 +560,75 @@
 					"path": "pages/montage_styles_choose/montage_styles_choose",
 					"style": {
 						"navigationBarTitleText": "选择视频风格"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/platform_publish/platform_publish",
+					"style": {
+						"navigationBarTitleText": "视频发布创建",
+						"disableScroll": true,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/platform_publish_works/platform_publish_works",
+					"style": {
+						"navigationBarTitleText": "视频发布作品"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/platform_publish_video/platform_publish_video",
+					"style": {
+						"navigationBarTitleText": "发布视频"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/platform_publish_copywriter/platform_publish_copywriter",
+					"style": {
+						"navigationBarTitleText": "",
+						"disableScroll": true,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/platform_publish_ai_copywriter/platform_publish_ai_copywriter",
+					"style": {
+						"navigationBarTitleText": "AI生成文案"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/montage_storyboard/montage_storyboard",
+					"style": {
+						"navigationBarTitleText": "",
+						"disableScroll": true,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/montage_storyboard_title/montage_storyboard_title",
+					"style": {
+						"navigationBarTitleText": "视频顶部标题"
 					},
 					"meta": {
 						"auth": true
@@ -1171,6 +1240,16 @@
 					},
 					"meta": {
 						"share": true
+					}
+				},
+				{
+					"path": "pages/create_wechat_private/create_wechat_private",
+					"style": {
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				}
 			]

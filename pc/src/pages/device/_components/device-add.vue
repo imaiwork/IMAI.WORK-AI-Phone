@@ -2,12 +2,12 @@
     <popup ref="popupRef" title="添加AI智能设备" async width="500px" confirm-button-text="" @close="close">
         <div class="flex flex-col gap-y-4">
             <div class="rounded-[10px] bg-white p-5 flex flex-col items-center">
-                <div class="text-xl font-bold">设备绑定码</div>
+                <div class="text-xl font-medium">设备绑定码</div>
                 <div class="text-xl text-[#0000004d] mt-[10px]">请勿与任何人分享此代码</div>
                 <div class="w-[250px] h-[250px] mt-[28px]" v-loading="loading">
                     <img :src="qrcode" class="w-full h-full rounded-[10px]" v-if="qrcode" />
                 </div>
-                <div class="font-bold mt-5">请前往RPA启用摄像头扫描此二维码</div>
+                <div class="font-medium mt-5">请前往RPA启用摄像头扫描此二维码</div>
             </div>
         </div>
     </popup>

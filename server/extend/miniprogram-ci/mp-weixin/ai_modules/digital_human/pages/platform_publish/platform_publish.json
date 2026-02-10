@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "视频发布创建",
+  "disableScroll": true,
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../../components/empty/empty",
+    "choose-material": "../../../../components/choose-material/choose-material",
+    "video-preview": "../../../../components/video-preview/video-preview",
+    "upload-progress": "../../../../components/upload-progress/upload-progress",
+    "choose-history": "../../components/choose-history/choose-history",
+    "create-success-pop": "../../components/create-success-pop/create-success-pop"
+  }
+}

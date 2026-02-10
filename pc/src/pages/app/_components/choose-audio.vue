@@ -18,7 +18,7 @@
                     </div>
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">背景音乐素材库</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             Audio Library Assets
                         </div>
                     </div>
@@ -40,7 +40,7 @@
                         @keyup.enter="resetPage()"></ElInput>
                     <ElButton
                         type="primary"
-                        class="!rounded-full !w-[100px] !h-[42px] !font-bold !text-sm !shadow-[#0065fb]/20"
+                        class="!rounded-full !w-[100px] !h-[42px] !font-medium !text-sm !shadow-[#0065fb]/20"
                         @click="resetPage()">
                         搜索
                     </ElButton>
@@ -81,7 +81,7 @@
                                                 class="text-[14px] font-black text-[#1E293B] truncate leading-tight"
                                                 >{{ item.name }}</span
                                             >
-                                            <span class="text-[11px] text-[#94A3B8] mt-1 font-bold"
+                                            <span class="text-[11px] text-[#94A3B8] mt-1 font-medium"
                                                 >来源: {{ item.source || "系统素材库" }}</span
                                             >
                                         </div>
@@ -112,7 +112,7 @@
                                 <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4">
                                     <Icon name="el-icon-Microphone" :size="32" color="#CBD5E1"></Icon>
                                 </div>
-                                <div class="text-[#94A3B8] font-bold text-sm">库中暂无相关音乐资源</div>
+                                <div class="text-[#94A3B8] font-medium text-sm">库中暂无相关音乐资源</div>
                             </div>
                         </div>
                     </ElScrollbar>

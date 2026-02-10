@@ -1,15 +1,15 @@
 <template>
     <scroll-view scroll-y class="scroll-view h-full" :scroll-top="scrollTop">
         <view class="h-full flex flex-col">
-            <view class="font-bold text-[#3D3D3D] text-[48rpx] mx-4 mt-[48rpx]"
+            <view class="font-medium text-[#3D3D3D] text-[48rpx] mx-4 mt-[48rpx]"
                 >恭喜完成练习，这是为您生成的评测报告:</view
             >
             <view class="bg-[#F5F8FF] rounded-tl-xl rounded-tr-xl p-3 mt-[48rpx] pb-[100rpx]">
                 <view class="bg-white rounded-xl p-3">
                     <view>
-                        <view class="text-[#97969C] font-bold">总得分</view>
+                        <view class="text-[#97969C] font-medium">总得分</view>
                         <view>
-                            <text class="text-primary font-bold text-[72rpx]">{{ detail.total_score || 0 }}</text>
+                            <text class="text-primary font-medium text-[72rpx]">{{ detail.total_score || 0 }}</text>
                             <text class="text-[#97969C]">/100</text>
                         </view>
                     </view>
@@ -56,7 +56,7 @@
                     :id="item.id"
                     v-for="item in indicator"
                     :key="item.id">
-                    <view class="text-primary font-bold text-xl">
+                    <view class="text-primary font-medium text-xl">
                         {{ item.name }}
                     </view>
                     <view class="flex items-center -mt-2">
@@ -64,7 +64,7 @@
                             <u-line />
                         </view>
                         <view class="ml-[64rpx]">
-                            <text class="text-primary font-bold text-[48rpx]">{{ item.score || 0 }}</text>
+                            <text class="text-primary font-medium text-[48rpx]">{{ item.score || 0 }}</text>
                             <text class="text-[#97969C]">/20</text>
                         </view>
                     </view>
@@ -73,7 +73,7 @@
                             <image
                                 src="@/ai_modules/ladder_player/static/icons/tongdian.svg"
                                 class="w-[48rpx] h-[48rpx] flex-shrink-0"></image>
-                            <text class="text-xs font-bold text-[#60636B]">痛点分析</text>
+                            <text class="text-xs font-medium text-[#60636B]">痛点分析</text>
                         </view>
                         <view class="flex items-center mt-2 gap-[2rpx]">
                             <view v-for="index in 5" :key="index" class="w-[24rpx] h-[24rpx]">

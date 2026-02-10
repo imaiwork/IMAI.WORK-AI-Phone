@@ -1,6 +1,6 @@
 <template>
     <view class="h-screen flex flex-col">
-        <view class="font-bold text-[30rpx] mx-4 mt-4">营销主题({{ dataList.length }})</view>
+        <view class="font-medium text-[30rpx] mx-4 mt-4">营销主题({{ dataList.length }})</view>
         <view class="grow min-h-0 mt-4">
             <scroll-view class="h-full" scroll-y>
                 <view class="px-4 flex flex-wrap gap-2">
@@ -8,12 +8,12 @@
                         class="rounded-[24rpx] bg-black px-[42rpx] h-[80rpx] flex items-center gap-x-1"
                         @click="handleEditKeywords(-1)">
                         <u-icon name="plus" size="20" color="#ffffff"></u-icon>
-                        <text class="text-xs text-white font-bold">添加</text>
+                        <text class="text-xs text-white font-medium">添加</text>
                     </view>
                     <view
                         v-for="(item, index) in dataList"
                         :key="index"
-                        class="rounded-[24rpx] bg-white px-[26rpx] h-[80rpx] flex items-center gap-x-1 font-bold"
+                        class="rounded-[24rpx] bg-white px-[26rpx] h-[80rpx] flex items-center gap-x-1 font-medium"
                         @click="handleEditKeywords(index)">
                         {{ item }}
                         <view

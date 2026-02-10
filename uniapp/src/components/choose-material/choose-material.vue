@@ -23,7 +23,7 @@
                                 @click="handleSelect(item)">
                                 <image
                                     v-if="item.m_type == 1 || item.pic"
-                                    :src="item.pic"
+                                    :src="item.pic || item.content"
                                     class="w-full h-full rounded-xl"
                                     lazy-load
                                     mode="aspectFill"></image>
@@ -56,7 +56,7 @@
                     </z-paging>
                 </view>
                 <view class="flex items-center justify-between gap-2 mt-[20rpx] mb-4 px-4">
-                    <view class="flex items-center gap-x-2" @click="toggleSelect" v-if="props.multiple">
+                    <view class="flex items-center gap-x-2" @click="toggleSelect" v-if="multiple && limit && limit > 1">
                         <view class="w-[32rpx] h-[32rpx]">
                             <image
                                 v-if="chooseLists.length > 0 && isAllSelected"
@@ -67,7 +67,7 @@
                         <view>全选</view>
                     </view>
                     <view
-                        class="text-white font-bold text-[30rpx] rounded-[20rpx] bg-primary h-[90rpx] w-[460rpx] flex items-center justify-center"
+                        class="flex-1 text-white font-medium text-[30rpx] rounded-[20rpx] bg-primary h-[90rpx] w-[460rpx] flex items-center justify-center"
                         :class="[!props.multiple ? 'w-full' : 'w-[460rpx]']"
                         @click="confirm">
                         确定选择
@@ -156,7 +156,14 @@ const confirm = () => {
         return;
     }
     show.value = false;
-    emit("select", chooseLists.value);
+    emit(
+        "select",
+        chooseLists.value.map((item: any) => ({
+            ...item,
+            url: item.content,
+            pic: item.m_type == 1 ? item.pic || item.content : item.pic,
+        }))
+    );
     chooseLists.value = [];
 };
 

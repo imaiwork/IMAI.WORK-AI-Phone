@@ -11,6 +11,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatLog;
 use app\common\enum\DeviceEnum;
+use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceTask;
 
@@ -69,7 +70,7 @@ class CrawlingManualLogic extends SvBaseLogic
                         'user_id' => self::$uid,
                         'device_code' => $device['device_code'],
                         'task_type' => DeviceEnum::TASK_TYPE_FRIENDS,
-                        'account' => is_null($device['wechat_device_code']) ? '' : self::getWechatAccount($device['wechat_device_code']),
+                        'account' => SvAccount::where('device_code', $device['device_code'])->where('user_id', self::$uid)->where('type', 1)->value('account') ?? '',
                         'account_type' => 1,
                         'task_name' => '设备自动加微任务',
                         'status' => 0,
@@ -81,6 +82,7 @@ class CrawlingManualLogic extends SvBaseLogic
                         'source' => DeviceEnum::TASK_SOURCE_FRIENDS,//sv_crawling_manual_task
                         'create_time' => time(),
                     ]);
+                    \app\api\logic\device\TaskLogic::updateWechatRpaTaskTime($device['device_code'], $time['start_time']);
                 }
             }
             \app\api\logic\device\TaskLogic::add($allTaskInstall);
@@ -549,10 +551,10 @@ class CrawlingManualLogic extends SvBaseLogic
             $info['account_info'] = AiWechat::where($where)->findOrEmpty()->toArray();
             $info['task_name'] = $params['task_name'];
             $info['task_category'] = $params['task_category'];
-            $bind['keywords'] = json_decode($bind['keywords'], JSON_UNESCAPED_UNICODE);
+            //$bind['keywords'] = json_decode($bind['keywords'], JSON_UNESCAPED_UNICODE);
             $info['start_time'] = date('H:i',$info['start_time']);
             $info['end_time'] = date('H:i',$info['end_time']);
-            $info['info'] = $bind;
+            //$info['info'] = $bind;
             self::$returnData = $info;
             return true;
         } catch (\Exception $e) {

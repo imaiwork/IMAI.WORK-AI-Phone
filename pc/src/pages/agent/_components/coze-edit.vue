@@ -243,7 +243,7 @@ defineExpose({
     .custom-radio-group {
         @apply gap-2;
         .el-radio-button__inner {
-            @apply rounded-lg border-none bg-[transparent] text-[#64748B] font-bold text-xs px-4 py-2;
+            @apply rounded-lg border-none bg-[transparent] text-[#64748B] font-medium text-xs px-4 py-2;
         }
         .el-radio-button__original-radio:checked + .el-radio-button__inner {
             @apply bg-white text-primary;

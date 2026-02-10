@@ -36,7 +36,7 @@
                         <view class="flex justify-between items-center">
                             <view>
                                 <view class="flex items-center gap-x-2 mr-4">
-                                    <view class="line-clamp-1 break-all font-bold text-[30rpx]">
+                                    <view class="line-clamp-1 break-all font-medium text-[30rpx]">
                                         {{ item.name }}
                                     </view>
                                     <view class="p-1" @click="handleEdit(index)">
@@ -139,7 +139,7 @@
                     <view
                         class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
                         :class="[selectedLists.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
-                        <text class="font-bold text-[32rpx]">{{ selectedLists.length }}</text>
+                        <text class="font-medium text-[32rpx]">{{ selectedLists.length }}</text>
                         <text class="text-xs mt-1">已选</text>
                     </view>
                     <view class="flex items-center gap-x-4">
@@ -169,7 +169,7 @@
         @update:show="showVideoPreview = false"></video-preview-v2>
     <u-popup v-model="showEditPopup" mode="center" width="90%" :border-radius="20">
         <view class="p-4 bg-white rounded-[20rpx]">
-            <view class="text-[30rpx] font-bold text-center mt-2">编辑名称</view>
+            <view class="text-[30rpx] font-medium text-center mt-2">编辑名称</view>
             <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
                 <u-input
                     v-model="newName"
@@ -180,12 +180,12 @@
             </view>
             <view class="flex items-center gap-x-5 mt-[56rpx]">
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold text-[#000000b3]"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
                     @click="showEditPopup = false">
                     取消
                 </view>
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-bold text-white"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
                     @click="handleEditConfirm"
                     >确定</view
                 >

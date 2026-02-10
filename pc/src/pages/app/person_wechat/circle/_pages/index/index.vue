@@ -22,7 +22,7 @@
                             </div>
                         </div>
                         <ElButton
-                            class="!rounded-xl !h-10 hover:!bg-gray-50 transition-all font-bold border-none bg-gray-100"
+                            class="!rounded-xl !h-10 hover:!bg-gray-50 transition-all font-medium border-none bg-gray-100"
                             :loading="circleListsLoading"
                             @click="refreshCircle">
                             <Icon name="el-icon-Refresh" />
@@ -63,7 +63,7 @@
                             v-if="circleListsLoad"
                             class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#ffffff]/90 backdrop-blur px-6 py-2 rounded-full shadow-light border border-primary-light-9 z-30 flex items-center gap-3">
                             <div class="chat-loader !scale-75"></div>
-                            <span class="text-[12px] font-bold text-primary">正在载入更多动态...</span>
+                            <span class="text-[12px] font-medium text-primary">正在载入更多动态...</span>
                         </div>
                     </div>
                 </div>

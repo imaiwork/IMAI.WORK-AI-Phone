@@ -14,7 +14,7 @@
             <scroll-view class="h-full" scroll-y>
                 <view class="px-4 pb-[100rpx]">
                     <view class="mt-[20rpx] p-[30rpx] bg-white rounded-[20rpx]">
-                        <view class="text-[30rpx] font-bold">视频名称</view>
+                        <view class="text-[30rpx] font-medium">视频名称</view>
                         <view class="mt-[20rpx] bg-[#F3F4FB] rounded-[20rpx] px-4 h-[100rpx] flex items-center">
                             <u-input
                                 class="w-full"
@@ -27,7 +27,7 @@
                     </view>
                     <view class="p-[30rpx] bg-white rounded-[20rpx] mt-[20rpx]">
                         <view>
-                            <view class="font-bold text-[30rpx]">提示词</view>
+                            <view class="font-medium text-[30rpx]">提示词</view>
                             <u-input
                                 ref="inputContentRef"
                                 class="w-full mt-[18rpx]"
@@ -44,15 +44,14 @@
                                 placeholder="描个25岁的青年女性，穿着正装，手上拿着商品正在讲解介绍...若选择角色，需在文案中使用角色名 ，如：小爱穿着正装，手上拿着商品正在讲解介绍..." />
                         </view>
                         <view class="flex items-center justify-between">
-                            <navigator
-                                :url="`/ai_modules/digital_human/pages/sora_ai_copywriter/sora_ai_copywriter?content=${formData.content}`"
-                                hover-class="none"
-                                class="px-[18rpx] py-[12rpx] bg-black rounded-[10rpx] flex items-center gap-x-[10rpx]">
+                            <view
+                                class="px-[18rpx] py-[12rpx] bg-black rounded-[10rpx] flex items-center gap-x-[10rpx]"
+                                @click="showChooseAgent = true">
                                 <image
                                     src="@/ai_modules/digital_human/static/icons/star_white.svg"
                                     class="w-[24rpx] h-[24rpx]"></image>
-                                <text class="text-white font-bold">优化提示词</text>
-                            </navigator>
+                                <text class="text-white font-medium">优化提示词</text>
+                            </view>
                             <view class="flex items-center gap-x-[46rpx]">
                                 <view class="flex items-center gap-x-[10rpx]" @click="formData.content = ''">
                                     <image
@@ -66,7 +65,7 @@
                             </view>
                         </view>
                         <view class="mt-[30rpx]">
-                            <view class="font-bold">选择角色(选填)</view>
+                            <view class="font-medium">选择角色(选填)</view>
                             <view class="grid grid-cols-4 mt-[22rpx] gap-x-[16rpx]">
                                 <view
                                     class="bg-[#F3F4FB] rounded-[12rpx] flex flex-col items-center justify-center h-[200rpx]"
@@ -74,7 +73,7 @@
                                     <image
                                         src="@/ai_modules/digital_human/static/icons/add.svg"
                                         class="w-[32rpx] h-[32rpx]"></image>
-                                    <text class="text-xs font-bold mt-2">选择</text>
+                                    <text class="text-xs font-medium mt-2">选择</text>
                                 </view>
                                 <view
                                     v-for="(item, index) in soraRoleList"
@@ -100,7 +99,7 @@
                     </view>
                     <view class="mt-[20rpx] p-[30rpx] bg-white rounded-[20rpx]">
                         <view>
-                            <view class="font-bold text-[30rpx]"
+                            <view class="font-medium text-[30rpx]"
                                 >参考图<text class="text-[#0000004d] text-xs">（选填，图片不可出现人物）</text></view
                             >
                             <view class="grid grid-cols-3 gap-[20rpx] mt-[20rpx]">
@@ -131,14 +130,14 @@
                                     <image
                                         src="@/ai_modules/digital_human/static/icons/add.svg"
                                         class="w-[32rpx] h-[32rpx]"></image>
-                                    <text class="text-xs font-bold mt-2">上传</text>
+                                    <text class="text-xs font-medium mt-2">上传</text>
                                 </view>
                             </view>
                         </view>
                     </view>
                     <view class="mt-[20rpx] p-[30rpx] bg-white rounded-[20rpx]">
                         <view>
-                            <view class="font-bold text-[30rpx]">视频比例</view>
+                            <view class="font-medium text-[30rpx]">视频比例</view>
                             <view class="mt-[20rpx] flex flex-wrap gap-2">
                                 <view
                                     class="common-type-item"
@@ -151,7 +150,7 @@
                             </view>
                         </view>
                         <view class="mt-[50rpx]">
-                            <view class="text-[30rpx] font-bold">视频时长</view>
+                            <view class="text-[30rpx] font-medium">视频时长</view>
                             <view class="mt-[20rpx] flex flex-wrap gap-2">
                                 <view
                                     class="common-type-item"
@@ -164,7 +163,7 @@
                             </view>
                         </view>
                         <view class="flex items-center justify-between gap-x-2 mt-[50rpx]">
-                            <view class="text-[30rpx] font-bold">生成视频数量</view>
+                            <view class="text-[30rpx] font-medium">生成视频数量</view>
                             <view class="flex items-center gap-x-2">
                                 <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('minus')">
                                     <image
@@ -206,7 +205,7 @@
                     <text class="text-[#8C8C8C] text-[22rpx]">算力消耗</text>
                 </view>
                 <view
-                    class="rounded-[16rpx] w-[456rpx] h-[100rpx] bg-black text-white font-bold flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
+                    class="rounded-[16rpx] w-[456rpx] h-[100rpx] bg-black text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
                     @click="handleCreateVideo">
                     立即生成（{{ formData.video_count }}个）
                 </view>
@@ -215,6 +214,12 @@
     </view>
 
     <choose-role v-model="showChooseRole" @confirm="handleConfirmRole" />
+    <choose-agent
+        v-if="showChooseAgent"
+        v-model="showChooseAgent"
+        is-sora
+        :system-agent-ids="[7]"
+        @select="handleSelectAgent" />
     <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <create-success-pop
         v-if="showCreateSuccess"
@@ -238,6 +243,7 @@ import { useEventBusManager } from "@/hooks/useEventBusManager";
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
 import ChooseRole from "@/ai_modules/digital_human/components/choose-role/choose-role.vue";
+import ChooseAgent from "@/ai_modules/digital_human/components/choose-agent/choose-agent.vue";
 
 const { on } = useEventBusManager();
 
@@ -283,12 +289,11 @@ const videoDurations = [
     { label: "25s(PRO)", value: 25, model: "sora-2-pro" },
 ];
 
-const contentCursorPosition = ref<number>(0);
-
 const currVideoDurationIndex = ref<number>(0);
 
 const maxDescLength = 5000;
 const replaceMaterialIndex = ref(-1);
+const showChooseAgent = ref(false);
 
 const showChooseRole = ref(false);
 const soraRoleList = ref<any[]>([]);
@@ -302,6 +307,17 @@ const showCreateSuccess = ref(false);
 const showTokensCost = ref(false);
 const createResult = ref<any>(null);
 const rechargePopupRef = shallowRef();
+
+const handleSelectAgent = (res: any) => {
+    const { data } = res;
+    uni.$u.route({
+        url: "/ai_modules/digital_human/pages/sora_ai_copywriter/sora_ai_copywriter",
+        params: {
+            agentData: JSON.stringify(data),
+            content: formData.content,
+        },
+    });
+};
 
 const handleConfirmRole = (role: any) => {
     soraRoleList.value.push(role);
@@ -482,7 +498,7 @@ onLoad(() => {
 .common-type-item {
     @apply px-[28rpx] h-[72rpx] flex items-center justify-center rounded-[10rpx] bg-[#F3F4FB];
     &.active {
-        @apply bg-black text-white font-bold;
+        @apply bg-black text-white font-medium;
     }
 }
 </style>

@@ -3,13 +3,13 @@
         <div>
             <div class="flex flex-col gap-4">
                 <div>
-                    <div class="text-[14px] font-bold">用户提问内容：</div>
+                    <div class="text-[14px] font-medium">用户提问内容：</div>
                     <div class="text-black border border-primary p-2 rounded-md mt-2">
                         {{ formData.message }}
                     </div>
                 </div>
                 <div>
-                    <div class="text-[14px] font-bold">回复内容：</div>
+                    <div class="text-[14px] font-medium">回复内容：</div>
                     <div class="mt-2">
                         <Markdown :content="formData.reply" />
                     </div>

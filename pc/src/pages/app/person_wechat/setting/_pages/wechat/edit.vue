@@ -14,7 +14,7 @@
             </div>
             <div>
                 <h3 class="text-[18px] font-[900] text-[#0F172A] leading-tight">配置接管策略</h3>
-                <p class="text-[12px] text-slate-400 font-bold mt-1 tracking-wide uppercase">
+                <p class="text-[12px] text-slate-400 font-medium mt-1 tracking-wide uppercase">
                     AI Strategy Configuration
                 </p>
             </div>
@@ -37,7 +37,7 @@
                                 active-text="已开启"
                                 inactive-text="已关闭"
                                 class="custom-large-switch" />
-                            <span class="text-[11px] text-slate-400 font-bold leading-tight"
+                            <span class="text-[11px] text-slate-400 font-medium leading-tight"
                                 >决定此账号是否允许 AI 介入聊天</span
                             >
                         </div>
@@ -197,7 +197,7 @@ defineExpose({
     :deep(.el-radio-button) {
         @apply flex-1;
         .el-radio-button__inner {
-            @apply w-full bg-[transparent] border-[none] rounded-lg text-[13px] font-bold text-slate-500 h-9 flex items-center justify-center transition-all;
+            @apply w-full bg-[transparent] border-[none] rounded-lg text-[13px] font-medium text-slate-500 h-9 flex items-center justify-center transition-all;
         }
         &.is-active .el-radio-button__inner {
             @apply bg-primary text-white shadow-light shadow-[#0065fb]/20;
@@ -213,7 +213,7 @@ defineExpose({
             @apply border-primary bg-[#0065fb]/5;
         }
         .el-radio__label {
-            @apply font-bold text-[13px];
+            @apply font-medium text-[13px];
         }
     }
 }

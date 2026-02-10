@@ -103,6 +103,11 @@ class LeadScrapingLogic extends SvBaseLogic
             if (isset($params['ip_address']) && is_array($params['ip_address'])) {
                 $params['ip_address'] = json_encode($params['ip_address'], JSON_UNESCAPED_UNICODE);
             }
+
+            if (isset($params['marker_method']) && is_array($params['marker_method'])) {
+                $params['marker_method'] = json_encode($params['marker_method'], JSON_UNESCAPED_UNICODE);
+            }
+
             // 更新
             SvLeadScrapingSetting::where('id', $leadScraping->id)->update($params);
             $result = $leadScraping->refresh()->toArray();
@@ -191,6 +196,7 @@ class LeadScrapingLogic extends SvBaseLogic
                             'source'       => DeviceEnum::TASK_SOURCE_TOUCH,
                             'create_time'  => time(),
                         ];
+                        \app\api\logic\device\TaskLogic::updateWechatRpaTaskTime($account['device_code'], $startTime);
                     }
                 }
                 TaskLogic::add($allTaskInstall);

@@ -1,7 +1,7 @@
 <template>
     <ElDrawer v-model="visible" size="960px" @close="close">
         <template #header>
-            <div class="border-b border-gray-200 h-[50px] flex items-center text-xl text-black font-bold">
+            <div class="border-b border-gray-200 h-[50px] flex items-center text-xl text-black font-medium">
                 {{ title }}
             </div>
         </template>

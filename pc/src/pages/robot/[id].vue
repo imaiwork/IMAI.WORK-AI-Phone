@@ -5,7 +5,7 @@
         :infinite-scroll-disabled="!pager.isLoad"
         :infinite-scroll-distance="10"
         v-infinite-scroll="load">
-        <div class="text-2xl font-bold p-6">{{ route.query.name }}</div>
+        <div class="text-2xl font-medium p-6">{{ route.query.name }}</div>
         <div class="grow flex flex-col min-h-0">
             <div class="px-6 pb-6">
                 <div

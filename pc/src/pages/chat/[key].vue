@@ -22,7 +22,7 @@
                     <template #content>
                         <div class="h-full flex flex-col items-center justify-center">
                             <img :src="robot?.image" class="w-[112px] h-[112px] rounded-full" />
-                            <div class="text-[32px] font-bold mt-4">{{ robot?.name }}</div>
+                            <div class="text-[32px] font-medium mt-4">{{ robot?.name }}</div>
                             <div class="text-[#7b7b7b] mt-[10px] text-xs w-[383px] mx-auto text-center">
                                 {{ robot?.welcome_introducer }}
                             </div>

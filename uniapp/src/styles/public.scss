@@ -161,7 +161,7 @@ button::after {
     }
 }
 .dh-version-name {
-    @apply px-3 py-2 text-white text-xs rounded-full;
+    @apply px-3 py-1 text-white text-xs rounded-full;
     border: 1px solid #ffffff33;
     background: #ffffff1a;
     backdrop-filter: blur(6px);
@@ -272,7 +272,7 @@ button::after {
         @apply w-[28rpx] h-[28rpx] rounded-full shadow-[0_0_0_2rpx_rgba(0,0,0,0.1)];
     }
     &-title {
-        @apply mt-[20rpx] text-[rgba(0,0,0,0.2)] font-bold text-xs;
+        @apply mt-[20rpx] text-[rgba(0,0,0,0.2)] font-medium text-xs;
     }
     &-line {
         @apply absolute right-[-18%] top-[15rpx] w-[40%] border-[0] border-b border-dashed border-[#D1D6D4];

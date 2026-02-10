@@ -9,8 +9,8 @@
             :disabled-date-method="disabledDateMethod"
             @selectDate="handleSelectDate" />
         <view class="px-4 mt-[50rpx]">
-            <view class="font-bold text-[30rpx]">已选的任务时间（{{ date.length }}）</view>
-            <view class="text-[#0000004d] text-xs mt-[4rpx] font-bold"> 多个时间范围在30天以内 </view>
+            <view class="font-medium text-[30rpx]">已选的任务时间（{{ date.length }}）</view>
+            <view class="text-[#0000004d] text-xs mt-[4rpx] font-medium"> 多个时间范围在30天以内 </view>
             <view class="flex flex-wrap gap-2 mt-[26rpx]">
                 <view
                     v-for="(item, index) in date"
@@ -105,7 +105,7 @@ onLoad((options: any) => {
 
 <style scoped lang="scss">
 .date-item {
-    @apply bg-white text-xs px-2 py-1 rounded-[10rpx] font-bold;
+    @apply bg-white text-xs px-2 py-1 rounded-[10rpx] font-medium;
     &.error-date {
         @apply bg-[#FFE5E5];
     }

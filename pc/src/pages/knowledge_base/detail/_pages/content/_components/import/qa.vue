@@ -16,7 +16,7 @@
                     <div class="w-12 h-12 rounded-full bg-[#F0F6FF] flex items-center justify-center mb-3">
                         <Icon name="local-icon-upload" class="text-primary" :size="24" />
                     </div>
-                    <div class="text-[14px] font-bold text-[#64748B]">
+                    <div class="text-[14px] font-medium text-[#64748B]">
                         将文件拖拽至此，或 <span class="text-primary font-[900] cursor-pointer">点击选择文件</span>
                     </div>
                     <div class="text-[12px] text-[#94A3B8] mt-2 italic">支持 {{ accept }} 格式，最大 50 个文件</div>
@@ -47,7 +47,7 @@
                                         <Icon name="local-icon-upload2" :size="14" />
                                     </div>
                                     <div
-                                        class="ml-3 text-[13px] font-bold truncate flex-1"
+                                        class="ml-3 text-[13px] font-medium truncate flex-1"
                                         :class="currIndex == index ? 'text-primary' : 'text-[#475569]'">
                                         {{ item.name }}
                                     </div>
@@ -69,7 +69,7 @@
                         <span class="w-1.5 h-4 bg-primary rounded-full"></span>
                         <span class="text-[14px] font-[900] text-[#1E293B]">分段内容预览</span>
                     </div>
-                    <div class="text-[12px] font-bold text-[#94A3B8]">
+                    <div class="text-[12px] font-medium text-[#94A3B8]">
                         共计 <span class="text-primary">{{ data[currIndex]?.data.length || 0 }}</span> 组
                     </div>
                 </div>

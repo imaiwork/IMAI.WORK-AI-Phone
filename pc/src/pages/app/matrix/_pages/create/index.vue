@@ -8,7 +8,7 @@
                 @click="handleCreate(item.type)">
                 <img :src="item.icon" />
                 <div>
-                    <div class="font-bold text-[22px]">{{ item.title }}</div>
+                    <div class="font-medium text-[22px]">{{ item.title }}</div>
                     <div class="text-xs text-[#666666]">{{ item.subTitle }}</div>
                 </div>
             </div>

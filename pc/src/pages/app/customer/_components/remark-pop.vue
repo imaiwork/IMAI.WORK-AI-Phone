@@ -17,7 +17,7 @@
                     <span class="w-1.5 h-4 bg-primary rounded-full"></span>
                     <h3 class="text-lg font-[1000] text-slate-800 tracking-tight">编辑验证备注</h3>
                 </div>
-                <p class="text-[11px] text-slate-400 font-bold uppercase tracking-widest ml-3.5">
+                <p class="text-[11px] text-slate-400 font-medium uppercase tracking-widest ml-3.5">
                     Edit Validation Message
                 </p>
             </div>
@@ -42,7 +42,7 @@
                     立即保存内容
                 </button>
 
-                <p class="text-center text-[10px] text-slate-400 font-bold">提示：优质的备注内容能显著提高通过率</p>
+                <p class="text-center text-[10px] text-slate-400 font-medium">提示：优质的备注内容能显著提高通过率</p>
             </div>
         </div>
     </popup>

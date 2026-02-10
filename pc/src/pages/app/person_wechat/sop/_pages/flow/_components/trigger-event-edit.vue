@@ -8,7 +8,7 @@
                 </div>
                 <div>
                     <h4 class="text-[15px] font-[900] text-[#0F172A]">触发条件配置</h4>
-                    <p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                    <p class="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
                         Trigger Logic Configuration
                     </p>
                 </div>
@@ -188,7 +188,7 @@ defineExpose({
     :deep(.el-radio-button) {
         @apply flex-1;
         .el-radio-button__inner {
-            @apply w-full bg-[transparent] border-none rounded-lg text-[13px] font-bold text-slate-500 h-10 flex items-center justify-center transition-all;
+            @apply w-full bg-[transparent] border-none rounded-lg text-[13px] font-medium text-slate-500 h-10 flex items-center justify-center transition-all;
         }
         &.is-active .el-radio-button__inner {
             @apply bg-white text-primary shadow-light shadow-[#0065fb]/5;

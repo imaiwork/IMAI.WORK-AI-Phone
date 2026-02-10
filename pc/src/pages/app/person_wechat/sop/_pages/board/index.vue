@@ -3,7 +3,7 @@
         <header class="bg-white p-[20px] rounded-[20px] border border-br flex items-center gap-[16px]">
             <div class="flex items-center gap-[12px]">
                 <div class="flex items-center bg-gray-50 rounded-[8px] px-[12px] py-1 border border-br-extra-light">
-                    <span class="text-[13px] font-bold text-tx-secondary mr-[8px]">归属微信</span>
+                    <span class="text-[13px] font-medium text-tx-secondary mr-[8px]">归属微信</span>
                     <ElSelect
                         v-model="queryParams.wechat_id"
                         placeholder="请选择微信"
@@ -19,7 +19,7 @@
                 </div>
 
                 <div class="flex items-center bg-gray-50 rounded-[8px] px-[12px] py-1 border border-br-extra-light">
-                    <span class="text-[13px] font-bold text-tx-secondary mr-[8px]">当前流程</span>
+                    <span class="text-[13px] font-medium text-tx-secondary mr-[8px]">当前流程</span>
                     <ElSelect
                         v-model="queryParams.flow_id"
                         placeholder="请选择流程"
@@ -55,7 +55,7 @@
                                         class="w-[8px] h-[8px] rounded-full bg-primary shadow-[0_0_8px_rgba(0,101,251,0.5)]"></div>
                                     <div class="text-[15px] font-[900] text-tx-primary">{{ sub_stage_name }}</div>
                                     <div
-                                        class="shrink-0 text-xs px-[6px] py-[1px] bg-gray-100 text-tx-secondary rounded-full font-bold">
+                                        class="shrink-0 text-xs px-[6px] py-[1px] bg-gray-100 text-tx-secondary rounded-full font-medium">
                                         {{ members?.length || 0 }}
                                     </div>
                                 </div>
@@ -438,7 +438,7 @@ onBeforeUnmount(() => {
 }
 
 .add-user-trigger {
-    @apply flex items-center justify-center h-[36px] bg-blue-50 text-primary text-[13px] font-bold rounded-[10px] cursor-pointer transition-all border border-primary-light-8;
+    @apply flex items-center justify-center h-[36px] bg-blue-50 text-primary text-[13px] font-medium rounded-[10px] cursor-pointer transition-all border border-primary-light-8;
     &:hover {
         @apply bg-primary text-white border-primary shadow-light;
     }

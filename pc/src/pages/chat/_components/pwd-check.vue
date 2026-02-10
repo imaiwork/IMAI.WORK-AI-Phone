@@ -1,7 +1,7 @@
 <template>
     <ElDialog v-model="showLogoutPopup" :width="342" :show-close="false" append-to-body>
         <div>
-            <div class="text-[15px] text-center font-bold text-inherit" :style="{ color: 'var(--app-text-color-1)' }">
+            <div class="text-[15px] text-center font-medium text-inherit" :style="{ color: 'var(--app-text-color-1)' }">
                 请输入密码
             </div>
             <div class="mt-4 text-center text-base text-inherit">

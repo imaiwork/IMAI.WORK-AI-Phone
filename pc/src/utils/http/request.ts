@@ -13,6 +13,25 @@ import { ContentTypeEnum, RequestMethodsEnum } from "@/enums/requestEnums";
 import { Sse } from "./sse";
 import { cancelTokenManager, CancelTokenManager } from "./cancel";
 
+/**
+ * 将对象转换为URL查询字符串
+ * @param obj 待转换的对象
+ * @returns 查询字符串
+ */
+function objectToQuery(obj: Record<string, any>): string {
+    if (!obj) return "";
+    const params = [];
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            const value = obj[key];
+            if (value !== undefined && value !== null) {
+                params.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+            }
+        }
+    }
+    return params.join("&");
+}
+
 export interface UserFetchOptions extends Partial<FetchOptions> {
     url: string;
 }
@@ -48,41 +67,52 @@ export class Request {
      */
     async eventStream(fetchOptions: FetchOptions, requestOptions?: Partial<RequestEventStreamOptions>) {
         let mergeOptions = merge({}, this.fetchOptions, fetchOptions);
-        this.controller = new AbortController();
+        const controller = new AbortController();
 
         mergeOptions.requestOptions = merge({}, this.requestOptions, requestOptions);
+
+        const { ignoreCancel = false } = mergeOptions.requestOptions;
+        const url = `${mergeOptions.baseURL || ""}${mergeOptions.url}`;
+        const method = mergeOptions.method || "GET";
+        const requestKey = CancelTokenManager.generateRequestKey(url, method, fetchOptions.params || {}, ignoreCancel);
+        cancelTokenManager.addRequest(requestKey, controller, ignoreCancel); // Register controller
+
         const { requestInterceptorsHook, responseInterceptorsHook } = this.requestOptions;
         if (requestInterceptorsHook && isFunction(requestInterceptorsHook)) {
             mergeOptions = requestInterceptorsHook(mergeOptions);
         }
         const { onmessage, onclose, onstart } = requestOptions;
         return new Promise((resolve, reject) => {
-            const push = async (controller, reader) => {
+            const push = async (controllerStream, reader) => {
                 try {
                     const { value, done } = await reader.read();
                     if (done) {
-                        controller.close();
+                        controllerStream.close();
                         onclose?.();
+                        cancelTokenManager.removeRequest(requestKey);
                     } else {
                         onmessage?.(new TextDecoder().decode(value));
-                        controller.enqueue(value);
-                        push(controller, reader);
+                        controllerStream.enqueue(value);
+                        push(controllerStream, reader);
                     }
                 } catch (error) {
                     onclose?.();
+                    if (error.name !== "AbortError") {
+                        cancelTokenManager.removeRequest(requestKey);
+                    }
                 }
             };
             let body = undefined;
-            let url = `${mergeOptions.baseURL}${mergeOptions.url}`;
+            let reqUrl = `${mergeOptions.baseURL}${mergeOptions.url}`;
             if (mergeOptions.method.toUpperCase() == RequestMethodsEnum.GET) {
-                url = `${url}?${objectToQuery(mergeOptions.params)}`;
+                reqUrl = `${reqUrl}?${objectToQuery(mergeOptions.params)}`;
             }
             if (mergeOptions.method.toUpperCase() == RequestMethodsEnum.POST) {
                 body = JSON.stringify(mergeOptions.body);
             }
-            fetch(url, {
+            fetch(reqUrl, {
                 ...mergeOptions,
-                signal: this.controller.signal,
+                signal: controller.signal,
                 body,
                 headers: {
                     accept: "text/event-stream",
@@ -92,22 +122,24 @@ export class Request {
             })
                 .then(async (response) => {
                     if (response.status == 200) {
-                        if (response.headers.get("content-type").includes("text/event-stream")) {
+                        if (response.headers.get("content-type")?.includes("text/event-stream")) {
                             const reader = response.body!.getReader();
                             onstart?.(reader);
 
                             new ReadableStream({
-                                start(controller) {
-                                    push(controller, reader);
+                                start(controllerStream) {
+                                    push(controllerStream, reader);
                                 },
                             });
                         } else {
                             //@ts-ignore
                             response._data = await response.json();
+                            cancelTokenManager.removeRequest(requestKey);
                             return response;
                         }
                     } else {
                         reject(response.statusText);
+                        cancelTokenManager.removeRequest(requestKey);
                     }
                 })
                 .then(async (response) => {
@@ -118,17 +150,21 @@ export class Request {
                     if (responseInterceptorsHook && isFunction(responseInterceptorsHook)) {
                         try {
                             response = await responseInterceptorsHook(response, mergeOptions);
-
+                            cancelTokenManager.removeRequest(requestKey);
                             resolve(response);
                         } catch (error) {
                             reject(error);
+                            cancelTokenManager.removeRequest(requestKey);
                         }
                         return;
                     }
+                    cancelTokenManager.removeRequest(requestKey);
                     resolve(response);
                 })
                 .catch((err) => {
-                    console.log("err", err);
+                    if (err.name !== "AbortError") {
+                        cancelTokenManager.removeRequest(requestKey);
+                    }
                     reject(err);
                 });
         });
@@ -141,7 +177,11 @@ export class Request {
         if (requestInterceptorsHook && isFunction(requestInterceptorsHook)) {
             mergeOptions = requestInterceptorsHook(mergeOptions) as FetchOptions & UserFetchOptions;
         }
-        mergeOptions.url = `${mergeOptions.baseURL}${mergeOptions.url}`;
+
+        const url = `${mergeOptions.baseURL}${mergeOptions.url}`;
+        const method = mergeOptions.method || "GET";
+        const { ignoreCancel = false } = mergeOptions.requestOptions;
+        const requestKey = CancelTokenManager.generateRequestKey(url, method, fetchOptions.params || {}, ignoreCancel);
 
         if (mergeOptions.method?.toUpperCase() === RequestMethodsEnum.GET && mergeOptions.params) {
             mergeOptions.url = `${mergeOptions.url}?${objectToQuery(mergeOptions.params!)}`;
@@ -156,7 +196,17 @@ export class Request {
         };
 
         const sseInstance = new Sse(mergeOptions.url, mergeOptions as RequestInit);
+
+        const controller = {
+            abort: (reason?: any) => {
+                sseInstance.abort();
+            },
+        } as AbortController;
+        cancelTokenManager.addRequest(requestKey, controller, ignoreCancel);
+
         sseInstance.addEventListener("error", (ev) => {
+            cancelTokenManager.removeRequest(requestKey);
+
             if (ev.errorType === "responseError") {
                 responseInterceptorsHook?.(
                     {
@@ -173,6 +223,10 @@ export class Request {
                 responseInterceptorsCatchHook?.(ev);
             }
         });
+        sseInstance.addEventListener("close", () => {
+            cancelTokenManager.removeRequest(requestKey);
+        });
+
         sseInstance.connect();
 
         return sseInstance;

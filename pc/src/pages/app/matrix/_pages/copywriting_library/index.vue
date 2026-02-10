@@ -8,7 +8,7 @@
                     </div>
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">智能文案库</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             总文案: {{ pager.count }} 个
                         </div>
                     </div>
@@ -40,7 +40,7 @@
                         </ElInput>
                         <ElButton
                             type="primary"
-                            class="!rounded-full !h-[32px] !px-4 !text-xs !font-bold"
+                            class="!rounded-full !h-[32px] !px-4 !text-xs !font-medium"
                             @click="resetPage()">
                             搜索
                         </ElButton>
@@ -160,7 +160,7 @@
                         <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4">
                             <Icon name="el-icon-DocumentDelete" :size="32" color="#CBD5E1"></Icon>
                         </div>
-                        <p class="text-[#94A3B8] font-bold text-sm">文案库空空如也，快去创作吧</p>
+                        <p class="text-[#94A3B8] font-medium text-sm">文案库空空如也，快去创作吧</p>
                     </div>
                 </div>
             </ElScrollbar>

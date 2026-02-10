@@ -10,7 +10,7 @@
             <div class="absolute top-[18px] right-[18px] w-6 h-6" @click="close">
                 <close-btn></close-btn>
             </div>
-            <div class="font-bold text-[20px] text-white px-[18px]">图片灵感库</div>
+            <div class="font-medium text-[20px] text-white px-[18px]">图片灵感库</div>
             <div class="mt-3">
                 <ElTabs v-model="categoryVal" type="card">
                     <ElTabPane :name="item.id" :label="item.title" v-for="(item, index) in optionsData.assembleLists">

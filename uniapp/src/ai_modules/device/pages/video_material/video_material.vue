@@ -1,6 +1,6 @@
 <template>
     <view class="h-screen flex flex-col">
-        <view class="font-bold text-[30rpx] mx-4 mt-4">剪辑素材({{ dataList.length }})</view>
+        <view class="font-medium text-[30rpx] mx-4 mt-4">剪辑素材({{ dataList.length }})</view>
 
         <view class="grow min-h-0">
             <scroll-view scroll-y class="h-full">
@@ -105,7 +105,7 @@ const handleChooseMaterial = (list: any[]) => {
     if (replaceMaterialIndex.value !== -1) {
         dataList.value[replaceMaterialIndex.value] = list[0];
     } else {
-        dataList.value.push(...list.map((item) => ({ pic: item.pic, url: item.content, type: "video" })));
+        dataList.value.push(...list.map((item) => ({ pic: item.pic, url: item.url, type: "video" })));
     }
     replaceMaterialIndex.value = -1;
 };

@@ -43,7 +43,7 @@
                             </view>
                             <view class="flex-1 mt-[28rpx]">
                                 <view class="flex items-center gap-x-2">
-                                    <view class="text-[30rpx] font-bold">{{ item.title }}</view>
+                                    <view class="text-[30rpx] font-medium">{{ item.title }}</view>
                                     <view v-if="item.is_dh" class="dh-badge" style="">含数字人</view>
                                 </view>
                                 <view class="mt-[12rpx] text-xs text-[#00000066]">
@@ -118,6 +118,14 @@ const typeList = [
         desc: "全新Sora2创作大模型，一句话即可生成视频，影视级创作效果",
         path: "/ai_modules/digital_human/pages/sora_create/sora_create",
     },
+    // {
+    //     key: "storyboard",
+    //     title: "分镜混剪视频",
+    //     desc: "支持创建多镜头分组素材，字幕分组等，智能匹配自动出片",
+    //     path: "/ai_modules/digital_human/pages/montage_storyboard/montage_storyboard",
+    //     videoUrl: config.baseUrl + "static/videos/dh/dh2.mp4",
+    //     imageUrl: config.baseUrl + "static/videos/dh/dh2.jpg",
+    // },
 ];
 
 const showVideoPreview = ref(false);

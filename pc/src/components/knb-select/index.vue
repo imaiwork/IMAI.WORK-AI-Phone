@@ -1,7 +1,7 @@
 <template>
     <ElDrawer v-model="visible" size="424px" class="knowledge-base-drawer" :close-on-click-modal="false" @close="close">
         <template #header>
-            <div class="text-lg font-bold text-black">关联知识库</div>
+            <div class="text-lg font-medium text-black">关联知识库</div>
         </template>
         <div class="flex flex-col gap-2 h-full">
             <div class="px-4">
@@ -41,7 +41,7 @@
                             <div class="flex items-center gap-4">
                                 <img src="@/assets/images/kn_logo.png" class="w-8 h-8" />
                                 <div>
-                                    <div class="font-bold">{{ item.name }}</div>
+                                    <div class="font-medium">{{ item.name }}</div>
                                     <div class="text-[10px] text-[#AAA6B9]">
                                         知识数：{{ item.file_count || item.file_counts }}
                                     </div>

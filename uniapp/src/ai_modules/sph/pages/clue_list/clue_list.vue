@@ -12,7 +12,7 @@
                         class="flex justify-between items-center h-[100rpx] border-solid border-[0] border-b-[1rpx] border-[#0000000d] gap-x-2">
                         <view> 线索词： </view>
                         <view
-                            class="px-[28rpx] py-[10rpx] rounded text-[22rpx] font-bold"
+                            class="px-[28rpx] py-[10rpx] rounded text-[22rpx] font-medium"
                             :class="getTagClass(item.status)"
                             >#{{ item.keyword }}</view
                         >

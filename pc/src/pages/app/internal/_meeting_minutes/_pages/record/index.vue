@@ -3,7 +3,7 @@
         <div class="flex-shrink-0 px-8 h-[88px] flex items-center justify-between border-b border-br-extra-light">
             <div class="flex flex-col">
                 <h1 class="text-xl font-[900] text-gray-950">会议文件库</h1>
-                <p class="text-[12px] text-tx-placeholder font-bold mt-0.5">管理及回顾您的所有语音会议记录</p>
+                <p class="text-[12px] text-tx-placeholder font-medium mt-0.5">管理及回顾您的所有语音会议记录</p>
             </div>
 
             <div class="flex items-center gap-4">
@@ -51,7 +51,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between border-t border-br-extra-light bg-white">
-            <div class="text-[12px] font-bold text-[#CBD5E1]">当前显示共 {{ pager.count }} 个会议文件</div>
+            <div class="text-[12px] font-medium text-[#CBD5E1]">当前显示共 {{ pager.count }} 个会议文件</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists" />
         </div>
     </div>

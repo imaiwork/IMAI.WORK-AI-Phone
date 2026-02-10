@@ -7,9 +7,9 @@
                         <view class="px-[26rpx] pt-3">
                             <view class="bg-white rounded-[20rpx] p-5">
                                 <view class="flex items-center justify-between">
-                                    <view class="font-bold text-[30rpx]">{{ detailData.detail?.name }}</view>
+                                    <view class="font-medium text-[30rpx]">{{ detailData.detail?.name }}</view>
                                     <view
-                                        class="flex-shrink-0 px-[12rpx] py-[6rpx] rounded-[12rpx] font-bold text-[22rpx]"
+                                        class="flex-shrink-0 px-[12rpx] py-[6rpx] rounded-[12rpx] font-medium text-[22rpx]"
                                         :class="getTaskStatusStyle(detailData.status)">
                                         {{ getTaskStatusText(detailData.status) }}
                                     </view>
@@ -78,7 +78,7 @@
                                     <view
                                         class="bg-white rounded-[20rpx] p-5 mt-3"
                                         v-if="detailData.task_type == TaskTypeEnum.CUSTOMER">
-                                        <view class="font-bold">
+                                        <view class="font-medium">
                                             线索词（{{ detailData.detail?.keywords?.length || 0 }} 个）
                                         </view>
                                         <view class="flex flex-wrap gap-2 mt-3">
@@ -114,7 +114,7 @@
                                         </view>
                                         <view class="flex-1 flex flex-col justify-between">
                                             <view class="mr-14">
-                                                <view class="font-bold text-[#000000e6] line-clamp-2">
+                                                <view class="font-medium text-[#000000e6] line-clamp-2">
                                                     {{ detailData.detail?.material_title }}
                                                 </view>
                                                 <view class="text-[#00000080] mt-1 text-xs line-clamp-2">
@@ -195,7 +195,7 @@
                 </view>
                 <view class="px-[26rpx] pb-5" v-if="detailData.auto_type != 1">
                     <view
-                        class="h-[98rpx] flex items-center justify-center bg-error text-white font-bold rounded-[20rpx]"
+                        class="h-[98rpx] flex items-center justify-center bg-error text-white font-medium rounded-[20rpx]"
                         @click="showConfirmDialog = true"
                         >删除任务</view
                     >

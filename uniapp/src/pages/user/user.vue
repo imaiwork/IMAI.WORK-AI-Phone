@@ -7,7 +7,7 @@
             :background="{
                 background: 'transparent',
             }">
-            <view class="text-[30rpx] font-bold text-white">个人中心</view>
+            <view class="text-[30rpx] font-medium text-white">个人中心</view>
         </u-navbar>
         <view class="grow min-h-0">
             <scroll-view scroll-y class="h-full">
@@ -35,7 +35,7 @@
                                 <!-- #endif -->
                             </view>
                             <view
-                                class="text-white font-bold mt-[40rpx] h-[40rpx] text-center"
+                                class="text-white font-medium mt-[40rpx] h-[40rpx] text-center"
                                 style="text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.3)">
                                 <!-- #ifndef APP-PLUS -->
                                 <navigator v-if="!isLogin" url="/pages/login/login" hover-class="none">
@@ -57,7 +57,7 @@
                                 <view class="tokens-card">
                                     <view class="flex-1">
                                         <view class="flex items-center">
-                                            <view class="tokens-value text-[32rpx] font-bold">
+                                            <view class="tokens-value text-[32rpx] font-medium">
                                                 当前剩余算力：{{ isLogin ? userTokens : "-" }}
                                             </view>
                                             <image
@@ -74,7 +74,7 @@
                                 </view>
                             </view>
                             <view class="mx-2">
-                                <view class="mt-[20rpx] text-[40rpx] font-bold text-[#4A2F21]">
+                                <view class="mt-[20rpx] text-[40rpx] font-medium text-[#4A2F21]">
                                     <view>{{ websiteConfig.shop_name }}算力驱动未来</view>
                                     <view>引擎全开，撑起无限的可能。</view>
                                 </view>
@@ -127,6 +127,21 @@
                             </view>
                         </router-navigate>
                     </view>
+                    <view class="mt-[50rpx]">
+                        <view class="">
+                            <view class="text-[22rpx] text-center mb-1 text-[#0000004d]">
+                                当前版本：Version {{ config.version }}
+                            </view>
+                            <view class="text-[#0000004d] text-[22rpx]">
+                                <view v-for="(item, index) in copyrightConfig" :key="index" class="text-center mb-1">
+                                    {{ item.key }}
+                                </view>
+                            </view>
+                        </view>
+                        <view class="text-[22rpx] text-center text-[#0000004d]">
+                            {{ byName }}
+                        </view>
+                    </view>
                 </view>
             </scroll-view>
         </view>
@@ -150,10 +165,10 @@
                 <scroll-view class="h-full" scroll-y>
                     <view class="flex flex-col items-center">
                         <view class="mt-[60rpx] flex items-center gap-x-2">
-                            <view class="text-[#299FD7] font-bold"> 专属客服全程陪伴 </view>
+                            <view class="text-[#299FD7] font-medium"> 专属客服全程陪伴 </view>
                             <view
                                 class="h-[36rpx] w-[72rpx] flex items-center justify-center border border-solid border-white rounded-[24rpx] rounded-bl-[0] bg-primary">
-                                <text class="text-[20rpx] text-white font-bold">官方</text>
+                                <text class="text-[20rpx] text-white font-medium">官方</text>
                             </view>
                         </view>
                         <view class="mt-4">
@@ -185,7 +200,7 @@
                             <view class="opacity-50 text-[26rpx]"> 我们的专属客服服务时间为： </view>
                             <view style="width: 40rpx; height: 2rpx; background-color: #00000008"></view>
                         </view>
-                        <view class="font-bold text-[30rpx] mt-[32rpx]">
+                        <view class="font-medium text-[30rpx] mt-[32rpx]">
                             <text
                                 >服务时间：<text class="text-primary">工作日{{ getCustomerService.time }}</text
                                 >（GMT+8）</text
@@ -199,6 +214,7 @@
 </template>
 
 <script lang="ts" setup>
+import config from "@/config";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
 import { updateUser } from "@/api/account";
@@ -212,7 +228,8 @@ const appStore = useAppStore();
 const websiteConfig = computed(() => appStore.getWebsiteConfig);
 const rechargeConfig = computed(() => appStore.getRechargeConfig);
 const cardCodeConfig = computed(() => appStore.getCardCodeConfig);
-
+const copyrightConfig = computed(() => appStore.getCopyRightConfig);
+const byName = computed(() => appStore.getByName);
 const getCustomerService = computed(() => {
     if (websiteConfig.value.customer_service) {
         const { wx_image, title, time, phone } = websiteConfig.value.customer_service;
@@ -313,7 +330,7 @@ onShow(() => {
     border-radius: 1000px;
     background: linear-gradient(270deg, #ffd6a9 0%, #ffeac9 100%);
     box-shadow: 0px 4px 6px 0px rgba(0, 0, 0, 0.3);
-    @apply w-[156rpx] h-[64rpx] flex items-center justify-center text-[#4A2F21] font-bold text-[26rpx];
+    @apply w-[156rpx] h-[64rpx] flex items-center justify-center text-[#4A2F21] font-medium text-[26rpx];
 }
 
 .menu-link {

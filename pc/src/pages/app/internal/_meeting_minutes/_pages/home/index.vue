@@ -17,7 +17,7 @@
                                 <div class="active-icon"></div>
                             </div>
                             <div class="container pt-4">
-                                <div class="font-bold text-[22px] title">
+                                <div class="font-medium text-[22px] title">
                                     {{ item.title }}
                                 </div>
                                 <div class="mt-4 leading-6 desc">
@@ -25,7 +25,7 @@
                                     <div>{{ item.desc2 }}</div>
                                 </div>
                                 <div
-                                    class="mt-4 font-bold text-[#27264D] group-hover:text-white invisible group-hover:visible">
+                                    class="mt-4 font-medium text-[#27264D] group-hover:text-white invisible group-hover:visible">
                                     <Icon name="el-icon-Right" :size="24"></Icon>
                                 </div>
                             </div>
@@ -36,7 +36,7 @@
                     <div class="flex items-end justify-between mb-6">
                         <div class="flex flex-col gap-1">
                             <div class="text-xl font-[900] text-gray-950 tracking-tight">最近记录</div>
-                            <div class="text-[12px] text-tx-placeholder font-bold">
+                            <div class="text-[12px] text-tx-placeholder font-medium">
                                 查看及管理您最近的音频转写与实时记录
                             </div>
                         </div>
@@ -78,7 +78,7 @@
                                                         <span class="text-sm font-black text-gray-950 truncate">{{
                                                             formatName(row.name)
                                                         }}</span>
-                                                        <span class="text-[11px] text-tx-placeholder font-bold">{{
+                                                        <span class="text-[11px] text-tx-placeholder font-medium">{{
                                                             row.task_type == 1 ? "音频素材" : "实时现场"
                                                         }}</span>
                                                     </div>
@@ -103,7 +103,7 @@
                                                                     3
                                                                 )"
                                                                 :key="index"
-                                                                class="px-2 py-0.5 rounded-md bg-gray-50 border border-br-extra-light text-[11px] font-bold text-tx-regular">
+                                                                class="px-2 py-0.5 rounded-md bg-gray-50 border border-br-extra-light text-[11px] font-medium text-tx-regular">
                                                                 {{ item }}
                                                             </span>
                                                         </template>
@@ -133,7 +133,7 @@
 
                                         <ElTableColumn label="视频时长" width="100">
                                             <template #default="{ row }">
-                                                <div class="text-xs font-mono font-bold text-tx-secondary">
+                                                <div class="text-xs font-mono font-medium text-tx-secondary">
                                                     {{
                                                         getDuration(
                                                             row.response?.Result?.Transcription?.Transcription
@@ -147,7 +147,7 @@
                                         <ElTableColumn label="记录时间" width="140">
                                             <template #default="{ row }">
                                                 <div class="flex flex-col">
-                                                    <span class="text-xs font-bold text-tx-regular">{{
+                                                    <span class="text-xs font-medium text-tx-regular">{{
                                                         dayjs(row.create_time).format("MM月DD日")
                                                     }}</span>
                                                     <span class="text-[10px] text-tx-placeholder">{{
@@ -206,7 +206,7 @@
 
                         <div class="mt-[100px] flex flex-col items-center" v-else>
                             <div class="ai-loader-ring"></div>
-                            <div class="text-sm font-bold text-tx-placeholder mt-6 tracking-widest">
+                            <div class="text-sm font-medium text-tx-placeholder mt-6 tracking-widest">
                                 正在调取云端记录...
                             </div>
                         </div>

@@ -8,6 +8,7 @@ use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\auto\AutoDeviceSetting;
+use app\common\model\auto\AutoDeviceConfig;
 use app\common\model\hd\HdPuzzle;
 use app\common\model\hd\HdPuzzleSetting;
 use app\common\model\shanjian\ShanjianClipTemplate;
@@ -40,6 +41,17 @@ class AutoDeviceSettingLogic extends ApiLogic
             $params['user_id'] = self::$uid;
             $params['status'] = DeviceEnum::AUTO_CONFIG_STATUS_WAIT;
 
+            $config = AutoDeviceConfig::field('device_code,video_theme,text_theme')->where('user_id', self::$uid)->where('device_code', $params['device_code'])->findOrEmpty();
+            if ($config->isEmpty()) {
+                throw new \Exception('当前设备未配置自动任务，请先配置自动任务');
+            }
+            if(empty($config->video_theme)){
+                throw new \Exception('当前设备自动任务视频主题不能为空');
+            }
+            if(empty($config->text_theme)){
+                throw new \Exception('当前设备自动任务文案主题不能为空');
+            }
+
             $find = AutoDeviceSetting::where('user_id', self::$uid)->where('device_code', $params['device_code'])->findOrEmpty();
             if (!$find->isEmpty()) {
                 if ($find->status === DeviceEnum::AUTO_CONFIG_STATUS_RUNNING) {
@@ -49,8 +61,8 @@ class AutoDeviceSettingLogic extends ApiLogic
                 $find->human_image = $params['human_image'];
                 $find->clip_material = $params['clip_material'];
                 $find->image_material = $params['image_material'];
-                $find->video_theme = $params['video_theme'];
-                $find->text_theme = $params['text_theme'];
+                $find->video_theme = $config->video_theme;
+                $find->text_theme = $config->text_theme;
                 if(is_null($find->exec_date)){
                     $find->exec_date = date('Y-m-d', strtotime('+1 day'));
                 }
@@ -59,6 +71,8 @@ class AutoDeviceSettingLogic extends ApiLogic
 
                 self::$returnData = $find->toArray();
             } else {
+                $params['video_theme'] = $config->video_theme;
+                $params['text_theme'] = $config->text_theme;
                 $params['create_time'] = time();
                 $params['update_time'] = time();
                 $params['execution_day'] = date('Y-m-d', time());
@@ -246,17 +260,31 @@ class AutoDeviceSettingLogic extends ApiLogic
             $currentTime = time();
             // 遍历处理每个任务
             foreach ($tasks as $task) {
-                $task->status = 1;
+                $videoTheme = $task->video_theme;
+                $textTheme = $task->text_theme;
                 $execution_day = date('Y-m-d', strtotime($task->execution_day) + 2 * 86400);
                 $task->execution_day = $execution_day;
+                if (trim($videoTheme) == '' ) {
+                    $task->remark = '视频主题为空';
+                    $task->status = 3;
+                    $task->save();
+                    continue;
+                }
+                if ( trim($textTheme) == '') {
+                    $task->remark = '文案主题为空';
+                    $task->status = 3;
+                    $task->save();
+                    continue;
+                }
+                $task->status = 1;
+
                 $task->save();
                 Db::startTrans();
                 try {
 
                     // 获取并验证human_image数据
                     $newhumanImage = $humanImage = $task->human_image;
-                    $videoTheme = $task->video_theme;
-                    $textTheme = $task->text_theme;
+
                     array_splice($newhumanImage, 0, 1);
                     $task->human_image = $newhumanImage;
                     // 定义4种shanjiang_type类型
@@ -710,7 +738,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                     Db::commit();
                 } catch (Exception $e) {
                   //  var_dump($e->__tostring());
-                    \think\facade\Log::channel('auto')->info('自动化失败' . $e->__toString());
+                    \think\facade\Log::channel('automedia')->info('自动化失败' . $e->__toString());
                     // 回滚事务
                     Db::rollback();
                     $task->status = 3;
@@ -724,7 +752,7 @@ class AutoDeviceSettingLogic extends ApiLogic
 
             return true;
         } catch (Exception $e) {
-            \think\facade\Log::channel('auto')->info('自动化失败' . $e->__toString());
+            \think\facade\Log::channel('automedia')->info('自动化失败' . $e->__toString());
             self::setError('处理human_image数据异常：' . $e->getMessage());
             return false;
         }

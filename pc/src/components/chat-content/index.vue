@@ -1,8 +1,11 @@
 <template>
     <div class="chat-content">
         <div class="chat-text">
-            <div v-if="error">
+            <div v-if="error" class="italic text-[#444746]">
                 {{ error }}
+            </div>
+            <div v-if="stopReply" class="italic text-[#444746]">
+                {{ stopReply }}
             </div>
             <template v-else>
                 <div v-if="reasoningContent" class="bg-primary-light-9 rounded-xl rounded-tl-none p-2 mb-4">
@@ -31,21 +34,33 @@
                             :typing="!isReasoningFinished"></Markdown>
                     </div>
                 </div>
+
                 <Markdown v-if="useMarkdown" :content="content" :typing="loading"> </Markdown>
+                <!-- 这里超过5行就显示省略号，然后需要有一个按钮展开 -->
                 <div
                     v-else
-                    class="whitespace-pre-line"
+                    class="break-all"
                     :class="{
                         'wait-typing': loading,
+                        'line-clamp-5': !isContentExpanded && showExpandButton,
                     }">
                     {{ content }}
                 </div>
+                <ElTooltip :content="isContentExpanded ? '收起' : '展开'" placement="top" v-if="showExpandButton">
+                    <div
+                        class="text-sm text-[#8A939D] cursor-pointer text-end w-fit ml-auto p-1 leading-[0] -mb-2"
+                        @click="isContentExpanded = !isContentExpanded">
+                        <Icon :name="isContentExpanded ? 'el-icon-ArrowUp' : 'el-icon-ArrowDown'" :size="16"></Icon>
+                    </div>
+                </ElTooltip>
             </template>
         </div>
     </div>
 </template>
 
 <script lang="ts" setup>
+import { ref, computed } from "vue";
+
 const props = defineProps({
     useMarkdown: {
         type: Boolean,
@@ -79,9 +94,18 @@ const props = defineProps({
         type: String,
         default: "",
     },
+    stopReply: {
+        type: String,
+        default: "",
+    },
 });
 
 const isHide = ref(false);
+const isContentExpanded = ref(false);
+
+const showExpandButton = computed(() => {
+    return !props.useMarkdown && props.content.length > 200;
+});
 </script>
 
 <style lang="scss" scoped>

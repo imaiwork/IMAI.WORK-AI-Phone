@@ -10,6 +10,9 @@
                 :send-disabled="isReceiving"
                 :is-upload-file="false"
                 :is-network="false"
+                :is-quote="false"
+                :is-share="false"
+                :is-edit="false"
                 @content-post="onContentPost"
                 @close="stopChat">
                 <template #content>
@@ -48,7 +51,7 @@
                 <template #customSendArea v-if="currCommandIndex >= 0">
                     <div class="w-full rounded-[20px] border border-primary overflow-hidden">
                         <div class="h-[50px] px-2 bg-[#F2F7FF] flex items-center justify-between">
-                            <div class="font-bold text-lg line-clamp-1 break-all ml-3">
+                            <div class="font-medium text-lg line-clamp-1 break-all ml-3">
                                 {{ getShortcutCommands?.name }}
                             </div>
                             <div class="w-6 h-6" @click="closeCommand">
@@ -79,7 +82,7 @@
                                                         <div
                                                             class="w-full h-[52px] flex items-center justify-center gap-2 text-primary">
                                                             <Icon name="el-icon-Plus" :size="14"></Icon>
-                                                            <span class="font-bold">点击或拖放</span>
+                                                            <span class="font-medium">点击或拖放</span>
                                                         </div>
                                                     </upload>
                                                 </div>

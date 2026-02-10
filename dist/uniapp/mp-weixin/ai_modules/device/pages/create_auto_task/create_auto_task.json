@@ -5,8 +5,6 @@
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
     "video-preview": "../../../../components/video-preview/video-preview",
-    "u-loading": "../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading",
-    "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
     "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
     "recorder-control": "../../components/recorder-control/recorder-control",

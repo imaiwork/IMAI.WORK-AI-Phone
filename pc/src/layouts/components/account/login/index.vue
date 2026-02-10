@@ -16,7 +16,7 @@
             </div>
         </ElTooltip>
         <div class="pt-[68px]">
-            <div class="text-[20px] font-bold">
+            <div class="text-[20px] font-medium">
                 <template v-if="loginType === LoginPopupTypeEnum.LOGIN"> 手机号登录 </template>
                 <template v-else-if="loginType === LoginPopupTypeEnum.MOBILE_LOGIN"> 验证码登录 </template>
                 <template v-else-if="loginType === LoginPopupTypeEnum.FORGOT_PWD_MOBILE"> 找回密码 </template>

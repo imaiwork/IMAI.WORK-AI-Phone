@@ -20,7 +20,7 @@
 
             <div class="px-10 pb-10 pt-6 text-center">
                 <div class="text-[20px] font-[900] text-[#1E293B]">Coze 令牌配置</div>
-                <div class="text-[12px] font-bold text-[#94A3B8] mt-2 leading-relaxed px-2">
+                <div class="text-[12px] font-medium text-[#94A3B8] mt-2 leading-relaxed px-2">
                     请输入您的个人访问令牌 (PAT)，系统将加密存储该信息以确保与 Coze 服务的安全通讯。
                 </div>
 
@@ -112,7 +112,7 @@ defineExpose({
         }
     }
     .el-input__inner {
-        @apply text-[14px] font-bold text-[#1E293B];
+        @apply text-[14px] font-medium text-[#1E293B];
         &::placeholder {
             @apply text-[#CBD5E1] font-sans;
         }

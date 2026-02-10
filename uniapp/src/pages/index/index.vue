@@ -14,7 +14,7 @@
             </template>
             <view class="flex items-center gap-x-2 px-4" v-if="chatContentList.length == 0">
                 <image :src="websiteConfig.shop_logo" class="w-[60rpx] h-[60rpx] rounded-full"></image>
-                <text class="text-[30rpx] font-bold break-all line-clamp-1">{{ websiteConfig.shop_name }}</text>
+                <text class="text-[30rpx] font-medium break-all line-clamp-1">{{ websiteConfig.shop_name }}</text>
             </view>
         </u-navbar>
         <view class="grow min-h-0 relative z-10 pt-2">
@@ -42,9 +42,9 @@
                                 class="px-4 h-full flex items-center justify-between"
                                 @click="toPage(isLogin ? PageKeyEnum.DEVICE_CONFIG : PageKeyEnum.LOGIN)">
                                 <view>
-                                    <view class="text-[34rpx] text-white font-bold">24h全自动工作 省心托管</view>
+                                    <view class="text-[34rpx] text-white font-medium">24h全自动工作 省心托管</view>
                                     <view
-                                        class="rounded-full bg-white text-xs font-bold h-[56rpx] w-[220rpx] mt-2 flex items-center justify-center gap-x-1">
+                                        class="rounded-full bg-white text-xs font-medium h-[56rpx] w-[220rpx] mt-2 flex items-center justify-center gap-x-1">
                                         {{ isLogin ? "一键开启托管" : "请先登录"
                                         }}<u-icon name="arrow-right" :size="16"></u-icon>
                                     </view>
@@ -62,7 +62,7 @@
                                     class="flex items-center justify-center gap-x-2 py-[30rpx] flex-1"
                                     @click="toPage(PageKeyEnum.CREATE_TASK)">
                                     <image src="/static/images/icons/add.svg" class="w-[32rpx] h-[32rpx] -ml-3"></image>
-                                    <text class="font-bold text-[30rpx]">创建任务</text>
+                                    <text class="font-medium text-[30rpx]">创建任务</text>
                                 </view>
                                 <view class="h-[1rpx] bg-[#0000000d] flex-shrink-0 my-1"></view>
                                 <view
@@ -71,13 +71,13 @@
                                     <image
                                         src="/static/images/icons/calendar.svg"
                                         class="w-[32rpx] h-[32rpx] -ml-3"></image>
-                                    <text class="font-bold text-[30rpx]">查看日程</text>
+                                    <text class="font-medium text-[30rpx]">查看日程</text>
                                 </view>
                             </view>
                             <view
                                 class="bg-white rounded-[20rpx] px-[38rpx] py-[30rpx] h-[240rpx] relative overflow-hidden"
                                 @click="toPage(PageKeyEnum.DIGITAL_CREATION)">
-                                <view class="text-[30rpx] font-bold"> 数字人创作 </view>
+                                <view class="text-[30rpx] font-medium"> 数字人创作 </view>
                                 <view class="flex items-center gap-x-1 mt-1">
                                     <text class="text-[22rpx] text-[#0000004d]">立即定制</text>
                                     <u-icon name="arrow-right" :size="20" color="#0000004d"></u-icon>
@@ -91,7 +91,7 @@
                             </view>
                         </view>
                         <view class="bg-white rounded-[20rpx] mt-[20rpx] py-2">
-                            <view class="text-[30rpx] font-bold px-[34rpx] py-1">快速应用</view>
+                            <view class="text-[30rpx] font-medium px-[34rpx] py-1">快速应用</view>
                             <view class="grid grid-cols-4 gap-4 py-2 mt-1">
                                 <view
                                     class="flex flex-col items-center justify-center"
@@ -108,7 +108,7 @@
                         </view>
                         <view class="bg-white rounded-[20rpx] mt-[20rpx] py-2">
                             <view class="flex items-center justify-between px-[34rpx] py-1">
-                                <view class="text-[30rpx] font-bold">AI创作视频</view>
+                                <view class="text-[30rpx] font-medium">AI创作视频</view>
                                 <navigator
                                     url="/ai_modules/digital_human/pages/index/index"
                                     hover-class="none"
@@ -123,7 +123,7 @@
                                     v-for="item in aiCreationVideoList"
                                     :key="item.key"
                                     @click="toPage(item.key)">
-                                    <view class="font-bold"> {{ item.name }} </view>
+                                    <view class="font-medium"> {{ item.name }} </view>
                                     <view class="mt-4 leading-[0]">
                                         <image
                                             :src="`${config.baseUrl}static/images/${item.icon}`"
@@ -325,7 +325,7 @@ const toPage = (key: PageKeyEnum) => {
         [PageKeyEnum.PUBLISH_VIDEO]: "/ai_modules/device/pages/create_task/create_task?type=1",
         [PageKeyEnum.MY_CREATION]: "/packages/pages/creation/creation",
         [PageKeyEnum.AI_CUSTOMER]: "/ai_modules/sph/pages/create_task/create_task",
-        [PageKeyEnum.AI_PUZZLE]: "/ai_modules/drawing/pages/index/index",
+        [PageKeyEnum.AI_PUZZLE]: "/ai_modules/drawing/pages/create_task/create_task",
         [PageKeyEnum.MATERIAL_LIBRARY]: "/packages/pages/material_library/material_library",
         [PageKeyEnum.MEETING_MINUTES]: "/ai_modules/meeting_minutes/pages/index/index",
         [PageKeyEnum.DIGITAL_PERSON_BROADCAST]: "/ai_modules/digital_human/pages/szr_create/szr_create",

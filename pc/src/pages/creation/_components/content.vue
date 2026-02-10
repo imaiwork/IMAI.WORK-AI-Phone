@@ -31,7 +31,7 @@
                                 @click="handleRecord(item)">
                                 <div class="flex items-start justify-between mb-3">
                                     <div
-                                        class="px-2 py-0.5 bg-[#F1F5F9] rounded text-[10px] font-bold text-[#64748B] truncate max-w-[120px]">
+                                        class="px-2 py-0.5 bg-[#F1F5F9] rounded text-[10px] font-medium text-[#64748B] truncate max-w-[120px]">
                                         {{ item.scene_name }}
                                     </div>
                                     <div class="absolute top-2 right-2" @click.stop>
@@ -71,7 +71,7 @@
                                 </div>
 
                                 <div
-                                    class="mt-4 pt-4 border-t border-[#F8FAFC] flex items-center justify-between text-[11px] font-bold text-[#CBD5E1]">
+                                    class="mt-4 pt-4 border-t border-[#F8FAFC] flex items-center justify-between text-[11px] font-medium text-[#CBD5E1]">
                                     <span class="flex items-center gap-1">
                                         <Icon name="el-icon-Clock" :size="12"></Icon>
                                         {{ item.create_time }}
@@ -207,6 +207,6 @@ onMounted(() => {
 }
 
 .pop-item {
-    @apply flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-bold text-[#64748B] cursor-pointer transition-all;
+    @apply flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium text-[#64748B] cursor-pointer transition-all;
 }
 </style>

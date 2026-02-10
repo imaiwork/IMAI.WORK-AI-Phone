@@ -12,7 +12,7 @@
                     <span class="ml-2">添加匹配标签</span>
                 </ElButton>
                 <ElButton
-                    class="!h-10 !px-6 !rounded-xl font-bold border-[#E2E8F0] hover:!bg-slate-50 transition-all"
+                    class="!h-10 !px-6 !rounded-xl font-medium border-[#E2E8F0] hover:!bg-slate-50 transition-all"
                     @click="handleImport">
                     <Icon name="el-icon-Upload" />
                     <span class="ml-2">批量导入</span>
@@ -51,7 +51,7 @@
                                     'w-2 h-2 rounded-full',
                                     row.match_mode == 0 ? 'bg-[#6366f1]' : 'bg-[#10b981]',
                                 ]"></div>
-                            <span class="text-[13px] font-bold text-tx-primary">
+                            <span class="text-[13px] font-medium text-tx-primary">
                                 {{ row.match_mode == 0 ? "AI 回复" : "客户回复" }}
                             </span>
                         </div>
@@ -84,11 +84,11 @@
                 <ElTableColumn label="操作" width="140" fixed="right">
                     <template #default="{ row }">
                         <div class="flex items-center justify-center gap-1">
-                            <ElButton type="primary" link class="!text-[13px] font-bold" @click="handleEdit(row)"
+                            <ElButton type="primary" link class="!text-[13px] font-medium" @click="handleEdit(row)"
                                 >编辑</ElButton
                             >
                             <div class="w-[1px] h-3 bg-slate-200 mx-1"></div>
-                            <ElButton type="danger" link class="!text-[13px] font-bold" @click="handleDelete(row.id)"
+                            <ElButton type="danger" link class="!text-[13px] font-medium" @click="handleDelete(row.id)"
                                 >删除</ElButton
                             >
                         </div>
@@ -103,7 +103,7 @@
             </ElTable>
         </div>
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
-            <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个自动标签规则</span>
+            <span class="text-xs font-medium text-[#94A3B8]">共计 {{ pager.count }} 个自动标签规则</span>
             <pagination v-model="pager" @change="getLists" />
         </div>
     </div>

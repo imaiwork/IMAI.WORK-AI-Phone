@@ -7,7 +7,7 @@
                     <image
                         src="@/ai_modules/voice_chat/static/icons/voice_loading.svg"
                         class="h-16 leading-[0] w-full"></image>
-                    <view class="text-white bg-[#F09E38] rounded-full font-bold text-xs mt-2 px-2 py-1">{{
+                    <view class="text-white bg-[#F09E38] rounded-full font-medium text-xs mt-2 px-2 py-1">{{
                         formatAudioTime(recordDuration)
                     }}</view>
                 </view>

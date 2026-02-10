@@ -1,7 +1,7 @@
 <template>
     <u-popup v-model="show" mode="center" border-radius="24" width="90%">
         <view class="bg-white rounded-[24rpx] p-[48rpx]">
-            <view class="font-bold text-center">图片/视频上传须知</view>
+            <view class="font-medium text-center">图片/视频上传须知</view>
             <view class="mt-[48rpx]">
                 <view class="flex items-center gap-x-1">
                     <text class="text-[#FF3C26]">*</text>

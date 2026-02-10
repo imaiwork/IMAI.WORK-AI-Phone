@@ -4,7 +4,9 @@
             <div
                 class="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all cursor-pointer group hover:bg-[#F1F5F9]"
                 @click="router.back()">
-                <Icon name="el-icon-ArrowLeft" class="text-[#64748B] group-hover:text-primary transition-colors" />
+                <span class="text-[#64748B] group-hover:text-primary transition-colors leading-[0]">
+                    <Icon name="el-icon-ArrowLeft" />
+                </span>
                 <span class="text-[14px] font-black text-[#64748B] group-hover:text-primary">返回列表</span>
             </div>
         </div>
@@ -35,7 +37,7 @@
 
                         <div class="flex-1 overflow-hidden">
                             <div
-                                class="text-[14px] font-bold truncate transition-colors"
+                                class="text-[14px] font-medium truncate transition-colors"
                                 :class="isActive(item) ? 'text-primary' : 'text-[#475569]'">
                                 {{ item.title || "新对话" }}
                             </div>

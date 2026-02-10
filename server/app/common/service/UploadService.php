@@ -223,13 +223,11 @@ class UploadService
                     'engine'  => [],
                 ];
             }
-
             // 2、执行文件上传
             $StorageDriver = new StorageDriver($config);
             $StorageDriver->setUploadFile('file');
             $fileName = $StorageDriver->getFileName();
             $fileInfo = $StorageDriver->getFileInfo();
-
             // 校验上传文件后缀
             if (!in_array(strtolower($fileInfo['ext']), config('project.file_video'))) {
                 throw new Exception("上传视频不允许上传" . $fileInfo['ext'] . "文件");
@@ -448,7 +446,6 @@ class UploadService
                 try {
                     $url = self::standardizeMedia($standardizedPath, null);
                 } catch (Exception $e) {
-                    Log::channel('ffmpeg')->write('文件标准化失败'. $e->getMessage());
                     if ($default != 'local') {
                         $url = self::uploadToOSS($standardizedPath, $saveDir);
 
@@ -772,10 +769,19 @@ class UploadService
      * @author 系统
      * @date 2024/12/19
      */
+    /**
+     * @notes 标准化媒体文件
+     * @param string $inputPath 输入文件路径
+     * @param array|null $customSpecs 自定义规范
+     * @return string
+     * @throws Exception
+     * @author 系统
+     * @date 2024/12/19
+     */
     public static function standardizeMedia(string $inputPath, ?array $customSpecs = null)
     {
+        $tempOutputPath = null;
         try {
-
             // 获取媒体信息
             $info = self::getMediaInfo($inputPath);
             if (empty($info['streams'])) {
@@ -784,47 +790,87 @@ class UploadService
             $stream = $info['streams'][0];
             $mediaType = $stream['codec_type'] ?? 'unknown';
             $r_frame_rate = $stream['r_frame_rate'] ?? 'unknown';
+            
+            // 提取oss路径信息
             if (preg_match('/uploads\/(.+?)\/\d{14}/', $inputPath, $matches)) {
                 $ossPath = "uploads/" . $matches[1];
             } else {
                 throw new Exception("未找到匹配的路径部分");
             }
-            $outputUrl =  $ossPath. '/' . basename($inputPath);
-            $outputPath =  public_path() .  $outputUrl;
+            
+            $outputUrl = $ossPath . '/' . basename($inputPath);
+            $finalOutputPath = public_path() . $outputUrl;
+            
             // 根据媒体类型进行标准化处理
-           if ($mediaType === 'video' && $r_frame_rate == '25/1') {
+            $needTranscode = false;
+            
+            if ($mediaType === 'video' && $r_frame_rate == '25/1') {
                 // 图片处理
-                $type = 'images';
                 $specs = $customSpecs['image'] ?? self::DEFAULT_IMAGE_SPECS;
                 if (!self::isImageCompliant($info, $specs)) {
-                    self::transcodeImage($inputPath, $outputPath, $specs, $info);
-                } else {
-                    $outputPath = $inputPath;
+                    $needTranscode = true;
                 }
-            
             } elseif ($mediaType === 'video') {
                 // 视频处理
-                $type = 'video';
                 $specs = $customSpecs['video'] ?? self::DEFAULT_VIDEO_SPECS;
                 if (!self::isVideoCompliant($info, $specs)) {
-                    self::transcodeVideo($inputPath, $outputPath, $specs, $info);
-                } else {
-                    $outputPath = $inputPath;
+                    $needTranscode = true;
                 }
-            } else{
+            } else {
                 throw new Exception("不支持的媒体类型: " . $mediaType);
             }
-        
+            
+            // 执行转码
+            if ($needTranscode) {
+                // 生成临时输出路径
+                $tempOutputPath = dirname($finalOutputPath) . '/tmp_' . uniqid() . '_' . basename($finalOutputPath);
+                // 确保输出目录存在
+                $outputDir = dirname($finalOutputPath);
+                if (!is_dir($outputDir)) {
+                    if (!mkdir($outputDir, 0755, true)) {
+                        throw new Exception("无法创建输出目录: " . $outputDir);
+                    }
+                }
+                
+                // 执行转码到临时文件
+                if ($mediaType === 'video' && $r_frame_rate == '25/1') {
+                    self::transcodeImage($inputPath, $tempOutputPath, $specs, $info);
+                } else {
+                    self::transcodeVideo($inputPath, $tempOutputPath, $specs, $info);
+                }
+                
+                // 验证临时文件是否生成成功
+                if (!file_exists($tempOutputPath)) {
+                    throw new Exception("转码失败：临时输出文件未生成");
+                }
+                
+                // 将临时文件移动到最终位置（覆盖原文件）
+                if (!copy($tempOutputPath, $finalOutputPath)) {
+                    @unlink($tempOutputPath);
+                    throw new Exception("文件替换失败");
+                }
+                
+                // 清理临时文件
+                @unlink($tempOutputPath);
+                $tempOutputPath = null; // 标记临时文件已清理
+            }
+            
             $default = ConfigService::get('storage', 'default', 'local');
             $ossUrl = $outputUrl;
+            
             // 如果需要上传到OSS
             if ($default != 'local') {
-                $ossUrl = self::uploadToOSS($outputPath,$ossPath );
-
+                $actualPath = $needTranscode ? $finalOutputPath : $inputPath;
+                $ossUrl = self::uploadToOSS($actualPath, $ossPath);
             }
+            
             return $ossUrl;
             
         } catch (Exception $e) {
+            // 清理临时文件（如果存在）
+            if ($tempOutputPath && file_exists($tempOutputPath)) {
+                @unlink($tempOutputPath);
+            }
             throw new Exception("媒体标准化失败: " . $e->getMessage());
         }
     }
@@ -1027,6 +1073,17 @@ class UploadService
      */
     private static function transcodeVideo(string $inputPath, string $outputPath, array $specs, array $info): void
     {
+        // 验证输入文件
+        if (!file_exists($inputPath)) {
+            throw new Exception("输入文件不存在: " . $inputPath);
+        }
+        
+        // 获取视频时长信息
+        $duration = null;
+        if (isset($info['format']['duration'])) {
+            $duration = floatval($info['format']['duration']);
+        }
+        
         // 从媒体信息中提取旋转角度
         $rotation = null;
         if (!empty($info['streams'])) {
@@ -1051,7 +1108,8 @@ class UploadService
         
         // 计算动态分辨率（传递旋转角度）
         $resolution = self::calculateTargetResolution($info, $specs, $rotation);
-        // 确保输出目录存在
+        
+        // 确保输出目录存在并有写权限
         $outputDir = dirname($outputPath);
         if (!is_dir($outputDir)) {
             if (!mkdir($outputDir, 0755, true)) {
@@ -1059,32 +1117,74 @@ class UploadService
             }
         }
         
+        if (!is_writable($outputDir)) {
+            throw new Exception("输出目录没有写权限: " . $outputDir);
+        }
+        
         // 构建ffmpeg命令
         $ffmpegParts = [
             "ffmpeg6 -i " . escapeshellarg($inputPath),
             "-c:v libx264",
-            "-crf 18",
-            "-preset veryfast", 
+            "-crf 23", // 调整CRF值，18可能过于严格
+            "-preset fast", // 使用fast而非veryfast，提高兼容性
             "-c:a aac",
             "-b:a 128k",
-            "-r " . $specs['frame_rate'],
-            "-pix_fmt " . escapeshellarg($specs['pixel_format']),
-            "-b:v " . escapeshellarg($specs['bit_rate']),
-            "-t " . $specs['duration']
+            "-movflags +faststart", // 优化网络播放
         ];
+        
+        // 只有在明确指定时才限制时长
+        if (isset($specs['duration']) && $specs['duration'] > 0) {
+            $ffmpegParts[] = "-t " . $specs['duration'];
+        }
+        
+        // 添加帧率（如果指定）
+        if (isset($specs['frame_rate']) && $specs['frame_rate'] > 0) {
+            $ffmpegParts[] = "-r " . $specs['frame_rate'];
+        }
+        
+        // 添加像素格式
+        if (isset($specs['pixel_format'])) {
+            $ffmpegParts[] = "-pix_fmt " . escapeshellarg($specs['pixel_format']);
+        }
+        
+        // 添加码率（如果指定）
+        if (isset($specs['bit_rate'])) {
+            $ffmpegParts[] = "-b:v " . escapeshellarg($specs['bit_rate']);
+        }
         
         // 添加缩放滤镜
         if ($resolution) {
-            $ffmpegParts[] = "-s " . escapeshellarg($resolution);
+            $ffmpegParts[] = "-vf scale=" . escapeshellarg($resolution);
         }
-        
-        $ffmpegParts[] = "-y"; // 覆盖输出文件
         $ffmpegParts[] = escapeshellarg($outputPath);
         
         $ffmpegCommand = implode(" ", $ffmpegParts);
+        
+        // 执行命令并捕获详细输出
         $output = shell_exec($ffmpegCommand . " 2>&1");
+        // 检查输出文件
         if (!file_exists($outputPath)) {
-            throw new Exception("视频转码失败，输出文件未生成. 命令: " . $ffmpegCommand);
+            $errorMsg = "视频转码失败，输出文件未生成.\n";
+            $errorMsg .= "命令: " . $ffmpegCommand . "\n";
+            $errorMsg .= "输出: " . $output . "\n";
+            $errorMsg .= "输入文件: " . $inputPath . "\n";
+            $errorMsg .= "输出文件: " . $outputPath . "\n";
+            $errorMsg .= "文件大小: " . (file_exists($inputPath) ? filesize($inputPath) : 'N/A') . " bytes\n";
+            
+            Log::channel('ffmpeg')->write($errorMsg);
+            throw new Exception($errorMsg);
+        }
+        
+        // 检查输出文件大小
+        $outputSize = filesize($outputPath);
+        if ($outputSize < 1000) { // 小于1KB可能表示转码失败
+            @unlink($outputPath); // 删除无效文件
+            $errorMsg = "视频转码失败，输出文件过小 (" . $outputSize . " bytes).\n";
+            $errorMsg .= "命令: " . $ffmpegCommand . "\n";
+            $errorMsg .= "输出: " . $output;
+            
+            Log::channel('ffmpeg')->write($errorMsg);
+            throw new Exception($errorMsg);
         }
     }
 
@@ -1100,6 +1200,11 @@ class UploadService
      */
     public static function transcodeImage(string $inputPath, string $outputPath, array $specs, array $info): void
     {
+        // 验证输入文件
+        if (!file_exists($inputPath)) {
+            throw new Exception("输入文件不存在: " . $inputPath);
+        }
+        
         // 从媒体信息中提取旋转角度
         $rotation = null;
         if (!empty($info['streams'])) {
@@ -1124,6 +1229,19 @@ class UploadService
         
         // 计算动态分辨率（传递旋转角度）
         $resolution = self::calculateTargetResolution($info, $specs, $rotation);
+        
+        // 确保输出目录存在并有写权限
+        $outputDir = dirname($outputPath);
+        if (!is_dir($outputDir)) {
+            if (!mkdir($outputDir, 0755, true)) {
+                throw new Exception("无法创建输出目录: " . $outputDir);
+            }
+        }
+        
+        if (!is_writable($outputDir)) {
+            throw new Exception("输出目录没有写权限: " . $outputDir);
+        }
+        
         // 构建ffmpeg命令
         $ffmpegParts = [
             "ffmpeg6 -i " . escapeshellarg($inputPath),
@@ -1134,16 +1252,39 @@ class UploadService
         if ($resolution) {
             $ffmpegParts[] = "-vf scale=" . escapeshellarg($resolution);
         }
-        
         $ffmpegParts[] = "-y"; // 覆盖输出文件
         $ffmpegParts[] = escapeshellarg($outputPath);
         
         $ffmpegCommand = implode(" ", $ffmpegParts);
         
+        // 执行命令并捕获详细输出
         $output = shell_exec($ffmpegCommand . " 2>&1");
+
+        // 检查输出文件
         if (!file_exists($outputPath)) {
-            throw new Exception("图片转码失败，输出文件未生成. 命令: " . $ffmpegCommand);
+            $errorMsg = "图片转码失败，输出文件未生成.\n";
+            $errorMsg .= "命令: " . $ffmpegCommand . "\n";
+            $errorMsg .= "输出: " . $output . "\n";
+            $errorMsg .= "输入文件: " . $inputPath . "\n";
+            $errorMsg .= "输出文件: " . $outputPath . "\n";
+            $errorMsg .= "文件大小: " . (file_exists($inputPath) ? filesize($inputPath) : 'N/A') . " bytes\n";
+            
+            Log::channel('ffmpeg')->write($errorMsg);
+            throw new Exception($errorMsg);
         }
+        
+        // 检查输出文件大小
+        $outputSize = filesize($outputPath);
+        if ($outputSize < 100) { // 小于100字节可能表示转码失败
+            @unlink($outputPath); // 删除无效文件
+            $errorMsg = "图片转码失败，输出文件过小 (" . $outputSize . " bytes).\n";
+            $errorMsg .= "命令: " . $ffmpegCommand . "\n";
+            $errorMsg .= "输出: " . $output;
+            
+            Log::channel('ffmpeg')->write($errorMsg);
+            throw new Exception($errorMsg);
+        }
+        
     }
 
 
@@ -1173,7 +1314,6 @@ class UploadService
         // 获取动态分辨率配置
         $maxDimension = $specs['max_dimension'] ?? 2000;
         $targetDimension = $specs['target_dimension'] ?? 1920;
-        
         // 检查是否需要压缩
         if (max($originalWidth, $originalHeight) <= $maxDimension) {
             // 不需要压缩，保持原始分辨率

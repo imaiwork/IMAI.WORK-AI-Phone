@@ -12,7 +12,7 @@
             <div class="absolute w-6 h-6 right-4 top-4 cursor-pointer" @click="close">
                 <close-btn />
             </div>
-            <div class="text-2xl font-bold mb-5">用量设置</div>
+            <div class="text-2xl font-medium mb-5">用量设置</div>
             <!-- 表单 -->
             <ElForm :model="formData" :rules="rules" ref="formRef" label-position="top">
                 <ElFormItem label="限制每个用户总对话数" prop="limit_total_chat">

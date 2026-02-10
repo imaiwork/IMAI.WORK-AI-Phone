@@ -1,6 +1,6 @@
 <template>
     <view class="h-screen flex flex-col" v-if="!loading">
-        <view class="px-4 text-[30rpx] font-bold mt-4"> 选择智能体 </view>
+        <view class="px-4 text-[30rpx] font-medium mt-4"> 选择智能体 </view>
         <view class="grow min-h-0">
             <z-paging
                 ref="pagingRef"
@@ -17,7 +17,7 @@
                         @click="selectedAgent = item.id">
                         <image :src="item.image" class="flex-shrink-0 w-[90rpx] h-[90rpx] rounded-full"></image>
                         <view class="flex-1">
-                            <view class="font-bold text-[30rpx] line-clamp-1">{{ item.name }}</view>
+                            <view class="font-medium text-[30rpx] line-clamp-1">{{ item.name }}</view>
                             <view class="text-xs text-[#0000004d] line-clamp-1 mt-[10rpx]">
                                 {{ item.intro }}
                             </view>
@@ -35,7 +35,7 @@
         </view>
         <view class="bg-white flex-shrink-0 pb-5 pt-4 px-6">
             <view
-                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-bold flex items-center justify-center"
+                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-medium flex items-center justify-center"
                 @click="handleSaveConfig">
                 确定保存
             </view>

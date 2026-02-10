@@ -61,7 +61,7 @@
 
         <div class="p-4 border-t border-br-extra-light bg-[#f9f9f9]/30">
             <ElButton
-                class="!w-full !rounded-xl !h-10 !border-dashed transition-all !font-bold text-tx-primary hover:!text-primary"
+                class="!w-full !rounded-xl !h-10 !border-dashed transition-all !font-medium text-tx-primary hover:!text-primary"
                 @click="openAddModal">
                 <Icon name="el-icon-Plus" />
                 <span class="ml-1">添加分组</span>
@@ -213,7 +213,7 @@ getCateLists();
 }
 
 .count-badge {
-    @apply text-[10px] px-1.5 py-0.5 rounded-md bg-gray-100 text-tx-placeholder font-bold transition-colors;
+    @apply text-[10px] px-1.5 py-0.5 rounded-md bg-gray-100 text-tx-placeholder font-medium transition-colors;
 }
 
 .action-trigger {

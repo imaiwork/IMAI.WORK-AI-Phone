@@ -1,6 +1,6 @@
 <template>
     <view class="h-screen flex flex-col">
-        <view class="font-bold text-[30rpx] mx-4 mt-4">数字人形象({{ dataList.length }})</view>
+        <view class="font-medium text-[30rpx] mx-4 mt-4">数字人形象({{ dataList.length }})</view>
         <view class="grow min-h-0">
             <scroll-view scroll-y class="h-full">
                 <view class="grid grid-cols-3 gap-[26rpx] p-4 pb-[100rpx]">

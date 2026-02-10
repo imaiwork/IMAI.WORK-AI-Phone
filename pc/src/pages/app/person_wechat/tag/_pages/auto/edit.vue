@@ -134,7 +134,7 @@ defineExpose({
 .radio-block-group {
     @apply flex bg-slate-100 p-1 rounded-xl w-full;
     .radio-block {
-        @apply flex-1 flex items-center justify-center py-2 text-[13px] font-bold text-tx-regular cursor-pointer transition-all rounded-lg;
+        @apply flex-1 flex items-center justify-center py-2 text-[13px] font-medium text-tx-regular cursor-pointer transition-all rounded-lg;
         .dot {
             @apply w-1.5 h-1.5 rounded-full bg-slate-300 mr-2 transition-all;
         }

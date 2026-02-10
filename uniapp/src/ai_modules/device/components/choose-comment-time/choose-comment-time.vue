@@ -6,7 +6,7 @@
                     <picker-view
                         :value="commentTimeIndex"
                         indicator-style="height: 100rpx;"
-                        indicator-class="font-bold"
+                        indicator-class="font-medium"
                         @change="changeCommentTime">
                         <picker-view-column>
                             <view
@@ -20,12 +20,12 @@
                 </view>
                 <view class="flex justify-around p-4 border-[0] border-t-[1rpx] border-solid border-[rgba(0,0,0,0.03)]">
                     <view
-                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-[#F3F3F3] text-[30rpx] text-[#00000080] font-bold"
+                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-[#F3F3F3] text-[30rpx] text-[#00000080] font-medium"
                         @click="cancelCommentTime"
                         >取消</view
                     >
                     <view
-                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-primary text-[30rpx] text-white font-bold"
+                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-primary text-[30rpx] text-white font-medium"
                         @click="confirmCommentTime"
                         >确定</view
                     >

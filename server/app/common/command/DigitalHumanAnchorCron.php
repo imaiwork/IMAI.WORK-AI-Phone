@@ -26,6 +26,7 @@ class DigitalHumanAnchorCron extends Command
         DigitalHumanLogic::getDigitalHumanAnchorStatusCron();
         DigitalHumanLogic::getDigitalHumanAnchorFailedStatusCron(); //1小时以上的失败任务处理
         DigitalHumanLogic::digitalHumanAnchorReturnCron(); //公共数字人创建失败退费
+        DigitalHumanLogic::supplement(); //公共数字人旧数据宽高补充 TODO 下个版本需删除
         return true;
     }
 }

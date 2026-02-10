@@ -90,7 +90,7 @@
                                         <Icon name="local-icon-fodder" :size="24"></Icon>
                                     </div>
                                     <div>
-                                        <div class="font-bold">通用</div>
+                                        <div class="font-medium">通用</div>
                                         <div class="text-[11px] text-[#00000080] mt-1">
                                             通用文本分块模式，检索和搜索的块是相同的
                                         </div>
@@ -114,7 +114,7 @@
                                                     :label="`${item.label}：${item.value}`"
                                                     :value="item.value">
                                                     <span>{{ item.label }}：</span>
-                                                    <span class="font-bold">{{ item.value }}</span>
+                                                    <span class="font-medium">{{ item.value }}</span>
                                                 </ElOption>
                                             </ElSelect>
                                         </div>
@@ -186,7 +186,7 @@
                                         <Icon name="local-icon-upload" :size="24"></Icon>
                                     </div>
                                     <div>
-                                        <div class="font-bold">文档已上传</div>
+                                        <div class="font-medium">文档已上传</div>
                                         <div class="text-[11px] text-[#00000080] mt-1">
                                             文档已上传至知识库：【{{ knName }}】，你可以在知识库的文档列表中找到它。
                                         </div>

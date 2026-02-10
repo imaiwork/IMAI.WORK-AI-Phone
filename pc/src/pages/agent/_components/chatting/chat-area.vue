@@ -8,7 +8,7 @@
                     <img class="w-full h-full rounded-[10px]" :src="detail.avatar || detail.image" />
                 </div>
                 <div>
-                    <div class="font-bold line-clamp-1 break-all">{{ detail.name }}</div>
+                    <div class="font-medium line-clamp-1 break-all">{{ detail.name }}</div>
                     <div class="text-[#00000080] mt-1 line-clamp-1 break-all">
                         {{ detail.introduced || detail.intro }}
                     </div>

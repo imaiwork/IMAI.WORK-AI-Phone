@@ -39,7 +39,7 @@
             <div class="px-8 py-6">
                 <div class="mb-6">
                     <h3 class="text-xl font-[900] text-[#0F172A]">配置 Coze 工作流</h3>
-                    <p class="text-xs text-[#94A3B8] font-bold mt-1 uppercase tracking-widest">
+                    <p class="text-xs text-[#94A3B8] font-medium mt-1 uppercase tracking-widest">
                         Workflow input & output orchestration
                     </p>
                 </div>
@@ -73,7 +73,7 @@
                                 <ElFormItem label="响应模式" prop="stream">
                                     <div
                                         class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-[#F1F5F9]">
-                                        <span class="text-xs font-bold text-[#64748B]">流式输出</span>
+                                        <span class="text-xs font-medium text-[#64748B]">流式输出</span>
                                         <ElSwitch
                                             v-model="formData.stream"
                                             :active-value="1"

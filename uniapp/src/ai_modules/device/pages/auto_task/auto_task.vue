@@ -16,19 +16,19 @@
                 class="rounded-[20rpx] bg-[#ffffff80] px-[36rpx] py-[22rpx] relative"
                 :class="{ 'opacity-50': !isCompleteConfig }">
                 <view class="flex items-center justify-between">
-                    <view class="font-bold text-[30rpx]">社媒账号</view>
+                    <view class="font-medium text-[30rpx]">社媒账号</view>
                     <view class="flex items-center gap-x-1">
                         <template v-if="!isCompleteConfig || isAllGetSuccess">
                             <image
                                 src="@/ai_modules/device/static/icons/success.svg"
                                 class="w-[28rpx] h-[28rpx]"></image>
-                            <view class="text-[#00C08E] font-bold">已获取</view>
+                            <view class="text-[#00C08E] font-medium">已获取</view>
                         </template>
                         <view v-else class="absolute right-3 top-0">
                             <view
                                 class="py-[32rpx] flex justify-center items-center gap-x-2"
                                 @click="showGetAccountPopup = true">
-                                <text class="text-primary font-bold">详情</text>
+                                <text class="text-primary font-medium">详情</text>
                             </view>
                         </view>
                     </view>
@@ -44,7 +44,7 @@
             <navigator
                 :url="`/ai_modules/device/pages/create_auto_task/create_auto_task?device_code=${deviceCode}`"
                 class="rounded-[20rpx] bg-[#ffffff80] px-[36rpx] py-4 flex items-center justify-between mt-[12rpx]">
-                <view class="font-bold text-[30rpx]">运营策略方案</view>
+                <view class="font-medium text-[30rpx]">运营策略方案</view>
                 <view class="flex items-center gap-x-1 text-[#000000]/40">
                     查看<u-icon name="arrow-right" size="20" color="#9DA5B0"></u-icon>
                 </view>
@@ -60,15 +60,15 @@
             class="grow min-h-0 mt-[28rpx] py-[30rpx] bg-[#F3F4FB] rounded-tl-[40rpx] rounded-tr-[40rpx] flex flex-col">
             <view class="px-[42rpx] flex items-center justify-between">
                 <view class="flex items-center gap-x-1">
-                    <view class="font-bold text-[30rpx]">24h任务列表</view>
+                    <view class="font-medium text-[30rpx]">24h任务列表</view>
                     <!-- <image src="@/ai_modules/device/static/icons/tips.svg" class="w-[24rpx] h-[24rpx]"></image> -->
                 </view>
                 <view class="flex items-center gap-x-1">
                     <template v-if="autoTaskDetail.is_config == 1">
                         <image src="@/ai_modules/device/static/icons/success.svg" class="w-[28rpx] h-[28rpx]"></image>
-                        <view class="text-[#00C08E] font-bold">可执行</view>
+                        <view class="text-[#00C08E] font-medium">可执行</view>
                     </template>
-                    <view v-else class="text-[#FF2442] text-xs font-bold">无法执行，配置未完整</view>
+                    <view v-else class="text-[#FF2442] text-xs font-medium">无法执行，配置未完整</view>
                 </view>
             </view>
             <view class="grow min-h-0 mt-2">
@@ -87,13 +87,13 @@
                             @click="toTaskConfig(item)">
                             <view
                                 class="flex-shrink-0 flex flex-col items-center justify-center w-[100rpx] gap-y-[10rpx]">
-                                <view class="text-[#00000080] font-bold">{{ item.time[0] }}</view>
+                                <view class="text-[#00000080] font-medium">{{ item.time[0] }}</view>
                                 <view class="flex flex-col gap-y-[4rpx]">
                                     <view class="w-[5rpx] h-[8rpx] rounded-[50rpx] bg-[#0000004d]"></view>
                                     <view class="w-[5rpx] h-[10rpx] rounded-[50rpx] bg-[#0000004d]"></view>
                                     <view class="w-[5rpx] h-[8rpx] rounded-[50rpx] bg-[#0000004d]"></view>
                                 </view>
-                                <view class="text-[#00000080] font-bold">{{ item.time[1] }}</view>
+                                <view class="text-[#00000080] font-medium">{{ item.time[1] }}</view>
                             </view>
                             <view class="bg-white flex-1 relative rounded-[20rpx] px-[40rpx] py-[30rpx]">
                                 <view
@@ -122,11 +122,11 @@
                                         <image
                                             src="@/ai_modules/device/static/icons/task.svg"
                                             class="w-[24rpx] h-[24rpx]"></image>
-                                        <text class="text-xs text-[#0000004d] font-bold">任务类型</text>
+                                        <text class="text-xs text-[#0000004d] font-medium">任务类型</text>
                                     </view>
                                 </view>
                                 <view class="mt-[6rpx] flex items-center gap-x-[10rpx]">
-                                    <text class="text-[34rpx] font-bold">
+                                    <text class="text-[34rpx] font-medium">
                                         {{ item.name }}
                                     </text>
                                     <!-- <image
@@ -136,7 +136,7 @@
                                 <view class="h-[1rpx] bg-[#F2F2F2] my-[24rpx]"></view>
                                 <view class="flex items-center justify-between">
                                     <view
-                                        class="font-bold"
+                                        class="font-medium"
                                         :class="[
                                             item.disabled
                                                 ? 'text-[#0000004d]'
@@ -174,9 +174,9 @@
                 class="h-full w-full pt-[200rpx]"
                 style="background: linear-gradient(360deg, #f3f4fb 30%, transparent 100%)">
                 <view class="flex flex-col items-center absolute bottom-[15vh] w-full">
-                    <view class="font-bold text-primary text-[40rpx]"> 请完善首次设置 </view>
+                    <view class="font-medium text-primary text-[40rpx]"> 请完善首次设置 </view>
                     <view
-                        class="mt-[46rpx] w-[240rpx] h-[90rpx] flex items-center justify-center font-bold text-white text-[30rpx] bg-primary rounded-lg"
+                        class="mt-[46rpx] w-[240rpx] h-[90rpx] flex items-center justify-center font-medium text-white text-[30rpx] bg-primary rounded-lg"
                         @click="toPage()"
                         >立即设置</view
                     >
@@ -195,7 +195,7 @@
         @get-account="handleGetAccount(deviceCode, false)" />
     <u-popup v-model="showChooseApp" mode="center" border-radius="20" width="80%">
         <view class="bg-white p-6 rounded-2xl">
-            <text class="text-xl font-bold mb-2 block">选择平台</text>
+            <text class="text-xl font-medium mb-2 block">选择平台</text>
             <text class="text-sm text-[#9ca3af] mb-5 block">请选择您要发布的平台</text>
 
             <view class="space-y-3">
@@ -260,7 +260,7 @@
 
                         <view class="flex flex-col items-end shrink-0">
                             <view class="flex items-baseline gap-0.5">
-                                <text class="text-[36rpx] font-bold text-primary">{{ item.score }}</text>
+                                <text class="text-[36rpx] font-medium text-primary">{{ item.score }}</text>
                                 <text class="text-[22rpx] text-slate-500 font-medium">{{ item.unit }}</text>
                             </view>
                         </view>

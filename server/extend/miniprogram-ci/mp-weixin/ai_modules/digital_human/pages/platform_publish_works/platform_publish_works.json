@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "视频发布作品",
+  "usingComponents": {
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "name-edit": "../../components/keywords-edit/keywords-edit"
+  }
+}

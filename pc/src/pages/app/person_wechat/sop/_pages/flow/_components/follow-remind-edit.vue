@@ -8,7 +8,7 @@
                 </div>
                 <div>
                     <h4 class="text-[15px] font-black text-[#0F172A]">自动化跟进策略</h4>
-                    <p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                    <p class="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
                         Automated Follow-up Strategy
                     </p>
                 </div>
@@ -30,7 +30,7 @@
                         <div class="flex flex-col gap-3">
                             <div
                                 class="flex items-center gap-2 p-3 bg-white rounded-xl border border-slate-100 shadow-light">
-                                <span class="text-[13px] font-bold text-slate-500 min-w-[60px]">
+                                <span class="text-[13px] font-medium text-slate-500 min-w-[60px]">
                                     {{ formData.status == 0 ? "停留超过" : "沉默超过" }}
                                 </span>
                                 <ElInputNumber
@@ -38,11 +38,11 @@
                                     :min="0"
                                     controls-position="right"
                                     class="!w-[100px] modern-number-input" />
-                                <span class="text-[13px] font-bold text-slate-500 px-2">天后</span>
+                                <span class="text-[13px] font-medium text-slate-500 px-2">天后</span>
 
                                 <div class="w-[1px] h-4 bg-slate-200 mx-1"></div>
 
-                                <span class="text-[13px] font-bold text-slate-500 px-2">
+                                <span class="text-[13px] font-medium text-slate-500 px-2">
                                     {{ formData.judgment > 0 ? "次日" : "当天" }}
                                 </span>
                                 <ElTimePicker

@@ -78,7 +78,8 @@ class VideoLogic extends ApiLogic
                                 'create_time',
                                 'update_time',
                                 'remark',
-                                "'1' as type"
+                                "'1' as type",
+                                'duration'
                             ])
                     ->where($where)
                     ->where($humanWhere)
@@ -99,7 +100,8 @@ class VideoLogic extends ApiLogic
                                 'create_time',
                                 'update_time',
                                 'remark',
-                                "shanjian_type + 1 as type"
+                                "shanjian_type + 1 as type",
+                                'duration'
                             ])
                     ->where($where)
                     ->where($shanjianWhere)
@@ -120,7 +122,8 @@ class VideoLogic extends ApiLogic
                                 'create_time',
                                 'update_time',
                                 'remark',
-                                "'6' as type"
+                                "'6' as type",
+                                'duration'
                             ])
                     ->where($where)
                     ->where($soraWhere)
@@ -159,6 +162,7 @@ class VideoLogic extends ApiLogic
                 'update_time'      => date('Y-m-d H:i:s', $item['update_time']),
                 'remark'           => $item['remark'],
                 'type'             => (int)$item['type'],
+                'duration'         => $item['duration'],
             ];
         }
 

@@ -21,7 +21,7 @@
 
             <div class="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-2xl border border-[#F1F5F9]">
                 <div class="flex flex-col">
-                    <span class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">Dimension</span>
+                    <span class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">Dimension</span>
                     <div class="flex items-center gap-2 mt-0.5">
                         <span class="text-[15px] font-[900] text-[#1E293B]">{{ getResolutionSize.width }}</span>
                         <span class="text-[12px] text-[#CBD5E1] font-black">×</span>

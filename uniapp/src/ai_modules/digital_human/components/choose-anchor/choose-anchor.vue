@@ -2,10 +2,15 @@
     <popup-bottom v-model="show" title="请选择形象" custom-class="bg-[#F9FAFB]" :is-disabled-touch="true">
         <template #content>
             <view class="h-full">
-                <z-paging ref="pagingRef" v-model="dataLists" :fixed="false" :safe-area-inset-bottom="true"
+                <z-paging
+                    ref="pagingRef"
+                    v-model="dataLists"
+                    :fixed="false"
+                    :safe-area-inset-bottom="true"
                     @query="queryList">
                     <view class="py-[30rpx] px-[32rpx] grid grid-cols-3 gap-2">
-                        <view class="bg-[#E6E6E6] h-[288rpx] rounded-[24rpx] flex flex-col items-center justify-center"
+                        <view
+                            class="bg-[#E6E6E6] h-[288rpx] rounded-[24rpx] flex flex-col items-center justify-center"
                             @click="toClone">
                             <view
                                 class="w-[32rpx] h-[32rpx] rounded-full flex items-center justify-center bg-[#00000080]">
@@ -13,13 +18,17 @@
                             </view>
                             <view class="text-[#000000b3] mt-[18rpx]">去克隆</view>
                         </view>
-                        <view v-for="(item, index) in dataLists" :key="index"
+                        <view
+                            v-for="(item, index) in dataLists"
+                            :key="index"
                             class="h-[288rpx] rounded-[24rpx] relative overflow-hidden card-gradient"
                             @click.stop="chooseAnchor(item)">
                             <image :src="item.pic" class="w-full h-full" mode="aspectFill"></image>
-                            <view v-if="item.status == 0"
+                            <view
+                                v-if="item.status == 0"
                                 class="z-[222] absolute top-0 left-0 w-full h-full flex items-center justify-center bg-[#00000080]">
-                                <view class="bg-primary text-xs font-bold text-white rounded-[10rpx] px-2 py-1">克隆中
+                                <view class="bg-primary text-xs font-medium text-white rounded-[10rpx] px-2 py-1"
+                                    >克隆中
                                 </view>
                             </view>
                         </view>

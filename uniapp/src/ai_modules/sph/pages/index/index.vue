@@ -16,7 +16,7 @@
         <view class="relative w-full h-[804rpx] flex-shrink-0">
             <image src="@/ai_modules/sph/static/images/home/bg.png" class="w-full h-full"></image>
             <view class="px-[56rpx] absolute top-[380rpx] left-0 right-0">
-                <view class="text-white text-[40rpx] font-bold">AI极速自动获客</view>
+                <view class="text-white text-[40rpx] font-medium">AI极速自动获客</view>
                 <view class="text-[22rpx] text-[#ffffff80] mt-2">
                     您无需人工干预，即可实现线索自动化获取。系统会在视频号内容中智能筛选目标，并通过私信引导用户进入后续互动，实现从“曝光”到“深度交流”的全流程自动化。这样既节省人力，又能显著提升转化效率，帮助您高效触达并锁定潜在客户群体。
                 </view>
@@ -166,6 +166,6 @@ onPageScroll((e) => {
 
 <style scoped lang="scss">
 .tab-item {
-    @apply flex-1 rounded-full h-[161rpx] flex items-center justify-center font-bold bg-[#00000008];
+    @apply flex-1 rounded-full h-[161rpx] flex items-center justify-center font-medium bg-[#00000008];
 }
 </style>

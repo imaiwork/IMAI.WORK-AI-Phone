@@ -12,7 +12,7 @@
         <view class="flex justify-end px-4 mt-4" v-if="circleList.length > 0">
             <view class="bg-black rounded-full px-[20rpx] py-[10rpx]" @click="handleSetup()">
                 <u-icon name="plus" size="24" color="#ffffff"></u-icon>
-                <text class="text-sm text-white font-bold ml-1">新增内容</text>
+                <text class="text-sm text-white font-medium ml-1">新增内容</text>
             </view>
         </view>
         <view class="grow min-h-0">
@@ -31,7 +31,7 @@
                             <u-icon name="info-circle-fill" size="28" color="#ff4d4f" style="margin-top: 4rpx"></u-icon>
 
                             <view class="flex-1 ml-2 mr-2">
-                                <text class="text-xs text-[#ff4d4f] font-bold block leading-normal">
+                                <text class="text-xs text-[#ff4d4f] font-medium block leading-normal">
                                     {{ item.error }}
                                 </text>
                             </view>
@@ -44,7 +44,7 @@
                         </view>
 
                         <view class="flex justify-between items-center mb-2">
-                            <text class="text-lg font-bold text-gray-800">{{ item.title || item.name }}</text>
+                            <text class="text-lg font-medium text-gray-800">{{ item.title || item.name }}</text>
                             <view class="flex items-center" @click="handleSetup(index)">
                                 <text class="text-sm font-medium" style="color: #0065fb">设置</text>
                                 <u-icon name="arrow-right" size="24" color="#0065fb"></u-icon>
@@ -105,13 +105,13 @@
                 <empty :size="200" text="暂无朋友圈发布内容" />
                 <view class="bg-black rounded-full px-[20rpx] py-[10rpx] mt-[40rpx]" @click="handleSetup()">
                     <u-icon name="plus" size="24" color="#ffffff"></u-icon>
-                    <text class="text-sm text-white font-bold ml-1">新增内容</text>
+                    <text class="text-sm text-white font-medium ml-1">新增内容</text>
                 </view>
             </view>
         </view>
         <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 p-4">
             <view
-                class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-bold flex items-center justify-center"
+                class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-medium flex items-center justify-center"
                 @click="handleCreateTask">
                 创建任务
             </view>

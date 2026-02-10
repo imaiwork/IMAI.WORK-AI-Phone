@@ -32,6 +32,11 @@ class TouchLogic extends ApiLogic
                 return false;
             }
 
+            if(empty($config->clue_theme)){
+                self::setError('设备自动化配置截流获客主题不能为空');
+                return false;
+            }
+
             $accounts = SvAccount::field('id,account,type')->where('user_id', self::$uid)->where('type', 'not in', [1, 5])->where('device_code', $params['device_code'])->select();
             if (count($accounts) === 0) {
                 self::setError('该设备没有绑定账号');
@@ -221,14 +226,13 @@ class TouchLogic extends ApiLogic
                             'account' => $account->account,
                             'type' => $account->type,
                         ]], JSON_UNESCAPED_UNICODE),
-                        'type' => 3,
                         'industry' => json_encode($keywords, JSON_UNESCAPED_UNICODE),
                         'industry_num' => count($keywords),
                         'content' => json_encode($item->touch_speech, JSON_UNESCAPED_UNICODE),
                         'filter' => is_null($item->comment_screening) ? json_encode(\app\common\service\ConfigService::get('touch_clue', 'comment_screening', []), JSON_UNESCAPED_UNICODE) : json_encode($item->comment_screening, JSON_UNESCAPED_UNICODE),
-                        'send_num' => 30,
-                        'is_like' => $item->actions['msg_comment_likes'],
-                        'is_follow' => $item->actions['msg_follow'],
+                        'send_num' => $account->type == DeviceEnum::ACCOUNT_TYPE_XHS ? 10 : 30,
+                        'is_like' => 1,
+                        'is_follow' => 1,
                         'send_time' => 0,
                         'gender' => $item->actions['gender'] == '' ? '不限' : $item->actions['gender'],
                         'region' => $item->actions['areas'],
@@ -238,7 +242,9 @@ class TouchLogic extends ApiLogic
                         'status' => 1,
                         'create_time' => time(),
                         'update_time' => time(),
-
+                        'ip_address' => [],
+                        'city' => [],
+                        'marker_method' => [1, 2, 3, 4, 5]
                     ];
 
                     $setting = SvLeadScrapingSetting::create($params);
@@ -254,7 +260,7 @@ class TouchLogic extends ApiLogic
                         'status' => 0,
                         'send_start_time' => $startTime,
                         'send_end_time' => $endTime,
-                        'count' => 30,
+                        'count' => $account->type == DeviceEnum::ACCOUNT_TYPE_XHS ? 10 : 30,
                         'published_count' => 0,
                         'create_time' => time(),
                         'update_time' => time(),

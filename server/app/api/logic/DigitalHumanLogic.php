@@ -676,4 +676,45 @@ class DigitalHumanLogic extends ApiLogic
             return false;
         }
     }
+
+    public static function supplement()
+    {
+        try {
+            $lists = DigitalHumanAnchor::where('status', 2)->where('width', '=', '')->select();
+            if ($lists->isEmpty()){
+                return true;
+            }
+            $lists = $lists->toArray();
+
+            foreach ($lists as $item){
+                $item['task_ids'] = json_decode($item['task_ids'], true);
+                $weiju_task_id = $item['task_ids']['weiju']['task_id'];
+                $chanjing_task_id = $item['task_ids']['chanjing']['task_id'];
+                if (!empty($weiju_task_id)){
+                    $weiju = HumanAnchor::where('task_id', $weiju_task_id)->findOrEmpty();
+                    if (!$weiju->isEmpty()){
+                        $weiju_width = $weiju->width;
+                        $weiju_height = $weiju->height;
+                    }
+                }
+                if (!empty($chanjing_task_id)){
+                    $chanjing = HumanAnchor::where('task_id', $chanjing_task_id)->findOrEmpty();
+                    if (!$chanjing->isEmpty()){
+                        $chanjing_width = $chanjing->width;
+                        $chanjing_height = $chanjing->height;
+                    }
+                }
+                $update = [
+                    'width' => $chanjing_width ?? $weiju_width ?? '',
+                    'height' => $chanjing_height ?? $weiju_height ?? '',
+                ];
+                DigitalHumanAnchor::where('id', $item['id'])->update($update);
+            }
+            return true;
+        } catch (\Exception $exception) {
+            Log::channel('digital')->write('补充视频宽高失败：' . $exception->getMessage());
+            echo $exception->getMessage();
+            return false;
+        }
+    }
 }

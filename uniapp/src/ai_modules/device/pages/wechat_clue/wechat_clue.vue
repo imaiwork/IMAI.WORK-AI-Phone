@@ -1,6 +1,6 @@
 <template>
     <view class="h-screen flex flex-col pt-4">
-        <view class="text-[30rpx] font-bold px-4">线索列表（已选：{{ selectedList.length }}）</view>
+        <view class="text-[30rpx] font-medium px-4">线索列表（已选：{{ selectedList.length }}）</view>
         <view class="grow min-h-0 mt-4">
             <z-paging
                 ref="pagingRef"

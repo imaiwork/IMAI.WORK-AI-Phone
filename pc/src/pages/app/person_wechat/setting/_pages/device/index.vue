@@ -59,7 +59,7 @@
 
                 <ElTableColumn prop="sdk_version" label="SDK版本" width="140">
                     <template #default="{ row }">
-                        <span class="px-2 py-0.5 rounded bg-slate-100 text-[11px] font-bold text-slate-500">{{
+                        <span class="px-2 py-0.5 rounded bg-slate-100 text-[11px] font-medium text-slate-500">{{
                             row.sdk_version
                         }}</span>
                     </template>
@@ -98,7 +98,7 @@
             </ElTable>
         </div>
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
-            <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个终端设备</span>
+            <span class="text-xs font-medium text-[#94A3B8]">共计 {{ pager.count }} 个终端设备</span>
             <pagination v-model="pager" @change="getLists" />
         </div>
         <popup
@@ -123,7 +123,7 @@
                 </div>
 
                 <div class="space-y-4">
-                    <div class="text-[13px] font-bold text-tx-regular px-1">设备授权码 (Auth Code)</div>
+                    <div class="text-[13px] font-medium text-tx-regular px-1">设备授权码 (Auth Code)</div>
                     <ElInput
                         v-model="deviceAuthCode"
                         placeholder="请输入您的设备授权码"
@@ -292,7 +292,7 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .status-badge {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-bold;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
     .pulse-dot {
         @apply w-1.5 h-1.5 rounded-full mr-2;
     }
@@ -316,7 +316,7 @@ onMounted(() => {
     @apply bg-slate-100 p-1 rounded-xl border-[none] gap-3;
     :deep(.el-radio-button__inner) {
         border: none;
-        @apply bg-[transparent] rounded-lg text-[13px] font-bold text-slate-500 h-8 flex items-center px-4 transition-all;
+        @apply bg-[transparent] rounded-lg text-[13px] font-medium text-slate-500 h-8 flex items-center px-4 transition-all;
         &:hover {
             @apply text-primary;
         }

@@ -11,12 +11,12 @@
                             maxlength="30"
                             clearable />
                     </view>
-                    <view class="mt-2 font-bold text-[#000000]/50">
+                    <view class="mt-2 font-medium text-[#000000]/50">
                         填写地区后，每个搜索词前会添加「XX地区 + 线索词」前缀
                     </view>
                 </view>
                 <view
-                    class="w-full h-[90rpx] flex items-center justify-center text-white font-bold bg-black rounded-[20rpx]"
+                    class="w-full h-[90rpx] flex items-center justify-center text-white font-medium bg-black rounded-[20rpx]"
                     @click="handleConfirm">
                     确定
                 </view>

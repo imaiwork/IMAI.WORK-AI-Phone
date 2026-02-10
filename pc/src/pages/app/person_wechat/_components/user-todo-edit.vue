@@ -27,8 +27,8 @@
             <ElFormItem prop="todo_content" class="!mb-6">
                 <template #label>
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="text-[14px] font-bold text-slate-700">内容描述</span>
-                        <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Content</span>
+                        <span class="text-[14px] font-medium text-slate-700">内容描述</span>
+                        <span class="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Content</span>
                     </div>
                 </template>
                 <ElInput
@@ -45,8 +45,8 @@
             <ElFormItem prop="todo_time" class="!mb-2">
                 <template #label>
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="text-[14px] font-bold text-slate-700">提醒时间</span>
-                        <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Schedule</span>
+                        <span class="text-[14px] font-medium text-slate-700">提醒时间</span>
+                        <span class="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Schedule</span>
                     </div>
                 </template>
                 <ElDatePicker
@@ -61,7 +61,7 @@
             </ElFormItem>
         </ElForm>
 
-        <div class="mt-4 flex items-center justify-center gap-2 text-slate-400 text-[11px] font-bold">
+        <div class="mt-4 flex items-center justify-center gap-2 text-slate-400 text-[11px] font-medium">
             <Icon name="el-icon-Lock" :size="12" />
             <span>任务设置成功后，将自动同步至云端提醒</span>
         </div>

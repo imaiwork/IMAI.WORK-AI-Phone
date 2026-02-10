@@ -15,7 +15,7 @@
                     <view class="flex items-center justify-between">
                         <view class="flex items-center justify-between gap-1 relative">
                             <image src="@/packages/static/images/common/jf.png" class="w-[48rpx] h-[48rpx]"></image>
-                            <text class="text-[32rpx] font-bold">卡密兑换</text>
+                            <text class="text-[32rpx] font-medium">卡密兑换</text>
                             <image
                                 src="@/packages/static/images/common/title_path.png"
                                 class="h-[16rpx] w-[122rpx] absolute right-[-62rpx] bottom-0 z-[-1]"></image>

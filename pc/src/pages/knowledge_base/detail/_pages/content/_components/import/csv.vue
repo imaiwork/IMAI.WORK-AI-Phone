@@ -14,7 +14,7 @@
                     <div class="w-12 h-12 rounded-full bg-[#F0F6FF] flex items-center justify-center mb-3">
                         <Icon name="local-icon-upload" class="text-primary" :size="24" />
                     </div>
-                    <div class="text-[14px] font-bold text-[#64748B]">
+                    <div class="text-[14px] font-medium text-[#64748B]">
                         拖拽 CSV/Excel 至此，或 <span class="text-primary font-[900]">点击选择文件</span>
                     </div>
                     <ElButton link type="primary" class="!text-[12px] mt-2 font-black" @click.stop>
@@ -27,7 +27,7 @@
 
             <div class="mt-3 p-3 bg-[#FFF9F0] border border-[#FFE4BA] rounded-xl flex gap-3">
                 <Icon name="el-icon-InfoFilled" color="#ED6A0C" :size="16" class="mt-0.5" />
-                <div class="text-[12px] text-[#A25D00] leading-5 font-bold">
+                <div class="text-[12px] text-[#A25D00] leading-5 font-medium">
                     请先完成模版填写后再上传。单文件建议不要超过 <span class="underline">1000条</span> 以保证流畅度。
                     <br />
                     系统将自动去重完全相同的问答对，但含有换行的内容目前暂不支持自动去重。
@@ -54,7 +54,7 @@
                                         <Icon name="local-icon-upload2" :size="14" />
                                     </div>
                                     <div
-                                        class="ml-3 text-[13px] font-bold truncate flex-1"
+                                        class="ml-3 text-[13px] font-medium truncate flex-1"
                                         :class="currIndex == index ? 'text-primary' : 'text-[#475569]'">
                                         {{ item.name }}
                                     </div>

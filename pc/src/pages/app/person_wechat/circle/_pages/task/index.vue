@@ -80,7 +80,7 @@
                 <ElTableColumn label="任务模式" width="120">
                     <template #default="{ row }">
                         <div
-                            class="flex items-center justify-center gap-1.5 font-bold text-[13px]"
+                            class="flex items-center justify-center gap-1.5 font-medium text-[13px]"
                             :class="row.task_type == 1 ? 'text-amber-500' : 'text-blue-500'">
                             <Icon :name="row.task_type == 1 ? 'el-icon-AlarmClock' : 'el-icon-Lightning'" :size="14" />
                             {{ row.task_type == 1 ? "定时" : "即时" }}
@@ -103,7 +103,7 @@
                 <ElTableColumn label="操作" width="140" fixed="right">
                     <template #default="{ row }">
                         <div class="flex items-center justify-center gap-1">
-                            <ElButton type="primary" link class="!text-xs font-bold" @click="handleDetail(row.id)"
+                            <ElButton type="primary" link class="!text-xs font-medium" @click="handleDetail(row.id)"
                                 >详情</ElButton
                             >
                             <!-- <ElButton
@@ -114,7 +114,7 @@
                                 "
                                 :type="row.send_status == SendStatus.PAUSED ? 'success' : 'warning'"
                                 link
-                                class="!text-xs font-bold"
+                                class="!text-xs font-medium"
                                 @click="handlePause(row)">
                                 {{ row.send_status == SendStatus.PAUSED ? "恢复" : "暂停" }}
                             </ElButton> -->
@@ -128,7 +128,7 @@
                                     ].includes(row.send_status)
                                 "
                                 class="w-[1px] h-3 bg-slate-200 mx-1"></div>
-                            <ElButton type="danger" link class="!text-[13px] font-bold" @click="handleDelete(row.id)"
+                            <ElButton type="danger" link class="!text-[13px] font-medium" @click="handleDelete(row.id)"
                                 >删除</ElButton
                             >
                         </div>
@@ -141,7 +141,7 @@
             </ElTable>
         </div>
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
-            <span class="text-xs font-bold text-[#94A3B8]"
+            <span class="text-xs font-medium text-[#94A3B8]"
                 >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条朋友圈任务</span
             >
             <pagination v-model="pager" @change="getLists"></pagination>
@@ -262,7 +262,7 @@ getLists();
 
 <style scoped lang="scss">
 .status-pill {
-    @apply flex items-center gap-1.5 px-3 py-1 rounded-full w-fit border text-[12px] font-bold;
+    @apply flex items-center gap-1.5 px-3 py-1 rounded-full w-fit border text-[12px] font-medium;
 
     .dot {
         @apply w-1.5 h-1.5 rounded-full;
@@ -301,6 +301,6 @@ getLists();
 }
 
 .type-tag {
-    @apply px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px] font-bold;
+    @apply px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px] font-medium;
 }
 </style>

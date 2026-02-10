@@ -14,7 +14,7 @@ class NeedsAnalysisValidate extends BaseValidate
 
     protected $rule = [
         'content'           => 'require',
-        'conversation_id'   => 'require',
+        'contents'          => 'require',
         'business_type'     => 'require',
         'account_stage'     => 'require',
         'target_audience'   => 'require',
@@ -29,7 +29,7 @@ class NeedsAnalysisValidate extends BaseValidate
 
     protected $message = [
         'content.require'           => '请输入聊天内容',
-        'conversation_id.require'   => '请输入会话ID',
+        'contents.require'          => '请输入一句话分析内容',
         'business_type.require'     => '业务类型',
         'account_stage.require'     => '账号阶段',
         'target_audience.require'   => '客户对象',
@@ -57,7 +57,7 @@ class NeedsAnalysisValidate extends BaseValidate
      */
     public function sceneRetrieve()
     {
-        return $this->only(['chat_id', 'conversation_id']);
+        return $this->only(['chat_id']);
     }
 
     /**
@@ -66,7 +66,7 @@ class NeedsAnalysisValidate extends BaseValidate
      */
     public function sceneAnalysis()
     {
-        return $this->only(['conversation_id']);
+        return $this->only(['contents']);
     }
 
     public function sceneUpdate()

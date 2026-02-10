@@ -14,7 +14,7 @@
                     :current="currTab"
                     @change="handleTabChange"></u-tabs>
             </view>
-            <view class="mx-4 text-xl font-bold" v-else>AI智能体</view>
+            <view class="mx-4 text-xl font-medium" v-else>AI智能体</view>
         </u-navbar>
         <template v-if="currType == 1">
             <view class="m-4 mt-2 relative z-10">
@@ -53,7 +53,7 @@
                                     <view class="robot-cate-item">
                                         <view class="robot-cate-item-wrap">
                                             <view class="flex items-center gap-2 w-full">
-                                                <view class="flex-1 text-[#6D6E70] text-xs font-bold">{{
+                                                <view class="flex-1 text-[#6D6E70] text-xs font-medium">{{
                                                     item.name
                                                 }}</view>
                                                 <u-icon
@@ -91,7 +91,7 @@
                         </view>
                     </view>
                     <view class="flex-1 flex flex-col min-h-0 overflow-hidden">
-                        <view class="text-[20rpx] font-bold text-[#6D6E70] mt-2 mx-[24rpx] mb-4">
+                        <view class="text-[20rpx] font-medium text-[#6D6E70] mt-2 mx-[24rpx] mb-4">
                             {{ total }}个智能体
                         </view>
                         <view class="grow relative">
@@ -118,7 +118,7 @@
                                                 class="rounded-full w-[108rpx] h-[108rpx] flex-shrink-0"
                                                 mode="aspectFill"></image>
                                             <view class="">
-                                                <text class="font-bold mt-1 line-clamp-1">{{ item.name }}</text>
+                                                <text class="font-medium mt-1 line-clamp-1">{{ item.name }}</text>
                                                 <view class="text-[20rpx] mt-1 text-[#9C9C9E] line-clamp-2">
                                                     {{ item.description }}
                                                 </view>
@@ -143,7 +143,7 @@
                     <view class="flex gap-2 px-[32rpx]">
                         <view
                             v-for="item in agentCateLists"
-                            class="text-[#959FAF] font-bold px-[24rpx] h-[64rpx] flex items-center rounded-full whitespace-nowrap"
+                            class="text-[#959FAF] font-medium px-[24rpx] h-[64rpx] flex items-center rounded-full whitespace-nowrap"
                             :class="{ 'bg-primary !text-white': currAgentType == item.value }"
                             :key="item.value"
                             @click="handleAgentCateClick(item)">
@@ -183,7 +183,7 @@
                                 </view>
                             </view>
                             <view class="flex-1 w-full px-3 pt-8">
-                                <view class="text-center line-clamp-1 font-bold">{{ item.name }}</view>
+                                <view class="text-center line-clamp-1 font-medium">{{ item.name }}</view>
                                 <view class="mt-1 line-clamp-2 text-center text-xs text-[#737373] break-all">
                                     {{ item.intro || item.introduced }}
                                 </view>

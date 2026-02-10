@@ -1,15 +1,23 @@
 <template>
-    <u-popup v-model="show" mode="center" width="90%" border-radius="64" :closeable="false" @close="close">
+    <u-popup
+        v-model="show"
+        mode="center"
+        width="90%"
+        border-radius="64"
+        negative-top="300"
+        :closeable="false"
+        @close="close">
         <view class="flex flex-col p-[32rpx]">
             <view class="text-[26rpx] text-center mt-[14rpx]">请输入{{ title }}</view>
             <view class="h-[100rpx] rounded-xl bg-[#00000005] flex items-center px-[18rpx] mt-[46rpx]">
-                <input
+                <u-input
                     v-model="editValue"
                     class="w-full"
-                    :placeholder="`请输入${title}`"
                     placeholder-style="font-size:26rpx;color:rgba(0,0,0,0.2)"
-                    :focus="show"
-                    :maxlength="maxlength" />
+                    clearable
+                    :type="type"
+                    :placeholder="`请输入${title}`"
+                    :focus="show" />
             </view>
             <view class="flex gap-x-[24rpx] mt-[36rpx] w-full">
                 <view class="flex-1">
@@ -51,9 +59,11 @@ const props = withDefaults(
         modelValue: boolean;
         title: string;
         maxlength?: number;
+        type: "text" | "textarea";
     }>(),
     {
         maxlength: 100,
+        type: "text",
     }
 );
 
@@ -69,7 +79,12 @@ const show = computed({
 const editValue = ref<string>("");
 
 const confirm = () => {
+    if (!editValue.value) {
+        uni.$u.toast("请输入内容");
+        return;
+    }
     emit("confirm", editValue.value);
+    close();
 };
 
 const close = () => {

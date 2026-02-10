@@ -346,7 +346,7 @@
                             :key="index"
                             class="border border-solid border-[#E9EBEC] rounded-[10rpx] px-4 py-3 flex items-center gap-x-2"
                             :class="{
-                                '!border-primary text-primary font-bold': currModel.id == item.id,
+                                '!border-primary text-primary font-medium': currModel.id == item.id,
                             }"
                             @click="handleModel(item)">
                             <image

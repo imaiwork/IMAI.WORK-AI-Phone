@@ -1,7 +1,7 @@
 <template>
     <div class="h-full flex flex-col gap-3 min-w-[1000px]">
         <div class="flex-shrink-0 bg-white rounded-2xl px-6 py-4 border border-br">
-            <h2 class="text-lg font-bold text-[#1E293B]">搜索测试</h2>
+            <h2 class="text-lg font-medium text-[#1E293B]">搜索测试</h2>
             <p class="text-sm text-[#94A3B8] mt-1">根据给定的查询文本测试知识的搜索效果，调优检索参数。</p>
         </div>
 
@@ -9,13 +9,13 @@
             <div class="w-[420px] flex flex-col gap-3 h-full">
                 <div class="bg-white rounded-2xl border border-br p-5 flex flex-col gap-4">
                     <div class="flex items-center justify-between">
-                        <span class="font-bold text-[#475569] flex items-center gap-2">
+                        <span class="font-medium text-[#475569] flex items-center gap-2">
                             <Icon name="el-icon-EditPen" />
-                            <span class="text-[12px] font-bold ml-1">源文本测试</span>
+                            <span class="text-[12px] font-medium ml-1">源文本测试</span>
                         </span>
-                        <ElButton v-if="!isRag" type="primary" link class="!font-bold" @click="openVectorSetting">
+                        <ElButton v-if="!isRag" type="primary" link class="!font-medium" @click="openVectorSetting">
                             <Icon name="el-icon-Setting" />
-                            <span class="text-[12px] font-bold ml-1">参数配置</span>
+                            <span class="text-[12px] font-medium ml-1">参数配置</span>
                         </ElButton>
                     </div>
 
@@ -35,7 +35,7 @@
 
                     <div v-if="isRag" class="bg-slate-50 rounded-xl p-4 border border-[#F1F5F9]">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-bold text-[#64748B] flex items-center gap-1">
+                            <span class="text-xs font-medium text-[#64748B] flex items-center gap-1">
                                 相似度阈值
                                 <ElTooltip content="设定最低分数标准，只有超过阈值的结果会被召回">
                                     <div class="text-[#CBD5E1]">
@@ -59,7 +59,7 @@
 
                 <div class="grow min-h-0 bg-white rounded-2xl border border-br flex flex-col overflow-hidden">
                     <div
-                        class="px-5 py-4 border-b border-[#F1F5F9] font-bold text-[#475569] flex items-center gap-2 bg-[#f8fafc]/50">
+                        class="px-5 py-4 border-b border-[#F1F5F9] font-medium text-[#475569] flex items-center gap-2 bg-[#f8fafc]/50">
                         <Icon name="el-icon-History" /> 测试记录
                     </div>
                     <div class="grow min-h-0">
@@ -71,7 +71,7 @@
                                     class="history-item"
                                     :class="{ 'is-active': currentTestItem?.id === item.id }"
                                     @click="handleHistoryTestItem(item)">
-                                    <div class="truncate text-[13px] font-bold text-[#1E293B]">
+                                    <div class="truncate text-[13px] font-medium text-[#1E293B]">
                                         {{ item.prompt || item.ask }}
                                     </div>
                                     <div class="text-[11px] text-[#94A3B8] mt-1">{{ item.create_time }}</div>
@@ -107,7 +107,7 @@
                                             class="w-6 h-6 rounded bg-[#0065fb]/10 flex items-center justify-center text-primary text-[10px] font-black">
                                             #{{ index + 1 }}
                                         </div>
-                                        <span class="text-[12px] font-bold text-[#64748B] truncate max-w-[300px]">
+                                        <span class="text-[12px] font-medium text-[#64748B] truncate max-w-[300px]">
                                             {{ item.source }}
                                         </span>
                                     </div>
@@ -131,7 +131,7 @@
                     </ElScrollbar>
                     <div v-else class="h-full flex flex-col items-center justify-center grayscale opacity-50">
                         <Icon name="local-icon-empty" :size="80" />
-                        <p class="text-sm font-bold text-[#94A3B8] mt-4">暂无召回结果，请在左侧发起测试</p>
+                        <p class="text-sm font-medium text-[#94A3B8] mt-4">暂无召回结果，请在左侧发起测试</p>
                     </div>
                 </div>
             </div>

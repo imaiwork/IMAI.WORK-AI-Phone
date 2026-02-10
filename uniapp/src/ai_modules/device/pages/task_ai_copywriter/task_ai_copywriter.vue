@@ -4,13 +4,14 @@
             <scroll-view scroll-y class="h-full">
                 <view class="p-4">
                     <template v-if="!isGenerating">
-                        <view class="flex items-center gap-1 font-bold">
+                        <view class="flex items-center gap-1 font-medium">
                             <text class="text-[#FF3C26]">*</text>
                             <text>您想生成的主题大纲</text>
                         </view>
                         <view class="mt-4 p-4 bg-white rounded-[16rpx]">
                             <textarea
                                 v-model="contentVal"
+                                class="w-full"
                                 focus
                                 height="364"
                                 placeholder="点击此输入您想生成的主题，如：北京旅游"
@@ -20,9 +21,9 @@
                                 {{ contentVal.length }} / {{ contentMaxLength }}
                             </view>
                         </view>
-                        <view class="flex items-center gap-1 font-bold mt-[48rpx]">
+                        <view class="flex items-center gap-1 font-medium mt-[48rpx]">
                             <text class="text-[#FF3C26]">*</text>
-                            <text> 生成的口播文案数量</text>
+                            <text> 生成的文案数量</text>
                         </view>
                         <view class="flex items-center gap-[36rpx] mt-[28rpx]">
                             <view
@@ -44,7 +45,7 @@
                                         src="@/ai_modules/device/static/icons/star2.svg"
                                         class="w-[24rpx] h-[24rpx]"></image>
 
-                                    <text class="font-bold">文案{{ index + 1 }}生成中</text>
+                                    <text class="font-medium">文案{{ index + 1 }}生成中</text>
                                 </view>
                                 <view class="mt-4">
                                     <view class="flex flex-col gap-3">
@@ -61,7 +62,7 @@
                                 </view>
                             </view>
                             <template v-else>
-                                <view class="text-[28rpx] font-bold mr-4">
+                                <view class="text-[28rpx] font-medium mr-4">
                                     <u-input
                                         v-model="item.title"
                                         placeholder-style="color: #7C7E80; "
@@ -128,7 +129,7 @@
     </view>
     <u-popup v-model="showEditTopicPopup" mode="center" width="90%" :border-radius="20">
         <view class="p-4 bg-white rounded-[20rpx]">
-            <view class="text-[30rpx] font-bold text-center mt-2">编辑标签</view>
+            <view class="text-[30rpx] font-medium text-center mt-2">编辑标签</view>
             <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
                 <u-input
                     v-model="newTopic"
@@ -138,12 +139,12 @@
             </view>
             <view class="flex items-center gap-x-5 mt-[56rpx]">
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold text-[#0000004d]"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#0000004d]"
                     @click="showEditTopicPopup = false">
                     取消
                 </view>
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-bold text-white"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
                     @click="handleEditTopicConfirm"
                     >确定</view
                 >
@@ -303,7 +304,7 @@ onLoad((options: any) => {
 .prompt-num-item {
     @apply w-[84rpx] h-[72rpx] flex items-center justify-center bg-white text-[26rpx] relative rounded-[16rpx];
     &.active {
-        @apply font-bold text-black shadow-[0rpx_0rpx_0rpx_2rpx_#0065FB];
+        @apply font-medium text-black shadow-[0rpx_0rpx_0rpx_2rpx_#0065FB];
     }
 }
 
@@ -312,7 +313,7 @@ onLoad((options: any) => {
 }
 
 .topic-item {
-    @apply bg-[rgba(0,101,251,0.03)] rounded-[10rpx] text-[#000000b3] px-[28rpx] py-[16rpx] font-bold relative;
+    @apply bg-[rgba(0,101,251,0.03)] rounded-[10rpx] text-[#000000b3] px-[28rpx] py-[16rpx] font-medium relative;
 }
 
 .send-btn {

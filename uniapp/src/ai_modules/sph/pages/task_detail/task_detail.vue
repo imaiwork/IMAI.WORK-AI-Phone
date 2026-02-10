@@ -5,11 +5,11 @@
             <task-card :item="detail" @changeStatus="handleChangeStatus" @edit="handleEditTask"></task-card>
         </view>
         <view class="flex-shrink-0 flex items-center justify-between px-[32rpx] my-[32rpx] text-[26rpx]">
-            <view class="text-[#000000cc] font-bold">获客线索</view>
+            <view class="text-[#000000cc] font-medium">获客线索</view>
             <navigator
                 :url="`/ai_modules/sph/pages/clue_list/clue_list?task_id=${detail.id}`"
                 hover-class="none"
-                class="text-primary font-bold"
+                class="text-primary font-medium"
                 >查看线索词</navigator
             >
         </view>
@@ -41,7 +41,7 @@
         </view>
         <view class="fixed bottom-[5vh] left-0 flex justify-center w-full z-[888]">
             <view
-                class="w-[280rpx] h-[80rpx] bg-[#FF4D4F] text-white text-[26rpx] font-bold rounded-[12rpx] flex items-center justify-center"
+                class="w-[280rpx] h-[80rpx] bg-[#FF4D4F] text-white text-[26rpx] font-medium rounded-[12rpx] flex items-center justify-center"
                 @click="handleDeleteClue"
                 >删除线索记录</view
             >

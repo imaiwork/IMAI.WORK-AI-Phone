@@ -290,14 +290,14 @@ export default function useHandle(props?: UseHandleProps) {
             friendInfo.value = {
                 ...friendInfo.value,
                 ...data,
-                friend_id: friendInfo.value.friend_id || data.friend_id,
-                avatar: friendInfo.value.avatar || data.avatar,
-                phone: friendInfo.value.phone || data.phone,
-                remark: friendInfo.value.remark || data.remark,
-                nickname: friendInfo.value.nickname || data.nickname,
-                source: friendInfo.value.source || data.source,
-                birth_date: friendInfo.value.birth_date || data.birth_date,
-                contact_address: friendInfo.value.contact_address || data.contact_address,
+                friend_id: data.friend_id || friendInfo.value.friend_id,
+                avatar: data.avatar || friendInfo.value.avatar,
+                phone: data.phone || friendInfo.value.phone,
+                remark: data.remark || friendInfo.value.remark,
+                nickname: data.nickname || friendInfo.value.nickname,
+                source: data.source || friendInfo.value.source,
+                birth_date: data.birth_date || friendInfo.value.birth_date,
+                contact_address: data.contact_address || friendInfo.value.contact_address,
             };
         } catch (error) {
             console.error("获取好友信息失败:", error);
@@ -321,12 +321,7 @@ export default function useHandle(props?: UseHandleProps) {
             });
             await getFriendInfo();
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "修改失败，请稍后再试";
-            if (typeof feedback !== "undefined" && feedback.msgError) {
-                feedback.msgError(errorMessage);
-            } else {
-                console.error("更新用户信息失败:", errorMessage);
-            }
+            feedback.msgError(error);
         } finally {
             userInfoIsLocked.value = false;
         }

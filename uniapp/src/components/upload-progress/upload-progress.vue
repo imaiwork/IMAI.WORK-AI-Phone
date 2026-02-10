@@ -1,12 +1,12 @@
 <template>
     <u-popup v-model="show" mode="center" border-radius="24" width="90%" :mask-close-able="false">
         <view class="bg-white rounded-[24rpx] p-[48rpx]">
-            <view class="font-bold text-center">上传进度</view>
+            <view class="font-medium text-center">上传进度</view>
             <view class="mt-[48rpx]">
                 <view class="">
                     <view class="flex items-center justify-between">
                         <view>第{{ currentIndex }}个素材上传中...</view>
-                        <view class="text-[#515357] font-bold text-[32rpx]"> {{ currentProgress }}% </view>
+                        <view class="text-[#515357] font-medium text-[32rpx]"> {{ currentProgress }}% </view>
                     </view>
                     <view class="mt-[16rpx]">
                         <u-line-progress
@@ -21,7 +21,7 @@
                 <view class="mt-[24rpx]">
                     <view class="flex items-center justify-between">
                         <view>总体进度</view>
-                        <view class="text-[#515357] font-bold text-[32rpx]">
+                        <view class="text-[#515357] font-medium text-[32rpx]">
                             {{ currentIndex }}/{{ uploadList.length }}
                         </view>
                     </view>

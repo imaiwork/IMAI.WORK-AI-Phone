@@ -12,7 +12,7 @@
                         class="bg-primary rounded-3xl px-2 h-8 w-28 flex items-center gap-1 justify-end"
                         @click="togglePlay()"
                         v-if="link">
-                        <text class="text-xs text-white font-bold">{{ duration }}″</text>
+                        <text class="text-xs text-white font-medium">{{ duration }}″</text>
                         <view class="w-[32rpx] h-[32rpx]" style="transform: rotateY(180deg)">
                             <image
                                 src="@/ai_modules/ladder_player/static/images/common/sound_white.png"
@@ -82,7 +82,7 @@
                                 src="@/ai_modules/ladder_player/static/images/common/sound_play_chat.gif"
                                 class="w-[32rpx] h-[32rpx]"
                                 v-else />
-                            <text class="text-xs text-[#8C582D] font-bold">{{ duration }}″</text>
+                            <text class="text-xs text-[#8C582D] font-medium">{{ duration }}″</text>
                         </view>
                     </view>
                     <view class="bg-[#FAEEE4] text-[#524B6B] rounded-[32rpx] rounded-tl-none px-4 py-3 leading-[44rpx]">

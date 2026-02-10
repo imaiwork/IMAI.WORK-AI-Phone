@@ -20,6 +20,8 @@ export interface ChatMessage {
     consume_tokens?: any; // 消耗的token信息
     tokens_info?: any; // (历史记录) 消耗的token信息
     robot_id?: string | number; // 机器人ID
+    quotes?: string; // 引用内容
+    stop_reply?: string; // 用户停止内容生成后的回复内容
 }
 
 // 定义文件上传后的结构
@@ -108,6 +110,7 @@ export const useChatStore = defineStore("chat", () => {
         presence_penalty?: number;
         frequency_penalty?: number;
         context_num?: number;
+        quotes?: string;
     }>({
         model_id: undefined,
         model_sub_id: undefined,
@@ -116,6 +119,7 @@ export const useChatStore = defineStore("chat", () => {
         presence_penalty: undefined,
         frequency_penalty: undefined,
         context_num: undefined,
+        quotes: undefined,
     });
 
     // --- Actions ---
@@ -156,6 +160,10 @@ export const useChatStore = defineStore("chat", () => {
         //     });
         // }
         agentValue.value = agent;
+    }
+
+    function setQuoteText(text: string) {
+        extraParams.value.quotes = text || "";
     }
 
     /**
@@ -263,5 +271,6 @@ export const useChatStore = defineStore("chat", () => {
         setFiles,
         clearFiles,
         resetRoute,
+        setQuoteText,
     };
 });

@@ -1,7 +1,7 @@
 <template>
     <view class="h-screen flex flex-col bg-[#F6F6F6]">
         <u-navbar title="查看线索词" :background="{ backgroundColor: '#f6f6f6' }" />
-        <view class="px-[32rpx] mt-[32rpx] font-bold"> #{{ keywordVal }} </view>
+        <view class="px-[32rpx] mt-[32rpx] font-medium"> #{{ keywordVal }} </view>
         <view class="grow min-h-0 mt-[32rpx]">
             <z-paging
                 ref="pagingRef"

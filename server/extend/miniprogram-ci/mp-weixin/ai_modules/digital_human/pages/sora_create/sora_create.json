@@ -12,6 +12,7 @@
     "video-preview": "../../../../components/video-preview/video-preview",
     "tokens-cost": "../../components/tokens-cost/tokens-cost",
     "create-success-pop": "../../components/create-success-pop/create-success-pop",
-    "choose-role": "../../components/choose-role/choose-role"
+    "choose-role": "../../components/choose-role/choose-role",
+    "choose-agent": "../../components/choose-agent/choose-agent"
   }
 }

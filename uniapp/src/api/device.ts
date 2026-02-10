@@ -260,6 +260,16 @@ export const createCircleLikeTask = (data: any) => {
     return request.post({ url: "/device.likeReply/add", data });
 };
 
+// 个微接管任务新增
+export const createWechatPrivateTask = (data: any) => {
+    return request.post({ url: "/device.wechat/add", data });
+};
+
+// 截流获客任务新增
+export const createInteractionTask = (data: any) => {
+    return request.post({ url: "/sv.leadScraping/add", data });
+};
+
 // 朋友圈发布时间校验
 export const checkCirclePublishTime = (data: any) => {
     return request.post({ url: "/wechat.circle/check", data });
@@ -285,7 +295,62 @@ export const marketingAnalysis = (data: any) => {
     return request.post({ url: "/auto.needsAnalysis/analysis", data });
 };
 
+// 24h任务营销数据添加
+export const addMarketingAnalysisData = (data: any) => {
+    return request.post({ url: "/auto.needsAnalysis/add", data });
+};
+
+// 24h任务营销数据更新
+export const updateMarketingAnalysisData = (data: any) => {
+    return request.post({ url: "/auto.needsAnalysis/update", data });
+};
+
 // 24h任务营销分析详情
 export const marketingAnalysisDetail = (data: any) => {
     return request.get({ url: "/auto.needsAnalysis/detail", data });
+};
+
+// 24h任务营销分析报告
+export const marketingAnalysisReport = (data: Record<string, any>) => {
+    return request.post({ url: "/auto.needsAnalysis/report", data });
+};
+
+// 手动发布列表
+export const getManualPublishList = (data: Record<string, any>) => {
+    return request.get({ url: "/sv.mediaManualSetting/lists", data });
+};
+
+// 手动发布创建
+export const createManualPublish = (data: Record<string, any>) => {
+    return request.post({ url: "/sv.mediaManualSetting/add", data });
+};
+
+// 手动发布删除
+export const deleteManualPublish = (data: Record<string, any>) => {
+    return request.post({ url: "/sv.mediaManualSetting/delete", data });
+};
+
+// 手动发布编辑
+export const editManualPublish = (data: Record<string, any>) => {
+    return request.post({ url: "/sv.mediaManualSetting/update", data });
+};
+
+// 手动发布任务详情
+export const getManualPublishTaskDetail = (data: Record<string, any>) => {
+    return request.get({ url: "/sv.mediaManualSetting/detail", data });
+};
+
+// 手动发布任务列表
+export const getManualPublishTaskList = (data: Record<string, any>) => {
+    return request.get({ url: "/sv.mediaManualTask/lists", data });
+};
+
+// 手动发布任务删除
+export const deleteManualPublishTask = (data: Record<string, any>) => {
+    return request.post({ url: "/sv.mediaManualTask/delete", data });
+};
+
+// 手动发布任务发布
+export const publishManualPublishTask = (data: Record<string, any>) => {
+    return request.post({ url: "/sv.mediaManualTask/publish", data });
 };

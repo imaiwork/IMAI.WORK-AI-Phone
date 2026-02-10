@@ -14,16 +14,16 @@
         <view class="px-[26rpx] mt-[24rpx]">
             <view class="bg-white rounded-[20rpx] px-[34rpx] py-[20rpx] flex justify-between gap-x-4">
                 <view>
-                    <view class="font-bold text-[30rpx]">今日任务</view>
+                    <view class="font-medium text-[30rpx]">今日任务</view>
                     <view class="mt-[48rpx]">
-                        <text class="text-[34rpx] font-bold">{{ statistics.completed + statistics.failure }}</text
+                        <text class="text-[34rpx] font-medium">{{ statistics.completed + statistics.failure }}</text
                         ><text class="text-[#0000004d]"> / {{ statistics.all }}</text>
                     </view>
                     <view class="mt-5">
                         <navigator
                             url="/ai_modules/device/pages/choose_task_type/choose_task_type"
                             hover-class="none"
-                            class="w-[200rpx] h-[70rpx] rounded-full bg-black text-white font-bold text-[28rpx] flex items-center justify-center gap-x-1">
+                            class="w-[200rpx] h-[70rpx] rounded-full bg-black text-white font-medium text-[28rpx] flex items-center justify-center gap-x-1">
                             <u-icon name="plus" size="24"></u-icon>
                             新增任务
                         </navigator>
@@ -32,7 +32,7 @@
                 <view class="">
                     <view class="mt-4">
                         <semi-circle-progress :progress="getProgress" :size="120" :strokeWidth="8">
-                            <view class="text-[34rpx] font-bold text-primary">{{ getProgress }}%</view>
+                            <view class="text-[34rpx] font-medium text-primary">{{ getProgress }}%</view>
                         </semi-circle-progress>
                     </view>
                     <view class="grid grid-cols-2 gap-3 mt-5">
@@ -60,7 +60,7 @@
                 </view>
             </view>
         </view>
-        <view class="mt-5 px-[26rpx] text-[30rpx] font-bold">任务列表({{ taskList.length }})</view>
+        <view class="mt-5 px-[26rpx] text-[30rpx] font-medium">任务列表({{ taskList.length }})</view>
         <view class="grow min-h-0 px-[26rpx] mt-5">
             <z-paging ref="pagingRef" v-model="taskList" :fixed="false" @query="queryTaskList">
                 <view>

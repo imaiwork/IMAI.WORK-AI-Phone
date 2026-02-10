@@ -12,7 +12,7 @@
             <div class="absolute w-6 h-6 top-[18px] right-[18px] z-[22]" @click="close">
                 <close-btn />
             </div>
-            <div class="text-[15px] font-bold">任务名称设置</div>
+            <div class="text-[15px] font-medium">任务名称设置</div>
             <div class="mt-4">
                 <ElInput
                     v-model="formData.name"

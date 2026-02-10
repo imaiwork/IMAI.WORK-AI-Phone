@@ -9,6 +9,7 @@
     "video-preview-v2": "../../../components/video-preview-v2/video-preview-v2",
     "u-input": "../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "u-popup": "../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
+    "popup-bottom": "../../../components/popup-bottom/popup-bottom",
     "puzzle-card": "../../components/puzzle-card/puzzle-card"
   }
 }

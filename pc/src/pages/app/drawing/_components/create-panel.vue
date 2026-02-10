@@ -19,13 +19,13 @@
                         >
                         <span class="text-[13px] font-[900] text-[#1E293B] ml-1">
                             {{ consumeTokens }}
-                            <span class="text-[10px] text-[#94A3B8] font-bold">{{ consumeTokensUnit }}</span>
+                            <span class="text-[10px] text-[#94A3B8] font-medium">{{ consumeTokensUnit }}</span>
                         </span>
                     </div>
 
                     <ElTooltip effect="light" placement="top" popper-class="custom-tooltip">
                         <div
-                            class="flex items-center gap-1 text-[11px] font-bold text-[#94A3B8] hover:text-[#0065fb] cursor-pointer transition-colors group">
+                            class="flex items-center gap-1 text-[11px] font-medium text-[#94A3B8] hover:text-[#0065fb] cursor-pointer transition-colors group">
                             <span>查看明细</span>
                             <Icon name="el-icon-QuestionFilled" :size="12"></Icon>
                         </div>
@@ -34,11 +34,11 @@
                                 <div class="text-[13px] font-black text-[#1E293B] mb-3">算力消耗明细</div>
                                 <div class="space-y-2.5">
                                     <div class="flex items-center justify-between text-[11px]">
-                                        <span class="text-[#94A3B8] font-bold">参考生成单价</span>
+                                        <span class="text-[#94A3B8] font-medium">参考生成单价</span>
                                         <span class="text-[#1E293B] font-black">{{ consumeTokens }}</span>
                                     </div>
                                     <div class="flex items-center justify-between text-[11px]">
-                                        <span class="text-[#94A3B8] font-bold">生成数量</span>
+                                        <span class="text-[#94A3B8] font-medium">生成数量</span>
                                         <span class="text-[#1E293B] font-black">×{{ formData.img_count || 1 }}</span>
                                     </div>
                                     <div class="h-[1px] bg-[#F1F5F9] my-1"></div>

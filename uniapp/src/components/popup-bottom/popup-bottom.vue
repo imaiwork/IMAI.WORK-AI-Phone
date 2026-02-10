@@ -25,7 +25,7 @@
                         </view>
                     </view>
                     <view class="mt-[40rpx] pb-[30rpx]">
-                        <view class="font-bold text-center">{{ title }}</view>
+                        <view class="font-medium text-center">{{ title }}</view>
                     </view>
                     <u-line />
                 </view>
@@ -46,7 +46,7 @@ const props = defineProps({
     },
     height: {
         type: String,
-        default: "90%",
+        default: "85%",
     },
     borderRadius: {
         type: [String, Number],

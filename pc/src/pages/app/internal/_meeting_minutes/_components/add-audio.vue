@@ -40,7 +40,7 @@
                                     <Icon name="el-icon-UploadFilled" color="var(--color-primary)" :size="40" />
                                 </div>
                                 <div class="font-black text-gray-950 text-lg">点击或拖拽上传音频</div>
-                                <div class="mt-4 space-y-1.5 text-[11px] text-tx-placeholder font-bold">
+                                <div class="mt-4 space-y-1.5 text-[11px] text-tx-placeholder font-medium">
                                     <p>• 支持格式: {{ getAccept.replace(/\./g, "").toUpperCase() }}</p>
                                     <p>• 单个文件不超过 {{ maxFileSize }}MB / {{ maxDuration }}小时</p>
                                     <p>• 单次最多支持上传 {{ fileLimit }} 个文件</p>
@@ -84,7 +84,7 @@
                                                         {{ item.file.name }}
                                                     </div>
                                                     <div
-                                                        class="flex items-center gap-2 text-[10px] font-bold text-tx-placeholder">
+                                                        class="flex items-center gap-2 text-[10px] font-medium text-tx-placeholder">
                                                         <span>{{ formatFileSize(item.file.size) }}</span>
                                                         <span class="w-1 h-1 rounded-full bg-gray-300"></span>
                                                         <span>{{ item.duration }}s</span>
@@ -176,7 +176,7 @@
                             <ElTooltip placement="top">
                                 <template #content>
                                     <div class="p-1">
-                                        <p class="font-bold mb-1">计费详情:</p>
+                                        <p class="font-medium mb-1">计费详情:</p>
                                         <p class="text-[11px] opacity-80">
                                             {{ tokensValue.score }} {{ tokensValue.unit }} / 每分钟
                                         </p>

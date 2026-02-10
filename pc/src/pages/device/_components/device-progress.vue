@@ -21,8 +21,8 @@
                             </div>
                         </div>
 
-                        <h3 class="text-xl font-bold text-[#1E293B] mb-2">正在同步云端数据</h3>
-                        <p class="text-[15px] font-bold text-primary px-4 py-1.5 bg-[#0065fb]/5 rounded-full mb-6">
+                        <h3 class="text-xl font-medium text-[#1E293B] mb-2">正在同步云端数据</h3>
+                        <p class="text-[15px] font-medium text-primary px-4 py-1.5 bg-[#0065fb]/5 rounded-full mb-6">
                             {{ step || "正在建立与 RPA 软件的连接..." }}
                         </p>
 
@@ -60,10 +60,10 @@
                         </div>
 
                         <div class="flex gap-3 w-full">
-                            <ElButton class="flex-1 !h-12 !rounded-2xl !font-bold" @click="handleClose"
+                            <ElButton class="flex-1 !h-12 !rounded-2xl !font-medium" @click="handleClose"
                                 >暂不同步</ElButton
                             >
-                            <ElButton type="primary" class="flex-1 !h-12 !rounded-2xl !font-bold" @click="handleRetry"
+                            <ElButton type="primary" class="flex-1 !h-12 !rounded-2xl !font-medium" @click="handleRetry"
                                 >重新尝试</ElButton
                             >
                         </div>
@@ -76,11 +76,11 @@
                     class="w-20 h-20 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto mb-6 border border-emerald-100">
                     <Icon name="el-icon-CircleCheckFilled" :size="48" />
                 </div>
-                <h3 class="text-xl font-bold text-slate-800 mb-2">同步任务完成</h3>
+                <h3 class="text-xl font-medium text-slate-800 mb-2">同步任务完成</h3>
                 <p class="text-[14px] text-slate-400 font-medium mb-8">AI 设备及对应账号信息已成功添加至列表</p>
 
                 <div
-                    class="bg-[#ecfdf5]/50 rounded-2xl p-4 mb-8 text-[12px] text-emerald-700 font-bold border border-[#d1fae5]/50">
+                    class="bg-[#ecfdf5]/50 rounded-2xl p-4 mb-8 text-[12px] text-emerald-700 font-medium border border-[#d1fae5]/50">
                     若列表未及时显示，请在 1-2 分钟后刷新页面重试
                 </div>
 

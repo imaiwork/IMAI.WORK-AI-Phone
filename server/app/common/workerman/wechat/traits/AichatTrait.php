@@ -334,7 +334,7 @@ trait AichatTrait
                     if (empty($msgs)) {
                         $this->redis()->del($key);
                         Timer::del($connection->timerId);
-                        unset($msgs, $key); 
+                        unset($msgs, $key);
                         return;
                     }
                     if ($reply['multiple_type'] == 1) {
@@ -374,7 +374,7 @@ trait AichatTrait
 
                     $this->redis()->del($key);
                     Timer::del($connection->timerId);
-                    unset($connection->timerId); 
+                    unset($connection->timerId);
                 });
             }
         } catch (\Exception $e) {
@@ -391,10 +391,31 @@ trait AichatTrait
         } finally {
             // 释放所有临时变量和数组，减少内存占用
             unset(
-                $payload, $device, $wechat, $friend, $robot, $reply, $historyMsg, 
-                $promat, $request, $workingTime, $work, $nonWorkingKey, $nonWorkingReplyStatus, 
-                $ext, $tmps, $tmpStr, $stop, $match, $TaskId, $statusKey, $key, $timerid,
-                $msgs, $_content, $lastMessage
+                $payload,
+                $device,
+                $wechat,
+                $friend,
+                $robot,
+                $reply,
+                $historyMsg,
+                $promat,
+                $request,
+                $workingTime,
+                $work,
+                $nonWorkingKey,
+                $nonWorkingReplyStatus,
+                $ext,
+                $tmps,
+                $tmpStr,
+                $stop,
+                $match,
+                $TaskId,
+                $statusKey,
+                $key,
+                $timerid,
+                $msgs,
+                $_content,
+                $lastMessage
             );
         }
     }
@@ -473,10 +494,10 @@ trait AichatTrait
             }
 
             $history = '';
-            foreach ($logs as $log){
+            foreach ($logs as $log) {
                 $history .= "\n " . $log['role'] . ': ' . $log['content'] . '。';
             }
-//            $history = implode("\n", array_column($logs, 'content'));
+            //            $history = implode("\n", array_column($logs, 'content'));
             $keyword = str_replace(
                 ['角色设定', '用户发送的内容', '相关知识库检索结果'],
                 [$robot->roles_prompt, $request['message'], empty($knowledge) ? '' : '相关知识库检索结果'],
@@ -638,7 +659,7 @@ trait AichatTrait
         //TODO 添加AI回复记录
         $payload['user_message'] = $reply;
         $payload['message_type'] = $payload['request']['message_type'];
-        $this->setFriendHistoryMsg($payload,true);
+        $this->setFriendHistoryMsg($payload, true);
     }
 
     private function _handleResponse(array $response, array $request)
@@ -677,6 +698,9 @@ trait AichatTrait
 
     private function _sendMessage(array $request)
     {
+        // 解析消息
+        $this->parseReplyImageToSend($request);
+
         $message_type = $request['is_chatroom'] === 1 ? ($request['message_type'] != 2 ? 22 : $request['message_type']) : $request['message_type'];
         $aiContent = TalkToFriendTaskHandler::handle([
             'DeviceId' => $request['device_code'],
@@ -690,20 +714,20 @@ trait AichatTrait
             'Immediate' => true
         ]);
 
-        // $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('sendFriendTalkNoticeMessage Send')->withContext([
-        //     'DeviceId' => $request['device_code'],
-        //     'WeChatId' => $request['wechat_id'],
-        //     'FriendId' => $request['friend_id'],
-        //     'TaskId' => time(),
-        //     'ContentType' => $message_type,
-        //     'Remark' => $request['MsgSvrId'] ?? '',
-        //     'MsgId' => time(),
-        //     'Content' => $request['message'],
-        //     'Immediate' => true,
-        //     'user_message' => $request['user_message'] ?? '',
-        // ])->log();
+        $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('sendFriendTalkNoticeMessage Send')->withContext([
+            'DeviceId' => $request['device_code'],
+            'WeChatId' => $request['wechat_id'],
+            'FriendId' => $request['friend_id'],
+            'TaskId' => time(),
+            'ContentType' => $message_type,
+            'Remark' => $request['MsgSvrId'] ?? '',
+            'MsgId' => time(),
+            'Content' => $request['message'],
+            'Immediate' => true,
+            'user_message' => $request['user_message'] ?? '',
+        ])->log();
 
-        if (!$request['is_chatroom']){
+        if (!$request['is_chatroom']) {
             $this->setFriendTagStrategy($request);
         }
 
@@ -724,6 +748,38 @@ trait AichatTrait
 
         $this->sendChannelMessage(SocketType::SOCKET, $request['device_code'], $aiContent);
         unset($aiContent);
+    }
+
+    private function parseReplyImageToSend(array $request): void
+    {
+        $images = extractAllImageUrls($request['message']);
+        foreach ($images as $ik => $image) {
+            $filepath = FileService::getFileUrl($image);
+            $aiContent = TalkToFriendTaskHandler::handle([
+                'DeviceId' => $request['device_code'],
+                'WeChatId' => $request['wechat_id'],
+                'FriendId' => $request['friend_id'],
+                'TaskId' => time(),
+                'ContentType' => 2,
+                'Remark' => $request['MsgSvrId'] ?? '',
+                'MsgId' => time(),
+                'Content' => $filepath,
+                'Immediate' => true
+            ]);
+            $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('parse image Send')->withContext([
+                'DeviceId' => $request['device_code'],
+                'WeChatId' => $request['wechat_id'],
+                'FriendId' => $request['friend_id'],
+                'TaskId' => time(),
+                'ContentType' => 2,
+                'Remark' => $request['MsgSvrId'] ?? '',
+                'MsgId' => time(),
+                'Content' => $filepath,
+                'Immediate' => true,
+                'user_message' => $request['user_message'] ?? '',
+            ])->log();
+            $this->sendChannelMessage(SocketType::SOCKET, $request['device_code'], $aiContent);
+        }
     }
 
     /**
@@ -815,9 +871,8 @@ trait AichatTrait
                         $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('模糊匹配')->withContext([
                             'data' => $resultMatch
                         ])->log();
-                        
                     }
-                    
+
                     // if (strpos($item->keyword, $request['message']) !== false || strpos($request['message'], $item->keyword) !== false) {
                     //     $this->_parseMessage($request, $item->reply);
                     //     $match = true;
@@ -913,8 +968,8 @@ trait AichatTrait
             ]);
         }
 
-        if (!$isSend){
-            $msgs = (count($msgs) / 2) > $number_chat_rounds ? array_slice($msgs, -($number_chat_rounds * 2 - 1)) : $msgs;
+        if (!$isSend) {
+            $msgs = (count($msgs) / 2) > $number_chat_rounds ? array_slice($msgs, - ($number_chat_rounds * 2 - 1)) : $msgs;
         }
 
         $this->redis()->set($key, json_encode($msgs, JSON_UNESCAPED_UNICODE), 86400 * 15);

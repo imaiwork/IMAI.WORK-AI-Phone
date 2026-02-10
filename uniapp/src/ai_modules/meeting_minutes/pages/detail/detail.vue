@@ -127,7 +127,7 @@ onLoad((options: any) => {
         .tab-item {
             @apply text-xl text-[#717189] relative;
             &.active {
-                @apply text-black font-bold;
+                @apply text-black font-medium;
                 &::after {
                     content: "";
                     transform: translateX(-50%);

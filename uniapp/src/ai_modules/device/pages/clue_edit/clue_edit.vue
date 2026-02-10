@@ -5,16 +5,16 @@
                 class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
                 @click="handleEditClue(-1)">
                 <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
-                <text class="font-bold text-[32rpx]">手动输入</text>
+                <text class="font-medium text-[32rpx]">手动输入</text>
             </view>
             <view
                 class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-black rounded-[10rpx]"
                 @click="showClueGenPopup = true">
                 <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
-                <text class="text-white font-bold text-[32rpx]">AI生成</text>
+                <text class="text-white font-medium text-[32rpx]">AI生成</text>
             </view>
         </view>
-        <view class="font-bold text-[30rpx] px-4 mt-[60rpx]">线索词（{{ clueList.length }}）</view>
+        <view class="font-medium text-[30rpx] px-4 mt-[60rpx]">线索词（{{ clueList.length }}）</view>
         <view class="grow min-h-0 mt-[32rpx]">
             <scroll-view class="h-full" scroll-y>
                 <view class="px-4 flex flex-wrap gap-4 pb-[100rpx]">
@@ -35,7 +35,7 @@
         </view>
         <view class="bg-white flex-shrink-0 pb-5 pt-4 px-6">
             <view
-                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-bold flex items-center justify-center"
+                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-medium flex items-center justify-center"
                 @click="handleSave">
                 确定保存
             </view>
@@ -114,6 +114,6 @@ onLoad((options: any) => {
 
 <style scoped lang="scss">
 .clue-item {
-    @apply relative rounded-[16rpx] bg-white shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] px-4 py-2 font-bold;
+    @apply relative rounded-[16rpx] bg-white shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] px-4 py-2 font-medium;
 }
 </style>

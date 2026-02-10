@@ -274,6 +274,10 @@ class AccountLogEnum
 
     const TOKENS_DEC_COMBINED_PICTURE_TITLE = 10201;
     const TOKENS_DEC_COMBINED_PICTURE = 10202;
+
+
+    const TOKENS_DEC_COZE_COPYWRITING = 10203;
+    const TOKENS_DEC_DOUYIN_JS = 10204;
     /**
      * 用户算力（减少类型汇总）
      */
@@ -370,6 +374,11 @@ class AccountLogEnum
         self::TOKENS_DEC_NEWS_MIXCUT_TITLE,
         self::TOKENS_DEC_COMBINED_PICTURE_TITLE,
         self::TOKENS_DEC_COMBINED_PICTURE,
+        self::TOKENS_DEC_COZE_COPYWRITING,
+        self::TOKENS_DEC_DOUYIN_JS,
+
+
+
         self::TOKENS_DEC_SORA_VIDEO,
         self::TOKENS_DEC_SORA_PRO_VIDEO,
         self::TOKENS_DEC_SORA_COPYWRITING,
@@ -567,6 +576,8 @@ class AccountLogEnum
             self::TOKENS_DEC_NEWS_MIXCUT_TITLE => '新闻体标题生成减少算力',
             self::TOKENS_DEC_COMBINED_PICTURE_TITLE => '小红书图片合成封面标题内容生成减少算力',
             self::TOKENS_DEC_COMBINED_PICTURE => '小红书图片自动合成减少算力',
+            self::TOKENS_DEC_COZE_COPYWRITING => 'Coze智能体文案生成减少算力',
+            self::TOKENS_DEC_DOUYIN_JS => '【抖音】扫码发布减少算力',
             self::TOKENS_DEC_SORA_VIDEO => '一句话生成视频减少算力',
             self::TOKENS_DEC_SORA_PRO_VIDEO => '一句话生成视频(pro)减少算力',
             self::TOKENS_DEC_SORA_COPYWRITING => '一句话生成视频AI优化文案减少算力',

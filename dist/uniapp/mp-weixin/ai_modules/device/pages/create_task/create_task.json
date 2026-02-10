@@ -12,6 +12,7 @@
     "choose-material": "../../../../components/choose-material/choose-material",
     "video-preview": "../../../../components/video-preview/video-preview",
     "number-pop": "../../components/number-pop/number-pop",
-    "choose-history": "../../components/choose-history/choose-history"
+    "choose-history": "../../components/choose-history/choose-history",
+    "keywords-edit": "../../components/keywords-edit/keywords-edit"
   }
 }

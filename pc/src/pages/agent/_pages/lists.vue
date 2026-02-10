@@ -6,7 +6,7 @@
                 <img src="@/assets/images/agent.svg" class="w-20 h-20 mt-10" />
                 <div>
                     <div class="text-[20px] font-[900] text-[#1E293B] mb-1">{{ ToolEnumMap[ToolEnum.AGENT] }}中心</div>
-                    <div class="text-base font-bold text-[#94A3B8]">
+                    <div class="text-base font-medium text-[#94A3B8]">
                         一键激活模块化智能体，精准执行流程、分析等多类任务，化身您的数字员工。
                     </div>
                 </div>
@@ -78,7 +78,8 @@
                                         class="text-[15px] font-[900] text-[#1E293B] mb-2 group-hover:text-primary transition-colors">
                                         {{ item.name }}
                                     </div>
-                                    <div class="text-[12px] font-bold text-[#94A3B8] leading-relaxed line-clamp-2 h-9">
+                                    <div
+                                        class="text-[12px] font-medium text-[#94A3B8] leading-relaxed line-clamp-2 h-9">
                                         {{ item.intro || item.introduced || "暂无描述信息" }}
                                     </div>
 
@@ -90,7 +91,7 @@
                                                 class="w-5 h-5 rounded-full bg-[#0065fb]/10 flex items-center justify-center">
                                                 <Icon name="el-icon-User" :size="10" />
                                             </div>
-                                            <span class="text-[11px] font-bold text-[#94A3B8]">{{
+                                            <span class="text-[11px] font-medium text-[#94A3B8]">{{
                                                 item.source_text
                                             }}</span>
                                         </div>

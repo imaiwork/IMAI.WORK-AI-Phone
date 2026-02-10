@@ -11,14 +11,14 @@
         </view>
         <view class="relative">
             <view class="px-[88rpx] mt-4">
-                <view class="font-bold text-[50rpx] text-[#0076BA]">AI图片创作</view>
-                <view class="font-bold text-[32rpx] text-[#0076bab3] mt-[12rpx]">一站式满足各种场景的图片设计</view>
+                <view class="font-medium text-[50rpx] text-[#0076BA]">AI图片创作</view>
+                <view class="font-medium text-[32rpx] text-[#0076bab3] mt-[12rpx]">一站式满足各种场景的图片设计</view>
             </view>
             <view class="mt-[76rpx] px-4 grid grid-cols-2 gap-[20rpx]">
                 <view
                     class="bg-white rounded-[20rpx] px-[34rpx] py-[26rpx] relative h-[190rpx] overflow-hidden"
                     @click="toPage(PageKey.SMART_PUZZLE)">
-                    <view class="text-[34rpx] font-bold">智能拼图</view>
+                    <view class="text-[34rpx] font-medium">智能拼图</view>
                     <view class="text-xs text-[#0000004d] mt-[4rpx]">自动拼图包装</view>
                     <image
                         src="@/ai_modules/drawing/static/images/common/puzzle.jpg"
@@ -28,7 +28,7 @@
                 <view
                     class="bg-white rounded-[20rpx] px-[34rpx] py-[26rpx] relative h-[190rpx] overflow-hidden"
                     @click="toPage(PageKey.AI_DRAWING)">
-                    <view class="text-[34rpx] font-bold">AI生图</view>
+                    <view class="text-[34rpx] font-medium">AI生图</view>
                     <view class="text-xs text-[#0000004d] mt-[4rpx]">即将上线</view>
                     <image
                         src="@/ai_modules/drawing/static/images/common/drawing.jpg"
@@ -44,7 +44,7 @@
                     @click="toPage(item.key)">
                     <image :src="item.icon" class="w-[40rpx] h-[40rpx]"></image>
                     <view class="relative mt-1">
-                        <text class="font-bold">{{ item.name }}</text>
+                        <text class="font-medium">{{ item.name }}</text>
                         <image
                             v-if="item.disabled"
                             src="@/ai_modules/drawing/static/icons/lock.svg"
@@ -54,7 +54,7 @@
             </view>
             <view class="mt-[44rpx] px-4">
                 <view class="flex items-center justify-between">
-                    <view class="font-bold text-[30rpx]">拼图创作</view>
+                    <view class="font-medium text-[30rpx]">拼图创作</view>
                     <view class="flex items-center gap-x-1" @click="toPage(PageKey.ME_CREATE)">
                         <text class="text-xs">全部</text>
                         <u-icon name="arrow-right" color="#727278"></u-icon>

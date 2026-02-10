@@ -1,7 +1,7 @@
 <template>
     <view>
         <view>
-            <view class="text-[30rpx] font-bold"> 基础设置 </view>
+            <view class="text-[30rpx] font-medium"> 基础设置 </view>
             <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx] shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.03)]">
                 <view>
                     <view class="text-[#7C7E80]">任务名称</view>
@@ -29,7 +29,9 @@
                                 hover-class="none">
                                 <text
                                     :class="[
-                                        formData?.device_codes?.length ? 'text-primary font-bold' : 'text-[#00000033]',
+                                        formData?.device_codes?.length
+                                            ? 'text-primary font-medium'
+                                            : 'text-[#00000033]',
                                     ]"
                                     >{{
                                         formData?.device_codes?.length
@@ -48,7 +50,7 @@
                                 hover-class="none">
                                 <text
                                     :class="[
-                                        formData?.accounts?.length ? 'text-primary font-bold' : 'text-[#00000033]',
+                                        formData?.accounts?.length ? 'text-primary font-medium' : 'text-[#00000033]',
                                     ]"
                                     >{{
                                         formData?.accounts?.length ? `${formData?.accounts?.length}个账号` : "选择账号"
@@ -62,7 +64,7 @@
             </view>
         </view>
         <view class="mt-[32rpx]">
-            <view class="text-[30rpx] font-bold"> 时间设置 </view>
+            <view class="text-[30rpx] font-medium"> 时间设置 </view>
             <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx] shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.03)]">
                 <view>
                     <view class="text-[#7C7E80]">任务频率</view>
@@ -108,8 +110,38 @@
                     </view>
                 </view>
                 <view class="mt-[28rpx]">
-                    <view class="text-[#7C7E80]">每日执行时间</view>
-                    <view class="mt-[12rpx] flex items-center gap-x-4">
+                    <view class="flex items-center justify-between">
+                        <view>
+                            <view class="text-[#7C7E80]">每日执行时间</view>
+                            <view class="text-[22rpx] text-[#000000]/50 font-medium mt-1" v-if="isWechatPrivate">
+                                当天无任务时段均为“空闲”
+                            </view>
+                        </view>
+                        <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-[268rpx]" v-if="isWechatPrivate">
+                            <view class="grid grid-cols-2 relative h-[72rpx]">
+                                <view
+                                    v-for="(item, index) in [
+                                        { label: '自选时间', value: 0 },
+                                        { label: '空闲时间', value: 1 },
+                                    ]"
+                                    :key="index"
+                                    class="flex flex-col items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500 text-xs"
+                                    :class="{ 'text-primary font-medium relative': formData.time_type == item.value }"
+                                    @click="
+                                        formData.time_type = item.value;
+                                        timeTypeIndex = index;
+                                    ">
+                                    {{ item.label }}
+                                </view>
+                                <view
+                                    class="tab-slider"
+                                    :style="{
+                                        transform: `translateX(${timeTypeIndex * 100}%)`,
+                                    }"></view>
+                            </view>
+                        </view>
+                    </view>
+                    <view class="mt-[12rpx] flex items-center gap-x-4" v-if="showTimeConfig">
                         <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
                             <picker
                                 mode="time"
@@ -119,7 +151,7 @@
                                 <view class="flex items-center justify-between h-[70rpx]">
                                     <text
                                         :class="[
-                                            formData.time_config[0] ? 'text-primary font-bold' : 'text-[#00000033]',
+                                            formData.time_config[0] ? 'text-primary font-medium' : 'text-[#00000033]',
                                         ]"
                                         >{{ formData.time_config[0] || "开始时间" }}</text
                                     >
@@ -139,7 +171,7 @@
                                 <view class="flex items-center justify-between h-[70rpx]">
                                     <text
                                         :class="[
-                                            formData.time_config[1] ? 'text-primary font-bold' : 'text-[#00000033]',
+                                            formData.time_config[1] ? 'text-primary font-medium' : 'text-[#00000033]',
                                         ]"
                                         >{{ formData.time_config[1] || "结束时间" }}</text
                                     >
@@ -173,6 +205,7 @@ const props = withDefaults(
         // 时间间隔
         timeInterval?: number;
         multiple?: 0 | 1;
+        isWechatPrivate?: boolean;
     }>(),
     {
         showDevice: true,
@@ -180,6 +213,7 @@ const props = withDefaults(
         currentFrequency: 0,
         timeInterval: 30,
         multiple: 1,
+        isWechatPrivate: false,
     }
 );
 
@@ -197,6 +231,10 @@ const formData = computed({
     },
 });
 
+const showTimeConfig = computed(() => {
+    return props.isWechatPrivate ? formData.value.time_type == 0 : true;
+});
+
 const currentFrequency = computed({
     get() {
         return props.currentFrequency;
@@ -207,7 +245,7 @@ const currentFrequency = computed({
 });
 
 const isExpandDate = ref(false);
-
+const timeTypeIndex = ref(0);
 const handleFrequency = (item: number, index: number) => {
     currentFrequency.value = index;
     formData.value.task_frep = item;
@@ -272,10 +310,14 @@ watch(
 .frequency-item {
     @apply px-[32rpx] py-[16rpx] rounded-[10rpx] bg-[#F6F6F6];
     &.active {
-        @apply text-primary shadow-[0_0_0_2rpx_#0065FB] font-bold bg-white;
+        @apply text-primary shadow-[0_0_0_2rpx_#0065FB] font-medium bg-white;
     }
 }
 .date-item {
-    @apply text-xs font-bold text-[#000000b3] rounded-[10rpx] px-[20rpx] py-[10rpx] bg-[#F6F6F6];
+    @apply text-xs font-medium text-[#000000b3] rounded-[10rpx] px-[20rpx] py-[10rpx] bg-[#F6F6F6];
+}
+
+.tab-slider {
+    @apply h-[calc(100%-10rpx)] w-[50%] rounded-[16rpx] bg-white absolute top-[5rpx] left-0 transition-all duration-500;
 }
 </style>

@@ -276,6 +276,14 @@ class DeviceHandler extends BaseMessageHandler
             $worker = $this->service->getWorker();;
 
             if (isset($worker->uidConnections[$uid])) {
+
+                foreach ($worker->uidConnections as $connection) {
+                    if($connection->deviceid == $payload['deviceId'] && $connection->uid !== $uid){
+                        $this->setLog('删除设备旧的socket连接, 设备号:' . $connection->deviceid . ', uid:' . $connection->uid . ', name:' . $connection->name, 'ws');
+                        $connection->close();
+                    }
+                }
+
                 $worker->uidConnections[$uid]->deviceid = $payload['deviceId'] ?? '';
                 $worker->uidConnections[$uid]->apptype = $payload['appType'] ?? 3;
                 $worker->uidConnections[$uid]->messageid = $payload['messageId'] ?? '';
@@ -292,6 +300,7 @@ class DeviceHandler extends BaseMessageHandler
                 $this->service->setWorker($worker);
                 $this->registerChannelListener($this->connection, $payload['deviceId']);
                 $this->setLog('设备绑定socket连接, 设备号:' . $payload['deviceId'] . ', uid:' . $uid . ', name:' . $worker->uidConnections[$uid]->name, 'device');
+                
 
                 $this->service->getRedis()->set("xhs:device:" . $payload['deviceId'] . ":taskStatus", json_encode([
                     'taskStatus' => 'standby',

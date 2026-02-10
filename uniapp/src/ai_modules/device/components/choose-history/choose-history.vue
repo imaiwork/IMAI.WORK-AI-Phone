@@ -51,7 +51,7 @@
                         <view>全选</view>
                     </view>
                     <view
-                        class="text-white font-bold text-[30rpx] rounded-[20rpx] bg-primary h-[90rpx] w-[460rpx] flex items-center justify-center"
+                        class="text-white font-medium text-[30rpx] rounded-[20rpx] bg-primary h-[90rpx] w-[460rpx] flex items-center justify-center"
                         @click="confirm">
                         确定选择
                     </view>

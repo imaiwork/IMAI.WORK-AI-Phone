@@ -212,7 +212,7 @@ input:-webkit-autofill:active {
 }
 
 .table-action-item {
-    @apply flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-[13px] font-bold text-[#64748B] transition-all hover:bg-[#F1F5F9] hover:text-primary;
+    @apply flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-[13px] font-medium text-[#64748B] transition-all hover:bg-[#F1F5F9] hover:text-primary;
 }
 
 .custom-input {
@@ -247,6 +247,13 @@ input:-webkit-autofill:active {
     }
     .el-input__count {
         background-color: transparent !important;
+    }
+}
+
+.custom-picker {
+    .el-input__wrapper {
+        border: none;
+        @apply bg-slate-50  h-11;
     }
 }
 

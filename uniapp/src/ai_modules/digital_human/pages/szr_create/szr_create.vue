@@ -3,51 +3,65 @@
         <view class="grow min-h-0">
             <scroll-view class="h-full" scroll-y>
                 <view class="pb-[32rpx] h-full flex flex-col">
-                    <view class="bg-white px-[44rpx]" :class="{
-                        'grow min-h-0 flex flex-col': anchorLists.length == 0,
-                    }">
+                    <view
+                        class="bg-white px-[44rpx]"
+                        :class="{
+                            'grow min-h-0 flex flex-col': anchorLists.length == 0,
+                        }">
                         <view class="h-[100rpx] flex items-center justify-between">
-                            <view class="font-bold text-[32rpx]">选择数字人</view>
+                            <view class="font-medium text-[32rpx]">选择数字人</view>
                             <view class="flex items-center justify-center gap-x-2 p-1" @click="showChooseAnchor = true">
-                                <image src="@/ai_modules/digital_human/static/icons/add.svg"
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/add.svg"
                                     class="w-[28rpx] h-[28rpx]"></image>
                                 <text class="text-[#000000cc] text-[26rpx]">选择形象</text>
                             </view>
                         </view>
-                        <view class="py-4" :class="[
-                            anchorLists.length == 0
-                                ? 'grow min-h-0 flex flex-col items-center justify-center'
-                                : 'border-[0rpx] border-t-[1rpx] border-b-[1rpx] border-solid border-[#E5E5E5]',
-                        ]">
+                        <view
+                            class="py-4"
+                            :class="[
+                                anchorLists.length == 0
+                                    ? 'grow min-h-0 flex flex-col items-center justify-center'
+                                    : 'border-[0rpx] border-t-[1rpx] border-b-[1rpx] border-solid border-[#E5E5E5]',
+                            ]">
                             <view v-if="anchorLists.length > 0">
                                 <scroll-view scroll-x>
                                     <view class="flex gap-x-2 whitespace-nowrap">
-                                        <view v-for="(item, index) in anchorLists"
+                                        <view
+                                            v-for="(item, index) in anchorLists"
                                             class="flex-shrink-0 w-[164rpx] h-[224rpx] rounded-[24rpx] relative overflow-hidden card-gradient"
-                                            :key="item.anchor_id || index" @click="chooseAnchor(index)">
+                                            :key="item.anchor_id || index"
+                                            @click="chooseAnchor(index)">
                                             <image :src="item.pic" class="w-full h-full" mode="aspectFill"></image>
-                                            <view class="absolute top-2 right-2 z-[223]"
+                                            <view
+                                                class="absolute top-2 right-2 z-[223]"
                                                 v-if="currAnchorIndex == index">
-                                                <image src="/static/images/icons/success.svg"
+                                                <image
+                                                    src="/static/images/icons/success.svg"
                                                     class="w-[28rpx] h-[28rpx]"></image>
                                             </view>
-                                            <view class="absolute bottom-1 right-0 z-[224]"
+                                            <view
+                                                class="absolute bottom-1 right-0 z-[224]"
                                                 @click.stop="previewVideo(item.result_url)">
-                                                <image src="@/ai_modules/digital_human/static/icons/play.svg"
+                                                <image
+                                                    src="@/ai_modules/digital_human/static/icons/play.svg"
                                                     class="w-[48rpx] h-[48rpx]"></image>
                                             </view>
-                                            <view v-if="getAnchorStatus(item.status, item.source_type) == 0"
+                                            <view
+                                                v-if="getAnchorStatus(item.status, item.source_type) == 0"
                                                 class="z-[222] absolute top-0 left-0 w-full h-full flex items-center justify-center bg-[#00000080]">
                                                 <view
-                                                    class="bg-primary text-xs font-bold text-white rounded-[10rpx] px-2 py-1">
-                                                    克隆中</view>
+                                                    class="bg-primary text-xs font-medium text-white rounded-[10rpx] px-2 py-1">
+                                                    克隆中</view
+                                                >
                                             </view>
                                         </view>
                                     </view>
                                 </scroll-view>
                             </view>
                             <view class="h-[468rpx] flex flex-col items-center justify-center" v-else>
-                                <image src="@/ai_modules/digital_human/static/images/common/avatar.png"
+                                <image
+                                    src="@/ai_modules/digital_human/static/images/common/avatar.png"
                                     class="w-[120rpx] h-[136rpx] mx-auto"></image>
                                 <view class="text-[26rpx] text-[#828282] mt-[32rpx] text-center">
                                     您还没有数字人，快去定制一个吧~
@@ -61,38 +75,48 @@
                         </view>
                         <view class="mb-2">
                             <view class="flex items-center justify-between h-[80rpx] gap-x-2">
-                                <text class="font-bold flex-shrink-0">选择模型</text>
+                                <text class="font-medium flex-shrink-0">选择模型</text>
                                 <view class="flex items-center gap-x-2" @click="openChooseModel()">
-                                    <text class="text-xs font-bold line-clamp-1"
-                                        :class="[formData.model_version ? 'text-primary' : 'text-[#0000004d]']">{{
-                                            modelVersionMap[formData.model_version] || "请选择" }}</text>
+                                    <text
+                                        class="text-xs font-medium line-clamp-1"
+                                        :class="[formData.model_version ? 'text-primary' : 'text-[#0000004d]']"
+                                        >{{ modelVersionMap[formData.model_version] || "请选择" }}</text
+                                    >
                                     <u-icon name="arrow-right" color="#00000020" size="22"></u-icon>
                                 </view>
                             </view>
                             <view class="flex items-center justify-between h-[80rpx] gap-x-2">
-                                <text class="font-bold flex-shrink-0">选择声音</text>
+                                <text class="font-medium flex-shrink-0">选择声音</text>
                                 <view class="flex items-center gap-x-2" @click="openChooseTone()">
-                                    <text v-if="isOriginalTone"
-                                        class="text-[20rpx] text-primary bg-[#DDF3FF] rounded font-bold p-1">
+                                    <text
+                                        v-if="isOriginalTone"
+                                        class="text-[20rpx] text-primary bg-[#DDF3FF] rounded font-medium p-1">
                                         视频原音
                                     </text>
-                                    <text v-else class="text-xs font-bold line-clamp-1"
-                                        :class="[formData.voice_name ? 'text-primary' : 'text-[#0000004d]']">{{
-                                            formData.voice_name || "无" }}</text>
+                                    <text
+                                        v-else
+                                        class="text-xs font-medium line-clamp-1"
+                                        :class="[formData.voice_name ? 'text-primary' : 'text-[#0000004d]']"
+                                        >{{ formData.voice_name || "无" }}</text
+                                    >
                                     <u-icon name="arrow-right" color="#00000020" size="22"></u-icon>
                                 </view>
                             </view>
                             <view v-if="clipConfig.is_open">
                                 <view class="flex items-center justify-between h-[80rpx] gap-x-2">
-                                    <text class="font-bold flex-shrink-0">Ai智剪</text>
+                                    <text class="font-medium flex-shrink-0">Ai智剪</text>
                                     <view class="flex items-center gap-x-1">
-                                        <u-switch v-model="formData.automatic_clip" size="36" :active-value="1"
+                                        <u-switch
+                                            v-model="formData.automatic_clip"
+                                            size="36"
+                                            :active-value="1"
                                             :inactive-value="0"></u-switch>
                                     </view>
                                 </view>
                                 <view class="flex items-center justify-between h-[80rpx] gap-x-2" v-if="false">
                                     <text class="text-[#333333] flex-shrink-0">背景音乐</text>
-                                    <navigator class="flex items-center gap-x-1"
+                                    <navigator
+                                        class="flex items-center gap-x-1"
                                         url="/ai_modules/digital_human/pages/audio_choose/audio_choose"
                                         hover-class="none">
                                         <text class="text-[#00000080] line-clamp-1">{{
@@ -103,7 +127,8 @@
                                 </view>
                                 <view class="flex items-center justify-between h-[80rpx] gap-x-2" v-if="false">
                                     <text class="text-[#333333] flex-shrink-0">剪辑风格选择</text>
-                                    <navigator class="flex items-center gap-x-1"
+                                    <navigator
+                                        class="flex items-center gap-x-1"
                                         url="/ai_modules/digital_human/pages/styles_choose/styles_choose"
                                         hover-class="none">
                                         <text class="text-[#00000080] line-clamp-1">{{
@@ -115,38 +140,37 @@
                             </view>
                         </view>
                     </view>
-                    <!-- 文案编辑区域 -->
                     <view class="bg-white px-[44rpx] pb-[40rpx] mt-[16rpx]">
                         <view class="flex items-center -mx-[24rpx] gap-x-2 py-[8rpx]">
                             <view class="util-item" @click="randomCopywriter()">
                                 <view class="w-[30rpx] h-[30rpx]">
-                                    <image src="@/ai_modules/digital_human/static/icons/random.svg"
+                                    <image
+                                        src="@/ai_modules/digital_human/static/icons/random.svg"
                                         class="w-full h-full"></image>
                                 </view>
-                                <text class="text-xs font-bold">随机文案</text>
+                                <text class="text-xs font-medium">随机文案</text>
                             </view>
                             <view class="h-[20rpx] w-[1rpx] bg-[#EDEDED]"></view>
-                            <navigator
-                                :url="`/ai_modules/digital_human/pages/ai_copywriter/ai_copywriter?limit=${textLimit}`"
-                                hover-class="none">
-                                <view class="util-item">
-                                    <view class="w-[30rpx] h-[30rpx]">
-                                        <image src="@/ai_modules/digital_human/static/icons/copywriter.svg"
-                                            class="w-full h-full"></image>
-                                    </view>
-                                    <text class="text-xs font-bold">智能文案</text>
+                            <view class="util-item" @click="showChooseAgent = true">
+                                <view class="w-[30rpx] h-[30rpx]">
+                                    <image
+                                        src="@/ai_modules/digital_human/static/icons/copywriter.svg"
+                                        class="w-full h-full"></image>
                                 </view>
-                            </navigator>
+                                <text class="text-xs font-medium">智能文案</text>
+                            </view>
                             <view class="h-[20rpx] w-[1rpx] bg-[#EDEDED]"></view>
                             <view class="util-item" @click="showAudioType = true">
                                 <view class="w-[30rpx] h-[30rpx]">
-                                    <image src="@/ai_modules/digital_human/static/icons/sound.svg"
+                                    <image
+                                        src="@/ai_modules/digital_human/static/icons/sound.svg"
                                         class="w-full h-full"></image>
                                 </view>
-                                <text class="text-xs font-bold">使用音频</text>
+                                <text class="text-xs font-medium">使用音频</text>
                             </view>
                         </view>
-                        <navigator v-if="formData.audio_type == CreateTypeEnum.TEXT"
+                        <navigator
+                            v-if="formData.audio_type == CreateTypeEnum.TEXT"
                             :url="`/ai_modules/digital_human/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
                             hover-class="none"
                             class="border-[1rpx] border-solid border-[#E5E5E5] border-l-0 border-r-0 border-b-0 py-[32rpx] relative">
@@ -164,27 +188,32 @@
                                 <u-icon name="close" size="20"></u-icon>
                             </view>
                             <template v-if="audioLoading">
-                                <view class="font-bold text-[30rpx]">录制的音频</view>
+                                <view class="font-medium text-[30rpx]">录制的音频</view>
                                 <view class="flex flex-col items-center justify-center mt-4">
                                     <view class="rotate">
                                         <u-icon name="reload" color="#ACACAF" size="40"></u-icon>
                                     </view>
-                                    <text class="mt-2 text-[30rpx] font-bold">正在提取中...</text>
-                                    <text class="text-xs font-bold text-[#000000]/30">请勿熄屏或切换应用</text>
+                                    <text class="mt-2 text-[30rpx] font-medium">正在提取中...</text>
+                                    <text class="text-xs font-medium text-[#000000]/30">请勿熄屏或切换应用</text>
                                 </view>
                             </template>
                             <template v-else>
                                 <view class="flex items-center gap-x-2">
                                     <view @click="handlePlayAudio">
-                                        <u-icon :name="isPlaying ? 'pause-circle' : 'play-circle'" color="#0065fb"
+                                        <u-icon
+                                            :name="isPlaying ? 'pause-circle' : 'play-circle'"
+                                            color="#0065fb"
                                             size="50"></u-icon>
                                     </view>
-                                    <text class="font-bold text-[30rpx]">录制的音频</text>
-                                    <text class="text-[#000000]50">{{ formatAudioTime(currDuration) }}/{{
-                                        formatAudioTime(formData.audio_duration)
-                                        }}</text>
+                                    <text class="font-medium text-[30rpx]">录制的音频</text>
+                                    <text class="text-[#000000]50"
+                                        >{{ formatAudioTime(currDuration) }}/{{
+                                            formatAudioTime(formData.audio_duration)
+                                        }}</text
+                                    >
                                 </view>
-                                <navigator class="mt-[40rpx] pb-3"
+                                <navigator
+                                    class="mt-[40rpx] pb-3"
                                     :url="`/ai_modules/digital_human/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
                                     hover-class="none">
                                     {{ formData.msg }}
@@ -203,31 +232,53 @@
                 </view>
             </view>
             <view class="flex-1">
-                <view class="rounded-full h-[100rpx] bg-black text-white font-bold flex items-center justify-center"
+                <view
+                    class="rounded-full h-[100rpx] bg-black text-white font-medium flex items-center justify-center"
                     @click="startCreate()">
                     生成视频
                 </view>
             </view>
         </view>
     </view>
-    <!-- 弹窗组件 -->
-    <video-preview v-model="showVideoPreview" title="视频预览" :video-url="previewVideoUrl"
+    <video-preview
+        v-model="showVideoPreview"
+        title="视频预览"
+        :video-url="previewVideoUrl"
         @confirm="showVideoPreview = false" />
     <select-anchor v-model="showChooseAnchor" @confirm="handleChooseAnchor" />
-    <choose-tone v-if="showChooseTone" v-model="showChooseTone" :model-version="formData.model_version"
-        :active-tone="formData.voice_id" :show-original-tone="showOriginalTone" @confirm="handleChooseTone" />
-    <choose-model v-model="showChooseModel" :filter="[DigitalHumanModelVersionEnum.SHANJIAN]"
+    <choose-tone
+        v-if="showChooseTone"
+        v-model="showChooseTone"
+        :model-version="formData.model_version"
+        :active-tone="formData.voice_id"
+        :show-original-tone="showOriginalTone"
+        @confirm="handleChooseTone" />
+    <choose-model
+        v-model="showChooseModel"
+        :filter="[DigitalHumanModelVersionEnum.SHANJIAN]"
         @confirm="handleChooseModel" />
+    <choose-agent v-if="showChooseAgent" v-model="showChooseAgent" @select="handleSelectAgent" />
     <model-rule v-model="showModelRule" :model-version="formData.model_version" />
     <create-panel ref="createPanelRef" :formData="formData" @success="confirmCreate" @recharge="recharge" />
     <agreement v-model="showAgreement" @agree="agreeCreate" @close="showAgreement = false" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
     <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
-    <recorder-control v-if="showRecorder" v-model="showRecorder" ref="recorderRef" @close="showRecorder = false"
+    <recorder-control
+        v-if="showRecorder"
+        v-model="showRecorder"
+        ref="recorderRef"
+        @close="showRecorder = false"
         @success="recorderSuccess" />
     <choose-audio-type v-model="showAudioType" @recorder="openRecorder" @file="uploadAndProcessFiles('file')" />
-    <create-success-pop v-if="showCreateSuccess" v-model="showCreateSuccess" title="数字人创作成功" desc="您可以立即去我的作品中查看" center
-        to-text="取消" @to="goHome" @seek="toRecord" />
+    <create-success-pop
+        v-if="showCreateSuccess"
+        v-model="showCreateSuccess"
+        title="数字人创作成功"
+        desc="您可以立即去我的作品中查看"
+        center
+        to-text="取消"
+        @to="goHome"
+        @seek="toRecord" />
 </template>
 
 <script setup lang="ts">
@@ -250,6 +301,7 @@ import { createVideoCopywriter } from "@/ai_modules/digital_human/config/copywri
 import SelectAnchor from "@/ai_modules/digital_human/components/choose-anchor/choose-anchor.vue";
 import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
 import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
+import ChooseAgent from "@/ai_modules/digital_human/components/choose-agent/choose-agent.vue";
 import ModelRule from "@/ai_modules/digital_human/components/model-rule/model-rule.vue";
 import Agreement from "@/ai_modules/digital_human/components/agreement/agreement.vue";
 import CreatePanel from "@/ai_modules/digital_human/components/create-panel/create-panel.vue";
@@ -322,6 +374,7 @@ const showVideoPreview = ref(false);
 const showChooseTone = ref(false);
 const currCopywriterIndex = ref(-1);
 const showModelRule = ref(false);
+const showChooseAgent = ref(false);
 const showAgreement = ref(false);
 const showAudioType = ref(false);
 const audioLoading = ref(false);
@@ -408,7 +461,7 @@ const chooseAnchor = (index: number) => {
     const anchorStatus = getAnchorStatus(status, source_type);
     if (anchorStatus != 1) {
         uni.$u.toast("该形象正在克隆中，请稍后再试");
-        return
+        return;
     }
 
     if (formData.model_version !== model_version) {
@@ -448,7 +501,6 @@ const handleChooseModel = (id: string) => {
     formData.voice_id = "-1";
     formData.voice_name = "";
     formData.voice_type = 1;
-
 };
 
 // 视频预览相关方法
@@ -479,6 +531,17 @@ const handleChooseTone = (data: any) => {
         formData.voice_name = name;
     }
     showChooseTone.value = false;
+};
+
+const handleSelectAgent = (res: any) => {
+    const { data } = res;
+    uni.$u.route({
+        url: "/ai_modules/digital_human/pages/szr_ai_copywriter/szr_ai_copywriter",
+        params: {
+            limit: textLimit.value,
+            agentData: JSON.stringify(data),
+        },
+    });
 };
 
 // 文案相关方法
@@ -702,8 +765,6 @@ const { start, end } = usePolling(getModelLists, {
     time: 3000,
 });
 
-
-
 const toRecord = () => {
     uni.$u.route({
         url: "/packages/pages/creation/creation",
@@ -721,8 +782,6 @@ const goHome = () => {
         type: "redirect",
     });
 };
-
-
 
 onShow(() => {
     getClipConfigData();
@@ -759,7 +818,7 @@ onLoad(async (options: any) => {
 
 onUnload(() => {
     destroy();
-    end()
+    end();
 });
 </script>
 

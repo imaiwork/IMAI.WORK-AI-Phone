@@ -17,7 +17,7 @@
         <template #reference>
             <div class="free-experience-btn" @click="toggleShowLogin(true)">
                 <Icon name="local-icon-tokens" color="#D6A670" :size="20"></Icon>
-                <span class="font-bold text-white text">免费体验</span>
+                <span class="font-medium text-white text">免费体验</span>
             </div>
         </template>
         <div>
@@ -37,7 +37,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="text-[#000000] font-bold">高级功能</div>
+                        <div class="text-[#000000] font-medium">高级功能</div>
                         <div class="text-[rgba(0,0,0,0.5)] text-xs mt-1">
                             AI 数字人、AI 面试、ChatGPT、AI 会议纪要等多种 AI 功能，让繁琐工作 AI 来完成。
                         </div>
@@ -71,7 +71,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="text-[#000000] font-bold">智能体</div>
+                        <div class="text-[#000000] font-medium">智能体</div>
                         <div class="text-[rgba(0,0,0,0.5)] text-xs mt-1">
                             强大智能体，免写提示词，高效可以，任何内容创作直接使用。
                         </div>
@@ -95,7 +95,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="text-[#000000] font-bold">商用保障</div>
+                        <div class="text-[#000000] font-medium">商用保障</div>
                         <div class="text-[rgba(0,0,0,0.5)] text-xs mt-1">
                             精益求精，一切都是为了您可以直接商用，而不是走马观花，让 AI 真正有价值。
                         </div>
@@ -119,7 +119,7 @@
                         </svg>
                     </div>
                     <div>
-                        <div class="text-[#000000] font-bold">多端通用</div>
+                        <div class="text-[#000000] font-medium">多端通用</div>
                         <div class="text-[rgba(0,0,0,0.5)] text-xs mt-1">
                             Windows、Mac、小程序全面支持，随时随地享用AI高效工作。
                         </div>

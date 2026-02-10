@@ -43,7 +43,8 @@ class FlowValidate extends BaseValidate
     {
         $where = [
             ['flow_name', '=', $value],
-            ['delete_time', 'null', null]
+            ['delete_time', 'null', null],
+            ['user_id', '=', $this->request->userId],
         ];
 
         // 如果是更新操作，排除自身
@@ -67,7 +68,8 @@ class FlowValidate extends BaseValidate
         $where = [
             ['sub_stage_name', '=', $value],
             ['flow_id', '=', $data['flow_id']],
-            ['delete_time', 'null', null]
+            ['delete_time', 'null', null],
+            ['user_id', '=', $this->request->userId],
         ];
 
         // 如果是更新操作，排除自身

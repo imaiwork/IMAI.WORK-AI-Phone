@@ -14,7 +14,7 @@ use think\response\Json;
 class DigitalHumanController extends BaseApiController
 {
 
-    public array $notNeedLogin = ['lists'];
+    public array $notNeedLogin = ['lists','supplement'];
 
     /**
      * @desc 公共数字人形象列表
@@ -56,5 +56,10 @@ class DigitalHumanController extends BaseApiController
     {
         $params = $this->request->post();
         return DigitalHumanLogic::deletePublicAnchor($params) ? $this->success('ok') : $this->fail(DigitalHumanLogic::getError());
+    }
+
+    public function supplement()
+    {
+        return DigitalHumanLogic::supplement() ? $this->success('ok') : $this->fail(DigitalHumanLogic::getError());
     }
 }

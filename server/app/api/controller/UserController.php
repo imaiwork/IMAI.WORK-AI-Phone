@@ -164,7 +164,7 @@ class UserController extends BaseApiController
         $list = ModelConfig::where('status', 1)->order('code', 'asc')->select()->toArray();
         $del = [
             'human_avatar_pro',  'human_voice_pro',  'human_audio_pro',  'human_video_pro',
-            'knowledge_chat'
+            'knowledge_chat','human_copywriting','shanjian_copywriting_create','news_mixcut_title','sora_copywriting_create'
         ];
         foreach ($list as $k => $v) {
             if (in_array($v['scene'], $del)) {

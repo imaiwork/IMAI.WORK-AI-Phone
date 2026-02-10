@@ -32,7 +32,7 @@
         <view class="grow min-h-0">
             <view class="h-full flex flex-col" v-if="step == 1">
                 <view class="mx-4">
-                    <view class="text-[30rpx] font-bold"> 上传图片({{ formData.materialList.length }}) </view>
+                    <view class="text-[30rpx] font-medium"> 上传图片({{ formData.materialList.length }}) </view>
                     <view class="text-xs text-[#00000080] mt-1"> 至少需要上传2张图片 </view>
                 </view>
                 <view class="grow min-h-0">
@@ -71,7 +71,7 @@
                         class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
                         @click="handleShowCopywriter()">
                         <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="font-bold text-[32rpx]">手动输入</text>
+                        <text class="font-medium text-[32rpx]">手动输入</text>
                     </view>
                     <navigator
                         url="/ai_modules/drawing/pages/puzzle_ai_copywriter/puzzle_ai_copywriter"
@@ -79,7 +79,7 @@
                         class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-black rounded-[10rpx]"
                         @click="editCopywriterIndex = -1">
                         <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="text-white font-bold text-[32rpx]">AI生成</text>
+                        <text class="text-white font-medium text-[32rpx]">AI生成</text>
                     </navigator>
                 </view>
                 <view class="grow min-h-0 mt-4">
@@ -111,7 +111,7 @@
             </view>
             <view class="h-full px-4" v-if="step == 3">
                 <view>
-                    <view class="text-[30rpx] font-bold">作品名称</view>
+                    <view class="text-[30rpx] font-medium">作品名称</view>
                     <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4 h-[100rpx] flex items-center">
                         <u-input
                             v-model="formData.name"
@@ -124,10 +124,10 @@
                 <view class="mt-[20rpx] bg-white rounded-[20rpx] px-[38rpx]">
                     <view
                         class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                        <view class="text-[30rpx] font-bold">参考素材</view>
+                        <view class="text-[30rpx] font-medium">参考素材</view>
                         <view class="flex items-center gap-x-1" @click="handleStep(1)">
                             <view>
-                                共<text class="mx-1 text-primary font-bold">{{ formData.materialList.length }}</text
+                                共<text class="mx-1 text-primary font-medium">{{ formData.materialList.length }}</text
                                 >个
                             </view>
                             <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
@@ -135,17 +135,17 @@
                     </view>
                     <view
                         class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                        <view class="text-[30rpx] font-bold">拼图标题</view>
+                        <view class="text-[30rpx] font-medium">拼图标题</view>
                         <view class="flex items-center gap-x-1" @click="handleStep(2)">
                             <view>
-                                共<text class="mx-1 text-primary font-bold">{{ formData.copywriterList.length }}</text
+                                共<text class="mx-1 text-primary font-medium">{{ formData.copywriterList.length }}</text
                                 >个
                             </view>
                             <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
                         </view>
                     </view>
                     <view class="flex items-center justify-between h-[106rpx]">
-                        <view class="text-[30rpx] font-bold">生成拼图数量</view>
+                        <view class="text-[30rpx] font-medium">生成拼图数量</view>
                         <view class="flex items-center gap-x-2">
                             <view class="p-[4rpx] leading-[0]" @click="handleMinusVideoCount('minus')">
                                 <image
@@ -180,7 +180,7 @@
                         v-if="step === 1"
                         class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
                         :class="[formData.materialList.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
-                        <text class="font-bold text-[32rpx]">{{ formData.materialList.length }}</text>
+                        <text class="font-medium text-[32rpx]">{{ formData.materialList.length }}</text>
                         <text class="text-xs mt-1">已选</text>
                     </view>
                     <view v-else>
@@ -199,7 +199,7 @@
                 </template>
                 <template v-else>
                     <view
-                        class="rounded-[16rpx] mx-auto w-[456rpx] h-[100rpx] bg-black text-white font-bold flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
+                        class="rounded-[16rpx] mx-auto w-[456rpx] h-[100rpx] bg-black text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
                         @click="handleCreateImage">
                         生成拼图（{{ formData.result_count }}个）
                     </view>
@@ -209,7 +209,7 @@
     </view>
     <u-popup v-model="showUploadTip" mode="center" border-radius="24" width="90%">
         <view class="bg-white rounded-[24rpx] p-[48rpx]">
-            <view class="font-bold text-center">图片上传须知</view>
+            <view class="font-medium text-center">图片上传须知</view>
             <view class="mt-[48rpx]">
                 <view class="flex items-center gap-x-1">
                     <text class="text-[#FF3C26]">*</text>
@@ -263,10 +263,10 @@
         :custom-style="{ backgroundColor: 'transparent' }"
         :mask-close-able="false">
         <view class="w-full bg-white rounded-[20rpx] py-[94rpx] px-[62rpx]">
-            <view class="text-[40rpx] font-bold text-center">拼图生成中</view>
+            <view class="text-[40rpx] font-medium text-center">拼图生成中</view>
             <view class="text-[30rpx] mt-[80rpx]">拼图生成成功后，您可以自定义设置图组数量去发布图文任务 </view>
             <view
-                class="mt-[98rpx] bg-black text-white text-[30rpx] font-bold rounded-[20rpx] h-[90rpx] flex items-center justify-center"
+                class="mt-[98rpx] bg-black text-white text-[30rpx] font-medium rounded-[20rpx] h-[90rpx] flex items-center justify-center"
                 @click="toPuzzleRecord">
                 查看拼图创作
             </view>
@@ -419,7 +419,7 @@ const handleSelectMaterial = async (lists: any[]) => {
         (item: any, index) =>
             new Promise((resolve) => {
                 wx.getImageInfo({
-                    src: item.content,
+                    src: item.url,
                     success: (info: any) => {
                         const { type, width, height } = info;
                         // 判断是否符合条件
@@ -429,7 +429,7 @@ const handleSelectMaterial = async (lists: any[]) => {
                             imageAccept.includes(type) &&
                             parseInt(item.size) <= imageSize * 1024 * 1024;
                         if (isAccord) {
-                            resolve(item.content);
+                            resolve(item.url);
                         } else {
                             uni.showToast({
                                 title: `选择的图片包含不符合条件的图片，已自动过滤`,

@@ -19,7 +19,7 @@
                 </div>
                 <div>
                     <div class="text-[18px] font-[900] text-[#1E293B]">{{ modeText }}分段数据</div>
-                    <div class="text-[12px] font-bold text-[#94A3B8]">手动维护知识库的分段内容及关联多媒体素材</div>
+                    <div class="text-[12px] font-medium text-[#94A3B8]">手动维护知识库的分段内容及关联多媒体素材</div>
                 </div>
             </div>
 
@@ -110,7 +110,7 @@
                                         <div class="h-[150px] w-full">
                                             <div v-if="!formData.video.length" class="video-trigger">
                                                 <Icon name="el-icon-VideoPlay" :size="24" />
-                                                <span class="text-[12px] font-bold mt-1">上传视频</span>
+                                                <span class="text-[12px] font-medium mt-1">上传视频</span>
                                             </div>
                                             <div v-else class="video-preview-box group h-full">
                                                 <video
@@ -300,7 +300,7 @@ defineExpose({
             @apply text-[14px] font-[900] text-[#1E293B];
         }
         .sub {
-            @apply text-[11px] font-bold text-[#94A3B8];
+            @apply text-[11px] font-medium text-[#94A3B8];
         }
     }
 }
@@ -349,7 +349,7 @@ defineExpose({
     @apply h-10 px-4 rounded-xl border border-br bg-white flex items-center gap-2 text-[12px] font-black text-[#64748B] hover:border-primary hover:text-primary transition-all cursor-pointer;
 }
 .file-item {
-    @apply flex items-center gap-2 px-3 py-2 bg-white border border-[#F1F5F9] rounded-xl text-[12px] font-bold text-[#1E293B];
+    @apply flex items-center gap-2 px-3 py-2 bg-white border border-[#F1F5F9] rounded-xl text-[12px] font-medium text-[#1E293B];
     .name {
         @apply flex-1 truncate;
     }

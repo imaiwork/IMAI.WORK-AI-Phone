@@ -30,7 +30,7 @@
                         <div class="text-xs text-blue-600 mb-1 flex items-center gap-1">
                             <Icon name="el-icon-Warning" :size="14" /> 导出限制说明
                         </div>
-                        <div class="text-sm font-bold text-blue-700">单次最大 {{ exportData.max_page }} 页</div>
+                        <div class="text-sm font-medium text-blue-700">单次最大 {{ exportData.max_page }} 页</div>
                         <div class="text-[11px] text-blue-400 mt-1">
                             上限 {{ exportData.all_max_size }} 条 / 确保导出稳定性
                         </div>
@@ -60,7 +60,7 @@
                                         controls-position="right"
                                         class="!w-[160px]" />
                                 </ElFormItem>
-                                <span class="text-tx-secondary font-bold">至</span>
+                                <span class="text-tx-secondary font-medium">至</span>
                                 <ElFormItem prop="page_end" class="!mb-0">
                                     <ElInputNumber
                                         v-model="formData.page_end"
@@ -194,7 +194,7 @@ const handleConfirm = async () => {
         &.is-checked {
             @apply border-primary bg-[#E6EFFF];
             .el-radio__label {
-                @apply text-primary font-bold;
+                @apply text-primary font-medium;
             }
         }
         .el-radio__inner {

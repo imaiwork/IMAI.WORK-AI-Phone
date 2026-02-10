@@ -31,7 +31,7 @@
         </view>
         <view class="grow min-h-0 mt-[24rpx]">
             <view v-if="step === 1" class="px-4">
-                <view class="text-[30rpx] font-bold">选择获客类型</view>
+                <view class="text-[30rpx] font-medium">选择获客类型</view>
                 <view class="grid grid-cols-2 gap-x-[20rpx] mt-[30rpx]">
                     <view
                         v-for="(item, index) in taskTypes"
@@ -56,7 +56,7 @@
                         class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
                         @click="handleEditClue(-1)">
                         <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="font-bold text-[32rpx]">手动输入</text>
+                        <text class="font-medium text-[32rpx]">手动输入</text>
                     </view>
                     <navigator
                         :url="`/ai_modules/sph/pages/task_ai_clue/task_ai_clue?type=${
@@ -65,10 +65,12 @@
                         hover-class="none"
                         class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-primary rounded-[10rpx]">
                         <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="text-white font-bold text-[32rpx]">AI生成</text>
+                        <text class="text-white font-medium text-[32rpx]">AI生成</text>
                     </navigator>
                 </view>
-                <view class="font-bold text-[30rpx] px-4 mt-[60rpx]">线索词列表（{{ formData.keywords.length }}）</view>
+                <view class="font-medium text-[30rpx] px-4 mt-[60rpx]"
+                    >线索词列表（{{ formData.keywords.length }}）</view
+                >
                 <view class="grow min-h-0 mt-[32rpx]">
                     <scroll-view class="h-full" scroll-y>
                         <view class="px-4 flex flex-wrap gap-4 pb-[100rpx]">
@@ -245,7 +247,7 @@
                 <scroll-view class="h-full" scroll-y>
                     <view class="px-4 pb-[100rpx]">
                         <view>
-                            <view class="text-[30rpx] font-bold"> 基础设置 </view>
+                            <view class="text-[30rpx] font-medium"> 基础设置 </view>
                             <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
                                 <view>
                                     <view class="text-[#7C7E80]">任务名称</view>
@@ -272,7 +274,7 @@
                                                 <text
                                                     :class="[
                                                         formData.device_codes.length
-                                                            ? 'text-primary font-bold'
+                                                            ? 'text-primary font-medium'
                                                             : 'text-[#00000033]',
                                                     ]"
                                                     >{{
@@ -289,7 +291,7 @@
                             </view>
                         </view>
                         <view class="mt-[32rpx]">
-                            <view class="text-[30rpx] font-bold"> 时间设置 </view>
+                            <view class="text-[30rpx] font-medium"> 时间设置 </view>
                             <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
                                 <view>
                                     <view class="text-[#7C7E80]">任务频率</view>
@@ -355,7 +357,7 @@
                                                     <text
                                                         :class="[
                                                             formData.time_config[0]
-                                                                ? 'text-primary font-bold'
+                                                                ? 'text-primary font-medium'
                                                                 : 'text-[#00000033]',
                                                         ]"
                                                         >{{ formData.time_config[0] || "开始时间" }}</text
@@ -378,7 +380,7 @@
                                                     <text
                                                         :class="[
                                                             formData.time_config[1]
-                                                                ? 'text-primary font-bold'
+                                                                ? 'text-primary font-medium'
                                                                 : 'text-[#00000033]',
                                                         ]"
                                                         >{{ formData.time_config[1] || "结束时间" }}</text
@@ -392,7 +394,7 @@
                             </view>
                         </view>
                         <view class="mt-[32rpx]" v-if="formData.add_type == '1'">
-                            <view class="text-[30rpx] font-bold"> 【加微任务】时间设置 </view>
+                            <view class="text-[30rpx] font-medium"> 【加微任务】时间设置 </view>
                             <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
                                 <u-radio-group v-model="formData.wechat_time_type">
                                     <u-radio :name="0" :size="28" label-size="26"> 当日获客任务完成后执行 </u-radio>
@@ -458,7 +460,7 @@
                                                             <text
                                                                 :class="[
                                                                     formData.wechat_time_config[0]
-                                                                        ? 'text-primary font-bold'
+                                                                        ? 'text-primary font-medium'
                                                                         : 'text-[#00000033]',
                                                                 ]"
                                                                 >{{
@@ -486,7 +488,7 @@
                                                             <text
                                                                 :class="[
                                                                     formData.wechat_time_config[1]
-                                                                        ? 'text-primary font-bold'
+                                                                        ? 'text-primary font-medium'
                                                                         : 'text-[#00000033]',
                                                                 ]"
                                                                 >{{
@@ -507,7 +509,7 @@
                             </view>
                         </view>
                         <view class="mt-[50rpx]" v-if="taskErrorMsg">
-                            <view class="font-bold">任务冲突</view>
+                            <view class="font-medium">任务冲突</view>
                             <view class="text-[#ff2442] mt-[20rpx]">
                                 {{ taskErrorMsg }}
                             </view>
@@ -536,7 +538,7 @@
                 </template>
                 <template v-else>
                     <view
-                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-bold flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
+                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
                         @click="handleCreateTask">
                         创建任务
                     </view>
@@ -547,7 +549,7 @@
     <clue-edit ref="clueEditRef" v-model="showClueEdit" @confirm="handleClueConfirm" @close="showClueEdit = false" />
     <u-popup v-model="showOCRTip" mode="bottom" border-radius="24" @close="showOCRTip = false">
         <view>
-            <view class="text-center text-lg font-bold py-3"> 线索识别方式 </view>
+            <view class="text-center text-lg font-medium py-3"> 线索识别方式 </view>
             <u-line />
             <view class="w-full overflow-hidden text-[#4C4B6A] text-xs p-6">
                 <view>
@@ -565,7 +567,7 @@
     </u-popup>
     <u-popup v-model="showAddRemark" mode="center" border-radius="24" width="90%" closeable>
         <view class="w-full p-4">
-            <view class="text-center text-lg font-bold"> 加好友备注文案 </view>
+            <view class="text-center text-lg font-medium"> 加好友备注文案 </view>
             <view class="border border-solid border-[#E5E5E5] rounded-md p-2 my-4">
                 <u-input
                     v-model="addRemarkContent"
@@ -1072,6 +1074,6 @@ onLoad(({ type }: any) => {
     }
 }
 .date-item {
-    @apply text-xs font-bold text-[#000000b3] rounded-[10rpx] px-[20rpx] py-[10rpx] bg-[#F6F6F6];
+    @apply text-xs font-medium text-[#000000b3] rounded-[10rpx] px-[20rpx] py-[10rpx] bg-[#F6F6F6];
 }
 </style>

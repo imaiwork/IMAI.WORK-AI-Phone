@@ -30,7 +30,7 @@
                     <ElButton
                         type="primary"
                         @click="handleAdd"
-                        class="!rounded-xl !h-[44px] px-6 !font-bold transition-all hover:scale-105 active:scale-95">
+                        class="!rounded-xl !h-[44px] px-6 !font-medium transition-all hover:scale-105 active:scale-95">
                         <Icon name="local-icon-add_circle" :size="18"></Icon>
                         <span class="ml-2">新增音色</span>
                     </ElButton>
@@ -84,14 +84,14 @@
 
                     <ElTableColumn label="创建时间" min-width="180">
                         <template #default="{ row }">
-                            <span class="text-[13px] font-bold text-[#94A3B8]">{{ row.create_time }}</span>
+                            <span class="text-[13px] font-medium text-[#94A3B8]">{{ row.create_time }}</span>
                         </template>
                     </ElTableColumn>
 
                     <ElTableColumn label="管理" width="100" fixed="right" align="right">
                         <template #default="{ row }">
                             <div class="flex items-center justify-end">
-                                <ElButton type="danger" link class="!font-bold" @click="handleDelete(row.id)">
+                                <ElButton type="danger" link class="!font-medium" @click="handleDelete(row.id)">
                                     删除
                                 </ElButton>
                             </div>
@@ -107,7 +107,7 @@
             </div>
 
             <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-                <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 个音色资源</div>
+                <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 个音色资源</div>
                 <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
             </div>
         </div>
@@ -192,7 +192,7 @@ onMounted(() => {
         background-color: transparent;
     }
     .el-input__inner {
-        @apply text-[13px] font-bold text-[#1E293B] pl-2;
+        @apply text-[13px] font-medium text-[#1E293B] pl-2;
         &::placeholder {
             @apply text-[#94A3B8];
         }

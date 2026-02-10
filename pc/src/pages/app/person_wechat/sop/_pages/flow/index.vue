@@ -52,7 +52,7 @@
                             <div
                                 class="flex gap-[8px] opacity-0 group-hover:opacity-100 transition-all translate-x-[10px] group-hover:translate-x-0">
                                 <ElButton
-                                    class="!rounded-[8px] !font-bold"
+                                    class="!rounded-[8px] !font-medium"
                                     size="small"
                                     @click="handleEditFlow(item.id)"
                                     >编辑</ElButton
@@ -60,7 +60,7 @@
                                 <ElButton
                                     type="danger"
                                     plain
-                                    class="!rounded-[8px] !font-bold"
+                                    class="!rounded-[8px] !font-medium"
                                     size="small"
                                     @click="handleDeleteFlow(item.id)"
                                     >删除</ElButton
@@ -76,7 +76,7 @@
                                             <div class="node-circle shadow-sm">
                                                 <div class="inner-dot"></div>
                                                 <span
-                                                    class="absolute -top-[8px] -right-[8px] w-[18px] h-[18px] bg-gray-950 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                                                    class="absolute -top-[8px] -right-[8px] w-[18px] h-[18px] bg-gray-950 text-white text-[10px] rounded-full flex items-center justify-center font-medium">
                                                     {{ vIndex + 1 }}
                                                 </span>
                                             </div>

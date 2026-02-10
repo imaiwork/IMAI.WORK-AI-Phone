@@ -29,6 +29,11 @@ class ClueLogic extends ApiLogic
                 return false;
             }
 
+            if(empty($config->clue_theme)){
+                self::setError('设备自动化配置线索词主题不能为空');
+                return false;
+            }
+
             $find = AutoDeviceClueConfig::where('user_id', self::$uid)->where('device_code', $params['device_code'])->findOrEmpty();
             if (!$find->isEmpty()) {
                 self::$returnData = $find->toArray();
@@ -88,7 +93,7 @@ class ClueLogic extends ApiLogic
                 $find->keywords = $params['keywords'];
                 $find->status = DeviceEnum::AUTO_CONFIG_STATUS_WAIT;
                 $find->update_time = time();
-                if(is_null($find->exec_date)){
+                if (is_null($find->exec_date)) {
                     $find->exec_date = date('Y-m-d', strtotime('+1 day'));
                 }
                 $find->save();
@@ -112,14 +117,13 @@ class ClueLogic extends ApiLogic
         try {
             $where = [];
             $where[] = ['device_code', '=', $deviceCode];
-            if($isFrist === 1){
+            if ($isFrist === 1) {
                 $where[] = ['is_first', '=', 0];
-                
-            }else{
+            } else {
                 $where[] = ['exec_date', '<=', date('Y-m-d', time())];
             }
 
-            
+
             $items = AutoDeviceClueConfig::where('status', '<>', DeviceEnum::AUTO_CONFIG_STATUS_RUNNING)->where($where)->select();
             \think\facade\Log::channel('auto')->write('自动化获客任务生成' . $items->isEmpty() ? \think\facade\Db::getLastSql() : $items->count() . '条', 'clue');
             if ($items->isEmpty()) {
@@ -127,10 +131,10 @@ class ClueLogic extends ApiLogic
             }
             $count = $isFrist === 1 ? 1 : 2;
             foreach ($items as $item) {
-                for($i = 0; $i < $count; $i++){
+                for ($i = 0; $i < $count; $i++) {
                     self::createAutoClueTask($item);
                 }
-                $item->exec_date = date('Y-m-d', strtotime('+' . $count .' day'));
+                $item->exec_date = date('Y-m-d', strtotime('+' . $count . ' day'));
                 $item->is_first = 1;
                 $item->save();
             }
@@ -153,11 +157,10 @@ class ClueLogic extends ApiLogic
             }, $item->keywords);
             $keywords = explode(',', implode(',', $keywords));
 
-            $wechat_device_code = \app\common\model\sv\SvDevice::where('device_code', $item->device_code)->where('user_id', $item->user_id)->value('wechat_device_code');
-            if ($wechat_device_code === null) {
-                throw new \Exception('请绑定个微，并获取微信账号信息');
-            }
-            $wechat = \app\common\model\wechat\AiWechat::where('device_code', $wechat_device_code)->where('user_id', $item->user_id)->findOrEmpty();
+
+
+
+            $wechat = \app\common\model\sv\SvAccount::where('device_code', $item->device_code)->where('user_id', $item->user_id)->where('type', 1)->findOrEmpty();
             if ($wechat->isEmpty()) {
                 throw new \Exception('请绑定个微，并获取微信账号信息');
             }
@@ -192,7 +195,7 @@ class ClueLogic extends ApiLogic
                 'source' => 2, //1手动创建2自动化任务创建
                 'private_message_prompt' => '',
                 'add_friends_prompt' => '',
-                'wechat_id' => $wechat->wechat_id,
+                'wechat_id' => $wechat->account,
                 'wechat_reg_type' => 1,
                 'ocr_type' => 1,
                 'exec_time' => json_encode([$item->exec_time], JSON_UNESCAPED_UNICODE),

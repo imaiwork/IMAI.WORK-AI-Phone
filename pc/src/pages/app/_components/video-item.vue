@@ -39,7 +39,7 @@
                                     class="flex w-6 h-6 rounded-lg bg-[#ffffff]/5 items-center justify-center group-hover:bg-[#0065fb]/20">
                                     <Icon :name="icon" color="#ffffff" :size="14"></Icon>
                                 </span>
-                                <span class="text-[13px] font-bold text-[#ffffff]/70 group-hover:text-white">{{
+                                <span class="text-[13px] font-medium text-[#ffffff]/70 group-hover:text-white">{{
                                     label
                                 }}</span>
                             </div>
@@ -98,7 +98,7 @@
                             </div>
                             <div class="flex flex-col items-center">
                                 <span class="text-white font-black text-sm">{{ item.remark || "生成失败" }}</span>
-                                <span class="text-white/40 text-[10px] mt-1 text-center font-bold">
+                                <span class="text-white/40 text-[10px] mt-1 text-center font-medium">
                                     请检查训练文件
                                 </span>
                             </div>
@@ -110,7 +110,7 @@
                                 <span class="text-white font-black text-sm tracking-widest uppercase opacity-90"
                                     >生成中...</span
                                 >
-                                <span class="text-primary font-bold text-[10px] mt-1 animate-pulse"
+                                <span class="text-primary font-medium text-[10px] mt-1 animate-pulse"
                                     >预计几分钟内完成视频生成</span
                                 >
                             </div>
@@ -126,11 +126,11 @@
                     {{ item.name || "未命名视频" }}
                 </div>
                 <div
-                    class="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] text-slate-400 font-bold">
+                    class="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] text-slate-400 font-medium">
                     {{ getTypeName(item.type) }}
                 </div>
             </div>
-            <div class="text-[11px] mt-1.5 text-slate-500 font-bold italic opacity-60">
+            <div class="text-[11px] mt-1.5 text-slate-500 font-medium italic opacity-60">
                 {{ item.create_time }}
             </div>
         </div>

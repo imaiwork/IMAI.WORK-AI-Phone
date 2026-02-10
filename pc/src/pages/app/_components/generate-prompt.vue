@@ -30,7 +30,7 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <Icon name="local-icon-fabang" color="var(--color-primary)" :size="22"></Icon>
-                    <span class="text-primary font-bold">AI生成文案</span>
+                    <span class="text-primary font-medium">AI生成文案</span>
                 </div>
                 <div
                     class="cursor-pointer leading-[0] hover:bg-token-light-8 rounded-full p-1"

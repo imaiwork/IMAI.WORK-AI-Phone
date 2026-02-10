@@ -13,7 +13,7 @@
                 <close-btn />
             </div>
             <!-- 标题 -->
-            <div class="text-2xl font-bold mb-5">{{ formData.id ? "编辑" : "添加" }}链接</div>
+            <div class="text-2xl font-medium mb-5">{{ formData.id ? "编辑" : "添加" }}链接</div>
             <!-- 表单 -->
             <ElForm :model="formData" :rules="rules" ref="formRef" label-position="top">
                 <ElFormItem label="名称" prop="name">

@@ -18,4 +18,14 @@ class SvLeadScrapingSetting extends BaseModel {
     {
         return $value ? json_decode($value, true) : [];
     }
+
+    public function setMarkerMethodAttr($value)
+    {
+        return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
+    }
+
+    public function getMarkerMethodAttr($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
 }

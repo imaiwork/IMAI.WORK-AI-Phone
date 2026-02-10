@@ -19,7 +19,7 @@
                         <image :src="detail.avatar" class="w-full h-full rounded-[10rpx]"></image>
                     </view>
                     <view>
-                        <view class="font-bold text-[28rpx] line-clamp-1">{{ detail.name }}</view>
+                        <view class="font-medium text-[28rpx] line-clamp-1">{{ detail.name }}</view>
                         <view class="text-[20rpx] text-[#969EA9] line-clamp-1">{{ detail.introduced }}</view>
                     </view>
                 </view>
@@ -245,7 +245,7 @@
                     <scroll-view scroll-y class="grow min-h-0">
                         <view class="p-4 flex flex-col gap-4">
                             <view v-for="(item, index) in getShortcutCommands?.components" :key="index">
-                                <view class="font-bold">{{ item.name }}</view>
+                                <view class="font-medium">{{ item.name }}</view>
                                 <view class="mt-[14rpx] bg-white rounded-[20rpx] px-3 py-1">
                                     <u-input
                                         v-if="item.type === 'text'"
@@ -268,7 +268,7 @@
                                         <template #trigger>
                                             <view class="flex items-center justify-center gap-x-1 h-[100rpx]">
                                                 <u-icon name="plus" color="#0065FB" :size="16"></u-icon>
-                                                <text class="text-primary font-bold">上传文件</text>
+                                                <text class="text-primary font-medium">上传文件</text>
                                             </view>
                                         </template>
                                     </file-upload>

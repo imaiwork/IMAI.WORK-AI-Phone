@@ -6,7 +6,7 @@
             <view class="grow min-h-0">
                 <view class="flex items-center gap-x-2 px-[64rpx]" :style="{ marginTop: `${getMarginTop}px` }">
                     <image :src="webSiteConfig.shop_logo" class="w-8 h-8 rounded-full"></image>
-                    <text class="text-[#787979] font-bold">{{ webSiteConfig.shop_name }}</text>
+                    <text class="text-[#787979] font-medium">{{ webSiteConfig.shop_name }}</text>
                 </view>
             </view>
             <view class="h-[84rpx] bg-[#2b2d3980] flex-shrink-0 border-0 border-t-[1rpx] border-solid border-[#424353]">
@@ -31,8 +31,8 @@
                                     hover-class="none"
                                     class="w-full h-full">
                                     <view class="relative z-10">
-                                        <view class="text-[#734207] font-bold text-[34rpx]">'视频号'获客</view>
-                                        <view class="text-[#73420766] font-bold text-xs mt-1"> 无人工全自动 </view>
+                                        <view class="text-[#734207] font-medium text-[34rpx]">'视频号'获客</view>
+                                        <view class="text-[#73420766] font-medium text-xs mt-1"> 无人工全自动 </view>
                                         <image
                                             src="/static/images/common/sph_icon.png"
                                             class="w-[44rpx] h-[44rpx] mt-[14rpx]"></image>
@@ -46,23 +46,23 @@
                                 </navigator>
                             </view>
                             <view class="redbook-card" @click="toPage(AgentType.COMMENT_TASK)">
-                                <view class="text-[#734207] font-bold text-[34rpx]">评论获客</view>
-                                <view class="text-[#73420766] font-bold text-xs mt-1"> 评论区截流获客 </view>
+                                <view class="text-[#734207] font-medium text-[34rpx]">截流获客</view>
+                                <view class="text-[#73420766] font-medium text-xs mt-1"> 评论区截流获客 </view>
                                 <image
                                     src="/static/images/common/platform_icon.png"
                                     class="w-[178rpx] h-[40rpx] absolute right-1 bottom-1"></image>
                             </view>
-                            <view class="dy-card" @click="toPage(AgentType.PRIVATE_MESSAGE_TASK)">
-                                <view class="text-[#734207] font-bold text-[34rpx]">私信获客</view>
-                                <view class="text-[#73420766] font-bold text-xs mt-1"> 从评论区私信获客 </view>
+                            <view class="dy-card" @click="toPage(AgentType.COLLECT_MARKETING)">
+                                <view class="text-[#734207] font-medium text-[34rpx]">留痕获客</view>
+                                <view class="text-[#73420766] font-medium text-xs mt-1"> 仅点赞/关注等互动 </view>
                                 <image
                                     src="/static/images/common/platform_icon.png"
                                     class="w-[178rpx] h-[40rpx] absolute right-1 bottom-1"></image>
                             </view>
                         </view>
                         <view class="mt-[50rpx]">
-                            <view class="text-[30rpx] font-bold"> AI矩阵运营 </view>
-                            <view class="text-[#0000004d] mt-[6rpx] text-xs font-bold">
+                            <view class="text-[30rpx] font-medium"> AI矩阵运营 </view>
+                            <view class="text-[#0000004d] mt-[6rpx] text-xs font-medium">
                                 从创作到发布，多平台一键搞定
                             </view>
                             <view class="mt-[38rpx] grid grid-cols-2 gap-[22rpx]">
@@ -71,8 +71,8 @@
                                     <view class="publish-video-line-2"></view>
                                     <view class="publish-video-card" @click="toPage(AgentType.VIDEO_TASK)">
                                         <view>
-                                            <view class="text-[#702AFA] font-bold text-[34rpx]">发布视频</view>
-                                            <view class="text-[rgba(112,42,250,0.4)] text-[22rpx] font-bold mt-1"
+                                            <view class="text-[#702AFA] font-medium text-[34rpx]">发布视频</view>
+                                            <view class="text-[rgba(112,42,250,0.4)] text-[22rpx] font-medium mt-1"
                                                 >自动/定时发布</view
                                             >
                                         </view>
@@ -84,8 +84,8 @@
                                     <view class="publish-img-line-2"></view>
                                     <view class="publish-img-card" @click="toPage(AgentType.IMG_TASK)">
                                         <view>
-                                            <view class="text-[#069AB8] font-bold text-[34rpx]">发布图文</view>
-                                            <view class="text-[rgba(6,154,184,0.4)] text-[22rpx] font-bold mt-1"
+                                            <view class="text-[#069AB8] font-medium text-[34rpx]">发布图文</view>
+                                            <view class="text-[rgba(6,154,184,0.4)] text-[22rpx] font-medium mt-1"
                                                 >自动/定时发布</view
                                             >
                                         </view>
@@ -113,18 +113,18 @@
                                         <view>
                                             <view class="flex items-center gap-x-2">
                                                 <view
-                                                    class="text-[34rpx] font-bold"
+                                                    class="text-[34rpx] font-medium"
                                                     :class="[item.disabled ? 'text-[#00000080]' : 'text-primary']"
                                                     >{{ item.title }}</view
                                                 >
                                                 <view
                                                     v-if="item.disabled"
-                                                    class="bg-[#F2E7C9] text-[#8F6B39] font-bold text-[18rpx] rounded-[10rpx] py-[4rpx] px-[10rpx]">
+                                                    class="bg-[#F2E7C9] text-[#8F6B39] font-medium text-[18rpx] rounded-[10rpx] py-[4rpx] px-[10rpx]">
                                                     即将解锁
                                                 </view>
                                             </view>
                                             <view
-                                                class="text-[#0000004d] text-[22rpx] font-bold mt-1"
+                                                class="text-[#0000004d] text-[22rpx] font-medium mt-1"
                                                 :class="[item.disabled ? 'text-[#0000004d]' : 'text-[#0065fb66]']"
                                                 >{{ item.desc }}</view
                                             >
@@ -137,18 +137,18 @@
                     </view>
                     <view v-show="currTabKey == TabKey.AI_SALES">
                         <view class="bg-white rounded-[20rpx] px-5 py-[32rpx] relative">
-                            <view class="text-[30rpx] font-bold"> 运营统计 </view>
-                            <view class="mt-[28rpx] text-[30rpx] font-bold">{{ getToady }}</view>
+                            <view class="text-[30rpx] font-medium"> 运营统计 </view>
+                            <view class="mt-[28rpx] text-[30rpx] font-medium">{{ getToady }}</view>
                             <view class="flex items-center gap-x-1 mt-[12rpx]">
                                 <image src="/static/images/icons/device.svg" class="w-[28rpx] h-[28rpx]"></image>
-                                <text class="text-[#0000004d] text-[22rpx] font-bold"
+                                <text class="text-[#0000004d] text-[22rpx] font-medium"
                                     >统计设备：{{ deviceCount }}个</text
                                 >
                             </view>
                             <view class="grid grid-cols-4 gap-4 mt-[50rpx]">
                                 <view v-for="(item, index) in salesStatsList" :key="index" class="py-2">
-                                    <view class="text-[40rpx] font-bold text-center">{{ item.value }}</view>
-                                    <view class="text-[#00000066] font-bold text-xs mt-[6rpx] text-center">{{
+                                    <view class="text-[40rpx] font-medium text-center">{{ item.value }}</view>
+                                    <view class="text-[#00000066] font-medium text-xs mt-[6rpx] text-center">{{
                                         item.title
                                     }}</view>
                                 </view>
@@ -159,24 +159,28 @@
                                     hover-class="none"
                                     class="h-[70rpx] w-[144rpx] border border-solid border-[#0000001a] rounded-[16rpx] flex items-center justify-center gap-x-2">
                                     <image src="/static/images/icons/statement.svg" class="w-[26rpx] h-[26rpx]"></image>
-                                    <text class="font-bold">报表</text>
+                                    <text class="font-medium">报表</text>
                                 </navigator>
                             </view>
                         </view>
                         <view class="mt-[54rpx]">
-                            <view class="text-[30rpx] font-bold mb-[28rpx]">私域运营</view>
+                            <view class="text-[30rpx] font-medium mb-[28rpx]">私域运营</view>
                             <view class="grid grid-cols-2 gap-x-[22rpx]">
                                 <view class="flex flex-col gap-y-[4rpx]">
                                     <view class="mx-auto w-[70%] h-[6rpx] bg-white rounded-full"></view>
                                     <view class="mx-auto w-[80%] h-[6rpx] bg-white rounded-full"></view>
                                     <view
                                         class="rounded-[20rpx] bg-white p-5 flex items-center justify-between gap-x-2"
-                                        @click="toPage(AgentType.SEND_CONTENT)">
+                                        @click="toPage(AgentType.LIKE_CIRCLE)">
                                         <view>
-                                            <view class="text-[30rpx] font-bold">群发内容</view>
-                                            <view class="text-[22rpx] text-[#0000004d] font-bold mt-1"> 即将解锁 </view>
+                                            <view class="text-[30rpx] font-medium">朋友圈互动</view>
+                                            <view class="text-[22rpx] text-[#0000004d] font-medium mt-1">
+                                                朋友圈点赞/评论
+                                            </view>
                                         </view>
-                                        <image src="/static/images/icons/send.svg" class="w-[48rpx] h-[48rpx]"></image>
+                                        <image
+                                            src="/static/images/icons/circle.svg"
+                                            class="w-[48rpx] h-[48rpx]"></image>
                                     </view>
                                 </view>
                                 <view class="flex flex-col gap-y-[4rpx]">
@@ -186,8 +190,10 @@
                                         class="rounded-[20rpx] bg-white p-5 flex items-center justify-between gap-x-2"
                                         @click="toPage(AgentType.SEND_CIRCLE)">
                                         <view>
-                                            <view class="text-[30rpx] font-bold">发朋友圈</view>
-                                            <view class="text-[22rpx] text-[#0000004d] font-bold mt-1"> 即将解锁 </view>
+                                            <view class="text-[30rpx] font-medium">发朋友圈</view>
+                                            <view class="text-[22rpx] text-[#0000004d] font-medium mt-1">
+                                                朋友圈发布内容
+                                            </view>
                                         </view>
                                         <image
                                             src="/static/images/icons/circle.svg"
@@ -196,14 +202,14 @@
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-[54rpx]">
-                            <view class="text-[30rpx] font-bold mb-[32rpx]">客户管理</view>
+                        <view class="mt-[54rpx]" v-if="false">
+                            <view class="text-[30rpx] font-medium mb-[32rpx]">客户管理</view>
                             <view
                                 class="rounded-[20rpx] bg-white p-[42rpx] mb-2 flex items-center justify-between gap-x-2"
                                 @click="toPage(AgentType.FLOW_SETTING)">
                                 <view class="flex items-center gap-x-3">
                                     <image src="/static/images/icons/flow.svg" class="w-[32rpx] h-[32rpx]"></image>
-                                    <text class="text-[30rpx] font-bold">流程设置</text>
+                                    <text class="text-[30rpx] font-medium">流程设置</text>
                                 </view>
                                 <u-icon name="arrow-right" color="#B2B2B2"></u-icon>
                             </view>
@@ -212,7 +218,7 @@
                                 @click="toPage(AgentType.TAG_SETTING)">
                                 <view class="flex items-center gap-x-3">
                                     <image src="/static/images/icons/tags.svg" class="w-[32rpx] h-[32rpx]"></image>
-                                    <text class="text-[30rpx] font-bold">标签设置</text>
+                                    <text class="text-[30rpx] font-medium">标签设置</text>
                                 </view>
                                 <u-icon name="arrow-right" color="#B2B2B2"></u-icon>
                             </view>
@@ -221,7 +227,7 @@
                                 @click="toPage(AgentType.PRAISE_SETTING)">
                                 <view class="flex items-center gap-x-3">
                                     <image src="/static/images/icons/praise.svg" class="w-[32rpx] h-[32rpx]"></image>
-                                    <text class="text-[30rpx] font-bold">点赞设置</text>
+                                    <text class="text-[30rpx] font-medium">点赞设置</text>
                                 </view>
                                 <u-icon name="arrow-right" color="#B2B2B2"></u-icon>
                             </view>
@@ -309,8 +315,8 @@
                 <image src="/static/images/icons/close.svg" class="w-[48rpx] h-[48rpx]"></image>
             </view>
             <view class="absolute left-0 top-0 w-full h-full z-[88]">
-                <view class="text-white pt-[40rpx] text-center font-bold text-[40rpx]">
-                    <view class="text-white text-center font-bold text-[40rpx]">
+                <view class="text-white pt-[40rpx] text-center font-medium text-[40rpx]">
+                    <view class="text-white text-center font-medium text-[40rpx]">
                         {{ webSiteConfig.shop_name }}全新升级,
                     </view>
                     <view> 为企业释放无限可能 </view>
@@ -331,7 +337,7 @@
             </view>
             <view class="w-full absolute top-[535rpx] left-0 z-[777]">
                 <view
-                    class="flex justify-center items-center text-white font-bold mt-[40rpx]"
+                    class="flex justify-center items-center text-white font-medium mt-[40rpx]"
                     @click="
                         copy(domain);
                         showPcTips = false;
@@ -389,6 +395,9 @@ enum AgentType {
     MATERIAL = "material",
     COMMENT_TASK = "comment_task",
     PRIVATE_MESSAGE_TASK = "private_message_task",
+    COLLECT_MARKETING = "COLLECT_MARKETING",
+    // 朋友圈互动
+    LIKE_CIRCLE = "like_circle",
 }
 
 const appStore = useAppStore();
@@ -429,13 +438,13 @@ const utilsList = [
         icon: penStarIcon,
         key: AgentType.MATERIAL,
     },
-    {
-        title: "文案创作",
-        desc: "高效内容生产助手，提升创作效率",
-        icon: penIcon,
-        disabled: true,
-        key: AgentType.COPYWRITING,
-    },
+    // {
+    //     title: "文案创作",
+    //     desc: "高效内容生产助手，提升创作效率",
+    //     icon: penIcon,
+    //     disabled: true,
+    //     key: AgentType.COPYWRITING,
+    // },
 ];
 
 const deviceCount = ref(0);
@@ -603,7 +612,6 @@ const handleAgent = (key: AgentType) => {
 const toPage = (type: AgentType) => {
     if (
         type === AgentType.SEND_CONTENT ||
-        type === AgentType.SEND_CIRCLE ||
         type === AgentType.FLOW_SETTING ||
         type === AgentType.TAG_SETTING ||
         type === AgentType.PRAISE_SETTING
@@ -618,8 +626,11 @@ const toPage = (type: AgentType) => {
         [AgentType.CREATION]: "/packages/pages/creation/creation",
         [AgentType.MATERIAL]: "/packages/pages/material_library/material_library",
         [AgentType.AI_DRAWING]: "/ai_modules/drawing/pages/index/index",
-        [AgentType.COMMENT_TASK]: "/ai_modules/device/pages/create_closure/create_closure?type=comment",
-        [AgentType.PRIVATE_MESSAGE_TASK]: "/ai_modules/device/pages/create_closure/create_closure?type=private_message",
+        [AgentType.COMMENT_TASK]: `/ai_modules/device/pages/create_closure/create_closure`,
+        [AgentType.PRIVATE_MESSAGE_TASK]: `/ai_modules/device/pages/create_closure/create_closure`,
+        [AgentType.COLLECT_MARKETING]: `/ai_modules/device/pages/create_closure/create_closure?type=${AgentType.COLLECT_MARKETING}`,
+        [AgentType.SEND_CIRCLE]: `/ai_modules/device/pages/create_circle/create_circle`,
+        [AgentType.LIKE_CIRCLE]: `/ai_modules/device/pages/create_circle_interact/create_circle_interact`,
     };
     if (!urls[type]) {
         return;
@@ -640,7 +651,7 @@ const getDeviceStatisticsFn = async () => {
 
 <style lang="scss" scoped>
 .tab-item {
-    @apply text-[#ffffff99] flex items-center justify-center h-full w-full font-bold relative z-10 transition-all duration-[800];
+    @apply text-[#ffffff99] flex items-center justify-center h-full w-full font-medium relative z-10 transition-all duration-[800];
     &.active {
         @apply text-primary relative;
         &::before {
@@ -717,7 +728,7 @@ const getDeviceStatisticsFn = async () => {
 }
 
 .utils-tips {
-    @apply h-[120rpx] rounded-[20rpx] px-[36rpx] text-[#00000080] font-bold pt-[30rpx] bg-no-repeat  bg-cover;
+    @apply h-[120rpx] rounded-[20rpx] px-[36rpx] text-[#00000080] font-medium pt-[30rpx] bg-no-repeat  bg-cover;
 }
 
 .hot-card {

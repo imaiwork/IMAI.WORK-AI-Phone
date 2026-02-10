@@ -13,7 +13,7 @@
                     <div class="w-1.5 h-5 bg-primary rounded-full"></div>
                     <span class="font-[900] text-xl text-[#0F172A]">{{ title }}</span>
                 </div>
-                <div class="font-bold text-[13px] text-[#94A3B8]">完善岗位详情，AI 将根据 JD 自动为您筛选人才</div>
+                <div class="font-medium text-[13px] text-[#94A3B8]">完善岗位详情，AI 将根据 JD 自动为您筛选人才</div>
             </div>
         </template>
 
@@ -52,7 +52,9 @@
                                                 v-if="!formData.avatar"
                                                 class="flex flex-col items-center justify-center">
                                                 <Icon name="el-icon-Plus" color="#94A3B8" :size="20" />
-                                                <span class="text-[11px] text-[#94A3B8] mt-1 font-bold">上传LOGO</span>
+                                                <span class="text-[11px] text-[#94A3B8] mt-1 font-medium"
+                                                    >上传LOGO</span
+                                                >
                                             </div>
                                             <div v-else class="w-full h-full relative">
                                                 <ElImage
@@ -149,7 +151,7 @@
                                     </div>
                                     <button
                                         type="button"
-                                        class="w-full h-10 rounded-xl border-2 border-dashed border-[#E2E8F0] hover:border-primary hover:text-primary text-[#94A3B8] flex items-center justify-center gap-2 transition-all font-bold text-xs"
+                                        class="w-full h-10 rounded-xl border-2 border-dashed border-[#E2E8F0] hover:border-primary hover:text-primary text-[#94A3B8] flex items-center justify-center gap-2 transition-all font-medium text-xs"
                                         @click="addAttentionItem">
                                         <Icon name="el-icon-Plus" :size="14" />
                                         添加关注点
@@ -172,7 +174,10 @@
             </div>
 
             <div class="p-6 border-t border-[#F1F5F9] flex justify-end gap-3 bg-[#FFFFFF]">
-                <ElButton class="!h-11 !px-8 !rounded-xl !text-[#64748B] font-bold" color="#F8FAFC" @click="handleClose"
+                <ElButton
+                    class="!h-11 !px-8 !rounded-xl !text-[#64748B] font-medium"
+                    color="#F8FAFC"
+                    @click="handleClose"
                     >取消</ElButton
                 >
                 <ElButton
@@ -313,7 +318,7 @@ defineExpose({
 :deep(.custom-radio-group) {
     @apply flex gap-3;
     .el-radio {
-        @apply h-11 px-5 rounded-xl mr-0 bg-slate-50 border-2 border-[transparent] font-bold;
+        @apply h-11 px-5 rounded-xl mr-0 bg-slate-50 border-2 border-[transparent] font-medium;
     }
 }
 

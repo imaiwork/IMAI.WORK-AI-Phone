@@ -16,7 +16,7 @@
                         @click="selectedAgent = item.id">
                         <image :src="item.image" class="flex-shrink-0 w-[90rpx] h-[90rpx] rounded-full"></image>
                         <view class="flex-1">
-                            <view class="font-bold text-[30rpx] line-clamp-1">{{ item.name }}</view>
+                            <view class="font-medium text-[30rpx] line-clamp-1">{{ item.name }}</view>
                             <view class="text-xs text-[#0000004d] line-clamp-1 mt-[10rpx]">
                                 {{ item.intro }}
                             </view>
@@ -34,7 +34,7 @@
         </view>
         <view class="bg-white flex-shrink-0 pb-5 pt-4 px-6">
             <view
-                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-bold flex items-center justify-center"
+                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-medium flex items-center justify-center"
                 @click="confirm">
                 确定保存
             </view>

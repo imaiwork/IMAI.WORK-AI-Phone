@@ -22,7 +22,7 @@
                     hover-class="none"
                     class="flex items-center justify-center gap-x-2 mx-[32rpx] bg-white rounded-[24rpx] h-[140rpx] mt-2">
                     <image src="@/ai_modules/digital_human/static/icons/add.svg" class="w-[32rpx] h-[32rpx]"></image>
-                    <text class="text-[30rpx] font-bold">去克隆音色</text>
+                    <text class="text-[30rpx] font-medium">去克隆音色</text>
                 </navigator>
 
                 <view class="grow min-h-0">

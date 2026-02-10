@@ -8,8 +8,8 @@
             :platform-types="[AppTypeEnum.XHS, AppTypeEnum.DOUYIN, AppTypeEnum.KUAISHOU]"
             @change-frequency="currentFrequency = $event" />
         <view class="mt-[50rpx]" v-if="taskErrorMsg">
-            <view class="font-bold">任务冲突：</view>
-            <view class="text-font-bold text-[#ff2442] text-xs mt-[20rpx]">
+            <view class="font-medium">任务冲突：</view>
+            <view class="text-font-medium text-[#ff2442] text-xs mt-[20rpx]">
                 {{ taskErrorMsg }}
             </view>
         </view>

@@ -9,11 +9,11 @@
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "choose-material": "../../../../components/choose-material/choose-material",
     "upload-progress": "../../../../components/upload-progress/upload-progress",
+    "video-preview": "../../../../components/video-preview/video-preview",
     "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
     "upload-rule-pop": "../../components/upload-rule-pop/upload-rule-pop",
     "choose-history": "../../components/choose-history/choose-history",
     "choose-character": "../../components/choose-character/choose-character",
-    "video-preview": "../../../../components/video-preview/video-preview",
     "tokens-cost": "../../components/tokens-cost/tokens-cost",
     "create-success-pop": "../../components/create-success-pop/create-success-pop"
   }

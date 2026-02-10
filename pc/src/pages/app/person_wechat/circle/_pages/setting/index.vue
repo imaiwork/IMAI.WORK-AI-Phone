@@ -8,14 +8,14 @@
                 </div>
                 <div>
                     <div class="text-[18px] text-[#1E293B] font-black tracking-tight">朋友圈自动化策略</div>
-                    <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                    <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                         Automation Settings
                     </div>
                 </div>
             </div>
             <ElButton
                 type="primary"
-                class="!w-[180px] !h-[50px] !rounded-xl !text-[16px] !font-bold"
+                class="!w-[180px] !h-[50px] !rounded-xl !text-[16px] !font-medium"
                 :loading="isLock"
                 @click="lockConfirm">
                 保存策略配置
@@ -54,7 +54,7 @@
                                         :min="0"
                                         controls-position="right"
                                         class="custom-number" />
-                                    <span class="text-[13px] font-bold text-tx-placeholder">分钟后执行</span>
+                                    <span class="text-[13px] font-medium text-tx-placeholder">分钟后执行</span>
                                 </div>
                             </div>
 
@@ -69,7 +69,7 @@
                                         :min="0"
                                         controls-position="right"
                                         class="custom-number" />
-                                    <span class="text-[13px] font-bold text-tx-placeholder">条 / 天</span>
+                                    <span class="text-[13px] font-medium text-tx-placeholder">条 / 天</span>
                                 </div>
                             </div>
 
@@ -157,7 +157,7 @@
                                         :min="0"
                                         controls-position="right"
                                         class="custom-number orange" />
-                                    <span class="text-[13px] font-bold text-tx-placeholder">分钟后执行</span>
+                                    <span class="text-[13px] font-medium text-tx-placeholder">分钟后执行</span>
                                 </div>
                             </div>
 
@@ -172,7 +172,7 @@
                                         :min="0"
                                         controls-position="right"
                                         class="custom-number orange" />
-                                    <span class="text-[13px] font-bold text-tx-placeholder">条 / 天</span>
+                                    <span class="text-[13px] font-medium text-tx-placeholder">条 / 天</span>
                                 </div>
                             </div>
 

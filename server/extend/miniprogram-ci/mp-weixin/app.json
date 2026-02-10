@@ -39,7 +39,7 @@
         "pages/audio_choose/audio_choose",
         "pages/clone_manage/clone_manage",
         "pages/szr_copywriter/szr_copywriter",
-        "pages/ai_copywriter/ai_copywriter",
+        "pages/szr_ai_copywriter/szr_ai_copywriter",
         "pages/styles_choose/styles_choose",
         "pages/montage_create/montage_create",
         "pages/anchor_create/anchor_create",
@@ -61,7 +61,14 @@
         "pages/sora_create_role/sora_create_role",
         "pages/sora_role_library/sora_role_library",
         "pages/music_choose/music_choose",
-        "pages/montage_styles_choose/montage_styles_choose"
+        "pages/montage_styles_choose/montage_styles_choose",
+        "pages/platform_publish/platform_publish",
+        "pages/platform_publish_works/platform_publish_works",
+        "pages/platform_publish_video/platform_publish_video",
+        "pages/platform_publish_copywriter/platform_publish_copywriter",
+        "pages/platform_publish_ai_copywriter/platform_publish_ai_copywriter",
+        "pages/montage_storyboard/montage_storyboard",
+        "pages/montage_storyboard_title/montage_storyboard_title"
       ]
     },
     {
@@ -146,7 +153,8 @@
         "pages/create_circle_interact/create_circle_interact",
         "pages/setting_circle_interact/setting_circle_interact",
         "pages/rpa_code/rpa_code",
-        "pages/task_tutorial/task_tutorial"
+        "pages/task_tutorial/task_tutorial",
+        "pages/create_wechat_private/create_wechat_private"
       ]
     },
     {

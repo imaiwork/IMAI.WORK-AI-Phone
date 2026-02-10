@@ -121,7 +121,7 @@ const getUploadImage = (res: any) => {
             @apply w-full h-full flex items-center justify-center bg-slate-50;
         }
         .type-tag {
-            @apply absolute bottom-2 left-2 px-2 py-0.5 bg-[#000000]/40 backdrop-blur-md text-white text-[9px] font-bold rounded-md uppercase tracking-widest;
+            @apply absolute bottom-2 left-2 px-2 py-0.5 bg-[#000000]/40 backdrop-blur-md text-white text-[9px] font-medium rounded-md uppercase tracking-widest;
         }
     }
 }

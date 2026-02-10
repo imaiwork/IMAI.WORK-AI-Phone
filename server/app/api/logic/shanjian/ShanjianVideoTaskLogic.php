@@ -302,6 +302,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             ];
                             Log::channel('shanjian')->write('获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                             $task->video_result_url = $video_result_url;
+                            $task->duration = $data['result']['duration'] ?? '0';;
                         }
                         $setPublish = self::updateVideoSettingStatus($task->video_setting_id, true);
 
@@ -586,10 +587,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
                             }
                             if($task->card_name != ''){
-                                $requestdata['introduceCard'] = [
-                                    'name' => $task->card_name,
-                                    'description' => $task->card_introduced,
-                                ];
+                                $requestdata['introduceCard']['name'] = $task->card_name;
+                            }
+                            if($task->card_introduced != ''){
+                                $requestdata['introduceCard']['description'] =  $task->card_introduced;
                             }
                             if ($soundSwitch){
                                 $requestdata['materialSoundSwitch'] = !($soundSwitch == "false") && (bool)$soundSwitch;
@@ -670,11 +671,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 $requestdata['materialSoundSwitch'] = !($soundSwitch == "false") && (bool)$soundSwitch;
                             }
                             if($task->card_name != ''){
-                                $requestdata['introduceCard'] = [
-                                    'name' => $task->card_name,
-                                    'description' => $task->card_introduced,
-                                ];
-
+                                $requestdata['introduceCard']['name'] = $task->card_name;
+                            }
+                            if($task->card_introduced != ''){
+                                $requestdata['introduceCard']['description'] =  $task->card_introduced;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
                             Log::channel('shanjian')->write('合成视频' . json_encode($response));
@@ -752,11 +752,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
                             }
                             if($task->card_name != ''){
-                                $requestdata['introduceCard'] = [
-                                    'name' => $task->card_name,
-                                    'description' => $task->card_introduced,
-                                ];
-
+                                $requestdata['introduceCard']['name'] = $task->card_name;
+                            }
+                            if($task->card_introduced != ''){
+                                $requestdata['introduceCard']['description'] =  $task->card_introduced;
                             }
                             if($task->material != ''){
                                 $requestdata['materials'] =  $task->material;
@@ -826,10 +825,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 ]
                             ];
                             if($task->card_name != ''){
-                                $requestdata['introduceCard'] = [
-                                    'name' => $task->card_name,
-                                    'description' => $task->card_introduced,
-                                ];
+                                $requestdata['introduceCard']['name'] = $task->card_name;
+                            }
+                            if($task->card_introduced != ''){
+                                $requestdata['introduceCard']['description'] =  $task->card_introduced;
                             }
                             if($task->material != ''){
                                 $requestdata['materials'] =  $task->material;

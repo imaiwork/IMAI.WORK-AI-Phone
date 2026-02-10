@@ -1,8 +1,8 @@
 <template>
     <div class="py-6 text-center">
-        <span v-if="!isLoad" class="text-[11px] text-[#94A3B8] font-bold uppercase tracking-widest">{{ text }}</span>
+        <span v-if="!isLoad" class="text-[11px] text-[#94A3B8] font-medium uppercase tracking-widest">{{ text }}</span>
         <div v-else class="flex items-center justify-center gap-2 text-primary">
-            <span class="text-xs font-bold">正在加载更多...</span>
+            <span class="text-xs font-medium">正在加载更多...</span>
         </div>
     </div>
 </template>

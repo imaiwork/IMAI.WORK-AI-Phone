@@ -17,7 +17,7 @@
                     </div>
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">素材资源库集</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             Material Resources
                         </div>
                     </div>
@@ -41,7 +41,7 @@
                     </ElInput>
                     <ElButton
                         type="primary"
-                        class="!rounded-full !w-[100px] !h-[42px] !font-bold !text-sm ! !shadow-[#0065fb]/20"
+                        class="!rounded-full !w-[100px] !h-[42px] !font-medium !text-sm ! !shadow-[#0065fb]/20"
                         @click="search">
                         搜索
                     </ElButton>
@@ -116,7 +116,7 @@
                                     </div>
 
                                     <div class="p-3 bg-white rounded-b-2xl">
-                                        <div class="text-[12px] font-bold text-[#1E293B] truncate leading-tight">
+                                        <div class="text-[12px] font-medium text-[#1E293B] truncate leading-tight">
                                             {{ item.name || "未命名素材" }}
                                         </div>
                                     </div>
@@ -125,12 +125,12 @@
                             <div class="py-6 text-center">
                                 <span
                                     v-if="!pager.isLoad"
-                                    class="text-[11px] text-[#94A3B8] font-bold uppercase tracking-widest"
+                                    class="text-[11px] text-[#94A3B8] font-medium uppercase tracking-widest"
                                     >End of Content</span
                                 >
                                 <div v-else class="flex items-center justify-center gap-2 text-primary">
                                     <Icon name="el-icon-Loading"></Icon>
-                                    <span class="text-xs font-bold">正在加载更多...</span>
+                                    <span class="text-xs font-medium">正在加载更多...</span>
                                 </div>
                             </div>
                         </div>
@@ -140,7 +140,7 @@
                                 class="w-24 h-24 bg-[#F1F5F9] rounded-full flex items-center justify-center mb-4 text-[#CBD5E1]">
                                 <Icon name="el-icon-FolderOpened" :size="40"></Icon>
                             </div>
-                            <div class="text-[#94A3B8] font-bold text-sm">此库中暂无素材内容</div>
+                            <div class="text-[#94A3B8] font-medium text-sm">此库中暂无素材内容</div>
                         </div>
                     </div>
                 </ElScrollbar>

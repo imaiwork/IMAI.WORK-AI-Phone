@@ -9,21 +9,21 @@
                         class="w-8 h-8 rounded-full bg-[#F9FAFB] flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
                         <Icon name="el-icon-ArrowLeft" :size="14"></Icon>
                     </div>
-                    <span class="text-sm font-bold text-[#6B7280] group-hover:text-[#111827] transition-colors"
+                    <span class="text-sm font-medium text-[#6B7280] group-hover:text-[#111827] transition-colors"
                         >返回上一步</span
                     >
                 </div>
 
                 <div class="flex items-center gap-3">
                     <ElButton
-                        class="!rounded-xl !h-10 !px-8 !border-[#E5E7EB] !bg-white !text-[#374151] font-bold hover:!bg-[#F9FAFB] active:scale-95 transition-all"
+                        class="!rounded-xl !h-10 !px-8 !border-[#E5E7EB] !bg-white !text-[#374151] font-medium hover:!bg-[#F9FAFB] active:scale-95 transition-all"
                         :disabled="isSubmitting"
                         @click="handleCancel">
                         取消
                     </ElButton>
                     <ElButton
                         type="primary"
-                        class="!rounded-xl !h-10 !px-8 font-bold shadow-[#0065fb]/20 active:scale-95 transition-all"
+                        class="!rounded-xl !h-10 !px-8 font-medium shadow-[#0065fb]/20 active:scale-95 transition-all"
                         :loading="isSubmitting"
                         @click="handleNext">
                         {{ isLastStep ? "提交任务" : "继续下一步" }}
@@ -43,12 +43,12 @@
                                         ? 'bg-primary text-white shadow-[#0065fb]/30'
                                         : 'bg-[#F3F4F6] text-[#9CA3AF]',
                                 ]">
-                                <i v-if="step == item.step" class="el-icon-check font-bold"></i>
+                                <i v-if="step == item.step" class="el-icon-check font-medium"></i>
                                 <span v>{{ index + 1 }}</span>
                             </div>
 
                             <div
-                                class="text-xs font-bold transition-colors duration-300 whitespace-nowrap"
+                                class="text-xs font-medium transition-colors duration-300 whitespace-nowrap"
                                 :class="[step >= item.step ? 'text-[#111827]' : 'text-[#9CA3AF]']">
                                 {{ item.title }}
                             </div>
@@ -71,7 +71,7 @@
             <!-- 内容区域 -->
             <div class="grow min-h-0 flex flex-col p-5">
                 <!-- 步骤一：基本信息 -->
-                <div class="grow min-h-0 flex flex-col w-[520px] mx-auto pb-6" v-if="step == 1">
+                <div class="grow min-h-0 flex flex-col w-[520px] mx-auto pb-6" v-show="step == 1">
                     <div class="flex items-center justify-between flex-shrink-0 mb-6 px-2">
                         <div>
                             <h2 class="text-[22px] font-black text-[#111827] tracking-tight">
@@ -95,7 +95,7 @@
                                         <span
                                             class="text-[11px] text-[#6B7280] bg-white px-2 py-0.5 rounded border border-[#E5E7EB]">
                                             已添加:
-                                            <span class="text-primary font-bold">{{
+                                            <span class="text-primary font-medium">{{
                                                 materialFormData.media_url.length
                                             }}</span>
                                         </span>
@@ -117,7 +117,7 @@
                             <button
                                 v-if="isImageMode"
                                 @click="handleAddImageGroup"
-                                class="h-9 px-4 rounded-xl bg-primary text-white text-[12px] font-bold hover:bg-[#4338CA] transition-all active:scale-95 flex items-center gap-2">
+                                class="h-9 px-4 rounded-xl bg-primary text-white text-[12px] font-medium hover:bg-[#4338CA] transition-all active:scale-95 flex items-center gap-2">
                                 <i class="el-icon-plus"></i>
                                 <span>添加图片组</span>
                             </button>
@@ -176,9 +176,9 @@
                     </div>
                 </div>
                 <!-- 步骤二：选择内容 -->
-                <div class="grow min-h-0 flex flex-col" v-else-if="step == 2">
+                <div class="grow min-h-0 flex flex-col" v-show="step == 2">
                     <div class="flex items-center justify-between flex-shrink-0">
-                        <div class="font-bold text-[20px]">填写文案</div>
+                        <div class="font-medium text-[20px]">填写文案</div>
                         <ElButton type="primary" class="!rounded-full !h-10 w-[106px]" @click="openCopywritingMaterial"
                             >智能文案</ElButton
                         >
@@ -202,7 +202,7 @@
                     </div>
                 </div>
                 <!-- 步骤三：发布设置 -->
-                <ElScrollbar v-else-if="step == 3">
+                <ElScrollbar v-show="step == 3">
                     <div class="w-[480px] mx-auto bg-white rounded-[24px] p-8 shadow-sm border border-slate-100">
                         <div class="flex items-center gap-3 mb-8">
                             <div class="w-1.5 h-6 bg-primary rounded-full"></div>
@@ -210,6 +210,18 @@
                         </div>
 
                         <div class="flex flex-col gap-y-8">
+                            <div class="form-item">
+                                <div class="item-label">
+                                    <Icon name="el-icon-Document" />
+                                    <span class="ml-2">任务名称</span>
+                                </div>
+                                <ElInput
+                                    v-model="formData.name"
+                                    placeholder="请输入任务名称"
+                                    maxlength="30"
+                                    class="custom-input !w-full">
+                                </ElInput>
+                            </div>
                             <div class="form-item">
                                 <div class="item-label">
                                     <Icon name="el-icon-User" />
@@ -231,7 +243,7 @@
                                         <div class="flex items-center justify-between w-full">
                                             <div class="flex items-center gap-2">
                                                 <img :src="getPlatform(item.type)?.icon" class="w-4 h-4 rounded-sm" />
-                                                <span class="font-bold text-[13px]">{{ item.nickname }}</span>
+                                                <span class="font-medium text-[13px]">{{ item.nickname }}</span>
                                             </div>
                                             <span class="text-[11px] text-slate-400 opacity-70">{{
                                                 item.account
@@ -240,7 +252,19 @@
                                     </ElOption>
                                 </ElSelect>
                             </div>
-
+                            <div class="form-item">
+                                <div class="item-label">
+                                    <Icon name="el-icon-Location" />
+                                    <span class="ml-2">标记地点(选填)</span>
+                                </div>
+                                <ElInput
+                                    v-model="formData.location"
+                                    placeholder="请输入标记地点"
+                                    maxlength="100"
+                                    show-word-limit
+                                    class="custom-input !w-full">
+                                </ElInput>
+                            </div>
                             <div class="form-item">
                                 <div class="item-label">
                                     <Icon name="el-icon-Timer" />
@@ -264,7 +288,7 @@
                                         :class="{ 'is-active': currentPublishFrequencyIdx == 5 }"
                                         @click="openCustomFreqDialog">
                                         <Icon name="el-icon-Setting" :size="14" />
-                                        <span class="text-[13px] font-bold">{{
+                                        <span class="text-[13px] font-medium">{{
                                             customPublishFrep ? `${customPublishFrep}条` : "自定义"
                                         }}</span>
                                     </div>
@@ -293,7 +317,7 @@
                                         :class="{ 'is-active': currentTaskFrequencyIdx == 5 }"
                                         @click="currentTaskFrequencyIdx = 5">
                                         <Icon name="el-icon-Setting" :size="14" />
-                                        <span class="text-[13px] font-bold">按日期</span>
+                                        <span class="text-[13px] font-medium">按日期</span>
                                     </div>
                                 </div>
 
@@ -441,7 +465,7 @@
 
                 <div class="bg-[#0065fb]/5 rounded-[28px] p-6 border border-[#0065fb]/10">
                     <div class="flex items-end justify-center gap-2 mb-6">
-                        <span class="text-[42px] font-bold text-primary leading-none tracking-tighter">{{
+                        <span class="text-[42px] font-medium text-primary leading-none tracking-tighter">{{
                             tempCustomFreq
                         }}</span>
                         <span class="text-[14px] font-black text-primary/60 mb-1.5">条 / 24h</span>
@@ -483,7 +507,7 @@
                 <div
                     class="mt-6 flex items-start gap-2 text-[11px] leading-relaxed text-orange-600 bg-[#fff7ed]/80 border border-[#ffedd5]/50 px-4 py-3 rounded-xl w-full">
                     <Icon name="el-icon-WarningFilled" />
-                    <span class="font-bold ml-0.5">修改此数值将导致下方已设置的时间段重置，请确认后再操作。</span>
+                    <span class="font-medium ml-0.5">修改此数值将导致下方已设置的时间段重置，请确认后再操作。</span>
                 </div>
             </div>
 
@@ -588,10 +612,19 @@ const { type } = toRefs(props);
 const query = searchQueryToObject();
 const materialId = computed(() => query.material_id);
 
-const step = ref(1);
+const step = ref(3);
 
 // 表单数据
-const formData = reactive({
+const formData = reactive<{
+    name: string;
+    accounts: string[];
+    media_type: PublishTaskTypeEnum;
+    time_config: any[];
+    publish_frep: number;
+    custom_date: string[];
+    task_frep: number;
+    location: string;
+}>({
     name: `${publishTypeMap[type.value]}矩阵任务${dayjs().format("YYYYMMDDHHmm")}`,
     accounts: [],
     media_type: type.value,
@@ -599,6 +632,7 @@ const formData = reactive({
     publish_frep: 2,
     custom_date: [],
     task_frep: 1,
+    location: "",
 });
 
 // 素材数据
@@ -1050,6 +1084,7 @@ const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
             task_type: 3,
             scene: 2,
             data_type: 0,
+            poi: formData.location,
         });
         feedback.msgSuccess("发布成功");
         router.push(`/app/matrix?type=${SidebarTypeEnum.ME_PUBLISH}`);
@@ -1085,39 +1120,21 @@ const handlePreviewVideo = async (url: string) => {
 </script>
 
 <style scoped lang="scss">
-/* 按钮禁用状态美化 */
 :deep(.el-button.is-disabled) {
     background-color: #f9fafb !important;
     border-color: #f3f4f6 !important;
     color: #d1d5db !important;
 }
 
-/* 步骤条点击效果 */
 .group:active .w-9 {
     transform: scale(0.9);
 }
 
-/* 蓝色投影增强品牌感 */
-.shadow-primary {
-    box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
-}
 .content-item {
     @apply rounded-xl border border-[var(--el-border-color)] py-[14px] flex flex-col grow min-h-0 flex-1;
 
     :deep(.el-input__inner::placeholder) {
         font-size: 10px;
-    }
-}
-
-:deep(.el-scrollbar__thumb) {
-    background-color: #e5e7eb !important;
-}
-
-:deep(.el-input__wrapper) {
-    border-radius: 12px;
-    box-shadow: none !important;
-    &:hover {
-        border-color: #4f46e5;
     }
 }
 
@@ -1170,13 +1187,7 @@ const handlePreviewVideo = async (url: string) => {
 }
 
 .error-notice {
-    @apply mt-4 p-3 bg-red-50 text-red-500 rounded-xl text-[12px] font-bold flex items-center gap-2 border border-red-100;
-}
-
-.modern-giant-input :deep(input::-webkit-outer-spin-button),
-.modern-giant-input :deep(input::-webkit-inner-spin-button) {
-    -webkit-appearance: none;
-    margin: 0;
+    @apply mt-4 p-3 bg-red-50 text-red-500 rounded-xl text-[12px] font-medium flex items-center gap-2 border border-red-100;
 }
 
 .modern-btn-secondary {

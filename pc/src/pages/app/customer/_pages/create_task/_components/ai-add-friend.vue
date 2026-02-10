@@ -12,7 +12,7 @@
             <div class="absolute w-6 h-6 top-[18px] right-[18px] z-[22]" @click="close">
                 <close-btn />
             </div>
-            <div class="text-[15px] font-bold">AI提示词设置（加好友内容）</div>
+            <div class="text-[15px] font-medium">AI提示词设置（加好友内容）</div>
             <div class="mt-4">
                 <ElInput
                     v-model="formData.content"

@@ -23,13 +23,13 @@
                             </div>
                             <div>
                                 <div class="flex items-center gap-3 mb-1">
-                                    <h2 class="text-slate-800 text-[24px] font-bold">{{ friendInfo.nickname }}</h2>
+                                    <h2 class="text-slate-800 text-[24px] font-medium">{{ friendInfo.nickname }}</h2>
                                     <span
                                         class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[11px] font-black rounded-md uppercase">
                                         {{ AccountTypeMap[AccountTypeEnum.Personal] }}
                                     </span>
                                 </div>
-                                <div class="flex items-center gap-2 text-slate-400 text-[13px] font-bold">
+                                <div class="flex items-center gap-2 text-slate-400 text-[13px] font-medium">
                                     <Icon name="el-icon-User" :size="14" />
                                     <span>备注：{{ friendInfo.remark || "未设置备注" }}</span>
                                 </div>
@@ -38,7 +38,7 @@
 
                         <div class="flex gap-4">
                             <div class="text-right">
-                                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                                <div class="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
                                     Join Source
                                 </div>
                                 <div class="text-[14px] text-slate-700 font-black">
@@ -50,19 +50,19 @@
 
                     <div class="mt-8 grid grid-cols-4 gap-6 p-5 bg-[#f8fafc]/50 rounded-[24px] border border-slate-100">
                         <div class="space-y-1">
-                            <div class="text-[11px] text-slate-400 font-bold uppercase">出生日期</div>
+                            <div class="text-[11px] text-slate-400 font-medium uppercase">出生日期</div>
                             <div class="text-[13px] text-slate-700 font-black">
                                 {{ friendInfo.birth_date || "未填写" }}
                             </div>
                         </div>
                         <div class="space-y-1">
-                            <div class="text-[11px] text-slate-400 font-bold uppercase">联系地址</div>
+                            <div class="text-[11px] text-slate-400 font-medium uppercase">联系地址</div>
                             <div class="text-[13px] text-slate-700 font-black truncate">
                                 {{ friendInfo.contact_address || "未填写" }}
                             </div>
                         </div>
                         <div class="space-y-1">
-                            <div class="text-[11px] text-slate-400 font-bold uppercase">活跃程度</div>
+                            <div class="text-[11px] text-slate-400 font-medium uppercase">活跃程度</div>
                             <div class="flex items-center gap-1">
                                 <div class="flex gap-0.5">
                                     <div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full bg-primary"></div>
@@ -71,7 +71,7 @@
                             </div>
                         </div>
                         <div class="space-y-1">
-                            <div class="text-[11px] text-slate-400 font-bold uppercase">最后互动</div>
+                            <div class="text-[11px] text-slate-400 font-medium uppercase">最后互动</div>
                             <div class="text-[13px] text-slate-700 font-black">2小时前</div>
                         </div>
                     </div>
@@ -316,9 +316,9 @@ defineExpose({
             @apply h-[4px] rounded-full bg-primary shadow-[0_2px_10px_rgba(0,101,251,0.4)];
         }
         .el-tabs__item {
-            @apply h-14 text-[15px] font-bold text-slate-400 transition-all;
+            @apply h-14 text-[15px] font-medium text-slate-400 transition-all;
             &.is-active {
-                @apply text-primary font-bold text-[16px];
+                @apply text-primary font-medium text-[16px];
             }
         }
     }

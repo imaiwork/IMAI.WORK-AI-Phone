@@ -43,6 +43,7 @@ import TaskYhIcon from "@/ai_modules/device/static/images/common/task_type_yh.pn
 import TaskCircleIcon from "@/ai_modules/device/static/images/common/task_type_circle.png";
 import TaskCollectIcon from "@/ai_modules/device/static/images/common/task_type_collect.png";
 import TaskCommentIcon from "@/ai_modules/device/static/images/common/task_type_comment.png";
+import TaskWechatMsgIcon from "@/ai_modules/device/static/images/common/task_type_wechat.png";
 
 const taskTypeList = [
     {
@@ -78,15 +79,29 @@ const taskTypeList = [
         desc: "评论区评论/私信",
         icon: TaskCommentIcon,
         disabled: false,
+        type: CreateTypeEnum.COMMENT_MARKETING,
+    },
+    {
+        title: "留痕获客",
+        desc: "仅点赞/关注等互动",
+        icon: TaskCollectIcon,
+        disabled: false,
         type: CreateTypeEnum.COLLECT_MARKETING,
     },
-    // {
-    //     title: "留痕获客",
-    //     desc: "仅点赞/关注等互动",
-    //     icon: TaskCollectIcon,
-    //     disabled: false,
-    //     type: CreateTypeEnum.COLLECT_MARKETING,
-    // },
+    {
+        title: "发朋友圈",
+        desc: "朋友圈发布内容",
+        icon: TaskCircleIcon,
+        disabled: false,
+        type: CreateTypeEnum.CIRCLE,
+    },
+    {
+        title: "朋友圈互动",
+        desc: "朋友圈点赞/评论",
+        icon: TaskCircleIcon,
+        disabled: false,
+        type: CreateTypeEnum.CIRCLE_INTERACT,
+    },
     {
         title: "自动加好友",
         desc: "聚焦省心省力",
@@ -102,18 +117,11 @@ const taskTypeList = [
         type: CreateTypeEnum.ACCOUNT_MAINTAIN,
     },
     {
-        title: "发朋友圈",
-        desc: "朋友圈发布内容",
-        icon: TaskCircleIcon,
+        title: "个微接管",
+        desc: "自动处理个微回复",
+        icon: TaskWechatMsgIcon,
         disabled: false,
-        type: CreateTypeEnum.CIRCLE,
-    },
-    {
-        title: "朋友圈互动",
-        desc: "朋友圈点赞/评论",
-        icon: TaskCircleIcon,
-        disabled: false,
-        type: CreateTypeEnum.CIRCLE_INTERACT,
+        type: CreateTypeEnum.WECHAT_MSG,
     },
 ];
 
@@ -131,11 +139,12 @@ const handleClick = (item: any) => {
         [CreateTypeEnum.CLUE_AUTO]: "/ai_modules/sph/pages/create_task/create_task",
         [CreateTypeEnum.CHAT_MANAGE]: "/ai_modules/device/pages/create_private_take/create_private_take",
         [CreateTypeEnum.COMMENT_MARKETING]: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.COMMENT_MARKETING}`,
-        [CreateTypeEnum.COLLECT_MARKETING]: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.PRIVATE_MESSAGE}`,
+        [CreateTypeEnum.COLLECT_MARKETING]: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.COLLECT_MARKETING}`,
         [CreateTypeEnum.FRIEND_ADD]: "/ai_modules/device/pages/create_add_wechat/create_add_wechat",
         [CreateTypeEnum.ACCOUNT_MAINTAIN]: "/ai_modules/device/pages/create_account_building/create_account_building",
         [CreateTypeEnum.CIRCLE]: "/ai_modules/device/pages/create_circle/create_circle",
         [CreateTypeEnum.CIRCLE_INTERACT]: "/ai_modules/device/pages/create_circle_interact/create_circle_interact",
+        [CreateTypeEnum.WECHAT_MSG]: "/ai_modules/device/pages/create_wechat_private/create_wechat_private",
     };
     uni.navigateTo({
         url: urls[item.type as keyof typeof urls],
@@ -148,11 +157,12 @@ const handlePreview = (item: any) => {
         [CreateTypeEnum.CLUE_AUTO]: `${config.baseUrl}static/videos/task_clue_auto.mp4`,
         [CreateTypeEnum.CHAT_MANAGE]: `${config.baseUrl}static/videos/task_chat_manage.mp4`,
         [CreateTypeEnum.COMMENT_MARKETING]: `${config.baseUrl}static/videos/task_comment_marketing.mp4`,
-        [CreateTypeEnum.COLLECT_MARKETING]: `${config.baseUrl}static/videos/task_dm_marketing.mp4`,
+        [CreateTypeEnum.COLLECT_MARKETING]: `${config.baseUrl}static/videos/task_collect_marketing.mp4`,
         [CreateTypeEnum.FRIEND_ADD]: `${config.baseUrl}static/videos/task_friend_add.mp4`,
         [CreateTypeEnum.ACCOUNT_MAINTAIN]: `${config.baseUrl}static/videos/task_account_maintain.mp4`,
         [CreateTypeEnum.CIRCLE]: `${config.baseUrl}static/videos/task_publish_circle.mp4`,
         [CreateTypeEnum.CIRCLE_INTERACT]: `${config.baseUrl}static/videos/task_circle_comment.mp4`,
+        [CreateTypeEnum.WECHAT_MSG]: `${config.baseUrl}static/videos/task_wechat_msg.mp4`,
     };
 
     previewUrl.value = urls[item.type as keyof typeof urls];

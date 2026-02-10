@@ -4,11 +4,11 @@
             <template v-if="!loading">
                 <img src="@/assets/images/app_tips_bg.png" class="w-full h-[582px]" />
                 <img src="@/assets/images/close.png" class="w-12 h-12 mt-6 mx-auto cursor-pointer" @click="close" />
-                <div class="absolute top-[46px] left-[38px] text-[48px] text-white font-bold">
+                <div class="absolute top-[46px] left-[38px] text-[48px] text-white font-medium">
                     {{ name }}
                 </div>
                 <div class="absolute top-[200px] w-full flex flex-col items-center justify-center">
-                    <div class="text-[32px] font-bold">{{ config.title }}</div>
+                    <div class="text-[32px] font-medium">{{ config.title }}</div>
                     <div class="text-[24px] text-[#A1A1A1] mt-4">
                         {{ config.subTitle }}
                     </div>

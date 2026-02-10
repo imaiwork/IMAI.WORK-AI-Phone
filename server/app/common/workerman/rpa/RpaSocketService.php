@@ -37,6 +37,8 @@ class RpaSocketService
     public function __construct(Worker $object)
     {
         $this->worker = $object;
+        // $this->worker->name = 'AiRpaService';
+        // $this->worker->count = swoole_cpu_num() * 2;
         date_default_timezone_set('PRC');
         // 只做基础初始化，进程级别的初始化移至onWorkerStart
         ini_set('memory_limit', '1024M');
@@ -276,7 +278,13 @@ class RpaSocketService
 
             // 详细的关闭日志
             $this->setLog('连接关闭 [IP:' . $ip . ', UID:' . $uid . ', 名称:' . $name . ', 原因:' . $reason . ']', 'info');
-
+            
+            $deviceid = $connection->deviceid ?? '';
+            if(!empty($deviceid)){
+                SvDevice::where('device_code', $deviceid)->update(['status' => 0, 'update_time' => time()]);
+                SvAccount::where('device_code', $deviceid)->update(['status' => 0, 'update_time' => time()]);
+            }
+            
             //代表用户下线，清除用户信息
             if (isset($connection->uid)) {
                 $this->_unBind($connection->uid);
@@ -300,6 +308,11 @@ class RpaSocketService
     public function onError(TcpConnection $connection, $code, $msg)
     {
         try {
+            $deviceid = $connection->deviceid ?? '';
+            if(!empty($deviceid)){
+                SvDevice::where('device_code', $deviceid)->update(['status' => 0, 'update_time' => time()]);
+                SvAccount::where('device_code', $deviceid)->update(['status' => 0, 'update_time' => time()]);
+            }
             // 获取客户端IP和其他连接信息
             $clientIp = $connection->getRemoteIp();
             $clientPort = $connection->getRemotePort();
@@ -311,6 +324,7 @@ class RpaSocketService
                 'client_ip' => $clientIp,
                 'client_port' => $clientPort,
                 'uid' => $connection->uid ?? 'unknown',
+                'deviceid' => $connection->deviceid ?? '',
                 'connection_status' => $connection->getStatus(),
                 'time' => date('Y-m-d H:i:s')
             );
@@ -372,10 +386,13 @@ class RpaSocketService
         // 添加心跳检测定时器
         // Timer::add(10, function () use ($worker) {
         //     $timeNow = time();
-        //     foreach ($worker->connections as $connection) {
-        //         if (isset($connection->lastMessageTime) && $timeNow - $connection->lastMessageTime > $this->HEARTBEAT_TIME) {
-        //             $connection->close();
-        //         }
+        //     $this->setLog("心跳检测定时器触发, 当前时间: ". date('Y-m-d H:i:s', $timeNow), 'info');
+        //     $this->setLog("uidConnections: ". count($worker->uidConnections), 'info');
+        //     foreach ($worker->uidConnections as $uid => $connection) {
+        //         // if (isset($connection->lastMessageTime) && ($timeNow - $connection->lastMessageTime) > $this->HEARTBEAT_TIME) {
+        //         //     $connection->close();
+        //         // }
+        //         $this->setLog("uid: $uid, deviceid: ". $connection->deviceid .", name: ". $connection->name .", clientType: ". $connection->clientType .", lastMessageTime: ". $connection->lastMessageTime, 'info');
         //     }
         // });
     }

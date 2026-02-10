@@ -309,7 +309,6 @@ const getCommonConfig = computed(() => {
 const getAiPersonConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) =>
         [
-            "human_copywriting",
             "human_avatar",
             "human_voice",
             "human_video",
@@ -326,11 +325,9 @@ const getAiPersonConfig = computed(() => {
             "human_avatar_shanjian",
             "human_voice_shanjian",
             "human_video_shanjian",
-            "shanjian_copywriting_create",
             "shanjian_realman_broadcast",
             "shanjian_broadcast_mixcut",
             "shanjian_news_mixcut",
-            "news_mixcut_title",
             "sora_video_create",
             "sora_pro_video_create",
             "sora_copywriting_create",
@@ -415,7 +412,13 @@ const getSphConfig = computed(() => {
 
 const getOtherConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) =>
-        ["video_clip", "matrix_copywriting", "automation_account_ip_analysis"].includes(item.scene)
+        [
+            "video_clip",
+            "matrix_copywriting",
+            "automation_account_ip_analysis",
+            "coze_copywriting",
+            "douyin_js",
+        ].includes(item.scene)
     );
 });
 

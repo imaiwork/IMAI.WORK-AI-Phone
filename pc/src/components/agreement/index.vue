@@ -18,7 +18,7 @@
         :show-close="false"
         @close="showConfirmPopup = false">
         <div class="text-center">
-            <div class="text-lg font-bold">温馨提示</div>
+            <div class="text-lg font-medium">温馨提示</div>
             <div class="text-[rgba(0,0,0,0.5)] mt-4 w-[70%] mx-auto text-base">
                 请勾选已阅读并同意《服务协议》和《隐私协议》
             </div>

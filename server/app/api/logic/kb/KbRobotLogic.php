@@ -4,15 +4,19 @@
 namespace app\api\logic\kb;
 
 use app\api\logic\KnowledgeLogic;
+use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
+use app\common\logic\AccountLogLogic;
 use app\common\logic\BaseLogic;
 use app\common\logic\NoticeLogic;
 use app\common\model\chat\Models;
 use app\common\model\chat\ModelsCost;
 use app\common\model\coze\AgentCate;
+use app\common\model\coze\CozeAgent;
 use app\common\model\kb\KbKnow;
 use app\common\model\kb\KbRobot;
 use app\common\model\kb\KbRobotCategory;
+use app\common\model\kb\KbRobotGroup;
 use app\common\model\kb\KbRobotInstruct;
 use app\common\model\kb\KbRobotShareLog;
 use app\common\model\kb\KbRobotSquare;
@@ -25,6 +29,7 @@ use app\common\model\user\UserAccountLog;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
 use Exception;
+use think\db\exception\DbException;
 use think\facade\Db;
 
 /**
@@ -32,6 +37,132 @@ use think\facade\Db;
  */
 class KbRobotLogic extends BaseLogic
 {
+    /**
+     * @notes 全部智能体列表
+     * @param array $params
+     * @param int $userId
+     * @return array
+     * @throws DbException
+     * @author kb
+     */
+    public static function all(array $params, int $userId): array
+    {
+
+        $pageNo    = isset($params['page_no']) && $params['page_no'] > 0 ? (int)$params['page_no'] : 1;
+        $pageSize  = isset($params['page_size']) && $params['page_size'] > 0 ? (int)$params['page_size'] : 10;
+        $offset    = ($pageNo - 1) * $pageSize;
+        $where     = [['user_id', '=', $userId], ['delete_time', '=', null]];
+        $cozeWhere = [['type', '=', 1], ['source_id', '=', $userId]];
+        $flowWhere = [['a.type', '=', 2], ['f.source_id', '=', $userId]];
+        $query1    = Db::name('kb_robot')
+                       ->field([
+                                   'id',
+                                   'group_id',
+                                   'name',
+                                   'image',
+                                   'intro as description',
+                                   'update_time',
+                                   "'system_agent' as type"
+                               ])
+                       ->where($where)
+                       ->buildSql();
+        $query2    = Db::name('coze_agent')
+                       ->field([
+                                   'id',
+                                   'group_id',
+                                   'name',
+                                   'avatar as image',
+                                   'introduced as description',
+                                   'update_time',
+                                   "'coze_agent' as type"
+                               ])
+                       ->where($cozeWhere)
+                       ->buildSql();
+        $query3    = Db::name('coze_agent')
+                       ->alias('a')
+                       ->leftJoin('coze_workflow f', 'f.coze_agent_id = a.id')
+                       ->field([
+                                   'a.id',
+                                   'a.group_id',
+                                   'a.name',
+                                   'a.avatar as image',
+                                   'a.introduced as description',
+                                   'f.update_time',
+                                   "'coze_workflow' as type"
+                               ])
+                       ->where($flowWhere)
+                       ->buildSql();
+        $unionSql  = "({$query1} UNION ALL {$query2} UNION ALL {$query3}) AS t";
+        $lists     = Db::table($unionSql)
+                       ->order('update_time', 'desc')  // 按更新时间倒序
+                       ->limit($offset, $pageSize)
+                       ->select()
+                       ->toArray();
+        foreach ($lists as &$list) {
+            $list['group_name']  = !empty($list['group_id']) ? KbRobotGroup::where('id', $list['group_id'])->value('name') : '';
+            $list['image']       = !empty($list['image']) ? FileService::getFileUrl($list['image']) : '';
+            $list['update_time'] = date('Y-m-d H:i:s', $list['update_time']);
+        }
+        $total = self::getTotalCount($where, $cozeWhere, $flowWhere);
+        return [
+            'count'      => $total,
+            'lists'      => $lists,
+            'page_no'    => $pageNo,
+            'page_size'  => $pageSize,
+            'total_page' => (int)ceil($total / $pageSize)
+        ];
+    }
+
+    public static function getTotalCount($where,$cozeWhere,$flowWhere){
+        $count1 = Db::name('kb_robot')->where($where)->count();
+        $count2 = Db::name('coze_agent')->where($cozeWhere)->count();
+        $count3 = Db::name('coze_agent')->alias('a')->leftJoin('coze_workflow f', 'f.coze_agent_id = a.id')->where($flowWhere)->count();
+        return $count1 + $count2 + $count3;
+    }
+
+    /**
+     * @notes 机器人置顶（废弃）
+     * @param array $params
+     * @param int $userId
+     * @return bool
+     * @throws Exception
+     * @author kb
+     */
+    public static function top(array $params, int $userId): bool
+    {
+        if ($params['type'] == 'system_agent') {
+            $model = new KbRobot();
+            $where = [['id', '=', $params['id']]];
+        } else if ($params['type'] == 'coze_agent' || $params['type'] == 'coze_workflow') {
+            $model = new CozeAgent();
+            $where = [['id', '=', $params['id']]];
+        } else {
+            throw new Exception('参数错误');
+        }
+        $model->startTrans();
+        try {
+            // 验证机器人
+            $robot = $model->field(['id,name,is_top'])
+                           ->where($where)
+                           ->findOrEmpty();
+
+            if ($robot->isEmpty()) {
+                throw new Exception('机器人不存在了!');
+            }
+
+            $is_top = $robot->is_top == 1 ? 0 : 1;
+            $model->update([
+                                     'is_top'      => $is_top,
+                                     'update_time' => time(),
+                                 ], ['id' => intval($params['id'])]);
+            $model->commit();
+            return true;
+        } catch (Exception $e) {
+            $model->rollback();
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
 
     /**
      * @notes 机器人详情
@@ -636,4 +767,150 @@ class KbRobotLogic extends BaseLogic
         ];
     }
 
+
+    public static function getSystemLists(array $params){
+        $type = $params['type'] ?? 0;
+        if ( $type == 1){
+            return [
+                [
+                    'id' => 0,
+                    'name' => '豆包口播文案',
+                    'description' => '豆包满血版本',
+                ],
+                [
+                    'id' => 1,
+                    'name' => '门店获客文案智能体',
+                    'description' => '生成实体门店引流获客到店文案',
+                ],
+                [
+                    'id' => 2,
+                    'name' => '新闻体吸睛标题',
+                    'description' => '快速生成IP人设文案',
+                ],
+                [
+                    'id' => 3,
+                    'name' => '招商加盟文案生成',
+                    'description' => '快速生爆款招商加盟文案',
+                ],
+                [
+                    'id' => 4,
+                    'name' => '营销推广',
+                    'description' => '玩转营销场景',
+                ],
+                [
+                    'id' => 5,
+                    'name' => '口播文案',
+                    'description' => '口播必备神器',
+                ],
+            ];
+        }elseif( $type == 2){
+            return [
+                [
+                 'id' => 6,
+                    'name' => '文案改写',
+                    'description' => '文案改写神器'
+                    ],
+                [
+                'id' => 7,
+                'name' => 'sora文案',
+                'description' => 'sora2文案优化'
+                 ]
+            ];
+        }else{
+            return [
+                [
+                    'id' => 0,
+                    'name' => '豆包口播文案',
+                    'description' => '豆包满血版本',
+                ],
+                [
+                    'id' => 1,
+                    'name' => '门店获客文案智能体',
+                    'description' => '生成实体门店引流获客到店文案',
+                ],
+                [
+                    'id' => 2,
+                    'name' => '新闻体吸睛标题',
+                    'description' => '快速生成IP人设文案',
+                ],
+                [
+                    'id' => 3,
+                    'name' => '招商加盟文案生成',
+                    'description' => '快速生爆款招商加盟文案',
+                ],
+                [
+                    'id' => 4,
+                    'name' => '营销推广',
+                    'description' => '玩转营销场景',
+                ],
+                [
+                    'id' => 5,
+                    'name' => '口播文案',
+                    'description' => '口播必备神器',
+                ],
+                [
+                 'id' => 6,
+                    'name' => '文案改写',
+                    'description' => '文案改写神器'
+                    ],
+                [
+                'id' => 7,
+                'name' => 'sora文案',
+                'description' => 'sora2文案优化'
+                 ]
+            ];
+        }
+
+
+    }
+    public static function getCopywriting($params)
+    {
+        try {
+            // 验证必要参数
+            if (!isset($params['number']) || !isset($params['keywords'])) {
+                throw new \Exception('缺少必要参数:生成数量或生成内容');
+            }
+            if(!isset($params['sn'])){
+                throw new \Exception('缺少必要参数:系统ID');
+            }
+            $num = $params['number'] ?? 1;
+            $userId = $params['user_id'];
+            //计费
+            $unit = TokenLogService::checkToken($userId, 'coze_copywriting');
+
+            // 添加辅助参数
+            $params['user_id'] = $userId;
+            $params['id'] = $params['now'] = time();
+            $task_id = generate_unique_task_id();
+            $params['task_id'] = $task_id;
+            $tokenCode = AccountLogEnum::TOKENS_DEC_COZE_COPYWRITING;
+            $res = \app\common\service\ToolsService::Coze()->settext($params);
+            if ($res['code'] == 10000) {
+
+                $points = round($num * $unit, 2);
+
+                if ($points > 0) {
+                    //token扣除
+                    User::userTokensChange($params['user_id'], $points);
+                    $extra = ['生成条数' => $num, '算力单价' => $unit, '实际消耗算力' => $points];
+
+                    //记录日志
+                    AccountLogLogic::recordUserTokensLog(true, $params['user_id'], $tokenCode, $points, $task_id, $extra);
+                }
+                if (isset($res['data']) && count($res['data']) > 0) {
+                    self::$returnData = $res['data'];
+                } else {
+                    self::setError('生成失败');
+                    return false;
+                }
+            } else {
+                self::setError($res['message']);
+                return false;
+            }
+            return true;
+        } catch (\Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
 }

@@ -33,7 +33,7 @@
                                     <div
                                         class="flex gap-x-[6px] min-w-[180px] justify-between"
                                         :class="[index === packageIndex ? 'text-[#FF9500]' : 'text-[#9eb4fd80]']">
-                                        <div class="font-bold text-lg flex-shrink-0 font-digital-number">
+                                        <div class="font-medium text-lg flex-shrink-0 font-digital-number">
                                             ￥{{ item.price }}
                                         </div>
                                         <div>Tokens/算力</div>
@@ -64,7 +64,7 @@
                                                 </svg>
                                             </span>
                                             <text
-                                                class="font-bold"
+                                                class="font-medium"
                                                 :class="[index === packageIndex ? 'text-[#FF9500]' : 'text-[#16F49F]']">
                                                 {{ item.package_info?.tokens || 0 }}
                                             </text>
@@ -199,7 +199,7 @@
                         </div>
                     </ElTooltip>
                     <div class="h-full px-[30px] relative">
-                        <div class="text-[20px] font-bold mt-[68px]">立即兑换</div>
+                        <div class="text-[20px] font-medium mt-[68px]">立即兑换</div>
                         <div class="text-[rgba(0,0,0,0.3)] text-xs mt-2">
                             请确认卡密编号，兑换后立即生效，卡密不可再次使用
                         </div>
@@ -274,12 +274,14 @@
                     <img src="@/assets/images/recharge_top.png" class="h-[74px]" />
                 </div>
                 <div class="h-[118px] rounded-lg flex justify-center items-center result-box">
-                    <span class="text-[32px] font-bold">算力+{{ getPackage.package_info?.tokens }}</span>
+                    <span class="text-[32px] font-medium">算力+{{ getPackage.package_info?.tokens }}</span>
                 </div>
                 <div class="text-[#7C7C7C] mt-4 text-center">充值已到账，让先用AI的人富起来~</div>
                 <div
                     class="mt-4 flex items-center justify-center bg-[#FFC8A3] h-[35px] w-[250px] mx-auto rounded-full cursor-pointer">
-                    <div class="font-bold text-[#472716]" @click="resultClose()">立即使用({{ resultCountDown }}s)</div>
+                    <div class="font-medium text-[#472716]" @click="resultClose()">
+                        立即使用({{ resultCountDown }}s)
+                    </div>
                 </div>
             </div>
         </ElDialog>
@@ -416,7 +418,7 @@ const check = async () => {
 };
 const endCallback = async () => {
     await feedback.alertWarning("支付超时！");
-    start();
+    end();
 };
 
 const cancelPay = () => {

@@ -59,6 +59,37 @@ class NeedsAnalysisController extends BaseApiController
         }
     }
 
+    public function report()
+    {
+        try {
+            $params = $this->request->post();
+            $result = NeedsAnalysisLogic::report($params);
+            if ($result) {
+                return $this->success(data: NeedsAnalysisLogic::getReturnData());
+            }
+            return $this->fail(NeedsAnalysisLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    /**
+     * @desc 手动添加需求分析
+     */
+    public function add()
+    {
+        try {
+            $params = $this->request->post();
+            $result = NeedsAnalysisLogic::add($params);
+            if ($result) {
+                return $this->success(data: NeedsAnalysisLogic::getReturnData());
+            }
+            return $this->fail(NeedsAnalysisLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
     public function detail()
     {
         try {
@@ -76,7 +107,8 @@ class NeedsAnalysisController extends BaseApiController
     public function update()
     {
         try {
-            $params = (new NeedsAnalysisValidate())->post()->goCheck('update');
+//            $params = (new NeedsAnalysisValidate())->post()->goCheck('update');
+            $params = $this->request->post();
             $result = NeedsAnalysisLogic::update($params);
             if ($result) {
                 return $this->success(data: NeedsAnalysisLogic::getReturnData());

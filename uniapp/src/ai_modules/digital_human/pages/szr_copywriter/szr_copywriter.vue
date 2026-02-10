@@ -2,7 +2,7 @@
     <view class="h-screen bg-white">
         <u-navbar :is-fixed="false" :border-bottom="false" is-custom-back-icon :custom-back="back">
             <template #custom-back-icon>
-                <view class="whitespace-nowrap text-[32rpx] font-bold text-[#19C979]">完成</view>
+                <view class="whitespace-nowrap text-[32rpx] font-medium text-[#19C979]">完成</view>
             </template>
         </u-navbar>
         <view class="p-4">
@@ -28,15 +28,22 @@ import { useEventBusManager } from "@/hooks/useEventBusManager";
 
 const { emit } = useEventBusManager();
 
+const isEdit = ref<boolean>(false);
+
 const formData = reactive({
     content: "",
 });
 
-const textLimit = ref(0);
+const textLimit = ref(500);
 const back = () => {
     if (!formData.content) {
-        uni.navigateBack();
-        return;
+        if (!isEdit.value) {
+            uni.navigateBack();
+            return;
+        } else {
+            uni.$u.toast("请输入文案");
+            return;
+        }
     }
     emit("confirm", {
         type: ListenerTypeEnum.SZR_COPYWRITER,
@@ -47,9 +54,12 @@ const back = () => {
 };
 
 onLoad((options: any) => {
-    textLimit.value = parseInt(options.limit);
+    if (options.limit) {
+        textLimit.value = parseInt(options.limit);
+    }
     if (options.content) {
         formData.content = options.content;
+        isEdit.value = true;
     }
 });
 </script>

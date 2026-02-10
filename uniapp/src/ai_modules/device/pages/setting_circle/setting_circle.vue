@@ -5,9 +5,9 @@
                 <view class="p-4">
                     <view>
                         <view class="flex items-center justify-between">
-                            <view class="text-[30rpx] font-bold">素材设置</view>
+                            <view class="text-[30rpx] font-medium">素材设置</view>
                             <view
-                                class="text-xs font-bold"
+                                class="text-xs font-medium"
                                 :class="isAllConfigComplete ? 'text-primary' : 'text-[#FF2442]'">
                                 {{ isAllConfigComplete ? "配置完成" : "配置未完成" }}
                             </view>
@@ -21,10 +21,10 @@
                                     materialIndex === materialList.length - 1 ? 'border-b-[0rpx]' : 'border-b-[1rpx]',
                                 ]"
                                 @click="toPage(material.page)">
-                                <text class="font-bold text-[28rpx]">{{ material.name }} </text>
+                                <text class="font-medium text-[28rpx]">{{ material.name }} </text>
                                 <view class="flex items-center gap-x-1">
                                     <text
-                                        class="font-bold text-xs"
+                                        class="font-medium text-xs"
                                         :class="[material.list.length > 0 ? 'text-primary' : 'text-[#FF2442]']"
                                         >{{ material.list.length ? `${material.list.length}(个)` : "未配置" }}</text
                                     >
@@ -35,11 +35,11 @@
                     </view>
                     <view class="mt-[50rpx]">
                         <view class="flex items-center justify-between">
-                            <view class="text-[30rpx] font-bold">发布设置</view>
+                            <view class="text-[30rpx] font-medium">发布设置</view>
                         </view>
                         <view class="mt-[18rpx] bg-white rounded-[20rpx] px-[36rpx] py-[30rpx]">
                             <view class="border-[0] border-b-[1rpx] border-solid border-[#F2F2F2] pb-[30rpx]">
-                                <view class="font-bold text-[30rpx]"> 朋友圈可视范围 </view>
+                                <view class="font-medium text-[30rpx]"> 朋友圈可视范围 </view>
                                 <view class="mt-[32rpx]">
                                     <u-radio-group v-model="formData.visible_type" class="w-full">
                                         <view class="flex justify-between w-full">
@@ -56,7 +56,7 @@
                                         </view>
                                     </u-radio-group>
                                     <view class="mt-[36rpx]" v-if="formData.type === 2">
-                                        <view class="text-primary font-bold">标签内容：</view>
+                                        <view class="text-primary font-medium">标签内容：</view>
                                         <view
                                             class="mt-[16rpx] bg-[#F3F3F3] px-4 rounded-[16rpx] h-[90rpx] flex items-center">
                                             <u-input
@@ -70,7 +70,7 @@
                                 </view>
                             </view>
                             <view class="mt-[32rpx]">
-                                <view class="font-bold text-[30rpx]"> 朋友圈防折叠 </view>
+                                <view class="font-medium text-[30rpx]"> 朋友圈防折叠 </view>
                                 <view class="mt-[32rpx]">
                                     <u-radio-group v-model="formData.type" class="w-full">
                                         <u-radio :name="1" :size="28">
@@ -89,7 +89,7 @@
         </view>
         <view class="bg-white flex-shrink-0 pb-5 pt-4 px-6">
             <view
-                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-bold flex items-center justify-center"
+                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-medium flex items-center justify-center"
                 @click="handleSaveConfig">
                 确定保存
             </view>

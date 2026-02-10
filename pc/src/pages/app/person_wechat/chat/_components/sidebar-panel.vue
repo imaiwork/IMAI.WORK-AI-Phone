@@ -2,7 +2,7 @@
     <div class="w-full h-full bg-black flex flex-col py-2">
         <div class="flex items-center justify-center gap-2 mt-2">
             <Icon name="local-icon-wechat" color="#00C800" :size="22"></Icon>
-            <span class="text-white font-bold whitespace-nowrap">个微</span>
+            <span class="text-white font-medium whitespace-nowrap">个微</span>
             <span class="flex-shrink-0 cursor-pointer" v-if="false">
                 <Icon name="local-icon-arrow_left_right" color="#ffffff" :size="10"></Icon>
             </span>

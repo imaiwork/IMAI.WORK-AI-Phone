@@ -2,7 +2,7 @@
     <div class="h-full min-w-[1000px] px-3 overflow-y-auto custom-scrollbar">
         <div class="mb-4">
             <h1 class="text-[24px] font-[900] text-[#1E293B]">克隆您的数字分身</h1>
-            <p class="text-[14px] text-[#64748B] mt-2">通过上传 2 分钟内的视频，即可生成 1:1 复刻的数字形象与声音</p>
+            <p class="text-[14px] text-[#64748B] mt-2">通过上传 1 分钟内的视频，即可生成 1:1 复刻的数字形象与声音</p>
         </div>
 
         <div class="flex flex-col gap-3 lg:flex-row items-start">
@@ -47,7 +47,7 @@
                                         class="w-16 h-16 bg-[#0065fb]/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                                         <Icon name="el-icon-VideoCamera" :size="32" color="var(--el-color-primary)" />
                                     </div>
-                                    <ElButton type="primary" class="!rounded-xl px-8 !h-11 font-bold"
+                                    <ElButton type="primary" class="!rounded-xl px-8 !h-11 font-medium"
                                         >上传形象视频</ElButton
                                     >
                                     <div class="mt-6 grid grid-cols-2 gap-x-8 gap-y-2 text-left max-w-[400px] mx-auto">
@@ -140,7 +140,7 @@
                                             }}使用视频中的肖像、声音，生成定制数字人，并在本人账号中创作使用。”
                                         </p>
                                     </div>
-                                    <ElButton type="primary" plain class="!rounded-xl px-10 !h-11 font-bold bg-white">
+                                    <ElButton type="primary" plain class="!rounded-xl px-10 !h-11 font-medium bg-white">
                                         <Icon name="el-icon-Upload" />
                                         <span class="ml-2">上传授权视频</span>
                                     </ElButton>
@@ -157,7 +157,7 @@
                         @click="lockFn">
                         <Icon v-if="isLock" name="el-icon-Loading" />
                         立即开启克隆
-                        <span class="text-sm font-bold opacity-60">(消耗 {{ getToken }} 算力)</span>
+                        <span class="text-sm font-medium opacity-60">(消耗 {{ getToken }} 算力)</span>
                     </button>
                     <div class="flex items-center justify-center gap-2 mt-4 text-[12px] text-[#94A3B8]">
                         <Icon name="el-icon-CircleCheck" color="var(--green-500)" />
@@ -165,7 +165,7 @@
                         <router-link
                             :to="`/policy/${PolicyAgreementEnum.PRIVACY}`"
                             target="_blank"
-                            class="text-primary font-bold hover:underline"
+                            class="text-primary font-medium hover:underline"
                             >《隐私协议政策》</router-link
                         >
                     </div>
@@ -208,7 +208,7 @@
                         <div
                             v-for="(item, index) in uploadTemplateContentLists"
                             class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-[#E2E8F0]/50">
-                            <span class="text-[12px] font-bold text-[#64748B]">{{ item.name }}</span>
+                            <span class="text-[12px] font-medium text-[#64748B]">{{ item.name }}</span>
                             <span class="text-[12px] font-black text-[#1E293B]">{{ item.value }}</span>
                         </div>
                     </div>

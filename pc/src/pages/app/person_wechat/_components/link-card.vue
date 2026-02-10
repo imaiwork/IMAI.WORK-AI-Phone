@@ -72,6 +72,6 @@ defineProps<{
 }
 
 .link-footer {
-    @apply mt-2 pt-2 border-t border-gray-50 flex items-center text-[10px] text-tx-placeholder uppercase tracking-wider font-bold;
+    @apply mt-2 pt-2 border-t border-gray-50 flex items-center text-[10px] text-tx-placeholder uppercase tracking-wider font-medium;
 }
 </style>

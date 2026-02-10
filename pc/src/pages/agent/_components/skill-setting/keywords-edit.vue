@@ -12,7 +12,7 @@
             <div class="absolute w-6 h-6 right-4 top-4 cursor-pointer" @click="close">
                 <close-btn />
             </div>
-            <div class="text-2xl font-bold mb-5">{{ formData.id ? "编辑" : "添加" }}关键词回复</div>
+            <div class="text-2xl font-medium mb-5">{{ formData.id ? "编辑" : "添加" }}关键词回复</div>
             <!-- 表单 -->
             <ElForm ref="formRef" :model="formData" :rules="formRules" label-position="top">
                 <ElFormItem label="匹配方式" prop="match_type">

@@ -5,7 +5,7 @@
             <div class="p-6 border-b border-[#F1F5F9] flex items-center justify-between">
                 <div>
                     <h2 class="text-[18px] font-[900] text-[#1E293B]">AI 导图生成</h2>
-                    <p class="text-[11px] text-[#94A3B8] font-bold uppercase tracking-widest">MindMap Generator</p>
+                    <p class="text-[11px] text-[#94A3B8] font-medium uppercase tracking-widest">MindMap Generator</p>
                 </div>
                 <div class="w-10 h-10 rounded-xl bg-[#0065fb]/10 text-primary flex items-center justify-center">
                     <Icon name="el-icon-MagicStick" :size="20"></Icon>
@@ -19,7 +19,7 @@
                             <label class="text-[13px] font-black text-[#64748B] uppercase tracking-wider"
                                 >描述需求</label
                             >
-                            <ElButton type="primary" link @click="handleExample()" class="!text-[12px] font-bold"
+                            <ElButton type="primary" link @click="handleExample()" class="!text-[12px] font-medium"
                                 >查看示例</ElButton
                             >
                         </div>
@@ -57,7 +57,7 @@
                             <div
                                 class="absolute inset-0 bg-white/40 backdrop-blur-[1px] rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                 <span
-                                    class="px-3 py-1 bg-white border border-br rounded-lg text-[11px] text-[#94A3B8] font-bold"
+                                    class="px-3 py-1 bg-white border border-br rounded-lg text-[11px] text-[#94A3B8] font-medium"
                                     >AI 生成结果展示</span
                                 >
                             </div>
@@ -111,7 +111,7 @@
                     <div class="mt-8 text-[16px] font-black text-[#1E293B] tracking-tight">
                         AI 正在深度思考并绘制导图...
                     </div>
-                    <div class="mt-2 text-[12px] text-[#94A3B8] font-bold uppercase tracking-widest animate-pulse">
+                    <div class="mt-2 text-[12px] text-[#94A3B8] font-medium uppercase tracking-widest animate-pulse">
                         Processing nodes & connections
                     </div>
                 </div>

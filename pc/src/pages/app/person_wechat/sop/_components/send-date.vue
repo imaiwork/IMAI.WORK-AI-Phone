@@ -2,7 +2,7 @@
     <div class="grid grid-cols-5 gap-3 p-1">
         <div class="flex flex-col items-center w-full group" v-for="(item, index) in dateList" :key="index">
             <div
-                class="w-full text-center py-1.5 rounded-lg bg-slate-50 text-[11px] font-bold text-slate-500 group-hover:bg-[#0065fb]/10 group-hover:text-primary transition-colors">
+                class="w-full text-center py-1.5 rounded-lg bg-slate-50 text-[11px] font-medium text-slate-500 group-hover:bg-[#0065fb]/10 group-hover:text-primary transition-colors">
                 Day {{ item.order_day }}
             </div>
 
@@ -41,7 +41,7 @@
                                         {{ value.push_time }}
                                     </span>
                                     <div
-                                        class="text-[10px] text-slate-400 hover:text-primary cursor-pointer font-bold"
+                                        class="text-[10px] text-slate-400 hover:text-primary cursor-pointer font-medium"
                                         @click="emit('edit', value.id)">
                                         编辑
                                     </div>
@@ -70,7 +70,7 @@ const emit = defineEmits<{
 
 <style scoped lang="scss">
 .push-time-tag {
-    @apply text-[10px] text-primary bg-[#0065fb]/5 border border-[#0065fb]/10 text-center py-1 rounded-md cursor-pointer font-bold transition-all hover:bg-primary hover:text-white hover:shadow-light hover:shadow-[#0065fb]/20;
+    @apply text-[10px] text-primary bg-[#0065fb]/5 border border-[#0065fb]/10 text-center py-1 rounded-md cursor-pointer font-medium transition-all hover:bg-primary hover:text-white hover:shadow-light hover:shadow-[#0065fb]/20;
 }
 
 .more-count-tag {

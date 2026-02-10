@@ -8,7 +8,7 @@
                     </div>
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">数字人视频</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             总数字人视频: {{ pager.count }} 个
                         </div>
                     </div>
@@ -26,7 +26,7 @@
                     </ElInput>
                     <ElButton
                         type="primary"
-                        class="!rounded-full !h-[32px] !px-4 !text-xs !font-bold"
+                        class="!rounded-full !h-[32px] !px-4 !text-xs !font-medium"
                         @click="resetPage">
                         搜索
                     </ElButton>
@@ -52,7 +52,7 @@
                         <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4">
                             <Icon name="el-icon-FolderOpened" :size="40" color="#CBD5E1"></Icon>
                         </div>
-                        <p class="text-[#94A3B8] text-sm font-bold">暂无数字人视频</p>
+                        <p class="text-[#94A3B8] text-sm font-medium">暂无数字人视频</p>
                     </div>
                 </div>
             </ElScrollbar>

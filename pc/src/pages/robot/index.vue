@@ -18,7 +18,7 @@
                             class="w-5 h-5 rounded-full object-cover transition-transform group-hover:scale-110" />
                         <span class="text-[15px] font-black">{{ tab.name }}</span>
                         <span
-                            class="text-[10px] px-1.5 py-0.5 rounded-md font-bold"
+                            class="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
                             :class="
                                 index === sceneIndex
                                     ? 'bg-primary text-white'
@@ -81,7 +81,7 @@
                                 </p>
 
                                 <div class="pt-4 border-t border-[#F8FAFC] flex items-center justify-between">
-                                    <span class="text-[10px] font-bold text-[#CBD5E1]">{{ item.create_time }}</span>
+                                    <span class="text-[10px] font-medium text-[#CBD5E1]">{{ item.create_time }}</span>
                                     <div
                                         class="opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 text-primary">
                                         <Icon name="el-icon-Right" />

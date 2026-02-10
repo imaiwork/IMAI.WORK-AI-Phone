@@ -113,16 +113,16 @@ const handlePlay = (url: string) => {
 };
 
 const handleMore = () => {
-    const { id, url, source_type } = props.item;
+    const { id, result_url, source_type } = props.item;
     uni.showActionSheet({
         itemList: ["下载视频", "播放视频", "删除"],
         success: (res) => {
             const { tapIndex } = res;
             if (tapIndex == 0) {
-                saveVideoToPhotosAlbum(url);
+                saveVideoToPhotosAlbum(result_url);
             }
             if (tapIndex == 1) {
-                emit("play", url);
+                emit("play", result_url);
             }
             if (tapIndex == 2) {
                 emit("delete", id, source_type);

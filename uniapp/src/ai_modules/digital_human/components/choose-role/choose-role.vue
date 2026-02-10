@@ -14,7 +14,7 @@
                             :current="typeIndex"
                             @change="handleChange"></u-tabs>
                     </view>
-                    <view class="text-primary font-bold" @click="toCreateRole">创建角色</view>
+                    <view class="text-primary font-medium" @click="toCreateRole">创建角色</view>
                 </view>
                 <view class="grow min-h-0 mt-4">
                     <z-paging
@@ -39,7 +39,7 @@
                                 <view
                                     v-if="item.status == 0"
                                     class="z-[222] absolute top-0 left-0 w-full h-full flex items-center justify-center bg-[#00000080]">
-                                    <view class="bg-primary text-xs font-bold text-white rounded-[10rpx] px-2 py-1"
+                                    <view class="bg-primary text-xs font-medium text-white rounded-[10rpx] px-2 py-1"
                                         >克隆中</view
                                     >
                                 </view>

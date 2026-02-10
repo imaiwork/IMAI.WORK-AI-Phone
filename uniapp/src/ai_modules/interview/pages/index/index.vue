@@ -13,7 +13,7 @@
             <view class="">
                 <view class="flex justify-between overflow-hidden">
                     <view class="flex flex-col gap-2 mt-10 mx-4">
-                        <view class="text-2xl font-bold">HI，{{ state.user_id ? "应聘者" : "今天怎么样？" }}</view>
+                        <view class="text-2xl font-medium">HI，{{ state.user_id ? "应聘者" : "今天怎么样？" }}</view>
                         <view class="text-[#707070]">{{
                             state.user_id
                                 ? `我是${detail.company || ""}企业的AIHR，请选择您要应聘的岗位！`
@@ -30,7 +30,7 @@
         </view>
         <view class="grow min-h-0 py-4 px-[32rpx] box overflow-scroll relative z-20">
             <view class="flex">
-                <view class="text-sm bg-[#06A359] rounded-[12rpx] text-white px-3 py-2 font-bold">{{
+                <view class="text-sm bg-[#06A359] rounded-[12rpx] text-white px-3 py-2 font-medium">{{
                     state.job_id ? "在招岗位" : "邀约面试"
                 }}</view>
             </view>
@@ -41,7 +41,7 @@
                     class="bg-white rounded-[40rpx] p-4 shadow-[0rpx_8rpx_124rpx_rgba(153,171,198,0.18)]">
                     <view class="flex items-center gap-2">
                         <image class="w-[80rpx] h-[80rpx] rounded-full" mode="aspectFill" :src="item.avatar"></image>
-                        <text class="text-[32rpx] font-bold">{{ item.name }}</text>
+                        <text class="text-[32rpx] font-medium">{{ item.name }}</text>
                     </view>
                     <view class="text-[#524B6B] text-xs mt-2 leading-6 whitespace-pre-wrap">
                         {{ item.desc }}

@@ -21,7 +21,7 @@
                 <div class="w-full max-w-[480px] mx-auto flex flex-col h-full">
                     <div class="mt-12 mb-8 text-center">
                         <h1 class="text-[28px] font-[900] text-[#0F172A] tracking-tight">创建新的知识库</h1>
-                        <p class="text-[14px] font-bold text-[#94A3B8] mt-2">为您的 AI 提供精准的私有数据支撑</p>
+                        <p class="text-[14px] font-medium text-[#94A3B8] mt-2">为您的 AI 提供精准的私有数据支撑</p>
                     </div>
 
                     <div class="grow min-h-0">
@@ -35,7 +35,7 @@
                                     v-if="tokensValue && isRag"
                                     class="mt-6 flex items-center justify-center gap-2 p-3 bg-[#FFF9F0] rounded-xl border border-[#FFE4BA]">
                                     <Icon name="el-icon-WarningFilled" color="#ED6A0C" :size="16" />
-                                    <span class="text-[12px] font-bold text-[#ED6A0C]">
+                                    <span class="text-[12px] font-medium text-[#ED6A0C]">
                                         本次操作将消耗
                                         <span class="text-[15px] font-black">{{ tokensValue }}</span> 算力
                                     </span>
@@ -57,7 +57,7 @@
 
                         <div
                             v-if="userTokens < tokensValue && isRag"
-                            class="text-[12px] font-bold text-red-500 flex items-center gap-1">
+                            class="text-[12px] font-medium text-red-500 flex items-center gap-1">
                             <Icon name="el-icon-CircleClose" />
                             当前算力不足 (剩余 {{ userTokens }})
                         </div>

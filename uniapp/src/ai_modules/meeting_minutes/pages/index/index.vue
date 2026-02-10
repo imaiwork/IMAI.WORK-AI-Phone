@@ -22,7 +22,7 @@
                     </view>
                     <image :src="item.logo" class="w-[164rpx] h-[208rpx] absolute -top-[80rpx] left-[12%] z-10"></image>
                     <view class="h-full w-full p-3 relative z-10">
-                        <view class="text-[32rpx] font-bold mt-[100rpx]">
+                        <view class="text-[32rpx] font-medium mt-[100rpx]">
                             {{ item.title }}
                         </view>
                         <view class="text-[#474747] text-xs mt-[24rpx]">
@@ -40,7 +40,7 @@
         <view class="grow min-h-0 mt-6 flex flex-col bg-[#EDF2FB7F] rounded-tl-[24rpx] rounded-tr-[24rpx]">
             <view class="flex justify-between items-center px-[32rpx] my-[32rpx]">
                 <view
-                    class="flex items-center text-xl font-bold before:content-[''] before:w-[6rpx] before:h-[24rpx] before:bg-primary before:block before:mr-[16rpx]">
+                    class="flex items-center text-xl font-medium before:content-[''] before:w-[6rpx] before:h-[24rpx] before:bg-primary before:block before:mr-[16rpx]">
                     我的会议
                 </view>
                 <navigator

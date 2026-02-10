@@ -23,7 +23,7 @@
                             :class="{ 'bg-primary-light-9': item.key == currSidebar.key }">
                             <Icon :name="`local-icon-${item.icon}`"></Icon>
                         </div>
-                        <div class="font-bold text-base">{{ item.name }}</div>
+                        <div class="font-medium text-base">{{ item.name }}</div>
                     </div>
                 </div>
             </div>
@@ -41,7 +41,7 @@
                 <div v-else-if="currSidebar.key == SidebarEnum.ABOUT" class="flex flex-col h-full px-[90px]">
                     <div class="flex flex-col items-center flex-1 justify-center mt-[100px]">
                         <img :src="webSiteConfig.shop_logo" class="w-[70px] h-[70px] rounded-full" />
-                        <div class="text-[15px] font-bold mt-5">{{ webSiteConfig.shop_name }}</div>
+                        <div class="text-[15px] font-medium mt-5">{{ webSiteConfig.shop_name }}</div>
                         <div class="text-[#00000080] mt-[10px]">{{ webSiteConfig.shop_title }}</div>
                     </div>
                     <div class="text-center mt-[100px] text-base">

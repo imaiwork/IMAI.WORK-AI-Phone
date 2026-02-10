@@ -79,6 +79,7 @@ class LikeReplyLogic extends ApiLogic
                         'source' => DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT,//sv_device_take_over_task_account
                         'create_time' => time(),
                     ]);
+                    \app\api\logic\device\TaskLogic::updateWechatRpaTaskTime($account['device_code'], $time['start_time']);
                 }
             }
             TaskLogic::add($allTaskInstall);

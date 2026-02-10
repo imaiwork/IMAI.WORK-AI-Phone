@@ -19,7 +19,7 @@
                 </div>
                 <div>
                     <div class="text-[18px] font-[900] text-[#1E293B]">向量检索配置</div>
-                    <div class="text-[12px] font-bold text-[#94A3B8]">配置模型检索的精度、上限及重排策略</div>
+                    <div class="text-[12px] font-medium text-[#94A3B8]">配置模型检索的精度、上限及重排策略</div>
                 </div>
             </div>
 
@@ -230,7 +230,7 @@ defineExpose({
 
 /* 标签样式 */
 .custom-label {
-    @apply flex items-center text-[13px] font-bold text-[#64748B];
+    @apply flex items-center text-[13px] font-medium text-[#64748B];
     .help-icon {
         @apply ml-1.5 text-[#CBD5E1] cursor-pointer hover:text-primary transition-colors leading-[0];
     }
@@ -238,7 +238,7 @@ defineExpose({
 
 :deep(.custom-number) {
     .el-input__inner {
-        @apply text-center font-bold text-primary bg-white rounded-lg border-br;
+        @apply text-center font-medium text-primary bg-white rounded-lg border-br;
     }
 }
 

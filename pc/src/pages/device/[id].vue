@@ -55,7 +55,7 @@
                                             : 'hover:bg-slate-50 text-[#475569]'
                                     "
                                     @click="changeDevice(item.device_code)">
-                                    <span class="text-[13px] font-bold truncate pr-2">{{ item.device_model }}</span>
+                                    <span class="text-[13px] font-medium truncate pr-2">{{ item.device_model }}</span>
                                     <div
                                         v-if="queryParams.device_code === item.device_code"
                                         class="w-1.5 h-1.5 rounded-full bg-primary"></div>
@@ -66,7 +66,7 @@
 
                     <div
                         v-if="queryParams.device_code"
-                        class="px-3 py-1 bg-[#F1F5F9] border border-br rounded-lg text-[11px] font-mono font-bold text-[#64748B]">
+                        class="px-3 py-1 bg-[#F1F5F9] border border-br rounded-lg text-[11px] font-mono font-medium text-[#64748B]">
                         ID: {{ queryParams.device_code }}
                     </div>
                 </div>
@@ -104,7 +104,7 @@
                             class="w-6 h-6 grayscale group-hover:grayscale-0 transition-all"
                             :class="{ 'grayscale-0': currentSocialPlatform === item.type }" />
                         <span
-                            class="text-[14px] font-bold"
+                            class="text-[14px] font-medium"
                             :class="currentSocialPlatform === item.type ? 'text-primary' : 'text-[#64748B]'"
                             >{{ item.name }}</span
                         >
@@ -139,7 +139,7 @@
                                                     当前账号
                                                 </div>
                                             </div>
-                                            <span class="text-[11px] font-bold text-[#94A3B8] tracking-tight"
+                                            <span class="text-[11px] font-medium text-[#94A3B8] tracking-tight"
                                                 >ID: {{ row.account }}</span
                                             >
                                         </div>
@@ -151,15 +151,15 @@
                                     <div class="flex items-center justify-center gap-6 text-[#475569]">
                                         <div class="flex flex-col">
                                             <span class="text-[14px] font-black">{{ row.fans || "0" }}</span>
-                                            <span class="text-[10px] font-bold text-[#94A3B8]">粉丝</span>
+                                            <span class="text-[10px] font-medium text-[#94A3B8]">粉丝</span>
                                         </div>
                                         <div class="flex flex-col">
                                             <span class="text-[14px] font-black">{{ row.thumbup_collect || "0" }}</span>
-                                            <span class="text-[10px] font-bold text-[#94A3B8]">获赞</span>
+                                            <span class="text-[10px] font-medium text-[#94A3B8]">获赞</span>
                                         </div>
                                         <div class="flex flex-col">
                                             <span class="text-[14px] font-black">{{ row.followers || "0" }}</span>
-                                            <span class="text-[10px] font-bold text-[#94A3B8]">关注</span>
+                                            <span class="text-[10px] font-medium text-[#94A3B8]">关注</span>
                                         </div>
                                     </div>
                                 </template>
@@ -185,7 +185,7 @@
                             </ElTableColumn>
                             <ElTableColumn label="最后更新" width="160">
                                 <template #default="{ row }">
-                                    <span class="text-[12px] font-bold text-[#64748B]">{{ row.create_time }}</span>
+                                    <span class="text-[12px] font-medium text-[#64748B]">{{ row.create_time }}</span>
                                 </template>
                             </ElTableColumn>
 
@@ -230,7 +230,7 @@
                         </ElTable>
                     </div>
                     <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
-                        <span class="text-[12px] font-bold text-[#94A3B8]"
+                        <span class="text-[12px] font-medium text-[#94A3B8]"
                             >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条账号数据</span
                         >
                         <pagination v-model="pager" @change="getLists" />
@@ -411,7 +411,7 @@ getDeviceList();
 }
 
 .action-btn {
-    @apply flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-bold text-[#64748B] hover:bg-[#F1F5F9] hover:text-primary transition-all;
+    @apply flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-medium text-[#64748B] hover:bg-[#F1F5F9] hover:text-primary transition-all;
 }
 
 .custom-scrollbar::-webkit-scrollbar {

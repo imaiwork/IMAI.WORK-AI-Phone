@@ -9,7 +9,7 @@
                         class="w-8 h-8 rounded-full bg-[#F9FAFB] flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
                         <Icon name="el-icon-ArrowLeft" :size="14"></Icon>
                     </div>
-                    <span class="text-sm font-bold text-[#6B7280] group-hover:text-[#111827] transition-colors"
+                    <span class="text-sm font-medium text-[#6B7280] group-hover:text-[#111827] transition-colors"
                         >返回上一步</span
                     >
                 </div>
@@ -27,8 +27,10 @@
             <div class="grow min-h-0 flex flex-col p-5 relative">
                 <div class="flex items-center justify-between mb-6 flex-shrink-0">
                     <div class="flex flex-col">
-                        <h3 class="text-slate-800 font-bold text-[18px] tracking-tight">文案创作</h3>
-                        <p class="text-slate-400 text-[12px] font-bold uppercase tracking-widest">Copywriting Studio</p>
+                        <h3 class="text-slate-800 font-medium text-[18px] tracking-tight">文案创作</h3>
+                        <p class="text-slate-400 text-[12px] font-medium uppercase tracking-widest">
+                            Copywriting Studio
+                        </p>
                     </div>
 
                     <button class="ai-premium-btn" @click="handleAi">
@@ -100,7 +102,7 @@
                     </div>
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">AI 智能内容生成</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest text-gradient">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest text-gradient">
                             AI Creative Assistant
                         </div>
                     </div>
@@ -154,7 +156,7 @@
                     class="mt-6 px-4 py-3 rounded-xl bg-[#0065fb]/10 border border-[#0065fb]/10 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <Icon name="el-icon-Cpu" :size="14" color="var(--color-primary)"></Icon>
-                        <span class="text-xs text-primary font-bold">算力预估计算</span>
+                        <span class="text-xs text-primary font-medium">算力预估计算</span>
                     </div>
                     <div class="text-[14px] text-primary font-black italic">
                         {{ getKeywordToCopywritingToken }} <span class="text-[10px] ml-0.5">算力</span>

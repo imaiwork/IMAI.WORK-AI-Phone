@@ -61,6 +61,7 @@ class AddWechatTaskNoticeHandler extends BaseMessageHandler
                 4 => '添加请求当前账号存在安全风险，暂时无法添加朋友',
             );
 
+            $record->image = $this->saveBase64ToImage($content['image'] ?? '', generate_unique_task_id(), 'wechat');
             $record->status = (int)$content['status'] === 0 ? 1 : 0;
             $record->result = $maps[$content['status']] ?? '未知状态：' . $content['status'];
             $record->update = time();

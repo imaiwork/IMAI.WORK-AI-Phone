@@ -115,6 +115,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     'content' => $content['content'] ?? '',
                     'comment' => $comment,
                     'hash' =>  $hash,
+                    'image' => $this->saveBase64ToImage($content['image'] ?? '', $hash, 'wechat'),
                     'task_id' => $request_id,
                     'type' => $setting->action,
                     'create_time' => time(),

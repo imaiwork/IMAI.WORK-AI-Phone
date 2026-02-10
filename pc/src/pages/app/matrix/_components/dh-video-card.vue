@@ -35,7 +35,7 @@
                 <div v-if="item.automatic_clip == 1" class="absolute bottom-[80px] inset-x-4 z-[31]">
                     <div
                         class="py-1.5 px-3 rounded-full bg-[#000000]/40 backdrop-blur-xl border border-[#ffffff]/10 text-center w-fit mx-auto">
-                        <span class="text-[11px] font-bold" :class="getClipStatusClass(item.clip_status)">
+                        <span class="text-[11px] font-medium" :class="getClipStatusClass(item.clip_status)">
                             <Icon v-if="item.clip_status < 3" name="el-icon-Loading" class="mr-1 animate-spin" />
                             {{ getClipStatusText(item.clip_status) }}
                         </span>
@@ -71,7 +71,7 @@
                     </div>
                     <div class="text-center">
                         <div class="text-white text-sm font-black tracking-widest">DIGITAL HUMAN</div>
-                        <div class="text-primary text-[10px] font-bold mt-1 animate-pulse">正在构建数字人...</div>
+                        <div class="text-primary text-[10px] font-medium mt-1 animate-pulse">正在构建数字人...</div>
                     </div>
                 </div>
             </template>
@@ -88,7 +88,7 @@
                         {{ modelVersionMap[item.model_version] }}
                     </div>
                 </div>
-                <div class="text-slate-400 text-[10px] font-bold italic">
+                <div class="text-slate-400 text-[10px] font-medium italic">
                     {{ item.create_time }}
                 </div>
             </div>

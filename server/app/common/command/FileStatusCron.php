@@ -21,7 +21,7 @@ class FileStatusCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
-        KnowledgeLogic::setFileStatus();
+        //KnowledgeLogic::setFileStatus();
         return true;
     }
 }

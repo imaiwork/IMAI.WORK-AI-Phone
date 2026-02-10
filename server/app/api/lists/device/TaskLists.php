@@ -19,7 +19,7 @@ use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSettingAccount;
 use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
-use app\common\model\sv\SvDeviceCircleLikeReply;
+use app\common\model\sv\SvWechatStrategy;
 
 /**
  * 设备任务列表
@@ -125,6 +125,11 @@ class TaskLists extends BaseApiDataLists implements ListsSearchInterface
                         //sv_crawling_manual_task
                         $taskinfo = SvCrawlingWechatTask::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
                         $item['name'] = $taskinfo['name'] ?? $item['task_name'];
+                        break;
+                    case DeviceEnum::TASK_SOURCE_WECHAT_RPA:
+                        //sv_wechat_strategy
+                        $taskinfo = SvWechatStrategy::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['task_name'] ?? $item['task_name'];
                         break;
                     default:
                         break;

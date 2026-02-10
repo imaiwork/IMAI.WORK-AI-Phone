@@ -7,7 +7,7 @@
                     <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                     AI 灵感助手
                 </div>
-                <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest mt-0.5">
+                <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest mt-0.5">
                     Prompt Generator
                 </div>
             </div>
@@ -25,7 +25,7 @@
                         <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4">
                             <Icon name="el-icon-MagicStick" :size="32" color="#CBD5E1"></Icon>
                         </div>
-                        <p class="text-[#94A3B8] text-[13px] font-bold">描述你的想法，我来为你润色</p>
+                        <p class="text-[#94A3B8] text-[13px] font-medium">描述你的想法，我来为你润色</p>
                     </div>
 
                     <div
@@ -59,7 +59,7 @@
 
                     <div v-if="isReceiving" class="flex flex-col items-center py-4">
                         <div class="loader-dots"><span></span><span></span><span></span></div>
-                        <span class="text-[11px] text-[#94A3B8] font-bold uppercase mt-3 tracking-[0.2em]"
+                        <span class="text-[11px] text-[#94A3B8] font-medium uppercase mt-3 tracking-[0.2em]"
                             >Thinking...</span
                         >
                     </div>
@@ -79,7 +79,7 @@
                     @keydown.enter.prevent="lockGenerateAiPrompt()"></ElInput>
 
                 <div class="absolute bottom-3 right-3 flex items-center gap-3">
-                    <span class="text-[10px] font-bold text-[#CBD5E1]">{{ prompt.length }}/500</span>
+                    <span class="text-[10px] font-medium text-[#CBD5E1]">{{ prompt.length }}/500</span>
                     <div
                         class="send-btn"
                         :class="{ 'is-loading': isReceiving || !prompt.trim() }"
@@ -185,7 +185,7 @@ defineExpose({
 
 /* 按钮样式 */
 .action-btn {
-    @apply flex items-center px-3 py-1.5 rounded-lg text-[#94A3B8] text-[12px] font-bold cursor-pointer transition-all;
+    @apply flex items-center px-3 py-1.5 rounded-lg text-[#94A3B8] text-[12px] font-medium cursor-pointer transition-all;
 }
 
 .use-btn {

@@ -5,7 +5,7 @@
             <div class="px-[30px] py-6">
                 <!-- Web App渠道 -->
                 <div>
-                    <div class="mb-3 font-bold">Web App</div>
+                    <div class="mb-3 font-medium">Web App</div>
                     <div class="grid grid-cols-2 gap-4">
                         <div v-for="(item, index) in webApp" :key="index" class="card" @click="handlePublish(item.key)">
                             <img :src="item.icon" class="w-[50px] h-[50px] flex-shrink-0" />
@@ -18,7 +18,7 @@
                 </div>
                 <!-- API对接渠道 -->
                 <div class="mt-6">
-                    <div class="mb-3 font-bold">APi对接</div>
+                    <div class="mb-3 font-medium">APi对接</div>
                     <div class="grid grid-cols-2 gap-4">
                         <div
                             v-for="(item, index) in apiPost"

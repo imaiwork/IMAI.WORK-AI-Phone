@@ -32,7 +32,7 @@
                                 </view>
                                 <view>
                                     <view class="flex items-center gap-x-2">
-                                        <view class="font-bold line-clamp-1">{{ item.nickname }}</view>
+                                        <view class="font-medium line-clamp-1">{{ item.nickname }}</view>
                                     </view>
                                     <view class="flex items-center gap-x-1 mt-[12rpx]">
                                         <image
@@ -44,7 +44,7 @@
                             </view>
                             <view>
                                 <view
-                                    class="px-[16rpx] py-[8rpx] rounded-[8rpx] text-[20rpx] font-bold"
+                                    class="px-[16rpx] py-[8rpx] rounded-[8rpx] text-[20rpx] font-medium"
                                     :class="[
                                         item.status === 1
                                             ? 'text-[#00B862] bg-[#E0F1EB]'

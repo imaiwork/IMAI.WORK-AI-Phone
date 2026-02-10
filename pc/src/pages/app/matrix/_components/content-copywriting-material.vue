@@ -20,13 +20,13 @@
                         <button
                             @click="isViewSelected = false"
                             :class="!isViewSelected ? 'bg-white  text-[#6366F1]' : 'text-[#64748B]'"
-                            class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all">
+                            class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all">
                             全部素材
                         </button>
                         <button
                             @click="handleViewSelected"
                             :class="isViewSelected ? 'bg-white  text-[#6366F1]' : 'text-[#64748B]'"
-                            class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all">
+                            class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all">
                             已选 ({{ titleCount + contentCount }})
                         </button>
                     </div>
@@ -56,13 +56,13 @@
             <div class="flex gap-x-6 h-[380px]">
                 <div class="flex-[2] flex flex-col bg-white border border-br rounded-[24px] overflow-hidden">
                     <div class="px-5 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-slate-50">
-                        <span class="font-bold text-[#334155] text-sm flex items-center gap-2">
+                        <span class="font-medium text-[#334155] text-sm flex items-center gap-2">
                             <span class="w-1.5 h-4 bg-[#6366F1] rounded-full"></span> 备选标题
                         </span>
                         <ElButton
                             link
                             type="primary"
-                            class="!text-xs font-bold"
+                            class="!text-xs font-medium"
                             @click="chooseAll(CopywritingType.Title)"
                             >全选</ElButton
                         >
@@ -102,13 +102,13 @@
 
                 <div class="flex-[3] flex flex-col bg-white border border-br rounded-[24px] overflow-hidden">
                     <div class="px-5 py-4 border-b border-[#F1F5F9] flex justify-between items-center bg-slate-50">
-                        <span class="font-bold text-[#334155] text-sm flex items-center gap-2">
+                        <span class="font-medium text-[#334155] text-sm flex items-center gap-2">
                             <span class="w-1.5 h-4 bg-[#10B981] rounded-full"></span> 正文描述
                         </span>
                         <ElButton
                             link
                             type="primary"
-                            class="!text-xs font-bold"
+                            class="!text-xs font-medium"
                             @click="chooseAll(CopywritingType.Described)"
                             >全选</ElButton
                         >
@@ -146,7 +146,7 @@
                                         v-for="(topic, t_index) in item.topic"
                                         :key="t_index"
                                         class="group/tag relative flex items-center bg-white border border-br px-2 py-1 rounded-lg">
-                                        <span class="text-[#6366F1] font-bold text-[12px] mr-1">#</span>
+                                        <span class="text-[#6366F1] font-medium text-[12px] mr-1">#</span>
                                         <input
                                             v-model="item.topic[t_index]"
                                             class="bg-transparent border-none outline-none text-[11px] w-[70px] text-[#64748B]"
@@ -176,7 +176,7 @@
 
             <div class="mt-8 flex justify-center">
                 <ElButton type="primary" class="w-[280px] !h-[52px] !rounded-xl" @click="confirm">
-                    <span class="font-bold">确定选择材料</span>
+                    <span class="font-medium">确定选择材料</span>
                 </ElButton>
             </div>
         </div>

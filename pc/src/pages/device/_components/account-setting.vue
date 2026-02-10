@@ -14,7 +14,7 @@
             </div>
             <div class="mb-6 relative">
                 <div class="text-[20px] font-[900] text-[#1E293B]">智能接管配置</div>
-                <div class="text-[12px] font-bold text-[#94A3B8] mt-1">设置当前账号的接管模式，实现自动化运营</div>
+                <div class="text-[12px] font-medium text-[#94A3B8] mt-1">设置当前账号的接管模式，实现自动化运营</div>
             </div>
 
             <ElForm ref="formRef" :model="formData" :rules="rules" label-position="top" class="custom-config-form">
@@ -77,7 +77,7 @@
                             </ElSelect>
                             <div
                                 class="mt-4 p-4 rounded-2xl bg-slate-50 border border-[#F1F5F9] flex items-center justify-between">
-                                <div class="text-[11px] font-bold text-[#64748B]">没有合适的机器人？</div>
+                                <div class="text-[11px] font-medium text-[#64748B]">没有合适的机器人？</div>
                                 <router-link to="/agent" target="_blank">
                                     <button
                                         type="button"
@@ -92,9 +92,9 @@
             </ElForm>
 
             <div class="mt-10 flex gap-3">
-                <ElButton class="flex-1 !h-12 !rounded-xl !font-bold !text-[#64748B]" @click="close"> 取消 </ElButton>
+                <ElButton class="flex-1 !h-12 !rounded-xl !font-medium !text-[#64748B]" @click="close"> 取消 </ElButton>
                 <ElButton
-                    class="flex-1 !h-12 !rounded-xl !font-bold"
+                    class="flex-1 !h-12 !rounded-xl !font-medium"
                     type="primary"
                     :disabled="isLock"
                     :loading="isLock"

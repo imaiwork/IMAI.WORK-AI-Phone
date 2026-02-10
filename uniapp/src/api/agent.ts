@@ -30,6 +30,11 @@ export function getCommonAgentList(data: any) {
     return request.get({ url: "/kb.robot/commonLists", data });
 }
 
+// 获取系统智能体列表
+export function getSystemAgentList(data: any) {
+    return request.get({ url: "/kb.robot/systemLists", data });
+}
+
 // coze智能体列表
 export function getCozeAgentList(data: any) {
     return request.get({ url: "/coze.cozeAgent/lists", data });
@@ -93,4 +98,9 @@ export function getAgentCategoryList(data: any) {
 // coze智能体获取配置
 export function cozeAgentGetConfig(data: any) {
     return request.get({ url: "/coze.cozeAgent/bots", data });
+}
+
+// 获取文案生成
+export function getCopyWritingGenerate(data: any) {
+    return request.post({ url: "/kb.robot/getCopywriting", data });
 }

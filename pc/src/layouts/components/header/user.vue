@@ -7,7 +7,7 @@
             <span class="w-5 h-5 flex items-center justify-center rounded-full bg-primary">
                 <Icon name="local-icon-user" :size="12" color="#ffffff"></Icon>
             </span>
-            <span class="font-bold" :style="{ color: getTheme.textColor }">团队模式</span>
+            <span class="font-medium" :style="{ color: getTheme.textColor }">团队模式</span>
         </div>
         <div class="ml-2">
             <free-experience v-if="!isLogin" />
@@ -20,16 +20,16 @@
                 v-else
                 class="flex items-center bg-primary rounded-full px-4 h-10 text-white cursor-pointer gap-x-[7px] hover:bg-primary-light-3"
                 @click="toggleShowLogin()">
-                <div class="font-bold">登录</div>
+                <div class="font-medium">登录</div>
                 <ElDivider direction="vertical" class="!border-l-[#ffffff33]" />
-                <div class="font-bold">注册</div>
+                <div class="font-medium">注册</div>
             </div>
         </div>
     </div>
     <data-package ref="dataPackageRef" v-if="showDataPackage"></data-package>
     <ElDialog v-model="showTeamPopup" width="342px" :show-close="false" append-to-body>
         <div>
-            <div class="text-[15px] text-[rgba(0,0,0,0.8)] text-center font-bold">团队模式</div>
+            <div class="text-[15px] text-[rgba(0,0,0,0.8)] text-center font-medium">团队模式</div>
             <div class="text-[rgba(0,0,0,0.5)] mt-4 text-center text-base">
                 团队模式，不再仅仅依赖单一的个人，而是通过团队。
             </div>

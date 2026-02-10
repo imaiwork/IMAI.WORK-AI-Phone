@@ -38,12 +38,12 @@
                         :row-style="{ height: '72px' }">
                         <ElTableColumn label="订单号" min-width="180">
                             <template #default="{ row }">
-                                <span class="text-xs font-bold text-[#64748B]">{{ row.sn || "--" }}</span>
+                                <span class="text-xs font-medium text-[#64748B]">{{ row.sn || "--" }}</span>
                             </template>
                         </ElTableColumn>
                         <ElTableColumn label="变动日期" min-width="180">
                             <template #default="{ row }">
-                                <span class="text-xs font-bold text-[#64748B]">{{ row.create_time }}</span>
+                                <span class="text-xs font-medium text-[#64748B]">{{ row.create_time }}</span>
                             </template>
                         </ElTableColumn>
 
@@ -86,7 +86,7 @@
                                         :key="key"
                                         class="text-[12px] flex items-center gap-1">
                                         <span class="text-[#94A3B8] font-medium">{{ key }}:</span>
-                                        <span class="text-[#475569] font-bold">{{ value }}</span>
+                                        <span class="text-[#475569] font-medium">{{ value }}</span>
                                     </div>
                                 </div>
                                 <span v-else class="text-[#CBD5E1] text-xs">--</span>
@@ -108,7 +108,7 @@
                 </div>
 
                 <div class="flex justify-between items-center mt-6 pt-4 border-t border-[#F8FAFC]">
-                    <span class="text-xs font-bold text-[#94A3B8]">共 {{ pager.count }} 条变动详情</span>
+                    <span class="text-xs font-medium text-[#94A3B8]">共 {{ pager.count }} 条变动详情</span>
                     <pagination v-model="pager" @change="getLists" />
                 </div>
             </div>

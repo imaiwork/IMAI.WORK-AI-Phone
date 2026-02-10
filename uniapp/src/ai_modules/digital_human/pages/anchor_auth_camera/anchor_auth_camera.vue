@@ -9,7 +9,7 @@
             @error="handleError"
             @stop="stopCountdown" />
         <view
-            class="absolute top-[200rpx] left-0 right-0 p-4 bg-[#0000007F] rounded-[24rpx] mx-[36rpx] text-white font-bold text-[32rpx] leading-5">
+            class="absolute top-[200rpx] left-0 right-0 p-4 bg-[#0000007F] rounded-[24rpx] mx-[36rpx] text-white font-medium text-[32rpx] leading-5">
             我是 _（真实姓名），我授权{{
                 shanjianAuth
             }}使用视频中的肖像、声音，为我生成定制数字人及声音，并在本人账号中创作使用。
@@ -17,7 +17,7 @@
         <view class="absolute bottom-8 left-0 w-full z-[888]">
             <view class="w-full flex flex-col items-center justify-center">
                 <view
-                    class="bg-[#0000007F] w-[178rpx] h-[78rpx] flex items-center justify-center text-white font-bold text-[32rpx] rounded-[48rpx]">
+                    class="bg-[#0000007F] w-[178rpx] h-[78rpx] flex items-center justify-center text-white font-medium text-[32rpx] rounded-[48rpx]">
                     {{ formatAudioTime(duration) }}
                 </view>
                 <view

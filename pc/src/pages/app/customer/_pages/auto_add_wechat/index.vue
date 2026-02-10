@@ -5,7 +5,7 @@
                 <div class="flex items-center justify-between mb-2">
                     <h1 class="text-xl font-[900] text-gray-950">自动加微记录</h1>
                     <div class="flex gap-3">
-                        <ElButton type="primary" class="!h-10 !rounded-full px-8 font-bold" @click="getLists()">
+                        <ElButton type="primary" class="!h-10 !rounded-full px-8 font-medium" @click="getLists()">
                             <Icon name="el-icon-Search" />
                             <span class="ml-1">搜索</span>
                         </ElButton>
@@ -19,7 +19,7 @@
 
                 <div class="grid grid-cols-5 gap-4">
                     <div class="filter-item">
-                        <div class="text-[12px] font-bold text-tx-placeholder mb-1.5 ml-1">执行设备</div>
+                        <div class="text-[12px] font-medium text-tx-placeholder mb-1.5 ml-1">执行设备</div>
                         <ElSelect
                             v-model="queryParams.device_code"
                             class="custom-select"
@@ -37,7 +37,7 @@
                     </div>
 
                     <div class="filter-item">
-                        <div class="text-[12px] font-bold text-tx-placeholder mb-1.5 ml-1">添加渠道</div>
+                        <div class="text-[12px] font-medium text-tx-placeholder mb-1.5 ml-1">添加渠道</div>
                         <ElSelect v-model="queryParams.channel" class="custom-select" placeholder="所有渠道" clearable>
                             <ElOption label="小红书" :value="AppTypeEnum.XHS"></ElOption>
                             <ElOption label="视频号" :value="AppTypeEnum.SPH"></ElOption>
@@ -45,7 +45,7 @@
                     </div>
 
                     <div class="filter-item">
-                        <div class="text-[12px] font-bold text-tx-placeholder mb-1.5 ml-1">执行类型</div>
+                        <div class="text-[12px] font-medium text-tx-placeholder mb-1.5 ml-1">执行类型</div>
                         <ElSelect
                             v-model="queryParams.exec_type"
                             class="custom-select"
@@ -58,7 +58,7 @@
                     </div>
 
                     <div class="filter-item">
-                        <div class="text-[12px] font-bold text-tx-placeholder mb-1.5 ml-1">添加微信</div>
+                        <div class="text-[12px] font-medium text-tx-placeholder mb-1.5 ml-1">添加微信</div>
                         <ElSelect
                             v-model="queryParams.wechat_no"
                             class="custom-select"
@@ -74,7 +74,7 @@
                     </div>
 
                     <div class="filter-item">
-                        <div class="text-[12px] font-bold text-tx-placeholder mb-1.5 ml-1">加微结果</div>
+                        <div class="text-[12px] font-medium text-tx-placeholder mb-1.5 ml-1">加微结果</div>
                         <ElSelect v-model="queryParams.status" class="custom-select" placeholder="全部状态" clearable>
                             <ElOption label="全部" value=""></ElOption>
                             <ElOption label="失败" value="0"></ElOption>
@@ -90,7 +90,7 @@
                 <ElTableColumn prop="device_code" label="执行设备" width="220" fixed="left">
                     <template #default="{ row }">
                         <div class="flex flex-col">
-                            <span class="text-gray-950 font-bold">{{ row.device_name || "-" }}</span>
+                            <span class="text-gray-950 font-medium">{{ row.device_name || "-" }}</span>
                             <span class="text-[11px] text-tx-placeholder">ID: {{ row.device_code }}</span>
                         </div>
                     </template>
@@ -99,7 +99,7 @@
                 <ElTableColumn label="添加渠道" width="120">
                     <template #default="{ row }">
                         <span
-                            class="px-2 py-0.5 rounded text-xs font-bold"
+                            class="px-2 py-0.5 rounded text-xs font-medium"
                             :class="
                                 row.channel == AppTypeEnum.XHS ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
                             ">
@@ -127,7 +127,7 @@
 
                 <ElTableColumn prop="reg_wechat" label="提取内容" min-width="160">
                     <template #default="{ row }">
-                        <span class="font-mono font-bold text-primary">{{ row.reg_wechat || "-" }}</span>
+                        <span class="font-mono font-medium text-primary">{{ row.reg_wechat || "-" }}</span>
                     </template>
                 </ElTableColumn>
 
@@ -142,7 +142,7 @@
 
                 <ElTableColumn label="加微结果" width="120" show-overflow-tooltip>
                     <template #default="{ row }">
-                        <span class="text-xs font-bold text-blue-500">{{ row.result || "-" }}</span>
+                        <span class="text-xs font-medium text-blue-500">{{ row.result || "-" }}</span>
                     </template>
                 </ElTableColumn>
                 <ElTableColumn
@@ -158,13 +158,13 @@
                                     type="primary"
                                     link
                                     size="small"
-                                    class="!font-bold"
+                                    class="!font-medium"
                                     @click="handleRetry(row.id)"
                                     >重试</ElButton
                                 >
                                 <div class="w-[1px] h-3 bg-br-extra-light mx-1"></div>
                             </template>
-                            <ElButton type="danger" class="!font-bold" link size="small" @click="handleDelete(row.id)"
+                            <ElButton type="danger" class="!font-medium" link size="small" @click="handleDelete(row.id)"
                                 >删除</ElButton
                             >
                         </div>
@@ -174,7 +174,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-            <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 条加微记录数据</div>
+            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条加微记录数据</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>

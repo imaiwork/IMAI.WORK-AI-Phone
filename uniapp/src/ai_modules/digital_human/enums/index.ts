@@ -46,6 +46,12 @@ export enum ListenerTypeEnum {
     MONTAGE_MATERIAL_GROUP = "montage-material-group",
     // 选择视频风格
     CHOOSE_VIDEO_STYLES = "choose-video-styles",
+    // 平台发布文案
+    PLATFORM_PUBLISH_COPYWRITER = "platform-publish-copywriter",
+    // 平台发布文案（AI）
+    PLATFORM_PUBLISH_AI_COPYWRITER = "platform-publish-ai-copywriter",
+    // 视频顶部标题
+    MONTAGE_TOP_TITLE = "montage-top-title",
 }
 
 // 剪辑风格

@@ -13,7 +13,7 @@
         <view class="px-[30rpx] pb-[100rpx] pt-[236rpx] relative">
             <view class="grid grid-cols-3 gap-[15rpx]">
                 <view class="create-card" @click="toPage(MenuKey.CHOOSE_CREATE_TYPE)">
-                    <text class="relative z-[22]">创作6种视频</text>
+                    <text class="relative z-[22]">创作数字人视频</text>
                     <view class="absolute left-[-70rpx] bottom-[-50rpx] opacity-20">
                         <image
                             src="@/ai_modules/digital_human/static/images/home/ai_tag.png"
@@ -23,24 +23,22 @@
                 <view v-for="(menu, index) in utils_1" :key="index" class="menu-card" @click="toPage(menu.key)">
                     <view class="flex flex-col items-center gap-y-[12rpx]">
                         <image :src="menu.icon" class="w-[48rpx] h-[48rpx]"></image>
-                        <view class="text-[28rpx] text-white font-bold">{{ menu.label }}</view>
+                        <view class="text-[28rpx] text-white font-medium">{{ menu.label }}</view>
                     </view>
                     <view v-if="menu.key == MenuKey.SORA" class="badge">全新体验</view>
-                    <view v-if="menu.disabled" class="badge">待上线</view>
                 </view>
             </view>
             <view class="grid grid-cols-4 gap-[15rpx] mt-4">
                 <view v-for="(menu, index) in utils_2" :key="index" class="menu2-card" @click="toPage(menu.key)">
                     <view class="flex flex-col items-center gap-y-[12rpx]">
                         <image :src="menu.icon" class="w-[40rpx] h-[40rpx]"></image>
-                        <view class="text-white font-bold">{{ menu.label }}</view>
+                        <view class="text-white font-medium">{{ menu.label }}</view>
                     </view>
-                    <view v-if="menu.disabled" class="badge">待上线</view>
                 </view>
             </view>
             <view class="mt-[60rpx]">
                 <view class="flex items-center justify-between">
-                    <view class="text-[30rpx] font-bold text-white">我的创作</view>
+                    <view class="text-[30rpx] font-medium text-white">我的创作</view>
                     <view class="flex items-center gap-x-1" @click="toPage(MenuKey.ME_CREATE)">
                         <text class="text-xs text-[#ffffffb3]">全部</text>
                         <u-icon name="arrow-right" color="#ffffffb3"></u-icon>
@@ -74,7 +72,7 @@
                                     class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center bg-[#0000004d] z-[22]">
                                     <template v-if="getStatus(item) == 2">
                                         <view
-                                            class="text-white bg-[#FF2442] text-[22rpx] font-bold rounded-[10rpx] w-[120rpx] h-[50rpx] flex items-center justify-center mx-auto"
+                                            class="text-white bg-[#FF2442] text-[22rpx] font-medium rounded-[10rpx] w-[120rpx] h-[50rpx] flex items-center justify-center mx-auto"
                                             >生成失败</view
                                         >
                                         <view class="mt-[16rpx] text-center text-[22rpx] text-white px-2">
@@ -97,7 +95,7 @@
             </view>
             <view class="mt-[60rpx]">
                 <view class="flex items-center justify-between">
-                    <view class="text-[30rpx] font-bold text-white">形象克隆</view>
+                    <view class="text-[30rpx] font-medium text-white">形象克隆</view>
                     <view class="flex items-center gap-x-1" @click="toPage(MenuKey.ME_CLONE)">
                         <text class="text-xs text-[#ffffffb3]">全部</text>
                         <u-icon name="arrow-right" color="#ffffffb3"></u-icon>
@@ -131,7 +129,7 @@
 <script setup lang="ts">
 import { useAppStore } from "@/stores/app";
 import { getVideoCreationRecord } from "@/api/app";
-import { digitalHumanLists, getPublicAnchorList } from "@/api/digital_human";
+import { getPublicAnchorList } from "@/api/digital_human";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { ModeTypeEnum } from "@/ai_modules/digital_human/enums";
 import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
@@ -142,8 +140,7 @@ import TextExtractIcon from "@/ai_modules/digital_human/static/icons/text_extrac
 import MeCloneIcon from "@/ai_modules/digital_human/static/icons/me_clone.svg";
 import MeCreateIcon from "@/ai_modules/digital_human/static/icons/me_create.svg";
 import MontageRecordIcon from "@/ai_modules/digital_human/static/icons/montage_record.svg";
-import MontageBatchIcon from "@/ai_modules/digital_human/static/icons/montage_batch.svg";
-import VideoItem from "@/ai_modules/digital_human/components/video-item/video-item.vue";
+import MontageScanIcon from "@/ai_modules/digital_human/static/icons/scan.svg";
 import AnchorVideo from "@/ai_modules/digital_human/components/anchor-video/anchor-video.vue";
 
 enum MenuKey {
@@ -158,6 +155,7 @@ enum MenuKey {
     MONTAGE_BATCH = "montage_batch",
     SORA = "sora",
     MATERIAL_LIBRARY = "material_library",
+    PLATFORM_PUBLISH = "platform_publish",
 }
 
 const appStore = useAppStore();
@@ -177,14 +175,13 @@ const utils_1 = [
     { label: "一句话生成", key: MenuKey.SORA, icon: VideoMixIcon },
     { label: "数字人克隆", key: MenuKey.ANCHOR_CLONE, icon: AnchorCloneIcon },
     { label: "配置声音", key: MenuKey.TONE_CLONE, icon: ToneCloneIcon },
-    { label: "文案提取", key: MenuKey.TEXT_EXTRACT, icon: TextExtractIcon, disabled: true },
 ];
 
 const utils_2 = [
     { label: "我的克隆", key: MenuKey.ME_CLONE, icon: MeCloneIcon },
     { label: "我的创作", key: MenuKey.ME_CREATE, icon: MeCreateIcon },
     { label: "素材库", key: MenuKey.MATERIAL_LIBRARY, icon: MontageRecordIcon },
-    { label: "批量智剪", key: MenuKey.MONTAGE_BATCH, disabled: true, icon: MontageBatchIcon },
+    { label: "发布二维码", key: MenuKey.PLATFORM_PUBLISH, icon: MontageScanIcon },
 ];
 
 const pageMap: Record<string, string | (() => void)> = {
@@ -196,7 +193,7 @@ const pageMap: Record<string, string | (() => void)> = {
     [MenuKey.ME_CLONE]: "/ai_modules/digital_human/pages/clone_manage/clone_manage",
     [MenuKey.ME_CREATE]: "/packages/pages/creation/creation",
     [MenuKey.MONTAGE_RECORD]: "/packages/pages/creation/creation",
-    [MenuKey.MONTAGE_BATCH]: () => uni.$u.toast("开发中..."),
+    [MenuKey.PLATFORM_PUBLISH]: "/ai_modules/digital_human/pages/platform_publish_works/platform_publish_works",
     [MenuKey.SORA]: "/ai_modules/digital_human/pages/sora_create/sora_create",
     [MenuKey.MATERIAL_LIBRARY]: "/packages/pages/material_library/material_library",
 };
@@ -287,9 +284,9 @@ onLoad(() => {
 }
 
 .create-card {
-    grid-column-start: span 2;
+    grid-column-start: span 3;
     @include gradient-bg;
-    @apply h-[190rpx] rounded-[20rpx] text-[40rpx] font-bold flex items-center justify-center relative overflow-hidden;
+    @apply h-[190rpx] rounded-[20rpx] text-[40rpx] font-medium flex items-center justify-center relative overflow-hidden;
 }
 .menu-card {
     @apply bg-[#202328] rounded-[20rpx] flex flex-col gap-4 items-center justify-center h-[190rpx] relative;

@@ -15,7 +15,7 @@
                     <view>
                         <view class="flex items-center gap-x-1">
                             <text class="text-[#FF3C26] text-[32rpx]">*</text>
-                            <text class="font-bold">基础设置</text>
+                            <text class="font-medium">基础设置</text>
                         </view>
                         <view
                             class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx] shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.03)]">
@@ -74,7 +74,7 @@
                     <view class="mt-[32rpx]" v-if="formData.publish_frep > 0">
                         <view class="flex items-center gap-x-1">
                             <text class="text-[#FF3C26] text-[32rpx]">*</text>
-                            <text class="font-bold">发布时间</text>
+                            <text class="font-medium">发布时间</text>
                         </view>
                         <view class="mb-[28rpx]">
                             <u-notice-bar
@@ -103,9 +103,9 @@
                                                     <text
                                                         :class="[
                                                             timeErrors[index]?.start_time
-                                                                ? 'text-[#FF3C26] font-bold'
+                                                                ? 'text-[#FF3C26] font-medium'
                                                                 : item.start_time
-                                                                ? 'text-[#00B862] font-bold'
+                                                                ? 'text-[#00B862] font-medium'
                                                                 : 'text-[#00000033]',
                                                         ]"
                                                         >{{ item.start_time || "开始时间" }}</text
@@ -128,9 +128,9 @@
                                                     <text
                                                         :class="[
                                                             timeErrors[index]?.end_time
-                                                                ? 'text-[#FF3C26] font-bold'
+                                                                ? 'text-[#FF3C26] font-medium'
                                                                 : item.end_time
-                                                                ? 'text-[#00B862] font-bold'
+                                                                ? 'text-[#00B862] font-medium'
                                                                 : 'text-[#00000033]',
                                                         ]"
                                                         >{{ item.end_time || "结束时间" }}</text
@@ -159,7 +159,7 @@
         <view class="flex-shrink-0 pb-5 pt-2">
             <view class="flex items-center justify-between px-4 gap-[48rpx]">
                 <view
-                    class="flex-1 flex items-center justify-center text-white rounded-[20rpx] h-[100rpx] font-bold"
+                    class="flex-1 flex items-center justify-center text-white rounded-[20rpx] h-[100rpx] font-medium"
                     :class="[canCreateTask ? 'bg-black' : 'bg-[#787878CC]']"
                     @click="createTask">
                     立即创建任务
@@ -408,7 +408,7 @@ onLoad((options: any) => {
 .prompt-length-item {
     @apply flex items-center justify-center bg-[#F7F8FC] w-[114rpx] h-[72rpx] text-[#7C7E80] relative rounded-[16rpx];
     &.active {
-        @apply font-bold text-black;
+        @apply font-medium text-black;
         &::before {
             @apply absolute top-[-4rpx] left-[-4rpx] w-[100%] h-[100%]  p-[4rpx] rounded-[16rpx] content-[''];
             background: conic-gradient(#47d59f, #37cced);

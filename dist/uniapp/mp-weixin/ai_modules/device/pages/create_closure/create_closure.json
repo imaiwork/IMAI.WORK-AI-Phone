@@ -7,6 +7,8 @@
     "u-radio": "../../../../uni_modules/vk-uview-ui/components/u-radio/u-radio",
     "u-radio-group": "../../../../uni_modules/vk-uview-ui/components/u-radio-group/u-radio-group",
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "u-checkbox": "../../../../uni_modules/vk-uview-ui/components/u-checkbox/u-checkbox",
+    "u-checkbox-group": "../../../../uni_modules/vk-uview-ui/components/u-checkbox-group/u-checkbox-group",
     "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
     "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",

@@ -158,6 +158,18 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
+        'douyin' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/douyin/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'automedia' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/automedia/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
         // 其它日志通道配置
     ],
 

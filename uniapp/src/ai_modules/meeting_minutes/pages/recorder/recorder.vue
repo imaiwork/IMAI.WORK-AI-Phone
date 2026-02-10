@@ -38,7 +38,7 @@
                             </image>
                         </view>
                         <view
-                            class="text-primary hover:text-white font-bold rounded-md w-[88rpx] h-[72rpx] bg-white hover:bg-primary cursor-pointer flex items-center justify-center"
+                            class="text-primary hover:text-white font-medium rounded-md w-[88rpx] h-[72rpx] bg-white hover:bg-primary cursor-pointer flex items-center justify-center"
                             @click="toggleRecording">
                             <image
                                 src="@/ai_modules/meeting_minutes/static/icons/mic.svg"
@@ -80,13 +80,13 @@
         <view class="h-full flex flex-col">
             <view class="flex items-center justify-center gap-2 h-[112rpx]">
                 <u-icon name="info-circle" color="#FE975F" :size="32"></u-icon>
-                <text class="text-[#2C2C36] text-xl font-bold">确定结束录音吗？</text>
+                <text class="text-[#2C2C36] text-xl font-medium">确定结束录音吗？</text>
             </view>
             <view>
                 <u-line />
             </view>
             <view class="mt-4 px-4 grow">
-                <view class="text-xl font-bold">选择发言人数量</view>
+                <view class="text-xl font-medium">选择发言人数量</view>
                 <view class="mt-4">
                     <view class="flex flex-wrap gap-[24rpx]">
                         <view

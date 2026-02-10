@@ -29,7 +29,7 @@ class SoraVideoSettingLists extends BaseAdminDataLists implements ListsSearchInt
             ->order(['sj.id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
             ->select()->each(function ($item) {
-                $item['image_count'] = json_decode($item->extra,true) ? json_decode($item->extra,true)['image_counts'] : 0;
+                $item['image_count'] = !empty(json_decode($item->extra,true)) ? count(json_decode($item->extra,true)['image_urls']) : 0;
                 $item['video_token'] = SoraVideoTask::where('video_setting_id', $item->id)->sum('video_token');
                 if ($item['video_token'] > 0) {
                     $item['video_token'] = sprintf('%.2f',   $item['video_token']);

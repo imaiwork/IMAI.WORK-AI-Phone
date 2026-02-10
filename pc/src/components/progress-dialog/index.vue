@@ -16,7 +16,7 @@
                             <span class="text-[13px] font-black text-slate-400 uppercase tracking-wider"
                                 >File Name</span
                             >
-                            <span class="text-sm font-bold text-slate-700 truncate max-w-[280px]">{{
+                            <span class="text-sm font-medium text-slate-700 truncate max-w-[280px]">{{
                                 name || "正在准备文件..."
                             }}</span>
                         </div>
@@ -44,7 +44,7 @@
                             <div class="pulse-ring" v-if="percentage > 0 && percentage < 100"></div>
                         </div>
                         <span
-                            class="text-xs font-bold transition-colors"
+                            class="text-xs font-medium transition-colors"
                             :class="percentage === 100 ? 'text-emerald-500' : 'text-slate-400'">
                             {{ getStatusText(percentage) }}
                         </span>

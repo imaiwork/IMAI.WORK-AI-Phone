@@ -13,7 +13,7 @@
                 </view>
             </view>
             <view class="grow min-h-0 flex flex-col">
-                <view class="my-4 text-center text-[#022541] font-bold"> 补充您要生成的信息 </view>
+                <view class="my-4 text-center text-[#022541] font-medium"> 补充您要生成的信息 </view>
                 <view class="grow min-h-0">
                     <scroll-view scroll-y class="h-full">
                         <view class="px-[32rpx]">

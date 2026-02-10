@@ -17,7 +17,7 @@
                                 :height="100"></canvas>
                         </view>
                         <view class="text-white mt-2"
-                            >录音中<text class="ml-2 font-bold">{{ formatAudioTime(recordTime / 1000) }}</text></view
+                            >录音中<text class="ml-2 font-medium">{{ formatAudioTime(recordTime / 1000) }}</text></view
                         >
                     </view>
                 </view>
@@ -28,7 +28,7 @@
                         重录
                     </view>
                     <view
-                        class="w-[246rpx] rounded-full bg-white text-primary h-[76rpx] text-xl font-bold flex items-center justify-center"
+                        class="w-[246rpx] rounded-full bg-white text-primary h-[76rpx] text-xl font-medium flex items-center justify-center"
                         @click="confirm()">
                         发送
                     </view>

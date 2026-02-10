@@ -24,6 +24,7 @@ class MediaStatusHandler extends BaseMessageHandler
             $this->payload = $payload;
             $this->userId = $content['userId'] ?? 0;
             $this->connection = $connection;
+            $this->publishPlatform = $content['publish_platform'] ?? 0;
 
             // $this->service->getRedis()->set("xhs:device:" . $this->payload['deviceId'] . ":taskStatus", json_encode([
             //     'taskStatus' => 'running',
@@ -36,7 +37,7 @@ class MediaStatusHandler extends BaseMessageHandler
             $mediaId = $content['material_id'] ?? 0;
             $status = $content['status'] ?? 0;
             $where = [];
-            if($this->payload['appType'] === DeviceEnum::ACCOUNT_TYPE_SPH){
+            if($this->publishPlatform === DeviceEnum::PUBLISH_PLATFORM_WX){
                 $media = AiWechatCircleTask::where('id', $mediaId)->findOrEmpty();
                 if (!$media->isEmpty()) {
                     $media->send_status = $status === 1 ? 2 : 3;
@@ -72,7 +73,7 @@ class MediaStatusHandler extends BaseMessageHandler
             // 主任务状态修改
             $task = SvDeviceTask::where($where)->findOrEmpty();
             if (!$task->isEmpty()) {
-                $task->status = (int)$status === 2 ? DeviceEnum::TASK_STATUS_FAILED : DeviceEnum::TASK_STATUS_FINISHED;
+                $task->status = (int)$status === 1 ? DeviceEnum::TASK_STATUS_FINISHED : DeviceEnum::TASK_STATUS_FAILED;
                 $task->remark = $content['msg'] ?? '';
                 $task->update_time = time();
                 $task->save();

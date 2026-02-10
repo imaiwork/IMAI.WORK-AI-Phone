@@ -21,7 +21,7 @@
     </view>
     <u-popup v-model="showConfirm" mode="center" border-radius="24" width="90%">
         <view class="p-[28rpx]">
-            <view class="font-bold text-[30rpx] text-center mt-4">温馨提示</view>
+            <view class="font-medium text-[30rpx] text-center mt-4">温馨提示</view>
             <view class="text-[#00000080] w-[62%] text-center text-[26rpx] mx-auto mt-5 leading-6">
                 请勾选已阅读并同意《服务协议》和《隐私协议》
             </view>

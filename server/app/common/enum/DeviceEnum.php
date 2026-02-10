@@ -19,6 +19,7 @@ class DeviceEnum
     const TASK_TYPE_WECHAT_CIRCLE = 7; // 朋友圈发布
     const TASK_TYPE_WECHAT_CIRCLE_THUMB_COMMENT = 8; // 朋友圈点赞评论
     const TASK_TYPE_CLUES_WECHAT = 9; // 视频号获客加微任务
+    const TASK_TYPE_WECHAT_RPA = 10; // 个微rpa任务
 
 
 
@@ -26,6 +27,14 @@ class DeviceEnum
     const ACCOUNT_TYPE_XHS = 3; // 小红书
     const ACCOUNT_TYPE_DY = 4; // 抖音
     const ACCOUNT_TYPE_KS = 5; // 快手
+
+    const PUBLISH_PLATFORM_SPH = 1; // 视频号
+    const PUBLISH_PLATFORM_WX = 2; // 微信
+    const PUBLISH_PLATFORM_XHS = 3; // 小红书
+    const PUBLISH_PLATFORM_DY = 4; // 抖音
+    const PUBLISH_PLATFORM_KS = 5; // 快手
+
+
 
     const TASK_STATUS_WAIT = 0; // 待执行
     const TASK_STATUS_RUNNING = 1; // 执行中
@@ -46,12 +55,14 @@ class DeviceEnum
     const TASK_SOURCE_WECHAT_CIRCLE_PUBLISH = 7; // 朋友圈发布
     const TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT = 8; // 朋友圈点赞评论
     const TASK_SOURCE_CLUES_WECHAT = 9; // 视频号获客加微任务
+    const TASK_SOURCE_WECHAT_RPA = 10; // 个微rpa任务
 
 
 
     const XHS_TAKE_OVER = 30; // 小红书接管
     const DY_TAKE_OVER = 31; // 抖音接管
     const KS_TAKE_OVER = 32; // 快手接管
+    const WX_TAKE_OVER = 33; // 微信接管
 
     const XHS_MAINTENANCE_ACCOUNT = 40; // 小红书维护账号
     const DY_MAINTENANCE_ACCOUNT = 41; // 抖音维护账号
@@ -59,6 +70,7 @@ class DeviceEnum
 
     const RPA_ADD_WECHAT = 50; // 自动加微任务启动
     const WECHAT_CIRCLE_LIKE_COMMENT = 51; // 微信圈点赞评论
+    const WECHAT_RPA_TASK = 53; // 个微rpa任务
 
     const TASK_COMMENT_TO_COMMENT = 101; // 评论区评论
     const TASK_COMMENT_TO_MSG = 102; // 评论区私信
@@ -116,6 +128,7 @@ class DeviceEnum
             self::ACCOUNT_TYPE_XHS => self::XHS_TAKE_OVER,
             self::ACCOUNT_TYPE_DY => self::DY_TAKE_OVER,
             self::ACCOUNT_TYPE_KS => self::KS_TAKE_OVER,
+            self::ACCOUNT_TYPE_SPH => self::WX_TAKE_OVER,
         ];
         return $desc[$type] ?? self::XHS_TAKE_OVER;
     }

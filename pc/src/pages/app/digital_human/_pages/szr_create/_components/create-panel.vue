@@ -1,6 +1,6 @@
 <template>
     <ElButton class="w-full !h-[50px]" type="primary" size="large" :loading="createIsLock" @click="createLockFn">
-        <span class="font-bold text-lg">立即生成视频</span>
+        <span class="font-medium text-lg">立即生成视频</span>
     </ElButton>
 </template>
 

@@ -6,7 +6,7 @@
             :custom-back="back"
             :background="{ background: 'transparent' }">
             <template #custom-back-icon>
-                <view class="whitespace-nowrap text-[32rpx] font-bold text-[#19C979]">完成</view>
+                <view class="whitespace-nowrap text-[32rpx] font-medium text-[#19C979]">完成</view>
             </template>
         </u-navbar>
         <view class="px-4">
@@ -35,12 +35,12 @@
             </view>
             <view class="mt-[66rpx]">
                 <view class="flex items-center justify-between">
-                    <text class="text-[30rpx] font-bold">标签</text>
+                    <text class="text-[30rpx] font-medium">标签</text>
                     <view class="flex items-center gap-x-2" v-if="formData.topic.length < 5" @click="handleAddTag">
                         <image
                             src="@/ai_modules/device/static/images/common/add_circle.png"
                             class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="font-bold">新增标签</text>
+                        <text class="font-medium">新增标签</text>
                     </view>
                 </view>
                 <view class="mt-5 flex flex-wrap gap-2">
@@ -62,7 +62,9 @@
     </view>
     <u-popup v-model="showAddTagPopup" mode="center" width="90%" :border-radius="20">
         <view class="p-4 bg-white rounded-[20rpx]">
-            <view class="text-[30rpx] font-bold text-center mt-2">{{ editTagIndex === -1 ? "新增" : "编辑" }}标签</view>
+            <view class="text-[30rpx] font-medium text-center mt-2"
+                >{{ editTagIndex === -1 ? "新增" : "编辑" }}标签</view
+            >
             <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
                 <u-input
                     v-model="newTopic"
@@ -72,12 +74,12 @@
             </view>
             <view class="flex items-center gap-x-5 mt-[56rpx]">
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold text-[#000000b3]"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
                     @click="handleAddTagCancel">
                     取消
                 </view>
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-primary font-bold text-white"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-primary font-medium text-white"
                     @click="handleTagConfirm"
                     >确定</view
                 >
@@ -163,6 +165,6 @@ onLoad((options: any) => {
 
 <style scoped lang="scss">
 .topic-item {
-    @apply bg-white rounded-[10rpx] text-[#000000b3] px-[28rpx] py-[16rpx] font-bold relative;
+    @apply bg-white rounded-[10rpx] text-[#000000b3] px-[28rpx] py-[16rpx] font-medium relative;
 }
 </style>

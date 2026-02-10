@@ -16,7 +16,7 @@
                     </div>
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">优秀案例库</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             Inspiration Gallery
                         </div>
                     </div>
@@ -74,7 +74,7 @@
                                 class="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 border border-[#F1F5F9]">
                                 <Icon name="el-icon-Picture" :size="24" color="#CBD5E1"></Icon>
                             </div>
-                            <p class="text-[#94A3B8] font-bold text-sm">暂无案例内容</p>
+                            <p class="text-[#94A3B8] font-medium text-sm">暂无案例内容</p>
                         </div>
                     </div>
                 </ElScrollbar>

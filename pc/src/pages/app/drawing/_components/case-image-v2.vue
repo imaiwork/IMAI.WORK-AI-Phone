@@ -16,7 +16,7 @@
                     </div>
                     <div>
                         <div class="text-[18px] text-[#1E293B] font-black tracking-tight">灵感案例库</div>
-                        <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                        <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                             Premium Templates
                         </div>
                     </div>
@@ -86,7 +86,7 @@
                     v-if="!pager.loading && pager.lists.length === 0"
                     class="h-[400px] flex flex-col items-center justify-center text-[#94A3B8]">
                     <Icon name="el-icon-FolderOpened" :size="48" class="mb-4 opacity-20"></Icon>
-                    <p class="font-bold text-sm">库中暂无素材</p>
+                    <p class="font-medium text-sm">库中暂无素材</p>
                 </div>
             </div>
         </div>

@@ -14,7 +14,7 @@
                             v-for="(item, index) in dataLists"
                             :key="index"
                             @click="emit('select', item)">
-                            <view class="font-bold text-[32rpx]"> {{ item.name }} </view>
+                            <view class="font-medium text-[32rpx]"> {{ item.name }} </view>
                             <view class="mt-[12rpx]"> {{ item.introduced }} </view>
                             <view class="absolute right-[-12rpx] top-[-12rpx] z-[22]">
                                 <view

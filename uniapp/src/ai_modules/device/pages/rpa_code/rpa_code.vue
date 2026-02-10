@@ -1,12 +1,12 @@
 <template>
     <view class="p-[26rpx]">
         <view class="rounded-[20rpx] bg-white p-5 flex flex-col items-center">
-            <view class="text-[30rpx] font-bold">设备绑定码</view>
+            <view class="text-[30rpx] font-medium">设备绑定码</view>
             <view class="text-[30rpx] text-[#0000004d] mt-[20rpx]">请勿与任何人分享此代码</view>
             <view class="w-[500rpx] h-[500rpx] mt-[56rpx]">
                 <image :src="qrcode" class="w-full h-full rounded-[20rpx]"></image>
             </view>
-            <view class="font-bold mt-5"> 请前往AI获客启用摄像头扫描此二维码 </view>
+            <view class="font-medium mt-5"> 请前往AI获客启用摄像头扫描此二维码 </view>
         </view>
     </view>
     <confirm-dialog

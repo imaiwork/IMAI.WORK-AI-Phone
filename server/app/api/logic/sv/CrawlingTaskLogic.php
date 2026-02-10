@@ -128,7 +128,7 @@ class CrawlingTaskLogic extends SvBaseLogic
                         'source' => DeviceEnum::TASK_SOURCE_CLUES, //sv_crawling_task
                         'create_time' => time(),
                     ]);
-
+                    \app\api\logic\device\TaskLogic::updateWechatRpaTaskTime($device, $task->start_time);
                     if(isset($params['add_type']) && isset($params['wechat_time_type']) && (int)$params['add_type'] === 1 && (int)$params['wechat_time_type'] === 0){
                         $st = $time['end_time'] + 180;
                         $et = $st + ((int)$params['add_number'] * (int)$params['add_interval_time'] * 60);
@@ -235,12 +235,6 @@ class CrawlingTaskLogic extends SvBaseLogic
 
     private static function getSphAccount(string $device_code)
     {
-        $find = AiWechat::where('device_code', '=', function ($query) use ($device_code) {
-            $query->name('sv_device')->where('device_code', $device_code)->field('wechat_device_code');
-        })->where('user_id', self::$uid)->findOrEmpty();
-        if (!$find->isEmpty()) {
-            return $find->wechat_id;
-        }
 
         $find = SvAccount::where('device_code',  $device_code)->where('type', 1)->where('user_id', self::$uid)->findOrEmpty();
         return $find->isEmpty() ? '' : $find->account;
@@ -283,25 +277,16 @@ class CrawlingTaskLogic extends SvBaseLogic
                 self::setError('子任务不存在');
                 return false;
             }
-            if ($info['type'] == 1) {
-                $where = [
-                    'sd.device_code' => $params['device_code'],
-                ];
-                $info['account_info'] = SvDevice::alias('sd')->field('ai.*,sd.wechat_device_code,sd.device_name,sd.device_model')->where($where)
-                    ->join('ai_wechat ai', 'ai.device_code = sd.wechat_device_code', 'LEFT')
-                    ->findOrEmpty()->toArray();
-                $info['device_info'] = [
-                    'device_name' => $info['account_info']['device_name'] ?? '',
-                    'device_model' => $info['account_info']['device_model'] ?? '',
-                ];
-            } else {
-                $where = [
-                    'device_code' => $info['device_code'],
-                    'account' => $info['account']
-                ];
-                $info['account_info'] = SvAccount::where($where)->findOrEmpty()->toArray();
-                $info['device_info'] =  SvDevice::where('device_code', $params['device_code'])->field('sd.device_name,sd.device_model')->findOrEmpty()->toArray();
-            }
+
+
+            $where = [
+                'device_code' => $info['device_code'],
+                'account' => $info['account']
+            ];
+            $info['account_info'] = SvAccount::where($where)->findOrEmpty()->toArray();
+            $info['device_info'] =  SvDevice::where('device_code', $params['device_code'])->field('sd.device_name,sd.device_model')->findOrEmpty()->toArray();
+
+
             $info['task_name'] = $params['task_name'];
             $info['task_category'] = $params['task_category'];
             $bind['keywords'] = json_decode($bind['keywords'], JSON_UNESCAPED_UNICODE);

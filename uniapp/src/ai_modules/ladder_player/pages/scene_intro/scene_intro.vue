@@ -14,7 +14,7 @@
                 <view class="mx-4 bg-white rounded-[40rpx] py-4 px-[60rpx]">
                     <view class="flex flex-col justify-center items-center">
                         <image :src="detail?.logo" class="w-[144rpx] h-[144rpx]"></image>
-                        <text class="text-xl font-bold mt-2">{{ detail?.name }}</text>
+                        <text class="text-xl font-medium mt-2">{{ detail?.name }}</text>
                     </view>
                     <view class="mt-[50rpx] text-[#524B6B] leading-[48rpx]">
                         {{ detail?.description }}
@@ -30,12 +30,12 @@
                                 <image
                                     src="@/ai_modules/ladder_player/static/images/common/beautify_img3.png"
                                     class="w-[48rpx] h-[48rpx]"></image>
-                                <text class="font-bold">练习目标</text>
+                                <text class="font-medium">练习目标</text>
                             </view>
                             <view class="mt-3 flex flex-col gap-2">
                                 <view v-for="(item, index) in detail.training_target" :key="index" class="flex gap-2">
                                     <view class="w-[6rpx] h-[6rpx] bg-[#B5B6B7] rounded-full flex-shrink-0 mt-2"></view>
-                                    <view class="font-bold leading-[40rpx]">{{ item }}</view>
+                                    <view class="font-medium leading-[40rpx]">{{ item }}</view>
                                 </view>
                             </view>
                         </view>
@@ -44,12 +44,12 @@
                                 <image
                                     src="@/ai_modules/ladder_player/static/images/common/beautify_img2.png"
                                     class="w-[48rpx] h-[48rpx]"></image>
-                                <text class="font-bold">温馨提示</text>
+                                <text class="font-medium">温馨提示</text>
                             </view>
                             <view class="mt-3 flex flex-col gap-2">
                                 <view v-for="(item, index) in detail.tips" :key="index" class="flex gap-2">
                                     <view class="w-[6rpx] h-[6rpx] bg-[#B5B6B7] rounded-full flex-shrink-0 mt-2"></view>
-                                    <view class="font-bold leading-[40rpx]">{{ item }}</view>
+                                    <view class="font-medium leading-[40rpx]">{{ item }}</view>
                                 </view>
                             </view>
                         </view>
@@ -83,16 +83,16 @@
                 <image
                     src="@/ai_modules/ladder_player/static/images/common/pen.png"
                     class="w-[128rpx] h-[128rpx]"></image>
-                <view class="text-[40rpx] font-bold text-center mt-[32rpx]"> 您还有练习未结束 </view>
+                <view class="text-[40rpx] font-medium text-center mt-[32rpx]"> 您还有练习未结束 </view>
             </view>
             <view class="px-[56rpx] mt-[32rpx]">
                 <view
-                    class="flex items-center justify-center h-[88rpx] text-white rounded-full bg-primary font-bold"
+                    class="flex items-center justify-center h-[88rpx] text-white rounded-full bg-primary font-medium"
                     @click="generateReport">
                     生成报告
                 </view>
                 <view
-                    class="flex items-center justify-center h-[88rpx] rounded-full bg-primary-light-9 text-primary font-bold shadow-[0_0_0_2rpx_rgba(232,234,242,1)] mt-[24rpx]"
+                    class="flex items-center justify-center h-[88rpx] rounded-full bg-primary-light-9 text-primary font-medium shadow-[0_0_0_2rpx_rgba(232,234,242,1)] mt-[24rpx]"
                     @click="handleContinue">
                     继续练习
                 </view>

@@ -11,7 +11,7 @@
             <scroll-view scroll-y class="h-full">
                 <view class="p-4">
                     <template v-if="!isGenerating">
-                        <view class="flex items-center gap-1 font-bold">
+                        <view class="flex items-center gap-1 font-medium">
                             <text class="text-[#FF3C26]">*</text>
                             <text>您想获取的线索方向</text>
                         </view>
@@ -27,7 +27,7 @@
                                 {{ contentVal.length }} / {{ contentMaxLength }}
                             </view>
                         </view>
-                        <view class="flex items-center gap-1 font-bold mt-[48rpx]">
+                        <view class="flex items-center gap-1 font-medium mt-[48rpx]">
                             <text class="text-[#FF3C26]">*</text>
                             <text> 线索词数量</text>
                         </view>
@@ -51,7 +51,7 @@
                                         src="@/ai_modules/sph/static/icons/star2.svg"
                                         class="w-[24rpx] h-[24rpx]"></image>
 
-                                    <text class="font-bold">线索词{{ index + 1 }}生成中</text>
+                                    <text class="font-medium">线索词{{ index + 1 }}生成中</text>
                                 </view>
                                 <view class="mt-4">
                                     <view class="w-full h-[28rpx] bg-[#F7F8FC] rounded-[8rpx]"></view>
@@ -252,7 +252,7 @@ onLoad((options: any) => {
 .prompt-num-item {
     @apply w-[84rpx] h-[72rpx] flex items-center justify-center  bg-white text-[26rpx]  relative rounded-[16rpx];
     &.active {
-        @apply font-bold text-primary shadow-[0_0_0_1rpx_var(--color-primary)];
+        @apply font-medium text-primary shadow-[0_0_0_1rpx_var(--color-primary)];
     }
 }
 
@@ -261,7 +261,7 @@ onLoad((options: any) => {
 }
 
 .topic-item {
-    @apply bg-[rgba(0,101,251,0.03)] rounded-[10rpx] text-[#000000b3] px-[28rpx] py-[16rpx] font-bold relative;
+    @apply bg-[rgba(0,101,251,0.03)] rounded-[10rpx] text-[#000000b3] px-[28rpx] py-[16rpx] font-medium relative;
 }
 
 .send-btn {

@@ -16,7 +16,7 @@
         </view>
         <view class="px-[32rpx]">
             <view>
-                <view class="text-xl font-bold">音频文件的语音</view>
+                <view class="text-xl font-medium">音频文件的语音</view>
                 <view class="mt-4">
                     <view class="flex flex-wrap gap-[24rpx]">
                         <view
@@ -33,13 +33,13 @@
                 </view>
             </view>
             <view class="mt-4">
-                <view class="text-xl font-bold">翻译目标语言</view>
+                <view class="text-xl font-medium">翻译目标语言</view>
                 <view class="mt-4">
                     <data-select v-model="formData.translation" :localdata="targetLanguageList"></data-select>
                 </view>
             </view>
             <view class="mt-4" v-if="state.type == CreateType.BATCH">
-                <view class="text-xl font-bold">区分发言人</view>
+                <view class="text-xl font-medium">区分发言人</view>
                 <view class="mt-4">
                     <data-select v-model="formData.speaker" :localdata="speakerOptions"></data-select>
                 </view>
@@ -61,7 +61,7 @@
     </view>
     <u-popup v-model="showSupportFormat" mode="bottom" border-radius="24" @close="showSupportFormat = false">
         <view>
-            <view class="text-center text-xl font-bold h-[110rpx] flex items-center justify-center">
+            <view class="text-center text-xl font-medium h-[110rpx] flex items-center justify-center">
                 {{ state.type == CreateType.BATCH ? "支持格式" : "注意事项" }}
             </view>
             <u-line />

@@ -285,6 +285,7 @@ class PublishLogic extends SvBaseLogic
                         'source' => DeviceEnum::TASK_SOURCE_PUBLISH, //sv_publish_setting_account
                         'create_time' => time(),
                     ]);
+                    \app\api\logic\device\TaskLogic::updateWechatRpaTaskTime($pubAccount->device_code, $time['start_time']);
                 }
             }
             //print_r($allTaskInstall);die;

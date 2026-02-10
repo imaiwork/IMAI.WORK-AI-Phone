@@ -154,7 +154,7 @@
                                     <div
                                         v-if="formData.ranking_status === 1"
                                         class="pt-[12px] border-t-[1px] border-[#F1F5F9] border-[transparent]">
-                                        <div class="text-[12px] font-bold mb-[8px]">重排过滤分数</div>
+                                        <div class="text-[12px] font-medium mb-[8px]">重排过滤分数</div>
                                         <ElSlider v-model="formData.ranking_score" :min="0" :max="1" :step="0.001" />
                                     </div>
                                 </div>

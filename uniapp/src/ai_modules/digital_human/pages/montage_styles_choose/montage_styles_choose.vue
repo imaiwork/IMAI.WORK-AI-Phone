@@ -55,7 +55,7 @@
             class="fixed bottom-0 left-0 right-0 bg-[#FFFFFF] border-t border-[#F1F5F9] px-6 py-4 pb-safe flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0,0.05)]">
             <view class="flex flex-col">
                 <view class="flex items-baseline">
-                    <text class="text-[32rpx] font-bold text-primary">{{ selectedIds.length }}</text>
+                    <text class="text-[32rpx] font-medium text-primary">{{ selectedIds.length }}</text>
                     <text class="ml-1 text-[24rpx] text-[#64748B]">个已选模板</text>
                 </view>
                 <text class="text-[20rpx] text-[#94A3B8]">可多选批量处理</text>
@@ -65,7 +65,7 @@
                 class="px-8 py-3 rounded-full transition-all active:opacity-80"
                 :class="[selectedIds.length > 0 ? 'bg-primary' : 'bg-[#E2E8F0]']"
                 @tap="confirmSelection">
-                <text class="text-[#FFFFFF] font-bold text-[28rpx]">确认选择</text>
+                <text class="text-[#FFFFFF] font-medium text-[28rpx]">确认选择</text>
             </view>
         </view>
     </view>

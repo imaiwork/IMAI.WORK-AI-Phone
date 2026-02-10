@@ -3,7 +3,7 @@
         <div class="flex items-center gap-x-3 py-1.5 group">
             <div
                 class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center border transition-all duration-300 bg-[#3b82f620] border-[#3b82f660]">
-                <span class="text-[10px] font-bold text-[#60a5fa]">{{ index }}</span>
+                <span class="text-[10px] font-medium text-[#60a5fa]">{{ index }}</span>
             </div>
             <span class="text-[14px] font-medium transition-colors text-[#cbd5e1]">{{ title }}</span>
         </div>
@@ -26,7 +26,7 @@
                             <span
                                 class="w-2 h-2 rounded-full mr-2 animate-pulse"
                                 style="background-color: #10b981"></span>
-                            <span class="text-[12px] font-bold uppercase tracking-wider text-[#60a5fa]"
+                            <span class="text-[12px] font-medium uppercase tracking-wider text-[#60a5fa]"
                                 >AI Matrix System</span
                             >
                         </div>
@@ -46,7 +46,7 @@
                     <div class="basis-[420px] rounded-[24px] p-[1px] bg-gradient-to-r from-[#334155] to-[#0f172a]">
                         <div class="rounded-[23px] p-8 bg-[#1e293b]">
                             <div class="flex items-center justify-between mb-8">
-                                <h3 class="text-[20px] font-bold text-[#f8fafc]">私域引流作战台</h3>
+                                <h3 class="text-[20px] font-medium text-[#f8fafc]">私域引流作战台</h3>
                                 <div
                                     class="px-2 py-0.5 rounded text-[10px] border text-[#10b981] border-[#10b98140] bg-[#10b98110]">
                                     LIVE
@@ -61,7 +61,7 @@
 
                             <button
                                 @click="handleClickCourseUrl"
-                                class="w-full py-3.5 rounded-xl font-bold text-[14px] transition-all active:scale-95 bg-[#3b82f6] text-[#ffffff]">
+                                class="w-full py-3.5 rounded-xl font-medium text-[14px] transition-all active:scale-95 bg-[#3b82f6] text-[#ffffff]">
                                 查看操作手册 →
                             </button>
                         </div>
@@ -79,11 +79,11 @@
                             <img :src="item.icon" class="w-6 h-6" style="filter: brightness(1.2)" />
                         </div>
                         <div
-                            class="text-[10px] font-bold mb-2 uppercase tracking-tighter"
+                            class="text-[10px] font-medium mb-2 uppercase tracking-tighter"
                             :style="{ color: item.color }">
                             Step 0{{ index + 1 }}
                         </div>
-                        <h4 class="text-[16px] font-bold mb-2 text-[#f1f5f9]">{{ item.title }}</h4>
+                        <h4 class="text-[16px] font-medium mb-2 text-[#f1f5f9]">{{ item.title }}</h4>
                         <p class="text-[12px] leading-relaxed text-[#64748b]">{{ item.desc }}</p>
                     </div>
                 </div>
@@ -126,7 +126,7 @@
                                 <img :src="feat.icon" class="w-5 h-5" />
                             </div>
                             <div>
-                                <div class="text-[15px] font-bold text-[#f1f5f9]">{{ feat.name }}</div>
+                                <div class="text-[15px] font-medium text-[#f1f5f9]">{{ feat.name }}</div>
                                 <div class="text-[11px] text-[#64748b]">{{ feat.sub }}</div>
                             </div>
                         </div>

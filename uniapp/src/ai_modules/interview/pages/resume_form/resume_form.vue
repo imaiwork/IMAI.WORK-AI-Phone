@@ -1,7 +1,7 @@
 <template>
     <view class="h-screen flex flex-col">
         <view class="grow min-h-0 overflow-y-auto p-4">
-            <view class="text-[32rpx] text-[#150B3D] font-bold"> 请填写您的简历信息 </view>
+            <view class="text-[32rpx] text-[#150B3D] font-medium"> 请填写您的简历信息 </view>
             <view class="mt-4 flex flex-col gap-4">
                 <view class="">
                     <view class="flex items-center gap-2">
@@ -134,12 +134,12 @@
         </view>
         <view class="p-4 flex justify-between gap-4">
             <button
-                class="bg-white rounded-lg after:border-none h-[86rpx] flex-1 font-bold text-base flex items-center justify-center"
+                class="bg-white rounded-lg after:border-none h-[86rpx] flex-1 font-medium text-base flex items-center justify-center"
                 @click="handleReset">
                 重置简历
             </button>
             <button
-                class="bg-primary text-white rounded-lg h-[86rpx] flex-1 font-bold text-base flex items-center justify-center"
+                class="bg-primary text-white rounded-lg h-[86rpx] flex-1 font-medium text-base flex items-center justify-center"
                 @click="handleSave">
                 保存
             </button>

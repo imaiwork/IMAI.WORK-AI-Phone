@@ -1697,7 +1697,9 @@ class KnowledgeLogic extends ApiLogic
                 }
             }
             $texts = str_replace('"', "'", $robotTexts . $texts);
-
+            if (!empty($params['quotes'])){
+                $texts = '引用的内容：' . $params['quotes'] . "。引用结束>>" . $texts;
+            }
             $textLength = mb_strlen($texts, 'utf-8');
 
             $record = array(
@@ -1762,6 +1764,7 @@ class KnowledgeLogic extends ApiLogic
 
             $request = [
                 'prompt' => $prompt,
+                'quotes' => $params['quotes'] ?? '',
                 'messages' => $messages,
                 'stream' =>  (bool)$params['stream'] ?? true,
                 'robot_id' => $params['robot_id'] ?? 0,

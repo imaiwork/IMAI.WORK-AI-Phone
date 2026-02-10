@@ -14,7 +14,7 @@
                     </ElBreadcrumbItem>
                 </ElBreadcrumb>
             </div>
-            <ElButton type="danger" link class="!font-bold" @click="emit('delete', flowId, true)">
+            <ElButton type="danger" link class="!font-medium" @click="emit('delete', flowId, true)">
                 <Icon name="el-icon-Delete" />
                 <span class="ml-1">删除整条流程</span>
             </ElButton>
@@ -52,7 +52,7 @@
                                                     </span>
                                                 </div>
                                                 <div
-                                                    class="flex items-center gap-3 mt-1.5 text-[11px] font-bold text-slate-400">
+                                                    class="flex items-center gap-3 mt-1.5 text-[11px] font-medium text-slate-400">
                                                     <span class="flex items-center gap-1"
                                                         ><Icon name="local-icon-click" :size="12" />触发器:
                                                         {{ item.trigger_count }}</span
@@ -117,7 +117,7 @@
                                                         <div class="text-[10px] text-primary font-black mb-0.5">
                                                             {{ getMatchType("trigger", value) }}
                                                         </div>
-                                                        <div class="text-[12px] font-bold text-tx-regular truncate">
+                                                        <div class="text-[12px] font-medium text-tx-regular truncate">
                                                             {{
                                                                 value.match_type == 2
                                                                     ? value.chat_keywords
@@ -160,7 +160,7 @@
                                                         <div class="text-[10px] text-amber-500 font-black mb-0.5">
                                                             {{ getMatchType("follow", value) }}
                                                         </div>
-                                                        <div class="text-xs font-bold text-tx-regular truncate">
+                                                        <div class="text-xs font-medium text-tx-regular truncate">
                                                             {{ value.judgment }}天后 {{ value.send_time }}
                                                         </div>
                                                     </div>
@@ -446,7 +446,7 @@ defineExpose({
 }
 
 .empty-placeholder {
-    @apply h-[100px] rounded-xl border-2 border-dashed border-slate-100 flex items-center justify-center text-[12px] text-slate-300 font-bold;
+    @apply h-[100px] rounded-xl border-2 border-dashed border-slate-100 flex items-center justify-center text-[12px] text-slate-300 font-medium;
 }
 
 .stage-list {
@@ -462,7 +462,7 @@ defineExpose({
 }
 
 .modern-breadcrumb :deep(.el-breadcrumb__inner) {
-    @apply font-bold text-slate-400;
+    @apply font-medium text-slate-400;
     &.is-link:hover {
         @apply text-primary;
     }

@@ -22,7 +22,7 @@
                         <div class="flex items-center gap-2 mb-4 px-1">
                             <div class="w-1.5 h-4 bg-primary rounded-full"></div>
                             <span class="text-[14px] font-[900] text-[#1E293B]">绘制模型</span>
-                            <span class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider ml-auto"
+                            <span class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-wider ml-auto"
                                 >Drawing Model</span
                             >
                         </div>
@@ -55,7 +55,7 @@
                                     class="tool-btn"
                                     @click="handleGeneratePrompt(CopywritingTypeEnum.AI_IMAGE_TO_IMAGE)">
                                     <Icon name="el-icon-MagicStick" :size="14"></Icon>
-                                    <span class="ml-1 text-[11px] font-bold">随机灵感</span>
+                                    <span class="ml-1 text-[11px] font-medium">随机灵感</span>
                                 </div>
                             </div>
                         </div>
@@ -69,7 +69,7 @@
                                 placeholder="描述你想要生成的画面，建议使用英文标签以获得更好效果..."
                                 class="custom-prompt-input"></ElInput>
                             <div
-                                class="absolute bottom-3 right-3 text-[10px] font-bold text-[#CBD5E1] group-focus-within:text-primary">
+                                class="absolute bottom-3 right-3 text-[10px] font-medium text-[#CBD5E1] group-focus-within:text-primary">
                                 {{ formData.prompt.length }} / 500
                             </div>
                         </div>
@@ -81,7 +81,7 @@
                         <div class="flex items-center gap-2 mb-4 px-1">
                             <div class="w-1.5 h-4 bg-primary rounded-full"></div>
                             <span class="text-[14px] font-[900] text-[#1E293B]">参考图</span>
-                            <span class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider ml-auto"
+                            <span class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-wider ml-auto"
                                 >Reference Image</span
                             >
                         </div>
@@ -95,7 +95,7 @@
                         <div class="flex items-center gap-2 mb-4 px-1">
                             <div class="w-1.5 h-4 bg-primary rounded-full"></div>
                             <span class="text-[14px] font-[900] text-[#1E293B]">画面比例</span>
-                            <span class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider ml-auto"
+                            <span class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-wider ml-auto"
                                 >Aspect Ratio</span
                             >
                         </div>

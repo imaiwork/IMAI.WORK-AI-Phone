@@ -6,7 +6,7 @@
                     class="h-[120rpx] flex items-center gap-x-2 px-[40rpx] bg-[#F6F6F6] rounded-[20rpx]"
                     @click="emit('recorder')">
                     <image src="@/ai_modules/digital_human/static/icons/mic.svg" class="w-[40rpx] h-[40rpx]"></image>
-                    <text class="font-bold text-[30rpx]">录制音频</text>
+                    <text class="font-medium text-[30rpx]">录制音频</text>
                 </view>
                 <view
                     class="h-[120rpx] flex items-center gap-x-2 px-[40rpx] bg-[#F6F6F6] rounded-[20rpx] mt-[24rpx]"
@@ -14,7 +14,7 @@
                     <image
                         src="@/ai_modules/digital_human/static/icons/audio_file.svg"
                         class="w-[40rpx] h-[40rpx]"></image>
-                    <text class="font-bold text-[30rpx]">从聊天记录中上传</text>
+                    <text class="font-medium text-[30rpx]">从聊天记录中上传</text>
                 </view>
             </view>
         </template>

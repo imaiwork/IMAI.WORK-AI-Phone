@@ -46,7 +46,7 @@
                     <image
                         src="@/ai_modules/ladder_player/static/icons/mic_fill.svg"
                         class="w-[40rpx] h-[40rpx]"></image>
-                    <text class="text-primary text-xl font-bold">点击说话</text>
+                    <text class="text-primary text-xl font-medium">点击说话</text>
                 </view>
             </view>
         </view>
@@ -58,7 +58,7 @@
                     <image
                         src="@/ai_modules/ladder_player/static/images/common/beautify_img2.png"
                         class="w-[36rpx] h-[36rpx]"></image>
-                    <text class="text-[#508DC5] text-xs font-bold">话术提示</text>
+                    <text class="text-[#508DC5] text-xs font-medium">话术提示</text>
                 </view>
                 <view class="text-white text-xs"> 尝试自己组织语言得分更高～ </view>
             </view>
@@ -76,7 +76,7 @@
         <view class="h-full flex flex-col">
             <view class="flex items-center justify-center gap-2 h-[112rpx] relative">
                 <u-icon name="info-circle" color="#FE975F" :size="32"></u-icon>
-                <text class="text-[#2C2C36] text-xl font-bold">确定结束练习吗？</text>
+                <text class="text-[#2C2C36] text-xl font-medium">确定结束练习吗？</text>
                 <view class="absolute right-4" @click="showEndPracticePop = false">
                     <u-icon name="close" color="#2C2C36" :size="32"></u-icon>
                 </view>

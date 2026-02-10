@@ -108,7 +108,7 @@
                                     class="tool-btn"
                                     @click="handleGeneratePrompt(CopywritingTypeEnum.AI_GENERATION_VIDEO)">
                                     <Icon name="el-icon-MagicStick" :size="14"></Icon>
-                                    <span class="text-[11px] font-bold ml-1">随机灵感</span>
+                                    <span class="text-[11px] font-medium ml-1">随机灵感</span>
                                 </div>
                             </div>
                         </div>

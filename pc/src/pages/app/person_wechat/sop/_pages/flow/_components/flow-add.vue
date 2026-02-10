@@ -12,7 +12,7 @@
 
             <div class="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex gap-3">
                 <Icon name="local-icon-tip" color="var(--color-primary)" :size="18" class="mt-0.5" />
-                <div class="text-[12px] leading-relaxed text-slate-500 font-bold">
+                <div class="text-[12px] leading-relaxed text-slate-500 font-medium">
                     流程名称需满足：
                     <span class="text-primary">唯一性</span>（不重复）、 <span class="text-primary">纯汉字</span>、
                     且字数不超过 <span class="text-primary">15字</span>。

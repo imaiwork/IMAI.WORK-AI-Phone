@@ -1,7 +1,7 @@
 <template>
     <div class="h-full flex min-w-[1200px] relative">
         <div class="h-full flex flex-col basis-[42%] min-w-[468px] bg-[#f7f8fc]">
-            <div class="text-lg font-bold mx-6 mt-6">语音转文字</div>
+            <div class="text-lg font-medium mx-6 mt-6">语音转文字</div>
             <div class="grow min-h-0 flex flex-col">
                 <template v-if="!loading">
                     <div class="grow min-h-0 my-8 relative">

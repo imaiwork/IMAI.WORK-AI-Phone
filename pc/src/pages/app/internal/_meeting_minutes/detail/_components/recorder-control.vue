@@ -27,7 +27,7 @@
                         </div>
                     </template>
                     <div
-                        class="text-primary hover:text-white font-bold rounded-md w-[44px] h-[36px] bg-white hover:bg-primary cursor-pointer flex items-center justify-center"
+                        class="text-primary hover:text-white font-medium rounded-md w-[44px] h-[36px] bg-white hover:bg-primary cursor-pointer flex items-center justify-center"
                         @click="toggleRecording">
                         <Icon :name="isPaused ? 'local-icon-mic' : 'local-icon-pause'" :size="18"></Icon>
                     </div>

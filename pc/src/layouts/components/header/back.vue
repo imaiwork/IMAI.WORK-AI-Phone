@@ -8,7 +8,7 @@
                 <Icon name="el-icon-Back" :size="20" :color="getTheme.iconColor"></Icon>
             </div>
         </ElTooltip>
-        <div v-if="title" class="font-bold" :style="{ color: getTheme.titleColor }">
+        <div v-if="title" class="font-medium" :style="{ color: getTheme.titleColor }">
             {{ title }}
         </div>
     </div>

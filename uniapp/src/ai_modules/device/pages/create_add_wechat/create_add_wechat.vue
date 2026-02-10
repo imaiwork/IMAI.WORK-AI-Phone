@@ -38,10 +38,10 @@
                         <image
                             src="@/ai_modules/device/static/images/common/add_circle_white.png"
                             class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="text-white font-bold text-[32rpx]">添加任务</text>
+                        <text class="text-white font-medium text-[32rpx]">添加任务</text>
                     </view>
                 </view>
-                <view class="px-4 font-bold text-[30rpx] mt-[40rpx]"> 任务列表({{ taskList.length }}) </view>
+                <view class="px-4 font-medium text-[30rpx] mt-[40rpx]"> 任务列表({{ taskList.length }}) </view>
                 <view class="px-4 mt-1 text-xs text-[#0000004d]">
                     注意：开启此任务请确保当前网络是常用安全网络，加资账号为常态化老号</view
                 >
@@ -67,7 +67,7 @@
                 <scroll-view class="h-full" scroll-y>
                     <view class="px-4 pb-[100rpx]">
                         <view>
-                            <view class="text-[30rpx] font-bold">加微设置</view>
+                            <view class="text-[30rpx] font-medium">加微设置</view>
                             <view class="mt-[24rpx] rounded-[24rpx] bg-white px-5 py-[24rpx]">
                                 <view>
                                     <view class="text-xs text-[#0000004d] mb-3">加微微信</view>
@@ -90,7 +90,7 @@
                             </view>
                         </view>
                         <view class="mt-[32rpx]">
-                            <view class="text-[30rpx] font-bold">频率设置</view>
+                            <view class="text-[30rpx] font-medium">频率设置</view>
                             <view class="mt-[24rpx] rounded-[24rpx] bg-white px-5 py-[24rpx]">
                                 <view>
                                     <view class="text-xs text-[#0000004d]">每日添加线索数量</view>
@@ -122,7 +122,7 @@
                                         <view
                                             class="bg-[#F6F6F6] flex items-center px-4 py-2 rounded-[16rpx] border border-solid text-xs border-[#F1F2F5]"
                                             :class="{
-                                                ' border-primary bg-white text-primary font-bold':
+                                                ' border-primary bg-white text-primary font-medium':
                                                     timeIntervalIndex == 4,
                                             }"
                                             @click="timeIntervalIndex = 4">
@@ -146,12 +146,12 @@
                         </view>
                         <view class="mt-5">
                             <view class="flex items-center justify-between gap-x-2">
-                                <view class="font-bold text-[30rpx]">加好友备注设置</view>
+                                <view class="font-medium text-[30rpx]">加好友备注设置</view>
                                 <view class="flex items-center gap-x-2" @click="handleEditRemark(-1)">
                                     <image
                                         src="@/ai_modules/device/static/images/common/add_circle.png"
                                         class="w-[32rpx] h-[32rpx]"></image>
-                                    <text class="font-bold">新增</text>
+                                    <text class="font-medium">新增</text>
                                 </view>
                             </view>
                             <view class="mt-5 flex flex-wrap gap-2">
@@ -188,7 +188,7 @@
                         v-if="step === 1"
                         class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
                         :class="[taskList.length > 0 ? 'bg-primary' : 'bg-[#787878CC]']">
-                        <text class="font-bold text-[32rpx]">{{ taskList.length }}</text>
+                        <text class="font-medium text-[32rpx]">{{ taskList.length }}</text>
                         <text class="text-xs mt-1">已选</text>
                     </view>
                     <view v-else>
@@ -207,7 +207,7 @@
                 </template>
                 <template v-else>
                     <view
-                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-bold flex items-center justify-center"
+                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-medium flex items-center justify-center"
                         @click="handleCreateTask">
                         创建任务
                     </view>
@@ -218,7 +218,7 @@
     <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <u-popup v-model="showRemarkPopup" mode="center" width="90%" :border-radius="20">
         <view class="p-4 bg-white rounded-[20rpx]">
-            <view class="text-[30rpx] font-bold text-center mt-2">输入加好友备注</view>
+            <view class="text-[30rpx] font-medium text-center mt-2">输入加好友备注</view>
             <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
                 <u-input
                     v-model="newRemark"
@@ -228,12 +228,12 @@
             </view>
             <view class="flex items-center gap-x-5 mt-[56rpx]">
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold text-[#000000b3]"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
                     @click="closeRemarkPopup">
                     取消
                 </view>
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-bold text-white"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
                     @click="handleRemarkConfirm"
                     >确定</view
                 >
@@ -634,7 +634,7 @@ onLoad(() => {
 .time-interval-item {
     @apply bg-[#F6F6F6] rounded-[16rpx]  py-2 text-center text-xs text-[#00000080] border border-solid border-[#F6F6F6];
     &.active {
-        @apply bg-white border-primary text-primary font-bold;
+        @apply bg-white border-primary text-primary font-medium;
     }
 }
 .remark-item {

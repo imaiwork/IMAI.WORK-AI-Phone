@@ -28,7 +28,7 @@
             <div class="flex items-center gap-x-3 pr-2">
                 <div class="h-4 w-[1px] bg-slate-200"></div>
                 <div class="text-[12px] text-tx-placeholder font-medium">
-                    当前限制: <span class="text-primary font-bold">{{ limit }}</span> 项素材
+                    当前限制: <span class="text-primary font-medium">{{ limit }}</span> 项素材
                 </div>
             </div>
         </div>
@@ -47,7 +47,7 @@
                 <div class="p-5 border-b border-[#F8FAFC] flex items-center justify-between bg-[#f8fafc]/50">
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                        <span class="text-[14px] font-bold text-tx-primary">素材库清单</span>
+                        <span class="text-[14px] font-medium text-tx-primary">素材库清单</span>
                     </div>
                 </div>
                 <div class="flex-1 overflow-hidden">

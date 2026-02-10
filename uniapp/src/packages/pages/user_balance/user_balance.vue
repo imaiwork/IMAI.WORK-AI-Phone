@@ -28,7 +28,7 @@
                                     <view class="text-[#8C8C8C] text-[20rpx] mt-1">{{ item.create_time }}</view>
                                 </view>
                                 <view class="text-right">
-                                    <view class="text-[32rpx] font-bold">
+                                    <view class="text-[32rpx] font-medium">
                                         {{ item.change_amount_desc }}
                                     </view>
 

@@ -16,9 +16,9 @@
                         @click="handleChoose(item)">
                         <view>
                             <view class="flex items-center gap-x-2">
-                                <view class="font-bold line-clamp-1">{{ item.device_name || "-" }}</view>
+                                <view class="font-medium line-clamp-1">{{ item.device_name || "-" }}</view>
                                 <view
-                                    class="px-[16rpx] py-[8rpx] rounded-[8rpx] text-[20rpx] font-bold"
+                                    class="px-[16rpx] py-[8rpx] rounded-[8rpx] text-[20rpx] font-medium"
                                     :class="[
                                         item.status === 0
                                             ? 'text-[#F63E2F] bg-[#F7E5E5]'

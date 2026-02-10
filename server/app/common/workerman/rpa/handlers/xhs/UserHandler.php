@@ -117,78 +117,18 @@ class UserHandler extends BaseMessageHandler
             $this->setLog('_getUserInfoByRpa' . $e, 'error');
         }
     }
-
-    private function sendAppExec($deviceid, $uid, $appType)
-    {
-        try {
-            $deviceTaskStatus = $this->service->getRedis()->get("xhs:device:{$deviceid}:taskStatus");
-            //print_r($deviceTaskStatus);die;
-            if (!empty($deviceTaskStatus)) {
-                $deviceTaskStatus = json_decode(($deviceTaskStatus), true);
-                if ($deviceTaskStatus['taskStatus'] == 'running' && $deviceTaskStatus['scene'] == 'xhs') {
-                    return;
-                }
-            }
-
-            $app = SvDeviceRpa::where('device_code', $deviceid)->where('app_type', $appType)->findOrEmpty();
-            if ($app->isEmpty()) {
-                throw new \Exception('当前设备未绑定app:' . Db::getLastSql());
-            }
-            $payload = [
-                "messageId" => 2,
-                "type" => 90, //执行那个app指令
-                "appType" => $appType,
-                "content" => json_encode([
-                    "deviceId" => $deviceid,
-                    "appType" => $appType,
-                    'msg' => WorkerEnum::getAccountTypeDesc($appType),
-                    'task_id' => $app->id
-                ], JSON_UNESCAPED_UNICODE),
-                'reply' => [
-                    "deviceId" => $deviceid,
-                    "appType" => $appType,
-                    'msg' => WorkerEnum::getAccountTypeDesc($appType),
-                    'task_id' => $app->id
-                ],
-                "deviceId" => $deviceid,
-                "appVersion" => WorkerEnum::APP_VERSION
-            ];
-
-            $this->sendResponse($uid, $payload, $payload['reply']);
-
-            SvDeviceRpa::where('device_code', $deviceid)->where('app_type', '<>', $appType)->update(['status' => 0, 'update_time' => time()]);
-            SvDeviceRpa::where('device_code', $deviceid)->where('app_type', $appType)->update([
-                'status' => 1,
-                'update_time' => time(),
-                'start_time' => date('Y-m-d H:i:s', time()),
-            ]);
-
-            $this->service->getRedis()->set("xhs:device:" . $this->payload['deviceId'] . ":taskStatus", json_encode([
-                'taskStatus' => 'running',
-                'taskType' => 'getUserInfo',
-                'msg' => WorkerEnum::getAccountTypeDesc($appType) . '正在获取用户信息',
-                'duration' => 10,
-                'scene' => 'xhs',
-                'time' => date('Y-m-d H:i:s', time()),
-            ], JSON_UNESCAPED_UNICODE));
-
-            sleep(20);
-        } catch (\Throwable $e) {
-            $this->setLog('sendAppExec' . $e, 'error');
-        }
-    }
-
-
-
     private function _updateUserInfoByDevice($content)
     {
 
         try {
-            if (isset($this->payload['appType']) && (int)$this->payload['appType'] === 1) {
+            $find = \app\common\model\sv\SvDevice::where('device_code', $this->payload['deviceId'])->findOrEmpty();
+            $postData = [];
+            if (isset($content['wechatDeviceCode']) && $content['wechatDeviceCode'] != '') {
                 $this->service->getRedis()->set("xhs:device:" . $this->payload['deviceId'] . ":wechat_code", $content['wechatDeviceCode']);
-                $find = \app\common\model\sv\SvDevice::where('device_code', $this->payload['deviceId'])->findOrEmpty();
+
                 if (!$find->isEmpty()) {
                     $find->wechat_device_code = $content['wechatDeviceCode'] ?? '';
+                    $find->mode = 'root';
                     $find->update_time = time();
                     $find->save();
                 }
@@ -219,8 +159,6 @@ class UserHandler extends BaseMessageHandler
                         'msg' => '获取账号信息失败,请先绑定个微,再重新获取'
                     ];
                 }
-                //判断是不是有web的ws,用则推送一条数据
-                $this->_sendWeb($postData);
             } else {
                 if (!isset($content['xhsId'])) {
                     //return;
@@ -233,6 +171,11 @@ class UserHandler extends BaseMessageHandler
                     ];
                     $this->_sendWeb($postData);
                     return;
+                }
+                if (!$find->isEmpty()) {
+                    $find->mode = 'rpa';
+                    $find->update_time = time();
+                    $find->save();
                 }
 
                 $content['xhsId'] = str_replace(WorkerEnum::getAccountTypeDesc($this->payload['appType'] ?? 3) . '号：', '', $content['xhsId']);
@@ -267,9 +210,9 @@ class UserHandler extends BaseMessageHandler
                 $platformType = $this->PlatformTypeEn[$this->payload['appType'] ?? 3] ?? 'xhs';
                 $this->service->getRedis()->set("xhs:{$this->payload['deviceId']}:{$platformType}:accountNo", $content['xhsId']);
                 $this->service->getRedis()->set("xhs:{$this->payload['deviceId']}:{$platformType}:accountInfo:{$content['xhsId']}", json_encode($postData, JSON_UNESCAPED_UNICODE));
-
-                $this->_sendWeb($postData);
             }
+
+            $this->_sendWeb($postData);
         } catch (\Exception $e) {
             $this->setLog('_updateUserInfoByDevice' . $e, 'error');
         }

@@ -5,7 +5,7 @@
         <div class="flex-shrink-0 px-8 py-6 flex items-center justify-between">
             <div>
                 <h1 class="text-xl font-[900] text-gray-950">AI 获客任务</h1>
-                <p class="text-[12px] text-tx-placeholder font-bold mt-0.5">自动监测全网线索，精准锁定潜在客户</p>
+                <p class="text-[12px] text-tx-placeholder font-medium mt-0.5">自动监测全网线索，精准锁定潜在客户</p>
             </div>
 
             <div class="flex items-center gap-4">
@@ -23,7 +23,7 @@
 
                 <ElButton
                     type="primary"
-                    class="!rounded-xl !h-[44px] px-6 !font-bold transition-all hover:scale-105 active:scale-95"
+                    class="!rounded-xl !h-[44px] px-6 !font-medium transition-all hover:scale-105 active:scale-95"
                     @click="handleCreate">
                     <Icon name="local-icon-add_circle" color="#ffffff" :size="18"></Icon>
                     <span class="ml-2">发布新任务</span>
@@ -50,7 +50,7 @@
                     <template #default="{ row }">
                         <div class="flex items-center justify-center gap-2">
                             <span
-                                class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase"
+                                class="px-2 py-0.5 rounded text-[10px] font-medium tracking-wider uppercase"
                                 :class="
                                     row.auto_type == 0 ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'
                                 ">
@@ -90,7 +90,7 @@
                 <ElTableColumn label="执行进度" width="140">
                     <template #default="{ row }">
                         <div class="flex flex-col gap-1 w-full pr-4">
-                            <div class="flex justify-between text-[11px] font-bold text-[#94A3B8]">
+                            <div class="flex justify-between text-[11px] font-medium text-[#94A3B8]">
                                 <span>进度</span>
                                 <span
                                     >{{
@@ -173,7 +173,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-            <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 个获客任务</div>
+            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 个获客任务</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
 

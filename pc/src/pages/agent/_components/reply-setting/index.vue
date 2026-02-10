@@ -98,7 +98,7 @@
                                     popper-class="!w-[300px]"
                                     content="提醒：用户可以设置 AI 在指定的时间段内接管对话，超出接管时间的消息，则会自动发送用户预先设定的固定回复。">
                                     <div class="flex items-center gap-[6px] mt-[4px]">
-                                        <span class="desc text-error font-bold">一小时内仅生效一次</span>
+                                        <span class="desc text-error font-medium">一小时内仅生效一次</span>
                                         <span class="text-error opacity-70 cursor-pointer leading-[0]">
                                             <Icon name="el-icon-InfoFilled" :size="14" />
                                         </span>
@@ -112,7 +112,7 @@
                             v-if="formData.working_enable == 1"
                             class="space-y-[20px] pt-[12px] border-t border-br-extra-light">
                             <div>
-                                <div class="text-[13px] font-bold text-tx-primary mb-[10px]">生效日期</div>
+                                <div class="text-[13px] font-medium text-tx-primary mb-[10px]">生效日期</div>
                                 <ElCheckboxGroup v-model="weekList" class="custom-checkbox-group">
                                     <ElCheckbox v-for="i in 7" :key="i" :value="i" border class="!mr-0">
                                         {{ ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][i - 1] }}
@@ -122,8 +122,8 @@
 
                             <div>
                                 <div class="flex items-center justify-between mb-[10px]">
-                                    <span class="text-[13px] font-bold text-tx-primary">生效时间段</span>
-                                    <ElButton type="primary" link @click="addWorkingTime" class="font-bold">
+                                    <span class="text-[13px] font-medium text-tx-primary">生效时间段</span>
+                                    <ElButton type="primary" link @click="addWorkingTime" class="font-medium">
                                         <Icon name="el-icon-Plus" />
                                         <span class="ml-[2px]">新增时段</span>
                                     </ElButton>
@@ -152,10 +152,8 @@
                                                 step="00:15"
                                                 end="23:59"
                                                 :min-time="item.start_time" />
-                                            <div
-                                                class="ml-2 w-4 h-4 flex-shrink-0 bg-app-bg-1 rounded-full flex items-center justify-center cursor-pointer"
-                                                @click="deleteWorkingTime(index)">
-                                                <Icon name="el-icon-Close" color="#ffffff" :size="10"></Icon>
+                                            <div class="ml-2 w-4 h-4 flex-shrink-0" @click="deleteWorkingTime(index)">
+                                                <close-btn :icon-size="10" />
                                             </div>
                                         </div>
                                     </div>
@@ -164,7 +162,9 @@
                             </div>
 
                             <div>
-                                <div class="text-[13px] font-bold text-tx-primary mb-[10px]">接管时间外的自动回复</div>
+                                <div class="text-[13px] font-medium text-tx-primary mb-[10px]">
+                                    接管时间外的自动回复
+                                </div>
                                 <ElInput
                                     v-model="formData.non_working_reply"
                                     type="textarea"
@@ -444,7 +444,7 @@ onMounted(() => {
             @apply bg-blue-50 border-primary-light-7;
         }
         .el-checkbox__label {
-            @apply pl-0 text-[12px] font-bold;
+            @apply pl-0 text-[12px] font-medium;
         }
         .el-checkbox__input {
             @apply hidden;

@@ -53,7 +53,7 @@ class CommentToCommentHandler extends BaseMessageHandler
     private function recordComment(array $content)
     {
         try {
-            if((int)$content['task_id'] == 0){
+            if ((int)$content['task_id'] == 0) {
                 return [
                     'isProceed' => 1, //是否处理 1是 0 否
                 ];
@@ -66,16 +66,20 @@ class CommentToCommentHandler extends BaseMessageHandler
             if ($task->isEmpty()) {
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务不存在: ' . \think\facade\Db::getLastSql());
             }
-            
+
             $setting = SvLeadScrapingSetting::where('id', $task->scraping_id)->findOrEmpty();
             if ($setting->isEmpty()) {
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务配置不存在');
             }
+
+            $hash = hash('sha256', $content['task_id'] . $content['author_name'] . $content['content']);
+
             if ((int)$setting->is_execed_clues  === 1) {
                 $find = SvLeadScrapingRecord::where([
                     ['user_id', '=', $task->user_id],
                     ['task_type', '=', 1],
                     ['account_name', '=', $content['author_name']],
+                    ['hash', '=', $hash],
                 ])->findOrEmpty();
                 if (!$find->isEmpty()) {
                     return [
@@ -88,7 +92,8 @@ class CommentToCommentHandler extends BaseMessageHandler
                 ['user_id', '=', $task->user_id],
                 ['task_type', '=', 1],
                 ['account_name', '=', $content['author_name']],
-                ['content', 'like', '%' . $content['content'] . '%']
+                ['hash', '=', $hash],
+                //['content', 'like', '%' . $content['content'] . '%']
             ])->findOrEmpty();
             if (!$record->isEmpty()) {
                 return [
@@ -110,10 +115,22 @@ class CommentToCommentHandler extends BaseMessageHandler
                 'task_id'             => $content['task_id'],
                 'content'             => $content['content'],
                 'exec_time'           => time(),
+                'hash'                => $hash,
+                'image'               => $this->saveBase64ToImage($content['image'] ?? '', $hash, 'touch'),
+                'address'             => $content['address'] ?? '',
+                'account'             => $content['account'] ?? '',
+                'likes'               => $content['likes'] ?? 0,
+                'fans'                => $content['fans'] ?? 0,
+                'follows'             => $content['follows'] ?? 0,
+                'industry_keyword'    => $content['industry_keyword'] ?? '',
+                'notes'               => $content['notes'] ?? '',
+                'filter_keyword'      => $content['filter_keyword'] ?? '',
+                'comment_content'     => $content['comment_content'] ?? '',
+                'touch_content'       => $content['touch_content'] ?? '',
             ];
             SvLeadScrapingRecord::create($insert);
             $scene = AutomationEnum::SHUT_OFF_COMMENTS;
-            self::requestUrl($insert,$scene, $task->user_id, $content['task_id'],  $this->payload['deviceId']);
+            self::requestUrl($insert, $scene, $task->user_id, $content['task_id'],  $this->payload['deviceId']);
             return [
                 'isProceed' => 1, //是否处理 1是 0 否
             ];
@@ -133,13 +150,13 @@ class CommentToCommentHandler extends BaseMessageHandler
         }
     }
 
-    private static function requestUrl(array $request, string $scene, int $userId,  $taskId,$device_code)
+    private static function requestUrl(array $request, string $scene, int $userId,  $taskId, $device_code)
     {
         $autoType = SvDevice::where('device_code', $device_code)->value('auto_type') ?? 0;
-        if ($autoType == 0){
+        if ($autoType == 0) {
             return [];
         }
-        Log::channel('socket')->write('自动化扣费' . $scene.'----设备号--'.$device_code.'----任务id--'.$taskId);
+        Log::channel('socket')->write('自动化扣费' . $scene . '----设备号--' . $device_code . '----任务id--' . $taskId);
         $requestService = \app\common\service\ToolsService::Automation();
 
         [$tokenScene, $tokenCode] = match ($scene) {
@@ -165,7 +182,7 @@ class CommentToCommentHandler extends BaseMessageHandler
         $request['task_id'] = $taskId;
         $request['user_id'] = $userId;
         $request['now'] = time();
-        $extra = [ '算力单价' => $unit, '实际消耗算力' => $unit];
+        $extra = ['算力单价' => $unit, '实际消耗算力' => $unit];
         switch ($scene) {
             // 自动化功能处理
             case AutomationEnum::SOCIAL_MEDIA_RELEASED:
@@ -193,7 +210,7 @@ class CommentToCommentHandler extends BaseMessageHandler
                 break;
             case AutomationEnum::SOCIAL_MEDIA_NURSING:
                 $points = $request['time_difference_minutes'] * $unit;
-                $extra = [ '执行时长（分钟）' => $request['time_difference_minutes'],'算力单价' => $unit, '实际消耗算力' => $points];
+                $extra = ['执行时长（分钟）' => $request['time_difference_minutes'], '算力单价' => $unit, '实际消耗算力' => $points];
                 $response = $requestService->socialMediaNursing($request);
                 break;
 

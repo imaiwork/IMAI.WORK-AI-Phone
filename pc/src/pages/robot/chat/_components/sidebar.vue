@@ -168,7 +168,7 @@ onMounted(() => {
     }
 }
 :deep(.el-form-item__label) {
-    @apply text-base font-bold;
+    @apply text-base font-medium;
 }
 :deep(.el-menu--collapse) {
     width: 100%;

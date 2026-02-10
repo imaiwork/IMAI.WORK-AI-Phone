@@ -41,7 +41,7 @@
                     <view
                         v-for="(item, index) in platformTabs"
                         :key="index"
-                        class="px-[24rpx] py-[10rpx] rounded-[50rpx] font-bold"
+                        class="px-[24rpx] py-[10rpx] rounded-[50rpx] font-medium"
                         :class="
                             currPlatformTab === index ? 'bg-black text-white' : 'shadow-[0_0_0_2rpx_rgba(0,0,0,0.1)]'
                         "
@@ -70,14 +70,14 @@
                                         mode="widthFix"></image>
                                     <view>
                                         <view class="flex items-center gap-x-[12rpx]">
-                                            <view class="text-[30rpx] font-bold break-all line-clamp-1">{{
+                                            <view class="text-[30rpx] font-medium break-all line-clamp-1">{{
                                                 item.account?.nickname
                                             }}</view>
                                             <image
                                                 :src="getPlatformIcon(item.account?.type)"
                                                 class="w-[32rpx] h-[32rpx]"></image>
                                         </view>
-                                        <view class="text-xs text-[#00000066] font-bold mt-[4rpx]"
+                                        <view class="text-xs text-[#00000066] font-medium mt-[4rpx]"
                                             >{{ getPlatformName(item.account?.type) }}：{{
                                                 item.account?.account
                                             }}</view
@@ -88,12 +88,12 @@
                                     <view class="flex items-center justify-between">
                                         <view class="flex items-center gap-x-2">
                                             <image :src="TaskFlagIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                            <text class="font-bold">任务及状态</text>
+                                            <text class="font-medium">任务及状态</text>
                                         </view>
                                         <view class="text-[#00000080]">
-                                            <text class="font-bold text-primary">{{ item.task_name }}，</text>
+                                            <text class="font-medium text-primary">{{ item.task_name }}，</text>
                                             执行<text
-                                                class="font-bold"
+                                                class="font-medium"
                                                 :class="item.status == 2 ? 'text-primary' : 'text-[#FF2442]'"
                                                 >{{ item.status == 2 ? "成功" : "失败" }}</text
                                             >
@@ -105,10 +105,10 @@
                                         <view class="flex items-center justify-between">
                                             <view class="flex items-center gap-x-2">
                                                 <image :src="TaskClueIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                                <text class="font-bold">线索词</text>
+                                                <text class="font-medium">线索词</text>
                                             </view>
                                             <view class="text-[#00000080]">
-                                                共线索词<text class="font-bold text-primary">{{
+                                                共线索词<text class="font-medium text-primary">{{
                                                     item.data_info?.keyword_number || 0
                                                 }}</text
                                                 >条
@@ -119,10 +119,10 @@
                                         <view class="flex items-center justify-between">
                                             <view class="flex items-center gap-x-2">
                                                 <image :src="TaskUserSearchIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                                <text class="font-bold">获取客资</text>
+                                                <text class="font-medium">获取客资</text>
                                             </view>
                                             <view class="text-[#00000080]">
-                                                共获取客资<text class="font-bold text-primary">{{
+                                                共获取客资<text class="font-medium text-primary">{{
                                                     item.data_info?.clues_number || 0
                                                 }}</text
                                                 >人
@@ -137,10 +137,10 @@
                                     <view class="flex items-center justify-between">
                                         <view class="flex items-center gap-x-2">
                                             <image :src="TaskEmailIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                            <text class="font-bold">私信回复</text>
+                                            <text class="font-medium">私信回复</text>
                                         </view>
                                         <view class="text-[#00000080]">
-                                            私信消息<text class="font-bold text-primary">{{
+                                            私信消息<text class="font-medium text-primary">{{
                                                 item.data_info?.reply_number || 0
                                             }}</text
                                             >条
@@ -153,10 +153,10 @@
                                     <view class="flex items-center justify-between">
                                         <view class="flex items-center gap-x-2">
                                             <image :src="TaskPostIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                            <text class="font-bold">发布朋友圈</text>
+                                            <text class="font-medium">发布朋友圈</text>
                                         </view>
                                         <view class="text-[#00000080]">
-                                            共发布内容<text class="font-bold text-primary">30</text>条
+                                            共发布内容<text class="font-medium text-primary">30</text>条
                                         </view>
                                     </view>
                                 </view> -->
@@ -165,10 +165,10 @@
                                         <view class="flex items-center justify-between">
                                             <view class="flex items-center gap-x-2">
                                                 <image :src="TaskPraiseIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                                <text class="font-bold">点赞评论</text>
+                                                <text class="font-medium">点赞评论</text>
                                             </view>
                                             <view class="text-[#00000080]">
-                                                共点赞/评论<text class="font-bold text-primary">{{
+                                                共点赞/评论<text class="font-medium text-primary">{{
                                                     item.data_info?.like_comment_number || 0
                                                 }}</text
                                                 >次
@@ -183,10 +183,10 @@
                                     <view class="flex items-center justify-between">
                                         <view class="flex items-center gap-x-2">
                                             <image :src="TaskWechatIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                            <text class="font-bold">自动加微</text>
+                                            <text class="font-medium">自动加微</text>
                                         </view>
                                         <view class="text-[#00000080]">
-                                            共自动加好友<text class="font-bold text-primary">{{
+                                            共自动加好友<text class="font-medium text-primary">{{
                                                 item.data_info?.add_wechat_number || 0
                                             }}</text
                                             >人
@@ -200,10 +200,10 @@
                                         <view class="flex items-center justify-between">
                                             <view class="flex items-center gap-x-2">
                                                 <image :src="TaskMsgIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                                <text class="font-bold">评论区回复</text>
+                                                <text class="font-medium">评论区回复</text>
                                             </view>
                                             <view class="text-[#00000080]">
-                                                评论消息<text class="font-bold text-primary">{{
+                                                评论消息<text class="font-medium text-primary">{{
                                                     item.data_info?.comment_number || 0
                                                 }}</text
                                                 >人
@@ -216,10 +216,10 @@
                                         <view class="flex items-center justify-between">
                                             <view class="flex items-center gap-x-2">
                                                 <image :src="TaskEmailIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                                <text class="font-bold">评论区私信</text>
+                                                <text class="font-medium">评论区私信</text>
                                             </view>
                                             <view class="text-[#00000080]">
-                                                私信消息<text class="font-bold text-primary">{{
+                                                私信消息<text class="font-medium text-primary">{{
                                                     item.data_info?.comment_number || 0
                                                 }}</text
                                                 >条
@@ -232,10 +232,10 @@
                                         <view class="flex items-center justify-between">
                                             <view class="flex items-center gap-x-2">
                                                 <image :src="TaskEmailIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                                <text class="font-bold">关注/点赞</text>
+                                                <text class="font-medium">关注/点赞</text>
                                             </view>
                                             <view class="text-[#00000080]">
-                                                共关注/点赞<text class="font-bold text-primary">{{
+                                                共关注/点赞<text class="font-medium text-primary">{{
                                                     item.data_info?.comment_number || 0
                                                 }}</text
                                                 >条
@@ -250,28 +250,28 @@
                         <view v-for="(item, index) in dataList" :key="index">
                             <view class="text-xs text-[#00000066] text-center">12月25日 04:44</view>
                             <view class="rounded-[20rpx] bg-white px-[40rpx] mt-[20rpx]">
-                                <view class="text-[30rpx] font-bold py-[24rpx]">2025.12.25 算力统计</view>
+                                <view class="text-[30rpx] font-medium py-[24rpx]">2025.12.25 算力统计</view>
                                 <view
                                     class="border-[0] border-t border-solid pb-1 border-[#f2f2f2] flex flex-col gap-y-[4rpx]">
                                     <view class="flex items-center pb-2">
                                         <image :src="TokensFlagIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                        <text class="font-bold text-[#00000080] ml-1">执行任务：</text>
-                                        <text class="font-bold">30个</text>
+                                        <text class="font-medium text-[#00000080] ml-1">执行任务：</text>
+                                        <text class="font-medium">30个</text>
                                     </view>
                                     <view class="flex items-center pb-2">
                                         <image :src="TokensTimeIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                        <text class="font-bold text-[#00000080] ml-1">开始时间：</text>
-                                        <text class="font-bold">2025.12.25 04:44</text>
+                                        <text class="font-medium text-[#00000080] ml-1">开始时间：</text>
+                                        <text class="font-medium">2025.12.25 04:44</text>
                                     </view>
                                     <view class="flex items-center pb-2">
                                         <image :src="TokensTimeIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                        <text class="font-bold text-[#00000080] ml-1">结束时间：</text>
-                                        <text class="font-bold">2025.12.25 04:44</text>
+                                        <text class="font-medium text-[#00000080] ml-1">结束时间：</text>
+                                        <text class="font-medium">2025.12.25 04:44</text>
                                     </view>
                                     <view class="flex items-center pb-2">
                                         <image :src="TokensIcon" class="w-[28rpx] h-[28rpx]"></image>
-                                        <text class="font-bold text-[#00000080] ml-1">算力总消耗：</text>
-                                        <text class="font-bold">300000算力</text>
+                                        <text class="font-medium text-[#00000080] ml-1">算力总消耗：</text>
+                                        <text class="font-medium">300000算力</text>
                                     </view>
                                 </view>
                                 <view class="flex items-center justify-between py-3" @click="handleTokensDetail(item)">
@@ -295,23 +295,23 @@
         @close="showTokensDetailPopup = false">
         <template #content>
             <view class="h-full flex flex-col py-4">
-                <view class="px-4 font-bold"> 算力总消耗：<text class="text-primary">300000算力</text> </view>
+                <view class="px-4 font-medium"> 算力总消耗：<text class="text-primary">300000算力</text> </view>
                 <scroll-view scroll-y class="grow min-h-0 mt-[22rpx]">
                     <view class="px-4">
                         <view class="bg-white rounded-[20rpx] px-[40rpx]">
                             <view
                                 class="flex items-center justify-between py-[26rpx] border-[0] border-t border-solid border-[#f2f2f2]">
-                                <text class="font-bold">视频号获客：</text>
-                                <text class="font-bold"><text class="text-primary mr-[4rpx]">30</text>算力</text>
+                                <text class="font-medium">视频号获客：</text>
+                                <text class="font-medium"><text class="text-primary mr-[4rpx]">30</text>算力</text>
                             </view>
                             <view
                                 class="flex items-center justify-between py-[26rpx] border-[0] border-t border-solid border-[#f2f2f2]">
-                                <text class="font-bold">视频号获客：</text>
-                                <text class="font-bold"><text class="text-primary mr-[4rpx]">30</text>算力</text>
+                                <text class="font-medium">视频号获客：</text>
+                                <text class="font-medium"><text class="text-primary mr-[4rpx]">30</text>算力</text>
                             </view>
                             <view class="flex items-center justify-between py-[26rpx]">
-                                <text class="font-bold">视频号获客：</text>
-                                <text class="font-bold"><text class="text-primary mr-[4rpx]">30</text>算力</text>
+                                <text class="font-medium">视频号获客：</text>
+                                <text class="font-medium"><text class="text-primary mr-[4rpx]">30</text>算力</text>
                             </view>
                         </view>
                     </view>
@@ -436,7 +436,7 @@ onLoad((options: any) => {
 .task-statement-tab-item {
     @apply flex flex-col items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500;
     &.active {
-        @apply text-black font-bold relative;
+        @apply text-black font-medium relative;
     }
 }
 .tab-slider {

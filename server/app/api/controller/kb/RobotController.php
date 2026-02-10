@@ -8,6 +8,7 @@ use app\api\lists\kb\KbRobotLists;
 use app\api\logic\kb\KbRobotLogic;
 use app\common\logic\BaseLogic;
 use Exception;
+use think\db\exception\DbException;
 use think\response\Json;
 
 /**
@@ -16,6 +17,35 @@ use think\response\Json;
 class RobotController extends BaseApiController
 {
     public array $notNeedLogin = ['commonLists'];
+
+    /**
+     * @notes 智能体列表
+     * @return Json
+     * @throws DbException
+     * @author kb
+     */
+    public function all(): Json
+    {
+        $params = $this->request->get();
+        $result = KbRobotLogic::all($params, $this->userId);
+        return $this->data($result);
+    }
+
+    /**
+     * @notes 智能体置顶
+     * @return Json
+     * @throws DbException
+     * @author kb
+     */
+    public function top(): Json
+    {
+        $params = $this->request->post();
+        $result = KbRobotLogic::top($params, $this->userId);
+        if ($result === false) {
+            return $this->fail(KbRobotLogic::getError());
+        }
+        return $this->success('操作成功');
+    }
 
     /**
      * @notes 机器人列表
@@ -146,5 +176,23 @@ class RobotController extends BaseApiController
 //        if ($results === false) {
 //            return $this->fail(KbRobotLogic::getError());
 //        }
+    }
+
+    public function systemLists(): Json
+    {
+        $params = $this->request->get();
+        try {
+            $detail = KbRobotLogic::getSystemLists($params);
+            return $this->data($detail);
+        } catch (Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    public function getCopywriting()
+    {
+        $params = $this->request->post();
+        $params['user_id'] =  $this->userId ;
+        return KbRobotLogic::getCopywriting($params) ? $this->success(data: KbRobotLogic::getReturnData()) : $this->fail(KbRobotLogic::getError());
     }
 }

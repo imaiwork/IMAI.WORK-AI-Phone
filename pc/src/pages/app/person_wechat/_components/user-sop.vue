@@ -7,7 +7,7 @@
                         <div class="w-10 h-10 rounded-xl bg-[#0065fb]/10 flex items-center justify-center shadow-sm">
                             <img src="@/assets/images/date.png" class="w-6 h-6" />
                         </div>
-                        <span class="text-[18px] font-bold text-slate-800 tracking-tight">{{ item.date }}</span>
+                        <span class="text-[18px] font-medium text-slate-800 tracking-tight">{{ item.date }}</span>
                         <div class="flex-1 h-[1px] bg-gradient-to-r from-slate-100 to-transparent ml-2"></div>
                     </div>
 
@@ -127,13 +127,13 @@
 
                             <div
                                 v-if="foldIndex.includes(`${value.id}-${vIndex}`)"
-                                class="text-center py-2 text-slate-400 text-[12px] font-bold bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                                class="text-center py-2 text-slate-400 text-[12px] font-medium bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
                                 @click="handleFoldContent(value.id, vIndex)">
                                 内容已折叠，点击展开查看详情
                             </div>
 
                             <div class="mt-4 pt-3 border-t border-slate-50 flex justify-between items-center">
-                                <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider"
+                                <span class="text-[11px] text-slate-400 font-medium uppercase tracking-wider"
                                     >Source Plan</span
                                 >
                                 <span

@@ -14,7 +14,7 @@
                 </div>
                 <div>
                     <h3 class="text-[18px] font-black text-tx-primary leading-tight">{{ title || "数据批量导入" }}</h3>
-                    <p class="text-[11px] text-tx-placeholder font-bold uppercase tracking-widest mt-1">
+                    <p class="text-[11px] text-tx-placeholder font-medium uppercase tracking-widest mt-1">
                         Batch Data Import
                     </p>
                 </div>
@@ -44,7 +44,7 @@
                                 class="inline-flex items-center gap-x-2 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/10 text-primary cursor-pointer hover:bg-primary/10 transition-all group"
                                 @click="handleDownloadTemplate">
                                 <Icon name="el-icon-Document" :size="16" />
-                                <span class="text-[13px] font-bold">下载《数据导入模板》</span>
+                                <span class="text-[13px] font-medium">下载《数据导入模板》</span>
                                 <span class="group-hover:translate-y-0.5 transition-transform leading-[0]">
                                     <Icon name="el-icon-Download" :size="14" />
                                 </span>
@@ -61,8 +61,8 @@
                     <div class="flex flex-col gap-y-1">
                         <span class="text-[15px] font-black text-tx-primary">上传数据文件</span>
                         <p class="text-[13px] text-tx-regular">
-                            支持 <span class="text-tx-primary font-bold">.csv</span> 格式，文件大小不超过
-                            <span class="text-orange-500 font-bold">10MB</span>
+                            支持 <span class="text-tx-primary font-medium">.csv</span> 格式，文件大小不超过
+                            <span class="text-orange-500 font-medium">10MB</span>
                         </p>
 
                         <div class="mt-4">
@@ -75,7 +75,7 @@
                                             :name="file ? 'el-icon-DocumentChecked' : 'el-icon-UploadFilled'"
                                             :size="24" />
                                     </div>
-                                    <span class="text-[14px] font-bold text-tx-regular group-hover:text-primary">
+                                    <span class="text-[14px] font-medium text-tx-regular group-hover:text-primary">
                                         {{ file ? "已选中：" + file.split("/").pop() : "点击或拖拽文件至此处上传" }}
                                     </span>
                                 </div>

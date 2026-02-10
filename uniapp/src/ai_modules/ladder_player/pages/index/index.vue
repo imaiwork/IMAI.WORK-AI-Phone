@@ -14,7 +14,7 @@
             <view class="absolute bottom-[60rpx] left-6">
                 <navigator
                     hover-class="none"
-                    class="rounded-full py-2 px-3 text-primary text-xs font-bold bg-[#DEE3F9]"
+                    class="rounded-full py-2 px-3 text-primary text-xs font-medium bg-[#DEE3F9]"
                     url="/ai_modules/ladder_player/pages/report/report">
                     查看我的练习报告
                 </navigator>
@@ -64,7 +64,7 @@
                                 <image :src="item.logo" lazy-load class="w-[144rpx] h-[144rpx]"></image>
                             </view>
                             <view>
-                                <view class="text-xl font-bold">
+                                <view class="text-xl font-medium">
                                     {{ item.name }}
                                 </view>
                                 <view class="text-sm text-[#ACABB9] mt-2 leading-[40rpx]">
@@ -93,7 +93,7 @@
                         <image
                             class="w-[48rpx] h-[48rpx]"
                             src="@/ai_modules/ladder_player/static/icons/tips.svg"></image>
-                        <text class="text-xl font-bold">创作我的专属练习场景</text>
+                        <text class="text-xl font-medium">创作我的专属练习场景</text>
                     </view>
                 </u-button>
             </view>
@@ -173,7 +173,7 @@ onShow(async () => {
     .tab-item {
         @apply text-xl text-[#717189] relative;
         &.active {
-            @apply text-black font-bold;
+            @apply text-black font-medium;
             &::after {
                 content: "";
                 transform: translateX(-50%);

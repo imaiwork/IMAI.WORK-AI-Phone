@@ -4,7 +4,7 @@
             <scroll-view scroll-y class="h-full">
                 <view class="p-4">
                     <template v-if="!isGenerating">
-                        <view class="flex items-center gap-1 font-bold">
+                        <view class="flex items-center gap-1 font-medium">
                             <text class="text-[#FF3C26]">*</text>
                             <text>您想生成的主题大纲</text>
                         </view>
@@ -22,7 +22,7 @@
                                 {{ contentVal.length }} / {{ contentMaxLength }}
                             </view>
                         </view>
-                        <view class="flex items-center gap-1 font-bold mt-[48rpx]">
+                        <view class="flex items-center gap-1 font-medium mt-[48rpx]">
                             <text class="text-[#FF3C26]">*</text>
                             <text> 生成文案的数量</text>
                         </view>
@@ -46,7 +46,7 @@
                                         src="@/ai_modules/digital_human/static/icons/star2.svg"
                                         class="w-[24rpx] h-[24rpx]"></image>
 
-                                    <text class="font-bold">文案{{ index + 1 }}生成中</text>
+                                    <text class="font-medium">文案{{ index + 1 }}生成中</text>
                                 </view>
                                 <view class="mt-4">
                                     <view class="flex flex-col gap-3">
@@ -71,7 +71,7 @@
                                         :class="{
                                             'mb-[28rpx] ': valIndex < item.content.length - 1,
                                         }">
-                                        <view class="text-[28rpx] font-bold mb-2"
+                                        <view class="text-[28rpx] font-medium mb-2"
                                             >{{ index == 0 ? "主标题" : "副标题" }}
                                         </view>
                                         <u-input
@@ -224,7 +224,7 @@ const useContent = () => {
 .prompt-num-item {
     @apply w-[84rpx] h-[72rpx] flex items-center justify-center  bg-white text-[26rpx]  relative rounded-[16rpx];
     &.active {
-        @apply font-bold text-black shadow-[0rpx_0rpx_0rpx_2rpx_#0065FB];
+        @apply font-medium text-black shadow-[0rpx_0rpx_0rpx_2rpx_#0065FB];
     }
 }
 

@@ -5,7 +5,7 @@
         <div class="flex-shrink-0 px-8 py-6 flex justify-between items-center">
             <div>
                 <h1 class="text-xl font-[900] text-gray-950">手动加微记录</h1>
-                <p class="text-[12px] text-tx-placeholder font-bold mt-0.5">管理及追踪所有手动触发的微信添加任务</p>
+                <p class="text-[12px] text-tx-placeholder font-medium mt-0.5">管理及追踪所有手动触发的微信添加任务</p>
             </div>
 
             <div class="flex items-center gap-4">
@@ -23,7 +23,7 @@
 
                 <ElButton
                     type="primary"
-                    class="!rounded-xl !h-[44px] px-6 !font-bold transition-all hover:scale-105 active:scale-95"
+                    class="!rounded-xl !h-[44px] px-6 !font-medium transition-all hover:scale-105 active:scale-95"
                     @click="handleCreate">
                     <Icon name="local-icon-add_circle" color="#ffffff" :size="18"></Icon>
                     <span class="ml-2">创建加微任务</span>
@@ -45,7 +45,7 @@
                             <span
                                 v-for="item in row.wechats"
                                 :key="item.wechat_id"
-                                class="inline-flex items-center px-2.5 py-1 rounded-lg bg-gray-50 border border-br-extra-light text-[11px] font-bold text-tx-regular">
+                                class="inline-flex items-center px-2.5 py-1 rounded-lg bg-gray-50 border border-br-extra-light text-[11px] font-medium text-tx-regular">
                                 <Icon name="local-icon-wechat" color="var(--green-500)" :size="12" />
                                 <span class="ml-1">
                                     {{ item.wechat_nickname }}
@@ -83,7 +83,7 @@
 
                 <ElTableColumn prop="exec_day" label="执行天数" width="100" align="center">
                     <template #default="{ row }">
-                        <span class="font-mono font-bold text-gray-950">{{ row.exec_day }}</span>
+                        <span class="font-mono font-medium text-gray-950">{{ row.exec_day }}</span>
                         <span class="text-[10px] text-tx-placeholder ml-0.5">天</span>
                     </template>
                 </ElTableColumn>
@@ -97,11 +97,16 @@
                 <ElTableColumn label="操作" width="100" fixed="right" align="right">
                     <template #default="{ row }">
                         <div class="flex justify-end items-center gap-1">
-                            <ElButton type="primary" link size="small" class="!font-bold" @click="handleDetail(row.id)"
+                            <ElButton
+                                type="primary"
+                                link
+                                size="small"
+                                class="!font-medium"
+                                @click="handleDetail(row.id)"
                                 >详情</ElButton
                             >
                             <div class="w-[1px] h-3 bg-br-extra-light mx-1"></div>
-                            <ElButton type="danger" class="!font-bold" link size="small" @click="handleDelete(row.id)"
+                            <ElButton type="danger" class="!font-medium" link size="small" @click="handleDelete(row.id)"
                                 >删除</ElButton
                             >
                         </div>
@@ -117,7 +122,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-            <div class="text-[12px] font-bold text-[#CBD5E1]">共计 {{ pager.count }} 条加微任务数据</div>
+            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条加微任务数据</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>

@@ -1,7 +1,7 @@
 <template>
     <view class="h-screen flex flex-col" v-if="!loading">
         <view class="mx-4 mt-4 bg-white px-[40rpx] py-[30rpx] rounded-[20rpx]">
-            <view class="text-[30rpx] font-bold"> 线索词任务结束后设置 </view>
+            <view class="text-[30rpx] font-medium"> 线索词任务结束后设置 </view>
             <view class="mt-[32rpx]">
                 <u-radio-group v-model="formData.type" class="w-full">
                     <view class="flex justify-between w-full">
@@ -19,7 +19,7 @@
                 </u-radio-group>
             </view>
             <view class="mt-[36rpx]" v-if="formData.type === 2">
-                <view class="font-bold text-primary">AI补充的线索词方向：</view>
+                <view class="font-medium text-primary">AI补充的线索词方向：</view>
                 <view class="bg-[#F3F3F3] rounded-[16rpx] px-[26rpx] mt-[16rpx] h-[90rpx] flex items-center">
                     <u-input
                         v-model="formData.ai_direction"
@@ -31,10 +31,10 @@
         </view>
         <view class="grow min-h-0 flex flex-col mt-[50rpx]">
             <view class="flex items-center justify-between px-4">
-                <view class="text-[30rpx] font-bold">线索词组</view>
+                <view class="text-[30rpx] font-medium">线索词组</view>
                 <view @click="handleEditClue(-1)">
                     <u-icon name="plus" size="20" color="#0065FB"></u-icon
-                    ><text class="text-primary font-bold ml-1">增加词组</text>
+                    ><text class="text-primary font-medium ml-1">增加词组</text>
                 </view>
             </view>
             <view class="mt-4 grow min-h-0">
@@ -47,7 +47,7 @@
                             @click="handleEditClue(index)">
                             <view class="flex items-center justify-between gap-x-4">
                                 <view class="flex items-center" @click.stop="handleEditClueName(index)">
-                                    <text class="text-[30rpx] font-bold mr-2 break-all line-clamp-1">{{
+                                    <text class="text-[30rpx] font-medium mr-2 break-all line-clamp-1">{{
                                         item.name
                                     }}</text>
                                     <image
@@ -81,14 +81,14 @@
                         class="border border-solid rounded-[20rpx] w-[220rpx] h-[88rpx] flex items-center justify-center mx-auto"
                         @click="handleAddClue">
                         <u-icon name="plus" size="20"></u-icon>
-                        <text class="font-bold ml-1">添加线索词</text>
+                        <text class="font-medium ml-1">添加线索词</text>
                     </view>
                 </view>
             </view>
         </view>
         <view class="bg-white flex-shrink-0 pb-5 pt-4 px-6">
             <view
-                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-bold flex items-center justify-center"
+                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-medium flex items-center justify-center"
                 @click="handleSaveConfig">
                 确定保存
             </view>

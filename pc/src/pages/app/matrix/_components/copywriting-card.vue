@@ -8,8 +8,8 @@
                 </div>
                 <div class="flex items-center gap-x-2 mt-1.5">
                     <span class="text-[#9CA3AF] text-[12px] font-medium">
-                        共 <span class="text-[#111827] font-bold">{{ valueList.length }}</span> 个素材，已配置
-                        <span class="text-[#10B981] font-bold">{{ count }}</span> 个
+                        共 <span class="text-[#111827] font-medium">{{ valueList.length }}</span> 个素材，已配置
+                        <span class="text-[#10B981] font-medium">{{ count }}</span> 个
                     </span>
 
                     <ElTooltip v-if="publishTypeName" placement="top" popper-class="custom-tooltip" :show-arrow="false">
@@ -28,7 +28,7 @@
             </div>
             <button
                 @click="handleAdd"
-                class="px-5 h-10 rounded-xl bg-[#F3F4F6] text-primary font-bold text-sm hover:bg-primary hover:text-white transition-all active:scale-95 flex items-center gap-2">
+                class="px-5 h-10 rounded-xl bg-[#F3F4F6] text-primary font-medium text-sm hover:bg-primary hover:text-white transition-all active:scale-95 flex items-center gap-2">
                 <i class="el-icon-plus"></i>
                 <span>新增{{ typeName }}</span>
             </button>
@@ -78,7 +78,9 @@
                                         ]">
                                         ITEM {{ index + 1 }}
                                     </div>
-                                    <span v-if="item.content" class="text-[11px] text-[#10B981] font-bold">已就绪</span>
+                                    <span v-if="item.content" class="text-[11px] text-[#10B981] font-medium"
+                                        >已就绪</span
+                                    >
                                 </div>
                                 <div class="w-7 h-7 opacity-0 group-hover:opacity-100" @click="handleDelete(index)">
                                     <close-btn :icon-size="12"></close-btn>
@@ -103,7 +105,7 @@
                                     v-for="(topic, t_index) in item.topic"
                                     :key="t_index"
                                     class="group/tag relative flex items-center bg-white border border-br px-2 py-1 rounded-lg">
-                                    <span class="text-[#6366F1] font-bold text-[12px] mr-1">#</span>
+                                    <span class="text-[#6366F1] font-medium text-[12px] mr-1">#</span>
                                     <input
                                         v-model="item.topic[t_index]"
                                         class="bg-transparent border-none outline-none text-[11px] w-[70px] text-[#64748B]"

@@ -12,7 +12,7 @@
             <div class="absolute w-6 h-6 top-[18px] right-[18px] z-[22]" @click="close">
                 <close-btn />
             </div>
-            <div class="text-[15px] font-bold">AI添加检索关键词</div>
+            <div class="text-[15px] font-medium">AI添加检索关键词</div>
             <div class="mt-4">
                 <ElSelect v-model="formData.targetCount" placeholder="请选择生成数量" class="!h-11" :show-arrow="false">
                     <ElOption

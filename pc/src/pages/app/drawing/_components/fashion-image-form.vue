@@ -5,7 +5,7 @@
                 <div class="flex items-center justify-between mb-4 px-1">
                     <div>
                         <span class="text-[14px] font-[900] text-[#1E293B]">{{ label }}</span>
-                        <span class="ml-2 text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">{{
+                        <span class="ml-2 text-[10px] text-[#94A3B8] font-medium uppercase tracking-wider">{{
                             subLabel
                         }}</span>
                     </div>
@@ -47,7 +47,7 @@
                                 <Icon name="el-icon-UploadFilled" :size="28"></Icon>
                             </div>
                             <div class="text-[13px] font-black text-[#64748B]">点击或拖拽上传图片</div>
-                            <div class="text-[10px] text-[#94A3B8] mt-1 font-bold">支持 JPG/PNG/WEBP</div>
+                            <div class="text-[10px] text-[#94A3B8] mt-1 font-medium">支持 JPG/PNG/WEBP</div>
                         </template>
                     </div>
                 </upload>
@@ -83,11 +83,11 @@
                     <div class="flex items-center justify-between mb-2 px-1">
                         <div>
                             <span class="text-[14px] font-[900] text-[#1E293B]">选择模特</span>
-                            <span class="ml-2 text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider"
+                            <span class="ml-2 text-[10px] text-[#94A3B8] font-medium uppercase tracking-wider"
                                 >Select Model</span
                             >
                         </div>
-                        <div class="text-[11px] text-[#94A3B8] font-bold">{{ formData.persons.length }} / 4 已选</div>
+                        <div class="text-[11px] text-[#94A3B8] font-medium">{{ formData.persons.length }} / 4 已选</div>
                     </div>
 
                     <div

@@ -3,7 +3,7 @@
         <view class="grow min-h-0">
             <scroll-view class="h-full" scroll-y>
                 <view class="p-4">
-                    <view class="text-[30rpx] font-bold">加好友备注设置</view>
+                    <view class="text-[30rpx] font-medium">加好友备注设置</view>
                     <view class="mt-4 rounded-[20rpx] bg-white p-[40rpx]">
                         <u-radio-group v-model="formData.type" class="w-full">
                             <view class="flex justify-between w-full">
@@ -36,7 +36,7 @@
                                 class="border border-solid border-[#0065FB] rounded-[12rpx] px-[28rpx] py-[12rpx] flex items-center justify-center gap-x-1"
                                 @click="handleEditWechatRemark(-1)">
                                 <u-icon name="plus" color="#0065FB" size="20"></u-icon>
-                                <text class="text-primary font-bold">添加</text>
+                                <text class="text-primary font-medium">添加</text>
                             </view>
                         </view>
                     </view>
@@ -45,7 +45,7 @@
         </view>
         <view class="bg-white flex-shrink-0 pb-5 pt-4 px-6">
             <view
-                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-bold flex items-center justify-center"
+                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-medium flex items-center justify-center"
                 @click="handleSaveConfig">
                 确定保存
             </view>

@@ -2,7 +2,7 @@
     <view class="min-h-screen p-4">
         <view class="pb-[300rpx]">
             <view>
-                <view class="text-[30rpx] font-bold">朋友圈文字内容</view>
+                <view class="text-[30rpx] font-medium">朋友圈文字内容</view>
                 <view class="mt-[20rpx] bg-white rounded-[20rpx] p-[24rpx] relative">
                     <u-input
                         v-model="formData.content"
@@ -16,7 +16,7 @@
             </view>
 
             <view class="mt-[40rpx]">
-                <view class="text-[30rpx] font-bold">发布内容</view>
+                <view class="text-[30rpx] font-medium">发布内容</view>
                 <view class="mt-[24rpx]">
                     <u-radio-group v-model="formData.attachment_type" @change="handleAttachmentTypeChange">
                         <u-radio :name="1" size="32" label-size="26">图片内容</u-radio>
@@ -57,7 +57,7 @@
             </view>
 
             <view class="mt-[40rpx]">
-                <view class="text-[32rpx] font-bold text-[#333]">发布时间</view>
+                <view class="text-[32rpx] font-medium text-[#333]">发布时间</view>
                 <view class="mt-[20rpx] bg-white rounded-[20rpx] px-[24rpx]">
                     <view
                         @click="handleChooseAccount"
@@ -92,7 +92,7 @@
                                 <view class="flex items-center justify-between h-[50rpx]">
                                     <text
                                         :class="[
-                                            formData.time_config[0] ? 'text-primary font-bold' : 'text-[#00000033]',
+                                            formData.time_config[0] ? 'text-primary font-medium' : 'text-[#00000033]',
                                         ]"
                                         >{{ formData.time_config[0] || "开始时间" }}</text
                                     >
@@ -112,7 +112,7 @@
                                 <view class="flex items-center justify-between h-[50rpx]">
                                     <text
                                         :class="[
-                                            formData.time_config[1] ? 'text-primary font-bold' : 'text-[#00000033]',
+                                            formData.time_config[1] ? 'text-primary font-medium' : 'text-[#00000033]',
                                         ]"
                                         >{{ formData.time_config[1] || "结束时间" }}</text
                                     >
@@ -124,8 +124,8 @@
                 </view>
             </view>
             <view class="mt-[50rpx]" v-if="taskErrorMsg">
-                <view class="font-bold">任务冲突：</view>
-                <view class="text-font-bold text-[#ff2442] text-xs mt-[20rpx]">
+                <view class="font-medium">任务冲突：</view>
+                <view class="text-font-medium text-[#ff2442] text-xs mt-[20rpx]">
                     {{ taskErrorMsg }}
                 </view>
             </view>
@@ -217,7 +217,7 @@ const handleAttachmentTypeChange = (e: any) => {
 
 const handleChooseMaterial = (materials: any[]) => {
     materials = materials.map((item: any) => ({
-        url: item.content,
+        url: item.url,
         pic: item.pic,
         size: item.size,
         type: formData.attachment_type,

@@ -10,7 +10,7 @@
             <div class="absolute w-6 h-6 top-4 right-4" @click="close">
                 <close-btn :theme="ThemeEnum.DARK"></close-btn>
             </div>
-            <div class="text-white text-[20px] font-bold">口播文案库</div>
+            <div class="text-white text-[20px] font-medium">口播文案库</div>
             <div class="flex justify-between gap-x-2 mt-[18px]">
                 <div class="text-[#ffffff80] text-[11px]">
                     已选择<span class="text-white">（{{ count }}）</span>

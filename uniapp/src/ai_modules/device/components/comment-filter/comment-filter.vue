@@ -12,7 +12,7 @@
                             clearable />
                     </view>
                     <view
-                        class="w-[180rpx] h-[90rpx] flex items-center justify-center bg-black rounded-[10rpx] text-white font-bold"
+                        class="w-[180rpx] h-[90rpx] flex items-center justify-center bg-black rounded-[10rpx] text-white font-medium"
                         @click="handleAddCommentFilter"
                         >添加</view
                     >
@@ -23,11 +23,11 @@
                             <u-checkbox-group>
                                 <u-checkbox v-model="isCommentFilterAll" label-size="28">全选</u-checkbox>
                             </u-checkbox-group>
-                            <view class="text-[#FF2442] font-bold text-[28rpx]" @click="handleDeleteCommentFilter"
+                            <view class="text-[#FF2442] font-medium text-[28rpx]" @click="handleDeleteCommentFilter"
                                 >删除关键词</view
                             >
                         </view>
-                        <view class="text-[#00000080] font-bold"
+                        <view class="text-[#00000080] font-medium"
                             >已选：{{ commentFilterList.filter((item) => item.checked).length }}</view
                         >
                     </view>
@@ -51,7 +51,7 @@
                 </view>
                 <view class="px-4 mt-4">
                     <view
-                        class="rounded-[16rpx] h-[90rpx] bg-black text-white font-bold flex items-center justify-center"
+                        class="rounded-[16rpx] h-[90rpx] bg-black text-white font-medium flex items-center justify-center"
                         @click="handleCommentFilterConfirm">
                         确定保存
                     </view>

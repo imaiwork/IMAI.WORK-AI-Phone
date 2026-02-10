@@ -5,12 +5,14 @@
             <div v-for="(stat, idx) in statConfigs" :key="idx" class="flex-1 flex flex-col items-center relative">
                 <div v-if="idx !== 0" class="absolute left-0 top-1/2 -translate-y-1/2 w-[1px] h-10 bg-[#F1F5F9]"></div>
 
-                <span class="text-[13px] font-bold text-[#94A3B8] mb-1 uppercase tracking-wider">{{ stat.label }}</span>
+                <span class="text-[13px] font-medium text-[#94A3B8] mb-1 uppercase tracking-wider">{{
+                    stat.label
+                }}</span>
                 <div class="flex items-baseline gap-1">
                     <span class="text-[32px] font-[900] text-[#0F172A] tracking-tight">
                         {{ statistics[stat.key] || 0 }}
                     </span>
-                    <span v-if="stat.unit" class="text-xs font-bold text-[#94A3B8]">{{ stat.unit }}</span>
+                    <span v-if="stat.unit" class="text-xs font-medium text-[#94A3B8]">{{ stat.unit }}</span>
                 </div>
             </div>
         </div>
@@ -62,7 +64,7 @@
                         <template #default="{ row }">
                             <div class="flex flex-col">
                                 <span class="font-black text-[#0F172A]">{{ row.interview_name }}</span>
-                                <span class="text-[11px] text-[#94A3B8] font-bold"
+                                <span class="text-[11px] text-[#94A3B8] font-medium"
                                     >{{ row.degree || "未知学历" }} · {{ row.work_years || 0 }}年经验</span
                                 >
                             </div>
@@ -71,7 +73,7 @@
 
                     <ElTableColumn prop="job_name" label="面试岗位" min-width="160">
                         <template #default="{ row }">
-                            <span class="px-3 py-1 rounded-lg bg-[#F1F5F9] text-[#475569] text-xs font-bold">{{
+                            <span class="px-3 py-1 rounded-lg bg-[#F1F5F9] text-[#475569] text-xs font-medium">{{
                                 row.job_name
                             }}</span>
                         </template>
@@ -81,7 +83,7 @@
                         <template #default="{ row }">
                             <div class="flex justify-center items-baseline gap-0.5">
                                 <span class="text-lg font-[900] text-primary">{{ row.best_score || 0 }}</span>
-                                <span class="text-[10px] text-[#94A3B8] font-bold">/100</span>
+                                <span class="text-[10px] text-[#94A3B8] font-medium">/100</span>
                             </div>
                         </template>
                     </ElTableColumn>
@@ -99,7 +101,7 @@
 
                     <ElTableColumn label="面试时间" width="180">
                         <template #default="{ row }">
-                            <span class="text-xs font-bold text-[#64748B]">{{ row.first_start_time_text }}</span>
+                            <span class="text-xs font-medium text-[#64748B]">{{ row.first_start_time_text }}</span>
                         </template>
                     </ElTableColumn>
 
@@ -147,7 +149,7 @@
             </div>
 
             <div class="flex justify-between items-center px-6 py-4 border-t border-[#F8FAFC]">
-                <span class="text-xs font-bold text-[#94A3B8]">共 {{ pager.count }} 条记录</span>
+                <span class="text-xs font-medium text-[#94A3B8]">共 {{ pager.count }} 条记录</span>
                 <pagination v-model="pager" @change="getLists" />
             </div>
         </div>

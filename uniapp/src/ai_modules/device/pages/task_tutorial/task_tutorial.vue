@@ -3,9 +3,8 @@
         <view class="mb-8 px-2">
             <view class="flex items-center gap-2">
                 <view class="w-2 h-6 bg-primary rounded-full"></view>
-                <text class="text-[44rpx] font-bold text-[#1A202C]">矩阵工作台</text>
+                <text class="text-[44rpx] font-medium text-[#1A202C]">矩阵工作台</text>
             </view>
-            <text class="text-[24rpx] text-[#A0AEC0] mt-2 block">Matrix Marketing Workspace</text>
         </view>
 
         <view class="grid grid-cols-2 gap-[30rpx]">
@@ -29,7 +28,7 @@
                     </view>
 
                     <view>
-                        <text class="text-[32rpx] font-bold text-[#2D3748]">{{ item.title }}</text>
+                        <text class="text-[32rpx] font-medium text-[#2D3748]">{{ item.title }}</text>
                         <view class="flex items-center mt-1">
                             <text
                                 class="text-[20rpx] uppercase tracking-wider font-medium"
@@ -60,7 +59,7 @@ const richMenuList = ref([
     {
         title: "发布图文",
         icon: "photo",
-        tag: "Publish IMAGE",
+        tag: "自动/定时发布",
         color: "#0065fb",
         lightColor: "#E6EFFF",
         key: CreateTypeEnum.IMAGE_PUBLISH,
@@ -68,7 +67,7 @@ const richMenuList = ref([
     {
         title: "发布视频",
         icon: "play-circle",
-        tag: "Publish VIDEO",
+        tag: "自动/定时发布",
         color: "#0065fb",
         lightColor: "#E6EFFF",
         key: CreateTypeEnum.VIDEO_PUBLISH,
@@ -76,7 +75,7 @@ const richMenuList = ref([
     {
         title: "自动获线索",
         icon: "search",
-        tag: "AI Get CLUE",
+        tag: "无人工Ai获客",
         color: "#7C4DFF",
         lightColor: "#F2EEFF",
         key: CreateTypeEnum.CLUE_AUTO,
@@ -84,31 +83,31 @@ const richMenuList = ref([
     {
         title: "私聊接管",
         icon: "chat",
-        tag: "Chat Management",
+        tag: "自动处理信息",
         color: "#00BFA5",
         lightColor: "#E6F9F6",
         key: CreateTypeEnum.CHAT_MANAGE,
     },
     {
-        title: "评论获客",
+        title: "截流获客",
         icon: "edit-pen",
-        tag: "Comment Marketing",
+        tag: "评论区评论/私信",
         color: "#FF6D00",
         lightColor: "#FFF2E6",
         key: CreateTypeEnum.COMMENT_MARKETING,
     },
     {
-        title: "私信获客",
+        title: "留痕获客",
         icon: "email",
-        tag: "DM Marketing",
+        tag: "仅点赞/关注等互动",
         color: "#FF6D00",
         lightColor: "#FFF2E6",
-        key: CreateTypeEnum.DM_MARKETING,
+        key: CreateTypeEnum.COLLECT_MARKETING,
     },
     {
         title: "自动加好友",
         icon: "account-fill",
-        tag: "Friend Add",
+        tag: "聚焦省心省力",
         color: "#F50057",
         lightColor: "#FFE6EE",
         key: CreateTypeEnum.FRIEND_ADD,
@@ -116,7 +115,7 @@ const richMenuList = ref([
     {
         title: "自动养号",
         icon: "thumb-up",
-        tag: "Account Maintain",
+        tag: "模拟真人养",
         color: "#3F51B5",
         lightColor: "#ECEDF9",
         key: CreateTypeEnum.ACCOUNT_MAINTAIN,
@@ -124,7 +123,7 @@ const richMenuList = ref([
     {
         title: "朋友圈发布",
         icon: "moments",
-        tag: "Friend Circle Publish",
+        tag: "朋友圈发布内容",
         color: "#00BFA5",
         lightColor: "#E6F9F6",
         key: CreateTypeEnum.CIRCLE,
@@ -132,10 +131,18 @@ const richMenuList = ref([
     {
         title: "朋友圈互动",
         icon: "moments",
-        tag: "Friend Circle Comment",
+        tag: "朋友圈点赞/评论",
         color: "#00BFA5",
         lightColor: "#E6F9F6",
         key: CreateTypeEnum.CIRCLE_INTERACT,
+    },
+    {
+        title: "个微接管",
+        icon: "chat",
+        tag: "自动处理个微回复",
+        color: "#00BFA5",
+        lightColor: "#E6F9F6",
+        key: CreateTypeEnum.WECHAT_MSG,
     },
 ]);
 
@@ -149,11 +156,12 @@ const handleNav = (item: any) => {
         [CreateTypeEnum.CLUE_AUTO]: `${config.baseUrl}static/videos/task_clue_auto.mp4`,
         [CreateTypeEnum.CHAT_MANAGE]: `${config.baseUrl}static/videos/task_chat_manage.mp4`,
         [CreateTypeEnum.COMMENT_MARKETING]: `${config.baseUrl}static/videos/task_comment_marketing.mp4`,
-        [CreateTypeEnum.DM_MARKETING]: `${config.baseUrl}static/videos/task_dm_marketing.mp4`,
+        [CreateTypeEnum.COLLECT_MARKETING]: `${config.baseUrl}static/videos/task_collect_marketing.mp4`,
         [CreateTypeEnum.FRIEND_ADD]: `${config.baseUrl}static/videos/task_friend_add.mp4`,
         [CreateTypeEnum.ACCOUNT_MAINTAIN]: `${config.baseUrl}static/videos/task_account_maintain.mp4`,
         [CreateTypeEnum.CIRCLE]: `${config.baseUrl}static/videos/task_publish_circle.mp4`,
         [CreateTypeEnum.CIRCLE_INTERACT]: `${config.baseUrl}static/videos/task_circle_comment.mp4`,
+        [CreateTypeEnum.WECHAT_MSG]: `${config.baseUrl}static/videos/task_wechat_msg.mp4`,
     };
 
     previewUrl.value = urls[item.key as keyof typeof urls];

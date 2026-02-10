@@ -58,7 +58,7 @@
                         style="box-shadow: 0rpx 8rpx 124rpx #99abc62d"
                         @click="openRecorder">
                         <image src="@/ai_modules/interview/static/icons/mic.svg" class="w-[40rpx] h-[40rpx]"></image>
-                        <text class="text-primary font-bold text-xl">点击说话</text>
+                        <text class="text-primary font-medium text-xl">点击说话</text>
                     </view>
                 </template>
             </view>

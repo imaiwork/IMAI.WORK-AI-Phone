@@ -7,7 +7,9 @@
                 </div>
                 <div>
                     <div class="text-[18px] text-[#1E293B] font-black tracking-tight">发布朋友圈</div>
-                    <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">Create New Moment</div>
+                    <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
+                        Create New Moment
+                    </div>
                 </div>
             </div>
             <div v-if="showCloseBtn" class="w-8 h-8" @click="emit('close')">
@@ -57,7 +59,7 @@
                                             <EmojiContainer @chooseEmoji="handleChooseEmoji" />
                                         </ElPopover>
                                     </div>
-                                    <div class="absolute bottom-3 right-4 text-[11px] text-[#94A3B8] font-bold">
+                                    <div class="absolute bottom-3 right-4 text-[11px] text-[#94A3B8] font-medium">
                                         {{ formData.content?.length || 0 }}/300
                                     </div>
                                 </div>
@@ -70,7 +72,7 @@
                                         <span class="text-[15px] font-black text-[#1E293B]">媒体素材附件</span>
                                     </div>
                                     <div
-                                        class="text-[11px] text-primary bg-primary/5 px-2 py-0.5 rounded-md font-bold uppercase">
+                                        class="text-[11px] text-primary bg-primary/5 px-2 py-0.5 rounded-md font-medium uppercase">
                                         {{ postTypeList.find((i) => i.value === formData.attachment_type)?.label }}
                                     </div>
                                 </div>
@@ -123,7 +125,7 @@
                                                             name="local-icon-image_add"
                                                             :size="24"
                                                             color="var(--color-primary)" />
-                                                        <span class="text-[11px] font-bold text-[#64748B] mt-1"
+                                                        <span class="text-[11px] font-medium text-[#64748B] mt-1"
                                                             >添加图片</span
                                                         >
                                                         <span class="text-[#999999] text-[11px]">
@@ -160,7 +162,7 @@
                                                         name="local-icon-video_add"
                                                         :size="32"
                                                         color="var(--color-primary)" />
-                                                    <span class="text-[13px] font-bold mt-2"
+                                                    <span class="text-[13px] font-medium mt-2"
                                                         ><a @click.stop="openMaterialPicker" class="text-primary"
                                                             >点击上传</a
                                                         >或从素材库选择视频</span
@@ -187,7 +189,9 @@
                                             </div>
                                             <div v-else class="media-empty-state" @click="openMaterialPicker">
                                                 <Icon name="local-icon-file2" :size="32" color="var(--color-primary)" />
-                                                <span class="text-[13px] font-bold mt-2">点击从素材库选择链接信息</span>
+                                                <span class="text-[13px] font-medium mt-2"
+                                                    >点击从素材库选择链接信息</span
+                                                >
                                             </div>
                                         </template>
                                     </div>
@@ -271,7 +275,7 @@
         <div v-if="!formData.id" class="p-6 bg-white border-t border-[#F1F5F9]">
             <ElButton
                 type="primary"
-                class="!w-full !h-[52px] !rounded-[16px] !text-[16px] !font-bold"
+                class="!w-full !h-[52px] !rounded-[16px] !text-[16px] !font-medium"
                 :loading="isLock"
                 @click="lockFn">
                 立即创建
@@ -626,7 +630,7 @@ defineExpose({
 }
 
 .type-tab {
-    @apply px-4 py-2 bg-slate-100 text-[#64748B] rounded-xl text-xs font-bold cursor-pointer transition-all border border-[transparent];
+    @apply px-4 py-2 bg-slate-100 text-[#64748B] rounded-xl text-xs font-medium cursor-pointer transition-all border border-[transparent];
     &:hover {
         @apply bg-slate-200;
     }
@@ -659,7 +663,7 @@ defineExpose({
 .custom-radio-group {
     @apply w-full flex gap-3;
     .strategy-radio {
-        @apply flex-1 m-0 h-11 rounded-xl px-4 flex items-center justify-center font-bold;
+        @apply flex-1 m-0 h-11 rounded-xl px-4 flex items-center justify-center font-medium;
         &.is-checked {
             @apply bg-[#0065fb]/5 border-[#0065fb]/30;
         }

@@ -12,11 +12,13 @@
             <view class="py-[58rpx]">
                 <view class="flex items-center justify-center gap-x-2">
                     <view
-                        class="flex-shrink-0 px-[20rpx] py-[6rpx] rounded-[12rpx] font-bold"
+                        class="flex-shrink-0 px-[20rpx] py-[6rpx] rounded-[12rpx] font-medium"
                         :class="getDeviceStatusStyle">
                         {{ detail.status === 0 ? "离线" : detail.status === 1 ? "在线" : "工作中" }}
                     </view>
-                    <view class="text-[40rpx] font-bold text-center line-clamp-1">{{ detail.device_name || "-" }}</view>
+                    <view class="text-[40rpx] font-medium text-center line-clamp-1">{{
+                        detail.device_name || "-"
+                    }}</view>
                     <view class="flex-shrink-0" @click="handleEditDevice">
                         <image src="/static/images/icons/edit_pen.svg" class="w-[40rpx] h-[40rpx]"></image>
                     </view>
@@ -28,7 +30,7 @@
             </view>
             <view class="bg-white rounded-[20rpx] px-[32rpx]">
                 <view class="h-[116rpx] flex items-center justify-between gap-x-2">
-                    <view class="text-[30rpx] font-bold">平台账号激活</view>
+                    <view class="text-[30rpx] font-medium">平台账号激活</view>
                     <view class="flex-1 flex items-center justify-end gap-x-[7rpx]">
                         <navigator
                             v-for="(account, index) in detail.accounts"
@@ -50,17 +52,17 @@
                 </view>
                 <view class="h-[2rpx] bg-[#00000008]"></view>
                 <view class="h-[116rpx] flex items-center justify-between gap-x-2" @click="handleUnbindDevice">
-                    <view class="text-[30rpx] font-bold">解除设备绑定</view>
+                    <view class="text-[30rpx] font-medium">解除设备绑定</view>
                     <u-icon name="arrow-right" color="#0000004d"></u-icon>
                 </view>
             </view>
             <view class="bg-white rounded-[20rpx] px-[32rpx] mt-[20rpx] pb-5">
                 <calendar-simple v-model="selectedDate" @change="reset" />
                 <view class="mt-[50rpx]">
-                    <view class="text-[30rpx] font-bold">今日任务</view>
+                    <view class="text-[30rpx] font-medium">今日任务</view>
                     <view class="mt-[30rpx]">
                         <semi-circle-progress :progress="getProgress">
-                            <view class="text-primary font-bold text-[56rpx]"> {{ getProgress }}% </view>
+                            <view class="text-primary font-medium text-[56rpx]"> {{ getProgress }}% </view>
                         </semi-circle-progress>
                     </view>
                     <view class="grid grid-cols-5 gap-x-[20rpx] mt-4">
@@ -68,14 +70,14 @@
                             class="flex flex-col items-center justify-center"
                             v-for="item in taskStatistics"
                             :key="item.key">
-                            <text class="text-[40rpx] font-bold">{{ formatNumberToWanOrYi(item.value) }}</text>
-                            <text class="text-xs font-bold text-[#00000066] mt-[6rpx]">{{ item.title }}</text>
+                            <text class="text-[40rpx] font-medium">{{ formatNumberToWanOrYi(item.value) }}</text>
+                            <text class="text-xs font-medium text-[#00000066] mt-[6rpx]">{{ item.title }}</text>
                         </view>
                     </view>
                 </view>
             </view>
             <view class="mt-[50rpx]">
-                <view class="text-[30rpx] font-bold mb-[26rpx]"> 任务列表（{{ taskList.length }}） </view>
+                <view class="text-[30rpx] font-medium mb-[26rpx]"> 任务列表（{{ taskList.length }}） </view>
                 <task-list
                     v-if="taskList.length > 0"
                     :list="taskList"
@@ -89,7 +91,7 @@
     </view>
     <u-popup v-model="showEditDevicePopup" mode="center" width="90%" :border-radius="20">
         <view class="p-4 bg-white rounded-[20rpx]">
-            <view class="text-[30rpx] font-bold text-center mt-2">编辑设备</view>
+            <view class="text-[30rpx] font-medium text-center mt-2">编辑设备</view>
             <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
                 <u-input
                     v-model="editDeviceName"
@@ -99,12 +101,12 @@
             </view>
             <view class="flex items-center gap-x-5 mt-[56rpx]">
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold text-[#000000b3]"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
                     @click="showEditDevicePopup = false">
                     取消
                 </view>
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-bold text-white"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
                     @click="handleEditDeviceConfirm"
                     >确定</view
                 >

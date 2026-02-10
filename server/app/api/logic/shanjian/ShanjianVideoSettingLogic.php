@@ -489,7 +489,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 $mergedArray = array_merge($extra, $extraData);
 //                $taskname = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($globalTaskIndex + 1);
                 $taskname = $taskContent['title'] ?? date('YmdHis'). '数字人口播混剪';
-            
+                $taskname = mb_substr( $taskname, 0, 120, 'UTF-8');
                 $taskItem = [
                     'name' => $taskname,
                     'pic' => $selectedAnchor['pic'] ?? '',
@@ -837,7 +837,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 if (!empty($modeSuffix)) {
                     $videoName .= '_' . $modeSuffix;
                 }
-
+                $videoName = mb_substr( $videoName, 0, 120, 'UTF-8');
                 $taskItem = [
                     'name' => $videoName,
                     'pic' => $currentAnchor['pic'] ?? '',
@@ -1202,6 +1202,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
 //                $videoName .= '_' . $modeSuffix;
 
                 $taskItem['name'] = $taskItem['title'] ??  date('YmdHis') . "素材混剪";
+                $taskItem['name'] = mb_substr( $taskItem['name'], 0, 120, 'UTF-8');
                 $taskData[] = $taskItem;
             } // 内层循环结束
         } // 外层循环结束
@@ -1558,7 +1559,6 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     throw new \Exception("标题必须填写");
                 }
             }
-
             $extra = $decodedData['extra'] ?? [];
             $volume = $extra['volume'] ?? 0.3;
             if ($volume < 0 || $volume > 1) {
@@ -1891,7 +1891,6 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $clipData = $decodedData['clip'] ?? [];
         $musicData = $decodedData['music'] ?? [];
         $extraData = $decodedData['extra'] ?? [];
-
         // 验证素材数据
         if (count($materialData) == 0) {
             throw new \Exception("素材不能为空");
@@ -1983,12 +1982,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     if ($musicMode == 1) {
                         // 顺序选择音乐
                         $musicIndex = $globalIndex % count($musicData);
-                        $music_url = $musicData[$musicIndex]['fileUrl'] ?? $defaultMusic;
+                        $music_url = $musicData[$musicIndex] ?? $defaultMusic;
                         $musicStrategy = 'sequential';
                     } else {
                         // 随机选择音乐
                         $randomIndex = array_rand($musicData);
-                        $music_url = $musicData[$randomIndex]['fileUrl'] ?? $defaultMusic;
+                        $music_url = $musicData[$randomIndex] ?? $defaultMusic;
                         $musicStrategy = 'random';
                     }
                 } else {
@@ -1996,6 +1995,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     $music_url = $defaultMusic;
                     $musicStrategy = 'default_random';
                 }
+            
                 // ===== 内容选择逻辑（文案或音频）=====
                 $taskItem = [];
                 // 使用文案
@@ -2064,7 +2064,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
 //                $modeSuffix = $contentMode == 1 ? 'S' : 'R'; // S=顺序，R=随机
 //                $videoName .= '_' . $modeSuffix;
                 $taskItem['name'] = $taskItem['title'] ??  date('YmdHis') . '新闻体';
-
+                $taskItem['name'] = mb_substr( $taskItem['name'], 0, 120, 'UTF-8');
                 $taskData[] = $taskItem;
             } // 内层循环结束
         } // 外层循环结束

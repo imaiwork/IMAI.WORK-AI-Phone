@@ -331,7 +331,7 @@ class PublishLogic extends ApiLogic
                 })->select();
             //print_r($accounts->toArray());die;
             foreach ($accounts as $account) {
-                $autoConfig = AutoDeviceConfig::where('device_code', $account->device_code)->findOrEmpty();
+                $autoConfig = AutoDeviceConfig::where('device_code', $account->device_code)->order('id', 'desc')->limit(1)->findOrEmpty();
                 if ($autoConfig->isEmpty()) {
                     throw new \Exception('设备' . $account->device_code . '没有自动发布配置');
                 }

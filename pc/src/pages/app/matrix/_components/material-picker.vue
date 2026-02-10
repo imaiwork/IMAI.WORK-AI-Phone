@@ -9,7 +9,7 @@
                     <Icon name="local-icon-import" :size="16" color="var(--color-primary)"></Icon>
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-sm font-bold text-[#1E293B]">从素材库导入</span>
+                    <span class="text-sm font-medium text-[#1E293B]">从素材库导入</span>
                     <span class="text-[10px] text-[#94A3B8]">选择已有的云端资源</span>
                 </div>
             </div>
@@ -27,7 +27,7 @@
                         <Icon name="local-icon-upload" :size="16" color="#10B981"></Icon>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-sm font-bold text-[#1E293B]">本地直接上传</span>
+                        <span class="text-sm font-medium text-[#1E293B]">本地直接上传</span>
                         <span class="text-[10px] text-[#94A3B8]">支持常见视频/图片格式</span>
                     </div>
                 </div>
@@ -98,15 +98,15 @@
                             </div>
                             <div class="mt-1 flex items-center justify-center gap-1.5">
                                 <span
-                                    class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-bold text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                                    class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-medium text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-all">
                                     {{ materialList.length }} / {{ getUploadProps.limit }}
                                 </span>
                                 <span
                                     v-if="getUploadProps.limit - materialList.length <= 3"
-                                    class="text-[10px] font-bold text-orange-500 animate-pulse">
+                                    class="text-[10px] font-medium text-orange-500 animate-pulse">
                                     还可传 {{ getUploadProps.limit - materialList.length }} 个
                                 </span>
-                                <span v-else class="text-[10px] font-bold text-slate-300">剩余可传</span>
+                                <span v-else class="text-[10px] font-medium text-slate-300">剩余可传</span>
                             </div>
                         </div>
                     </div>

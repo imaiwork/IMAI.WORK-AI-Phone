@@ -42,7 +42,7 @@
                             <view class="flex items-center gap-x-2">
                                 <view class="flex-1 line-clamp-1 break-all">{{ item.name }}</view>
                                 <view
-                                    class="px-[20rpx] py-[10rpx] rounded-[8rpx] text-[20rpx] font-bold"
+                                    class="px-[20rpx] py-[10rpx] rounded-[8rpx] text-[20rpx] font-medium"
                                     :class="[
                                         item.status != 3
                                             ? 'text-[#C93F8D] bg-[#F3E5EE]'

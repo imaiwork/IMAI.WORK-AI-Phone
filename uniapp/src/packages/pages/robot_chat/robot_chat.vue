@@ -18,7 +18,7 @@
                     <image :src="detail.logo" class="w-full h-full rounded-[10rpx]"></image>
                 </view>
                 <view>
-                    <view class="font-bold text-[28rpx] line-clamp-1">{{ detail.name }}</view>
+                    <view class="font-medium text-[28rpx] line-clamp-1">{{ detail.name }}</view>
                     <view class="text-[20rpx] text-[#969EA9] line-clamp-1">{{ detail.description }}</view>
                 </view>
             </view>
@@ -216,6 +216,7 @@ const contentPost = async (userInput?: any, isNewChat: boolean = false) => {
                 message: userInput || "",
                 message_ext: JSON.stringify(sidebarRef.value?.formData),
                 assistant_id: detail.id,
+                task_id: taskId.value,
                 ...chatPostParams,
             },
             {

@@ -8,7 +8,6 @@ use app\common\model\coze\CozeAgent;
 use app\common\model\coze\CozeLog;
 use app\common\model\coze\CozeWorkflow;
 use app\common\model\user\User;
-use TencentCloud\Antiddos\V20200309\Models\DDoSAIRelation;
 use think\facade\Db;
 
 class CozeAgentLogic extends ApiLogic
@@ -178,6 +177,7 @@ class CozeAgentLogic extends ApiLogic
                     return false;
                 }
                 CozeAgent::destroy(['id' => $id, 'source_id' => self::$uid, 'source' => CozeAgent::SOURCE_USER]);
+                CozeWorkflow::destroy(['coze_agent_id' => $id, 'source_id' => self::$uid, 'source' => CozeAgent::SOURCE_USER]);
                 CozeLog::where('bot_id',$bot_id)->select()->delete();
             } else {
                 $bot_id = CozeAgent::whereIn('id', $id)->where([ 'source_id' => self::$uid, 'source' => CozeAgent::SOURCE_USER])->column('coze_id');
@@ -188,6 +188,9 @@ class CozeAgentLogic extends ApiLogic
                 CozeAgent::whereIn('id', $id)->where('source_id', self::$uid)
                     ->where('source', CozeAgent::SOURCE_USER)
                     ->select()->delete();
+                CozeWorkflow::whereIn('coze_agent_id', $id)->where('source_id', self::$uid)
+                            ->where('source', CozeAgent::SOURCE_USER)
+                            ->select()->delete();
                 CozeLog::whereIn('bot_id',$bot_id)->select()->delete();
             }
             return true;

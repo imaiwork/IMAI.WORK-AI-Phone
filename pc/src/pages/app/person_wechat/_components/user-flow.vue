@@ -9,7 +9,7 @@
                             <img src="@/assets/images/7_day.png" class="w-7 h-7" />
                         </div>
                         <div class="flex flex-col">
-                            <div class="text-[14px] text-slate-500 font-bold mb-1">当前停留时长统计</div>
+                            <div class="text-[14px] text-slate-500 font-medium mb-1">当前停留时长统计</div>
                             <div class="text-[14px] text-slate-700">
                                 流程停留
                                 <span class="text-primary font-[900] mx-0.5 text-[16px]">{{
@@ -26,7 +26,7 @@
                         </div>
                     </div>
                     <div
-                        class="px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 text-[12px] text-slate-400 font-bold uppercase tracking-wider">
+                        class="px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 text-[12px] text-slate-400 font-medium uppercase tracking-wider">
                         Real-time Tracking
                     </div>
                 </div>
@@ -36,7 +36,7 @@
                         <div class="flex items-center gap-x-3">
                             <div class="w-2 h-6 rounded-full bg-primary shadow-sm shadow-[#0065fb]/30"></div>
                             <div class="flex items-center gap-2">
-                                <span class="text-[16px] font-bold text-slate-800 tracking-tight">{{
+                                <span class="text-[16px] font-medium text-slate-800 tracking-tight">{{
                                     flowData.flow_name
                                 }}</span>
                                 <span class="px-2 py-0.5 bg-[#0065fb]/10 text-primary text-[10px] rounded-md font-black"
@@ -44,7 +44,7 @@
                                 >
                             </div>
                         </div>
-                        <div class="flex items-center gap-2 text-slate-400 text-[12px] font-bold">
+                        <div class="flex items-center gap-2 text-slate-400 text-[12px] font-medium">
                             <Icon name="el-icon-Calendar" :size="14" />
                             进入流程日期：{{ flowData.join_flow_time || "-" }}
                         </div>
@@ -84,7 +84,7 @@
                                             v-if="flowData.stage_id == item.stage_id"
                                             class="absolute -top-8 animate-bounce">
                                             <div
-                                                class="px-2 py-1 bg-primary text-white text-[10px] rounded-md font-bold shadow-lg shadow-[#0065fb]/20 relative">
+                                                class="px-2 py-1 bg-primary text-white text-[10px] rounded-md font-medium shadow-lg shadow-[#0065fb]/20 relative">
                                                 当前位置
                                                 <div
                                                     class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rotate-45"></div>
@@ -143,13 +143,13 @@ const props = defineProps<{
 }
 
 .step-badge {
-    @apply absolute -top-1 -right-1 w-[18px] h-[18px] text-[10px] rounded-full flex items-center justify-center font-bold shadow-light;
+    @apply absolute -top-1 -right-1 w-[18px] h-[18px] text-[10px] rounded-full flex items-center justify-center font-medium shadow-light;
     background: #1e293b;
     color: white;
 }
 
 .stage-name-tag {
-    @apply text-[13px] font-bold text-slate-500 bg-[#f8fafc]/50 px-[12px] py-[4px] rounded-[10px] border border-slate-100 transition-all;
+    @apply text-[13px] font-medium text-slate-500 bg-[#f8fafc]/50 px-[12px] py-[4px] rounded-[10px] border border-slate-100 transition-all;
 
     &.is-active {
         @apply text-primary bg-[#0065fb]/5 border-[#0065fb]/20 font-black scale-105;

@@ -24,7 +24,7 @@
                             </div>
                         </div>
                         <h2 class="text-[44px] text-white font-[900] leading-tight tracking-tight">员工陪练</h2>
-                        <p class="text-[#ffffff]/70 text-sm font-bold mt-1">AI 模拟真实场景，快速提升员工话术能力</p>
+                        <p class="text-[#ffffff]/70 text-sm font-medium mt-1">AI 模拟真实场景，快速提升员工话术能力</p>
                     </div>
                 </div>
 
@@ -56,7 +56,7 @@
 
                     <div class="mt-8 flex items-center gap-2 text-[#94A3B8]">
                         <Icon name="el-icon-Iphone" :size="16" />
-                        <span class="text-[12px] font-bold uppercase tracking-widest">支持 iOS & Android</span>
+                        <span class="text-[12px] font-medium uppercase tracking-widest">支持 iOS & Android</span>
                     </div>
                 </div>
             </template>
@@ -66,7 +66,7 @@
                     <div class="absolute inset-0 border-4 border-[#F1F5F9] rounded-full"></div>
                     <div class="absolute inset-0 border-4 border-t-primary rounded-full animate-spin"></div>
                 </div>
-                <span class="mt-4 text-sm font-bold text-[#94A3B8] tracking-widest uppercase">Fetching Data...</span>
+                <span class="mt-4 text-sm font-medium text-[#94A3B8] tracking-widest uppercase">Fetching Data...</span>
             </div>
         </div>
     </div>

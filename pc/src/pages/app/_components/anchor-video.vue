@@ -6,20 +6,14 @@
                 background: `linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.9) 100%), url(${item.pic}) no-repeat center`,
                 backgroundSize: 'cover',
             }">
-            <div class="w-full px-4 pt-4 break-all relative z-20">
+            <div class="w-full px-4 pt-4 break-all relative z-[8888]">
                 <div class="text-white font-black text-[14px] line-clamp-1 drop-shadow-md">
                     {{ item.name }}
-                </div>
-                <div v-if="item.automatic_clip == 1" class="mt-1 flex">
-                    <span
-                        class="px-2 py-0.5 rounded bg-[#0065fb]/20 backdrop-blur-md border border-[#0065fb]/30 text-[9px] font-black text-primary uppercase">
-                        AI剪辑
-                    </span>
                 </div>
             </div>
 
             <div
-                class="absolute right-3 top-3 z-[1000] w-9 h-9 flex items-center justify-center bg-[#ffffff]/10 rounded-full invisible group-hover:visible backdrop-blur-md border border-[#ffffff]/10 transition-all"
+                class="absolute right-3 top-3 z-[10000] w-9 h-9 flex items-center justify-center bg-[#ffffff]/10 rounded-full invisible group-hover:visible backdrop-blur-md border border-[#ffffff]/10 transition-all"
                 :class="[activeVideo == item.id ? '!visible !bg-primary !border-primary shadow-[#0065fb]/30' : '']">
                 <ElPopover
                     popper-class="!w-[212px] !min-w-[212px] !p-2 !rounded-2xl !border-slate-800 !bg-[#0f172a]/95 !backdrop-blur-xl"
@@ -43,20 +37,20 @@
                                     class="flex w-6 h-6 rounded-lg bg-[#ffffff]/5 items-center justify-center group-hover:bg-[#0065fb]/20 transition-colors">
                                     <Icon :name="icon" color="#ffffff" :size="14"></Icon>
                                 </span>
-                                <span class="text-[13px] font-bold text-[#ffffff]/80 group-hover:text-white">{{
+                                <span class="text-[13px] font-medium text-[#ffffff]/80 group-hover:text-white">{{
                                     label
                                 }}</span>
                             </div>
                         </DefineTemplate>
 
                         <div @click="handleDownLoad(item.url)">
-                            <UseTemplate label="下载视频" icon="local-icon-download" />
+                            <UseTemplate label="下载形象" icon="local-icon-download" />
                         </div>
                         <div @click="handlePlay(item.url)">
-                            <UseTemplate label="播放视频" icon="local-icon-play" />
+                            <UseTemplate label="播放形象" icon="local-icon-play" />
                         </div>
                         <div @click="handleDelete(item.id)">
-                            <UseTemplate label="删除视频" icon="local-icon-delete" />
+                            <UseTemplate label="删除形象" icon="local-icon-delete" />
                         </div>
                     </div>
                 </ElPopover>
@@ -91,7 +85,7 @@
                             <div
                                 class="w-10 h-10 rounded-full border-[3px] border-[#0065fb]/20 border-t-primary animate-spin mb-2"></div>
                             <span class="text-white font-black text-sm uppercase tracking-widest">生成中...</span>
-                            <span class="text-[#0065fb]/60 font-bold text-[11px] text-center animate-pulse"
+                            <span class="text-[#0065fb]/60 font-medium text-[11px] text-center animate-pulse"
                                 >几分钟即可生成形象</span
                             >
                         </template>
@@ -100,7 +94,7 @@
             </template>
 
             <div class="absolute bottom-5 left-0 w-full z-[51] text-center">
-                <div class="text-[11px] font-bold text-[#ffffff]/30 italic tracking-wider uppercase">
+                <div class="text-[11px] font-medium text-[#ffffff]/30 italic tracking-wider uppercase">
                     {{ item.create_time }}
                 </div>
             </div>

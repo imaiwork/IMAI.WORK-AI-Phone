@@ -7,7 +7,7 @@
                         <div class="w-2 h-6 bg-primary rounded-full"></div>
                         <h2 class="text-[20px] font-[900] text-[#1E293B]">我的思维导图</h2>
                     </div>
-                    <div class="text-[13px] text-[#94A3B8] font-bold">共 {{ pager.count || 0 }} 份文档</div>
+                    <div class="text-[13px] text-[#94A3B8] font-medium">共 {{ pager.count || 0 }} 份文档</div>
                 </div>
                 <div class="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                     <div
@@ -86,7 +86,7 @@
                 class="w-20 h-20 bg-white rounded-[32px] flex items-center justify-center border border-[#F1F5F9] mb-4">
                 <Icon name="el-icon-Document" :size="32" color="#CBD5E1"></Icon>
             </div>
-            <p class="text-[#94A3B8] font-bold">暂无思维导图文档</p>
+            <p class="text-[#94A3B8] font-medium">暂无思维导图文档</p>
         </div>
     </div>
 

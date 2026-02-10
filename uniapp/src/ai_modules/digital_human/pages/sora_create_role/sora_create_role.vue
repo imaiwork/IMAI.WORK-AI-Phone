@@ -14,7 +14,7 @@
             <scroll-view class="h-full" scroll-y>
                 <view class="px-4 pb-[100rpx]">
                     <view class="mt-[50rpx]">
-                        <view class="text-[30rpx] font-bold"><text class="text-[#FF0000]">*</text>角色名称</view>
+                        <view class="text-[30rpx] font-medium"><text class="text-[#FF0000]">*</text>角色名称</view>
                         <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4 flex items-center h-[100rpx]">
                             <u-input
                                 class="w-full"
@@ -27,7 +27,7 @@
                     </view>
                     <view class="mt-[50rpx]">
                         <view class="flex items-center justify-between">
-                            <view class="text-[30rpx] font-bold"
+                            <view class="text-[30rpx] font-medium"
                                 ><text class="text-[#FF0000]">*</text>角色生成方式
                             </view>
                             <view v-if="isUploadSuccess" class="text-primary" @click="handleUpload()">重新上传</view>
@@ -46,7 +46,7 @@
                                     <view>
                                         {{ item.label }}
                                     </view>
-                                    <view class="text-primary text-[22rpx] font-bold">
+                                    <view class="text-primary text-[22rpx] font-medium">
                                         {{ item.desc }}
                                     </view>
                                 </view>
@@ -61,7 +61,7 @@
                                     <image
                                         src="@/ai_modules/digital_human/static/images/common/image_add.png"
                                         class="w-[60rpx] h-[60rpx]"></image>
-                                    <text class="text-[28rpx] font-bold mt-[12rpx]">{{
+                                    <text class="text-[28rpx] font-medium mt-[12rpx]">{{
                                         formData.upload_type === RoleGenerationType.VIDEO ? "上传视频" : "上传图片"
                                     }}</text>
                                 </view>
@@ -98,7 +98,7 @@
                         </view>
                         <!-- <view class="bg-white rounded-[20rpx] p-[30rpx]" v-if="themeTypeIndex === 1">
                             <view>
-                                <view class="font-bold text-[30rpx]">提示词</view>
+                                <view class="font-medium text-[30rpx]">提示词</view>
                                 <textarea
                                     class="w-full mt-[18rpx]"
                                     v-model="formData.name"
@@ -130,7 +130,7 @@
                     </view>
                     <view class="mt-[50rpx]" v-if="formData.upload_type === RoleGenerationType.VIDEO">
                         <view class="flex items-center justify-between">
-                            <view class="text-[30rpx] font-bold"><text class="text-[#FF0000]">*</text>抽取范围</view>
+                            <view class="text-[30rpx] font-medium"><text class="text-[#FF0000]">*</text>抽取范围</view>
                         </view>
                         <view class="mt-[20rpx] bg-white rounded-[20rpx] p-[30rpx]">
                             <view class="text-[22rpx] text-[#00000080] px-10 py-2" v-if="!formData.anchor_url">
@@ -147,7 +147,7 @@
                                 <!-- <view class="grid grid-cols-2 gap-x-3">
                                     <view
                                         class="bg-[#F3F4FB] rounded-[16rpx] px-[30rpx] py-[6rpx] flex items-center justify-between">
-                                        <view class="text-[#00000080] font-bold flex-shrink-0">开始</view>
+                                        <view class="text-[#00000080] font-medium flex-shrink-0">开始</view>
                                         <u-input
                                             v-model="startTime"
                                             type="digit"
@@ -158,7 +158,7 @@
                                     </view>
                                     <view
                                         class="bg-[#F3F4FB] rounded-[16rpx] px-[30rpx] py-[4rpx] flex items-center justify-between">
-                                        <view class="text-[#00000080] font-bold flex-shrink-0">结束</view>
+                                        <view class="text-[#00000080] font-medium flex-shrink-0">结束</view>
                                         <u-input
                                             v-model="endTime"
                                             type="digit"
@@ -173,7 +173,7 @@
                         <!-- <view
                             class="mt-[20rpx] bg-white rounded-[20rpx] px-4 h-[100rpx] flex items-center justify-between"
                             @click="showRoleStylePopup = true">
-                            <view class="font-bold">{{
+                            <view class="font-medium">{{
                                 roleStyles.find((item) => item.value === formData.roleStyle)?.label
                             }}</view>
                             <view class="text-[#00000080] flex items-center gap-x-1">
@@ -186,7 +186,7 @@
         </view>
         <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 pb-5 flex justify-center px-4 pt-4">
             <view
-                class="rounded-[16rpx] w-full h-[100rpx] bg-black text-white font-bold flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
+                class="rounded-[16rpx] w-full h-[100rpx] bg-black text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
                 @click="handleCreateRole">
                 提交创建 <text class="text-[#ffffff80] text-xs">(预计消耗{{ getToken }}算力)</text>
             </view>
@@ -211,7 +211,7 @@
                     <picker-view
                         :value="formData.roleStyleIndex"
                         indicator-style="height: 100rpx;"
-                        indicator-class="font-bold"
+                        indicator-class="font-medium"
                         @change="changeRoleStyle">
                         <picker-view-column>
                             <view
@@ -225,12 +225,12 @@
                 </view>
                 <view class="flex justify-around p-4 border-[0] border-t-[1rpx] border-solid border-[rgba(0,0,0,0.03)]">
                     <view
-                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-[#F3F3F3] text-[30rpx] text-[#00000080] font-bold"
+                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-[#F3F3F3] text-[30rpx] text-[#00000080] font-medium"
                         @click="cancelRoleStyle"
                         >取消</view
                     >
                     <view
-                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-primary text-[30rpx] text-white font-bold"
+                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-primary text-[30rpx] text-white font-medium"
                         @click="confirmRoleStyle"
                         >确定</view
                     >
@@ -525,7 +525,7 @@ picker-view {
 .theme-type-item {
     @apply flex flex-col items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500;
     &.active {
-        @apply text-black font-bold relative;
+        @apply text-black font-medium relative;
     }
 }
 .tab-slider {

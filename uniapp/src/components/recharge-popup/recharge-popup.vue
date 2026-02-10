@@ -67,7 +67,7 @@ defineExpose({
 
 <style scoped lang="scss">
 .shop-name-text {
-    @apply text-[48rpx] font-bold;
+    @apply text-[48rpx] font-medium;
     background: linear-gradient(180deg, #0065fb 0%, #cde3ef 100%);
     background-clip: text;
     -webkit-background-clip: text;

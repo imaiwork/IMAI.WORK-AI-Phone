@@ -43,4 +43,5 @@ export enum CreateTypeEnum {
     PRIVATE_MESSAGE = "PRIVATE_MESSAGE", // 私信获客
     CIRCLE = "CIRCLE", // 发朋友圈
     CIRCLE_INTERACT = "CIRCLE_INTERACT", // 朋友圈互动
+    WECHAT_MSG = "WECHAT_MSG", // 个微接管
 }

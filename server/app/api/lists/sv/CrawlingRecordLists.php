@@ -5,6 +5,7 @@ namespace app\api\lists\sv;
 use app\api\lists\BaseApiDataLists;
 use app\common\lists\ListsSearchInterface;
 use app\common\lists\ListsExcelInterface;
+use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvCrawlingRecord;
 use app\common\model\sv\SvAddWechatRecord;
 use app\common\model\sv\SvDevice;
@@ -57,10 +58,10 @@ class CrawlingRecordLists extends BaseApiDataLists implements ListsSearchInterfa
                     $item['status'] = 1;
                     $item->save();
                 }
-                $exec_account = AiWechat::field('wechat_no, wechat_nickname')->where('user_id', $item['user_id'])
-                    ->where('device_code', function($query) use($item){
-                        $query->name('sv_device')->where('device_code', $item['device_code'])->field('wechat_device_code');
-                    })
+                
+                $exec_account = SvAccount::field('account, nickname')->where('user_id', $item['user_id'])
+                    ->where('device_code', $item['device_code'])
+                    ->where('type', 1)
                     ->findOrEmpty();
 
                 $item['device_model'] = SvDevice::where('device_code', $item['device_code'])->value('device_model');
@@ -68,8 +69,8 @@ class CrawlingRecordLists extends BaseApiDataLists implements ListsSearchInterfa
                 $item['image'] = FileService::getFileUrl($item['image']);
                 $item['exec_time'] = $item['exectime'];
                 $item['create_time'] = $item['exectime'];
-                $item['exec_account'] = $exec_account->isEmpty() ? '' : $exec_account->wechat_no;
-                $item['exec_account_name'] = $exec_account->isEmpty() ? '' : $exec_account->wechat_nickname;
+                $item['exec_account'] = $exec_account->isEmpty() ? '' : $exec_account->account;
+                $item['exec_account_name'] = $exec_account->isEmpty() ? '' : $exec_account->nickname;
             })
             ->toArray();
         return $list;

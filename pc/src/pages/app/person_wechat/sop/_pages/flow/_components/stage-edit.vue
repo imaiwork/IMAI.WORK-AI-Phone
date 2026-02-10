@@ -16,8 +16,8 @@
                 <div class="text-[12px] leading-relaxed">
                     <p class="text-primary font-black mb-0.5">命名规范提示：</p>
                     <p class="text-slate-500 font-medium">
-                        阶段名称需为 <span class="text-primary font-bold">纯汉字</span>，且长度
-                        <span class="text-primary font-bold">不可超过 8 个字</span
+                        阶段名称需为 <span class="text-primary font-medium">纯汉字</span>，且长度
+                        <span class="text-primary font-medium">不可超过 8 个字</span
                         >。系统建议按转化逻辑命名（如：初步接触、核心意向）。
                     </p>
                 </div>
@@ -55,7 +55,7 @@
                             placeholder="0-999"
                             class="!w-full modern-number-input" />
                         <div
-                            class="flex-shrink-0 text-[11px] text-slate-400 font-bold bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                            class="flex-shrink-0 text-[11px] text-slate-400 font-medium bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
                             MAX: 999
                         </div>
                     </div>

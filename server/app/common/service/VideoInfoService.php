@@ -84,7 +84,6 @@ class VideoInfoService
             if ($cachedInfo) {
                 return $cachedInfo;
             }
-
             // 5. 检查是否正在处理中
             if ($this->isProcessing($videoUrl)) {
                 throw new Exception('视频正在处理中，请稍后再试');
@@ -92,7 +91,6 @@ class VideoInfoService
 
             // 6. 标记为处理中
             $this->markAsProcessing($videoUrl);
-
             try {
                 // 7. 预检查URL可访问性
                 if (!$this->isUrlAccessible($videoUrl)) {
@@ -106,7 +104,6 @@ class VideoInfoService
                 if ($videoInfo) {
                     $this->cacheVideoInfo($videoUrl, $videoInfo);
                 }
-
                 return $videoInfo;
             } finally {
                 // 10. 清除处理标记
@@ -189,8 +186,9 @@ class VideoInfoService
 
         // 初始化批次结果缓存
         $batchCacheKey = 'batch_result_' . $batchId;
-        Cache::set($batchCacheKey, [], 300);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            // 5分钟过期
-
+        Cache::set($batchCacheKey, [], 300);
+        
+        // 5分钟过期
         // 将任务推送到队列
         foreach ($videoUrls as $index => $url) {
             $jobData = [
@@ -215,7 +213,7 @@ class VideoInfoService
         }
 
         // 等待处理完成或超时
-        $maxWaitTime   = min($timeout + 30, 120);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           // 最多等待2分钟
+        $maxWaitTime   = min($timeout + 30, 120);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            // 最多等待2分钟
         $waitTime      = 0;
         $checkInterval = 2; // 每2秒检查一次
 
@@ -627,16 +625,13 @@ class VideoInfoService
 
             // 解析JSON输出
             $data = json_decode($output, true);
-
             if (json_last_error() !== JSON_ERROR_NONE) {
                 throw new Exception('FFprobe 输出解析失败: ' . json_last_error_msg() . ', 原始输出: ' . substr($output, 0, 500));
             }
-
             // 检查是否有错误
             if (isset($data['error'])) {
                 throw new Exception('FFprobe错误: ' . ($data['error']['string'] ?? '未知错误'));
             }
-
             if (!isset($data['streams']) || empty($data['streams'])) {
                 // 尝试备用命令
                 $fallbackCommand = $this->buildFallbackFFprobeCommand($inputPath, $timeout);
@@ -654,7 +649,6 @@ class VideoInfoService
                     throw new Exception('未找到有效的媒体流。原始输出: ' . substr($output, 0, 200));
                 }
             }
-
             // 解析视频数据
             $videoInfo                   = $this->parseFFprobeData($data);
             $videoInfo['source_url']     = $videoUrl;
@@ -662,7 +656,6 @@ class VideoInfoService
             $videoInfo['ffmpeg_version'] = $this->getFFmpegVersion();
             $videoInfo['input_path']     = $inputPath;
             $videoInfo['is_local']       = $is_local;
-
             return $videoInfo;
 
         } catch (Exception $e) {
@@ -861,15 +854,12 @@ class VideoInfoService
     private function parseFFprobeData(array $data): array
     {
         $videoInfo = $this->initializeVideoInfo();
-
         // 解析格式信息
         if (isset($data['format'])) {
             $this->parseFormatInfo($data['format'], $videoInfo);
         }
-
         // 解析流信息
         $this->parseStreamInfo($data['streams'], $videoInfo);
-
         // 计算额外信息
         $this->calculateAdditionalInfo($videoInfo);
 
@@ -1057,17 +1047,27 @@ class VideoInfoService
     /**
      * 格式化时长
      */
-    private function formatDuration(float $seconds): string
+    private function formatDuration($seconds): string
     {
-        $hours   = floor($seconds / 3600);
-        $minutes = floor(($seconds % 3600) / 60);
-        $secs    = floor($seconds % 60);
+        $roundedSeconds = round($seconds, 2);
+        $totalSeconds = (int) $roundedSeconds; // 先整体转整数，避免后续浮点运算
+
+        $hours = intdiv($totalSeconds, 3600);
+        $minutes = intdiv($totalSeconds % 3600, 60);
+        $secs = $totalSeconds % 60;
+
+        // 处理小数部分（保留两位小数）
+        $micro = (int) round(($roundedSeconds - $totalSeconds) * 100);
 
         if ($hours > 0) {
-            return sprintf('%02d:%02d:%02d', $hours, $minutes, $secs);
+            return $micro > 0
+                ? sprintf('%02d:%02d:%02d.%02d', $hours, $minutes, $secs, $micro)
+                : sprintf('%02d:%02d:%02d', $hours, $minutes, $secs);
         }
 
-        return sprintf('%02d:%02d', $minutes, $secs);
+        return $micro > 0
+            ? sprintf('%02d:%02d.%02d', $minutes, $secs, $micro)
+            : sprintf('%02d:%02d', $minutes, $secs);
     }
 
     /**

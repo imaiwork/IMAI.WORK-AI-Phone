@@ -7,7 +7,7 @@
             <div class="text-[15px] font-black text-[#1E293B] text-center">
                 {{ msg || "生成失败" }}
             </div>
-            <p class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">Generation Failed</p>
+            <p class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">Generation Failed</p>
         </div>
     </ErrorTemplate.define>
 
@@ -20,7 +20,7 @@
                 </div>
                 <div>
                     <div class="text-[18px] text-[#1E293B] font-black tracking-tight">生成结果</div>
-                    <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">Artworks Gallery</div>
+                    <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">Artworks Gallery</div>
                 </div>
             </div>
         </div>
@@ -70,7 +70,7 @@
                                                 {{ currentLoadingText }}
                                             </div>
                                             <div
-                                                class="text-[9px] text-[#94A3B8] font-bold uppercase tracking-[0.2em] mt-1">
+                                                class="text-[9px] text-[#94A3B8] font-medium uppercase tracking-[0.2em] mt-1">
                                                 Creating Magic
                                             </div>
                                         </div>
@@ -155,7 +155,7 @@
                     class="w-20 h-20 bg-white rounded-[32px] flex items-center justify-center border border-[#F1F5F9] mb-4">
                     <Icon name="el-icon-Picture" :size="32" color="#CBD5E1"></Icon>
                 </div>
-                <p class="text-[#94A3B8] font-bold text-sm">暂无生成作品</p>
+                <p class="text-[#94A3B8] font-medium text-sm">暂无生成作品</p>
                 <p class="text-[10px] text-[#CBD5E1] uppercase tracking-[0.3em] mt-1">Empty Gallery</p>
             </div>
         </div>

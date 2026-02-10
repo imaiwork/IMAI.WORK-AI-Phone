@@ -26,6 +26,14 @@ class WebWorkerHandler extends BaseMessageHandler
             }
             $worker = $this->service->getWorker();
             if (isset($worker->uidConnections[$uid])) {
+
+                foreach ($worker->uidConnections as $connection) {
+                    if($connection->userid == $this->userId && $connection->uid !== $uid){
+                        $this->setLog('删除用户旧的socket连接, 设备号:' . $connection->userid . ', uid:' . $connection->uid . ', name:' . $connection->name, 'ws');
+                        $connection->close();
+                    }
+                }
+
                 $worker->uidConnections[$uid]->apptype = WorkerEnum::WS_WEB_TYPE;
                 $worker->uidConnections[$uid]->userid = $content['userId'] ?? 0;
                 $worker->uidConnections[$uid]->clientType = 'webUser';

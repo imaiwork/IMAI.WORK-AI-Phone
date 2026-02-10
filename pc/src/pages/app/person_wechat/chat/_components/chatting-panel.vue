@@ -94,7 +94,7 @@
             </div>
             <div class="flex justify-end mt-1">
                 <ElButton color="#E9E9E9" @click="contentPost">
-                    <span class="text-[#07C160] font-bold">发送（Enter）</span>
+                    <span class="text-[#07C160] font-medium">发送（Enter）</span>
                 </ElButton>
             </div>
             <div class="absolute top-[60px] right-2 z-[1000]" v-if="inputContent.contentType != ContentTypeEnum.Text">

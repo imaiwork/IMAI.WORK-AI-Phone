@@ -1,8 +1,8 @@
 <template>
     <view class="w-full h-full" @click="toDetail">
         <view class="flex items-center justify-between">
-            <view class="font-bold break-all line-clamp-1">{{ item.name }}</view>
-            <view class="flex items-center font-bold gap-x-1">
+            <view class="font-medium break-all line-clamp-1">{{ item.name }}</view>
+            <view class="flex items-center font-medium gap-x-1">
                 <text>{{ item.success_puzzle_count }}</text>
                 <text class="text-[#B2B2B2]">张</text>
                 <u-icon name="arrow-right" color="#B2B2B2" :size="20"></u-icon>
@@ -26,7 +26,7 @@
             <template v-else class="">
                 <view class="flex items-center gap-x-2">
                     <image src="@/packages/static/icons/stop.svg" class="w-[28rpx] h-[28rpx]"></image>
-                    <text class="text-[#F12A46] font-bold">拼图失败</text>
+                    <text class="text-[#F12A46] font-medium">拼图失败</text>
                 </view>
                 <view class="text-center text-[20rpx] text-[#00000066] w-[70%] mt-1">{{ item.remark }}</view>
             </template>
@@ -130,7 +130,7 @@ const previewImage = (urls: string[], index: number) => {
     }
 }
 .gen-loading-text {
-    @apply font-bold;
+    @apply font-medium;
     background: linear-gradient(90deg, #9879df 0%, #706fd1 34.73%, #277ef2 73.61%, #2adbc8 101%);
     background-clip: text;
     -webkit-background-clip: text;

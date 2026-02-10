@@ -6,7 +6,7 @@
                     <view
                         v-for="(item, index) in modelTypes"
                         :key="index"
-                        class="rounded-[12rpx] font-bold flex items-center justify-center z-10 transition-colors duration-500"
+                        class="rounded-[12rpx] font-medium flex items-center justify-center z-10 transition-colors duration-500"
                         :class="{ 'text-white': modelIndex === index }"
                         @click="modelIndex = index">
                         {{ item.name }}
@@ -19,7 +19,7 @@
             <scroll-view class="h-full" scroll-y>
                 <view class="px-4 pb-[100rpx]">
                     <view class="px-[40rpx] py-[30rpx] rounded-[20rpx] bg-white">
-                        <view class="font-bold text-[30rpx]"> 线索词任务结束后设置 </view>
+                        <view class="font-medium text-[30rpx]"> 线索词任务结束后设置 </view>
                         <view class="mt-[36rpx]">
                             <u-radio-group v-model="formData.type" class="w-full">
                                 <view class="flex justify-between w-full">
@@ -37,7 +37,7 @@
                                 </view>
                             </u-radio-group>
                             <view class="mt-[36rpx]" v-if="formData.type === 2">
-                                <view class="font-bold text-primary">AI补充的线索词方向：</view>
+                                <view class="font-medium text-primary">AI补充的线索词方向：</view>
                                 <view
                                     class="bg-[#F3F3F3] rounded-[16rpx] px-[26rpx] mt-[16rpx] h-[90rpx] flex items-center">
                                     <u-input
@@ -51,10 +51,10 @@
                     </view>
                     <view class="mt-[50rpx]">
                         <view class="flex items-center justify-between">
-                            <view class="font-bold text-[30rpx]"> 获客线索词组 </view>
+                            <view class="font-medium text-[30rpx]"> 获客线索词组 </view>
                             <view class="flex items-center gap-x-1" @click="handleAddClue">
                                 <u-icon name="plus" color="#0065FB" size="20"></u-icon>
-                                <text class="text-primary font-bold">增加词组</text>
+                                <text class="text-primary font-medium">增加词组</text>
                             </view>
                         </view>
                         <view class="mt-[24rpx]">
@@ -66,7 +66,7 @@
                                     @click="handleEditClue(index)">
                                     <view class="flex items-center justify-between gap-x-4">
                                         <view class="flex items-center" @click.stop="handleEditClueName(index)">
-                                            <text class="text-[30rpx] font-bold mr-2 break-all line-clamp-1">{{
+                                            <text class="text-[30rpx] font-medium mr-2 break-all line-clamp-1">{{
                                                 item.name
                                             }}</text>
                                             <image
@@ -101,13 +101,13 @@
                                     class="border border-solid rounded-[20rpx] w-fit px-4 h-[88rpx] flex items-center justify-center mx-auto"
                                     @click="handleAddClue">
                                     <u-icon name="plus" size="20"></u-icon>
-                                    <text class="font-bold ml-1">添加线索词</text>
+                                    <text class="font-medium ml-1">添加线索词</text>
                                 </view>
                             </view>
                         </view>
                     </view>
                     <view class="mt-[50rpx]">
-                        <view class="font-bold text-[30rpx]"> 评论话术 </view>
+                        <view class="font-medium text-[30rpx]"> 评论话术 </view>
                         <view class="mt-[36rpx] bg-white rounded-[20rpx] px-[40rpx] py-[24rpx]">
                             <u-radio-group v-model="formData.comment_type" class="w-full">
                                 <view class="flex justify-between w-full">
@@ -128,7 +128,7 @@
                                 <view
                                     v-for="(item, index) in formData.comment_list"
                                     :key="index"
-                                    class="border border-solid border-[#E5E5E5] rounded-[20rpx] px-2 py-[12rpx] flex items-center gap-x-2 break-all"
+                                    class="border border-solid border-[#E5E5E5] rounded-[20rpx] px-2 py-[12rpx] flex items-center gap-x-2"
                                     @click="handleEditComment(index)">
                                     {{ item }}
                                     <view
@@ -138,16 +138,16 @@
                                     </view>
                                 </view>
                                 <view
-                                    class="border border-solid border-[#0065FB] rounded-[12rpx] px-[28rpx] h-[60rpx] flex items-center justify-center"
+                                    class="border border-solid border-[#0065FB] rounded-[20rpx] px-[28rpx] h-[60rpx] flex items-center justify-center"
                                     @click="handleEditComment(-1)">
                                     <u-icon name="plus" color="#0065FB" size="20"></u-icon>
-                                    <text class="text-primary font-bold ml-1">添加</text>
+                                    <text class="text-primary font-medium ml-1">添加</text>
                                 </view>
                             </view>
                         </view>
                     </view>
                     <view class="mt-[50rpx]" v-if="modelIndex === 1">
-                        <view class="font-bold text-[30rpx]"> 评论词筛选 </view>
+                        <view class="font-medium text-[30rpx]"> 评论词筛选 </view>
                         <view
                             class="flex flex-wrap gap-2 mt-[36rpx] bg-white rounded-[20rpx] px-[40rpx] py-[24rpx]"
                             v-if="formData.comment_filter_list.length > 0">
@@ -163,10 +163,10 @@
                                 </view>
                             </view>
                             <view
-                                class="border border-solid border-[#0065FB] rounded-[12rpx] px-[28rpx] h-[60rpx] flex items-center justify-center"
+                                class="border border-solid border-[#0065FB] rounded-[20rpx] px-[28rpx] h-[60rpx] flex items-center justify-center"
                                 @click="openCommentFilterEdit">
                                 <u-icon name="plus" color="#0065FB" size="20"></u-icon>
-                                <text class="text-primary font-bold">编辑</text>
+                                <text class="text-primary font-medium">编辑</text>
                             </view>
                         </view>
                         <view v-else class="mt-10">
@@ -174,15 +174,15 @@
                                 class="border border-solid rounded-[20rpx] w-fit px-4 h-[88rpx] flex items-center justify-center mx-auto"
                                 @click="openCommentFilterEdit">
                                 <u-icon name="plus" size="20"></u-icon>
-                                <text class="font-bold ml-1">添加评论词筛选</text>
+                                <text class="font-medium ml-1">添加评论词筛选</text>
                             </view>
                         </view>
                     </view>
                     <view class="mt-[50rpx]" v-if="modelIndex === 1">
-                        <view class="font-bold text-[30rpx]"> 附加动作设置 </view>
+                        <view class="font-medium text-[30rpx]"> 附加动作设置 </view>
                         <view class="mt-[20rpx] rounded-[20rpx] bg-white px-[36rpx]">
                             <view class="flex items-center justify-between py-[28rpx]">
-                                <text class="font-bold">评论附带点赞</text>
+                                <text class="font-medium">评论附带点赞</text>
                                 <u-switch
                                     v-model="formData.comment_like"
                                     active-value="1"
@@ -192,7 +192,7 @@
 
                             <template v-if="false">
                                 <view class="flex items-center justify-between py-[28rpx]">
-                                    <text class="font-bold">评论附带关注</text>
+                                    <text class="font-medium">评论附带关注</text>
                                     <u-switch
                                         v-model="formData.comment_follow"
                                         active-value="1"
@@ -202,12 +202,14 @@
                                 <view
                                     class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
                                     @click="showCommentTimePopup = true">
-                                    <text class="font-bold flex-shrink-0">评论时间</text>
+                                    <text class="font-medium flex-shrink-0">评论时间</text>
                                     <view class="flex items-center gap-x-1">
                                         <text
                                             class="line-clamp-1 break-all"
                                             :class="
-                                                formData.comment_time > -1 ? 'text-primary font-bold' : 'text-[#B2B2B2]'
+                                                formData.comment_time > -1
+                                                    ? 'text-primary font-medium'
+                                                    : 'text-[#B2B2B2]'
                                             "
                                             >{{ getCommentTimeLabel || "请选择" }}</text
                                         >
@@ -217,12 +219,12 @@
                                 <view
                                     class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
                                     @click="showChooseRegionPopup = true">
-                                    <text class="font-bold flex-shrink-0">地区筛选</text>
+                                    <text class="font-medium flex-shrink-0">地区筛选</text>
                                     <view class="flex items-center gap-x-1">
                                         <text
                                             class="line-clamp-1 break-all"
                                             :class="
-                                                formData.comment_region ? 'text-primary font-bold' : 'text-[#B2B2B2]'
+                                                formData.comment_region ? 'text-primary font-medium' : 'text-[#B2B2B2]'
                                             "
                                             >{{ formData.comment_region || "请选择" }}</text
                                         >
@@ -232,12 +234,12 @@
                                 <view
                                     class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
                                     @click="handleEditCommentGender">
-                                    <text class="font-bold flex-shrink-0">用户性别</text>
+                                    <text class="font-medium flex-shrink-0">用户性别</text>
                                     <view class="flex items-center gap-x-1">
                                         <text
-                                            class="font-bold line-clamp-1 break-all"
+                                            class="font-medium line-clamp-1 break-all"
                                             :class="
-                                                formData.comment_gender ? 'text-primary font-bold' : 'text-[#B2B2B2]'
+                                                formData.comment_gender ? 'text-primary font-medium' : 'text-[#B2B2B2]'
                                             "
                                             >{{ formData.comment_gender || "请选择" }}</text
                                         >
@@ -247,9 +249,9 @@
                                 <view
                                     class="flex items-center justify-between py-[28rpx] border-[0] border-b border-solid border-[#F2F2F2] gap-2"
                                     @click="handleEditCommentAge">
-                                    <text class="font-bold flex-shrink-0">用户年龄</text>
+                                    <text class="font-medium flex-shrink-0">用户年龄</text>
                                     <view class="flex items-center gap-x-1">
-                                        <text class="line-clamp-1 break-all text-primary font-bold">{{
+                                        <text class="line-clamp-1 break-all text-primary font-medium">{{
                                             formData.comment_age
                                         }}</text>
                                         <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
@@ -258,9 +260,9 @@
                                 <view
                                     class="flex items-center justify-between py-[28rpx] gap-2"
                                     @click="handleEditCommentAccountFeature">
-                                    <text class="font-bold flex-shrink-0">账号特征</text>
+                                    <text class="font-medium flex-shrink-0">账号特征</text>
                                     <view class="flex items-center gap-x-1">
-                                        <text class="line-clamp-1 break-all text-primary font-bold">{{
+                                        <text class="line-clamp-1 break-all text-primary font-medium">{{
                                             formData.comment_account_feature == "0" ? "全部" : "跳过认证号"
                                         }}</text>
                                         <u-icon name="arrow-right" size="22" color="#B2B2B2"></u-icon>
@@ -274,7 +276,7 @@
         </view>
         <view class="bg-white flex-shrink-0 pb-5 pt-4 px-6">
             <view
-                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-bold flex items-center justify-center"
+                class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-medium flex items-center justify-center"
                 @click="handleSaveConfig">
                 确定保存
             </view>

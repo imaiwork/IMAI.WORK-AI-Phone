@@ -21,7 +21,7 @@ class FileChunksPullCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
-        KnowledgeLogic::fileChunksPull();
+        //KnowledgeLogic::fileChunksPull();
         return true;
     }
 }

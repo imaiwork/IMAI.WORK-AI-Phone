@@ -11,7 +11,7 @@
                 v-if="type === 2"></image>
         </view>
         <view class="">
-            <view class="font-bold text-[30rpx] break-all"> {{ data.name }} </view>
+            <view class="font-medium text-[30rpx] break-all"> {{ data.name }} </view>
             <view class="text-xs text-[#0000004d] flex items-center gap-x-1 mt-1">
                 <view>{{ type === 1 ? formatFileSize(data.size || 0) : data.time }}</view>
                 <view class="w-[2rpx] h-[22rpx] bg-[#CCCCCC] mx-[10rpx]"></view>

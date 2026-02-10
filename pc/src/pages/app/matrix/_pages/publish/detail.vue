@@ -19,12 +19,12 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="p-4 rounded-2xl bg-slate-50 border border-[#F1F5F9]">
-                        <p class="text-[10px] text-[#94A3B8] font-bold uppercase mb-1">任务类型</p>
-                        <p class="text-[13px] font-bold text-[#334155]">{{ detail?.task_category }}</p>
+                        <p class="text-[10px] text-[#94A3B8] font-medium uppercase mb-1">任务类型</p>
+                        <p class="text-[13px] font-medium text-[#334155]">{{ detail?.task_category }}</p>
                     </div>
                     <div class="p-4 rounded-2xl bg-slate-50 border border-[#F1F5F9]">
-                        <p class="text-[10px] text-[#94A3B8] font-bold uppercase mb-1">每日发布量</p>
-                        <p class="text-[13px] font-bold text-[#1E293B]">
+                        <p class="text-[10px] text-[#94A3B8] font-medium uppercase mb-1">每日发布量</p>
+                        <p class="text-[13px] font-medium text-[#1E293B]">
                             {{ detail?.count || 0 }} <span class="text-[10px] font-normal text-[#94A3B8]">条 / 天</span>
                         </p>
                     </div>
@@ -42,7 +42,7 @@
                         </p>
                     </div>
                     <div class="text-right flex flex-col items-end">
-                        <span class="text-[10px] text-[#94A3B8] font-bold uppercase">创建于</span>
+                        <span class="text-[10px] text-[#94A3B8] font-medium uppercase">创建于</span>
                         <span class="text-[10px] text-[#64748B] font-medium">{{
                             detail?.create_time?.split(" ")[0] || "-"
                         }}</span>
@@ -55,7 +55,7 @@
                     <span class="w-1.5 h-4 bg-primary rounded-full"></span>
                     <span class="text-xs font-black tracking-widest text-[#64748B] uppercase">发布动态记录</span>
                 </div>
-                <div class="text-[10px] px-2.5 py-1 rounded-full bg-[#F1F5F9] text-[#64748B] font-bold">
+                <div class="text-[10px] px-2.5 py-1 rounded-full bg-[#F1F5F9] text-[#64748B] font-medium">
                     共 {{ dataLists.length }} 条
                 </div>
             </div>
@@ -74,7 +74,7 @@
                                             >#{{ String(index + 1).padStart(2, "0") }}</span
                                         >
                                         <span class="w-1 h-1 rounded-full bg-[#CBD5E1]"></span>
-                                        <span class="text-[10px] font-bold text-[#64748B]">{{
+                                        <span class="text-[10px] font-medium text-[#64748B]">{{
                                             item.material_type == 2 ? "图文" : "视频"
                                         }}</span>
                                     </div>
@@ -110,7 +110,7 @@
                                                 <div
                                                     class="flex flex-col items-center justify-center gap-2 w-full h-full bg-slate-50 text-[#CBD5E1]">
                                                     <Icon name="el-icon-Picture" :size="32"></Icon>
-                                                    <span class="text-[10px] font-bold opacity-60">图片加载失败</span>
+                                                    <span class="text-[10px] font-medium opacity-60">图片加载失败</span>
                                                 </div>
                                             </template>
                                         </ElImage>
@@ -131,7 +131,7 @@
                                 </div>
 
                                 <div class="space-y-3">
-                                    <h4 class="text-sm font-bold text-[#1E293B] line-clamp-1">
+                                    <h4 class="text-sm font-medium text-[#1E293B] line-clamp-1">
                                         {{ item.material_title }}
                                     </h4>
                                     <p class="text-[12px] text-[#64748B] leading-relaxed line-clamp-2">
@@ -142,14 +142,14 @@
                                         <span
                                             v-for="topic in item.material_tag"
                                             :key="topic"
-                                            class="text-[10px] font-bold text-primary bg-[#EEF2FF] px-2 py-0.5 rounded"
+                                            class="text-[10px] font-medium text-primary bg-[#EEF2FF] px-2 py-0.5 rounded"
                                             >#{{ topic }}</span
                                         >
                                     </div>
 
                                     <div class="flex items-center justify-between pt-4 mt-2 border-t border-[#F1F5F9]">
                                         <div class="flex flex-col">
-                                            <span class="text-[9px] text-[#94A3B8] font-bold uppercase tracking-wider"
+                                            <span class="text-[9px] text-[#94A3B8] font-medium uppercase tracking-wider"
                                                 >发布时间</span
                                             >
                                             <span class="text-[11px] text-[#334155] font-medium">{{

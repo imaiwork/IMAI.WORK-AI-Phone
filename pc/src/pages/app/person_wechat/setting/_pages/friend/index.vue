@@ -8,14 +8,14 @@
                 </div>
                 <div>
                     <div class="text-[18px] text-[#1E293B] font-black tracking-tight">自动同意好友申请</div>
-                    <div class="text-[10px] text-[#94A3B8] font-bold uppercase tracking-widest">
+                    <div class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">
                         Auto Friend Acceptance
                     </div>
                 </div>
             </div>
             <ElButton
                 type="primary"
-                class="w-[180px] !h-[50px] !rounded-xl !text-[16px] !font-bold"
+                class="w-[180px] !h-[50px] !rounded-xl !text-[16px] !font-medium"
                 :loading="isLock"
                 @click="lockConfirm">
                 <Icon name="el-icon-CircleCheck" />
@@ -55,7 +55,7 @@
                                         :min="0"
                                         controls-position="right"
                                         class="custom-number" />
-                                    <span class="text-[13px] font-bold text-tx-placeholder">个 / 每天</span>
+                                    <span class="text-[13px] font-medium text-tx-placeholder">个 / 每天</span>
                                 </div>
                             </div>
 
@@ -70,7 +70,7 @@
                                         :min="0"
                                         controls-position="right"
                                         class="custom-number" />
-                                    <span class="text-[13px] font-bold text-tx-placeholder">分钟 / 间隔</span>
+                                    <span class="text-[13px] font-medium text-tx-placeholder">分钟 / 间隔</span>
                                 </div>
                             </div>
 
@@ -111,7 +111,7 @@
                                 <div class="w-[4px] h-[18px] bg-emerald-500 rounded-full"></div>
                                 <span class="text-[16px] font-black text-[#1E293B]">好友来源过滤</span>
                             </div>
-                            <div class="text-[12px] text-emerald-600 font-bold bg-[#d1fae5]/50 px-3 py-1 rounded-lg">
+                            <div class="text-[12px] text-emerald-600 font-medium bg-[#d1fae5]/50 px-3 py-1 rounded-lg">
                                 智能过滤中
                             </div>
                         </div>
@@ -136,7 +136,7 @@
                                                 <div class="check-box">
                                                     <Icon v-if="acceptSource === item.id" name="el-icon-Check" />
                                                 </div>
-                                                <span class="text-[14px] font-bold">{{ item.label }}</span>
+                                                <span class="text-[14px] font-medium">{{ item.label }}</span>
                                             </div>
                                             <span class="opacity-20 leading-[0]">
                                                 <Icon :name="getSourceIcon(item.id)" :size="20" />

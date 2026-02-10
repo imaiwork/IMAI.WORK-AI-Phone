@@ -57,10 +57,10 @@
                         </view>
                     </view>
                     <view class="mt-[60rpx]">
-                        <view class="text-[30rpx] font-bold">常见问题</view>
+                        <view class="text-[30rpx] font-medium">常见问题</view>
                         <view class="mt-[40rpx] flex flex-col gap-y-[40rpx]">
                             <view>
-                                <view class="text-[26rpx] font-bold">
+                                <view class="text-[26rpx] font-medium">
                                     Q：为什么每次生成视频后，总会退款一部分算力?
                                 </view>
                                 <view class="text-[#7D7D7E] text-[26rpx] mt-[20rpx] leading-5">
@@ -68,19 +68,21 @@
                                 </view>
                             </view>
                             <view>
-                                <view class="text-[26rpx] font-bold"> Q：视频生成失败了，还会扣我的算力吗 ? </view>
+                                <view class="text-[26rpx] font-medium"> Q：视频生成失败了，还会扣我的算力吗 ? </view>
                                 <view class="text-[#7D7D7E] text-[26rpx] mt-[20rpx] leading-5">
                                     1.生成失败的视频，会退回对应预扣的算力。
                                 </view>
                             </view>
                             <view>
-                                <view class="text-[26rpx] font-bold"> Q：声音克隆什么时候扣费 ? </view>
+                                <view class="text-[26rpx] font-medium"> Q：声音克隆什么时候扣费 ? </view>
                                 <view class="text-[#7D7D7E] text-[26rpx] mt-[20rpx] leading-5">
                                     1.如果是单独克隆声音，只有在最终保存声音时才会扣除。保存后的声音将可以在数字人视频制作中使用。对于数字人定制，则会在提交所有内容时统一扣费。
                                 </view>
                             </view>
                             <view>
-                                <view class="text-[26rpx] font-bold"> Q：为什么数字人定制失败后只退回部分算力 ? </view>
+                                <view class="text-[26rpx] font-medium">
+                                    Q：为什么数字人定制失败后只退回部分算力 ?
+                                </view>
                                 <view class="text-[#7D7D7E] text-[26rpx] mt-[20rpx] leading-5">
                                     1.数字人定制包括形象定制和声音定制。如果形象定制失败但声音定制成功，仅退回与形象定制相关的算力。重新提交时，只需重新训练形象，无需再次训练声音，系统默认会选中“不克隆的声音”。
                                 </view>

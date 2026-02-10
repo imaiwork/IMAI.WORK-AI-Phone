@@ -9,7 +9,7 @@
                         <Icon name="el-icon-ArrowLeft"></Icon>
                     </span>
                 </div>
-                <div class="text-sm font-bold text-tx-regular">返回列表</div>
+                <div class="text-sm font-medium text-tx-regular">返回列表</div>
             </div>
             <div class="flex items-center gap-3">
                 <ElButton
@@ -67,7 +67,7 @@
                                                     <Icon name="el-icon-Upload" color="var(--color-primary)" />
                                                 </div>
                                                 <div>
-                                                    <div class="font-bold text-sm">表格导入</div>
+                                                    <div class="font-medium text-sm">表格导入</div>
                                                     <div class="text-xs text-tx-secondary">上传CSV/Excel文件</div>
                                                 </div>
                                             </div>
@@ -86,7 +86,7 @@
                                                     <Icon name="el-icon-Link" color="var(--green-500)" />
                                                 </div>
                                                 <div>
-                                                    <div class="font-bold text-sm">获客任务引用</div>
+                                                    <div class="font-medium text-sm">获客任务引用</div>
                                                     <div class="text-xs text-tx-secondary">使用已有获客数据</div>
                                                 </div>
                                             </div>
@@ -122,7 +122,7 @@
                             <template v-if="formData.source == 1">
                                 <div class="space-y-4">
                                     <div class="flex items-center justify-between">
-                                        <div class="text-sm font-bold text-tx-regular">导入模版</div>
+                                        <div class="text-sm font-medium text-tx-regular">导入模版</div>
                                         <a
                                             href="/static/file/template/wechatidcsv.csv"
                                             target="_blank"
@@ -150,7 +150,7 @@
                                                     :size="24"
                                                     color="var(--color-primary)"></Icon>
                                             </div>
-                                            <div class="text-sm font-bold text-tx-regular">
+                                            <div class="text-sm font-medium text-tx-regular">
                                                 点击添加或将文件拖拽到该处
                                             </div>
                                             <div class="text-xs text-tx-secondary mt-1">
@@ -194,12 +194,12 @@
 
                             <div class="space-y-6">
                                 <div>
-                                    <div class="text-sm font-bold text-tx-regular mb-4">执行周期</div>
+                                    <div class="text-sm font-medium text-tx-regular mb-4">执行周期</div>
                                     <div class="flex flex-wrap gap-2">
                                         <div
                                             v-for="item in [1, 3, 5, 10, 30]"
                                             :key="item"
-                                            class="px-5 py-2 rounded-xl cursor-pointer text-sm font-bold transition-all border"
+                                            class="px-5 py-2 rounded-xl cursor-pointer text-sm font-medium transition-all border"
                                             :class="
                                                 formData.task_frep == item && currentFrequency != 5
                                                     ? 'bg-primary text-white border-primary shadow-light'
@@ -209,7 +209,7 @@
                                             {{ item }}天
                                         </div>
                                         <div
-                                            class="px-5 py-2 rounded-xl cursor-pointer text-sm font-bold transition-all border"
+                                            class="px-5 py-2 rounded-xl cursor-pointer text-sm font-medium transition-all border"
                                             :class="
                                                 currentFrequency == 5
                                                     ? 'bg-primary text-white border-primary shadow-light'
@@ -232,7 +232,7 @@
                                 </div>
 
                                 <div class="pt-4 border-t border-dashed border-br-light">
-                                    <div class="text-sm font-bold text-tx-regular mb-4">每日执行时段</div>
+                                    <div class="text-sm font-medium text-tx-regular mb-4">每日执行时段</div>
                                     <ElTimePicker
                                         v-model="formData.time_config"
                                         type="time"
@@ -247,7 +247,7 @@
                                 </div>
 
                                 <div v-if="taskErrorMsg" class="p-4 bg-red-50 border border-red-200 rounded-xl">
-                                    <div class="text-sm font-bold text-red-600 mb-2">任务冲突</div>
+                                    <div class="text-sm font-medium text-red-600 mb-2">任务冲突</div>
                                     <div class="text-xs text-red-500">{{ taskErrorMsg }}</div>
                                 </div>
                             </div>
@@ -264,7 +264,7 @@
                                 <div class="flex items-start gap-3">
                                     <Icon name="el-icon-Warning" color="var(--amber-500)" />
                                     <div class="text-xs text-amber-700">
-                                        <div class="font-bold mb-1">重要提醒</div>
+                                        <div class="font-medium mb-1">重要提醒</div>
                                         <div>开启此任务请确保当前网络是常用安全网络，加好友账号为常态化老号</div>
                                     </div>
                                 </div>
@@ -398,7 +398,7 @@
                                                 :key="index"
                                                 class="bg-white border border-slate-100 pl-3 pr-2 py-2 rounded-xl flex items-center group hover:border-primary transition-all cursor-pointer"
                                                 @click="handleEditRemark(item, index)">
-                                                <span class="text-xs font-bold text-slate-600 mr-3">{{ item }}</span>
+                                                <span class="text-xs font-medium text-slate-600 mr-3">{{ item }}</span>
                                                 <button
                                                     @click.stop="handleDeleteRemark(index)"
                                                     class="w-5 h-5 rounded-md bg-slate-100 text-slate-400 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center">

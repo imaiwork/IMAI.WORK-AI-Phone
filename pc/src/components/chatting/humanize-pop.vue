@@ -25,7 +25,7 @@
             </div>
         </template>
         <div>
-            <div class="text-lg font-bold">参数设置</div>
+            <div class="text-lg font-medium">参数设置</div>
             <div class="mt-4">
                 <ElForm :model="formData" label-width="100px">
                     <ElFormItem label="上下文数">

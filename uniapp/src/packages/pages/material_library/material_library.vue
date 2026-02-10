@@ -3,7 +3,7 @@
         <view class="bg-white shadow-sm">
             <view class="flex items-center justify-between px-4 py-3">
                 <view class="flex items-center gap-3">
-                    <text class="text-[32rpx] font-bold text-[#1F2937] max-w-[150rpx] truncate">{{
+                    <text class="text-[32rpx] font-medium text-[#1F2937] max-w-[150rpx] truncate">{{
                         isAll ? `${currentGroupItem.name || "素材库"}` : "素材分组"
                     }}</text>
                     <view class="w-[2rpx] h-[28rpx] bg-[#E5E7EB]"></view>
@@ -40,7 +40,7 @@
                         :key="index"
                         class="text-xs relative px-[32rpx] py-[12rpx] rounded-full transition-all duration-300 z-10"
                         :class="{
-                            'text-white font-bold': materialTypeIndex === index,
+                            'text-white font-medium': materialTypeIndex === index,
                             'text-[#64748B]': materialTypeIndex !== index,
                         }"
                         @click="handleMaterialType(item.key, index)">
@@ -209,7 +209,7 @@
                             <u-icon v-if="isAllSelected" name="checkbox-mark" color="#fff" size="20"></u-icon>
                         </view>
                         <text
-                            class="text-[28rpx] font-bold"
+                            class="text-[28rpx] font-medium"
                             :class="[isAllSelected ? 'text-primary' : 'text-[#1E293B]']"
                             >全选</text
                         >
@@ -219,14 +219,14 @@
                 <view class="flex items-center gap-x-3">
                     <template v-if="isHandle">
                         <view
-                            class="h-[76rpx] px-5 bg-[#F1F5F9] text-[#1E293B] rounded-full flex items-center justify-center text-[26rpx] font-bold active:scale-95 transition-all"
+                            class="h-[76rpx] px-5 bg-[#F1F5F9] text-[#1E293B] rounded-full flex items-center justify-center text-[26rpx] font-medium active:scale-95 transition-all"
                             @click="openMoveGroupPopup">
                             <u-icon name="folder-open" size="28" class="mr-1"></u-icon>
                             移动至
                         </view>
 
                         <view
-                            class="min-w-[180rpx] h-[76rpx] px-4 rounded-full flex items-center justify-center text-white text-[26rpx] font-bold transition-all active:scale-95"
+                            class="min-w-[180rpx] h-[76rpx] px-4 rounded-full flex items-center justify-center text-white text-[26rpx] font-medium transition-all active:scale-95"
                             :class="[
                                 handleList.length > 0
                                     ? 'bg-[#FF2442] shadow-lg shadow-[#FF2442]/20'
@@ -240,7 +240,7 @@
 
                     <view
                         v-else
-                        class="h-[76rpx] px-6 bg-[#1E293B] text-white flex items-center justify-center rounded-full text-[26rpx] font-bold shadow-lg shadow-gray-300 active:scale-95 transition-all"
+                        class="h-[76rpx] px-6 bg-[#1E293B] text-white flex items-center justify-center rounded-full text-[26rpx] font-medium shadow-lg shadow-gray-300 active:scale-95 transition-all"
                         @click="isHandle = true">
                         <u-icon name="setting" color="#fff" size="28" class="mr-1"></u-icon>
                         批量管理
@@ -303,12 +303,12 @@
                     </view>
                     <view class="flex items-center gap-x-[50rpx] p-3">
                         <view
-                            class="w-[240rpx] h-[100rpx] flex items-center justify-center bg-[#F3F3F3] font-bold rounded-[20rpx]"
+                            class="w-[240rpx] h-[100rpx] flex items-center justify-center bg-[#F3F3F3] font-medium rounded-[20rpx]"
                             @click="closeAddGroupPopup">
                             取消
                         </view>
                         <view
-                            class="flex-1 h-[100rpx] flex items-center justify-center bg-black text-white font-bold rounded-[20rpx]"
+                            class="flex-1 h-[100rpx] flex items-center justify-center bg-black text-white font-medium rounded-[20rpx]"
                             @click="confirmGroup">
                             确定
                         </view>
@@ -319,7 +319,7 @@
 
         <u-popup v-model="showEditPopup" mode="center" width="90%" :border-radius="20">
             <view class="p-4 bg-white rounded-[20rpx]">
-                <view class="text-[30rpx] font-bold text-center mt-2">编辑名称</view>
+                <view class="text-[30rpx] font-medium text-center mt-2">编辑名称</view>
                 <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
                     <u-input
                         v-model="newName"
@@ -330,7 +330,7 @@
                 </view>
                 <view class="flex items-center gap-x-5 mt-[56rpx]">
                     <view
-                        class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold text-[#000000b3]"
+                        class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
                         @click="
                             showEditPopup = false;
                             newName = '';
@@ -338,7 +338,7 @@
                         取消
                     </view>
                     <view
-                        class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-bold text-white"
+                        class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
                         @click="confirmUpdateGroupName">
                         确定
                     </view>
@@ -348,7 +348,7 @@
 
         <u-popup v-model="showAddGroupPopup" mode="center" width="90%" :border-radius="20">
             <view class="p-4 bg-white rounded-[20rpx]">
-                <view class="text-[30rpx] font-bold text-center mt-2">创建素材组</view>
+                <view class="text-[30rpx] font-medium text-center mt-2">创建素材组</view>
                 <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
                     <u-input
                         v-model="newName"
@@ -359,7 +359,7 @@
                 </view>
                 <view class="flex items-center gap-x-5 mt-[56rpx]">
                     <view
-                        class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-bold text-[#000000b3]"
+                        class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
                         @click="
                             showAddGroupPopup = false;
                             newName = '';
@@ -367,7 +367,7 @@
                         取消
                     </view>
                     <view
-                        class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-bold text-white"
+                        class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
                         @click="confirmAddGroupName">
                         确定
                     </view>

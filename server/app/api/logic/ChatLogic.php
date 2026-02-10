@@ -48,6 +48,7 @@ class ChatLogic extends ApiLogic
         $params['model'] = $params['model'] ?? 'deepseek'; //默认deepseek模型
         $params['file_info'] = $params['file_info'] ?? []; //文件信息
         $params['user_id'] = self::$uid ?? 0;
+        $params['quotes'] = $params['quotes'] ?? '';
         if (isset($params['model_id']) && !empty($params['model_id'])) {
             $params['model'] = ModelsCost::where('model_id', $params['model_id'])->value('alias') ?? $params['model'];
         }
@@ -255,6 +256,11 @@ class ChatLogic extends ApiLogic
         $request['context_num'] = $params['context_num'] ?? 5; //上下文数
         $request['file_info'] = $params['file_info'] ?? []; //文件信息
         $request['robot_id'] = $params['robot_id'] ?? 0; //机器人id
+        $request['quotes'] = $params['quotes'] ?? ''; //引用内容
+
+        if (!empty($params['quotes'])){
+            $request['message'] = '引用的内容：' . $params['quotes'] . "。引用结束>>" . $request['message'];
+        }
 
         if (isset($params['unique_id'])) {
             $request['unique_id'] = $params['unique_id'];
@@ -648,7 +654,7 @@ class ChatLogic extends ApiLogic
                 ->where('assistant_id', $params['assistant_id'])
                 ->whereIn('chat_type', [AccountLogEnum::TOKENS_DEC_COMMON_CHAT, AccountLogEnum::TOKENS_DEC_SCENE_CHAT, AccountLogEnum::TOKENS_DEC_KNOWLEDGE_CHAT, AccountLogEnum::TOKENS_DEC_OPENAI_CHAT])
                 ->where('task_id', $params['task_id'])
-                ->field('id,user_id,task_id,assistant_id,message,reasoning_content,usage_tokens,reply,file_ids,create_time,extra')
+                ->field('id,user_id,task_id,assistant_id,message,reasoning_content,usage_tokens,reply,file_ids,create_time,extra,quotes')
                 ->order('id asc')->select()
                 ->each(function ($item) use (&$logList) {
 
@@ -682,6 +688,7 @@ class ChatLogic extends ApiLogic
                         'tokens_info' => $item['usage_tokens'],
                         'extra' => json_decode($item['extra'], true) ?? [], //预留扩展字段
                         'file_info' => $extra['file'] ?? [],
+                        'quotes' => $item['quotes'],
                     ];
 
                     $logList[] = [
@@ -730,6 +737,28 @@ class ChatLogic extends ApiLogic
     }
 
     /**
+     * @desc 编辑聊天记录
+     * @param array $params
+     * @return true
+     */
+    public static function editChat(array $params): bool
+    {
+        try {
+            $log = ChatLog::where('id', $params['id'])->findOrEmpty();
+            if ($log->isEmpty()) {
+                throw new \Exception('聊天记录不存在');
+            }
+            $log->message = !empty($params['message']) ? $params['message'] : $log->message;
+            $log->reply   = !empty($params['reply']) ? $params['reply'] : $log->reply;
+            $log->save();
+            return true;
+        } catch (\Throwable $e) {
+            self::$error = $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
      * @desc 保存聊天记录
      * @return void
      * @date 2024/6/27 9:30
@@ -746,13 +775,13 @@ class ChatLogic extends ApiLogic
                                           'square_id'      => 0,
                                           'chat_model_id'  => 0,
                                           'emb_model_id'   => 0,
-                                          'ask'            => $request['question'],
+                                          'ask'            => self::cutAfterQuotesEnd($request['question']),
                                           'reply'          => $response['reply'],
                                           'reasoning'      => $response['reasoning_content'] ?? null,
                                           'images'         => '',
                                           'video'          => '',
                                           'files'          => '',
-                                          'quotes'         => '',
+                                          'quotes'         => $request['quotes'] ?? '',
                                           'context'        => json_encode($request['messages'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                                           'correlation'    => null,
                                           'flows'          => '',
@@ -778,14 +807,15 @@ class ChatLogic extends ApiLogic
                     'task_id'           => $request['task_id'],
                     'assistant_id'      => $request['assistant_id'] ?? 0,
                     'robot_id'          => $request['robot_id'] ?? 0,
-                    'message'           => $request['message'] ?? ($request['prompt'] ?? ''),
+                    'message'           => isset($request['message']) ? self::cutAfterQuotesEnd($request['message']) : (isset($request['prompt']) ? self::cutAfterQuotesEnd($request['prompt']) : ''),
                     'reply'             => $response['reply'],
-                    'chat_type' => $request['chat_type'] ?? 9006,
+                    'chat_type'         => $request['chat_type'] ?? 9006,
                     'usage_tokens'      => $response['usage_tokens'] ?? [],
                     'reasoning_content' => $response['reasoning_content'] ?? null,
                     'file_ids'          => !empty($request['file_id']) ? json_encode($request['file_id']) : '',
-                    'task_time' => isset($request['now']) ? time() - $request['now'] : 0,
+                    'task_time'         => isset($request['now']) ? time() - $request['now'] : 0,
                     'extra'             => json_encode($response['extra'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), //预留扩展字段
+                    'quotes'            => $request['quotes'] ?? '',
                 ];
                 ChatLog::create($chatLogData);
             }
@@ -795,7 +825,27 @@ class ChatLogic extends ApiLogic
     }
 
     /**
+     * 从字符串中找到"。引用结束>>"后，截取该位置之后的所有内容
+     * @param string $str 原始字符串
+     * @return string
+     */
+    public static function cutAfterQuotesEnd(string $str): string
+    {
+        $target = "。引用结束>>";
+        $pos = strpos($str, $target);
+
+        if ($pos === false) {
+            return $str;
+        }
+
+        $endPos = $pos + strlen($target);
+        return substr($str, $endPos);
+    }
+
+    /**
      * @desc tokens计费
+     * @param $request
+     * @param $tokens
      * @return void
      * @date 2024/12/17 10:46
      * @author dagouzi

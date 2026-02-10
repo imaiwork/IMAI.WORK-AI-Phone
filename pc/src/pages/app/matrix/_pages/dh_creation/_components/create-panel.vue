@@ -53,7 +53,7 @@
                             class="w-8 h-8 rounded-full bg-[#F9FAFB] flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
                             <Icon name="el-icon-ArrowLeft" :size="14"></Icon>
                         </div>
-                        <span class="text-sm font-bold text-[#64748B] group-hover:text-[#1E293B]">返回列表</span>
+                        <span class="text-sm font-medium text-[#64748B] group-hover:text-[#1E293B]">返回列表</span>
                     </div>
                     <div class="w-[1px] h-6 bg-[#E2E8F0]"></div>
                     <h2 class="text-base font-black text-[#1E293B]">
@@ -63,13 +63,13 @@
 
                 <div class="flex items-center gap-3">
                     <ElButton
-                        class="!rounded-xl !h-10 !px-8 !border-br !bg-white !text-[#475569] font-bold hover:!bg-slate-50"
+                        class="!rounded-xl !h-10 !px-8 !border-br !bg-white !text-[#475569] font-medium hover:!bg-slate-50"
                         @click="handleCancel"
                         >取消</ElButton
                     >
                     <ElButton
                         type="primary"
-                        class="!rounded-xl !h-10 !px-8 font-bold shadow-[#0065fb]/20 active:scale-95 transition-all"
+                        class="!rounded-xl !h-10 !px-8 font-medium shadow-[#0065fb]/20 active:scale-95 transition-all"
                         :loading="isCreateLock"
                         @click="handleCreateLockFn(CreateType.Create)">
                         {{ formData.id ? "更新任务" : "开始生成" }}
@@ -95,7 +95,7 @@
                     <ElTooltip placement="left">
                         <div
                             class="flex items-center gap-x-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-br cursor-help">
-                            <span class="text-[12px] font-bold text-[#64748B]">扣费规则</span>
+                            <span class="text-[12px] font-medium text-[#64748B]">扣费规则</span>
                             <Icon name="local-icon-tips2" :size="14"></Icon>
                         </div>
                         <template #content>
@@ -141,14 +141,14 @@
                                 <ElButton
                                     link
                                     type="primary"
-                                    class="!text-xs font-bold"
+                                    class="!text-xs font-medium"
                                     @click="handleCopywriting('fill')"
                                     >文案库填充</ElButton
                                 >
                                 <ElButton
                                     link
                                     type="primary"
-                                    class="!text-xs font-bold"
+                                    class="!text-xs font-medium"
                                     @click="handleCopywriting('add')"
                                     >新增</ElButton
                                 >
@@ -195,7 +195,7 @@
                             <ElButton
                                 link
                                 type="primary"
-                                class="!text-xs font-bold"
+                                class="!text-xs font-medium"
                                 @click="handleOpenAdvancedSetting()"
                                 v-if="clipConfig.is_open"
                                 >高级参数</ElButton
@@ -274,7 +274,7 @@
                                                                 <div
                                                                     class="w-1.5 h-1.5 rounded-full bg-[#0065fb]/40 group-hover:bg-primary"></div>
                                                                 <span
-                                                                    class="text-[13px] font-bold text-[#1E293B] truncate break-all">
+                                                                    class="text-[13px] font-medium text-[#1E293B] truncate break-all">
                                                                     {{ item.name }}
                                                                 </span>
                                                             </div>

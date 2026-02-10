@@ -4,7 +4,7 @@
             <div class="flex items-end justify-between mb-6">
                 <div>
                     <h1 class="text-[28px] font-[900] text-[#1E293B] tracking-tight">创作中心</h1>
-                    <p class="text-[13px] font-bold text-[#94A3B8] mt-1">释放 AI 潜能，开启无限创意空间</p>
+                    <p class="text-[13px] font-medium text-[#94A3B8] mt-1">释放 AI 潜能，开启无限创意空间</p>
                 </div>
             </div>
 

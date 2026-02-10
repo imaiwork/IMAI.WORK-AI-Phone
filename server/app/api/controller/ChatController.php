@@ -123,6 +123,16 @@ class ChatController extends BaseApiController
     }
 
     /**
+     * @desc 编辑聊天记录
+     * @return Json
+     */
+    public function editChat()
+    {
+        $params = $this->request->post();
+        return ChatLogic::editChat($params) ? $this->success() : $this->fail(ChatLogic::getError());
+    }
+
+    /**
      * @desc 场景聊天 - 助理信息
      * @return Json
      */

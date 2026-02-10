@@ -252,11 +252,9 @@ export default defineComponent({
                         const isDurationValid = fileDuration >= minDuration && fileDuration <= maxDuration;
                         if (!isHeightValid) {
                             feedback.msgError(`上传视频高度不能小于${videoMinHeight}或大于${videoMaxHeight}`);
-                        }
-                        if (!isWidthValid) {
+                        } else if (!isWidthValid) {
                             feedback.msgError(`上传视频宽度不能小于${videoMinWidth}或大于${videoMaxWidth}`);
-                        }
-                        if (!isDurationValid) {
+                        } else if (!isDurationValid) {
                             feedback.msgError(`上传视频时长不能小于${minDuration}秒或大于${maxDuration}秒`);
                         }
                         resolve(isHeightValid && isWidthValid && isDurationValid);

@@ -139,6 +139,7 @@ export enum TokensSceneEnum {
     NEWS_MIX_CUT_TITLE = "news_mixcut_title",
     SHANJIAN_COPYWRITING_CREATE = "shanjian_copywriting_create",
     AI_SHANJIAN_AUTHORIZED_VIDEO = "ai_shanjian_authorized_video",
+    COZE_COPYWRITING = "coze_copywriting",
 }
 
 // 应用类型

@@ -18,7 +18,7 @@
                     <div class="w-6 h-6 flex items-center justify-center rounded-md border border-[#ffffff1a]">
                         <Icon name="local-icon-windows" :size="14"></Icon>
                     </div>
-                    <div class="text-[20px] text-white font-bold">从已有音色中选择</div>
+                    <div class="text-[20px] text-white font-medium">从已有音色中选择</div>
                 </div>
                 <div class="w-6 h-6" @click="close">
                     <close-btn :theme="ThemeEnum.DARK" />

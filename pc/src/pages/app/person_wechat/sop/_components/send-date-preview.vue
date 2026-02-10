@@ -12,8 +12,8 @@
                     <img src="@/assets/images/7_day.png" class="w-6 h-6" />
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-[18px] font-bold text-slate-800 tracking-tight">推送日期全景预览</span>
-                    <span class="text-[11px] text-primary font-bold uppercase tracking-[0.2em] opacity-70"
+                    <span class="text-[18px] font-medium text-slate-800 tracking-tight">推送日期全景预览</span>
+                    <span class="text-[11px] text-primary font-medium uppercase tracking-[0.2em] opacity-70"
                         >Push Schedule Panorama</span
                     >
                 </div>
@@ -21,7 +21,7 @@
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-primary"></span>
-                    <span class="text-xs text-slate-400 font-bold">已编排 {{ dateList.length }} 天</span>
+                    <span class="text-xs text-slate-400 font-medium">已编排 {{ dateList.length }} 天</span>
                 </div>
             </div>
         </div>
@@ -32,7 +32,7 @@
 
             <div class="mt-6 flex justify-center">
                 <div
-                    class="px-4 py-2 rounded-full bg-slate-100 text-slate-400 text-[12px] font-bold flex items-center gap-2">
+                    class="px-4 py-2 rounded-full bg-slate-100 text-slate-400 text-[12px] font-medium flex items-center gap-2">
                     <Icon name="el-icon-InfoFilled" />
                     提示：点击具体时间点可快速跳转编辑该素材
                 </div>

@@ -58,7 +58,66 @@ class CommentToMarkClueHandler extends BaseMessageHandler
                 throw new \Exception($this->platform[$this->appType] . '截流获客留痕获客任务不存在: ' . \think\facade\Db::getLastSql());
             }
 
+            $setting = SvLeadScrapingSetting::where('id', $task->scraping_id)->findOrEmpty();
+            if ($setting->isEmpty()) {
+                throw new \Exception($this->platform[$this->appType] . '截流获客留痕获客任务配置不存在');
+            }
+            $hash = hash('sha256', $content['task_id'] . $content['author_name'] . $content['content']);
+            
+            if ((int)$setting->is_execed_clues  === 1) {
+                $find = SvLeadScrapingRecord::where([
+                    ['user_id', '=', $task->user_id],
+                    ['task_type', '=', 3],
+                    ['account_name', '=', $content['author_name']],
+                    ['hash', '=', $hash],
+                ])->findOrEmpty();
+                if (!$find->isEmpty()) {
+                    return [
+                        'isProceed' => 0, //是否处理 1是 0 否
+                    ];
+                }
+            }
 
+            $record = SvLeadScrapingRecord::where([
+                ['user_id', '=', $task->user_id],
+                ['task_type', '=', 3],
+                ['account_name', '=', $content['author_name']],
+                ['hash', '=', $hash],
+                //['content', 'like', '%' . $content['content'] . '%']
+            ])->findOrEmpty();
+            if (!$record->isEmpty()) {
+                return [
+                    'isProceed' => 0, //是否处理 1是 0 否
+                ];
+            }
+            $insert = [
+                'user_id'             => $task->user_id,
+                'task_type'           => 3,
+                'scraping_id'         => $task->scraping_id,
+                'scraping_account_id' => $task->id,
+                'address'             => $content['address'] ?? '',
+                'pusher_timer'         => $content['pusherTimer'] ?? 0,
+                'status'              => 3,
+                'account_name'        => $content['author_name'],
+                'account_type'        => $this->appType,
+                'platform'            => $this->appType,
+                'device_code'         => $this->payload['deviceId'],
+                'task_id'             => $content['task_id'],
+                'hash'                => $hash,
+                'image' => $this->saveBase64ToImage($content['image'] ?? '', $hash, 'touch'),
+                'content'             => $content['content'],
+                'exec_time'           => time(),
+                'account'             => $content['account'] ?? '',
+                'likes'               => $content['likes'] ?? 0,
+                'fans'                => $content['fans'] ?? 0,
+                'follows'             => $content['follows'] ?? 0,
+                'industry_keyword'    => $content['industry_keyword'] ?? '',
+                'notes'               => $content['notes'] ?? '',
+                'filter_keyword'      => $content['filter_keyword'] ?? '',
+                'comment_content'     => $content['comment_content'] ?? '',
+                'touch_content'       => $content['touch_content'] ?? '',
+            ];
+            SvLeadScrapingRecord::create($insert);
             return [
                 'isProceed' => 1,//是否处理 1是 0 否
             ];

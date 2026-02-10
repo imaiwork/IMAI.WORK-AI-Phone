@@ -15,7 +15,7 @@
             <view class="bg-white rounded-tl-[20rpx] rounded-tr-[20rpx] grow p-[40rpx]">
                 <view>
                     <image class="w-[80rpx] h-[80rpx] rounded-full" :src="detail.avatar" mode="aspectFill"></image>
-                    <view class="text-[32rpx] font-bold mt-2">
+                    <view class="text-[32rpx] font-medium mt-2">
                         {{ detail.name }}
                     </view>
                     <view class="text-[#150B3D] text-xs mt-1">
@@ -29,7 +29,7 @@
                     </view>
                 </view>
                 <view class="mt-[64rpx]">
-                    <view class="text-[#150B3D] font-bold"> 岗位要求 </view>
+                    <view class="text-[#150B3D] font-medium"> 岗位要求 </view>
                     <view class="mt-2 flex gap-2">
                         <view class="w-[6rpx] h-[6rpx] rounded-full bg-[#B5B6B7] flex-shrink-0 mt-2"> </view>
                         <view class="text-[#150B3D]">
@@ -38,7 +38,7 @@
                     </view>
                 </view>
                 <view class="mt-[48rpx]">
-                    <view class="text-[#150B3D] font-bold"> 请添加您的简历 </view>
+                    <view class="text-[#150B3D] font-medium"> 请添加您的简历 </view>
                     <view class="mt-4">
                         <template v-if="isUploadFile">
                             <view class="flex gap-2" @click="handleAddResume">

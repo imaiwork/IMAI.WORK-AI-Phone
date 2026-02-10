@@ -34,7 +34,7 @@
                 <view class="px-4 pb-[100rpx]">
                     <view class="bg-white rounded-[20rpx] px-[40rpx] py-[30rpx]">
                         <view class="border-[0] border-b-[1rpx] border-solid border-[#E5E5E5] pb-[26rpx]">
-                            <view class="text-[30rpx] font-bold">互动动作</view>
+                            <view class="text-[30rpx] font-medium">互动动作</view>
                             <view class="mt-[26rpx]">
                                 <u-radio-group v-model="formData.interaction_action" class="w-full">
                                     <view class="flex justify-between w-full">
@@ -55,7 +55,7 @@
                             </view>
                         </view>
                         <view class="mt-[32rpx]">
-                            <view class="text-[30rpx] font-bold">每个好友当前任务互动数量</view>
+                            <view class="text-[30rpx] font-medium">每个好友当前任务互动数量</view>
                             <view class="mt-[26rpx] flex items-center gap-x-2">
                                 <view
                                     class="h-[80rpx] w-[220rpx] rounded-[20rpx] border border-solid border-[#E5E5E5] px-[20rpx]">
@@ -68,7 +68,7 @@
                             </view>
                         </view>
                         <view class="mt-[32rpx]">
-                            <view class="text-[30rpx] font-bold">每次互动时间间隔</view>
+                            <view class="text-[30rpx] font-medium">每次互动时间间隔</view>
                             <view class="mt-[26rpx] flex items-center gap-x-2">
                                 <view
                                     class="h-[80rpx] w-[220rpx] rounded-[20rpx] border border-solid border-[#E5E5E5] px-[20rpx]">
@@ -81,7 +81,7 @@
                             </view>
                         </view>
                         <view class="mt-[32rpx] border-[0] border-b-[1rpx] border-solid border-[#E5E5E5] pb-[26rpx]">
-                            <view class="text-[30rpx] font-bold">互动动作</view>
+                            <view class="text-[30rpx] font-medium">互动动作</view>
                             <view class="mt-[26rpx]">
                                 <u-radio-group v-model="formData.interaction_time_type" class="w-full">
                                     <view class="flex justify-between w-full">
@@ -104,16 +104,16 @@
                         <view
                             class="mt-[32rpx] border-[0] border-b-[1rpx] border-solid border-[#E5E5E5] pb-[26rpx] flex items-center justify-between"
                             @click="showChooseRobot = true">
-                            <view class="text-[30rpx] font-bold">评论智能体</view>
+                            <view class="text-[30rpx] font-medium">评论智能体</view>
                             <view class="flex items-center gap-x-2">
-                                <text :class="!formData.robot_id ? 'text-[#00000099]' : 'text-[#0065FB] font-bold'">{{
+                                <text :class="!formData.robot_id ? 'text-[#00000099]' : 'text-[#0065FB] font-medium'">{{
                                     formData.robot_id ? formData.robot_name : "请选择"
                                 }}</text>
                                 <u-icon name="arrow-right" color="#B2B2B2" size="20"></u-icon>
                             </view>
                         </view>
                         <view class="mt-[32rpx]">
-                            <view class="text-[30rpx] font-bold">当内容为"图片/视频"类型时</view>
+                            <view class="text-[30rpx] font-medium">当内容为"图片/视频"类型时</view>
                             <view class="mt-[26rpx]">
                                 <u-radio-group v-model="formData.comment_type" class="w-full">
                                     <view class="flex gap-5 w-full">
@@ -133,7 +133,7 @@
                                 </u-radio-group>
                             </view>
                             <view class="mt-[36rpx]" v-if="formData.comment_type === 2">
-                                <view class="font-bold text-primary">固定评论内容：</view>
+                                <view class="font-medium text-primary">固定评论内容：</view>
                                 <view class="bg-[#F3F3F3] rounded-[16rpx] px-[26rpx] py-1 mt-[16rpx]">
                                     <u-input
                                         v-model="formData.comment_content"
@@ -186,7 +186,7 @@
                 </template>
                 <template v-else>
                     <view
-                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-bold flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
+                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
                         @click="handleCreateTask">
                         创建任务
                     </view>

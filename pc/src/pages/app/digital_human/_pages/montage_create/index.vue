@@ -25,7 +25,7 @@
                     <span class="text-sm font-black text-slate-700"
                         >上传{{ type === "video" ? "视频" : "图片" }}素材</span
                     >
-                    <span class="text-[10px] text-slate-400 font-bold uppercase"
+                    <span class="text-[10px] text-slate-400 font-medium uppercase"
                         >Dynamic {{ type === "video" ? "Video" : "Image" }}</span
                     >
                 </div>
@@ -39,9 +39,9 @@
                     class="px-8 py-5 border-b border-slate-50 flex justify-between items-center bg-[#f8fafc]/80 backdrop-blur-md">
                     <div class="flex items-center gap-3">
                         <div class="w-1.5 h-6 rounded-full bg-primary shadow-[0_0_12px_rgba(0,101,251,0.4)]"></div>
-                        <h3 class="text-[18px] font-bold text-slate-800 tracking-tight">形象素材选择</h3>
+                        <h3 class="text-[18px] font-medium text-slate-800 tracking-tight">形象素材选择</h3>
                         <div class="flex items-center bg-[#0065fb]/10 px-3 py-1 rounded-full">
-                            <span class="text-primary text-[11px] font-bold uppercase tracking-wider"
+                            <span class="text-primary text-[11px] font-medium uppercase tracking-wider"
                                 >Selected: {{ formData.anchorLists.length }}</span
                             >
                         </div>
@@ -100,7 +100,7 @@
                         <div class="w-1.5 h-6 rounded-full bg-orange-400 shadow-[0_0_12px_rgba(251,146,60,0.4)]"></div>
                         <h3 class="text-[16px] font-black text-slate-700">参考素材</h3>
                         <div
-                            class="text-[11px] text-slate-400 font-bold bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                            class="text-[11px] text-slate-400 font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
                             总量限制：全部素材总时长不得超过{{ montageUploadConfig.materialTotalDuration }}分钟
                             (图片按{{ montageUploadConfig.imageDuration }}秒/张，视频按实际时长/个)
                         </div>
@@ -111,7 +111,7 @@
                         popper-class="!p-2 !rounded-[20px] border-[rgba(0,101,251,0.1)] shadow-[0_10px_40px_-10px_rgba(0,101,251,0.2)]"
                         v-if="formData.materialList.length > 0">
                         <template #reference>
-                            <ElButton link type="primary" class="!font-bold !text-[13px]">+ 补充素材</ElButton>
+                            <ElButton link type="primary" class="!font-medium !text-[13px]">+ 补充素材</ElButton>
                         </template>
                         <UseTemplate type="image" />
                         <UseTemplate type="video" />
@@ -190,7 +190,7 @@
 
         <div class="w-[450px] bg-white flex flex-col relative flex-shrink-0 rounded-[20px] p-6 border border-br">
             <header class="mb-5">
-                <h2 class="text-[24px] font-bold text-slate-800 tracking-tight">生成设置</h2>
+                <h2 class="text-[24px] font-medium text-slate-800 tracking-tight">生成设置</h2>
                 <div class="h-1 w-12 bg-primary rounded-full mt-2"></div>
             </header>
 
@@ -217,7 +217,7 @@
 
                     <section class="bg-slate-50 rounded-[20px] p-3 border border-br">
                         <div class="flex justify-between items-center mb-4 px-2">
-                            <h4 class="text-[14px] font-bold text-slate-700">人设设定</h4>
+                            <h4 class="text-[14px] font-medium text-slate-700">人设设定</h4>
                             <button
                                 @click="showCharacter = true"
                                 class="text-primary text-xs font-black hover:underline">
@@ -289,7 +289,7 @@
                                                 ]">
                                                 #{{ (index + 1).toString().padStart(2, "0") }}
                                             </span>
-                                            <span class="text-xs font-bold text-slate-600 truncate w-full">
+                                            <span class="text-xs font-medium text-slate-600 truncate w-full">
                                                 {{ item.title || "未命名文案" }}
                                             </span>
                                         </div>
@@ -348,7 +348,7 @@
                                 </template>
                                 <div v-else class="h-full flex flex-col items-center justify-center space-y-4">
                                     <!-- <img src="@/assets/images/empty_content.png" class="w-24 opacity-20" /> -->
-                                    <p class="text-xs font-bold text-slate-300">点击“手动添加”开始编写内容</p>
+                                    <p class="text-xs font-medium text-slate-300">点击“手动添加”开始编写内容</p>
                                 </div>
                             </div>
                         </div>
@@ -357,7 +357,7 @@
                     <section class="space-y-3">
                         <div class="p-3 bg-white rounded-[20px] border border-br">
                             <div class="flex items-center justify-between mb-4">
-                                <span class="text-[14px] font-bold text-slate-700">背景音乐 (BGM)</span>
+                                <span class="text-[14px] font-medium text-slate-700">背景音乐 (BGM)</span>
                             </div>
                             <div
                                 class="h-[56px] rounded-2xl bg-[#f1f5f9]/50 border border-slate-100 flex items-center px-4 cursor-pointer hover:bg-white hover:border-primary transition-all group"
@@ -366,7 +366,7 @@
                                     <Icon name="el-icon-Headset" :size="20" />
                                 </span>
 
-                                <span class="text-[13px] font-bold text-slate-600 flex-1 truncate">{{
+                                <span class="text-[13px] font-medium text-slate-600 flex-1 truncate">{{
                                     formData.music[0]?.name || "点击选择配乐素材"
                                 }}</span>
                                 <Icon name="el-icon-ArrowRight" color="var(--slate-300)" />
@@ -395,7 +395,7 @@
                             class="flex items-center justify-between px-8 h-[80px] bg-slate-900 rounded-[20px] text-white shadow-xl">
                             <div class="flex flex-col">
                                 <span class="text-[15px] font-black">生成数量</span>
-                                <span class="text-[9px] text-[#ffffff]/30 uppercase font-bold tracking-widest"
+                                <span class="text-[9px] text-[#ffffff]/30 uppercase font-medium tracking-widest"
                                     >Total Batch</span
                                 >
                             </div>
@@ -405,7 +405,7 @@
                                     class="w-9 h-9 rounded-full border border-white/20 flex items-center justify-center hover:bg-white/10 transition-colors">
                                     <Icon name="el-icon-Minus" />
                                 </button>
-                                <span class="text-[22px] font-bold w-8 text-center tabular-nums">{{
+                                <span class="text-[22px] font-medium w-8 text-center tabular-nums">{{
                                     formData.video_count
                                 }}</span>
                                 <button
@@ -421,7 +421,7 @@
 
             <footer class="mt-6 pt-6 border-t border-br">
                 <ElButton class="w-full !h-[50px]" type="primary" size="large">
-                    <span class="font-bold text-lg">立即生成视频</span>
+                    <span class="font-medium text-lg">立即生成视频</span>
                 </ElButton>
             </footer>
         </div>

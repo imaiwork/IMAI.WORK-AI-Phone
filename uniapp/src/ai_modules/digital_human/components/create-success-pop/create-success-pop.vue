@@ -22,7 +22,7 @@
                 </view>
             </view>
 
-            <view class="text-[36rpx] font-bold text-center mb-[20rpx] text-[#1f2937]">
+            <view class="text-[36rpx] font-medium text-center mb-[20rpx] text-[#1f2937]">
                 {{ title }}
             </view>
 

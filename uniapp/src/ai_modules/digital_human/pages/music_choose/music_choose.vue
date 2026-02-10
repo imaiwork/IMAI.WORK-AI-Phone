@@ -5,17 +5,17 @@
                 class="flex items-center justify-center gap-x-[14rpx] border border-solid border-[#000000]/10 rounded-[10rpx] p-[20rpx]"
                 @click="uploadAndProcessFiles('file')">
                 <image src="@/ai_modules/digital_human/static/icons/upload.svg" class="w-[28rpx] h-[28rpx]"></image>
-                <text class="font-bold">上传音乐</text>
+                <text class="font-medium">上传音乐</text>
             </view>
             <view
                 class="flex items-center justify-between gap-x-[14rpx] border border-solid border-[#000000]/10 rounded-[10rpx] p-[20rpx]"
                 @click="showVolumePopup = true">
                 <view class="flex items-center gap-x-[14rpx]">
                     <image src="@/ai_modules/digital_human/static/icons/volume.svg" class="w-[28rpx] h-[28rpx]"></image>
-                    <text class="font-bold">音量</text>
+                    <text class="font-medium">音量</text>
                 </view>
                 <view>
-                    <text class="text-primary font-bold">{{ formatVolume(currentVolume) }}</text>
+                    <text class="text-primary font-medium">{{ formatVolume(currentVolume) }}</text>
                     <u-icon name="arrow-right" size="20" color="#B2B2B2"></u-icon>
                 </view>
             </view>
@@ -31,7 +31,7 @@
                                 src="@/ai_modules/digital_human/static/images/common/ai.png"
                                 class="w-[44rpx] h-[44rpx]"></image>
                         </view>
-                        <view class="flex-1 line-clamp-1 break-all text-[30rpx] font-bold"> 使用AI音乐库 </view>
+                        <view class="flex-1 line-clamp-1 break-all text-[30rpx] font-medium"> 使用AI音乐库 </view>
                         <view class="shrink-0 w-[60rpx]">
                             <image
                                 src="/static/images/icons/success.svg"
@@ -60,7 +60,7 @@
                                 class="w-[44rpx] h-[44rpx]"></image>
                         </view>
                         <view class="flex-1 line-clamp-1 break-all">
-                            <text class="text-[30rpx] font-bold">{{ item.name }}</text>
+                            <text class="text-[30rpx] font-medium">{{ item.name }}</text>
                         </view>
                         <view class="shrink-0 w-[60rpx]">
                             <image
@@ -76,9 +76,9 @@
             </z-paging>
         </view>
         <view class="flex items-center justify-between px-[26rpx] py-4">
-            <view class="font-bold text-[#000000]/50">已选：{{ chooseList.length }}</view>
+            <view class="font-medium text-[#000000]/50">已选：{{ chooseList.length }}</view>
             <view
-                class="w-[440rpx] h-[90rpx] bg-black rounded-[20rpx] flex items-center justify-center font-bold text-white text-[30rpx]"
+                class="w-[440rpx] h-[90rpx] bg-black rounded-[20rpx] flex items-center justify-center font-medium text-white text-[30rpx]"
                 @click="handleConfirm">
                 确定
             </view>
@@ -105,7 +105,7 @@
                     </view>
                 </view>
                 <view
-                    class="w-full h-[90rpx] bg-black rounded-[20rpx] flex items-center justify-center font-bold text-white text-[30rpx]"
+                    class="w-full h-[90rpx] bg-black rounded-[20rpx] flex items-center justify-center font-medium text-white text-[30rpx]"
                     @click="handleConfirmVolume">
                     确定
                 </view>

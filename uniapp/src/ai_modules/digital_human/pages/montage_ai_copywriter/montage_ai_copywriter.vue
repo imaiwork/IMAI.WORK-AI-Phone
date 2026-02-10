@@ -4,7 +4,7 @@
             <scroll-view scroll-y class="h-full">
                 <view class="p-4">
                     <template v-if="!isGenerating">
-                        <view class="flex items-center gap-1 font-bold">
+                        <view class="flex items-center gap-1 font-medium">
                             <text class="text-[#FF3C26]">*</text>
                             <text>您想生成的主题大纲</text>
                         </view>
@@ -21,8 +21,8 @@
                                 {{ contentVal.length }} / {{ contentMaxLength }}
                             </view>
                         </view>
-                        <template v-if="montageType != MontageTypeEnum.NEWS_BODY">
-                            <view class="flex items-center gap-1 font-bold mt-[48rpx]">
+                        <template v-if="isSystem">
+                            <view class="flex items-center gap-1 font-medium mt-[48rpx]">
                                 <text class="text-[#FF3C26]">*</text>
                                 <text> 口播文案的字数</text>
                             </view>
@@ -36,22 +36,21 @@
                                     {{ item.name }}
                                 </view>
                             </view>
-                        </template>
-
-                        <view class="flex items-center gap-1 font-bold mt-[48rpx]">
-                            <text class="text-[#FF3C26]">*</text>
-                            <text> 生成的口播文案数量</text>
-                        </view>
-                        <view class="flex items-center gap-[36rpx] mt-[28rpx]">
-                            <view
-                                v-for="(item, index) in promptNumList"
-                                :key="item"
-                                class="prompt-num-item"
-                                :class="{ active: currentPromptNum === item }"
-                                @click="currentPromptNum = item">
-                                {{ item }}条
+                            <view class="flex items-center gap-1 font-medium mt-[48rpx]">
+                                <text class="text-[#FF3C26]">*</text>
+                                <text> 生成的口播文案数量</text>
                             </view>
-                        </view>
+                            <view class="flex items-center gap-[36rpx] mt-[28rpx]">
+                                <view
+                                    v-for="(item, index) in promptNumList"
+                                    :key="item"
+                                    class="prompt-num-item"
+                                    :class="{ active: currentPromptNum === item }"
+                                    @click="currentPromptNum = item">
+                                    {{ item }}条
+                                </view>
+                            </view>
+                        </template>
                     </template>
                     <view class="flex flex-col gap-4" v-else>
                         <view v-for="(item, index) in chatContentList" :key="index" class="copywriter-item">
@@ -62,7 +61,7 @@
                                         src="@/ai_modules/digital_human/static/icons/star2.svg"
                                         class="w-[24rpx] h-[24rpx]"></image>
 
-                                    <text class="font-bold">文案{{ index + 1 }}生成中</text>
+                                    <text class="font-medium">文案{{ index + 1 }}生成中</text>
                                 </view>
                                 <view class="mt-4">
                                     <view class="flex flex-col gap-3">
@@ -80,13 +79,13 @@
                             </view>
                             <template v-else>
                                 <template v-if="!isNewsBody">
-                                    <view class="text-[28rpx] font-bold mr-4">
+                                    <view class="text-[28rpx] font-medium mr-4">
                                         <u-input
                                             v-model="item.title"
                                             placeholder-style="color: #7C7E80; "
-                                            maxlength="50"></u-input>
+                                            :maxlength="30"></u-input>
                                     </view>
-                                    <view class="mt-[28rpx]">
+                                    <view class="mt-[28rpx]" v-if="!isNewsBody">
                                         <u-input
                                             v-model="item.content"
                                             type="textarea"
@@ -99,18 +98,15 @@
                                     </view>
                                 </template>
                                 <template v-else>
-                                    <view
-                                        v-for="(val, valIndex) in item.content"
-                                        class="border-[0] border-b-[1rpx] border-solid border-[#F1F2F5] pb-2"
-                                        :key="valIndex"
-                                        :class="{
-                                            'mb-[28rpx] ': valIndex < item.content.length - 1,
-                                        }">
-                                        <view class="text-[28rpx] font-bold mb-2">标题{{ valIndex + 1 }}</view>
+                                    <view class="text-[28rpx] font-medium mr-4">
                                         <u-input
-                                            v-model="chatContentList[index].content[valIndex]"
+                                            v-model="item.title"
                                             placeholder-style="color: #7C7E80; "
-                                            maxlength="100"></u-input>
+                                            type="textarea"
+                                            :maxlength="1000"></u-input>
+                                        <view class="mt-2 text-[#B2B2B2] text-end">
+                                            {{ item.title.length }} / 1000
+                                        </view>
                                     </view>
                                 </template>
                                 <view
@@ -132,7 +128,7 @@
                     class="flex-1 flex items-center justify-center text-white rounded-[8rpx] h-[100rpx]"
                     :class="[contentVal.length > 0 ? 'bg-black' : 'bg-[#787878CC]']"
                     @click="contentPost(contentVal)">
-                    生成文案（消耗{{ getToken }}算力）
+                    生成文案<template v-if="isSystem"> （消耗{{ getToken }}算力） </template>
                 </view>
                 <template v-else>
                     <view
@@ -153,16 +149,27 @@
 </template>
 
 <script setup lang="ts">
-import { generateShanjianPrompt, generateNewsBodyPrompt } from "@/api/digital_human";
+import { getCopyWritingGenerate } from "@/api/agent";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
+import useAgent from "@/ai_modules/digital_human/hooks/useAgent";
 
 const { emit } = useEventBusManager();
 
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
+
+const agentData = ref<{
+    type: string;
+    agentType: number;
+    agentId: number;
+}>({
+    type: "",
+    agentType: 0,
+    agentId: -1,
+});
 
 const contentVal = ref<string>("");
 const contentMaxLength = 500;
@@ -184,6 +191,8 @@ const isNewsBody = computed(() => {
     return montageType.value == MontageTypeEnum.NEWS_BODY;
 });
 
+const isSystem = computed(() => agentData.value.agentType == 1);
+
 // 口播数量
 const promptNumList = [1, 3, 5, 10, 20];
 const currentPromptNum = ref<number>(1);
@@ -200,12 +209,26 @@ const isGenerated = computed(() => {
 
 // 获取消耗的算力
 const getToken = computed(() => {
-    const token = userStore.getTokenByScene(
-        montageType.value == MontageTypeEnum.NEWS_BODY
-            ? TokensSceneEnum.NEWS_MIX_CUT_TITLE
-            : TokensSceneEnum.SHANJIAN_COPYWRITING_CREATE
-    )?.score;
+    const token = userStore.getTokenByScene(TokensSceneEnum.COZE_COPYWRITING)?.score;
     return parseFloat(token) * currentPromptNum.value;
+});
+
+const { result, getDetail, handleGenerate, pollingEnd } = useAgent({
+    onfinish: () => {
+        chatContentList.value[0].status = "success";
+        chatContentList.value[0].title = isNewsBody.value ? result : contentVal;
+        chatContentList.value[0].content = result;
+        userStore.getUser();
+    },
+    onerror: (err: any) => {
+        isGenerating.value = false;
+        chatContentList.value = [];
+        uni.showToast({
+            title: err || "生成失败，请重试",
+            icon: "none",
+            duration: 3000,
+        });
+    },
 });
 
 const contentPost = async (userInput: string) => {
@@ -214,7 +237,7 @@ const contentPost = async (userInput: string) => {
         return;
     }
     if (!isGenerated.value) return;
-    if (userTokens.value < getToken.value) {
+    if (userTokens.value < (isSystem.value ? getToken.value : 0)) {
         uni.$u.toast("算力不足，请充值！");
         return;
     }
@@ -222,46 +245,36 @@ const contentPost = async (userInput: string) => {
     try {
         isGenerating.value = true;
 
-        chatContentList.value = Array.from({ length: currentPromptNum.value }, () => ({
-            title: "",
-            content: "",
-            status: "pending",
-        }));
-        if (isNewsBody.value) {
-            const result = await generateNewsBodyPrompt({
+        if (isSystem.value) {
+            chatContentList.value = Array.from({ length: currentPromptNum.value }, () => ({
+                title: "",
+                content: "",
+                status: "pending",
+            }));
+            const { content } = await getCopyWritingGenerate({
+                sn: agentData.value.agentId,
                 keywords: userInput,
                 number: currentPromptNum.value,
+                length: currentPrompt.value.length,
             });
-            if (result.content && result.content.length > 0) {
-                chatContentList.value = result.content.map((item: any) => ({
-                    content: JSON.parse(item),
+            if (content && content.length > 0) {
+                chatContentList.value = content.map((item: any) => ({
+                    title: isNewsBody.value ? item : userInput,
+                    content: item,
                     status: "success",
                 }));
             } else {
-                uni.$u.toast("文案生成失败，请重新输入");
-                isGenerating.value = false;
-                chatContentList.value = [];
+                uni.$u.toast("生成失败，请重试");
             }
-            return;
+            userStore.getUser();
+        } else {
+            chatContentList.value = Array.from({ length: 1 }, () => ({
+                title: "",
+                content: "",
+                status: "pending",
+            }));
+            await handleGenerate(userInput, agentData.value.agentType);
         }
-        // 这里要根据生成数量来请求接口, 要并发请求
-        const promises = [];
-        for (let i = 0; i < currentPromptNum.value; i++) {
-            promises.push(
-                generateShanjianPrompt({
-                    keywords: userInput,
-                    number: currentPrompt.value.length,
-                })
-            );
-        }
-        const results = await Promise.all(promises);
-
-        chatContentList.value = results.map((item) => ({
-            title: item.title,
-            content: item.content,
-            status: "success",
-        }));
-        userStore.getUser();
     } catch (err: any) {
         isGenerating.value = false;
         chatContentList.value = [];
@@ -285,12 +298,11 @@ const useContent = () => {
         uni.$u.toast("文案在生成中...");
         return;
     }
+
     emit("confirm", {
         type: ListenerTypeEnum.MONTAGE_AI_COPYWRITER,
         data: isNewsBody.value
-            ? chatContentList.value
-                  .filter((item) => item.content.some((content: string) => content.trim() !== ""))
-                  .map((item) => item.content)
+            ? chatContentList.value.filter((item) => item.title.trim() !== "").map((item) => item.title)
             : chatContentList.value
                   .filter((item) => item.title)
                   .map((item) => ({ title: item.title, content: item.content }))
@@ -305,6 +317,16 @@ onLoad((options: any) => {
     if (options.montageType) {
         montageType.value = parseInt(options.montageType);
     }
+    if (options.agentData) {
+        agentData.value = JSON.parse(options.agentData);
+        if (!isSystem.value) {
+            getDetail(agentData.value.agentId, agentData.value.agentType);
+        }
+    }
+});
+
+onUnload(() => {
+    pollingEnd.value?.();
 });
 </script>
 
@@ -313,7 +335,7 @@ onLoad((options: any) => {
 .prompt-num-item {
     @apply w-[84rpx] h-[72rpx] flex items-center justify-center bg-white text-[26rpx] relative rounded-[16rpx];
     &.active {
-        @apply font-bold text-black shadow-[0rpx_0rpx_0rpx_2rpx_#0065FB];
+        @apply font-medium text-black shadow-[0rpx_0rpx_0rpx_2rpx_#0065FB];
     }
 }
 

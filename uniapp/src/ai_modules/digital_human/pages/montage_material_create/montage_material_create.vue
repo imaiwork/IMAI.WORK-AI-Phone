@@ -32,9 +32,9 @@
         <view class="grow min-h-0 mt-[24rpx]">
             <view class="h-full flex flex-col" v-if="step == 1">
                 <view class="px-4 flex items-center justify-between">
-                    <view class="text-[30rpx] font-bold">素材图组</view>
+                    <view class="text-[30rpx] font-medium">素材图组</view>
                     <view
-                        class="px-[28rpx] py-[12rpx] bg-black text-white rounded-[50rpx] font-bold"
+                        class="px-[28rpx] py-[12rpx] bg-black text-white rounded-[50rpx] font-medium"
                         @click="handleEditMaterial()"
                         >添加图组</view
                     >
@@ -48,10 +48,10 @@
                                 :key="index"
                                 @click="handleEditMaterial(index)">
                                 <view class="flex items-center justify-between">
-                                    <view class="font-bold break-all line-clamp-1">素材图组{{ index + 1 }}</view>
-                                    <view class="flex items-center font-bold gap-x-1">
-                                        <text class="font-bold">{{ group.length }}</text>
-                                        <text class="text-[#B2B2B2] font-bold">张</text>
+                                    <view class="font-medium break-all line-clamp-1">素材图组{{ index + 1 }}</view>
+                                    <view class="flex items-center font-medium gap-x-1">
+                                        <text class="font-medium">{{ group.length }}</text>
+                                        <text class="text-[#B2B2B2] font-medium">张</text>
                                         <u-icon name="arrow-right" color="#B2B2B2" :size="20"></u-icon>
                                     </view>
                                 </view>
@@ -84,7 +84,7 @@
                                 class="w-[220rpx] h-[88rpx] rounded-[20rpx] border border-solid flex items-center justify-center gap-x-2"
                                 @click="handleEditMaterial()">
                                 <u-icon name="plus" size="24"></u-icon>
-                                <text class="font-bold">添加图组</text>
+                                <text class="font-medium">添加图组</text>
                             </view>
                         </view>
                     </view>
@@ -114,23 +114,21 @@
                             class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
                             @click="handleShowCopywriter()">
                             <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
-                            <text class="font-bold text-[32rpx]">手动输入</text>
+                            <text class="font-medium text-[32rpx]">手动输入</text>
                         </view>
-                        <navigator
-                            url="/ai_modules/digital_human/pages/montage_ai_copywriter/montage_ai_copywriter"
-                            hover-class="none"
+                        <view
                             class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-black rounded-[10rpx]"
-                            @click="editCopywriterIndex = -1">
+                            @click="showChooseAgent = true">
                             <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
-                            <text class="text-white font-bold text-[32rpx]">AI生成</text>
-                        </navigator>
+                            <text class="text-white font-medium text-[32rpx]">AI生成</text>
+                        </view>
                     </template>
                     <view
                         v-if="copywriterTypeIndex === 1"
                         class="bg-white rounded-[10rpx] w-full h-[100rpx] flex items-center justify-center gap-x-2"
                         @click="showAudioType = true">
                         <u-icon name="plus" size="20"></u-icon>
-                        <text class="font-bold text-[32rpx]">添加音频</text>
+                        <text class="font-medium text-[32rpx]">添加音频</text>
                     </view>
                 </view>
                 <view class="grow min-h-0 mt-4">
@@ -142,7 +140,7 @@
                                     :key="index"
                                     class="copywriter-item"
                                     @click="handleSelectCopywriter(index)">
-                                    <view class="text-[32rpx] font-bold mr-4">
+                                    <view class="text-[32rpx] font-medium mr-4">
                                         {{ item.title }}
                                     </view>
                                     <view class="mt-[28rpx]">
@@ -168,7 +166,7 @@
                                                 color="#0065fb"
                                                 size="50"></u-icon>
                                         </view>
-                                        <text class="font-bold text-[30rpx]">录制的音频</text>
+                                        <text class="font-medium text-[30rpx]">录制的音频</text>
                                     </view>
                                     <view class="mt-[40rpx] pb-3">
                                         <u-input
@@ -191,7 +189,7 @@
             </view>
             <scroll-view class="h-full" scroll-y v-show="step == 3">
                 <view class="px-4 pb-[150rpx]">
-                    <view class="text-[30rpx] font-bold">视频名称</view>
+                    <view class="text-[30rpx] font-medium">视频名称</view>
                     <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4 h-[100rpx] flex items-center">
                         <u-input
                             v-model="formData.name"
@@ -203,10 +201,12 @@
                     <view class="mt-[20rpx] bg-white rounded-[20rpx] px-4">
                         <view
                             class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                            <view class="text-[30rpx] font-bold">参考素材</view>
+                            <view class="text-[30rpx] font-medium">参考素材</view>
                             <view class="flex items-center gap-x-1" @click="handleStep(1)">
                                 <view>
-                                    共<text class="mx-1 text-primary font-bold">{{ formData.materialList.length }}</text
+                                    共<text class="mx-1 text-primary font-medium">{{
+                                        formData.materialList.length
+                                    }}</text
                                     >个
                                 </view>
                                 <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
@@ -214,10 +214,10 @@
                         </view>
                         <view
                             class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                            <view class="text-[30rpx] font-bold">文案内容</view>
+                            <view class="text-[30rpx] font-medium">文案内容</view>
                             <view class="flex items-center gap-x-1" @click="handleStep(2)">
                                 <view>
-                                    共<text class="mx-1 text-primary font-bold">{{
+                                    共<text class="mx-1 text-primary font-medium">{{
                                         formData.copywriterList.length
                                     }}</text
                                     >个
@@ -227,20 +227,20 @@
                         </view>
                         <view
                             class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                            <view class="text-[30rpx] font-bold">选择音色</view>
+                            <view class="text-[30rpx] font-medium">选择音色</view>
                             <view class="flex items-center gap-x-1" @click="showChooseTone = true">
-                                <view :class="[voiceValue.name ? 'text-primary font-bold' : 'text-[#B2B2B2]']">
+                                <view :class="[voiceValue.name ? 'text-primary font-medium' : 'text-[#B2B2B2]']">
                                     {{ voiceValue.name || "请选择音色" }}
                                 </view>
                                 <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
                             </view>
                         </view>
                         <view class="flex items-center justify-between h-[106rpx]">
-                            <view class="text-[30rpx] font-bold">素材视频原声</view>
+                            <view class="text-[30rpx] font-medium">素材视频原声</view>
                             <u-switch v-model="formData.extra.soundSwitch" inactive-color="#E5E5E5" :size="40" />
                         </view>
                         <view class="flex items-center justify-between h-[106rpx]">
-                            <view class="text-[30rpx] font-bold">背景音乐</view>
+                            <view class="text-[30rpx] font-medium">背景音乐</view>
                             <navigator
                                 :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
                                     formData.music
@@ -249,7 +249,7 @@
                                 class="flex items-center gap-x-1">
                                 <view>
                                     <template v-if="formData.music.length > 0">
-                                        共<text class="mx-1 text-primary font-bold">{{ formData.music.length }}</text
+                                        共<text class="mx-1 text-primary font-medium">{{ formData.music.length }}</text
                                         >个
                                     </template>
                                     <text class="text-[#000000]/70" v-else>AI音乐库</text>
@@ -260,7 +260,7 @@
                     </view>
                     <view class="flex items-center justify-between bg-white mt-[22rpx] p-4 rounded-[20rpx]">
                         <view>
-                            <view class="text-[30rpx] font-bold">生成视频数量</view>
+                            <view class="text-[30rpx] font-medium">生成视频数量</view>
                             <view class="text-[#000000]/50"> 每条素材生成视频的数量 </view>
                         </view>
                         <view class="flex items-center gap-x-2">
@@ -288,13 +288,12 @@
                         </view>
                     </view>
                     <view class="mt-[22rpx] bg-white rounded-[20rpx] px-4">
-                        <view class="font-bold text-[30rpx] py-3">使用设置</view>
+                        <view class="font-medium text-[30rpx] py-3">使用设置</view>
 
                         <view
                             class="flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                            <view
-                                class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                                <view class="font-bold">背景音乐使用</view>
+                            <view class="flex items-center justify-between h-[106rpx]">
+                                <view class="font-medium">背景音乐使用</view>
                             </view>
                             <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-[268rpx]">
                                 <view class="grid grid-cols-2 gap-x-1 h-[68rpx] relative">
@@ -318,7 +317,7 @@
                             class="flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#00000008]">
                             <view
                                 class="flex items-center justify-between h-[106rpx] border-[0] border-b-[1rpx] border-solid border-[#00000008]">
-                                <view class="font-bold">视频风格</view>
+                                <view class="font-medium">视频风格</view>
                             </view>
                             <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-[268rpx]">
                                 <view class="grid grid-cols-2 gap-x-1 h-[68rpx] relative">
@@ -345,10 +344,10 @@
                             }&data=${JSON.stringify(formData.clip)}`"
                             hover-class="none"
                             class="flex items-center justify-between h-[106rpx] b">
-                            <view class="text-[30rpx] font-bold">选择视频风格</view>
+                            <view class="text-[30rpx] font-medium">选择视频风格</view>
                             <view class="flex items-center">
                                 <view>
-                                    共<text class="mx-1 text-primary font-bold">{{ formData.clip.length }}</text
+                                    共<text class="mx-1 text-primary font-medium">{{ formData.clip.length }}</text
                                     >个
                                 </view>
                                 <u-icon name="arrow-right" :size="20" color="#C5CACA"></u-icon>
@@ -365,7 +364,7 @@
                         v-if="step === 1"
                         class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
                         :class="[formData.anchorLists.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
-                        <text class="font-bold text-[32rpx]">{{ formData.anchorLists.length }}</text>
+                        <text class="font-medium text-[32rpx]">{{ formData.anchorLists.length }}</text>
                         <text class="text-xs mt-1">已选</text>
                     </view>
                     <view v-else>
@@ -390,7 +389,7 @@
                         <text class="text-[#8C8C8C] text-[22rpx]">算力消耗</text>
                     </view>
                     <view
-                        class="rounded-[16rpx] w-[456rpx] h-[100rpx] bg-black text-white font-bold flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
+                        class="rounded-[16rpx] w-[456rpx] h-[100rpx] bg-black text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
                         @click="handleCreateVideo">
                         生成视频
                     </view>
@@ -412,6 +411,8 @@
         :active-tone="formData.voice"
         :show-free-tone="false"
         @confirm="handleSelectTone" />
+    <choose-agent v-if="showChooseAgent" v-model="showChooseAgent" @select="handleSelectAgent" />
+
     <video-preview
         v-if="showVideoPreview"
         v-model="showVideoPreview"
@@ -458,6 +459,7 @@ import VideoPreview from "@/components/video-preview/video-preview.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
 import ChooseAudioType from "@/ai_modules/digital_human/components/choose-audio-type/choose-audio-type.vue";
+import ChooseAgent from "@/ai_modules/digital_human/components/choose-agent/choose-agent.vue";
 import RecorderControl from "@/ai_modules/digital_human/components/recorder-control/recorder-control.vue";
 
 const { on } = useEventBusManager();
@@ -528,6 +530,8 @@ const videoPreview = reactive({
 });
 const showChooseTone = ref(false);
 const voiceValue = ref<any>({});
+const showChooseAgent = ref(false);
+
 const showCreateSuccess = ref(false);
 const createResult = ref<any>(null);
 const showTokensCost = ref(false);
@@ -627,6 +631,16 @@ const handleShowCopywriter = (data?: any) => {
         url: "/ai_modules/digital_human/pages/montage_copywriter/montage_copywriter",
         params: {
             data: data ? JSON.stringify(data) : "",
+        },
+    });
+};
+
+const handleSelectAgent = (res: any) => {
+    const { data } = res;
+    uni.$u.route({
+        url: "/ai_modules/digital_human/pages/montage_ai_copywriter/montage_ai_copywriter",
+        params: {
+            agentData: JSON.stringify(data),
         },
     });
 };
@@ -823,6 +837,7 @@ onLoad(() => {
             if (data.length == 0) return;
             if (editCopywriterIndex.value !== -1) {
                 formData.copywriterList[editCopywriterIndex.value] = data[0];
+                editCopywriterIndex.value = -1;
             } else {
                 formData.copywriterList = formData.copywriterList.concat(data);
             }
@@ -834,6 +849,7 @@ onLoad(() => {
                     return;
                 }
                 formData.materialList[editMaterialIndex.value] = data;
+                editMaterialIndex.value = -1;
             } else {
                 if (data.length == 0) return;
                 formData.materialList.push(data);
@@ -863,7 +879,7 @@ onUnload(() => {
 .type-item {
     @apply flex flex-col items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500 text-xs;
     &.active {
-        @apply text-primary font-bold relative;
+        @apply text-primary font-medium relative;
     }
 }
 .tab-slider {

@@ -11,7 +11,7 @@
                 <template #reference>
                     <div class="flex items-center gap-x-[6px]" ref="tokenInfoRef">
                         <Icon name="local-icon-tokens" color="#D6A670" :size="20"></Icon>
-                        <span class="font-bold text-white text">{{ userTokens }}</span>
+                        <span class="font-medium text-white text">{{ userTokens }}</span>
                     </div>
                 </template>
 
@@ -21,7 +21,7 @@
                             <span class="font-[900] text-xl text-[#0F172A]">算力规则</span>
                             <router-link
                                 to="/user/balance"
-                                class="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                                class="text-xs font-medium text-primary hover:underline flex items-center gap-1">
                                 消耗明细 <Icon name="el-icon-ArrowRight" :size="10" />
                             </router-link>
                         </div>
@@ -46,7 +46,9 @@
                                         class="w-5 h-5 flex items-center justify-center rounded-lg bg-white border border-[#E2E8F0] text-[10px] font-black text-[#94A3B8] group-hover/item:border-primary group-hover/item:text-primary transition-all">
                                         {{ index + 1 }}
                                     </div>
-                                    <span class="text-[13px] font-bold text-[#475569] break-all">{{ item.name }}</span>
+                                    <span class="text-[13px] font-medium text-[#475569] break-all">{{
+                                        item.name
+                                    }}</span>
                                 </div>
                                 <div
                                     class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-[#E2E8F0] shadow-sm">
@@ -64,7 +66,7 @@
                 <path opacity="0.1" d="M1 0V12" stroke="white" />
             </svg>
             <div class="flex items-center gap-x-2">
-                <div class="font-bold text-white text" @click="handleRecharge">立即充值</div>
+                <div class="font-medium text-white text" @click="handleRecharge">立即充值</div>
                 <div @click="handleService">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
                         <path
@@ -119,14 +121,16 @@
 
                     <div class="flex items-center gap-3 w-full">
                         <div class="flex-1 h-[1px] bg-[#F1F5F9]"></div>
-                        <span class="text-[11px] font-bold text-[#CBD5E1] uppercase tracking-widest">Service Time</span>
+                        <span class="text-[11px] font-medium text-[#CBD5E1] uppercase tracking-widest"
+                            >Service Time</span
+                        >
                         <div class="flex-1 h-[1px] bg-[#F1F5F9]"></div>
                     </div>
 
                     <div class="flex items-center gap-2 text-sm">
                         <span class="text-[#64748B] font-medium">服务时间：</span>
                         <span class="text-[#0F172A] font-black">工作日 {{ getCustomerService.time }}</span>
-                        <span class="text-[#94A3B8] text-xs font-bold">(GMT+8)</span>
+                        <span class="text-[#94A3B8] text-xs font-medium">(GMT+8)</span>
                     </div>
                 </div>
             </div>

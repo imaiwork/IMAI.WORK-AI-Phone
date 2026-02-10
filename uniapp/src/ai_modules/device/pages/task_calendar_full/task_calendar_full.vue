@@ -11,7 +11,7 @@
         <view class="bg-white">
             <calendar v-model="selectedDate" @select-date="handleSelectDate" />
         </view>
-        <view class="mt-5 px-[26rpx] text-[30rpx] font-bold">任务列表({{ taskList.length }})</view>
+        <view class="mt-5 px-[26rpx] text-[30rpx] font-medium">任务列表({{ taskList.length }})</view>
         <view class="grow min-h-0 px-[26rpx] mt-5">
             <z-paging ref="pagingRef" v-model="taskList" :fixed="false" @query="queryTaskList">
                 <view>

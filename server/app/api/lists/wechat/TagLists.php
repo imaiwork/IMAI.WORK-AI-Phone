@@ -33,6 +33,9 @@ class TagLists extends BaseApiDataLists implements ListsSearchInterface
 
         // 获取微信ID
         $wechatId = $this->request->get('wechat_id');
+        if (!$wechatId) {
+            throw new \Exception('请选择微信');
+        }
 
         // 获取标签列表
         $tagList = AiWechatTag::where('user_id', $this->userId)

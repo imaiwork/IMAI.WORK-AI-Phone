@@ -28,7 +28,7 @@
                 </div>
             </div>
             <div class="px-6 py-4">
-                <div class="font-bold">智能（AI）无人直播</div>
+                <div class="font-medium">智能（AI）无人直播</div>
                 <div class="text-xs text-[rgba(0,0,0,0.5)] mt-[10px]">
                     替传统直播方式，24小时在线，随时为您带来精彩内容。精准的语音识别、自动内容生成、智能观众互动，让每一场直播都充满活力。
                 </div>
@@ -48,7 +48,7 @@
                                     </div>
                                     <div class="text-[11px]">
                                         <div class="text-[rgba(255,255,255,0.5)] text-[10px]">激活算力</div>
-                                        <div class="text-white font-bold text-[11px]">Activate feature</div>
+                                        <div class="text-white font-medium text-[11px]">Activate feature</div>
                                     </div>
                                 </div>
                                 <div class="leading-[0]">
@@ -65,7 +65,7 @@
                             <img src="@/assets/images/down_and_icon.png" class="w-6 h-6 rounded" />
                             <div class="text-[11px]">
                                 <div class="text-[rgba(255,255,255,0.5)] text-[10px]">下载工具</div>
-                                <div class="text-white font-bold text-[11px]">Android APK Download</div>
+                                <div class="text-white font-medium text-[11px]">Android APK Download</div>
                             </div>
                         </div>
                     </div>
@@ -138,7 +138,7 @@ const downloadClient = () => {
     background-repeat: no-repeat;
     background-size: cover;
     .live-mask-text {
-        @apply text-[32px] font-bold;
+        @apply text-[32px] font-medium;
         background: linear-gradient(129deg, #fff 0%, rgba(255, 255, 255, 0) 105.02%);
         background-clip: text;
         -webkit-background-clip: text;

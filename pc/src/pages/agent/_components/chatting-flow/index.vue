@@ -6,7 +6,7 @@
                     <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
                     <span class="text-[15px] font-[900] text-[#1E293B]">参数配置</span>
                 </div>
-                <p class="text-[12px] font-bold text-[#94A3B8]">请填写下方工作流所需的输入参数</p>
+                <p class="text-[12px] font-medium text-[#94A3B8]">请填写下方工作流所需的输入参数</p>
             </div>
 
             <div class="grow min-h-0">
@@ -68,7 +68,7 @@
                                                         class="text-[#475569] group-hover:text-primary" />
                                                 </div>
                                                 <span
-                                                    class="text-[#94A3B8] text-[12px] font-bold group-hover:text-primary"
+                                                    class="text-[#94A3B8] text-[12px] font-medium group-hover:text-primary"
                                                     >点击或拖拽上传文件</span
                                                 >
                                             </div>
@@ -102,7 +102,7 @@
                     <span class="text-[16px] font-[900] text-[#1E293B]">输出结果</span>
                 </div>
                 <div v-if="result" class="flex items-center gap-2">
-                    <span class="text-[12px] font-bold text-[#94A3B8]">处理完成</span>
+                    <span class="text-[12px] font-medium text-[#94A3B8]">处理完成</span>
                 </div>
             </div>
 
@@ -199,13 +199,13 @@
                         <div class="w-24 h-24 mb-4 bg-[#F1F5F9] rounded-full flex items-center justify-center">
                             <Icon name="el-icon-Compass" :size="48" class="text-[#94A3B8]" />
                         </div>
-                        <p class="text-[14px] font-bold text-[#94A3B8]">运行工作流以查看输出结果</p>
+                        <p class="text-[14px] font-medium text-[#94A3B8]">运行工作流以查看输出结果</p>
                     </div>
                 </template>
 
                 <div v-else class="h-full flex flex-col items-center justify-center">
                     <loader />
-                    <p class="mt-4 text-[14px] font-bold text-primary animate-pulse">正在处理数据，请稍候...</p>
+                    <p class="mt-4 text-[14px] font-medium text-primary animate-pulse">正在处理数据，请稍候...</p>
                 </div>
             </div>
         </div>

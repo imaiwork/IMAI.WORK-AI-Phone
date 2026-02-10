@@ -12,7 +12,7 @@
             <div class="absolute w-6 h-6 right-4 top-4 cursor-pointer" @click="close">
                 <close-btn />
             </div>
-            <div class="text-2xl font-bold mb-5">JS嵌入</div>
+            <div class="text-2xl font-medium mb-5">JS嵌入</div>
             <!-- Iframe嵌入方式 -->
             <div>
                 <div class="form-tips">要在您网站的任何位置添加聊天智能体，请将此 iframe 添加到您的 html 代码中</div>

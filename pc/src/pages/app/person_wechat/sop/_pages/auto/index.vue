@@ -48,7 +48,7 @@
                         <div class="flex flex-col gap-0.5">
                             <span class="font-[900] text-[#0F172A] text-sm text-left">{{ row.push_name }}</span>
                             <div class="flex items-center gap-2">
-                                <span class="text-[11px] font-bold text-[#94A3B8]">ID: {{ row.id }}</span>
+                                <span class="text-[11px] font-medium text-[#94A3B8]">ID: {{ row.id }}</span>
                                 <span class="w-1 h-1 rounded-full bg-[#CBD5E1]"></span>
                                 <span class="text-[11px] font-black text-primary">{{ SendWayMap[row.type] }}</span>
                             </div>
@@ -91,7 +91,7 @@
 
                 <ElTableColumn label="创建日期" prop="create_time" width="180">
                     <template #default="{ row }">
-                        <span class="text-xs font-bold text-[#94A3B8]">{{ row.create_time }}</span>
+                        <span class="text-xs font-medium text-[#94A3B8]">{{ row.create_time }}</span>
                     </template>
                 </ElTableColumn>
 
@@ -133,7 +133,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
-            <span class="text-xs font-bold text-[#94A3B8]">共计 {{ pager.count }} 个自动化方案</span>
+            <span class="text-xs font-medium text-[#94A3B8]">共计 {{ pager.count }} 个自动化方案</span>
             <pagination v-model="pager" @change="getLists"></pagination>
         </div>
     </div>

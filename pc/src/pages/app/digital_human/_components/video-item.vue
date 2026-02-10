@@ -13,7 +13,7 @@
 
             <div class="absolute top-3 left-3 z-[22]" v-if="item.clip_status != 0">
                 <span
-                    class="px-2 py-0.5 rounded-md bg-[#0065fb]/20 backdrop-blur-md border border-[#0065fb]/30 text-[9px] font-bold text-primary uppercase">
+                    class="px-2 py-0.5 rounded-md bg-[#0065fb]/20 backdrop-blur-md border border-[#0065fb]/30 text-[9px] font-medium text-primary uppercase">
                     AI 剪辑
                 </span>
             </div>
@@ -55,7 +55,7 @@
                             <span class="text-white font-black text-sm text-center">{{
                                 item.remark || "生成失败"
                             }}</span>
-                            <span class="text-[#ffffff]/40 text-[10px] font-bold">请检查视频素材</span>
+                            <span class="text-[#ffffff]/40 text-[10px] font-medium">请检查视频素材</span>
                         </template>
                         <template v-else>
                             <div
@@ -63,7 +63,7 @@
                             <span class="text-white font-black text-[12px] uppercase tracking-widest opacity-80"
                                 >生成中...</span
                             >
-                            <span class="text-primary font-bold text-[10px] animate-pulse">预计几分钟内完成</span>
+                            <span class="text-primary font-medium text-[10px] animate-pulse">预计几分钟内完成</span>
                         </template>
                     </div>
                 </div>
@@ -83,7 +83,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 mt-1">
-                <span class="text-[#0000004d] text-[11px] font-bold italic">{{ item.create_time }}</span>
+                <span class="text-[#0000004d] text-[11px] font-medium italic">{{ item.create_time }}</span>
                 <span class="w-1 h-1 rounded-full bg-slate-200"></span>
                 <span class="text-[#0065fb]/70 text-[11px] font-black uppercase tracking-tight">{{
                     getTypeName(item.type)
@@ -112,8 +112,8 @@
                         class="w-16 h-16 bg-[#0065fb]/5 rounded-2xl flex items-center justify-center mb-4 text-primary">
                         <Icon name="el-icon-Download" :size="28" />
                     </div>
-                    <h3 class="text-slate-800 font-bold text-[20px] tracking-tight">资源打包完成</h3>
-                    <p class="text-slate-400 text-[13px] font-bold mt-1">请选择您需要下载的视频版本</p>
+                    <h3 class="text-slate-800 font-medium text-[20px] tracking-tight">资源打包完成</h3>
+                    <p class="text-slate-400 text-[13px] font-medium mt-1">请选择您需要下载的视频版本</p>
                 </div>
 
                 <div class="flex flex-col gap-4">
@@ -129,11 +129,12 @@
                             <div class="flex flex-col flex-1">
                                 <div class="flex items-center gap-2">
                                     <span class="text-[15px] font-black text-slate-700">下载 AI 剪辑版</span>
-                                    <span class="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] rounded font-bold"
+                                    <span
+                                        class="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] rounded font-medium"
                                         >推荐</span
                                     >
                                 </div>
-                                <span class="text-[11px] text-slate-400 font-bold mt-1">包含智能字幕、转场与BGM</span>
+                                <span class="text-[11px] text-slate-400 font-medium mt-1">包含智能字幕、转场与BGM</span>
                             </div>
                             <div class="text-slate-300 group-hover:text-primary transition-colors leading-[0]">
                                 <Icon name="el-icon-Download" :size="18" />
@@ -149,7 +150,9 @@
                             </div>
                             <div class="flex flex-col flex-1">
                                 <span class="text-[15px] font-black text-slate-700">下载视频原片</span>
-                                <span class="text-[11px] text-slate-400 font-bold mt-1">原始纯净画面，无后期处理</span>
+                                <span class="text-[11px] text-slate-400 font-medium mt-1"
+                                    >原始纯净画面，无后期处理</span
+                                >
                             </div>
 
                             <div class="text-slate-300 group-hover:text-slate-500 transition-colors">
@@ -162,7 +165,7 @@
                 <div class="mt-8 flex justify-center">
                     <button
                         @click="showDownload = false"
-                        class="text-[13px] text-slate-400 font-bold hover:text-slate-600 transition-colors">
+                        class="text-[13px] text-slate-400 font-medium hover:text-slate-600 transition-colors">
                         取消下载
                     </button>
                 </div>
@@ -180,8 +183,8 @@
 
             <div class="p-8 flex flex-col items-center text-center gap-6">
                 <div class="space-y-2">
-                    <h3 class="text-slate-800 font-bold text-[20px] tracking-tight">预览版本选择</h3>
-                    <p class="text-slate-400 text-[13px] font-bold">请选择您想要查看的视频版本</p>
+                    <h3 class="text-slate-800 font-medium text-[20px] tracking-tight">预览版本选择</h3>
+                    <p class="text-slate-400 text-[13px] font-medium">请选择您想要查看的视频版本</p>
                 </div>
 
                 <div class="flex flex-col gap-4 w-full">
@@ -195,7 +198,7 @@
                             </div>
                             <div class="flex flex-col items-start text-left">
                                 <span class="text-white font-black text-[15px]">AI 剪辑版本</span>
-                                <span class="text-[#ffffff]/70 text-[11px] font-bold">智能处理 · 效果更佳</span>
+                                <span class="text-[#ffffff]/70 text-[11px] font-medium">智能处理 · 效果更佳</span>
                             </div>
                         </div>
                         <div
@@ -216,7 +219,7 @@
                             </div>
                             <div class="flex flex-col items-start text-left">
                                 <span class="text-slate-700 font-black text-[15px]">数字人原片</span>
-                                <span class="text-slate-400 text-[11px] font-bold">原始生成 · 未经剪辑</span>
+                                <span class="text-slate-400 text-[11px] font-medium">原始生成 · 未经剪辑</span>
                             </div>
                         </div>
                         <Icon
@@ -227,7 +230,7 @@
                 </div>
 
                 <div
-                    class="text-[13px] text-slate-400 font-bold cursor-pointer hover:text-slate-600 transition-colors"
+                    class="text-[13px] text-slate-400 font-medium cursor-pointer hover:text-slate-600 transition-colors"
                     @click="showPlaySelection = false">
                     暂不播放
                 </div>

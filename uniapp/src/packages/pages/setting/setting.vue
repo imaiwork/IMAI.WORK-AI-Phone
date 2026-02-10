@@ -69,7 +69,7 @@
                             class="grow min-h-0 flex flex-col w-full px-[60rpx]">
                             <view class="flex flex-col items-center justify-center w-full grow min-h-0">
                                 <image :src="websiteConfig.shop_logo" class="w-[140rpx] h-[136rpx]" />
-                                <text class="font-bold text-[30rpx] mt-[40rpx]">
+                                <text class="font-medium text-[30rpx] mt-[40rpx]">
                                     {{ websiteConfig.shop_name }}
                                 </text>
                                 <text class="opacity-50 text-[26rpx] mt-[20rpx]"> 专为企业打造的下一代 AI 工具 </text>
@@ -173,6 +173,7 @@
 </template>
 
 <script setup lang="ts">
+import config from "@/config";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import { getPolicy } from "@/api/app";
@@ -180,8 +181,6 @@ import { userEdit } from "@/api/user";
 import { updateUser } from "@/api/account";
 import { useCopy } from "@/hooks/useCopy";
 import UpdateUserInfo from "@/pages/login/components/update-user-info.vue";
-
-import config from "@/config";
 
 const appStore = useAppStore();
 const userStore = useUserStore();

@@ -77,8 +77,7 @@ trait SphTaskTrait
 
 
 
-            // self::sendAppExec($row, 1);
-            // usleep(200 * 1000); //200毫秒
+                
             $task = [
                 'id' => $row['id'],
                 'task_id' => $task_id,

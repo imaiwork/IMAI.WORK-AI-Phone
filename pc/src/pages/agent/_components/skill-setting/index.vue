@@ -63,7 +63,7 @@
                                                 }}</span>
                                                 <div class="flex items-center gap-[8px]">
                                                     <span
-                                                        class="text-[11px] bg-blue-100 text-primary px-[8px] py-[2px] rounded-[4px] font-bold"
+                                                        class="text-[11px] bg-blue-100 text-primary px-[8px] py-[2px] rounded-[4px] font-medium"
                                                         >Token 鉴权已开启</span
                                                     >
                                                     <span class="text-[12px] text-tx-secondary opacity-60"
@@ -146,7 +146,7 @@
                                                         :class="
                                                             row.match_type === 0 ? 'text-orange-500' : 'text-primary'
                                                         "
-                                                        class="text-[12px] font-bold">
+                                                        class="text-[12px] font-medium">
                                                         {{ row.match_type === 0 ? "模糊" : "精确" }}
                                                     </span>
                                                 </template>
@@ -379,7 +379,7 @@ onMounted(() => {
 }
 
 .badge-dev {
-    @apply text-[11px] text-white bg-orange-400 px-[8px] py-[2px] rounded-[6px] font-bold h-fit;
+    @apply text-[11px] text-white bg-orange-400 px-[8px] py-[2px] rounded-[6px] font-medium h-fit;
 }
 
 .workflow-active-card {
@@ -391,7 +391,7 @@ onMounted(() => {
 }
 
 .import-btn {
-    @apply h-[36px] rounded-[8px] border-br font-bold text-tx-primary hover:text-primary;
+    @apply h-[36px] rounded-[8px] border-br font-medium text-tx-primary hover:text-primary;
 }
 
 .table-wrapper {

@@ -18,7 +18,7 @@
             </div>
             <!-- 步骤一：下载模板 -->
             <div class="mt-6">
-                <div class="font-bold">
+                <div class="font-medium">
                     <span>一、请按照数据模板的格式准备要导入的数据。</span>
                     <a class="text-primary cursor-pointer" @click="handleDownloadTemplate">
                         点击此处下载《话术导入模板》
@@ -28,7 +28,7 @@
             </div>
             <!-- 步骤二：上传文件 -->
             <div class="mt-6">
-                <div class="font-bold">
+                <div class="font-medium">
                     <span>二、请选择需要导入的文件</span>
                 </div>
                 <div class="mt-2">

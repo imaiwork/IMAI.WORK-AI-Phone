@@ -15,7 +15,7 @@
                         <view class="flex items-center justify-between mb-4">
                             <view class="flex items-center gap-x-1">
                                 <view class="w-1 h-4 bg-black rounded-full mr-1"></view>
-                                <text class="font-bold text-[32rpx] text-[#1A1A1A]">上传形象视频</text>
+                                <text class="font-medium text-[32rpx] text-[#1A1A1A]">上传形象视频</text>
                                 <text class="text-[#FF3C26] text-[32rpx]">*</text>
                             </view>
                             <view
@@ -84,7 +84,7 @@
                         <view class="flex items-center justify-between mb-4">
                             <view class="flex items-center gap-x-1">
                                 <view class="w-1 h-4 bg-black rounded-full mr-1"></view>
-                                <text class="font-bold text-[32rpx] text-[#1A1A1A]">上传授权视频</text>
+                                <text class="font-medium text-[32rpx] text-[#1A1A1A]">上传授权视频</text>
                                 <text class="text-[#FF3C26] text-[32rpx]">*</text>
                             </view>
                             <view class="flex items-center gap-x-2">
@@ -93,7 +93,7 @@
                                         <view
                                             v-for="(item, index) in ['手动授权', 'AI授权']"
                                             :key="index"
-                                            class="rounded-[12rpx] text-xs font-bold flex items-center justify-center z-10 transition-colors duration-500"
+                                            class="rounded-[12rpx] text-xs font-medium flex items-center justify-center z-10 transition-colors duration-500"
                                             :class="authIndex === index ? 'text-primary' : 'text-[#000000]/50'"
                                             @click="authIndex = index">
                                             {{ item }}
@@ -167,13 +167,13 @@
         <view
             class="flex-shrink-0 p-4 pb-[calc(20rpx+env(safe-area-inset-bottom))] bg-white flex items-center gap-x-3 shadow-[0_-4rpx_16rpx_rgba(0,0,0,0.03)] z-10">
             <view
-                class="h-[96rpx] w-[200rpx] bg-[#F5F7FA] rounded-full flex items-center justify-center text-[28rpx] font-bold text-[#333] active:scale-95 transition-transform"
+                class="h-[96rpx] w-[200rpx] bg-[#F5F7FA] rounded-full flex items-center justify-center text-[28rpx] font-medium text-[#333] active:scale-95 transition-transform"
                 @click="showExample = true">
                 <u-icon name="play-circle" size="32" class="mr-1"></u-icon>
                 拍摄教程
             </view>
             <view
-                class="flex-1 h-[96rpx] text-white flex items-center justify-center rounded-full font-bold text-[30rpx] shadow-lg active:scale-[0.98] transition-all"
+                class="flex-1 h-[96rpx] text-white flex items-center justify-center rounded-full font-medium text-[30rpx] shadow-lg active:scale-[0.98] transition-all"
                 :class="[isCreate ? 'bg-[#1A1A1A] shadow-[#000000]/20' : 'bg-[#E1E4E8] text-[#999] shadow-[none]']"
                 @click="handleCreateAnchor">
                 开始克隆 <text class="text-[24rpx] font-normal ml-1 opacity-80"> (消耗{{ getToken }}算力)</text>
@@ -191,7 +191,7 @@
                     :color="isSuccess ? '#ffffff' : '#FF3C26'"
                     size="40"></u-icon>
             </view>
-            <text class="text-[36rpx] font-bold text-[#1A1A1A] mb-2">{{
+            <text class="text-[36rpx] font-medium text-[#1A1A1A] mb-2">{{
                 isSuccess ? "创建任务成功" : "创建任务失败"
             }}</text>
             <text v-if="!isSuccess" class="text-[#666] text-center text-[28rpx]">{{
@@ -199,7 +199,7 @@
             }}</text>
 
             <view
-                class="w-full h-[96rpx] text-white flex items-center justify-center rounded-full bg-[#1A1A1A] mt-8 text-[30rpx] font-bold active:opacity-90"
+                class="w-full h-[96rpx] text-white flex items-center justify-center rounded-full bg-[#1A1A1A] mt-8 text-[30rpx] font-medium active:opacity-90"
                 @click="handleConfirm">
                 确认
             </view>
@@ -214,7 +214,7 @@
                     <view class="bg-white p-4 rounded-[24rpx] mb-4 overflow-hidden">
                         <view class="flex items-center gap-x-2 mb-4">
                             <view class="w-1 h-4 bg-[#1A1A1A] rounded-full"></view>
-                            <text class="text-[30rpx] font-bold text-[#1A1A1A]">视频教程</text>
+                            <text class="text-[30rpx] font-medium text-[#1A1A1A]">视频教程</text>
                         </view>
                         <view class="h-[384rpx] rounded-[24rpx] overflow-hidden relative bg-black">
                             <video-player
@@ -228,7 +228,7 @@
                         <view class="bg-white p-4 rounded-[24rpx]">
                             <view class="flex items-center gap-x-2 mb-4">
                                 <view class="w-1 h-4 bg-[#1A1A1A] rounded-full"></view>
-                                <text class="text-[30rpx] font-bold text-[#1A1A1A]">拍摄要求</text>
+                                <text class="text-[30rpx] font-medium text-[#1A1A1A]">拍摄要求</text>
                             </view>
                             <image
                                 class="w-full rounded-[16rpx]"
@@ -239,7 +239,7 @@
                         <view class="bg-white p-4 rounded-[24rpx]">
                             <view class="flex items-center gap-x-2 mb-4">
                                 <view class="w-1 h-4 bg-[#FF3C26] rounded-full"></view>
-                                <text class="text-[30rpx] font-bold text-[#1A1A1A]">错误示例</text>
+                                <text class="text-[30rpx] font-medium text-[#1A1A1A]">错误示例</text>
                             </view>
                             <view class="grid grid-cols-2 gap-3">
                                 <view class="bg-[#F8F9FB] p-3 rounded-[16rpx] flex flex-col items-center">
@@ -276,15 +276,15 @@
 
     <u-popup v-model="showAuthHelp" mode="center" border-radius="20" width="85%">
         <view class="bg-white px-[54rpx] py-[44rpx]">
-            <view class="text-[30rpx] font-bold"> AI授权是什么？ </view>
-            <view class="mt-[32rpx] text-[#000000]/70 font-bold leading-6">
+            <view class="text-[30rpx] font-medium"> AI授权是什么？ </view>
+            <view class="mt-[32rpx] text-[#000000]/70 font-medium leading-6">
                 启用后，无需自行录制授权视频，系统将自动使用您已上传的训练视频生成一段带口型同步的授权声明视频。
             </view>
-            <view class="mt-[32rpx] text-[#000000]/70 font-bold leading-6">
+            <view class="mt-[32rpx] text-[#000000]/70 font-medium leading-6">
                 该功能按次收费，每次生成会消耗对应算力/金额。 建议在确认训练视频无误后再使用，可减少重复扣费。
             </view>
             <view
-                class="mt-[70rpx] w-[320rpx] h-[90rpx] mx-auto bg-[#F3F3F3] rounded-[20rpx] text-center leading-[90rpx] text-[30rpx] font-bold"
+                class="mt-[70rpx] w-[320rpx] h-[90rpx] mx-auto bg-[#F3F3F3] rounded-[20rpx] text-center leading-[90rpx] text-[30rpx] font-medium"
                 @click="showAuthHelp = false">
                 我已知晓
             </view>

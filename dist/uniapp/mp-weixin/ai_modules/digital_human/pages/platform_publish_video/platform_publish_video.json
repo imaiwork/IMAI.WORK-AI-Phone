@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "发布视频",
+  "usingComponents": {
+    "video-preview": "../../../../components/video-preview/video-preview",
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
+    "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
+    "name-edit": "../../components/keywords-edit/keywords-edit"
+  }
+}

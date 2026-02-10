@@ -62,7 +62,7 @@
                             <img src="@/assets/images/sound_black.png" class="w-full" v-if="!isPlaying" />
                             <img src="@/assets/images/sound_play_black.gif" class="w-full" v-else />
                         </div>
-                        <span class="text-xs font-bold">{{ formatAudioTime(file.duration) }}″</span>
+                        <span class="text-xs font-medium">{{ formatAudioTime(file.duration) }}″</span>
                     </div>
                 </div>
                 <div v-if="showStt" class="bg-white px-4 py-2 rounded mt-2">
@@ -128,7 +128,7 @@
                 class="w-[10px] h-[10px] bg-white rounded-[2px] absolute top-[18px] -translate-y-1/2 rotate-45"
                 :class="{ '-right-1': type == 1, '-left-1': type == 2 }"></div>
             <div class="bg-white p-2 rounded flex gap-2 items-center justify-between">
-                <div class="font-bold inline-block max-w-[300px] flex-1 break-words">
+                <div class="font-medium inline-block max-w-[300px] flex-1 break-words">
                     {{ file.Title || file.name }}
                 </div>
                 <img src="@/assets/images/file.png" class="w-[41px]" />
@@ -150,7 +150,7 @@
                     'bg-[#A9EA7A]': type == 1,
                     'bg-white': type == 2,
                 }">
-                <div class="font-bold">
+                <div class="font-medium">
                     {{ file.Title }}
                 </div>
                 <ElDivider class="!my-2" />

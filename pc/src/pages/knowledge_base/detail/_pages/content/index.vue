@@ -10,7 +10,7 @@
                             {{ isRag ? "RAG ENGINE" : "VECTOR DB" }}
                         </span>
                     </div>
-                    <div class="text-[13px] font-bold text-[#94A3B8]">
+                    <div class="text-[13px] font-medium text-[#94A3B8]">
                         管理知识库文件，系统将根据这些文档进行语义索引与对话回复。
                     </div>
                 </div>
@@ -84,7 +84,7 @@
                                     <img :src="getFileType(row.type)" class="w-6 h-6 object-contain" />
                                 </div>
                                 <span
-                                    class="text-[14px] font-bold text-[#1E293B] hover:text-primary transition-colors"
+                                    class="text-[14px] font-medium text-[#1E293B] hover:text-primary transition-colors"
                                     >{{ row.name }}</span
                                 >
                             </div>
@@ -154,7 +154,9 @@
                     <template #empty>
                         <div class="py-20 flex flex-col items-center justify-center grayscale opacity-60">
                             <Icon name="local-icon-empty" :size="100" />
-                            <p class="text-[14px] font-bold text-[#94A3B8] mt-4">没有任何文档，点击上方按钮开始上传</p>
+                            <p class="text-[14px] font-medium text-[#94A3B8] mt-4">
+                                没有任何文档，点击上方按钮开始上传
+                            </p>
                         </div>
                     </template>
                 </ElTable>

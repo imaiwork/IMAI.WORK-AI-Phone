@@ -17,6 +17,7 @@
     "create-success-pop": "../../components/create-success-pop/create-success-pop",
     "tokens-cost": "../../components/tokens-cost/tokens-cost",
     "choose-audio-type": "../../components/choose-audio-type/choose-audio-type",
+    "choose-agent": "../../components/choose-agent/choose-agent",
     "recorder-control": "../../components/recorder-control/recorder-control"
   }
 }

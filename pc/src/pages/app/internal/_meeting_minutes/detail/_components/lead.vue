@@ -1,7 +1,7 @@
 <template>
     <div class="h-full flex flex-col gap-4 pt-4">
         <div class="">
-            <div class="font-bold">关键词</div>
+            <div class="font-medium">关键词</div>
             <div class="mt-3">
                 <div class="flex flex-wrap gap-3" v-if="getTags">
                     <div v-for="tag in getTags" class="px-3 py-1 bg-[#E8F0FF] text-primary rounded-md">
@@ -12,7 +12,7 @@
             </div>
         </div>
         <div class="">
-            <div class="font-bold">全文概要</div>
+            <div class="font-medium">全文概要</div>
             <div class="mt-3">
                 <div class="text-[#585A73] leading-6" v-if="getParameters">
                     {{ getParameters }}
@@ -78,18 +78,18 @@
                             <div class="flex flex-col gap-3" v-if="getQa">
                                 <div v-for="(item, index) in getQa" class="rounded flex overflow-hidden">
                                     <div class="bg-[#DEE5FA] w-[48px] flex-shrink-0 flex items-center justify-center">
-                                        <span class="text-xl font-bold text-primary">Q</span>
-                                        <span class="text-[10px] font-bold text-[#FF8D1A]">A</span>
+                                        <span class="text-xl font-medium text-primary">Q</span>
+                                        <span class="text-[10px] font-medium text-[#FF8D1A]">A</span>
                                     </div>
                                     <div class="bg-[#E8F0FF] grow p-3">
                                         <div class="flex gap-2">
-                                            <div class="text-primary font-bold">问:</div>
-                                            <div class="font-bold">
+                                            <div class="text-primary font-medium">问:</div>
+                                            <div class="font-medium">
                                                 {{ item.Question }}
                                             </div>
                                         </div>
                                         <div class="flex gap-2 mt-2">
-                                            <div class="text-[#FF8D1A] font-bold">答:</div>
+                                            <div class="text-[#FF8D1A] font-medium">答:</div>
                                             <div class="text-xs text-[#585A73] leading-[20px]">
                                                 {{ item.Answer }}
                                             </div>

@@ -71,24 +71,24 @@
                                 <div
                                     v-for="(tag, index) in getTags"
                                     :key="index"
-                                    class="text-[10px] font-bold text-tx-secondary px-2 flex justify-center items-center bg-gray-100 h-[20px] rounded-md border border-br-extra-light">
+                                    class="text-[10px] font-medium text-tx-secondary px-2 flex justify-center items-center bg-gray-100 h-[20px] rounded-md border border-br-extra-light">
                                     {{ tag }}
                                 </div>
                             </div>
                             <div class="text-xs text-tx-placeholder" v-else>暂无主题标签</div>
                         </template>
                         <div
-                            class="text-xs text-red-500 font-bold flex items-center gap-1"
+                            class="text-xs text-red-500 font-medium flex items-center gap-1"
                             v-else-if="item.status == TurnStatus.ERROR">
                             <Icon name="el-icon-CircleClose" :size="12" color="#F56C6C" />
                             任务失败
                         </div>
-                        <div class="text-xs text-primary font-bold animate-pulse" v-else>正在智能处理中...</div>
+                        <div class="text-xs text-primary font-medium animate-pulse" v-else>正在智能处理中...</div>
                     </div>
                 </div>
 
                 <div class="px-6 pb-4 flex items-center justify-between">
-                    <div class="text-tx-placeholder text-[11px] font-bold">
+                    <div class="text-tx-placeholder text-[11px] font-medium">
                         {{ dayjs(item.create_time).format("MM/DD HH:mm") }}
                     </div>
 
@@ -221,7 +221,7 @@ const onTrain = (item: any) => {
 
 /* 操作项样式 */
 .action-item {
-    @apply flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer text-xs font-bold text-tx-regular hover:bg-gray-100 transition-all active:scale-95;
+    @apply flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer text-xs font-medium text-tx-regular hover:bg-gray-100 transition-all active:scale-95;
 }
 
 .success-box {

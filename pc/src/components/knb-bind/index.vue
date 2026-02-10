@@ -72,7 +72,7 @@
                                     :label="`${item.label} ${item.value}`"
                                     :value="item.value">
                                     <span class="text-[#94A3B8]">{{ item.label }}：</span>
-                                    <span class="font-bold">{{ item.value }}</span>
+                                    <span class="font-medium">{{ item.value }}</span>
                                 </ElOption>
                             </ElSelect>
                         </ElFormItem>

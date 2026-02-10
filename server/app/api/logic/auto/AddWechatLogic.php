@@ -134,12 +134,9 @@ class AddWechatLogic extends ApiLogic
                 throw new \Exception('该设备没有绑定账号');
             }
 
-            if($device->wechat_device_code == null){
-                throw new \Exception('该设备没有绑定个微设备号');
-            }   
+            
 
-            $wechat = AiWechat::where('user_id', $item->user_id)->where('device_code', $device->wechat_device_code)->findOrEmpty();
-           
+            $wechat = SvAccount::where('user_id', $item->user_id)->where('device_code', $device->device_code)->where('type', 1)->findOrEmpty();
             if($wechat->isEmpty()){
                 throw new \Exception('该设备绑定的微号不存在');
             }   
@@ -148,7 +145,7 @@ class AddWechatLogic extends ApiLogic
                 ->where('task_type', DeviceEnum::AUTO_TYPE_WECHAT_FRIEND)
                 ->where('source', DeviceEnum::TASK_SOURCE_FRIENDS)
                 ->where('auto_type', 1)
-                ->where('account', $wechat->wechat_id)
+                ->where('account', $wechat->account)
                 ->where('account_type', 1)
                 ->order('day', 'desc')
                 ->limit(1)
@@ -163,7 +160,7 @@ class AddWechatLogic extends ApiLogic
                     'user_id' => $item->user_id,
                     'device_code' => $item->device_code,
                     'task_type' => DeviceEnum::AUTO_TYPE_WECHAT_FRIEND,
-                    'account' => $wechat->wechat_id,
+                    'account' => $wechat->account,
                     'account_type' => 1,
                     'auto_type' => 1,
                     'task_name' => '自动化加微任务',

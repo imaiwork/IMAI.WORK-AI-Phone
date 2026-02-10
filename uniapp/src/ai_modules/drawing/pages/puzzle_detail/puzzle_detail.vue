@@ -1,7 +1,7 @@
 <template>
     <view class="h-screen flex flex-col bg-white pt-2" v-if="!loading">
         <view class="px-4">
-            <view class="font-bold">{{ detailData.name }}</view>
+            <view class="font-medium">{{ detailData.name }}</view>
             <view class="text-[22rpx] text-[#0000004d] mt-1">{{ detailData.create_time }}</view>
         </view>
         <view class="px-[8rpx] mx-4 mt-4 bg-[#F1F2F5] rounded-[16rpx]">
@@ -40,7 +40,7 @@
                         <template v-else-if="detailData.status == 5" class="">
                             <view class="flex items-center gap-x-2">
                                 <image src="@/packages/static/icons/stop.svg" class="w-[28rpx] h-[28rpx]"></image>
-                                <text class="text-[#F12A46] font-bold">拼图失败</text>
+                                <text class="text-[#F12A46] font-medium">拼图失败</text>
                             </view>
                             <view class="text-center text-[20rpx] text-[#00000066] w-[70%] mt-1">{{
                                 detailData.remark
@@ -67,7 +67,7 @@
                 <text class="text-[#0000004d]">删除</text>
             </view>
             <view
-                class="rounded-[16rpx] w-[450rpx] h-[90rpx] flex items-center justify-center bg-black text-white font-bold text-[30rpx]"
+                class="rounded-[16rpx] w-[450rpx] h-[90rpx] flex items-center justify-center bg-black text-white font-medium text-[30rpx]"
                 @click="handleCreate"
                 >创建发布图文</view
             >
@@ -84,7 +84,7 @@
                     <picker-view
                         :value="groupValue"
                         indicator-style="height: 100rpx;"
-                        indicator-class="font-bold"
+                        indicator-class="font-medium"
                         @change="changeGroupValue">
                         <picker-view-column>
                             <view
@@ -98,12 +98,12 @@
                 </view>
                 <view class="flex justify-around p-4 border-[0] border-t-[1rpx] border-solid border-[rgba(0,0,0,0.03)]">
                     <view
-                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-[#F3F3F3] text-[30rpx] text-[#00000080] font-bold"
+                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-[#F3F3F3] text-[30rpx] text-[#00000080] font-medium"
                         @click="showPublishSetting = false"
                         >取消</view
                     >
                     <view
-                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-primary text-[30rpx] text-white font-bold"
+                        class="w-[180rpx] h-[76rpx] flex items-center justify-center rounded-[10rpx] bg-primary text-[30rpx] text-white font-medium"
                         @click="toPublish"
                         >确定</view
                     >
@@ -247,7 +247,7 @@ picker-view {
 .type-item {
     @apply w-full flex items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500;
     &.active {
-        @apply text-black font-bold relative;
+        @apply text-black font-medium relative;
     }
 }
 
@@ -296,7 +296,7 @@ picker-view {
     }
 }
 .gen-loading-text {
-    @apply font-bold;
+    @apply font-medium;
     background: linear-gradient(90deg, #9879df 0%, #706fd1 34.73%, #277ef2 73.61%, #2adbc8 101%);
     background-clip: text;
     -webkit-background-clip: text;
