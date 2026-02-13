@@ -217,7 +217,7 @@
                             <template v-else>
                                 <view class="mt-[34rpx]">
                                     <view class="flex items-center justify-between">
-                                        <template v-if="item.is_auto_setting === 0">
+                                        <template v-if="[0,2].includes(item.is_auto_setting)">
                                             <view
                                                 class="text-[#FF2442] font-medium"
                                                 @click.stop="
@@ -263,7 +263,7 @@
                                             class="flex-1 h-[80rpx] bg-[#FF2442] rounded-[16rpx] flex items-center justify-center gap-x-2"
                                             @click.stop="
                                                 toPage(
-                                                    item.is_auto_setting == 0
+                                                    [0, 2].includes(item.is_auto_setting)
                                                         ? '/ai_modules/device/pages/create_auto_task/create_auto_task'
                                                         : '/ai_modules/device/pages/auto_task/auto_task',
                                                     {
@@ -285,7 +285,7 @@
                                         </view>
                                     </template>
                                     <view
-                                        v-if="[1, 2].includes(item.is_auto_setting)"
+                                        v-if="[1].includes(item.is_auto_setting)"
                                         class="h-[80rpx] w-[144rpx] border border-solid border-[#0000001a] rounded-[16rpx] flex items-center justify-center gap-x-2"
                                         @click.stop="
                                             toPage('/ai_modules/device/pages/auto_task/auto_task', {

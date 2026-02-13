@@ -97,4 +97,17 @@ class ConfigController extends BaseAdminController
 
         return $this->fail('更新失败');
     }
+
+
+    /**
+     * @notes 查询缺少的配置
+     * @return \think\response\Json
+     * @author 段誉
+     * @date 2021/12/31 11:01
+     */
+    public function check()
+    {
+        $data = ConfigLogic::check();
+        return $this->data($data);
+    }
 }

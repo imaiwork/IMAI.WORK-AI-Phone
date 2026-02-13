@@ -280,6 +280,11 @@ export const getDeviceTaskDashboard = (data: any) => {
     return request.get({ url: "/device.display/lists", data });
 };
 
+// 检查是不是有真实任务
+export const checkRealTask = (data: any) => {
+    return request.post({ url: "/auto.device/checkOpt", data });
+};
+
 // 创建演示任务
 export const createDemoTask = (data: any) => {
     return request.post({ url: "/auto.device/opt", data });

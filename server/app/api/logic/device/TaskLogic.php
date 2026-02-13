@@ -504,12 +504,12 @@ class TaskLogic extends ApiLogic
                     AiWechatCircleTask::where('id', $task['sub_data_id'])->select()->delete();
                     break;
                 case DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT:
-                    $taskinfo = SvDeviceCircleLikeReply::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty();
+                    $taskinfo = SvDeviceCircleLikeReplyAccount::where('id', $task['sub_data_id'])->where('user_id', self::$uid)->findOrEmpty();
                     if ($taskinfo->isEmpty()) {
                         throw new \Exception('点赞评论任务不存在');
                     }
-                    SvDeviceCircleLikeReply::where('id', $params['sub_task_id'])->select()->delete();
-                    SvDeviceCircleLikeReplyAccount::where('id', $task['sub_data_id'])->select()->delete();
+                    //SvDeviceCircleLikeReply::where('id', $params['sub_task_id'])->select()->delete();
+                    SvDeviceCircleLikeReplyAccount::where('id', $taskinfo['id'])->select()->delete();
                     break;
 
                 case DeviceEnum::TASK_SOURCE_CLUES_WECHAT:
@@ -548,7 +548,7 @@ class TaskLogic extends ApiLogic
         try {
 
             $source = $params['source'] ?? 0;
-            $task = SvDeviceTask::field('start_time,end_time,account_type,account,status,device_code,task_name,task_type,auto_type')
+            $task = SvDeviceTask::field('start_time,end_time,account_type,account,status,device_code,task_name,task_type,auto_type,sub_data_id')
                 ->where('id', $params['id'])
                 ->where('user_id', self::$uid)
                 ->findOrEmpty()->toArray();
@@ -656,7 +656,7 @@ class TaskLogic extends ApiLogic
                     if (!$taskinfo) {
                         throw new \Exception('朋友圈点赞评论任务不存在');
                     }
-                    $detail = SvDeviceCircleLikeReplyAccount::where('circle_like_reply_id', $taskinfo['id'])->findOrEmpty()->toArray();
+                    $detail = SvDeviceCircleLikeReplyAccount::where('id', $task['sub_data_id'])->findOrEmpty()->toArray();
                     if ($detail) {
                         $detail['name'] =  $taskinfo['task_name'] ?? '';
                         $task['detail'] = $detail;

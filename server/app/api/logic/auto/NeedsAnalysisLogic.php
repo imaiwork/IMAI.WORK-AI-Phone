@@ -144,7 +144,7 @@ class NeedsAnalysisLogic extends ApiLogic
             $request['Model']    = '';
             $res                 = self::flowRequest($request);
             if (!empty($res['result']['Operations'])) {
-                $report = AutoNeedsAnalysis::where('device_code', $params['device_code'])->where('step', 2)->findOrEmpty();
+                $report = AutoNeedsAnalysis::where('device_code', $params['device_code'])->where('user_id', self::$uid)->where('step', 2)->findOrEmpty();
                 if ($report->isEmpty()){
                     $insert             = [
                         'user_id'         => self::$uid,
@@ -218,7 +218,7 @@ class NeedsAnalysisLogic extends ApiLogic
     public static function add($params)
     {
         try {
-            $analysis = AutoNeedsAnalysis::where('device_code', $params['device_code'])->where('step',1)->findOrEmpty();
+            $analysis = AutoNeedsAnalysis::where('device_code', $params['device_code'])->where('user_id', self::$uid)->where('step',1)->findOrEmpty();
             $arr              = [
                 'basicInformation'             => $params['basicInformation'], //基础信息
                 'ipTalent'                     => $params['ipTalent'], //IP人选

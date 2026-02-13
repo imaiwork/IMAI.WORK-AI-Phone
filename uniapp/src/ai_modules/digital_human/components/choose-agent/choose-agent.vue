@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model="show" :is-disabled-touch="true">
+    <popup-bottom v-model="show" :is-disabled-touch="true" :mask-close-able="false">
         <template #header>
             <view
                 class="header flex justify-between items-center px-6 py-5 border-[0] border-b border-solid border-[#f3f4f6]">

@@ -209,7 +209,7 @@ class UploadService
      * @author 段誉
      * @date 2021/12/29 16:32
      */
-    public static function video($cid, int $sourceId = 0, int $source = FileEnum::SOURCE_ADMIN, string $saveDir = 'uploads/video',  $ffmpeg = 0)
+    public static function video($cid, int $sourceId = 0, int $source = FileEnum::SOURCE_ADMIN, string $saveDir = 'uploads/video',  $ffmpeg = 0, $clip = [])
     {
         try {
             if ($ffmpeg == 0) {
@@ -269,7 +269,7 @@ class UploadService
                 $standardizedPath = public_path() . $saveDir . '/' . str_replace("\\", "/", $fileName);
                 $default = ConfigService::get('storage', 'default', 'local');
                 try {
-                    $url = self::standardizeMedia($standardizedPath, null);
+                    $url = self::standardizeMedia($standardizedPath, $clip);
                 } catch (Exception $e) {
                     Log::channel('ffmpeg')->write('视频标准化失败'. $e->getMessage());
                     if ($default != 'local') {
@@ -380,7 +380,7 @@ class UploadService
      * @author dw
      * @date 2023/06/26
      */
-    public static function file($cid, int $sourceId = 0, int $source = FileEnum::SOURCE_ADMIN, string $saveDir = 'uploads/file', $ffmpeg = 0)
+    public static function file($cid, int $sourceId = 0, int $source = FileEnum::SOURCE_ADMIN, string $saveDir = 'uploads/file', $ffmpeg = 0, $clip = [])
     {
         try {
             if ($ffmpeg == 0) {
@@ -442,9 +442,9 @@ class UploadService
             if ($ffmpeg == 1) {
                 $default = ConfigService::get('storage', 'default', 'local');
                 $standardizedPath = public_path() . $saveDir . '/' . str_replace("\\", "/", $fileName);
-
                 try {
-                    $url = self::standardizeMedia($standardizedPath, null);
+                    $url = self::standardizeMedia($standardizedPath, $clip);
+                    
                 } catch (Exception $e) {
                     if ($default != 'local') {
                         $url = self::uploadToOSS($standardizedPath, $saveDir);
@@ -803,7 +803,6 @@ class UploadService
             
             // 根据媒体类型进行标准化处理
             $needTranscode = false;
-            
             if ($mediaType === 'video' && $r_frame_rate == '25/1') {
                 // 图片处理
                 $specs = $customSpecs['image'] ?? self::DEFAULT_IMAGE_SPECS;
@@ -1019,21 +1018,33 @@ class UploadService
         if (empty($info['streams'])) {
             return false;
         }
-        
+        $specs = array_merge(self::DEFAULT_VIDEO_SPECS, $specs);
         $stream = $info['streams'][0];
-        
         // 计算目标分辨率
         $targetResolution = self::calculateTargetResolution($info, $specs);
         $targetDims = explode('x', $targetResolution);
+        if($specs['duration'] < 1){
+            return (
+                isset($stream['codec_name']) && $stream['codec_name'] === $specs['video_codec'] &&
+                isset($stream['width']) && $stream['width'] <= intval($targetDims[0]) &&
+                isset($stream['height']) && $stream['height'] <= intval($targetDims[1]) &&
+                isset($stream['r_frame_rate']) && $stream['r_frame_rate'] == $specs['frame_rate'] &&
+                isset($stream['bit_rate']) && $stream['bit_rate'] >= 4000000 && $stream['bit_rate'] <= 6000000 &&
+                isset($stream['pix_fmt']) && $stream['pix_fmt'] === $specs['pixel_format']
+            );
+        }else{
+            return (
+                isset($stream['codec_name']) && $stream['codec_name'] === $specs['video_codec'] &&
+                isset($stream['width']) && $stream['width'] <= intval($targetDims[0]) &&
+                isset($stream['height']) && $stream['height'] <= intval($targetDims[1]) &&
+                isset($stream['r_frame_rate']) && $stream['r_frame_rate'] == $specs['frame_rate'] &&
+                isset($stream['bit_rate']) && $stream['bit_rate'] >= 4000000 && $stream['bit_rate'] <= 6000000 &&
+                isset($stream['pix_fmt']) && $stream['pix_fmt'] === $specs['pixel_format']&&
+                isset($stream['duration']) && $stream['duration'] >= $specs['duration']
+            );
+        }
         
-        return (
-            isset($stream['codec_name']) && $stream['codec_name'] === $specs['video_codec'] &&
-            isset($stream['width']) && $stream['width'] <= intval($targetDims[0]) &&
-            isset($stream['height']) && $stream['height'] <= intval($targetDims[1]) &&
-            isset($stream['r_frame_rate']) && $stream['r_frame_rate'] == $specs['frame_rate'] &&
-            isset($stream['bit_rate']) && $stream['bit_rate'] >= 4000000 && $stream['bit_rate'] <= 6000000 &&
-            isset($stream['pix_fmt']) && $stream['pix_fmt'] === $specs['pixel_format']
-        );
+        
     }
 
     /**
@@ -1051,7 +1062,6 @@ class UploadService
         }
         
         $stream = $info['streams'][0];
-        
         // 计算目标分辨率
         $targetResolution = self::calculateTargetResolution($info, $specs);
         $targetDims = explode('x', $targetResolution);
@@ -1136,7 +1146,6 @@ class UploadService
         if (isset($specs['duration']) && $specs['duration'] > 0) {
             $ffmpegParts[] = "-t " . $specs['duration'];
         }
-        
         // 添加帧率（如果指定）
         if (isset($specs['frame_rate']) && $specs['frame_rate'] > 0) {
             $ffmpegParts[] = "-r " . $specs['frame_rate'];

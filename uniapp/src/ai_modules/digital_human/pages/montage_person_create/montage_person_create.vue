@@ -610,12 +610,15 @@ const chooseUploadType = (type: 0 | 1) => {
                     showHistory.value = true;
                 }
                 if (res.tapIndex == 1) {
+                    uploadMaterialType.value = 'video'
+
                     if (isFirstOpen.value) {
                         isFirstOpen.value = false;
                         showUploadTip.value = true;
+                        uploadMaterialType.value = "video";
                         return;
                     }
-                    uploadAndProcessFiles("video");
+                    uploadAndProcessFiles(uploadMaterialType.value);
                 }
             },
         });

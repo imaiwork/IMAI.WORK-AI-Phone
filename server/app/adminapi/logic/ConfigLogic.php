@@ -6,6 +6,7 @@ namespace app\adminapi\logic;
 
 use app\common\model\dict\DictData;
 use app\common\model\ModelConfig;
+use app\common\model\pay\PayConfig;
 use app\common\service\{ConfigService, FileService};
 
 /**
@@ -230,8 +231,7 @@ class ConfigLogic
                 'human_avatar_pro',
                 'human_voice_pro',
                 'human_audio_pro',
-                'human_video_pro',
-                'knowledge_chat'
+                'human_video_pro'
             ])->field('*')->findOrEmpty();
             if ($info->isEmpty()) {
                 unset($castLists[$key]);
@@ -400,5 +400,99 @@ class ConfigLogic
         $response =  \app\common\service\ToolsService::Auth()->checkby();;
 
         return  $response['byname'] ?? '';
+    }
+
+    /**
+     * @notes 查询缺少的配置
+     * @return array
+     * @author 段誉
+     * @date 2021/12/31 11:03
+     */
+    public static function check(): array
+    {
+
+        // 授权码
+        $key   = ConfigService::get('model', 'key', '');
+        $cdKey = 1;
+        if (empty($key) || empty($key['api_key'])) {
+            $cdKey = 0;
+        }
+
+        // 小程序
+        $mnpAppId   = ConfigService::get('mnp_setting', 'app_id', '');
+        $mnpSecret  = ConfigService::get('mnp_setting', 'app_secret', '');
+        $mnpSetting = 1;
+        if (empty($mnpAppId) || empty($mnpSecret)) {
+            $mnpSetting = 0;
+        }
+
+        // 公众号
+        $oaAppId   = ConfigService::get('oa_setting', 'app_id', '');
+        $oaSecret  = ConfigService::get('oa_setting', 'app_secret', '');
+        $oaSetting = 1;
+        if (empty($oaAppId) || empty($oaSecret)) {
+            $oaSetting = 0;
+        }
+
+        // 短信
+        $aliSMS     = ConfigService::get('sms', 'ali', ['type' => 'ali', 'name' => '阿里云短信', 'status' => 0]);
+        $tencentSMS = ConfigService::get('sms', 'tencent', ['type' => 'tencent', 'name' => '腾讯云短信', 'status' => 0]);
+        $smsSetting = 1;
+        if ((empty($aliSMS['sign']) || empty($aliSMS['app_key']) || empty($aliSMS['secret_key'])) && (empty($tencentSMS['sign']) || empty($tencentSMS['app_id']) || empty($tencentSMS['secret_id']) || empty($tencentSMS['secret_key']))) {
+            $smsSetting = 0;
+        }
+
+        // 支付
+        $wechatPayConfig  = PayConfig::find(2)->toArray();
+        $aliPayConfig     = PayConfig::find(3)->toArray();
+        $wechatPaySetting = 1;
+        $aliPaySetting    = 1;
+        $paySetting       = 1;
+        if (empty($wechatPayConfig['config']['mch_id']) || empty($wechatPayConfig['config']['pay_sign_key'])|| empty($wechatPayConfig['config']['apiclient_cert'])|| empty($wechatPayConfig['config']['apiclient_key'])) {
+            $wechatPaySetting = 0;
+        }
+        if (empty($aliPayConfig['config']['app_id']) || empty($aliPayConfig['config']['private_key']) || empty($aliPayConfig['config']['ali_public_key'])) {
+            $aliPaySetting = 0;
+        }
+        if ($wechatPaySetting == 0 && $aliPaySetting == 0) {
+            $paySetting = 0;
+        }
+
+        // 存储
+        $storage = ConfigService::get('storage', 'default', 'local');
+        // 七牛云存储
+        $qiniu = ConfigService::get('storage', 'qiniu', [
+            'access_key' => '',
+            'secret_key' => '',
+        ]);
+        // 阿里云存储
+        $aliyun = ConfigService::get('storage', 'aliyun', [
+            'access_key' => '',
+            'secret_key' => '',
+        ]);
+        // 腾讯云存储
+        $qcloud     = ConfigService::get('storage', 'qcloud', [
+            'access_key' => '',
+            'secret_key' => '',
+        ]);
+        $ossSetting = 1;
+        if ($storage == 'qiniu' && (empty($qiniu['bucket']) || empty($qiniu['access_key']) || empty($qiniu['secret_key']) || empty($qiniu['domain']))){
+            $ossSetting = 0;
+        }
+        if ($storage == 'aliyun' && (empty($aliyun['bucket']) || empty($aliyun['access_key']) || empty($aliyun['secret_key']) ||empty($aliyun['domain']))) {
+            $ossSetting = 0;
+        }
+        if ($storage == 'qcloud' && (empty($qcloud['bucket']) || empty($qcloud['region']) || empty($qcloud['access_key']) || empty($qcloud['secret_key']) || empty($qcloud['domain']))){
+            $ossSetting = 0;
+        }
+
+        return [
+            'api_key'     => $cdKey,
+            'mnp_setting' => $mnpSetting,
+            'oa_setting'  => $oaSetting,
+            'sms_setting' => $smsSetting,
+            'pay_setting' => $paySetting,
+            'oss_setting' => $ossSetting
+        ];
     }
 }

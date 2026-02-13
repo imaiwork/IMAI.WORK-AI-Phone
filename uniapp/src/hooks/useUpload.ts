@@ -16,6 +16,13 @@ const defaultOptions = {
 };
 export default function useUpload(options: {
     isTranscode?: boolean;
+    clip?: [
+        {
+            video: {
+                duration: number;
+            };
+        }
+    ];
     count?: number;
     imageAccept?: string[];
     imageSize?: number;
@@ -31,6 +38,13 @@ export default function useUpload(options: {
 }) {
     const {
         isTranscode = false,
+        clip = [
+            {
+                video: {
+                    duration: 0,
+                },
+            },
+        ],
         count = defaultOptions.count,
         imageAccept = defaultOptions.imageAccept,
         imageSize = defaultOptions.imageSize,
@@ -54,6 +68,7 @@ export default function useUpload(options: {
             const isVideo = fileType === "video";
             const isFile = fileType === "file";
             const isAll = fileType === "all";
+
             const { tempFiles } = await chooseFile({
                 type: fileType,
                 count,
@@ -141,7 +156,13 @@ export default function useUpload(options: {
                 }
                 const fileRes: any = await uploadFile(
                     isAll ? "file" : fileType,
-                    { filePath: item.tempFilePath, formData: { ffmpeg: isTranscode && (isVideo || isImage) ? 1 : 0 } },
+                    {
+                        filePath: item.tempFilePath,
+                        formData: {
+                            ffmpeg: isTranscode && (isVideo || isImage) ? 1 : 0,
+                            "clip[video][duration]": clip[0].video.duration,
+                        },
+                    },
                     (progress) => progressCallback(progress, item)
                 );
                 // if (isTranscode && fileRes.uri) {

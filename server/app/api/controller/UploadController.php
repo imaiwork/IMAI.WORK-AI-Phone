@@ -47,7 +47,8 @@ class UploadController extends BaseApiController
         try {
             $cid = $this->request->post('cid', 0);
             $ffmpeg = $this->request->post('ffmpeg', 0);
-            $result = UploadService::file($cid, $this->userId, FileEnum::SOURCE_USER,'uploads/file',$ffmpeg);
+            $clip = $this->request->post('clip', []);
+            $result = UploadService::file($cid, $this->userId, FileEnum::SOURCE_USER,'uploads/file',$ffmpeg,$clip);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
             return $this->fail($e->getMessage());
@@ -82,7 +83,9 @@ class UploadController extends BaseApiController
         try {
             $cid = $this->request->post('cid', 0);
             $ffmpeg = $this->request->post('ffmpeg', 0);
-            $result = UploadService::video($cid, $this->userId, FileEnum::SOURCE_USER,'uploads/video',$ffmpeg);
+            $clip = $this->request->post('clip', []);
+            
+            $result = UploadService::video($cid, $this->userId, FileEnum::SOURCE_USER,'uploads/video',$ffmpeg,$clip);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
             return $this->fail($e->getMessage());

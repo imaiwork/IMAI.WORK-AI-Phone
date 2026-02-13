@@ -327,7 +327,7 @@
                         <navigator
                             v-if="formData.extra.clip === 1"
                             :url="`/ai_modules/digital_human/pages/montage_styles_choose/montage_styles_choose?type=${
-                                MontageStylesType.MATERIAL
+                                MontageStylesType.NEWS
                             }&data=${JSON.stringify(formData.clip)}`"
                             hover-class="none"
                             class="flex items-center justify-between h-[106rpx] b">

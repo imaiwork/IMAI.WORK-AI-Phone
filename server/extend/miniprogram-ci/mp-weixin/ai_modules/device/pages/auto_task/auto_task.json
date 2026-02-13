@@ -9,6 +9,7 @@
     "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
     "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
     "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
     "account-get": "../../components/account-get/account-get"
   }
 }

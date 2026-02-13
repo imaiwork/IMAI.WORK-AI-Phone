@@ -4,6 +4,7 @@ import zhCn from "element-plus/es/locale/lang/zh-cn";
 import useAppStore from "./stores/modules/app";
 import useSettingStore from "./stores/modules/setting";
 import { ScreenEnum } from "./enums/appEnums";
+import SystemConfigInf from "./components/system-config-inf/index.vue";
 const appStore = useAppStore();
 const settingStore = useSettingStore();
 const elConfig = {
@@ -35,6 +36,7 @@ watch(
 <template>
 	<el-config-provider :locale="elConfig.locale" :z-index="elConfig.zIndex">
 		<router-view />
+		<system-config-inf />
 	</el-config-provider>
 </template>
 

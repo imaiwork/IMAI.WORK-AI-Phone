@@ -195,10 +195,10 @@ import AnchorVideo from "@/ai_modules/digital_human/components/anchor-video/anch
 
 const tabs = [
     {
-        name: "形象克隆",
+        name: "形象列表",
     },
     {
-        name: "声音克隆",
+        name: "声音列表",
     },
 ];
 const currentTab = ref(0);

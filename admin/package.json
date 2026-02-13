@@ -1,6 +1,6 @@
 {
     "name": "admin",
-    "version": "2.7.6",
+    "version": "2.7.7",
     "license": "MIT",
     "scripts": {
         "init": "node initialize.js",

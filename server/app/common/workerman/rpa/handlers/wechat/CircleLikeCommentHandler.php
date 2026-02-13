@@ -113,7 +113,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     'account' => $task->account,
                     'nickname' => $content['nickname'] ?? '',
                     'content' => $content['content'] ?? '',
-                    'comment' => $comment,
+                    'comment' => implode(",", $comment),
                     'hash' =>  $hash,
                     'image' => $this->saveBase64ToImage($content['image'] ?? '', $hash, 'wechat'),
                     'task_id' => $request_id,
@@ -123,9 +123,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
 
                 $this->payload['reply'] = array(
                     'type' => 1,
-                    'content' => [
-                        $comment
-                    ],
+                    'content' => $comment,
                     'link' => '',
                     'isLike' => in_array($setting->action, [1, 3]) ? 1 : 0,
                     'isComment' => in_array($setting->action, [2, 3]) ? 1 : 0,
@@ -166,13 +164,13 @@ class CircleLikeCommentHandler extends BaseMessageHandler
         try {
             if (empty($circleContent)) {
                 $this->setLog('朋友圈内容为空', 'like');
-                return '';
+                return [];
             }
 
             $option = SvDeviceCircleLikeReply::where('id', $task->circle_like_reply_id)->findOrEmpty();
             if ($option->isEmpty()) {
                 $this->setLog('点赞回复选项不存在', 'like');
-                return '';
+                return [];
             }
 
 
@@ -180,7 +178,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
             $robot = KbRobot::where('id', $option->robot_id)->findOrEmpty();
             if ($robot->isEmpty()) {
                 $this->setLog('点赞回复机器人不存在', 'like');
-                return '';
+                return [];
             }
             $knowledge = [];
             if ($robot->kb_type == 1) { //rag
@@ -190,7 +188,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     $bindFind = \app\common\model\knowledge\Knowledge::where('id', $bind['kid'])->limit(1)->find();
                     if (empty($bindFind)) {
                         $this->setLog('挂载知识库不存在', 'like');
-                        return '';
+                        return [];
                     } else {
                         $knowledge = $bindFind->toArray();
                     }
@@ -204,7 +202,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     $bindFind = \app\common\model\kb\KbKnow::where('id', $bind['kid'])->limit(1)->find();
                     if (empty($bindFind)) {
                         $this->setLog('挂载知识库不存在', 'like');
-                        return '';
+                        return [];
                     } else {
                         $knowledge = $bindFind->toArray();
                     }
@@ -214,7 +212,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
             $messages = array(
                 array(
                     'role' => 'system',
-                    'content' => $robot->roles_prompt,
+                    'content' => empty($robot->roles_prompt) ? '你是一个乐意助人的助手' : $robot->roles_prompt,
                 ),
                 array(
                     'role' => 'user',
@@ -240,7 +238,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                 ]);
                 if ($chatStatus === false) {
                     $this->setLog('队列请求知识库失败: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
-                    return '';
+                    return [];
                 } else {
                     if (isset($response['choices'][0]) && !empty($response['choices'][0])) {
                         $replyContent =  $response['choices'][0]['message']['content'];
@@ -273,14 +271,16 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     // 重试
 
                     $this->setLog('队列请求知识库失败: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
-                    return '';
+                    return [];
                 }
             }
 
-            return $replyContent;
+            return [
+                $replyContent
+            ];
         } catch (\Throwable $e) {
             $this->setLog('异常信息' . $e->__toString(), 'like');
-            return '';
+            return [];
         }
     }
 

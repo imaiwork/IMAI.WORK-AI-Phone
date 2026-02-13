@@ -156,10 +156,10 @@ export const useDeviceStore = defineStore("device", {
                 return;
             }
 
-            // 如果有实例但连接已断开，清理旧实例
-            if (this.ws && !this.isConnected) {
-                this.cleanupWebSocket();
-            }
+            // // 如果有实例但连接已断开，清理旧实例
+            // if (this.ws && !this.isConnected) {
+            //     this.cleanupWebSocket();
+            // }
 
             try {
                 const { send, close, onEvent, socket, isConnected } = useDeviceWs();

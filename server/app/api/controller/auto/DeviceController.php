@@ -58,4 +58,17 @@ class DeviceController extends BaseApiController
             return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }
     }
+
+    public function checkOpt(){
+        try {
+            $params = (new DeviceValidate())->post()->goCheck('opt');
+            $result = DeviceLogic::checkOpt($params);
+            if ($result) {
+                return $this->success(data: DeviceLogic::getReturnData());
+            }
+            return $this->fail(DeviceLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
 }

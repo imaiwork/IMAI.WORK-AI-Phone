@@ -1,6 +1,7 @@
 <template>
-    <div class="chatting" ref="chattingRef">
+    <div class="chatting">
         <div
+            ref="chattingRef"
             class="h-full flex-1 flex flex-col min-h-0 relative py-5"
             :class="{ 'pb-[200px]': showShare }"
             v-if="contentList.length">
@@ -480,8 +481,8 @@ const contentContainerStyle = computed(() => {
     }
 
     // 如果有上推高度，使用 chatting容器高度 + 内容容器高度 + 上推高度
-    if (contentPushHeight.value > 0 && containerCurrentHeight.value > 0) {
-        const totalHeight = containerCurrentHeight.value + contentPushHeight.value;
+    if (contentPushHeight.value > 0) {
+        const totalHeight = containerCurrentHeight.value + contentPushHeight.value - 250;
         return {
             minHeight: `${totalHeight}px`,
             transition: "min-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -599,7 +600,7 @@ const triggerContentPushUp = () => {
         containerCurrentHeight.value = getContainerCurrentHeight();
         // 获取最后一轮对话的高度
         const lastConversationHeight = getLastConversationHeight();
-        contentPushHeight.value = lastConversationHeight + chattingContainerHeight.value / 2 - 100;
+        contentPushHeight.value = chattingContainerHeight.value;
     });
 };
 

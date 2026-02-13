@@ -6,12 +6,11 @@ namespace app\adminapi\logic;
 
 use app\common\logic\BaseLogic;
 use app\common\model\ModelConfig;
+use app\common\model\recharge\GiftPackageOrder;
+use app\common\model\user\User;
+use app\common\model\user\UserActiveLog;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
-use app\common\model\user\User;
-use app\common\model\recharge\RechargeOrder;
-use app\common\model\user\UserActiveLog;
-use app\common\model\recharge\GiftPackageOrder;
 
 /**
  * 工作台
@@ -139,7 +138,6 @@ class WorkbenchLogic extends BaseLogic
                     'human_voice_pro',
                     'human_audio_pro',
                     'human_video_pro',
-                    'knowledge_chat'
                 ])->field('name,unit,score,code,scene,description')->findOrEmpty();
 
             if ($info->isEmpty()) {

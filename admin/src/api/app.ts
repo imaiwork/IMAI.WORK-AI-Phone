@@ -40,3 +40,9 @@ export function uploadFile(type: type, params: FileParams, onProgress?: ((progre
         params
     );
 }
+
+
+// 检查系统配置
+export function checkSystemConfig() {
+    return request.get({ url: "/config/check" });
+}
