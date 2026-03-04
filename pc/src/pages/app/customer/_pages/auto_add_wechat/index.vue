@@ -19,7 +19,7 @@
 
                 <div class="grid grid-cols-5 gap-4">
                     <div class="filter-item">
-                        <div class="text-[12px] font-medium text-tx-placeholder mb-1.5 ml-1">执行设备</div>
+                        <div class="text-xs font-medium text-tx-placeholder mb-1.5 ml-1">执行设备</div>
                         <ElSelect
                             v-model="queryParams.device_code"
                             class="custom-select"
@@ -37,7 +37,7 @@
                     </div>
 
                     <div class="filter-item">
-                        <div class="text-[12px] font-medium text-tx-placeholder mb-1.5 ml-1">添加渠道</div>
+                        <div class="text-xs font-medium text-tx-placeholder mb-1.5 ml-1">添加渠道</div>
                         <ElSelect v-model="queryParams.channel" class="custom-select" placeholder="所有渠道" clearable>
                             <ElOption label="小红书" :value="AppTypeEnum.XHS"></ElOption>
                             <ElOption label="视频号" :value="AppTypeEnum.SPH"></ElOption>
@@ -45,7 +45,7 @@
                     </div>
 
                     <div class="filter-item">
-                        <div class="text-[12px] font-medium text-tx-placeholder mb-1.5 ml-1">执行类型</div>
+                        <div class="text-xs font-medium text-tx-placeholder mb-1.5 ml-1">执行类型</div>
                         <ElSelect
                             v-model="queryParams.exec_type"
                             class="custom-select"
@@ -58,7 +58,7 @@
                     </div>
 
                     <div class="filter-item">
-                        <div class="text-[12px] font-medium text-tx-placeholder mb-1.5 ml-1">添加微信</div>
+                        <div class="text-xs font-medium text-tx-placeholder mb-1.5 ml-1">添加微信</div>
                         <ElSelect
                             v-model="queryParams.wechat_no"
                             class="custom-select"
@@ -74,7 +74,7 @@
                     </div>
 
                     <div class="filter-item">
-                        <div class="text-[12px] font-medium text-tx-placeholder mb-1.5 ml-1">加微结果</div>
+                        <div class="text-xs font-medium text-tx-placeholder mb-1.5 ml-1">加微结果</div>
                         <ElSelect v-model="queryParams.status" class="custom-select" placeholder="全部状态" clearable>
                             <ElOption label="全部" value=""></ElOption>
                             <ElOption label="失败" value="0"></ElOption>
@@ -149,7 +149,7 @@
                     prop="create_time"
                     label="创建时间"
                     width="170"
-                    class-name="text-[12px] text-tx-placeholder" />
+                    class-name="text-xs text-tx-placeholder" />
                 <ElTableColumn label="操作" width="100" fixed="right" align="right">
                     <template #default="{ row }">
                         <div class="flex justify-end items-center gap-1">
@@ -174,7 +174,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条加微记录数据</div>
+            <div class="text-xs font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条加微记录数据</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>

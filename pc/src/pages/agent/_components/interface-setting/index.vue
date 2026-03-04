@@ -15,7 +15,7 @@
                                     <template #label>
                                         <div class="flex flex-col gap-[2px]">
                                             <span class="text-[14px] font-[900] text-[#0F172A]">对话欢迎语</span>
-                                            <span class="text-[12px] font-normal text-[#94A3B8]">
+                                            <span class="text-xs font-normal text-[#94A3B8]">
                                                 用户进入对话窗口时显示的开场白。添加双井号（如
                                                 #示例问题#）可快速生成引导词。
                                             </span>
@@ -49,9 +49,7 @@
                                     <div class="w-[4px] h-[16px] bg-primary rounded-[full]"></div>
                                     <div class="flex flex-col">
                                         <span class="text-[15px] font-[900] text-[#0F172A]">快捷菜单</span>
-                                        <span class="text-[12px] text-[#94A3B8]"
-                                            >点击即复，此类消息不消耗 Token 余额</span
-                                        >
+                                        <span class="text-xs text-[#94A3B8]">点击即复，此类消息不消耗 Token 余额</span>
                                     </div>
                                 </div>
                                 <ElButton type="primary" class="add-menu-btn" @click="handleMenuEdit()">

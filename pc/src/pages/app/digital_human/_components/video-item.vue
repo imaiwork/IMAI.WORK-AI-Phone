@@ -60,7 +60,7 @@
                         <template v-else>
                             <div
                                 class="w-9 h-9 rounded-full border-[3px] border-[#0065fb]/20 border-t-primary animate-spin mb-1"></div>
-                            <span class="text-white font-black text-[12px] uppercase tracking-widest opacity-80"
+                            <span class="text-white font-black text-xs uppercase tracking-widest opacity-80"
                                 >生成中...</span
                             >
                             <span class="text-primary font-medium text-[10px] animate-pulse">预计几分钟内完成</span>
@@ -77,7 +77,7 @@
                 <div class="flex-shrink-0">
                     <handle-menu
                         horizontal
-                        :menu-list="menuList"
+                        :menu-list="getMenuList"
                         :data="item"
                         class="!text-slate-400 hover:!text-primary transition-colors" />
                 </div>
@@ -285,6 +285,17 @@ const menuList = ref<HandleMenuType[]>([
     },
 ]);
 
+const getMenuList = computed(() => {
+    if (props.item.type == 6 && [1, 2].includes(getStatus(props.item))) {
+        menuList.value.push({
+            label: "重试",
+            icon: "el-icon-Refresh",
+            click: (data: any) => handleRetry(data),
+        });
+    }
+    return menuList.value;
+});
+
 // 根据不同的类型获取不同的status值
 const getStatus = (item: any) => {
     const { type, status } = item || {};
@@ -342,6 +353,10 @@ const hasClipVideo = computed(() => {
 
 const handleDelete = async (item: any) => {
     emit("delete", item);
+};
+
+const handleRetry = async (item: any) => {
+    emit("retry", item);
 };
 
 const handlePlayCheck = () => {

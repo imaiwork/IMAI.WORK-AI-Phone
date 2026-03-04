@@ -66,7 +66,7 @@
                                                         class="text-[11px] bg-blue-100 text-primary px-[8px] py-[2px] rounded-[4px] font-medium"
                                                         >Token 鉴权已开启</span
                                                     >
-                                                    <span class="text-[12px] text-tx-secondary opacity-60"
+                                                    <span class="text-xs text-tx-secondary opacity-60"
                                                         >ID: {{ formData.flow_config.app_id }}</span
                                                     >
                                                 </div>
@@ -129,7 +129,7 @@
                                         </div>
                                         <div class="w-[1px] h-[24px] bg-gray-200 mx-[20px]"></div>
                                         <ElButton @click="handleImportKeywords()" class="import-btn">
-                                            <Icon name="el-icon-Upload" class="mr-[4px]" />批量导入
+                                            <Icon name="el-icon-Upload" /><span class="ml-[4px]">批量导入</span>
                                         </ElButton>
                                     </div>
 
@@ -146,7 +146,7 @@
                                                         :class="
                                                             row.match_type === 0 ? 'text-orange-500' : 'text-primary'
                                                         "
-                                                        class="text-[12px] font-medium">
+                                                        class="text-xs font-medium">
                                                         {{ row.match_type === 0 ? "模糊" : "精确" }}
                                                     </span>
                                                 </template>
@@ -367,7 +367,7 @@ onMounted(() => {
         @apply text-[15px] font-[900] text-tx-primary;
     }
     .desc {
-        @apply text-[12px] text-tx-secondary mt-[4px] font-normal;
+        @apply text-xs text-tx-secondary mt-[4px] font-normal;
     }
 
     .collapse-icon-box {
@@ -423,7 +423,7 @@ onMounted(() => {
 :deep(.el-table) {
     --el-table-header-bg-color: var(--gray-50);
     th {
-        @apply font-[900] text-gray-500 text-[12px];
+        @apply font-[900] text-gray-500 text-xs;
     }
 }
 </style>

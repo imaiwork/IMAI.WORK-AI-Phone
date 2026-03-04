@@ -168,7 +168,10 @@ const formData = reactive<{
     attachment_type: 1, //附件类型 1：图片 2：短视频
     attachment_content: [],
     wechat_ids: [],
-    time_config: ["00:00", "00:30"], //时间区间
+    time_config: [
+        uni.$u.timeFormat(new Date(), "hh:MM"),
+        uni.$u.timeFormat(new Date(new Date().getTime() + 30 * 60 * 1000), "hh:MM"),
+    ], //时间区间
     date: "", //日期
 });
 

@@ -46,13 +46,13 @@ $post = [
     'code' => trim($_POST['code'] ?? ''),
     'type' => trim($_POST['type'] ?? ''),
     'ai_password' => trim($_POST['ai_password'] ?? $_SERVER['HTTP_HOST']),
-    
-    'pg_host'                => trim($_POST['pg_host']     ?? '127.0.0.1'),
-    'pg_port'                => trim($_POST['pg_port']     ?? '5432'),
-    'pg_name'                => trim($_POST['pg_name']     ?? 'postgres'),
-    'pg_user'                => trim($_POST['pg_user']     ?? 'postgres'),
-    'pg_password'            => trim($_POST['pg_password'] ?? 'postgres'),
-    'pg_prefix'              => trim($_POST['pg_prefix']   ?? 'iw_'),
+
+    'pg_host' => trim($_POST['pg_host'] ?? '127.0.0.1'),
+    'pg_port' => trim($_POST['pg_port'] ?? '5432'),
+    'pg_name' => trim($_POST['pg_name'] ?? 'postgres'),
+    'pg_user' => trim($_POST['pg_user'] ?? 'postgres'),
+    'pg_password' => trim($_POST['pg_password'] ?? 'postgres'),
+    'pg_prefix' => trim($_POST['pg_prefix'] ?? 'iw_'),
 ];
 
 if ($step == 4) {
@@ -60,8 +60,19 @@ if ($step == 4) {
 }
 
 if ($step == 5) {
-
     $post = $_SESSION['install_data']; // 获取 Session
+
+    $host = $_SERVER['HTTP_HOST'];
+
+    // 幂等控制：防止用户在第5步不断刷新导致重复发送Webhook消息
+    $webhookLockFile = $modelInstall->getAppRoot() . '/install_webhook.lock';
+    if (!file_exists($webhookLockFile)) {
+        // 异步推送企微通知任务派发
+        \app\common\service\ToolsService::Notify()->dispatchWebhookAsync($host, $post['mobile'] ?? '');
+
+        // 生成锁文件，标记Webhook已经成功触发过一次
+        file_put_contents($webhookLockFile, time());
+    }
 }
 
 // 判断是否 HTTPS
@@ -71,16 +82,16 @@ $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERV
 $host = $_SERVER['HTTP_HOST'];
 $address = [
     'admin' => $protocol . $host . '/admin',
-    'ai'    => 'https://imai.club/user/login'
+    'ai' => 'https://imai.club/user/login'
 ];
 
 $message = '';
 
 if ($post['type'] == 'send') {
     $response = \app\common\service\ToolsService::DataCenter()->tokensKey([
-        'type'      => $post['type'],
-        'ym'      => $host,
-        'mobile'    => $post['mobile'],
+        'type' => $post['type'],
+        'ym' => $host,
+        'mobile' => $post['mobile'],
     ]);
 
     echo json_encode($response);
@@ -113,11 +124,11 @@ if ($step == 4) {
         if ($canNext) {
             //自动注册数据中台
             $response = \app\common\service\ToolsService::DataCenter()->tokensKey([
-                'type'      => 'register',
-                'mobile'    => $post['mobile'],
-                'code'      => $post['code'],
-                'ym'      => $host,
-                'password'  => $post['ai_password']
+                'type' => 'register',
+                'mobile' => $post['mobile'],
+                'code' => $post['code'],
+                'ym' => $host,
+                'password' => $post['ai_password']
             ]);
 
             if ($response['code'] != 10000 || !isset($response['data']['api_key'])) {
@@ -127,7 +138,7 @@ if ($step == 4) {
 
             $keyInfo = $response['data'];
         }
-        
+
         // if ($canNext) {
         //     //自动注册授权
         //     $response = \app\common\service\ToolsService::Auth($post)->cdkExchange();

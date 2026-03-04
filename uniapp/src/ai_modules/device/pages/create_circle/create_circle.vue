@@ -2,7 +2,7 @@
     <view class="h-screen device-bg flex flex-col">
         <u-navbar
             title-bold
-            title="朋友圈互动"
+            title="朋友圈发布"
             :border-bottom="false"
             :is-fixed="false"
             :background="{

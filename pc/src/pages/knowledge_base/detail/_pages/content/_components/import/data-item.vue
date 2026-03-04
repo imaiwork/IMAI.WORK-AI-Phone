@@ -3,7 +3,7 @@
         <div class="flex items-center justify-between mb-3 px-1">
             <div class="flex items-center gap-2">
                 <span class="index-badge"> #{{ (index + 1).toString().padStart(2, "0") }} </span>
-                <span class="text-[12px] font-medium text-[#94A3B8] truncate max-w-[260px]">
+                <span class="text-xs font-medium text-[#94A3B8] truncate max-w-[260px]">
                     {{ name }}
                 </span>
             </div>
@@ -51,7 +51,7 @@
                 </div>
                 <div>
                     <div class="text-[18px] font-[900] text-[#1E293B]">编辑分段内容</div>
-                    <div class="text-[12px] font-medium text-[#94A3B8]">修改后的内容将实时更新至预览列表</div>
+                    <div class="text-xs font-medium text-[#94A3B8]">修改后的内容将实时更新至预览列表</div>
                 </div>
             </div>
 

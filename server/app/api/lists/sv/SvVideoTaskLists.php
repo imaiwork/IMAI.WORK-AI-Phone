@@ -37,7 +37,16 @@ class SvVideoTaskLists extends BaseApiDataLists implements ListsSearchInterface,
     }
     public function lists(): array
     {
-        $this->searchWhere[] = ['auto_type', '=', $this->request->get('auto_type', 0)];
+        $hasVideoSettingId = false;
+        foreach ($this->searchWhere as $condition) {
+            if (isset($condition[0]) && $condition[0] === 'video_setting_id' && $condition[2] > 0) {
+                $hasVideoSettingId = true;
+                break;
+            }
+        }
+        if (!$hasVideoSettingId) {
+            $this->searchWhere[] = ['auto_type', '=', $this->request->get('auto_type', 0)];
+        }
         $this->searchWhere[] = ['user_id', '=', $this->userId];
         $list = SvVideoTask::where($this->searchWhere)
             ->order($this->sortOrder)

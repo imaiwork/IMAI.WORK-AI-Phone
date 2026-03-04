@@ -335,6 +335,11 @@ const handlePreviewImage = (index?: number) => {
 };
 
 const getDetail = async (data: any) => {
+    detailData.value = {
+        task_id: data.id,
+        sub_task_id: data.sub_task_id,
+        source: data.source,
+    };
     const res = await getDeviceTaskSubtasks({
         id: data.id,
         sub_task_id: data.sub_task_id,
@@ -342,9 +347,7 @@ const getDetail = async (data: any) => {
     });
     detailData.value = {
         ...res,
-        task_id: data.id,
-        sub_task_id: data.sub_task_id,
-        source: data.source,
+        ...detailData.value,
     };
 };
 

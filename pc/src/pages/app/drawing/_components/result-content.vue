@@ -31,7 +31,7 @@
                     <div v-for="(item, idx) in resultLists" :key="idx" class="relative">
                         <div class="flex items-center gap-3 mb-5">
                             <span
-                                class="text-[12px] font-black text-[#1E293B] bg-white px-3 py-1 rounded-lg border border-[#F1F5F9]"
+                                class="text-xs font-black text-[#1E293B] bg-white px-3 py-1 rounded-lg border border-[#F1F5F9]"
                                 >{{ item.date }}</span
                             >
                             <div class="h-[1px] grow bg-[#E2E8F0]"></div>

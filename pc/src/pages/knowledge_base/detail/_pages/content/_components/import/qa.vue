@@ -19,7 +19,7 @@
                     <div class="text-[14px] font-medium text-[#64748B]">
                         将文件拖拽至此，或 <span class="text-primary font-[900] cursor-pointer">点击选择文件</span>
                     </div>
-                    <div class="text-[12px] text-[#94A3B8] mt-2 italic">支持 {{ accept }} 格式，最大 50 个文件</div>
+                    <div class="text-xs text-[#94A3B8] mt-2 italic">支持 {{ accept }} 格式，最大 50 个文件</div>
                 </div>
             </ElUpload>
         </div>
@@ -69,7 +69,7 @@
                         <span class="w-1.5 h-4 bg-primary rounded-full"></span>
                         <span class="text-[14px] font-[900] text-[#1E293B]">分段内容预览</span>
                     </div>
-                    <div class="text-[12px] font-medium text-[#94A3B8]">
+                    <div class="text-xs font-medium text-[#94A3B8]">
                         共计 <span class="text-primary">{{ data[currIndex]?.data.length || 0 }}</span> 组
                     </div>
                 </div>

@@ -185,11 +185,11 @@ defineExpose({
 
 /* 按钮样式 */
 .action-btn {
-    @apply flex items-center px-3 py-1.5 rounded-lg text-[#94A3B8] text-[12px] font-medium cursor-pointer transition-all;
+    @apply flex items-center px-3 py-1.5 rounded-lg text-[#94A3B8] text-xs font-medium cursor-pointer transition-all;
 }
 
 .use-btn {
-    @apply flex items-center px-4 py-1.5 rounded-xl bg-primary text-white text-[12px] font-black cursor-pointer hover:bg-[#4338CA] shadow-light shadow-[#0065fb]/20 active:scale-95 transition-all;
+    @apply flex items-center px-4 py-1.5 rounded-xl bg-primary text-white text-xs font-black cursor-pointer hover:bg-[#4338CA] shadow-light shadow-[#0065fb]/20 active:scale-95 transition-all;
 }
 
 /* 发送按钮 */

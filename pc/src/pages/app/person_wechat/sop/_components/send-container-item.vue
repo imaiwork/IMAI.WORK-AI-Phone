@@ -120,7 +120,7 @@
             </div>
 
             <div
-                class="py-4 text-center text-slate-400 text-[12px] font-medium tracking-widest flex items-center justify-center gap-2"
+                class="py-4 text-center text-slate-400 text-xs font-medium tracking-widest flex items-center justify-center gap-2"
                 v-if="foldIndex.includes(`${data.push_time_id}-${vIndex}`)">
                 <Icon name="el-icon-Loading" class="animate-spin" v-if="false" />
                 CONTENT FOLDED

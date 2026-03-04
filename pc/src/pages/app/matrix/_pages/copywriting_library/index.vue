@@ -134,8 +134,7 @@
                                         class="text-[15px] font-black text-[#1E293B] mb-2 line-clamp-1 group-hover:text-primary transition-colors">
                                         {{ item.name || "未命名文案" }}
                                     </h4>
-                                    <p
-                                        class="text-[12px] text-[#64748B] leading-relaxed line-clamp-3 italic opacity-80">
+                                    <p class="text-xs text-[#64748B] leading-relaxed line-clamp-3 italic opacity-80">
                                         “{{ getCopywritingContent(item) }}”
                                     </p>
                                 </div>

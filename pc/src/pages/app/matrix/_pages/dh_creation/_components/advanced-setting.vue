@@ -39,7 +39,7 @@
                     <Transition name="fade-slide" v-if="false">
                         <div v-if="formData.automatic_clip == 1" class="mt-6 pt-6 border-t border-br/50">
                             <div class="mb-6">
-                                <label class="block text-[12px] font-black text-[#64748B] uppercase mb-3 ml-1"
+                                <label class="block text-xs font-black text-[#64748B] uppercase mb-3 ml-1"
                                     >剪辑风格选择</label
                                 >
                                 <ElSelect
@@ -61,7 +61,7 @@
                             </div>
 
                             <div>
-                                <label class="block text-[12px] font-black text-[#64748B] uppercase mb-3 ml-1"
+                                <label class="block text-xs font-black text-[#64748B] uppercase mb-3 ml-1"
                                     >背景音乐库</label
                                 >
 

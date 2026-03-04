@@ -39,7 +39,7 @@
                 </template>
             </z-paging>
         </view>
-        <view class="fixed bottom-[5vh] left-0 flex justify-center w-full z-[888]">
+        <view class="fixed bottom-[5vh] left-0 flex justify-center w-full z-[888]" v-if="detail.auto_type === 0">
             <view
                 class="w-[280rpx] h-[80rpx] bg-[#FF4D4F] text-white text-[26rpx] font-medium rounded-[12rpx] flex items-center justify-center"
                 @click="handleDeleteClue"

@@ -187,7 +187,7 @@ defineExpose({
 }
 
 .glass-action-btn {
-    @apply flex items-center justify-center h-[32px] px-[16px] rounded-[32px] bg-[rgba(0,0,0,0.3)] backdrop-blur-[8px] border-[1px] border-[rgba(255,255,255,0.2)] text-[#FFFFFF] text-[12px] font-[900] cursor-pointer transition-all;
+    @apply flex items-center justify-center h-[32px] px-[16px] rounded-[32px] bg-[rgba(0,0,0,0.3)] backdrop-blur-[8px] border-[1px] border-[rgba(255,255,255,0.2)] text-[#FFFFFF] text-xs font-[900] cursor-pointer transition-all;
 
     &:hover {
         @apply bg-[rgba(0,0,0,0.5)];

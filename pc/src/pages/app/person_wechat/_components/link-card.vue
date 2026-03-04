@@ -55,7 +55,7 @@ defineProps<{
 }
 
 .link-desc {
-    @apply line-clamp-2 text-[12px] text-tx-secondary leading-[1.6] break-all;
+    @apply line-clamp-2 text-xs text-tx-secondary leading-[1.6] break-all;
     opacity: 0.85;
 }
 

@@ -65,7 +65,7 @@ class KbRobotGroupLogic extends BaseLogic
      * @return bool
      * @author kb
      */
-    public static function edit(array $post, int $userId): bool
+    public static function update(array $post, int $userId): bool
     {
         try {
             $modelKbRobotGroup = new KbRobotGroup();
@@ -167,6 +167,41 @@ class KbRobotGroupLogic extends BaseLogic
     }
 
     /**
+     * @notes 智能体移除分组
+     * @param array $params
+     * @param int $userId
+     * @return bool
+     * @throws Exception
+     * @author kb
+     */
+    public static function remove(array $params, int $userId): bool
+    {
+        if ($params['type'] == 'system_agent') {
+            $model = new KbRobot();
+        } else if ($params['type'] == 'coze_agent' || $params['type'] == 'coze_workflow') {
+            $model = new CozeAgent();
+        } else {
+            throw new Exception('参数错误');
+        }
+        try {
+            $robot = $model
+                ->field(['id,name,group_id'])
+                ->where(['id' => $params['robot_id']])
+                ->findOrEmpty();
+            if ($robot->isEmpty()) {
+                throw new Exception('智能体不存在');
+            }
+
+            $robot->group_id = 0;
+            $robot->save();
+            return true;
+        } catch (Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * @notes 智能体分组编辑
      * @param array $post
      * @param int $userId
@@ -185,8 +220,15 @@ class KbRobotGroupLogic extends BaseLogic
             if (!$knowGroup) {
                 throw new Exception('智能体分组不存在了!');
             }
+
+            if (isset($post['type']) && $post['type'] == 1){
+                $sort = 999;
+            }else{
+                $sort = 0;
+            }
+
             KbRobotGroup::update([
-                                     'sort'        => 999,
+                                     'sort'        => $sort,
                                      'update_time' => time(),
                                  ], ['id' => intval($post['id'])]);
             return true;

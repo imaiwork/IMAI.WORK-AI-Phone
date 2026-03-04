@@ -9,8 +9,32 @@
             title="我的克隆"
             title-bold>
         </u-navbar>
-        <view class="px-10">
-            <u-tabs :list="tabs" :is-scroll="false" :current="currentTab" bg-color="" @change="changeTab"></u-tabs>
+        <view class="flex justify-between h-[100rpx] items-center px-4">
+            <view class="flex-1" v-if="!isDelete">
+                <u-tabs :list="tabs" :is-scroll="false" :current="currentTab" bg-color="" @change="changeTab"></u-tabs>
+            </view>
+            <view class="flex items-center justify-between" :class="{ 'flex-1': isDelete }">
+                <view class="flex items-center gap-x-2">
+                    <view
+                        class="w-[144rpx] h-[68rpx] flex items-center justify-center text-white bg-primary rounded-md"
+                        @click="handleManage">
+                        {{ isDelete ? "取消" : "管理" }}
+                    </view>
+                    <view
+                        v-if="isDelete"
+                        class="w-[144rpx] h-[68rpx] flex items-center justify-center text-primary border border-solid border-primary rounded-md"
+                        @click="handleSelectAll">
+                        全选
+                    </view>
+                </view>
+                <view v-if="isDelete">
+                    <view
+                        class="w-[174rpx] h-[68rpx] flex items-center justify-center text-white bg-[#FF2442] rounded-md"
+                        @click="handleDelete()">
+                        删除 ({{ chooseList.length }})
+                    </view>
+                </view>
+            </view>
         </view>
         <view class="px-4 mt-4">
             <view class="text-xs text-[#00000080]">结果：{{ dataCount }}</view>
@@ -20,6 +44,7 @@
                 ref="pagingRef"
                 v-model="dataLists"
                 :fixed="false"
+                :auto="false"
                 :safe-area-inset-bottom="true"
                 @query="queryList">
                 <view class="px-4">
@@ -48,7 +73,7 @@
                     </view>
                     <view class="flex flex-col gap-2" v-if="currentTab == 1">
                         <view v-for="(item, index) in dataLists" :key="index" class="audio-item">
-                            <view class="flex items-center min-h-[120rpx]">
+                            <view class="flex items-center min-h-[120rpx] gap-x-2">
                                 <view
                                     class="absolute top-0 right-0 w-[100rpx] h-[100rpx] rounded-full opacity-30"
                                     style="
@@ -78,7 +103,7 @@
                                 <view class="flex items-center gap-x-2 flex-shrink-0 relative z-10">
                                     <view
                                         v-if="item.status == 1"
-                                        class="play-btn flex items-center justify-center gap-x-2 rounded-[16rpx] px-[20rpx] py-[12rpx] transition-all duration-300 bg-[#eef6ff] border border-solid border-[#dbeafe] min-w-[120rpx] h-[64rpx]"
+                                        class="play-btn flex items-center justify-center gap-x-1 rounded-[16rpx] px-[20rpx] py-[12rpx] transition-all duration-300 bg-[#eef6ff] border border-solid border-[#dbeafe] min-w-[120rpx] h-[64rpx]"
                                         :class="isPlaying && currVoiceId == item.id ? 'playing' : 'paused'"
                                         style="background: linear-gradient(135deg, #eef6ff 0%, #dbeafe 100%)"
                                         @click="toggleAudioPlayback(item)">
@@ -93,7 +118,7 @@
 
                                     <view
                                         v-else-if="item.status === 2"
-                                        class="status-badge flex items-center gap-x-2 rounded-[16rpx] px-[20rpx] py-[12rpx] bg-[#fef2f2] border border-solid border-[#fca5a5] min-w-[100rpx] h-[64rpx]"
+                                        class="status-badge flex items-center gap-x-1 rounded-[16rpx] px-[20rpx] py-[12rpx] bg-[#fef2f2] border border-solid border-[#fca5a5] min-w-[100rpx] h-[64rpx]"
                                         style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)">
                                         <image
                                             src="@/ai_modules/digital_human/static/icons/fail.svg"
@@ -103,7 +128,7 @@
 
                                     <view
                                         v-else-if="[0, 3, 4, 5].includes(item.status)"
-                                        class="status-badge flex items-center gap-x-2 rounded-[16rpx] px-[20rpx] py-[12rpx] relative bg-[#fffbeb] border border-solid border-[#fcd34d] min-w-[120rpx] h-[64rpx]"
+                                        class="status-badge flex items-center gap-x-1 rounded-[16rpx] px-[20rpx] py-[12rpx] relative bg-[#fffbeb] border border-solid border-[#fcd34d] min-w-[120rpx] h-[64rpx]"
                                         style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)">
                                         <image
                                             src="@/ai_modules/digital_human/static/icons/clone.svg"
@@ -148,26 +173,11 @@
                 </template>
             </z-paging>
         </view>
-        <view class="px-4 pb-4 pt-1 flex items-center justify-between" v-if="dataLists.length > 0">
-            <view class="flex items-center gap-x-2">
-                <view
-                    class="w-[144rpx] h-[68rpx] flex items-center justify-center text-white bg-primary rounded-md"
-                    @click="handleManage">
-                    {{ isDelete ? "取消" : "管理" }}
-                </view>
-                <view
-                    v-if="isDelete"
-                    class="w-[144rpx] h-[68rpx] flex items-center justify-center text-primary border border-solid border-primary rounded-md"
-                    @click="handleSelectAll">
-                    全选
-                </view>
-            </view>
-            <view v-if="isDelete">
-                <view
-                    class="w-[174rpx] h-[68rpx] flex items-center justify-center text-white bg-[#FF2442] rounded-md"
-                    @click="handleDelete()">
-                    删除 ({{ chooseList.length }})
-                </view>
+        <view class="px-4 py-2 pb-4">
+            <view
+                class="h-[100rpx] flex items-center justify-center bg-black text-white font-bold text-[30rpx] rounded-[20rpx]"
+                @click="toClone">
+                立即去克隆
             </view>
         </view>
     </view>
@@ -190,6 +200,7 @@ import {
 } from "@/api/digital_human";
 import { DigitalHumanModelVersionEnum, DigitalHumanModelVersionEnumMap } from "@/enums/appEnums";
 import { useAudio } from "@/hooks/useAudio";
+import { ModeTypeEnum } from "@/ai_modules/digital_human/enums";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import AnchorVideo from "@/ai_modules/digital_human/components/anchor-video/anchor-video.vue";
 
@@ -282,6 +293,7 @@ const clickItem = (index: number) => {
 const isDelete = ref(false);
 
 const handleManage = () => {
+    if (dataLists.value.length === 0) return;
     isDelete.value = !isDelete.value;
     chooseList.value = [];
 };
@@ -382,6 +394,26 @@ async function deleteBySourceType(sourceType: string, deleteFunction: Function) 
 }
 
 const tryReloadPaging = () => pagingRef.value?.reload();
+
+const toClone = () => {
+    if (currentTab.value == 0) {
+        uni.$u.route({
+            url: "/ai_modules/digital_human/pages/anchor_create/anchor_create?type=anchor&model_version=1",
+        });
+    } else {
+        uni.$u.route({ url: "/ai_modules/digital_human/pages/tone_clone/tone_clone?type=voice&model_version=1" });
+    }
+};
+
+onLoad(async (options: any) => {
+    if (options.type == ModeTypeEnum.ANCHOR) {
+        currentTab.value = 0;
+    } else if (options.type == ModeTypeEnum.TONE) {
+        currentTab.value = 1;
+    }
+    await nextTick();
+    pagingRef.value?.reload();
+});
 
 onUnload(() => {
     destroy();

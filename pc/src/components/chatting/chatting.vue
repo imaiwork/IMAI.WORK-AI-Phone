@@ -1,13 +1,11 @@
 <template>
-    <div class="chatting">
-        <div
-            ref="chattingRef"
-            class="h-full flex-1 flex flex-col min-h-0 relative py-5"
-            :class="{ 'pb-[200px]': showShare }"
-            v-if="contentList.length">
-            <ElScrollbar ref="scrollbarRef" height="100%" @scroll="scroll">
-                <div class="md:max-w-3xl lg:max-w-[42rem] xl:max-w-[48rem] 2xl:max-w-[52rem] mx-auto h-full">
-                    <div ref="containerRef" :class="{ 'space-y-1': showShare }" :style="contentContainerStyle">
+    <div class="chatting" ref="chattingRef">
+        <div class="flex-1 relative min-h-0" :class="{ 'pb-[200px]': showShare }" v-if="contentList.length">
+            <div ref="scrollContainerRef" class="scroll-container" @scroll="scroll">
+                <div
+                    class="md:max-w-3xl lg:max-w-[42rem] xl:max-w-[48rem] 2xl:max-w-[52rem] mx-auto"
+                    :style="contentContainerStyle">
+                    <div ref="containerRef" :class="{ 'space-y-1': showShare }">
                         <div
                             v-for="(item, index) in contentList"
                             :key="index"
@@ -100,15 +98,10 @@
                         </div>
                     </div>
                 </div>
-            </ElScrollbar>
+            </div>
 
-            <!-- 回到底部按钮 -->
             <Transition name="fade-slide-up">
-                <div
-                    v-if="showBackToBottom && !showShare"
-                    class="back-to-bottom-btn"
-                    @click="handleBackToBottom"
-                    title="回到底部">
+                <div v-if="showBackToBottom && !showShare" class="back-to-bottom-btn" @click="handleBackToBottom">
                     <Icon name="el-icon-ArrowDown" :size="20" />
                     <span class="back-to-bottom-text">回到底部</span>
                 </div>
@@ -117,6 +110,7 @@
 
         <div
             v-show="!showShare"
+            ref="chattingAreaRef"
             class="w-full"
             :class="[contentList.length == 0 ? 'flex-1 flex flex-col items-center justify-center' : 'flex-none mt-2']">
             <slot name="content" v-if="contentList.length == 0" class="mb-6"></slot>
@@ -125,16 +119,6 @@
                     <slot name="customSendArea" v-if="$slots.customSendArea"></slot>
                     <div class="flex flex-col" v-else>
                         <slot name="chat-area-top" />
-                        <div class="flex items-center mb-3 relative h-10" v-if="isNewChat">
-                            <div class="w-full h-full flex items-center justify-center absolute z-[9]" v-if="isNewChat">
-                                <div
-                                    class="bg-white rounded-xl w-[114px] h-8 flex items-center justify-center shadow-[0_0_4px_1px_rgba(0,0,0,0.05)] gap-x-1 cursor-pointer hover:bg-[#F5F5F5]"
-                                    @click="emit('newChat')">
-                                    <Icon name="local-icon-message" color="#989898"></Icon>
-                                    <span class="text-[#989898] text-xs">开启全新对话</span>
-                                </div>
-                            </div>
-                        </div>
                         <div
                             class="bg-white rounded-[24px] border border-[#EBEBEB]"
                             :class="{
@@ -250,7 +234,8 @@
                                         <Icon
                                             name="local-icon-arrow_up"
                                             :color="isSendDisabled ? '#a9a9a9' : 'var(--color-primary)'"
-                                            :size="18"></Icon>
+                                            :size="18">
+                                        </Icon>
                                     </button>
                                 </div>
                             </div>
@@ -260,9 +245,9 @@
                 </div>
             </div>
             <div class="flex justify-center">
-                <div class="text-xs flex justify-center mb-8 gap-2 items-center p-1 bg-[#00000008] rounded-full">
+                <div class="text-xs flex justify-center mb-2 gap-2 items-center p-1 bg-[#00000008] rounded-full">
                     <Icon name="local-icon-tips2" :size="16"></Icon>
-                    <span class="text-[#0000004d] text-xs">免责声明：内容由AI大模型生成，请仔细甄别。</span>
+                    <span class="text-[#0000004d] text-xs">免责声明：内容由AI大模型生成,请仔细甄别。</span>
                 </div>
             </div>
         </div>
@@ -328,11 +313,10 @@
 </template>
 
 <script setup lang="ts">
-import { ElInput, ElScrollbar, ElSelect, ElOption } from "element-plus";
+import { ElInput, ElSelect, ElOption } from "element-plus";
 import feedback from "@/utils/feedback";
 import QRCode from "qrcode";
 import removeMarkdown from "remove-markdown";
-import { useElementSize } from "@vueuse/core";
 import cloneDeep from "lodash/cloneDeep";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
@@ -345,6 +329,7 @@ import HumanizePop from "./humanize-pop.vue";
 import PreviewShare from "./preview-share.vue";
 import EditPop from "./edit-pop.vue";
 import QuoteItem from "./quote-item.vue";
+
 const emit = defineEmits([
     "contentPost",
     "close",
@@ -429,9 +414,9 @@ const humanizePopRef = shallowRef<InstanceType<typeof HumanizePop>>();
 //输入框输入内容.
 const inputContent = ref("");
 const containerRef = ref<HTMLDivElement>(null);
-const chattingRef = ref<HTMLDivElement>(null); // 新增：chatting容器引用
-//滚动条ref
-const scrollbarRef = ref<InstanceType<typeof ElScrollbar>>(null);
+const chattingAreaRef = ref<HTMLDivElement>(null);
+// 新增：滚动容器ref，替代原来的 scrollbarRef
+const scrollContainerRef = ref<HTMLDivElement>(null);
 // 输入框ref
 const inputRef = ref<InstanceType<typeof ElInput>>(null);
 
@@ -448,13 +433,15 @@ const disabledScroll = ref(false);
 
 // 回到底部按钮相关状态
 const showBackToBottom = ref(false);
-const BACK_TO_BOTTOM_THRESHOLD = 200; // 距离底部超过200px时显示按钮
+const BACK_TO_BOTTOM_THRESHOLD = 200;
 
 // 内容上推相关状态
-const contentPushHeight = ref(0);
 const containerCurrentHeight = ref(0);
-const chattingContainerHeight = ref(0); // 新增：chatting容器高度
+const chattingContainerHeight = ref(0);
 const chatMessageRefs = ref<Map<number, HTMLElement>>(new Map());
+
+// ===== 新增：稳定高度计算 =====
+const stableContainerHeight = ref(0);
 
 // 设置聊天消息元素引用
 const setChatMessageRef = (el: any, index: number) => {
@@ -465,34 +452,19 @@ const setChatMessageRef = (el: any, index: number) => {
     }
 };
 
-// 检查是否有AI正在回复
-const isAiReplying = computed(() => {
-    return props.contentList.some((item) => item.type === 2 && item.loading);
-});
-
-// 计算内容容器样式
+// ===== 修改：计算内容容器样式 =====
 const contentContainerStyle = computed(() => {
     // 分享模式下不应用最小高度，避免生成图片时底部空白
     if (showShare.value) {
         return {
             minHeight: "auto",
-            transition: "none",
         };
     }
-
-    // 如果有上推高度，使用 chatting容器高度 + 内容容器高度 + 上推高度
-    if (contentPushHeight.value > 0) {
-        const totalHeight = containerCurrentHeight.value + contentPushHeight.value - 250;
+    if (props.contentList.length > 0 && containerCurrentHeight.value > 0) {
         return {
-            minHeight: `${totalHeight}px`,
-            transition: "min-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+            minHeight: `${containerCurrentHeight.value}px`,
         };
     }
-
-    return {
-        minHeight: "auto",
-        transition: "min-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-    };
 });
 
 const getAIModels = computed(() => {
@@ -537,82 +509,46 @@ const handleNetwork = () => {
     emit("update:network", selectedNetwork.value);
 };
 
-// 获取chatting容器当前高度
-const getChattingContainerHeight = () => {
-    if (!chattingRef.value) return 0;
-    return chattingRef.value.clientHeight;
-};
-
-// 获取内容容器当前高度
-const getContainerCurrentHeight = () => {
-    if (!containerRef.value) return 0;
-    return containerRef.value.scrollHeight;
-};
-
-// 获取最后一轮对话的总高度（用户问题 + AI回答）
-const getLastConversationHeight = () => {
-    if (props.contentList.length < 2) return 0;
-
-    let totalHeight = 0;
-    const contentLength = props.contentList.length;
-
-    // 找到最后一轮对话的索引
-    let lastUserIndex = -1;
-    let lastAiIndex = -1;
-
-    // 从后往前找最后一个AI回答
-    for (let i = contentLength - 1; i >= 0; i--) {
-        if (props.contentList[i].type === 2 && lastAiIndex === -1) {
-            lastAiIndex = i;
-        }
-    }
-
-    // 找到对应的用户问题
-    if (lastAiIndex > 0 && props.contentList[lastAiIndex - 1].type === 1) {
-        lastUserIndex = lastAiIndex - 1;
-    }
-
-    // 计算最后一轮对话的总高度
-    if (lastUserIndex !== -1) {
-        const userElement = chatMessageRefs.value.get(lastUserIndex);
-        if (userElement) {
-            totalHeight += userElement.offsetHeight;
-        }
-    }
-
-    if (lastAiIndex !== -1) {
-        const aiElement = chatMessageRefs.value.get(lastAiIndex);
-        if (aiElement) {
-            totalHeight += aiElement.offsetHeight;
-        }
-    }
-
-    return totalHeight;
+// ===== 新增：更新稳定高度的函数 =====
+const updateStableHeight = () => {
+    if (!scrollContainerRef.value) return;
+    stableContainerHeight.value = scrollContainerRef.value.clientHeight;
 };
 
 // 触发内容上推效果（用户发送消息后调用）
 const triggerContentPushUp = () => {
-    // 延迟执行，确保DOM已经更新
     nextTick(() => {
-        // 获取chatting容器高度
-        chattingContainerHeight.value = getChattingContainerHeight();
-        // 获取当前内容容器高度
-        containerCurrentHeight.value = getContainerCurrentHeight();
-        // 获取最后一轮对话的高度
-        const lastConversationHeight = getLastConversationHeight();
-        contentPushHeight.value = chattingContainerHeight.value;
+        if (!scrollContainerRef.value || !containerRef.value) return;
+
+        // 获取可视区域高度
+        const viewportHeight = scrollContainerRef.value.clientHeight;
+
+        // 获取当前内容总高度
+        const currentContentHeight = containerRef.value.scrollHeight;
+
+        // 设置容器最小高度，确保旧内容可以被顶上去
+        // 最小高度 = 可视高度 + 旧内容高度
+        containerCurrentHeight.value = viewportHeight + currentContentHeight - chattingAreaRef.value.offsetHeight;
+
+        // 等待DOM更新后滚动
+        setTimeout(() => {
+            scrollToBottom(true);
+        }, 100);
     });
 };
 
-//计算滚动到底部高度
+// 修改：计算滚动到底部高度
 const toScrollHeight = () => {
-    return scrollbarRef.value?.wrapRef.scrollHeight - scrollbarRef.value?.wrapRef.clientHeight;
+    if (!scrollContainerRef.value) return 0;
+    return scrollContainerRef.value.scrollHeight - scrollContainerRef.value.clientHeight;
 };
 
-// 检查是否接近底部
+// 修改：检查是否接近底部
 const checkNearBottom = (scrollTop: number) => {
-    const scrollHeight = scrollbarRef.value?.wrapRef.scrollHeight || 0;
-    const clientHeight = scrollbarRef.value?.wrapRef.clientHeight || 0;
+    if (!scrollContainerRef.value) return;
+
+    const scrollHeight = scrollContainerRef.value.scrollHeight;
+    const clientHeight = scrollContainerRef.value.clientHeight;
     const maxScrollTop = scrollHeight - clientHeight;
     const distanceFromBottom = maxScrollTop - scrollTop;
 
@@ -622,9 +558,10 @@ const checkNearBottom = (scrollTop: number) => {
     showBackToBottom.value = shouldShow;
 };
 
-//对话框滚动
-const scroll = (value) => {
-    const currentScrollTop = value.scrollTop;
+// 修改：对话框滚动事件处理
+const scroll = (event: Event) => {
+    const target = event.target as HTMLElement;
+    const currentScrollTop = target.scrollTop;
 
     // 检查是否需要显示回到底部按钮
     checkNearBottom(currentScrollTop);
@@ -641,12 +578,12 @@ const scroll = (value) => {
     }
 
     previousScrollTop.value = currentScrollTop;
-    refresh(value);
+    refresh(currentScrollTop);
 };
 
-//滚动至顶部加载
-const refresh = ({ scrollTop }) => {
-    if (scrollTop == 0) {
+// 修改：滚动至顶部加载
+const refresh = (scrollTop: number) => {
+    if (scrollTop === 0) {
         emit("top");
     }
 };
@@ -658,31 +595,53 @@ const resetScroll = () => {
     showBackToBottom.value = false;
 };
 
-//滚动到底部
-const scrollToBottom = async () => {
-    // 如果用户禁用了自动滚动（向上滚动了），则不自动滚动到底部
-    if (disabledScroll.value) return;
+// 修改：滚动到底部
+const scrollToBottom = async (smooth = false) => {
+    if (disabledScroll.value || !scrollContainerRef.value) return;
 
     const scrollH = toScrollHeight();
     await nextTick();
-    scrollbarRef.value?.setScrollTop(scrollH);
+    if (smooth) {
+        // 平滑滚动
+        scrollContainerRef.value.scrollTo({
+            top: scrollH,
+            behavior: "smooth",
+        });
+    } else {
+        // 立即滚动
+        scrollContainerRef.value.scrollTop = scrollH;
+    }
+
     showBackToBottom.value = false;
 };
 
-// 处理回到底部按钮点击
+// 修改：处理回到底部按钮点击
 const handleBackToBottom = async () => {
+    if (!scrollContainerRef.value) return;
+
     const scrollH = toScrollHeight();
     await nextTick();
-    scrollbarRef.value?.setScrollTop(scrollH);
+
+    scrollTo(scrollH);
+
     showBackToBottom.value = false;
-    // 点击回到底部后，重新启用自动滚动
     disabledScroll.value = false;
 };
 
-// 滚动到指定位置
-const scrollTo = async (top: number) => {
+// 修改：滚动到指定位置
+const scrollTo = async (top: number, smooth = true) => {
+    if (!scrollContainerRef.value) return;
+
     await nextTick();
-    scrollbarRef.value?.setScrollTop(top);
+
+    if (smooth) {
+        scrollContainerRef.value.scrollTo({
+            top: top,
+            behavior: "smooth",
+        });
+    } else {
+        scrollContainerRef.value.scrollTop = top;
+    }
 };
 
 //清空输入框
@@ -691,7 +650,6 @@ const cleanInput = () => {
     fileList.value = [];
     fileIsLoad.value = false;
     // 清空输入框时，重置内容上推高度
-    contentPushHeight.value = 0;
     containerCurrentHeight.value = 0;
     chattingContainerHeight.value = 0;
 };
@@ -729,15 +687,11 @@ const contentPost = () => {
         return;
     }
 
-    emit("contentPost", inputContent.value);
-
-    // 用户发送消息后，触发内容上推效果
     triggerContentPushUp();
 
+    emit("contentPost", inputContent.value);
+    // 用户发送消息后，触发内容上推效果
     resetScroll();
-    nextTick(() => {
-        scrollToBottom();
-    });
     cleanInput();
 };
 
@@ -780,11 +734,6 @@ const handleSelectAll = () => {
 const handleCancelShare = () => {
     showShare.value = false;
     shareContentIndexList.value = [];
-};
-
-// 获取选中的内容
-const getSelectedContent = () => {
-    return shareContentIndexList.value.map((index) => props.contentList[index]);
 };
 
 const generateShareContent = async (isPDF = false) => {
@@ -979,6 +928,20 @@ const handleEdit = (item: any) => {
     }
 };
 
+// ===== 新增：生命周期钩子 =====
+onMounted(() => {
+    nextTick(() => {
+        updateStableHeight();
+    });
+
+    // 监听窗口大小变化
+    window.addEventListener("resize", updateStableHeight);
+});
+
+onUnmounted(() => {
+    window.removeEventListener("resize", updateStableHeight);
+});
+
 // 监听文件列表变化
 watch(
     () => fileList.value,
@@ -1009,18 +972,11 @@ watch(
     () => showShare.value,
     (newVal) => {
         if (newVal) {
-            contentPushHeight.value = 0;
             containerCurrentHeight.value = 0;
             chattingContainerHeight.value = 0;
         }
     }
 );
-
-const { height } = useElementSize(containerRef);
-watch(height, (value) => {
-    // 当内容高度变化时（比如AI回复内容增加），自动滚动到底部
-    scrollToBottom();
-});
 
 defineExpose({
     scrollToBottom,
@@ -1044,13 +1000,42 @@ defineExpose({
 .chatting {
     @apply h-full flex flex-col w-full relative;
 }
+
+/* 新增：滚动容器样式 */
+.scroll-container {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /* 自定义滚动条样式 */
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: #f5f5f5;
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+
+        &:hover {
+            background: #999;
+        }
+    }
+}
+
 .chat-message {
     @apply py-[10px];
     animation: fade-in 0.3s ease-out forwards;
     will-change: transform, opacity;
+
     &.is-share {
         @apply pl-10 pt-4 pb-3 pr-3 relative rounded-lg hover:bg-[#F5F5F5] cursor-pointer;
     }
+
     &.is-selected {
         @apply bg-[#F5F5F5];
     }
@@ -1063,30 +1048,32 @@ defineExpose({
         transition-duration: 300ms;
         box-shadow: none;
         background-color: transparent;
+
         &::-webkit-scrollbar {
             cursor: pointer;
             width: 8px;
             background-color: #f5f5f5;
         }
+
         &::-webkit-scrollbar-thumb {
             cursor: pointer;
             background-color: #ccc;
             border-radius: 4px;
         }
+
         &::placeholder {
             @apply text-[#CACACA];
         }
+
         &.is-focus {
             min-height: 100px !important;
         }
     }
 }
-:deep(.el-scrollbar__view) {
-    @apply h-full;
-}
 
 :deep(.ai-model-select) {
     width: 135px;
+
     .el-select__wrapper {
         min-height: 34px;
         border-radius: 20px;
@@ -1094,8 +1081,10 @@ defineExpose({
         border: 1px solid rgba(0, 0, 0, 0.1);
     }
 }
+
 textarea {
     resize: none;
+
     &:focus-visible {
         outline: none;
     }
@@ -1254,6 +1243,7 @@ textarea {
     &:active {
         transform: translateY(0);
     }
+
     &:disabled {
         opacity: 0.4;
         cursor: not-allowed;
@@ -1287,6 +1277,7 @@ textarea {
     background: #f8fafc;
     color: #94a3b8;
     transition: all 0.2s;
+
     &:hover {
         background: #ef4444;
         color: white;
@@ -1311,11 +1302,13 @@ textarea {
         @apply ring-2 ring-[#0065fb]/20 bg-[#0065fb]/5;
     }
 }
+
 @keyframes fade-in {
     from {
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);

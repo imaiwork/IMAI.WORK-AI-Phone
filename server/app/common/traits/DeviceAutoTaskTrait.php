@@ -98,7 +98,7 @@ trait DeviceAutoTaskTrait
                 'create_time' => $find['create_time'],
                 'start_time' => $dtask->start_time,
                 'end_time' => $dtask->end_time,
-                'time_interval' => ($dtask->end_time - $dtask->start_time) / 60,
+                'time_interval' => ceil(($dtask->end_time - $dtask->start_time) / 60),
             ];
 
             $data = array(
@@ -1276,6 +1276,7 @@ trait DeviceAutoTaskTrait
             SvAddWechatRecord::where('id', $record['id'])->update([
                 'wechat_no' => $wechat->account,
                 'wechat_name' => $wechat->nickname,
+                'wechat_avatar' => $wechat->avatar,
                 'status' => 2,
                 'result' => '执行中',
                 'update_time' => time(),

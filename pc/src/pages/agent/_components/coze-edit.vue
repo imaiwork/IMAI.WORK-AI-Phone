@@ -40,7 +40,7 @@
                     <h3 class="text-[22px] font-[900] text-[#0F172A] leading-tight">
                         {{ formData.id ? "编辑" : "新增" }}智能助手
                     </h3>
-                    <p class="text-[12px] text-[#94A3B8] font-medium mt-1 uppercase tracking-widest">
+                    <p class="text-xs text-[#94A3B8] font-medium mt-1 uppercase tracking-widest">
                         Configure Your Coze Intelligent Agent
                     </p>
                 </div>

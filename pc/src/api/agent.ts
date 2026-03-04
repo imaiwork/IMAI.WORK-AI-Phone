@@ -244,3 +244,38 @@ export function getAgentCategoryList(params: any) {
 export function getCopyWritingGenerate(params: any) {
     return $request.post({ url: "/kb.robot/getCopywriting", params });
 }
+
+// 获取智能体分组列表
+export function getAgentGroupList(params: any) {
+    return $request.get({ url: "/kb.robotGroup/lists", params });
+}
+
+// 新增智能体分组
+export function addAgentGroup(params: any) {
+    return $request.post({ url: "/kb.robotGroup/add", params });
+}
+
+// 更新智能体分组
+export function updateAgentGroup(params: any) {
+    return $request.post({ url: "/kb.robotGroup/update", params });
+}
+
+// 删除智能体分组
+export function deleteAgentGroup(params: any) {
+    return $request.post({ url: "/kb.robotGroup/del", params });
+}
+
+// 置顶智能体分组
+export function topAgentGroup(params: any) {
+    return $request.post({ url: "/kb.robotGroup/top", params });
+}
+
+// 添加智能体到分组
+export function addAgentToGroup(params: any) {
+    return $request.post({ url: "/kb.robotGroup/join", params });
+}
+
+// 删除智能体从分组
+export function deleteAgentFromGroup(params: any) {
+    return $request.post({ url: "/kb.robotGroup/remove", params });
+}

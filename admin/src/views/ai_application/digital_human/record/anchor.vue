@@ -53,7 +53,7 @@
                 row-key="id"
                 @selection-change="handleSelectionChange">
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
-                <el-table-column label="ID" prop="id" min-width="60" />
+                <el-table-column label="ID" prop="id" min-width="80" />
                 <el-table-column label="任务ID" prop="task_id" width="160" show-overflow-tooltip />
                 <el-table-column label="头像" min-width="100">
                     <template #default="{ row }">
@@ -120,6 +120,7 @@
     </div>
     <el-dialog v-model="showVideo" width="740px" title="视频预览">
         <video-player ref="playerRef" :src="videoUrl" width="100%" height="450px" />
+        <el-button type="primary" class="mt-2" @click="downloadFile(videoUrl)">下载</el-button>
     </el-dialog>
 </template>
 <script lang="ts" setup>
@@ -128,6 +129,7 @@ import { usePaging } from "@/hooks/usePaging";
 import useAppStore from "@/stores/modules/app";
 import feedback from "@/utils/feedback";
 import { ElTable } from "element-plus";
+import { downloadFile } from "@/utils/util";
 
 const appStore = useAppStore();
 const { config } = toRefs(appStore);

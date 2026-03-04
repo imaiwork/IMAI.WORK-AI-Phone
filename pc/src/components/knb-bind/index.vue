@@ -228,7 +228,7 @@ defineExpose({ open, setFormData });
 
 .custom-form {
     :deep(.el-form-item__label) {
-        @apply text-[12px] font-black text-[#94A3B8] mb-2 px-1 uppercase tracking-wider;
+        @apply text-xs font-black text-[#94A3B8] mb-2 px-1 uppercase tracking-wider;
     }
 }
 

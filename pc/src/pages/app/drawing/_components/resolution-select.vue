@@ -1,6 +1,6 @@
 <template>
     <div class="flex flex-col gap-3">
-        <div class="text-[12px] font-black text-[#94A3B8] uppercase tracking-widest ml-1">分辨率</div>
+        <div class="text-xs font-black text-[#94A3B8] uppercase tracking-widest ml-1">分辨率</div>
         <div class="flex flex-col gap-4 w-full">
             <div class="grid grid-cols-4 gap-3">
                 <div
@@ -24,7 +24,7 @@
                     <span class="text-[10px] text-[#94A3B8] font-medium uppercase tracking-widest">Dimension</span>
                     <div class="flex items-center gap-2 mt-0.5">
                         <span class="text-[15px] font-[900] text-[#1E293B]">{{ getResolutionSize.width }}</span>
-                        <span class="text-[12px] text-[#CBD5E1] font-black">×</span>
+                        <span class="text-xs text-[#CBD5E1] font-black">×</span>
                         <span class="text-[15px] font-[900] text-[#1E293B]">{{ getResolutionSize.height }}</span>
                         <span class="text-[11px] text-[#94A3B8] ml-1 font-medium">px</span>
                     </div>

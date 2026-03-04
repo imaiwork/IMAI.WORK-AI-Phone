@@ -83,10 +83,11 @@ class WorkerEnum
     public const RPA_GET_ACCOUNT_APP_DATA_SEND = 706; #正在等待数据返回 appDataSend
     public const RPA_GET_ACCOUNT_APP_COMPLETED = 707; #获取账号信息已完成 appCompleted
 
-    public const RPA_COMMENT_TO_COMMENT = 101; #评论区评论
-    public const RPA_COMMENT_TO_MSG = 102; #评论区私信
-    public const RPA_COMMENT_TO_MARK_CLUE = 103; #评论区留痕获客
-    
+    public const RPA_COMMENT_TO_COMMENT_CHECK = 101; #评论区评论
+    public const RPA_COMMENT_TO_MSG_CHECK = 102; #评论区私信
+    public const RPA_COMMENT_TO_MARK_CLUE_CHECK = 103; #评论区留痕获客
+    public const RPA_COMMENT_TO_TOUCH_POST = 104; #评论区截流上报
+
 
     # web指令
     public const WEB_SOCKET_STATUS = 80; # web ws身份
@@ -166,6 +167,7 @@ class WorkerEnum
     public const RPA_COMMENT_TO_COMMENT_FAIL = 4055; //评论区评论失败;
     public const RPA_COMMENT_TO_MSG_FAIL = 4056; //评论区私信失败;
     public const RPA_COMMENT_TO_MARK_CLUE_FAIL = 4057; //评论区留痕获客失败;
+    public const RPA_COMMENT_TO_TOUCH_POST_FAIL = 4058; //评论区截流上报异常;
 
 
 
@@ -286,6 +288,7 @@ class WorkerEnum
         self::RPA_COMMENT_TO_COMMENT_FAIL => '评论区评论失败',
         self::RPA_COMMENT_TO_MSG_FAIL => '评论区私信失败',
         self::RPA_COMMENT_TO_MARK_CLUE_FAIL => '评论区留痕获客失败',
+        self::RPA_COMMENT_TO_TOUCH_POST_FAIL => '评论区截流上报异常',
 
     ];
     /**

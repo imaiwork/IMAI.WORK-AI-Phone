@@ -48,7 +48,7 @@
                 </el-form>
                 <div>
                     <el-table size="large" height="400px" v-loading="pager.loading" :data="pager.lists">
-                        <el-table-column label="ID" prop="id" min-width="60" />
+                        <el-table-column label="ID" prop="id" min-width="80" />
                         <el-table-column label="卡密编号" prop="record_sn" min-width="140" />
                         <el-table-column label="状态" min-width="120">
                             <template #default="{ row }">

@@ -19,7 +19,7 @@
                     <div class="absolute inset-0 flex flex-col justify-center px-10">
                         <div class="flex items-center gap-3 mb-2">
                             <div
-                                class="px-3 py-1 rounded-full bg-[#ffffff]/20 backdrop-blur-md text-white text-[12px] font-black uppercase tracking-[2px]">
+                                class="px-3 py-1 rounded-full bg-[#ffffff]/20 backdrop-blur-md text-white text-xs font-black uppercase tracking-[2px]">
                                 Training Pro
                             </div>
                         </div>
@@ -56,7 +56,7 @@
 
                     <div class="mt-8 flex items-center gap-2 text-[#94A3B8]">
                         <Icon name="el-icon-Iphone" :size="16" />
-                        <span class="text-[12px] font-medium uppercase tracking-widest">支持 iOS & Android</span>
+                        <span class="text-xs font-medium uppercase tracking-widest">支持 iOS & Android</span>
                     </div>
                 </div>
             </template>

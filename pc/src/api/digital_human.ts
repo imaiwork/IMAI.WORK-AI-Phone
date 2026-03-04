@@ -150,3 +150,8 @@ export const generateNewsBodyPrompt = (params: Record<string, any>) => {
 export const generateShanjianPrompt = (params: Record<string, any>) => {
     return $request.post({ url: "/shanjian.shanjianVideoTask/copywriting", params }, { ignoreCancel: true });
 };
+
+// sora 任务重试
+export const retrySoraTask = (params: Record<string, any>) => {
+    return $request.post({ url: "/sora.soraVideoSetting/retry", params });
+};

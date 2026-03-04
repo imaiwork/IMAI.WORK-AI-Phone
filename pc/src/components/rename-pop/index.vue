@@ -25,7 +25,7 @@
 
             <div class="p-8 bg-slate-50">
                 <div class="bg-white p-6 rounded-2xl border border-br">
-                    <label class="block text-[12px] font-black text-[#94A3B8] uppercase mb-2 ml-1">新的名称</label>
+                    <label class="block text-xs font-black text-[#94A3B8] uppercase mb-2 ml-1">新的名称</label>
                     <ElInput
                         v-model="formData.name"
                         class="custom-edit-input"
@@ -98,7 +98,7 @@ const confirm = async () => {
         });
         close();
     } catch (error) {
-        feedback.msgWarning(error);
+        feedback.msgError(error);
     }
 };
 
@@ -107,7 +107,6 @@ const open = () => {
 };
 
 const close = () => {
-    popupRef.value.close();
     emit("close");
 };
 

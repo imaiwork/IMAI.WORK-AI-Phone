@@ -147,6 +147,7 @@ const { processAndAppend } = useMaterial(toRef(materialList, "value"));
 
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
+    videoDuration: [1, 59],
     onSuccess: (res: any[]) => {
         if (replaceMaterialIndex.value !== -1) {
             materialList.value[replaceMaterialIndex.value] = res[0];
@@ -167,9 +168,11 @@ const handleSelectHistory = async (lists: any[]) => {
         rawList: normalized,
         urlField: "actualUrl",
         type: "video",
+        maxDuration: 59,
         replaceIndex: replaceMaterialIndex.value,
         onSuccess: () => (showHistory.value = false),
     });
+    console.log(materialList.value);
 };
 
 const handleSelectMaterial = async (res: any[]) => {
@@ -178,6 +181,7 @@ const handleSelectMaterial = async (res: any[]) => {
         rawList: res,
         urlField: "url",
         type: type as "video" | "image",
+        maxDuration: 59,
         replaceIndex: replaceMaterialIndex.value,
         onSuccess: () => (showMaterialLibrary.value = false),
     });

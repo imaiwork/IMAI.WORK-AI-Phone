@@ -26,7 +26,7 @@
                         </div>
                     </div>
                     <div
-                        class="px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 text-[12px] text-slate-400 font-medium uppercase tracking-wider">
+                        class="px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-400 font-medium uppercase tracking-wider">
                         Real-time Tracking
                     </div>
                 </div>
@@ -44,7 +44,7 @@
                                 >
                             </div>
                         </div>
-                        <div class="flex items-center gap-2 text-slate-400 text-[12px] font-medium">
+                        <div class="flex items-center gap-2 text-slate-400 text-xs font-medium">
                             <Icon name="el-icon-Calendar" :size="14" />
                             进入流程日期：{{ flowData.join_flow_time || "-" }}
                         </div>

@@ -121,12 +121,12 @@
                                     <div class="flex gap-2">
                                         <button
                                             @click="handleRandomCopywriter"
-                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-br rounded-2xl text-[12px] font-medium hover:border-primary hover:text-primary transition-all">
+                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-br rounded-2xl text-xs font-medium hover:border-primary hover:text-primary transition-all">
                                             随机
                                         </button>
                                         <button
                                             @click="openGeneratePrompt"
-                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-[#0065FB]/5 text-primary rounded-2xl text-[12px] font-black hover:bg-[#0065FB]/10 transition-all">
+                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-[#0065FB]/5 text-primary rounded-2xl text-xs font-black hover:bg-[#0065FB]/10 transition-all">
                                             AI 生成
                                         </button>
                                     </div>
@@ -197,7 +197,7 @@
                             </div>
 
                             <div class="mt-4 pt-4 border-t border-[#E2E8F0]" v-if="false">
-                                <div class="text-[12px] font-black text-[#94A3B8] uppercase mb-3">背景音乐 (BGM)</div>
+                                <div class="text-xs font-black text-[#94A3B8] uppercase mb-3">背景音乐 (BGM)</div>
                                 <button
                                     v-if="!formData.music_url"
                                     @click="openChooseMusic"
@@ -232,7 +232,7 @@
 
             <div class="h-full flex flex-col items-center justify-center" v-else>
                 <div class="chat-loader mb-4"></div>
-                <div class="text-[12px] font-black text-[#94A3B8] tracking-widest uppercase">Preparing Studio...</div>
+                <div class="text-xs font-black text-[#94A3B8] tracking-widest uppercase">Preparing Studio...</div>
             </div>
         </div>
     </div>

@@ -2,6 +2,7 @@
 export enum ModeTypeEnum {
     VIDEO = 1, // 视频
     ANCHOR = 2, // 形象
+    TONE = 3, // 音色
 }
 
 // 创建类型

@@ -173,6 +173,8 @@ class LeadScrapingLogic extends SvBaseLogic
                             'name'            => $result['name'] . ' - ' . self::formatType((int)$account['type']),
                             'account'         => $account['account'],
                             'account_type'    => $account['type'],
+                            'nickname'        => $account['nickname'],
+                            'avatar'          => $account['avatar'],
                             'device_code'     => $account['device_code'],
                             'send_start_time' => $startTime,
                             'send_end_time'   => $endTime,
@@ -324,6 +326,7 @@ class LeadScrapingLogic extends SvBaseLogic
             ->where('user_id', self::$uid)
             ->where('task_type', $params['task_type'])
             ->limit($offset, $limit)
+            ->order('id', 'desc')
             ->select();
         $count  = SvLeadScrapingIndustryLog::where('user_id', self::$uid)->where('task_type', $params['task_type'])->count();
         if ($logs->isEmpty()) {

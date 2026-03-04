@@ -117,7 +117,7 @@
                                                         <div class="text-[10px] text-primary font-black mb-0.5">
                                                             {{ getMatchType("trigger", value) }}
                                                         </div>
-                                                        <div class="text-[12px] font-medium text-tx-regular truncate">
+                                                        <div class="text-xs font-medium text-tx-regular truncate">
                                                             {{
                                                                 value.match_type == 2
                                                                     ? value.chat_keywords
@@ -446,7 +446,7 @@ defineExpose({
 }
 
 .empty-placeholder {
-    @apply h-[100px] rounded-xl border-2 border-dashed border-slate-100 flex items-center justify-center text-[12px] text-slate-300 font-medium;
+    @apply h-[100px] rounded-xl border-2 border-dashed border-slate-100 flex items-center justify-center text-xs text-slate-300 font-medium;
 }
 
 .stage-list {

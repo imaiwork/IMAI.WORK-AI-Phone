@@ -32,7 +32,7 @@
                 </el-tabs>
             </div>
             <el-table :data="pager.lists" v-loading="pager.loading">
-                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="id" label="ID" min-width="80" fixed="left" />
                 <el-table-column
                     prop="params.text"
                     label="描述"

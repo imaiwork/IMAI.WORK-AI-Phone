@@ -34,7 +34,7 @@
             </el-button>
             <div class="mt-4">
                 <el-table :data="pager.lists" size="large">
-                    <el-table-column label="ID" prop="id" min-width="60" />>
+                    <el-table-column label="ID" prop="id" min-width="80" />>
                     <el-table-column label="头像" min-width="100">
                         <template #default="{ row }">
                             <el-avatar :size="50" :src="row.avatar"></el-avatar>

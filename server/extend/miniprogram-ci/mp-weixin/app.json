@@ -1,8 +1,6 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/staff/staff",
-    "pages/agent/agent",
     "pages/user/user",
     "pages/login/login",
     "pages/login/mobile",
@@ -148,6 +146,7 @@
         "pages/setting_ca/setting_ca",
         "pages/setting_private_take/setting_private_take",
         "pages/task_statement/task_statement",
+        "pages/task_statement_detail/task_statement_detail",
         "pages/create_closure/create_closure",
         "pages/create_circle/create_circle",
         "pages/create_circle_interact/create_circle_interact",

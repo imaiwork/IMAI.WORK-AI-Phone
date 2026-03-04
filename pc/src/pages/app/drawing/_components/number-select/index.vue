@@ -1,7 +1,7 @@
 <template>
     <div class="flex items-center justify-between mb-4 px-1">
         <div class="text-[13px] font-[900] text-[#64748B] uppercase tracking-widest">生成数量 Count</div>
-        <span class="text-[12px] font-black text-primary bg-[#F5F7FF] px-2 py-0.5 rounded-md">{{ count }} 张</span>
+        <span class="text-xs font-black text-primary bg-[#F5F7FF] px-2 py-0.5 rounded-md">{{ count }} 张</span>
     </div>
     <div class="px-1">
         <ElSlider v-model="count" :min="1" :max="4" :step="1" tooltip-class="custom-slider-tooltip" />

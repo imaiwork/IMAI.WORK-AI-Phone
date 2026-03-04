@@ -52,7 +52,10 @@ const formData = reactive<{
     name: `自动养号任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`,
     accounts: [],
     task_frep: 1,
-    time_config: ["09:00", "09:30"],
+    time_config: [
+        uni.$u.timeFormat(new Date(), "hh:MM"),
+        uni.$u.timeFormat(new Date(new Date().getTime() + 30 * 60 * 1000), "hh:MM"),
+    ],
     custom_date: [],
 });
 

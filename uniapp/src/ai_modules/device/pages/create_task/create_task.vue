@@ -1039,6 +1039,30 @@ const handleCreateTask = async () => {
         uni.$u.route({ url: "/ai_modules/device/pages/account_choose/account_choose" });
         return;
     }
+    // 判断如果materialList中只有一条的时候，需要判断account账号是不是有多个相同的平台的账号，如果有需要提示用户
+
+    if (formData.materialList.length === 1) {
+        const typeCountMap = formData.accounts.reduce<Record<string, number>>((acc, account) => {
+            acc[account.type] = (acc[account.type] || 0) + 1;
+            return acc;
+        }, {});
+
+        const duplicateTypes = Object.entries(typeCountMap)
+            .filter(([, count]) => count > 1)
+            .map(([type]) => type);
+        if (duplicateTypes.length > 0) {
+            const confirmed = await new Promise<boolean>((resolve) => {
+                uni.showModal({
+                    title: "提示",
+                    content: `当前素材只有1条，但您选择了多个相同平台的账号，将只选择一个账号发布内容，是否继续？`,
+                    confirmText: "继续创建",
+                    cancelText: "去修改",
+                    success: (res) => resolve(res.confirm),
+                });
+            });
+            if (!confirmed) return;
+        }
+    }
 
     uni.showLoading({ title: "创建中...", mask: true });
 

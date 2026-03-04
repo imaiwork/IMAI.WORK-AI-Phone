@@ -46,7 +46,7 @@
                 :data="pager.lists"
                 @selection-change="handleSelectionChange">
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
-                <el-table-column label="ID" prop="id" min-width="80" fixed="left" />
+                <el-table-column label="ID" prop="id" min-width="80" />
                 <el-table-column label="头像" min-width="100">
                     <template #default="{ row }">
                         <el-avatar :src="row.avatar" :size="50" />

@@ -33,7 +33,7 @@
             <div class="space-y-8 px-2">
                 <div class="relative pl-8">
                     <div
-                        class="absolute left-0 top-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-[12px] font-black flex items-center justify-center">
+                        class="absolute left-0 top-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center">
                         1
                     </div>
                     <div class="flex flex-col gap-y-1">
@@ -55,7 +55,7 @@
 
                 <div class="relative pl-8 pb-4">
                     <div
-                        class="absolute left-0 top-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-[12px] font-black flex items-center justify-center">
+                        class="absolute left-0 top-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center">
                         2
                     </div>
                     <div class="flex flex-col gap-y-1">

@@ -13,7 +13,7 @@
                     class="w-8 h-8 rounded-lg bg-[#0065fb]/10 flex items-center justify-center text-primary flex-shrink-0">
                     <Icon name="el-icon-InfoFilled" :size="18" />
                 </div>
-                <div class="text-[12px] leading-relaxed">
+                <div class="text-xs leading-relaxed">
                     <p class="text-primary font-black mb-0.5">命名规范提示：</p>
                     <p class="text-slate-500 font-medium">
                         阶段名称需为 <span class="text-primary font-medium">纯汉字</span>，且长度

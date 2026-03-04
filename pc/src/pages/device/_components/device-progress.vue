@@ -80,7 +80,7 @@
                 <p class="text-[14px] text-slate-400 font-medium mb-8">AI 设备及对应账号信息已成功添加至列表</p>
 
                 <div
-                    class="bg-[#ecfdf5]/50 rounded-2xl p-4 mb-8 text-[12px] text-emerald-700 font-medium border border-[#d1fae5]/50">
+                    class="bg-[#ecfdf5]/50 rounded-2xl p-4 mb-8 text-xs text-emerald-700 font-medium border border-[#d1fae5]/50">
                     若列表未及时显示，请在 1-2 分钟后刷新页面重试
                 </div>
 

@@ -116,7 +116,7 @@
                                     </div>
 
                                     <div class="p-3 bg-white rounded-b-2xl">
-                                        <div class="text-[12px] font-medium text-[#1E293B] truncate leading-tight">
+                                        <div class="text-xs font-medium text-[#1E293B] truncate leading-tight">
                                             {{ item.name || "未命名素材" }}
                                         </div>
                                     </div>
@@ -313,7 +313,6 @@ const choose = (item: MaterialItem) => {
         // 如果已选中，则取消选中
         chooseList.value = chooseList.value.filter((val) => val.id !== item.id);
     } else {
-        console.log(props.limit);
         // 如果未选中，则添加
         if (chooseList.value.length >= props.limit) {
             feedback.msgWarning(`最多只能选择${props.limit}个素材`);

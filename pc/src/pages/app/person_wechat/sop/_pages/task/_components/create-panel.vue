@@ -91,7 +91,7 @@
 
                             <div class="flex items-center gap-4 py-2">
                                 <div class="flex-1 h-[1px] bg-slate-100"></div>
-                                <div class="flex items-center gap-2 text-slate-400 text-[12px] font-medium">
+                                <div class="flex items-center gap-2 text-slate-400 text-xs font-medium">
                                     <Icon name="el-icon-Setting" />
                                     <span>配置执行流程（支持多选）</span>
                                 </div>
@@ -208,7 +208,9 @@ const fetchDetail = async (id: string | number) => {
         syncFormDataFromDetail(result);
         if (stepKey.value === StepKey.CONTENT) {
             const timeLists = await sopPushContentTimeLists({ push_id: id });
-            sendContainerRef.value?.setDateList(timeLists);
+            setTimeout(() => {
+                sendContainerRef.value?.setDateList(timeLists);
+            }, 150);
         }
         detail.value = result;
     } finally {

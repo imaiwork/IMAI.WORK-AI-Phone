@@ -34,7 +34,7 @@ export class CancelTokenManager {
             this.cancelRequest(key);
         }
 
-        // 如果忽略取消，为key添加唯一后缀以避免冲突
+        // ✅ 如果忽略取消且key已存在，为key添加唯一后缀以避免冲突
         if (ignoreCancel && this.requestMap.has(key)) {
             key = `${key}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         }

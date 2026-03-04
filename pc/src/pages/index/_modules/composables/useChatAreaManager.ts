@@ -6,6 +6,7 @@ import "chatarea/lib/ChatArea.css";
  */
 interface Agent {
     name?: string;
+    type?: string;
     id: string;
 }
 
@@ -27,7 +28,6 @@ interface UseChatAreaOptions {
  */
 export function useChatAreaManager(options: UseChatAreaOptions) {
     // --- State ---
-
     /**
      * @description 聊天输入框的 DOM 元素引用。
      */
@@ -96,12 +96,12 @@ export function useChatAreaManager(options: UseChatAreaOptions) {
 
             // 监听输入操作事件 (输入、删除等)
             chatAreaInstance.addEventListener("operate", () => {
-                const isEmpty = chatAreaInstance!.isEmpty();
-                if (isEmpty) {
+                const isAgentEmpty = chatAreaInstance.getCallUserList().length === 0;
+                if (isAgentEmpty) {
                     currentAgent.value = null; // 如果输入框为空，则清除当前智能体
                 }
                 const newText = replaceInputText(chatAreaInstance!.getText());
-                options.onInputChange(newText, isEmpty);
+                options.onInputChange(newText, isAgentEmpty);
             });
 
             // 监听特殊操作，如剪切
@@ -178,6 +178,10 @@ export function useChatAreaManager(options: UseChatAreaOptions) {
      */
     const setAgent = async (agent: Agent) => {
         await nextTick(); // 等待DOM更新
+        // 设置之前先清空之前选中的智能体
+        if (currentAgent.value?.id) {
+            chatAreaInstance.delUserTags([currentAgent.value.id]);
+        }
         currentAgent.value = agent;
         chatAreaInstance.setUserTag(agent);
     };

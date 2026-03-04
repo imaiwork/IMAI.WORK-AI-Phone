@@ -288,8 +288,9 @@ class AutoDeviceSettingLogic extends ApiLogic
                     array_splice($newhumanImage, 0, 1);
                     $task->human_image = $newhumanImage;
                     // 定义4种shanjiang_type类型
-                    $shanjiangTypes = [1, 2, 3, 5, 4, 6];
+                    // $shanjiangTypes = [1, 2, 3, 5, 4, 6];
                   //  $shanjiangTypes = [1,2,3,4];
+                    $shanjiangTypes = [1,  3, 3, 5, 4, 4];
                     $currentResults = [];
                     $copywritingBreak = false;
                     // 为每种类型创建对应的记录
@@ -377,11 +378,30 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 'create_time' => $currentTime,
                                 'update_time' => $currentTime
                             ];
-
+                            $materialDuration = 0;
                             switch ($type) {
                                 case 1:
                                 case 2:
-                                    $material = json_encode($task->clip_material, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                    
+                                    $clipMaterialArray = $task->clip_material ?: [];
+                                    shuffle($clipMaterialArray);
+                                    $randomLength = rand(3, 5);
+                                    $selectedMaterials = array_slice($clipMaterialArray, 0, $randomLength);
+
+                                    foreach ($selectedMaterials as $key => &$value) {
+                                        if (isset($value['duration'])) {
+                                            $nowDuration = $value['duration'];
+                                        }else{
+                                            $nowDuration = 2;
+                                        }
+                                         $materialDuration += $nowDuration;
+                                        if($materialDuration > 290 || $nowDuration > 59){
+                                            unset($selectedMaterials[$key]);
+                                            $materialDuration -= $nowDuration;
+                                        }
+                                    }
+
+                                    $material = json_encode(array_values($selectedMaterials), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                     $anchor_id =  [
                                         [
                                             "anchor_id" => $firstHumanImage['shanjian_anchor_id'] ?? '',
@@ -410,13 +430,25 @@ class AutoDeviceSettingLogic extends ApiLogic
                                     //   $material = json_encode([$firstHumanImage], JSON_UNESCAPED_UNICODE);
                                     break;
                                 case 3:
-                                    $material = $task->clip_material;
+                                    $clipMaterialArray = $task->clip_material ?: [];
+                                    shuffle($clipMaterialArray);
+                                    $randomLength = rand(4, 8);
+                                    $material = array_slice($clipMaterialArray, 0, $randomLength);
                                     $isvideo = false;
-
                                     foreach ($material as $key => &$value) {
                                         if (isset($value['cover'])) {
                                             $pic = $value['cover'];
                                             unset($material[$key]['cover']);
+                                        }
+                                        if (isset($value['duration'])) {
+                                            $nowDuration = $value['duration'];
+                                        }else{
+                                            $nowDuration = 2;
+                                        }
+                                         $materialDuration += $nowDuration;
+                                        if($materialDuration > 290 || $nowDuration > 59){
+                                            unset($material[$key]);
+                                            $materialDuration -= $nowDuration;
                                         }
                                         if (isset($value['type']) && $value['type'] == 'video') {
                                             $value['soundSwitch'] = true;
@@ -427,7 +459,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                                         break; // 跳过没有视频的任务
                                     }
 
-                                    $material = json_encode($material, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                    $material = json_encode(array_values($material), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                     // 素材类型需要特殊处理
                                     $scene = 'oralMixCutting';
                                     $shanjianVideoSettingData['material'] = $material;
@@ -435,8 +467,21 @@ class AutoDeviceSettingLogic extends ApiLogic
 
                                     break;
                                 case 4:
-                                    $material = $task->clip_material;
+                                    $clipMaterialArray = $task->clip_material ?: [];
+                                    shuffle($clipMaterialArray);
+                                    $randomLength = rand(3, 5);
+                                    $material = array_slice($clipMaterialArray, 0, $randomLength );
                                     foreach ($material as $key => &$value) {
+                                        if (isset($value['duration'])) {
+                                            $nowDuration = $value['duration'];
+                                        }else{
+                                            $nowDuration = 2;
+                                        }
+                                         $materialDuration += $nowDuration;
+                                        if($materialDuration > 290 || $nowDuration > 59){
+                                            unset($material[$key]);
+                                            $materialDuration -= $nowDuration;
+                                        }
                                         if (isset($value['cover'])) {
                                             $pic = $value['cover'];
                                             unset($material[$key]['cover']);
@@ -446,9 +491,9 @@ class AutoDeviceSettingLogic extends ApiLogic
                                             $isvideo = true;
                                         }
                                     }
-                                   
+                                
                                     // 使用预先生成的文案
-                                    $material = json_encode($material, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                    $material = json_encode(array_values($material), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
                                     $copywritingResult4[0]['title'] = $copywriting['content']['0'];
                                     $shanjianVideoSettingData['copywriting'] = json_encode($copywritingResult4, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -462,6 +507,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                                     $material = ''; // 默认空字符串
                                     break;
                             }
+                              \think\facade\Log::channel('automedia')->info( $task->id . '时长测试计算' . $materialDuration);
                             if (!$isvideo) {
                                 continue; // 跳过没有视频的任务
                             }
@@ -547,7 +593,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 'update_time' => time()
                             ];
                             $svVideoSetting = SvVideoSetting::create($svVideoSettingData);
-                            $anchor_id = $firstHumanImage['anchor_id'] ?? '';
+                            $anchor_id = $firstHumanImage['chanjing_anchor_id'] ?? '';
                             if (empty($anchor_id)) {
                                 $status = 0;
                             } else {

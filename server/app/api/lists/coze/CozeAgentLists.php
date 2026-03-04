@@ -20,10 +20,18 @@ class CozeAgentLists extends BaseApiDataLists implements ListsSearchInterface
 
     public function lists(): array
     {
-        $where = [
-            ['source_id', '=', $this->userId],
-            ['source', '=', CozeAgent::SOURCE_USER],
-        ];
+        if ($this->userId == 0){
+            $where = [
+                ['source_id', '=', 1],
+                ['source', '=', CozeAgent::SOURCE_ADMIN],
+            ];
+        }else{
+            $where = [
+                ['source_id', '=', $this->userId],
+                ['source', '=', CozeAgent::SOURCE_USER],
+            ];
+        }
+
 
         $list = CozeAgent::where(function ($q) use ($where) {
                 $q->where(function ($q2)use ($where) {

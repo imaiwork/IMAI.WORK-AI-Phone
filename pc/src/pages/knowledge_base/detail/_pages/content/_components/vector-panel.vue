@@ -8,7 +8,7 @@
                         <Icon name="el-icon-ArrowLeft" :size="16"></Icon>
                     </div>
                     <div>
-                        <div class="text-[12px] font-medium text-[#94A3B8] leading-none mb-1">
+                        <div class="text-xs font-medium text-[#94A3B8] leading-none mb-1">
                             正在操作知识库：{{ knName }}
                         </div>
                         <div class="text-[14px] font-[900] text-[#1E293B]">返回上一步</div>
@@ -47,7 +47,7 @@
                                     </div>
                                     <div class="min-w-0">
                                         <div class="text-[15px] font-[900] mb-1 leading-tight">{{ item.name }}</div>
-                                        <div class="text-[12px] font-medium text-[#94A3B8] leading-relaxed">
+                                        <div class="text-xs font-medium text-[#94A3B8] leading-relaxed">
                                             {{ item.desc }}
                                         </div>
                                     </div>

@@ -170,6 +170,24 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
+         'automediaSetting' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/automediaSetting/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'storyboard' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/storyboard/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+         'shanjiannotice' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/shanjiannotice/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
         // 其它日志通道配置
     ],
 

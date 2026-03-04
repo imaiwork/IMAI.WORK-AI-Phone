@@ -62,7 +62,7 @@
                                     </div>
                                     <div class="flex-1">
                                         <div class="text-[14px] font-[900] text-[#1E293B]">语义向量检索</div>
-                                        <div class="text-[12px] font-medium text-[#94A3B8] mt-1">
+                                        <div class="text-xs font-medium text-[#94A3B8] mt-1">
                                             通过 Embedding 模型生成向量，检索余弦相似度最高的内容分段。
                                         </div>
                                     </div>

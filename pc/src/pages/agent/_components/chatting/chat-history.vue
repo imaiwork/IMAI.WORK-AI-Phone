@@ -13,7 +13,7 @@
 
         <div class="grow min-h-0 flex flex-col">
             <div class="px-6 py-4 flex items-center justify-between">
-                <span class="text-[12px] font-black text-[#94A3B8] tracking-wider uppercase"
+                <span class="text-xs font-black text-[#94A3B8] tracking-wider uppercase"
                     >历史记录 ({{ pager.lists.length }})</span
                 >
             </div>

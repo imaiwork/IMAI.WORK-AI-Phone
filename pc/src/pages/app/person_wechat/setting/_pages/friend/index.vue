@@ -111,7 +111,7 @@
                                 <div class="w-[4px] h-[18px] bg-emerald-500 rounded-full"></div>
                                 <span class="text-[16px] font-black text-[#1E293B]">好友来源过滤</span>
                             </div>
-                            <div class="text-[12px] text-emerald-600 font-medium bg-[#d1fae5]/50 px-3 py-1 rounded-lg">
+                            <div class="text-xs text-emerald-600 font-medium bg-[#d1fae5]/50 px-3 py-1 rounded-lg">
                                 智能过滤中
                             </div>
                         </div>
@@ -263,7 +263,7 @@ onMounted(() => {
             @apply text-[14px] font-black text-[#1E293B];
         }
         .sub-label {
-            @apply text-[12px] text-[#94A3B8] font-medium;
+            @apply text-xs text-[#94A3B8] font-medium;
         }
     }
 }

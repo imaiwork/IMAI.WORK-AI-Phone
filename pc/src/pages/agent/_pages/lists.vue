@@ -78,8 +78,7 @@
                                         class="text-[15px] font-[900] text-[#1E293B] mb-2 group-hover:text-primary transition-colors">
                                         {{ item.name }}
                                     </div>
-                                    <div
-                                        class="text-[12px] font-medium text-[#94A3B8] leading-relaxed line-clamp-2 h-9">
+                                    <div class="text-xs font-medium text-[#94A3B8] leading-relaxed line-clamp-2 h-9">
                                         {{ item.intro || item.introduced || "暂无描述信息" }}
                                     </div>
 

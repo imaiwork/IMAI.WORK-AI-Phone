@@ -17,16 +17,16 @@ use think\response\Json;
 class SoraVideoTaskController extends BaseApiController
 {
 
-    public array $notNeedLogin = ['list','notify'];
+    public array $notNeedLogin = ['list', 'notify', 'notifyNew'];
 
     public function notify(): Json
     {
         try {
             $data = $this->request->all();
-            Log::channel('sora')->write('接收sora参数'.json_encode($data));
+            Log::channel('sora')->write('接收sora参数' . json_encode($data));
             $key = md5(json_encode($data));
             $val = cache($key);
-            if ($val){
+            if ($val) {
                 Log::channel('sora')->write('重复请求');
                 return $this->fail('重复请求');
             }
@@ -37,7 +37,30 @@ class SoraVideoTaskController extends BaseApiController
             }
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('sora')->write('sora回调失败'.$e->getMessage());
+            Log::channel('sora')->write('sora回调失败' . $e->getMessage());
+            return $this->success('fail');
+        }
+    }
+
+    public function notifyNew(): Json
+    {
+        try {
+            $data = $this->request->all();
+            Log::channel('sora')->write('接收sora参数' . json_encode($data));
+            $key = md5(json_encode($data));
+            $val = cache($key);
+            if ($val) {
+                Log::channel('sora')->write('重复请求');
+                return $this->fail('重复请求');
+            }
+            cache($key, 1, 20);
+            $result = SoraVideoTaskLogic::notifyNew($data);
+            if (!$result) {
+                return $this->fail(SoraVideoTaskLogic::getError());
+            }
+            return $this->success('ok');
+        } catch (\Exception $e) {
+            Log::channel('sora')->write('sora回调失败' . $e->getMessage());
             return $this->success('fail');
         }
     }

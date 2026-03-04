@@ -1,6 +1,6 @@
 <template>
     <div>
-        <el-card class="!border-none" shadow="never">
+        <el-card class="!border-none" shadow="never" v-if="false">
             <div class="text-xl font-medium mb-[20px] mt-4">基本设置</div>
             <div class="mt-4 w-[400px]">
                 <div>

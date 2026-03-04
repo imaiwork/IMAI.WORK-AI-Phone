@@ -11,7 +11,7 @@ use think\exception\HttpResponseException;
 
 class CozeAgentController extends BaseApiController
 {
-    public array $notNeedLogin = ['commonLists'];
+    public array $notNeedLogin = ['lists','commonLists'];
 
     public function add()
     {

@@ -46,7 +46,7 @@
                     </section>
 
                     <section v-if="!isNewsBody">
-                        <label class="text-[12px] font-[1000] text-slate-400 mb-3 block uppercase tracking-widest"
+                        <label class="text-xs font-[1000] text-slate-400 mb-3 block uppercase tracking-widest"
                             >文案长度 / Length</label
                         >
                         <div class="bg-white p-1 rounded-xl border border-br flex gap-1">
@@ -66,7 +66,7 @@
                     </section>
 
                     <section>
-                        <label class="text-[12px] font-[1000] text-slate-400 mb-3 block uppercase tracking-widest"
+                        <label class="text-xs font-[1000] text-slate-400 mb-3 block uppercase tracking-widest"
                             >生成条数 / Quantity</label
                         >
                         <div class="grid grid-cols-5 gap-1.5">

@@ -53,7 +53,7 @@
                 row-key="id"
                 @selection-change="handleSelectionChange">
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
-                <el-table-column label="ID" prop="id" min-width="60" />
+                <el-table-column label="ID" prop="id" min-width="80" />
                 <el-table-column label="用户" prop="user_nickname" min-width="140" show-overflow-tooltip />
                 <el-table-column label="发布账号" width="180">
                     <template #default="{ row }">

@@ -77,7 +77,7 @@
                             <h2 class="text-[22px] font-black text-[#111827] tracking-tight">
                                 选择{{ publishTypeMap[type] }}
                             </h2>
-                            <p class="text-[12px] text-[#9CA3AF] font-medium mt-1">请上传并管理您的任务素材</p>
+                            <p class="text-xs text-[#9CA3AF] font-medium mt-1">请上传并管理您的任务素材</p>
                         </div>
                     </div>
 
@@ -117,7 +117,7 @@
                             <button
                                 v-if="isImageMode"
                                 @click="handleAddImageGroup"
-                                class="h-9 px-4 rounded-xl bg-primary text-white text-[12px] font-medium hover:bg-[#4338CA] transition-all active:scale-95 flex items-center gap-2">
+                                class="h-9 px-4 rounded-xl bg-primary text-white text-xs font-medium hover:bg-[#4338CA] transition-all active:scale-95 flex items-center gap-2">
                                 <i class="el-icon-plus"></i>
                                 <span>添加图片组</span>
                             </button>
@@ -453,7 +453,7 @@
                             </div>
                         </ElTooltip>
                     </div>
-                    <p class="text-[12px] text-slate-400 font-medium">请合理规划每日发布节奏，避免频率过高</p>
+                    <p class="text-xs text-slate-400 font-medium">请合理规划每日发布节奏，避免频率过高</p>
                 </div>
             </div>
 
@@ -612,7 +612,7 @@ const { type } = toRefs(props);
 const query = searchQueryToObject();
 const materialId = computed(() => query.material_id);
 
-const step = ref(3);
+const step = ref(1);
 
 // 表单数据
 const formData = reactive<{
@@ -905,7 +905,7 @@ const addTitleAndDesc = (isUpdate = true) => {
 // 禁用当前日期之前的日期
 const getDisabledTaskDate = (time: Date) => time.getTime() < dayjs().startOf("day").valueOf();
 
-const validatePublishSettings = () => {
+const validatePublishSettings = async () => {
     const { valid, errors } = validateTimeConfig();
 
     if (formData.accounts.length === 0) {
@@ -923,6 +923,31 @@ const validatePublishSettings = () => {
     if (currentTaskFrequencyIdx.value === 5 && formData.custom_date.length === 0) {
         feedback.msgWarning("请选择任务日期");
         return false;
+    }
+
+    // 判断如果素材只有1条的时候，需要判断账号是不是有多个相同的平台的账号，如果有需要提示用户
+    if (materialFormData.media_url.length === 1) {
+        const typeCountMap = accountList.value.reduce<Record<string, number>>((acc, account) => {
+            acc[account.type] = (acc[account.type] || 0) + 1;
+            return acc;
+        }, {});
+        const duplicateTypes = Object.entries(typeCountMap)
+            .filter(([, count]) => count > 1)
+            .map(([type]) => type);
+        if (duplicateTypes.length > 0) {
+            const confirmed = await new Promise<boolean>((resolve) => {
+                useNuxtApp().$confirm({
+                    message: `当前素材只有1条，但您选择了多个相同平台的账号，将只选择一个账号发布内容，是否继续？`,
+                    onConfirm: () => {
+                        resolve(true);
+                    },
+                    onCancel: () => {
+                        resolve(false);
+                    },
+                });
+            });
+            if (!confirmed) return false;
+        }
     }
 
     return true;
@@ -1038,7 +1063,7 @@ const handleTaskFrequency = (item: number) => {
 };
 
 const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
-    if (!validatePublishSettings()) return;
+    if (!(await validatePublishSettings())) return;
     try {
         const copywriterList = materialFormData.title
             .filter((item) => item.content)
@@ -1061,6 +1086,7 @@ const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
                 url: item.url.map((val) => val.url),
             }));
         }
+
         const { id } = await addMatrixTask({
             name: formData.name,
             media_url,
@@ -1187,7 +1213,7 @@ const handlePreviewVideo = async (url: string) => {
 }
 
 .error-notice {
-    @apply mt-4 p-3 bg-red-50 text-red-500 rounded-xl text-[12px] font-medium flex items-center gap-2 border border-red-100;
+    @apply mt-4 p-3 bg-red-50 text-red-500 rounded-xl text-xs font-medium flex items-center gap-2 border border-red-100;
 }
 
 .modern-btn-secondary {

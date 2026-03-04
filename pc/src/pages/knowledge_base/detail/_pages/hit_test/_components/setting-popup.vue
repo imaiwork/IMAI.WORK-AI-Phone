@@ -19,7 +19,7 @@
                 </div>
                 <div>
                     <div class="text-[18px] font-[900] text-[#1E293B]">向量检索配置</div>
-                    <div class="text-[12px] font-medium text-[#94A3B8]">配置模型检索的精度、上限及重排策略</div>
+                    <div class="text-xs font-medium text-[#94A3B8]">配置模型检索的精度、上限及重排策略</div>
                 </div>
             </div>
 

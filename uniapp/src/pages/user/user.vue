@@ -1,145 +1,198 @@
 <template>
-    <view class="h-screen flex flex-col relative user-page">
+    <view class="h-screen flex flex-col relative user-bg">
         <u-navbar
-            is-custom-back-icon
             :border-bottom="false"
             :is-fixed="false"
             :background="{
                 background: 'transparent',
             }">
-            <view class="text-[30rpx] font-medium text-white">个人中心</view>
         </u-navbar>
-        <view class="grow min-h-0">
+        <view class="absolute top-0 left-0 right-0 z-[1] bg-image-container">
+            <image
+                :src="`${config.baseUrl}static/images/mp/user_top_bg.png`"
+                class="w-full h-[600rpx] object-cover"
+                mode="aspectFill" />
+            <view class="absolute bottom-0 left-0 right-0 h-[200rpx] bg-blur-mask"></view>
+        </view>
+
+        <view class="grow min-h-0 relative z-[20]">
             <scroll-view scroll-y class="h-full">
-                <view class="px-[32rpx] pb-5">
-                    <view class="flex justify-center">
-                        <view class="mt-[32rpx]">
-                            <view class="w-[128rpx] h-[128rpx] rounded-full mx-auto relative">
-                                <template v-if="isLogin">
-                                    <image :src="userInfo.avatar" class="w-full h-full rounded-full"></image>
-                                    <view class="absolute -bottom-1 -right-1" @click="showUpdateUserPopup = true">
+                <view class="min-h-full flex flex-col">
+                    <view class="pb-5 grow min-h-0">
+                        <view class="px-[70rpx]">
+                            <view class="pt-[32rpx] flex items-center space-x-[42rpx]">
+                                <view class="w-[128rpx] h-[128rpx] rounded-full relative">
+                                    <template v-if="isLogin">
                                         <image
-                                            src="/static/images/icons/user_edit.svg"
-                                            class="w-[40rpx] h-[40rpx]"></image>
-                                    </view>
-                                </template>
-                                <!-- #ifndef APP-PLUS -->
-                                <navigator class="w-full h-full" url="/pages/login/login" hover-class="none" v-else>
-                                    <image :src="websiteConfig.shop_logo" class="w-full h-full rounded-full"></image>
-                                </navigator>
-                                <!-- #endif -->
-                                <!-- #ifdef APP-PLUS -->
-                                <navigator class="w-full h-full" url="/pages/login/mobile" hover-class="none" v-else>
-                                    <image :src="websiteConfig.shop_logo" class="w-full h-full rounded-full"></image>
-                                </navigator>
-                                <!-- #endif -->
-                            </view>
-                            <view
-                                class="text-white font-medium mt-[40rpx] h-[40rpx] text-center"
-                                style="text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.3)">
-                                <!-- #ifndef APP-PLUS -->
-                                <navigator v-if="!isLogin" url="/pages/login/login" hover-class="none">
-                                    点击登录后，体验更多 AI功能
-                                </navigator>
-                                <!-- #endif -->
-                                <!-- #ifdef APP-PLUS -->
-                                <navigator v-if="!isLogin" url="/pages/login/mobile" hover-class="none">
-                                    点击登录后，体验更多 AI功能
-                                </navigator>
-                                <!-- #endif -->
-                                <text>{{ userInfo.nickname }}</text>
-                            </view>
-                        </view>
-                    </view>
-                    <view class="mt-[48rpx]">
-                        <view class="main-card">
-                            <view class="border border-solid border-[#B0A99D] rounded-[28rpx] p-[3rpx]">
-                                <view class="tokens-card">
-                                    <view class="flex-1">
-                                        <view class="flex items-center">
-                                            <view class="tokens-value text-[32rpx] font-medium">
-                                                当前剩余算力：{{ isLogin ? userTokens : "-" }}
-                                            </view>
+                                            :src="userInfo.avatar"
+                                            class="w-full h-full rounded-full"
+                                            mode="aspectFill"></image>
+                                        <view class="absolute -bottom-1 -right-1" @click="showUpdateUserPopup = true">
                                             <image
-                                                src="/static/images/icons/shandian.svg"
-                                                class="w-[16rpx] h-[24rpx] ml-2 mt-[4rpx]"></image>
+                                                src="/static/images/icons/user_edit.svg"
+                                                class="w-[40rpx] h-[40rpx]"></image>
                                         </view>
-                                        <view class="tokens-desc text-[22rpx] mt-1"> 充值算力，助你抢占先机 </view>
-                                    </view>
-                                    <view class="absolute right-[80rpx]" @click="handleUtils('recharge')">
+                                    </template>
+                                    <navigator class="w-full h-full" url="/pages/login/login" hover-class="none" v-else>
                                         <image
-                                            src="/static/images/common/recharge-btn.png"
-                                            class="h-[100rpx] w-[172rpx]"></image>
+                                            :src="websiteConfig.shop_logo"
+                                            class="w-full h-full rounded-full"></image>
+                                    </navigator>
+                                </view>
+                                <view>
+                                    <navigator url="/pages/login/login" hover-class="none" v-if="!isLogin">
+                                        <view class="text-[36rpx] font-medium">未登录</view>
+                                        <view
+                                            class="text-[#000000]/40 flex items-center mt-2 text-[22rpx] font-medium gap-x-[6rpx]">
+                                            <text>立即登录</text>
+                                            <u-icon name="arrow-right" size="20" color="#00000040"></u-icon>
+                                        </view>
+                                    </navigator>
+                                    <view v-else>
+                                        <view class="text-[36rpx] font-medium">{{ userInfo.nickname }}</view>
+                                        <view class="flex items-center gap-x-2 text-xs mt-2 text-[#000000]/40">
+                                            <view @click="copy(userInfo.sn)">ID: {{ userInfo.sn }}</view>
+                                            <view>|</view>
+                                            <view @click="copy(userInfo.mobile)">{{ userInfo.mobile }}</view>
+                                        </view>
                                     </view>
                                 </view>
                             </view>
-                            <view class="mx-2">
-                                <view class="mt-[20rpx] text-[40rpx] font-medium text-[#4A2F21]">
-                                    <view>{{ websiteConfig.shop_name }}算力驱动未来</view>
-                                    <view>引擎全开，撑起无限的可能。</view>
+                            <view class="grid grid-cols-3 gap-x-[20rpx] mt-[40rpx]">
+                                <view class="flex flex-col items-center">
+                                    <view class="text-[34rpx] font-medium">{{ userTokens || "-" }}</view>
+                                    <view
+                                        class="text-[#000000]/40 flex items-center mt-1 text-[22rpx] font-medium gap-x-[6rpx]"
+                                        @click="handleUtils('recharge')">
+                                        <text>可用算力</text>
+                                        <u-icon name="arrow-right" size="20" color="#00000040"></u-icon>
+                                    </view>
                                 </view>
-                                <view class="opacity-50 text-[22rpx] mt-[16rpx]">
-                                    解锁更强大、更敏捷、更智慧的人工智能体验，始于核心算力的每一次跃升。
+                                <view class="flex flex-col items-center">
+                                    <view class="text-[34rpx] font-medium">{{ videoCount || "-" }}</view>
+                                    <view
+                                        class="text-[#000000]/40 flex items-center mt-1 text-[22rpx] font-medium gap-x-[6rpx]">
+                                        <text>我的创作</text>
+                                    </view>
                                 </view>
-                            </view>
-                            <view class="grid grid-cols-3 mt-[28rpx] gap-x-[20rpx]">
-                                <router-navigate class="menu-link" to="/packages/pages/creation/creation">
-                                    <image
-                                        src="/static/images/common/creation_record_card.png"
-                                        class="w-full h-full"></image>
-                                </router-navigate>
-                                <router-navigate class="menu-link" to="/packages/pages/tokens_rule/tokens_rule">
-                                    <image
-                                        src="/static/images/common/tokens_rule_card.png"
-                                        class="w-full h-full"></image>
-                                </router-navigate>
-                                <view class="menu-link" @click="openService()">
-                                    <image src="/static/images/common/service_card.png" class="w-full h-full"></image>
-                                </view>
-                            </view>
-                            <view class="mt-[40rpx] flex gap-x-2">
-                                <view class="flex items-center gap-x-2">
-                                    <image
-                                        src="/static/images/icons/success_badge.svg"
-                                        class="w-[28rpx] h-[28rpx]"></image>
-                                    <text class="opacity-30 text-[22rpx]">最受欢迎的智能工具之一</text>
-                                </view>
-                                <view class="flex items-center gap-x-2">
-                                    <image
-                                        src="/static/images/icons/success_badge.svg"
-                                        class="w-[28rpx] h-[28rpx]"></image>
-                                    <text class="opacity-30 text-[22rpx]">智能体验深度探索助力企业</text>
+                                <view class="flex flex-col items-center">
+                                    <view class="text-[34rpx] font-medium">{{ anchorCount || "-" }}</view>
+                                    <view
+                                        class="text-[#000000]/40 flex items-center mt-1 text-[22rpx] font-medium gap-x-[6rpx]">
+                                        <text>数字人</text>
+                                    </view>
                                 </view>
                             </view>
                         </view>
+                        <view class="mt-[62rpx] px-[26rpx]" v-if="isLogin">
+                            <view class="relative h-[260rpx] p-[20rpx] rounded-[30rpx] recharge-card">
+                                <view>
+                                    <image
+                                        :src="`${config.baseUrl}static/images/mp/tokens_badge.png`"
+                                        class="w-[144rpx] h-[150rpx] absolute top-[-25rpx] right-[50rpx]"></image>
+                                </view>
+                                <view class="h-[200rpx] w-full relative mt-2">
+                                    <view class="w-full absolute top-0 left-0">
+                                        <image
+                                            :src="`${config.baseUrl}static/images/mp/tokens_bg.png`"
+                                            class="w-full"
+                                            mode="widthFix"></image>
+                                    </view>
+
+                                    <view class="flex items-center justify-between relative z-10 pt-[70rpx] px-8">
+                                        <view class="flex flex-col items-center" @click="handleUtils('recharge')">
+                                            <image
+                                                :src="`${config.baseUrl}static/images/mp/user_tokens_1.png`"
+                                                class="w-[40rpx] h-[40rpx]"></image>
+                                            <text class="mt-[12rpx] text-black">算力充值</text>
+                                        </view>
+                                        <view class="flex flex-col items-center" @click="handleUtils('rule')">
+                                            <image
+                                                :src="`${config.baseUrl}static/images/mp/user_tokens_2.png`"
+                                                class="w-[40rpx] h-[40rpx]"></image>
+                                            <text class="mt-[12rpx]">算力规则</text>
+                                        </view>
+                                        <view class="flex flex-col items-center" @click="handleUtils('card')">
+                                            <image
+                                                :src="`${config.baseUrl}static/images/mp/user_tokens_3.png`"
+                                                class="w-[40rpx] h-[40rpx]"></image>
+                                            <text class="mt-[12rpx]">卡密兑换</text>
+                                        </view>
+                                    </view>
+                                </view>
+                            </view>
+                        </view>
+                        <view class="mt-[24rpx] px-[26rpx]" v-if="isLogin">
+                            <view class="bg-white rounded-[30rpx] px-[40rpx]">
+                                <router-navigate
+                                    to="/packages/pages/user_balance/user_balance"
+                                    hover-class="none"
+                                    class="h-[110rpx] flex justify-between items-center border-[0] border-b-[1rpx] border-solid border-[#F6F6F6]">
+                                    <view class="leading-[0] flex items-center gap-x-2">
+                                        <image
+                                            src="/static/images/icons/record.svg"
+                                            class="w-[32rpx] h-[32rpx]"></image>
+                                        <text class="text-[26rpx]">算力消耗记录</text>
+                                    </view>
+                                    <view class>
+                                        <u-icon name="arrow-right" size="20" color="#00000050"></u-icon>
+                                    </view>
+                                </router-navigate>
+                                <router-navigate
+                                    to="/packages/pages/user_balance/user_balance?type=order"
+                                    hover-class="none"
+                                    class="h-[110rpx] flex justify-between items-center border-[0] border-b-[1rpx] border-solid border-[#F6F6F6]">
+                                    <view class="leading-[0] flex items-center gap-x-2">
+                                        <image src="/static/images/icons/order.svg" class="w-[32rpx] h-[32rpx]"></image>
+                                        <text class="text-[26rpx]">我的订单</text>
+                                    </view>
+                                    <view class>
+                                        <u-icon name="arrow-right" size="20" color="#00000050"></u-icon>
+                                    </view>
+                                </router-navigate>
+                                <view
+                                    class="h-[110rpx] flex justify-between items-center border-[0] border-b-[1rpx] border-solid border-[#F6F6F6]"
+                                    @click="openService">
+                                    <view class="leading-[0] flex items-center gap-x-2">
+                                        <image
+                                            src="/static/images/icons/service.svg"
+                                            class="w-[32rpx] h-[32rpx]"></image>
+                                        <text class="text-[26rpx]">联系客服</text>
+                                    </view>
+                                    <view class>
+                                        <u-icon name="arrow-right" size="20" color="#00000050"></u-icon>
+                                    </view>
+                                </view>
+                                <router-navigate
+                                    to="/packages/pages/setting/setting"
+                                    hover-class="none"
+                                    class="h-[110rpx] flex justify-between items-center">
+                                    <view class="leading-[0] flex items-center gap-x-2">
+                                        <image
+                                            src="/static/images/icons/setting3.svg"
+                                            class="w-[32rpx] h-[32rpx]"></image>
+                                        <text class="text-[26rpx]">设置与协议</text>
+                                    </view>
+                                    <view class>
+                                        <u-icon name="arrow-right" size="20" color="#00000050"></u-icon>
+                                    </view>
+                                </router-navigate>
+                            </view>
+                        </view>
                     </view>
-                    <view class="mt-[32rpx]">
-                        <router-navigate
-                            to="/packages/pages/setting/setting"
-                            hover-class="none"
-                            class="rounded-[24rpx] bg-white p-[18rpx] flex justify-between items-center leading-[0]">
-                            <view class="leading-[0] flex items-center gap-x-2">
-                                <image src="/static/images/icons/menu_setting.svg" class="w-[72rpx] h-[72rpx]"></image>
-                                <text class="text-[26rpx]">相关设置</text>
-                            </view>
-                            <view class>
-                                <image src="/static/images/icons/more.svg" class="w-[28rpx] h-[28rpx]"></image>
-                            </view>
-                        </router-navigate>
-                    </view>
-                    <view class="mt-[50rpx]">
-                        <view class="">
-                            <view class="text-[22rpx] text-center mb-1 text-[#0000004d]">
-                                当前版本：Version {{ config.version }}
-                            </view>
+                    <view class="my-[50rpx]">
+                        <view class="text-[22rpx] text-center text-[#0000004d]">
+                            {{ byName }}
+                        </view>
+                        <view class="mt-1">
                             <view class="text-[#0000004d] text-[22rpx]">
                                 <view v-for="(item, index) in copyrightConfig" :key="index" class="text-center mb-1">
                                     {{ item.key }}
                                 </view>
                             </view>
                         </view>
-                        <view class="text-[22rpx] text-center text-[#0000004d]">
-                            {{ byName }}
+                        <view class="text-[22rpx] text-center mb-1 text-[#0000004d]">
+                            当前版本：Version <text class="font-medium">{{ config.version }}</text>
                         </view>
                     </view>
                 </view>
@@ -215,14 +268,19 @@
 
 <script lang="ts" setup>
 import config from "@/config";
+import { getPublicAnchorList } from "@/api/digital_human";
+import { getVideoCreationRecord } from "@/api/app";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
 import { updateUser } from "@/api/account";
 import { isIOS } from "@/utils/client";
 import UpdateUserInfo from "@/pages/login/components/update-user-info.vue";
+import { useCopy } from "@/hooks/useCopy";
 
 const userStore = useUserStore();
 const { userInfo, isLogin, userTokens } = toRefs(userStore);
+
+const { copy } = useCopy();
 
 const appStore = useAppStore();
 const websiteConfig = computed(() => appStore.getWebsiteConfig);
@@ -252,6 +310,12 @@ const handleUpdateUser = async (value: any) => {
 };
 
 const handleUtils = (type: string) => {
+    if (!isLogin.value) {
+        uni.$u.route({
+            url: "/pages/login/login",
+        });
+        return;
+    }
     let pathUrl;
     switch (type) {
         case "recharge":
@@ -260,6 +324,12 @@ const handleUtils = (type: string) => {
                 pathUrl = "/packages/pages/redeem/redeem";
             }
 
+            break;
+        case "card":
+            pathUrl = "/packages/pages/redeem/redeem";
+            break;
+        case "rule":
+            pathUrl = "/packages/pages/tokens_rule/tokens_rule";
             break;
     }
     uni.$u.route({
@@ -292,14 +362,60 @@ const saveQrcode = () => {
     });
 };
 
+const anchorCount = ref(0);
+const getAnchorCount = async () => {
+    const { count } = await getPublicAnchorList({
+        page: 1,
+        page_size: 1,
+    });
+    anchorCount.value = count;
+};
+
+const videoCount = ref(0);
+const getVideoCount = async () => {
+    const { count } = await getVideoCreationRecord({
+        page: 1,
+        page_size: 1,
+    });
+    videoCount.value = count;
+};
+
 onShow(() => {
     userStore.getUser();
+    getAnchorCount();
+    getVideoCount();
 });
 </script>
 
 <style lang="scss" scoped>
-.user-page {
-    background: linear-gradient(180deg, $u-type-primary 30.54%, #f9fafb 46.18%);
+.user-bg {
+    background: linear-gradient(
+        180deg,
+        rgba(232, 236, 247, 1) 0%,
+        rgba(235, 238, 245, 1) 40%,
+        rgba(245, 247, 250, 1) 100%
+    );
+}
+
+.bg-image-container {
+    height: 600rpx;
+    overflow: hidden;
+}
+
+.bg-blur-mask {
+    background: linear-gradient(
+        180deg,
+        rgba(235, 238, 245, 0) 0%,
+        rgba(235, 238, 245, 0.3) 30%,
+        rgba(235, 238, 245, 0.7) 60%,
+        rgba(235, 238, 245, 1) 100%
+    );
+    backdrop-filter: blur(8rpx);
+    -webkit-backdrop-filter: blur(8rpx);
+}
+
+.recharge-card {
+    background: linear-gradient(90deg, rgba(245, 220, 226, 1) 0%, rgba(217, 232, 250, 1) 100%);
 }
 
 .main-card {
@@ -338,8 +454,5 @@ onShow(() => {
     border-radius: 32rpx;
     box-shadow: 0px 4px 6px 3px rgba(0, 0, 0, 0.3);
     height: 250rpx;
-}
-.gf-badge {
-    box-shadow: 0px 1px 6px rgba(0, 101, 251, 0.25);
 }
 </style>

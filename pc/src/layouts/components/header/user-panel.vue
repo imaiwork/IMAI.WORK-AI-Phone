@@ -30,7 +30,7 @@
                     <div class="info-row group" @click="copy(userInfo.mobile)">
                         <div class="flex items-center gap-2">
                             <Icon name="el-icon-Phone" :size="12" color="#94A3B8" />
-                            <span class="text-[12px] font-medium text-[#64748B]">{{ userInfo.mobile }}</span>
+                            <span class="text-xs font-medium text-[#64748B]">{{ userInfo.mobile }}</span>
                         </div>
                         <span class="text-[#CBD5E1] group-hover:text-primary"><Icon name="local-icon-copy" /></span>
                     </div>

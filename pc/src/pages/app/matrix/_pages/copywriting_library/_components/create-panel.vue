@@ -28,9 +28,7 @@
                 <div class="flex items-center justify-between mb-6 flex-shrink-0">
                     <div class="flex flex-col">
                         <h3 class="text-slate-800 font-medium text-[18px] tracking-tight">文案创作</h3>
-                        <p class="text-slate-400 text-[12px] font-medium uppercase tracking-widest">
-                            Copywriting Studio
-                        </p>
+                        <p class="text-slate-400 text-xs font-medium uppercase tracking-widest">Copywriting Studio</p>
                     </div>
 
                     <button class="ai-premium-btn" @click="handleAi">
@@ -116,8 +114,7 @@
             <div class="p-8 bg-slate-50">
                 <div class="space-y-6">
                     <div class="bg-white p-5 rounded-2xl border border-br">
-                        <label
-                            class="text-[12px] font-black text-[#64748B] uppercase mb-3 ml-1 flex items-center gap-2">
+                        <label class="text-xs font-black text-[#64748B] uppercase mb-3 ml-1 flex items-center gap-2">
                             <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
                             内容主题
                         </label>
@@ -132,9 +129,7 @@
 
                     <div class="bg-white p-5 rounded-2xl border border-br flex items-center justify-between">
                         <div>
-                            <label class="block text-[12px] font-black text-[#64748B] uppercase mb-1 ml-1"
-                                >生成数量</label
-                            >
+                            <label class="block text-xs font-black text-[#64748B] uppercase mb-1 ml-1">生成数量</label>
                             <p class="text-[11px] text-[#94A3B8]">单次最高支持生成 10 条内容</p>
                         </div>
                         <div class="w-[140px]">

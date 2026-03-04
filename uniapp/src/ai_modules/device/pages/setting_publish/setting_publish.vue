@@ -498,6 +498,7 @@ const handleSaveConfig = async () => {
                 type: item.type,
                 fileUrl: item.url,
                 cover: item.pic,
+                duration: item.duration,
             })),
             image_material: materialStore.imageList.map((item: any) => item.url),
         });
@@ -544,6 +545,7 @@ const getDetail = async () => {
             url: item.fileUrl,
             pic: item.cover,
             type: item.type,
+            duration: item.duration,
         }));
         easyModeData.imageList = data.image_material.map((item: any) => ({
             url: item,

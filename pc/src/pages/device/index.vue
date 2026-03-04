@@ -26,9 +26,7 @@
             <div class="h-[80px] px-8 flex items-center justify-between">
                 <div class="flex items-center gap-4">
                     <div class="flex flex-col">
-                        <span class="text-[12px] font-black text-[#94A3B8] uppercase tracking-wider"
-                            >Device Assets</span
-                        >
+                        <span class="text-xs font-black text-[#94A3B8] uppercase tracking-wider">Device Assets</span>
                         <span class="text-[16px] font-[900] text-[#1E293B]">当前设备：{{ pager.count }}</span>
                     </div>
                     <div class="w-[1px] h-8 bg-[#F1F5F9] mx-2"></div>
@@ -76,23 +74,36 @@
                             <div class="text-[11px] text-[#94A3B8]">SDK: {{ row.sdk_version }}</div>
                         </template>
                     </ElTableColumn>
-
+                    <ElTableColumn label="AI自动/人工" width="160">
+                        <template #default="{ row }">
+                            <div class="flex items-center justify-center gap-2" @click.stop>
+                                <ElSwitch
+                                    v-model="row.auto_type"
+                                    :active-value="1"
+                                    :inactive-value="0"
+                                    @change="handleChangeAutoType(row)" />
+                                <span class="text-xs font-medium text-[#475569]">{{
+                                    row.auto_type == 1 ? "AI自动" : "人工"
+                                }}</span>
+                            </div>
+                        </template>
+                    </ElTableColumn>
                     <ElTableColumn label="实时状态" width="120">
                         <template #default="{ row }">
                             <div class="flex items-center justify-center gap-1.5">
                                 <div
                                     v-if="row.status == 1"
-                                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECFDF5] text-[#10B981] text-[12px] font-black">
+                                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECFDF5] text-[#10B981] text-xs font-black">
                                     <span class="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span> 在线
                                 </div>
                                 <div
                                     v-else-if="row.status == 2"
-                                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0065fb]/10 text-primary text-[12px] font-black">
+                                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0065fb]/10 text-primary text-xs font-black">
                                     <Icon name="el-icon-Loading" /> 工作中
                                 </div>
                                 <div
                                     v-else
-                                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FEF2F2] text-[#EF4444] text-[12px] font-black">
+                                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FEF2F2] text-[#EF4444] text-xs font-black">
                                     <span class="w-1.5 h-1.5 rounded-full bg-[#EF4444]"></span> 离线
                                 </div>
                             </div>
@@ -155,7 +166,7 @@
             </div>
 
             <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
-                <span class="text-[12px] font-medium text-[#94A3B8]"
+                <span class="text-xs font-medium text-[#94A3B8]"
                     >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条设备数据</span
                 >
                 <pagination v-model="pager" @change="getLists"></pagination>
@@ -429,6 +440,19 @@ const handleDelete = (row: any) => {
             }
         },
     });
+};
+
+const handleChangeAutoType = async (row: any) => {
+    try {
+        await updateDevice({
+            device_code: row.device_code,
+            auto_type: row.auto_type,
+        });
+        feedback.msgSuccess("更新成功");
+        getLists();
+    } catch (error) {
+        feedback.msgError(error || "更新失败");
+    }
 };
 
 getLists();

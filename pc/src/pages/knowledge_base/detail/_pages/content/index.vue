@@ -1,7 +1,6 @@
 <template>
     <div class="flex flex-col h-full min-w-[1000px]" v-if="!isAddFile && !isDetail">
-        <div
-            class="flex flex-col h-full bg-white rounded-[24px] border border-br overflow-hidden max-w-[1200px] mx-auto w-full">
+        <div class="flex flex-col h-full bg-white rounded-[24px] border border-br overflow-hidden mx-auto w-full">
             <div class="flex-shrink-0 h-[90px] flex items-center justify-between px-8 border-b border-br">
                 <div class="flex flex-col gap-1">
                     <div class="flex items-center gap-2">
@@ -108,7 +107,7 @@
 
                     <ElTableColumn label="上传节点" width="180px">
                         <template #default="{ row }">
-                            <div class="text-[12px] text-[#94A3B8] font-medium">{{ row.create_time }}</div>
+                            <div class="text-xs text-[#94A3B8] font-medium">{{ row.create_time }}</div>
                         </template>
                     </ElTableColumn>
 

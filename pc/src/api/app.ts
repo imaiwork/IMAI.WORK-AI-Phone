@@ -15,17 +15,17 @@ export function getPolicy(params: any) {
 
 // 上传图片
 export function uploadImage(params: any, onProgress?: (percent: number) => void) {
-    return $request.uploadFile({ url: "/upload/image" }, params, onProgress);
+    return $request.uploadFile({ url: "/upload/image", requestOptions: { ignoreCancel: true } }, params, onProgress);
 }
 
 // 上传音频
 export function uploadAudio(params: any, onProgress?: (percent: number) => void) {
-    return $request.uploadFile({ url: "/upload/audio" }, params, onProgress);
+    return $request.uploadFile({ url: "/upload/audio", requestOptions: { ignoreCancel: true } }, params, onProgress);
 }
 
 // 上传文件
 export function uploadFile(params: any, onProgress?: (percent: number) => void) {
-    return $request.uploadFile({ url: "/upload/file" }, params, onProgress);
+    return $request.uploadFile({ url: "/upload/file", requestOptions: { ignoreCancel: true } }, params, onProgress);
 }
 
 // 上传GPT文件

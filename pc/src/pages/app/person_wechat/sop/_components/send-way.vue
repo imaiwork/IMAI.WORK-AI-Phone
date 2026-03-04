@@ -24,7 +24,7 @@
                             class="text-[16px] font-black text-slate-800 mb-2 group-hover:text-primary transition-colors">
                             {{ card.title }}
                         </span>
-                        <span class="text-slate-400 text-[12px] font-medium leading-relaxed px-2">
+                        <span class="text-slate-400 text-xs font-medium leading-relaxed px-2">
                             {{ card.desc }}
                         </span>
                     </div>
@@ -37,7 +37,7 @@
 
         <div class="flex items-center gap-4 py-2">
             <div class="flex-1 h-[1px] bg-slate-100"></div>
-            <div class="flex items-center gap-2 text-slate-400 text-[12px] font-medium">
+            <div class="flex items-center gap-2 text-slate-400 text-xs font-medium">
                 <Icon name="el-icon-Setting" />
                 <span>配置触发细节</span>
             </div>
@@ -60,7 +60,7 @@
                                     :value="item.id"
                                     :key="item.id"></ElOption>
                             </ElSelect>
-                            <div class="mt-2 text-[12px] text-slate-400">当用户进入此流程时，SOP 将自动开启</div>
+                            <div class="mt-2 text-xs text-slate-400">当用户进入此流程时，SOP 将自动开启</div>
                         </ElFormItem>
                     </template>
 

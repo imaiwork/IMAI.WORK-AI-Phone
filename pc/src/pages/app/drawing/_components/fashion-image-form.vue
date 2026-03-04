@@ -36,7 +36,7 @@
                             <img :src="formData[type]" class="relative z-10 w-full h-full object-contain p-2" />
                             <div
                                 class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center justify-center">
-                                <div class="px-4 py-1.5 bg-white rounded-full text-[12px] font-black text-[#1E293B]">
+                                <div class="px-4 py-1.5 bg-white rounded-full text-xs font-black text-[#1E293B]">
                                     更换素材
                                 </div>
                             </div>
@@ -111,7 +111,7 @@
                                             class="w-10 h-10 rounded-full bg-white flex items-center justify-center mb-2 group-hover:scale-110 transition-all duration-300">
                                             <Icon name="el-icon-Plus" :size="20" color="var(--color-primary)"></Icon>
                                         </div>
-                                        <span class="text-[12px] font-black text-tx-secondary">添加模特素材</span>
+                                        <span class="text-xs font-black text-tx-secondary">添加模特素材</span>
                                         <span class="text-[10px] text-tx-placeholder mt-1 font-medium"
                                             >支持 JPG/PNG 格式</span
                                         >

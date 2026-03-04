@@ -4,6 +4,7 @@
 namespace app\adminapi\logic\kb;
 
 use app\adminapi\logic\knowledge\KnowledgeLogic;
+use app\api\logic\kb\KbTeachLogic;
 use app\common\enum\kb\RobotEnum;
 use app\common\logic\BaseLogic;
 use app\common\model\chat\ChatLog;
@@ -11,12 +12,14 @@ use app\common\model\chat\Models;
 use app\common\model\chat\ModelsCost;
 use app\common\model\coze\AgentCate;
 use app\common\model\kb\KbKnow;
+use app\common\model\kb\KbKnowFiles;
 use app\common\model\kb\KbRobot;
 use app\common\model\kb\KbRobotInstruct;
 use app\common\model\kb\KbRobotRecord;
 use app\common\model\knowledge\Knowledge;
 use app\common\model\knowledge\KnowledgeBind;
 use app\common\model\sv\SvReplyStrategy;
+use app\common\pgsql\KbEmbedding;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
 use Exception;
@@ -193,7 +196,7 @@ class KbRobotLogic extends BaseLogic
         $model->startTrans();
         try {
             // 机器人检测
-            $robot = $model->field(['id,is_enable'])
+            $robot = $model->field(['id,user_id,is_enable,is_indexed,intro,roles_prompt'])
                            ->where(['id' => intval($post['id'])])
                            ->findOrEmpty();
             if (is_string($post['kb_ids'])) {
@@ -298,6 +301,18 @@ class KbRobotLogic extends BaseLogic
                 throw new \Exception('上下文数量取值范围 0到5');
             }
 
+            $userId = $robot['user_id'];
+            //模型大管家检测
+            if ($robot['is_indexed'] == 1 && $userId > 0){
+                if ($robot['intro'] != $post['intro'] || $robot['roles_prompt'] != $post['roles_prompt']){
+                    $mbKbId = KbKnow::where('name','模型大管家')->where('user_id',$userId)->value('id');
+                    $fdId = KbKnowFiles::where('know_id',$mbKbId)->value('id');
+                    $pgsql = new KbEmbedding();
+                    $uuid = $pgsql->where('kb_id',$mbKbId)->where('fd_id',$fdId)->where('user_id',$userId)->where('answer','【【@'.$robot['id'].'】】')->value('uuid');
+                    KbTeachLogic::modelButlerRobotUpdate($robot['id'],$mbKbId,$fdId,$userId,$uuid);
+                }
+            }
+
             KbRobot::update([
                                 'kb_type'            => intval($post['kb_type'] ?? 2),
                                 'kb_ids'             => implode(',', $post['kb_ids']),
@@ -391,12 +406,25 @@ class KbRobotLogic extends BaseLogic
             $modelKbRobot = new KbRobot();
             foreach ($ids as $id) {
                 $detail = $modelKbRobot
-                    ->field(['id'])
+                    ->field(['id,user_id,is_indexed'])
                     ->where(['id' => $id])
                     ->findOrEmpty()
                     ->toArray();
                 if (!$detail) {
                     throw new Exception('该机器人应用已不存在了，请刷新重试！');
+                }
+                // 删除智能体关联的大管家知识库
+                $userId = $detail['user_id'];
+                if ($detail['is_indexed'] == 1 && $userId > 0){
+                    $mbKbId = KbKnow::where('name','模型大管家')->where('user_id',$userId)->value('id');
+                    $fdId = KbKnowFiles::where('know_id',$mbKbId)->value('id');
+                    $pgsql = new KbEmbedding();
+                    $uuid = $pgsql->where('kb_id',$mbKbId)->where('fd_id',$fdId)->where('user_id',$userId)->where('answer','【【@'.$detail['id'].'】】')->value('uuid');
+                    $delPost = [
+                        'uuids' => [$uuid],
+                        'kb_id' => $mbKbId,
+                    ];
+                    KbTeachLogic::modelButlerRobotDelete($delPost,$userId);
                 }
             }
 

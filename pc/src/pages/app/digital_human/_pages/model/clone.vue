@@ -159,7 +159,7 @@
                         立即开启克隆
                         <span class="text-sm font-medium opacity-60">(消耗 {{ getToken }} 算力)</span>
                     </button>
-                    <div class="flex items-center justify-center gap-2 mt-4 text-[12px] text-[#94A3B8]">
+                    <div class="flex items-center justify-center gap-2 mt-4 text-xs text-[#94A3B8]">
                         <Icon name="el-icon-CircleCheck" color="var(--green-500)" />
                         <span>点击即代表同意</span>
                         <router-link
@@ -208,8 +208,8 @@
                         <div
                             v-for="(item, index) in uploadTemplateContentLists"
                             class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-[#E2E8F0]/50">
-                            <span class="text-[12px] font-medium text-[#64748B]">{{ item.name }}</span>
-                            <span class="text-[12px] font-black text-[#1E293B]">{{ item.value }}</span>
+                            <span class="text-xs font-medium text-[#64748B]">{{ item.name }}</span>
+                            <span class="text-xs font-black text-[#1E293B]">{{ item.value }}</span>
                         </div>
                     </div>
                 </div>

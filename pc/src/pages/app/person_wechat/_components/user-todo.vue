@@ -62,7 +62,7 @@
 
             <div
                 v-if="foldIndex.includes(item.id)"
-                class="py-3 px-4 bg-[#f8fafc]/50 rounded-xl border border-dashed border-slate-200 text-center text-[12px] text-slate-400 font-medium cursor-pointer hover:bg-slate-100 transition-colors"
+                class="py-3 px-4 bg-[#f8fafc]/50 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-400 font-medium cursor-pointer hover:bg-slate-100 transition-colors"
                 @click="handleFoldContent(item.id)">
                 点击展开待办详情...
             </div>

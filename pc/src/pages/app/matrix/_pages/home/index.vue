@@ -26,7 +26,7 @@
                             <span
                                 class="w-2 h-2 rounded-full mr-2 animate-pulse"
                                 style="background-color: #10b981"></span>
-                            <span class="text-[12px] font-medium uppercase tracking-wider text-[#60a5fa]"
+                            <span class="text-xs font-medium uppercase tracking-wider text-[#60a5fa]"
                                 >AI Matrix System</span
                             >
                         </div>
@@ -84,7 +84,7 @@
                             Step 0{{ index + 1 }}
                         </div>
                         <h4 class="text-[16px] font-medium mb-2 text-[#f1f5f9]">{{ item.title }}</h4>
-                        <p class="text-[12px] leading-relaxed text-[#64748b]">{{ item.desc }}</p>
+                        <p class="text-xs leading-relaxed text-[#64748b]">{{ item.desc }}</p>
                     </div>
                 </div>
 

@@ -107,7 +107,7 @@
             </div>
 
             <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-                <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 个音色资源</div>
+                <div class="text-xs font-medium text-[#CBD5E1]">共计 {{ pager.count }} 个音色资源</div>
                 <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
             </div>
         </div>

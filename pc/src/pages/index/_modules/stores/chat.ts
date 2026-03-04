@@ -43,6 +43,10 @@ export const useChatStore = defineStore("chat", () => {
     // --- State ---
 
     /**
+     * @description 聊天组件的引用 (用于调用其内部方法，如滚动到底部)。
+     */
+    const chattingRef = shallowRef<any>(null);
+    /**
      * @type {Record<string, {logo: string, name: string}>}
      * @description 记录详情
      * 包含记录的logo、name等信息
@@ -248,6 +252,7 @@ export const useChatStore = defineStore("chat", () => {
 
     return {
         // State
+        chattingRef,
         detail,
         taskId,
         agentValue,

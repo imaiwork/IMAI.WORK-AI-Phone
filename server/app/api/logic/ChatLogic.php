@@ -3,6 +3,7 @@
 namespace app\api\logic;
 
 use app\api\logic\coze\CozeToolsLogic;
+use app\api\logic\kb\KbKnowLogic;
 use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
@@ -213,8 +214,13 @@ class ChatLogic extends ApiLogic
                     throw new \Exception(KnowledgeLogic::getError());
                 }
                 self::$returnData = KnowledgeLogic::getReturnData();
-            } else {
+            } else if (isset($params['robot_id']) && empty($params['kb_id'])){
                 if (!ChatLogic::commonChat($params)) {
+                    throw new \Exception(ChatLogic::getError());
+                }
+                self::$returnData = [];
+            } else {
+                if (!ChatLogic::modelButlerChat($params)) {
                     throw new \Exception(ChatLogic::getError());
                 }
                 self::$returnData = [];
@@ -224,6 +230,171 @@ class ChatLogic extends ApiLogic
             self::$error = $th->getMessage();
             return false;
         }
+    }
+
+    /**
+     * @desc 通用聊天
+     * @param array $params
+     * @return void
+     */
+    public static function modelButlerChat(array $params)
+    {
+
+        // if (empty($params['message'])) {
+        //     message('参数错误');
+        // }
+        if (!empty($params['message'])) {
+            WordsService::sensitive($params['message']);
+            // 问题审核(百度)
+            WordsService::askCensor($params['message']);
+        }
+
+
+        $request['message'] = $params['message'];
+        $request['open_reasoning'] = $params['open_reasoning'] ?? 0;
+        $request['stream'] = true;
+        $request['model'] = $params['model'] ?? 'deepseek'; //默认deepseek模型
+        $request['temperature'] = $params['temperature'] ?? 1.0; //温度
+        $request['top_p'] = $params['top_p'] ?? 0.5; //多样性范围
+        $request['presence_penalty'] = $params['presence_penalty'] ?? 0.2; //避免重复力度
+        $request['frequency_penalty'] = $params['frequency_penalty'] ?? 0.3; //避免重复用词力度
+        $request['max_tokens'] = $params['max_tokens'] ?? 4096; //token上限
+        $request['context_num'] = $params['context_num'] ?? 5; //上下文数
+        $request['file_info'] = $params['file_info'] ?? []; //文件信息
+        $request['robot_id'] = $params['robot_id'] ?? 0; //机器人id
+        $request['quotes'] = $params['quotes'] ?? ''; //引用内容
+
+        if (!empty($params['quotes'])){
+            $request['message'] = '引用的内容：' . $params['quotes'] . "。引用结束>>" . $request['message'];
+        }
+
+        if (isset($params['unique_id'])) {
+            $request['unique_id'] = $params['unique_id'];
+            $request['apiKey']    = $params['apiKey'];
+            $request['identity']  = $params['identity'];
+            $request['share_id']  = $params['share_id'];
+            $request['question']  = $params['question'];
+        }
+
+        if (empty($params['message']) && empty($request['file_info'])) {
+            message('参数错误');
+        }
+
+        $logs = [];
+
+        //模型大管家检索
+        $systemRoleCheck = KbKnowLogic::embModelButlerSearch($params['user_id'],$request['message'],$checkRobotId);
+        $systemRole[] = [
+            'role' => 'system',
+            'content' => "你的角色是模型大管家，当用户提出问题时，帮助用户检索出合适的智能体进行问答，如果检索到合适的智能体，不要进行虚构的内容补充，只需告诉用户找到了对应的智能体，例如：'关于这个问题，我找到了更适合的智能体为你解答，建议你寻找 【@小助理】 的帮助。' \n 如果没检索到智能体，你的角色是对话机器人，恢复成常规对话模式对用户进行回复。\n" . $systemRoleCheck,
+        ];
+        $request['check_robot_id'] = $checkRobotId ?? 0;
+
+        if (!isset($params['unique_id'])) {
+            if (isset($params['task_id']) && $params['task_id']) {
+                $request['task_id'] = $params['task_id'];
+
+                // 对话记录
+                $logs = self::chatLog($request['task_id'], 0, self::$uid);
+
+                if (!$logs) {
+
+                    message('对话记录ID错误');
+                }
+            } else {
+                $request['task_id'] = generate_unique_task_id();
+            }
+        } else {
+            $ids = KbRobotRecord::where('unique_id', $params['unique_id'])
+                                ->column('id');
+            if (count($ids) > $params['context_num']) {
+                $ids = array_slice($ids, count($ids) - $params['context_num'], $params['context_num']);
+            }
+            KbRobotRecord::whereIn('id', $ids)
+                         ->order('id asc')
+                         ->select()
+                         ->each(function ($item) use (&$logs) {
+                             $logs[] = [
+                                 'role'    => 'user',
+                                 'content' => $item->ask
+                             ];
+                             $logs[] = [
+                                 'role'    => 'assistant',
+                                 'content' => $item->reply
+                             ];
+                         })
+                         ->toArray();
+            $request['task_id'] = $params['unique_id'];
+        }
+
+        if (isset($params['file_content']) && !empty($params['file_content'])) {
+            $logs[] = [
+                'role' => 'user',
+                'content' => $params['file_content']
+            ];
+        }
+
+        if (isset($params['net_content']) && !empty($params['net_content'])) {
+            $logs[] = [
+                'role' => 'user',
+                'content' => $params['net_content']
+            ];
+        }
+
+        if (isset($params['robot_id']) && $params['robot_id'] != 0 && $params['robot_id'] != '0') {
+            $robot_set = KbRobot::where('id', $params['robot_id'])->value('roles_prompt');
+            if (!empty($robot_set)) {
+                $text   = "你的角色设定是：" . $robot_set . "\n";
+                $logs[] = [
+                    'role'    => 'user',
+                    'content' => str_replace('"', "'", $text),
+                ];
+            }
+        }
+
+
+        if (!empty($params['message'])) {
+            $messages = array_merge($logs, [
+                [
+                    'role' => 'user',
+                    'content' => $params['message']
+                ]
+            ]);
+        } else {
+            $messages = $logs;
+        }
+        $messages = array_merge($systemRole, $messages);
+
+        $gptModels = [
+            'gpt-4',
+            'gpt-4o',
+            'gpt-4o-mini',
+            'gpt-4o-2024-08-06',
+            'gpt-3.5-turbo',
+            'claude-sonnet-4-5'
+        ];
+        $geminiModels = [
+            'gemini-2.5-pro',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemma-3-4b-it',
+        ];
+        $request['messages'] = $messages;
+        if (in_array($request['model'], $gptModels)){
+            $scene = self::OPENAI_CHAT;
+        }else if (in_array($request['model'], $geminiModels)){
+            $scene = self::GEMINI_CHAT;
+        }else{
+            $scene = self::COMMON_CHAT;
+        }
+        //print_r($request);die;
+        $uid = self::$uid;
+        if ($uid == 0 && isset($params['unique_id'])) {
+            $uid = KbRobot::where('id', $params['robot_id'])->value('user_id');
+        }
+        self::requestChatUrl($request, $scene, $uid);
+
+        exit;
     }
 
     /**
@@ -274,8 +445,10 @@ class ChatLogic extends ApiLogic
             message('参数错误');
         }
 
-
         $logs = [];
+
+        $request['check_robot_id'] = 0;
+
         if (!isset($params['unique_id'])) {
             if (isset($params['task_id']) && $params['task_id']) {
                 $request['task_id'] = $params['task_id'];

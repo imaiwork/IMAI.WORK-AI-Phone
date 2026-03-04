@@ -283,6 +283,10 @@ class KbKnowLogic extends BaseLogic
                 ->findOrEmpty()
                 ->toArray();
 
+            if ($know['name'] == '模型大管家') {
+                throw new Exception('该知识库不可删除!');
+            }
+
             if (!$know) {
                 throw new Exception('知识库不存在了!');
             }
@@ -478,6 +482,10 @@ class KbKnowLogic extends BaseLogic
             $files = $model->where(['id'=>$fid])->findOrEmpty()->toArray();
             if (!$files) {
                 throw new Exception('文件已不存在了!');
+            }
+
+            if ($files['name'] == '模型大管家') {
+                throw new Exception('该文件不可删除!');
             }
 
             if ($files['is_default']) {
@@ -985,5 +993,129 @@ class KbKnowLogic extends BaseLogic
         $searchContent .= '知识库检索完毕。';
         RecallKnow::destroy();
         return $searchContent;
+    }
+
+    /**
+     * @notes 模型大管家向量知识库内容检索
+     * @throws Exception
+     * @author kb
+     */
+    public static function embModelButlerSearch($userId,$content,&$checkRobotId): string
+    {
+        $know = KbKnow::where('name', '模型大管家')->where('user_id',$userId)->findOrEmpty();
+        if ($know->isEmpty()){
+            return '检索开始：'."\n".'对问题"'.$content.'" 进行检索：'."\n未找到模型大管家。\n检索结束。\n现在你没有角色，恢复成常规对话模式，对问题进行回复。";
+        }
+        $KbId = $know['id'];
+        // 接收参数
+        $kbIds = [$KbId];
+        $question       = $content;
+        $searchMode     = 'similar';
+        $searchTokens   = 3000;
+        $searchSimilar  = 0.78;
+        $rankingStatus  = 0;
+        $rankingScore   = 0.5;
+        $embModels      = '3:3';
+
+        $questions = [$question];
+        // 发起检索
+        $results = [];
+        foreach ($questions as $query) {
+            if ($searchMode == 'similar') {
+                $lists = RecallKnow::embeddingRecall($embModels, $query, $kbIds, $know['user_id']);
+                $results[] = ['k'=>60, 'list'=>$lists];
+            } elseif ($searchMode == 'full') {
+                $lists = RecallKnow::fullTextRecall($query, $kbIds);
+                $results[] = ['k'=>60, 'list'=>$lists];
+            } elseif ($searchMode == 'mix') {
+                $lists = RecallKnow::mixedRecall($embModels, $query, $kbIds, $know['user_id']);
+                $results[] = ['k'=>60, 'list'=>$lists];
+            }
+        }
+
+        // 结果处理(1): RRF融合
+        $results = RecallUtils::rrfConcatResults($results);
+
+        // 结果处理(2): 重排模型
+        $similar = $searchSimilar;
+        if ($rankingStatus and $results) {
+            $similar = $rankingScore;
+        }
+
+        // 结果处理(3): 相似度过滤
+        $results = RecallUtils::filterMaxScore($results, $searchMode, $rankingStatus, $similar);
+
+        // 结果处理(4): 过滤最大Tokens
+        $pgList = RecallUtils::filterMaxTokens($results, $searchTokens);
+
+        if (!$pgList) {
+            return '检索开始：'."\n".'对问题："'.$content.'" 进行检索：'."\n未找到相关智能体。\n检索结束。\n现在你没有角色，恢复成常规对话模式，对问题进行回复。";
+        }
+
+        $searchContent = '检索开始：'."\n".'对问题："'.$content.'" 进行检索：'."\n";
+
+        foreach ($pgList as $val) {
+
+//            $searchContent .= '检索出的内容:'.$val['question']." \n";
+            if (!empty($val['answer'])){
+                $checkRobotId = preg_replace('/【【@|】】/', '', $val['answer']);
+                $robotName = KbRobot::where('id',$checkRobotId)->value('name','默认助理');
+                $searchContent .= '检索出的智能体结果是: 【@'.$robotName."】。\n";
+            }else{
+                $searchContent .= "未找到匹配内容，现在你没有角色，恢复成常规对话模式，对问题进行回复。\n";
+            }
+            break;
+        }
+        $searchContent .= '检索结束。';
+        RecallKnow::destroy();
+        return $searchContent;
+    }
+
+    /**
+     * @notes 模型大管家定时任务
+     * @author kb
+     */
+    public static function modelButlerCheck()
+    {
+        $robots = KbRobot::where('is_indexed', 0)->select();
+        if (!$robots->isEmpty()) {
+            $robots = $robots->toArray();
+            foreach ($robots as $robot) {
+                $kbId = self::modelButlerKnow($robot['user_id']);
+                $fdId = KbTeachLogic::modelButlerFile($kbId, $robot['user_id']);
+                $res  = KbTeachLogic::modelButlerRobotInsert($robot['id'], $kbId, $fdId, $robot['user_id']);
+                if ($res) {
+                    KbRobot::where('id', $robot['id'])->update(['is_indexed' => 1]);
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @notes 模型大管家知识库
+     * @author kb
+     */
+    public static function modelButlerKnow($userId)
+    {
+        if (!$userId) {
+            return false;
+        }
+        $know = KbKnow::where('user_id', $userId)->where('name', '模型大管家')->findOrEmpty();
+        if ($know->isEmpty()) {
+            $know = KbKnow::create([
+                                       'user_id'                => $userId,
+                                       'create_uid'             => $userId,
+                                       'image'                  => '',
+                                       'name'                   => '模型大管家',
+                                       'intro'                  => '模型大管家检索智能体专用知识库',
+                                       'documents_model_id'     => 2,
+                                       'documents_model_sub_id' => 2,
+                                       'embedding_model_id'     => 3,
+                                       'embedding_model_sub_id' => 3,
+                                       'is_enable'              => 1,
+                                   ]);
+        }
+        return $know->id;
     }
 }

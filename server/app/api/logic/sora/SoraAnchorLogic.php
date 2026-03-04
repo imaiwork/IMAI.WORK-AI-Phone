@@ -24,7 +24,7 @@ class SoraAnchorLogic extends ApiLogic
     public static function add(array $params)
     {
         $name   = $params['name'] ?? '角色' . date('YmdHi');
-        $anchor = SoraAnchor::where('name', $name)->findOrEmpty();
+        $anchor = SoraAnchor::where('name', $name)->where('user_id', self::$uid)->findOrEmpty();
         if (!$anchor->isEmpty()) {
             self::setError('已存在同名的角色');
             return false;

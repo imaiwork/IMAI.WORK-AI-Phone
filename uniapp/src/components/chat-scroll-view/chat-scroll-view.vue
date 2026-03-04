@@ -84,21 +84,43 @@
                                 @click="handleNetwork">
                                 <u-icon
                                     name="/static/images/icons/deep.svg"
-                                    :size="28"
+                                    :size="24"
                                     v-if="!selectedNetwork"></u-icon>
-                                <u-icon name="/static/images/icons/deep_white.svg" :size="28" v-else></u-icon>
-                                <text class="text-xs">联网搜索</text>
+                                <u-icon name="/static/images/icons/deep_white.svg" :size="24" v-else></u-icon>
+                                <text class="text-xs">联网</text>
                             </view>
                             <view
                                 class="flex-shrink-0 flex items-center justify-center gap-x-1 text-xs bg-white rounded-[16rpx] h-[60rpx] px-2"
                                 @click="emit('showHistory')">
-                                <u-icon name="/static/images/icons/history.svg" :size="28"></u-icon>
-                                <text class="text-xs">历史对话</text>
+                                <u-icon name="/static/images/icons/history.svg" :size="24"></u-icon>
+                                <text class="text-xs">历史</text>
                             </view>
                             <view
                                 class="flex-shrink-0 leading-[0] h-[60rpx] w-[60rpx] flex items-center justify-center rounded-full bg-white"
                                 @click="handleSetting">
                                 <u-icon name="/static/images/icons/setting.svg" :size="28"></u-icon>
+                            </view>
+                            <view
+                                class="flex-shrink-0 flex items-center justify-center gap-x-1 text-xs bg-white rounded-[16rpx] h-[60rpx] px-2"
+                                @click="toPage('ladder_player')">
+                                <u-icon
+                                    :name="`${config.baseUrl}static/images/mp/ladder_player.svg`"
+                                    :size="24"></u-icon>
+                                <text class="text-xs">AI陪练</text>
+                            </view>
+                            <view
+                                class="flex-shrink-0 flex items-center justify-center gap-x-1 text-xs bg-white rounded-[16rpx] h-[60rpx] px-2"
+                                @click="toPage('meeting_minutes')">
+                                <u-icon
+                                    :name="`${config.baseUrl}static/images/mp/meeting_minutes.svg`"
+                                    :size="24"></u-icon>
+                                <text class="text-xs">AI会议</text>
+                            </view>
+                            <view
+                                class="flex-shrink-0 flex items-center justify-center gap-x-1 text-xs bg-white rounded-[16rpx] h-[60rpx] px-2"
+                                @click="toPage('interview')">
+                                <u-icon :name="`${config.baseUrl}static/images/mp/interview.svg`" :size="24"></u-icon>
+                                <text class="text-xs">智能人事</text>
                             </view>
                         </view>
                     </scroll-view>
@@ -137,8 +159,6 @@
                                     :placeholder="placeholder"
                                     :show-confirm-bar="false"
                                     :disable-default-padding="true"
-                                    @focus="handleInputFocus"
-                                    @blur="isInputFocus = false"
                                     @input="handleInput"></textarea>
                                 <view class="flex-shrink-0 flex items-end gap-2.5 mr-3 mb-1">
                                     <view class="send-btn bg-primary-light-9" v-if="isStop" @click="chatClose">
@@ -404,6 +424,7 @@
     </popup-bottom>
 </template>
 <script lang="ts" setup>
+import config from "@/config";
 import { getUserChatConfig, saveUserChatConfig } from "@/api/chat";
 import { getAgentList as getAgentListApi } from "@/api/agent";
 import { getRect, setFormData } from "@/utils/util";
@@ -444,6 +465,8 @@ const emit = defineEmits<{
     (event: "update:fileList", value: any): void;
     (event: "update:network", value: boolean): void;
     (event: "showHistory"): void;
+    (event: "update:agent", value: any): void;
+    (event: "update:model", value: any): void;
 }>();
 
 const appStore = useAppStore();
@@ -503,6 +526,11 @@ const handleModel = (item: any) => {
     currModel.value = JSON.parse(JSON.stringify(item));
     showModel.value = false;
     getChatConfig();
+    emit("update:model", item);
+};
+
+const handleModelClear = () => {
+    emit("update:model", null);
 };
 
 const showAgent = ref(false);
@@ -513,15 +541,17 @@ const currAgent = reactive({
 });
 
 const handleAgent = (item: any) => {
-    setFormData(item, currAgent);
+    setFormData({ ...item, avatar: item.avatar || item.image }, currAgent);
     userInput.value = "";
     showAgent.value = false;
+    emit("update:agent", item);
 };
 
 const handleAgentClear = () => {
     currAgent.id = "";
     currAgent.name = "";
     currAgent.avatar = "";
+    emit("update:agent", null);
 };
 const showHumanize = ref(false);
 const humanizeParams = reactive({
@@ -723,6 +753,12 @@ const getAgentList = async (page_no: number, page_size: number) => {
     }
 };
 
+const toPage = (page: string) => {
+    uni.$u.route({
+        url: `/ai_modules/${page}/pages/index/index`,
+    });
+};
+
 watch(
     () => appStore.getAiModelConfig,
     (val) => {
@@ -755,10 +791,14 @@ defineExpose({
     setAgentConfig: (params: any) => {
         setFormData(params, currAgent);
     },
+    handleAgent,
+    handleAgentClear,
+    handleModel,
+    handleModelClear,
     hideKeyboard,
     // 弹起键盘
     openKeyboard: () => {
-        handleInputFocus();
+        // handleInputFocus();
     },
 });
 </script>

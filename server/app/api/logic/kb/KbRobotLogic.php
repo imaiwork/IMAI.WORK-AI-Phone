@@ -14,6 +14,7 @@ use app\common\model\chat\ModelsCost;
 use app\common\model\coze\AgentCate;
 use app\common\model\coze\CozeAgent;
 use app\common\model\kb\KbKnow;
+use app\common\model\kb\KbKnowFiles;
 use app\common\model\kb\KbRobot;
 use app\common\model\kb\KbRobotCategory;
 use app\common\model\kb\KbRobotGroup;
@@ -26,6 +27,7 @@ use app\common\model\knowledge\KnowledgeBind;
 use app\common\model\sv\SvReplyStrategy;
 use app\common\model\user\User;
 use app\common\model\user\UserAccountLog;
+use app\common\pgsql\KbEmbedding;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
 use Exception;
@@ -92,7 +94,8 @@ class KbRobotLogic extends BaseLogic
                                ])
                        ->where($flowWhere)
                        ->buildSql();
-        $unionSql  = "({$query1} UNION ALL {$query2} UNION ALL {$query3}) AS t";
+//        $unionSql  = "({$query1} UNION ALL {$query2} UNION ALL {$query3}) AS t";
+        $unionSql  = "({$query1}) AS t";
         $lists     = Db::table($unionSql)
                        ->order('update_time', 'desc')  // 按更新时间倒序
                        ->limit($offset, $pageSize)
@@ -115,9 +118,10 @@ class KbRobotLogic extends BaseLogic
 
     public static function getTotalCount($where,$cozeWhere,$flowWhere){
         $count1 = Db::name('kb_robot')->where($where)->count();
-        $count2 = Db::name('coze_agent')->where($cozeWhere)->count();
-        $count3 = Db::name('coze_agent')->alias('a')->leftJoin('coze_workflow f', 'f.coze_agent_id = a.id')->where($flowWhere)->count();
-        return $count1 + $count2 + $count3;
+//        $count2 = Db::name('coze_agent')->where($cozeWhere)->count();
+//        $count3 = Db::name('coze_agent')->alias('a')->leftJoin('coze_workflow f', 'f.coze_agent_id = a.id')->where($flowWhere)->count();
+//        return $count1 + $count2 + $count3;
+        return $count1;
     }
 
     /**
@@ -326,7 +330,7 @@ class KbRobotLogic extends BaseLogic
         $model->startTrans();
         try {
             // 机器人检测
-            $robot = $model->field(['id,is_enable'])
+            $robot = $model->field(['id,is_enable,is_indexed,intro,roles_prompt'])
                 ->where(['id'=>intval($post['id'])])
                 ->where(['user_id'=>$userId])
                 ->findOrEmpty();
@@ -447,6 +451,17 @@ class KbRobotLogic extends BaseLogic
                 throw new \Exception('上下文数量取值范围 0到5');
             }
 
+            //模型大管家检测
+            if ($robot['is_indexed'] == 1){
+                if ($robot['intro'] != $post['intro'] || $robot['roles_prompt'] != $post['roles_prompt']){
+                    $mbKbId = KbKnow::where('name','模型大管家')->where('user_id',$userId)->value('id');
+                    $fdId = KbKnowFiles::where('know_id',$mbKbId)->value('id');
+                    $pgsql = new KbEmbedding();
+                    $uuid = $pgsql->where('kb_id',$mbKbId)->where('fd_id',$fdId)->where('user_id',$userId)->where('answer','【【@'.$robot['id'].'】】')->value('uuid');
+                    KbTeachLogic::modelButlerRobotUpdate($robot['id'],$mbKbId,$fdId,$userId,$uuid);
+                }
+            }
+
             KbRobot::update([
                 'kb_type'            => intval($post['kb_type']??2),
                 'kb_ids'             => implode(',', $post['kb_ids']),
@@ -542,7 +557,7 @@ class KbRobotLogic extends BaseLogic
         $model->startTrans();
         try {
             // 验证机器人
-            $robot = $model->field(['id,name,is_enable'])
+            $robot = $model->field(['id,name,is_enable,is_indexed'])
                 ->where(['id'=>$id])
                 ->where(['user_id'=>$userId])
                 ->findOrEmpty();
@@ -556,6 +571,19 @@ class KbRobotLogic extends BaseLogic
 
             // 删除智能体关联的回复策略
             SvReplyStrategy::where('robot_id', $id)->delete();
+
+            // 删除智能体关联的大管家知识库
+            if ($robot['is_indexed'] == 1){
+                $mbKbId = KbKnow::where('name','模型大管家')->where('user_id',$userId)->value('id');
+                $fdId = KbKnowFiles::where('know_id',$mbKbId)->value('id');
+                $pgsql = new KbEmbedding();
+                $uuid = $pgsql->where('kb_id',$mbKbId)->where('fd_id',$fdId)->where('user_id',$userId)->where('answer','【【@'.$robot['id'].'】】')->value('uuid');
+                $delPost = [
+                    'uuids' => [$uuid],
+                    'kb_id' => $mbKbId,
+                ];
+                KbTeachLogic::modelButlerRobotDelete($delPost,$userId);
+            }
 
             $model->commit();
             return true;

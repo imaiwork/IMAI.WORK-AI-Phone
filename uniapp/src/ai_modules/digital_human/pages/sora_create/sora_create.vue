@@ -13,19 +13,7 @@
         <view class="grow min-h-0 mt-[20rpx]">
             <scroll-view class="h-full" scroll-y>
                 <view class="px-4 pb-[100rpx]">
-                    <view class="mt-[20rpx] p-[30rpx] bg-white rounded-[20rpx]">
-                        <view class="text-[30rpx] font-medium">视频名称</view>
-                        <view class="mt-[20rpx] bg-[#F3F4FB] rounded-[20rpx] px-4 h-[100rpx] flex items-center">
-                            <u-input
-                                class="w-full"
-                                v-model="formData.name"
-                                maxlength="50"
-                                placeholder-style="font-size:26rpx;"
-                                placeholder="请输入"
-                                clearable />
-                        </view>
-                    </view>
-                    <view class="p-[30rpx] bg-white rounded-[20rpx] mt-[20rpx]">
+                    <view class="p-[30rpx] bg-white rounded-[20rpx]">
                         <view>
                             <view class="font-medium text-[30rpx]">提示词</view>
                             <u-input
@@ -161,6 +149,9 @@
                                     {{ item.label }}
                                 </view>
                             </view>
+                            <view class="text-[#999999] text-[22rpx] mt-3"
+                                >提示：sora生成视频为官方模型，效果更佳稳定</view
+                            >
                         </view>
                         <view class="flex items-center justify-between gap-x-2 mt-[50rpx]">
                             <view class="text-[30rpx] font-medium">生成视频数量</view>
@@ -187,6 +178,18 @@
                                         class="w-[36rpx] h-[36rpx]"></image>
                                 </view>
                             </view>
+                        </view>
+                    </view>
+                    <view class="mt-[20rpx] p-[30rpx] bg-white rounded-[20rpx]">
+                        <view class="text-[30rpx] font-medium">视频名称</view>
+                        <view class="mt-[20rpx] bg-[#F3F4FB] rounded-[20rpx] px-4 h-[100rpx] flex items-center">
+                            <u-input
+                                class="w-full"
+                                v-model="formData.name"
+                                maxlength="50"
+                                placeholder-style="font-size:26rpx;"
+                                placeholder="请输入"
+                                clearable />
                         </view>
                     </view>
                 </view>
@@ -227,7 +230,17 @@
         title="视频生成中"
         desc="您可以立即去设置发布任务，也可以等待视频生成成功后再发布"
         @to="toPublish"
-        @seek="toRecord" />
+        @seek="toRecord">
+        <template #custom-btn>
+            <view
+                class="btn-secondary w-full text-[30rpx] font-medium rounded-[20rpx] h-[96rpx] flex items-center justify-center relative overflow-hidden border border-solid text-[#475569] border-[#e2e8f0]"
+                style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)"
+                @click="handleRelaunch">
+                <view class="btn-ripple"></view>
+                <text class="relative z-10">再创作一个</text>
+            </view>
+        </template>
+    </create-success-pop>
     <tokens-cost v-if="showTokensCost" v-model="showTokensCost" :type="5" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
     <video-preview v-model="showVideoPreview" :video-url="playData.url" :pic="playData.pic" />
@@ -282,9 +295,9 @@ const videoProportions = [
 
 // 视频时长
 const videoDurations = [
-    { label: "10s(普通)", value: 10, model: "sora-2" },
-    { label: "15s(普通)", value: 15, model: "sora-2" },
-    { label: "10s(PRO)", value: 10, model: "sora-2-pro" },
+    { label: "4s(普通)", value: 4, model: "sora-2" },
+    { label: "8s(普通)", value: 8, model: "sora-2" },
+    { label: "12s(普通)", value: 12, model: "sora-2" },
     { label: "15s(PRO)", value: 15, model: "sora-2-pro" },
     { label: "25s(PRO)", value: 25, model: "sora-2-pro" },
 ];
@@ -465,6 +478,13 @@ const toRecord = () => {
             type: 6,
         },
     });
+};
+
+const handleRelaunch = () => {
+    showCreateSuccess.value = false;
+    formData.content = "";
+    formData.materialList = [];
+    soraRoleList.value = [];
 };
 
 onLoad(() => {

@@ -14,9 +14,7 @@
                 <div class="flex items-center justify-between mb-5 px-1">
                     <div class="flex items-center gap-1.5">
                         <div class="w-1.5 h-1.5 rounded-full bg-[#0065fb] opacity-60"></div>
-                        <span class="text-[12px] font-black text-[#64748B] uppercase tracking-wider"
-                            >Estimated Cost</span
-                        >
+                        <span class="text-xs font-black text-[#64748B] uppercase tracking-wider">Estimated Cost</span>
                         <span class="text-[13px] font-[900] text-[#1E293B] ml-1">
                             {{ consumeTokens }}
                             <span class="text-[10px] text-[#94A3B8] font-medium">{{ consumeTokensUnit }}</span>
@@ -42,7 +40,7 @@
                                         <span class="text-[#1E293B] font-black">×{{ formData.img_count || 1 }}</span>
                                     </div>
                                     <div class="h-[1px] bg-[#F1F5F9] my-1"></div>
-                                    <div class="flex items-center justify-between text-[12px]">
+                                    <div class="flex items-center justify-between text-xs">
                                         <span class="text-[#0065fb] font-black">预计总计</span>
                                         <span class="text-[#0065fb] font-[900]"
                                             >{{ getTokensCount }} {{ consumeTokensUnit }}</span

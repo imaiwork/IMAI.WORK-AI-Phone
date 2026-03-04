@@ -59,7 +59,7 @@
                             <div
                                 class="material-item border-dashed hover:border-[#0065fb] hover:bg-[#F1F6FF] transition-all">
                                 <Icon name="el-icon-Plus" :size="20" color="#94A3B8" />
-                                <span class="text-[#94A3B8] text-[12px] mt-[4px]">添加图片</span>
+                                <span class="text-[#94A3B8] text-xs mt-[4px]">添加图片</span>
                             </div>
                         </upload>
                     </div>

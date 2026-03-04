@@ -7,7 +7,7 @@
                     <span class="text-lg font-black text-[#111827]">{{ typeName }}管理</span>
                 </div>
                 <div class="flex items-center gap-x-2 mt-1.5">
-                    <span class="text-[#9CA3AF] text-[12px] font-medium">
+                    <span class="text-[#9CA3AF] text-xs font-medium">
                         共 <span class="text-[#111827] font-medium">{{ valueList.length }}</span> 个素材，已配置
                         <span class="text-[#10B981] font-medium">{{ count }}</span> 个
                     </span>
@@ -105,7 +105,7 @@
                                     v-for="(topic, t_index) in item.topic"
                                     :key="t_index"
                                     class="group/tag relative flex items-center bg-white border border-br px-2 py-1 rounded-lg">
-                                    <span class="text-[#6366F1] font-medium text-[12px] mr-1">#</span>
+                                    <span class="text-[#6366F1] font-medium text-xs mr-1">#</span>
                                     <input
                                         v-model="item.topic[t_index]"
                                         class="bg-transparent border-none outline-none text-[11px] w-[70px] text-[#64748B]"

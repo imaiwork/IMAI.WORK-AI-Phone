@@ -114,8 +114,8 @@
                                     <u-radio
                                         v-for="(item, index) in [
                                             { value: 1, label: '固定话术' },
-                                            { value: 2, label: 'AI回复' },
-                                            { value: 3, label: 'AI根据固话优化' },
+                                            // { value: 2, label: 'AI回复' },
+                                            // { value: 3, label: 'AI根据固话优化' },
                                         ]"
                                         :key="index"
                                         :name="item.value"

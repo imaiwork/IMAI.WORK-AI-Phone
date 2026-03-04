@@ -5,7 +5,7 @@
         <div class="flex-shrink-0 px-8 py-6 flex justify-between items-center">
             <div>
                 <h1 class="text-xl font-[900] text-gray-950">手动加微记录</h1>
-                <p class="text-[12px] text-tx-placeholder font-medium mt-0.5">管理及追踪所有手动触发的微信添加任务</p>
+                <p class="text-xs text-tx-placeholder font-medium mt-0.5">管理及追踪所有手动触发的微信添加任务</p>
             </div>
 
             <div class="flex items-center gap-4">
@@ -32,7 +32,12 @@
         </div>
 
         <div class="grow min-h-0">
-            <ElTable height="100%" :data="pager.lists" v-loading="pager.loading">
+            <ElTable
+                height="100%"
+                :data="pager.lists"
+                v-loading="pager.loading"
+                row-class-name="cursor-pointer"
+                @row-click="handleDetail">
                 <ElTableColumn prop="name" label="任务名称" min-width="200" fixed="left">
                     <template #default="{ row }">
                         <span class="text-gray-950 font-black text-sm">{{ row.name || "未命名任务" }}</span>
@@ -92,21 +97,26 @@
                     prop="create_time"
                     label="创建时间"
                     width="160"
-                    class-name="text-[12px] text-tx-placeholder" />
+                    class-name="text-xs text-tx-placeholder" />
 
                 <ElTableColumn label="操作" width="100" fixed="right" align="right">
                     <template #default="{ row }">
-                        <div class="flex justify-end items-center gap-1">
+                        <div class="flex justify-end items-center gap-1" @click.stop>
                             <ElButton
                                 type="primary"
                                 link
                                 size="small"
                                 class="!font-medium"
-                                @click="handleDetail(row.id)"
+                                @click.stop="handleDetail(row)"
                                 >详情</ElButton
                             >
                             <div class="w-[1px] h-3 bg-br-extra-light mx-1"></div>
-                            <ElButton type="danger" class="!font-medium" link size="small" @click="handleDelete(row.id)"
+                            <ElButton
+                                type="danger"
+                                class="!font-medium"
+                                link
+                                size="small"
+                                @click.stop="handleDelete(row.id)"
                                 >删除</ElButton
                             >
                         </div>
@@ -122,7 +132,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条加微任务数据</div>
+            <div class="text-xs font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条加微任务数据</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>
@@ -168,7 +178,7 @@ const handleCreate = () => {
     });
 };
 
-const handleDetail = (id: string) => {
+const handleDetail = ({ id }) => {
     isDetail.value = true;
     replaceState({
         is_detail: 1,

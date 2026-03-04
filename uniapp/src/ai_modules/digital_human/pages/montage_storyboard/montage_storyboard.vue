@@ -1,7 +1,7 @@
 <template>
     <view class="h-screen flex flex-col device-bg">
         <u-navbar
-            title="数字人口播混剪"
+            title="分镜混剪"
             title-bold
             :is-fixed="false"
             :border-bottom="false"
@@ -48,7 +48,7 @@
                                 :key="index"
                                 @click="handleEditMaterial(index)">
                                 <view class="flex items-center justify-between">
-                                    <view class="font-medium break-all line-clamp-1">素材图组{{ index + 1 }}</view>
+                                    <view class="font-medium break-all line-clamp-1">{{ storyboard.groupName }}</view>
                                     <view class="flex items-center font-medium gap-x-1">
                                         <text class="font-medium">{{ storyboard.materialList.length }}</text>
                                         <text class="text-[#B2B2B2] font-medium">张</text>
@@ -156,6 +156,9 @@
                                         @click.stop="handleDeleteCopywriter(index)">
                                         <u-icon name="close" color="#ffffff" size="16"></u-icon>
                                     </view>
+                                    <view class="text-xs text-[#000000]/50 text-right mt-2">
+                                        {{ item.length }} / 500
+                                    </view>
                                 </view>
                             </template>
                             <template v-if="copywriterTypeIndex === 1">
@@ -185,6 +188,9 @@
                                                 class="absolute right-2 top-3 rounded-full flex item-center justify-center w-4 h-4 bg-[#0000004C]"
                                                 @click.stop="handleDeleteCopywriter(index, contentIndex)">
                                                 <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                            </view>
+                                            <view class="text-xs text-[#000000]/50 text-right mt-2">
+                                                {{ content.length }} / 500
                                             </view>
                                         </view>
                                     </view>
@@ -230,7 +236,7 @@
                             <view class="flex items-center gap-x-1" @click="handleStep(2)">
                                 <view>
                                     共<text class="mx-1 text-primary font-medium">{{
-                                        formData.copywriterList.length
+                                        formData.copywriterList.length || formData.subtitleList.length
                                     }}</text
                                     >个
                                 </view>
@@ -255,9 +261,27 @@
                                 <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
                             </navigator>
                         </view>
-                        <view class="flex items-center justify-between h-[106rpx]">
+                        <view class="flex items-center justify-between h-[106rpx]" v-if="false">
                             <view class="text-[30rpx] font-medium">团购引导画面</view>
                             <u-switch v-model="formData.extra.soundSwitch" inactive-color="#E5E5E5" :size="40" />
+                        </view>
+                        <view class="flex items-center justify-between h-[106rpx]">
+                            <view class="text-[30rpx] font-medium">背景音乐</view>
+                            <navigator
+                                :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
+                                    formData.music
+                                )}&volume=${formData.extra.volume}`"
+                                hover-class="none"
+                                class="flex items-center gap-x-1">
+                                <view>
+                                    <template v-if="formData.music.length > 0">
+                                        共<text class="mx-1 text-primary font-medium">{{ formData.music.length }}</text
+                                        >个
+                                    </template>
+                                    <text class="text-[#000000]/70" v-else>AI音乐库</text>
+                                </view>
+                                <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
+                            </navigator>
                         </view>
                     </view>
                     <view class="flex items-center justify-between bg-white mt-[22rpx] p-4 rounded-[20rpx]">
@@ -358,13 +382,22 @@
         </view>
     </view>
     <choose-agent v-if="showChooseAgent" v-model="showChooseAgent" @select="handleSelectAgent" />
+    <create-success-pop
+        v-if="showCreateSuccess"
+        v-model="showCreateSuccess"
+        title="视频生成中"
+        desc="您可以立即去设置发布任务，也可以等待视频生成成功后再发布"
+        to-text=""
+        @seek="toRecord" />
 </template>
 
 <script setup lang="ts">
 import WechatOA from "@/utils/wechat";
+import { createMontageStoryboard } from "@/api/digital_human";
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import ChooseAgent from "@/ai_modules/digital_human/components/choose-agent/choose-agent.vue";
+import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
 
 const { on } = useEventBusManager();
 
@@ -380,6 +413,7 @@ const formData = reactive<{
     name: string;
     storyboardList: {
         is_use: boolean;
+        groupName: string;
         materialList: any[];
     }[];
     copywriterList: any[];
@@ -424,16 +458,42 @@ const addSubtitleContentIndex = ref(-1);
 const showChooseAgent = ref(false);
 const showTokensCost = ref(true);
 
+const showCreateSuccess = ref(false);
+const createResult = ref<any>(null);
+
 const canStepProceed = (stepNumber: number) => {
     const strategy: Record<number, () => boolean> = {
-        1: () => formData.storyboardList.length > 0,
-        2: () => true,
+        1: () =>
+            formData.storyboardList.length > 0 &&
+            formData.storyboardList.every((item) => item.materialList.length > 0 && item.materialList.length <= 200),
+        2: () => {
+            if (copywriterTypeIndex.value === 0) {
+                return formData.copywriterList.length > 0 && isCopywriterValid();
+            } else {
+                return formData.subtitleList.length > 0 && isCopywriterValid();
+            }
+        },
         5: () => true,
     };
     return strategy[stepNumber]?.() ?? false;
 };
 
 const canNext = computed(() => canStepProceed(step.value));
+
+const isCopywriterValid = () => {
+    if (copywriterTypeIndex.value === 0) {
+        return (
+            formData.copywriterList.every((item: any) => item.trim().length >= 3 && item.length <= 500) &&
+            formData.copywriterList.length <= 50
+        );
+    } else {
+        return formData.subtitleList.every(
+            (item) =>
+                item.contentList.every((content) => content.trim().length >= 3 && content.length <= 500) &&
+                item.contentList.length <= 50
+        );
+    }
+};
 
 const handleStep = (targetStep: number, type?: "next" | "prev") => {
     if (type === "prev") {
@@ -447,6 +507,19 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
         } else {
             const messages: Record<number, () => string> = {
                 1: () => "请至少添加一个镜头组素材",
+                2: () => {
+                    if (copywriterTypeIndex.value === 0) {
+                        if (!isCopywriterValid()) {
+                            return "口播文案包含内容不能少于3个字，不能超过500个字";
+                        }
+                        return "请至少添加一条文案";
+                    } else {
+                        if (!isCopywriterValid()) {
+                            return "字幕文案包含内容不能少于3个字，不能超过500个字";
+                        }
+                        return "请至少添加一条字幕";
+                    }
+                },
             };
             uni.$u.toast(messages[step.value]?.() || "请完成当前步骤");
         }
@@ -546,7 +619,71 @@ const handleMinusVideoCount = (type: "minus" | "add") => {
     }
 };
 
-const handleCreateVideo = async () => {};
+const handleCreateVideo = async () => {
+    uni.showLoading({
+        title: "提交中...",
+        mask: true,
+    });
+    try {
+        const mediaGroupArray = formData.storyboardList.map((item) => ({
+            GroupName: item.groupName,
+            materialList: item.materialList.map((item) => item.url),
+            Volume: item.is_use ? 1 : 0,
+        }));
+        // 这里要统计素材的总时长， 时长 = 视频时长 + 图片（5s）
+        const totalDuration = formData.storyboardList.reduce((groupAcc, group) => {
+            const groupDuration = group.materialList.reduce((materialAcc, material) => {
+                return materialAcc + (material.type === "video" ? material.duration : 5);
+            }, 0);
+            return groupAcc + groupDuration;
+        }, 0);
+        const params: any = {
+            name: formData.name,
+            number: formData.extra.video_count,
+            duration: totalDuration,
+            TitleArray: formData.topTitleList,
+            SpeechTextArray: formData.copywriterList,
+            MediaGroupArray: mediaGroupArray,
+            BackgroundMusicArray: formData.music.map((item) => item.content),
+            BackgroundMusicVolume: formData.extra.volume,
+        };
+        if (copywriterTypeIndex.value === 1) {
+            delete params.SpeechTextArray;
+            for (let i = 0; i < mediaGroupArray.length; i++) {
+                if (i < formData.subtitleList.length) {
+                    params.MediaGroupArray[i].SpeechTextArray = formData.subtitleList[i].contentList.map(
+                        (item) => item
+                    );
+                } else {
+                    params.MediaGroupArray[i].SpeechTextArray = [];
+                }
+            }
+        }
+        const res = await createMontageStoryboard(params);
+        uni.hideLoading();
+        createResult.value = res;
+        showCreateSuccess.value = true;
+        WechatOA.notify();
+    } catch (error: any) {
+        uni.hideLoading();
+        uni.showToast({
+            title: error || "提交失败",
+            icon: "none",
+            duration: 3000,
+        });
+    }
+};
+
+const toRecord = () => {
+    uni.$u.route({
+        url: "/packages/pages/creation/creation",
+        type: "redirect",
+        params: {
+            source: "1",
+            type: 6,
+        },
+    });
+};
 
 onLoad(() => {
     on("confirm", (res: any) => {
@@ -558,20 +695,31 @@ onLoad(() => {
                     return;
                 }
                 formData.storyboardList[editMaterialIndex.value].materialList = data;
+                editMaterialIndex.value = -1;
             } else {
                 if (data.length == 0) return;
                 formData.storyboardList.push({
                     is_use: true,
+                    groupName: `镜头组${formData.storyboardList.length + 1}`,
                     materialList: data,
                 });
             }
         }
-        if (type === ListenerTypeEnum.SZR_COPYWRITER) {
+        if (type === ListenerTypeEnum.MONTAGE_AI_COPYWRITER || type === ListenerTypeEnum.SZR_COPYWRITER) {
             if (copywriterTypeIndex.value === 0) {
                 if (editCopywriterIndex.value != -1) {
-                    formData.copywriterList[editCopywriterIndex.value] = data;
+                    if (type == ListenerTypeEnum.MONTAGE_AI_COPYWRITER) {
+                        formData.copywriterList[editCopywriterIndex.value] = data[0].content;
+                    } else {
+                        formData.copywriterList[editCopywriterIndex.value] = data;
+                    }
+                    editCopywriterIndex.value = -1;
                 } else {
-                    formData.copywriterList.push(data);
+                    if (type == ListenerTypeEnum.MONTAGE_AI_COPYWRITER) {
+                        formData.copywriterList.push(...data.map((item: any) => item.content));
+                    } else {
+                        formData.copywriterList.push(data);
+                    }
                 }
             } else {
                 if (addSubtitleContentIndex.value != -1) {
@@ -581,16 +729,21 @@ onLoad(() => {
                 }
                 if (editSubtitleContentIndex.value != -1) {
                     formData.subtitleList[editCopywriterIndex.value].contentList[editSubtitleContentIndex.value] = data;
+                    editSubtitleContentIndex.value = -1;
                 } else {
                     formData.subtitleList.push({
                         title: `字幕组${formData.subtitleList.length + 1}的字幕`,
-                        contentList: [data],
+                        contentList: data.map((item: any) => item.content),
                     });
                 }
             }
         }
         if (type === ListenerTypeEnum.MONTAGE_TOP_TITLE) {
             formData.topTitleList = data;
+        }
+        if (type === ListenerTypeEnum.CHOOSE_MUSIC) {
+            formData.music = data.music;
+            formData.extra.volume = data.volume;
         }
     });
 });

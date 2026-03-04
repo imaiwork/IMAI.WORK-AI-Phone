@@ -9,7 +9,7 @@
                             <span class="text-[14px] font-[900] text-[#1E293B]">生成模型</span>
                         </div>
                         <div
-                            class="flex items-center gap-1 text-[12px] font-medium text-primary cursor-pointer hover:opacity-80 transition-opacity"
+                            class="flex items-center gap-1 text-xs font-medium text-primary cursor-pointer hover:opacity-80 transition-opacity"
                             @click="fillExample">
                             <Icon name="el-icon-MagicStick" :size="14"></Icon>
                             <span>填入示例</span>
@@ -39,27 +39,27 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-2">
-                            <label class="text-[12px] font-black text-[#94A3B8] ml-1">海报类型</label>
+                            <label class="text-xs font-black text-[#94A3B8] ml-1">海报类型</label>
                             <ElInput v-model="formData.poster_type" placeholder="如：VLOG封面" class="custom-input" />
                         </div>
                         <div class="space-y-2">
-                            <label class="text-[12px] font-black text-[#94A3B8] ml-1">配色方案</label>
+                            <label class="text-xs font-black text-[#94A3B8] ml-1">配色方案</label>
                             <ElInput v-model="formData.poster_color" placeholder="如：马卡龙色" class="custom-input" />
                         </div>
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-[12px] font-black text-[#94A3B8] ml-1">海报主标题</label>
+                        <label class="text-xs font-black text-[#94A3B8] ml-1">海报主标题</label>
                         <ElInput v-model="formData.poster_title" placeholder="请输入主标题" class="custom-input" />
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-[12px] font-black text-[#94A3B8] ml-1">海报副标题</label>
+                        <label class="text-xs font-black text-[#94A3B8] ml-1">海报副标题</label>
                         <ElInput v-model="formData.poster_subtitle" placeholder="请输入副标题" class="custom-input" />
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-[12px] font-black text-[#94A3B8] ml-1">海报主题描述</label>
+                        <label class="text-xs font-black text-[#94A3B8] ml-1">海报主题描述</label>
                         <ElInput
                             v-model="formData.poster_description"
                             type="textarea"

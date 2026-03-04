@@ -600,7 +600,7 @@ onEvent("error", (error: any) => {
 const queryRobotList = async (pageNo: number, pageSize: number) => {
     try {
         const { lists } = await getAgentList({
-            page: pageNo,
+            page_no: pageNo,
             page_size: pageSize,
             source: 1,
         });

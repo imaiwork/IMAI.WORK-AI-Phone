@@ -81,6 +81,7 @@ export function useChatHistory() {
     const createNewSession = (initialMessage?: string) => {
         if (!taskId.value) return;
         // 清空当前聊天状态
+        stopStream();
         chatStore.clearChat();
         chatStore.resetRoute();
     };

@@ -110,7 +110,7 @@ const handleAddCommentFilter = () => {
         uni.$u.toast("评论词已存在");
         return;
     }
-    commentFilterList.value.push({ value: commentFilterInput.value, checked: true });
+    commentFilterList.value.unshift({ value: commentFilterInput.value, checked: true });
     commentFilterInput.value = "";
 };
 

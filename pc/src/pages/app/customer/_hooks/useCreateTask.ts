@@ -1,5 +1,5 @@
 import { getDeviceList } from "@/api/device";
-import { getWeChatLists } from "@/api/person_wechat";
+import { getPublishAccountList } from "@/api/device";
 import { useAppStore } from "@/stores/app";
 import RemarkPop from "@/pages/app/customer/_components/remark-pop.vue";
 import dayjs from "dayjs";
@@ -28,8 +28,8 @@ export function useCreateTask(formData: any) {
             transformData: (data) => data.lists,
         },
         wechatLists: {
-            api: getWeChatLists,
-            params: { page_size: 1000 },
+            api: getPublishAccountList,
+            params: { page_size: 1000, type: 1 },
             transformData: (data) => data.lists,
         },
     });

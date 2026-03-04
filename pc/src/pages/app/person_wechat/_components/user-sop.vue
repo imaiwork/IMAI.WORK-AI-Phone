@@ -127,7 +127,7 @@
 
                             <div
                                 v-if="foldIndex.includes(`${value.id}-${vIndex}`)"
-                                class="text-center py-2 text-slate-400 text-[12px] font-medium bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                                class="text-center py-2 text-slate-400 text-xs font-medium bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
                                 @click="handleFoldContent(value.id, vIndex)">
                                 内容已折叠，点击展开查看详情
                             </div>
@@ -136,10 +136,9 @@
                                 <span class="text-[11px] text-slate-400 font-medium uppercase tracking-wider"
                                     >Source Plan</span
                                 >
-                                <span
-                                    class="text-[12px] text-slate-500 font-black bg-slate-100 px-2 py-0.5 rounded-md"
-                                    >{{ value.push_name }}</span
-                                >
+                                <span class="text-xs text-slate-500 font-black bg-slate-100 px-2 py-0.5 rounded-md">{{
+                                    value.push_name
+                                }}</span>
                             </div>
                         </div>
                     </div>

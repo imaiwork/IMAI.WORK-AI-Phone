@@ -29,7 +29,7 @@ class SoraVideoSettingLogic extends ApiLogic
 
     public static function add(array $params): bool
     {
-        if (empty($params['content'])){
+        if (empty($params['content'])) {
             message('请输入提示词');
         }
         $successNum   = 0;
@@ -44,14 +44,14 @@ class SoraVideoSettingLogic extends ApiLogic
         $proportion   = explode(':', $aspect_ratio);
         $width        = $proportion[0];
         $height       = $proportion[1];
-        $duration     = !empty($params['duration']) ? $params['duration'] : 10; //输出时长
+        $duration     = !empty($params['duration']) ? $params['duration'] : 4;  //输出时长
         $style        = $params['style'] ?? '';                                 //视频风格
         $number       = $params['number'] ?? 1;                                 //生成视频数量
         $taskId       = generate_unique_task_id();
         $ai_type      = $params['ai_type'] ?? 0;
         $model        = $params['model'] == 'sora-2-pro' ? 2 : 1;
         $anchor_ids   = $params['anchor_ids'] ?? [];
-//        $keywords = '视频类型：【' . $theme . '】
+        //        $keywords = '视频类型：【' . $theme . '】
 //        视频细节：【' . $content . '】
 //        人物性别：【' . $gender . '】
 //        视频风格：【' . $style . '】
@@ -96,11 +96,19 @@ class SoraVideoSettingLogic extends ApiLogic
 
             for ($i = 0; $i < $number; $i++) {
                 $request = [
+                    // TODO 测试sora
+                    'test_sora'    => 1,
                     'prompt'       => $keywords,
                     'aspect_ratio' => $aspect_ratio,
                     'duration'     => $duration,
                     'model'        => $model,
                 ];
+                if ($request['duration'] == 15) {
+                    $request['quality'] = 'high';
+                } else {
+                    $request['quality'] = 'standard';
+                }
+
                 // 素材图片不为空
                 if (!empty($image_urls)) {
                     // 生成的视频选择素材图片，按顺序只可选择一张
@@ -182,6 +190,89 @@ class SoraVideoSettingLogic extends ApiLogic
         }
     }
 
+    /**
+     * @desc 失败任务重试
+     * @param int $id
+     * @return bool
+     * @date 2026/3/2 12:00
+     * @author MonitorAllen
+     */
+    public static function retry($id)
+    {
+        if (!$id) {
+            self::setError('参数错误');
+            return false;
+        }
+
+        // 获取当前失败任务
+        $task = SoraVideoTask::where('id', $id)->find();
+        if (!$task) {
+            self::setError('任务不存在');
+            return false;
+        }
+
+        if (!in_array($task->status, [2, 3])) {
+            self::setError('不支持的任务状态');
+            return false;
+        }
+
+        Db::startTrans();
+
+        // 重置 taskId
+        $newTaskId     = generate_unique_task_id();
+        $task->task_id = $newTaskId;
+
+        // 重置状态为重试中
+        $task->status = 4;
+        $task->remark = '';
+
+        // 更新任务
+        $newTask = SoraVideoTask::update($task, ['id' => $task->id]);
+        if (!$newTask) {
+            Db::rollback();
+            self::setError('重试时更新任务失败');
+            return false;
+        }
+
+        $scene = $task->model_version == 2 ? self::SORA_PRO_VIDEO_CREATE : self::SORA_VIDEO_CREATE;
+
+        // 重试任务
+        $request = [
+            'test_sora'    => 1,
+            'prompt'       => $task->msg,
+            'aspect_ratio' => $task->width . ':' . $task->height,
+            'duration'     => $task->duration,
+            'model'        => $task->model_version,
+        ];
+
+        // 素材图片不为空
+        if (!empty($task->extra['image_urls'])) {
+            // 生成的视频选择素材图片，按顺序只可选择一张
+            if (count($task->extra['image_urls']) == 1) {
+                $key = 0;
+            } else {
+                if ($task->id > count($task->extra['image_urls'])) {
+                    $key = $task->id % count($task->extra['image_urls']);
+                } else {
+                    $key = $task->id;
+                }
+            }
+            $request['image_urls'][] = $task->extra['image_urls'][$key];
+        }
+
+        $result = self::requestUrl($request, $scene, $task->user_id, $newTaskId);
+        if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
+            self::$returnData = $result;
+        } else {
+            self::setError('生成失败');
+            return false;
+        }
+
+        Db::commit();
+
+        return true;
+    }
+
     public static function status($params)
     {
         $taskId = $params['task_id'] ?? '';
@@ -256,7 +347,12 @@ class SoraVideoSettingLogic extends ApiLogic
             Log::channel('sora')->write('扣费请求返回' . json_encode($response));
             //成功响应，需要扣费
             if (isset($response['code']) && $response['code'] == 10000) {
-                $points = $unit;
+                if ($tokenScene == self::SORA_PRO_VIDEO_CREATE){
+                    $points = $unit;
+                }else{
+                    $points = $unit * $request['duration'];
+                }
+
                 Log::channel('sora')->write('扣费数量' . $points);
                 if ($points > 0) {
                     $extra = [];
@@ -374,18 +470,18 @@ class SoraVideoSettingLogic extends ApiLogic
                     SoraVideoSetting::where('id', $setting['id'])->update(['status' => 5]);
                 } else if ($setting['error_num'] > 0 && $setting['error_num'] == $num) {
                     SoraVideoSetting::where('id', $setting['id'])->update(['status' => 4]);
-                    $send = true;
+                    $send   = true;
                     $status = '生成失败';
                 } else {
                     SoraVideoSetting::where('id', $setting['id'])->update(['status' => 3]);
-                    $send = true;
+                    $send   = true;
                     $status = '生成成功';
                 }
                 //发送小程序消息通知
                 if ($send) {
-                    $old = NoticeRecord::where('title','like','%'.$setting['name'].'%')->findOrEmpty();
+                    $old = NoticeRecord::where('title', 'like', '%' . $setting['name'] . '%')->findOrEmpty();
                     //回调时已通知，避免重复通知
-                    if(!$old->isEmpty()){
+                    if (!$old->isEmpty()) {
                         return true;
                     }
                     $mnpMessage = [

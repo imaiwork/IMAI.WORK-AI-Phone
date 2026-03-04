@@ -38,16 +38,20 @@
                                     <view class="text-xs text-white">正在生成中</view>
                                     <view class="text-[22rpx] text-white mt-2">几分钟即可生成形象</view>
                                 </view>
-                                <view class="absolute top-0 left-0 w-full h-full bg-[#00000080]" v-if="isChoose(index)">
-                                    <view class="absolute top-2 right-2">
-                                        <image
-                                            src="/static/images/icons/success.svg"
-                                            class="w-[28rpx] h-[28rpx]"></image>
+                                <template v-if="item.status == 2">
+                                    <view
+                                        class="absolute top-0 left-0 w-full h-full bg-[#00000080]"
+                                        v-if="isChoose(index)">
+                                        <view class="absolute top-2 right-2">
+                                            <image
+                                                src="/static/images/icons/success.svg"
+                                                class="w-[28rpx] h-[28rpx]"></image>
+                                        </view>
                                     </view>
-                                </view>
-                                <view
-                                    class="absolute top-2 right-2 w-[28rpx] h-[28rpx] rounded-full bg-white"
-                                    v-else></view>
+                                    <view
+                                        class="absolute top-2 right-2 w-[28rpx] h-[28rpx] rounded-full bg-white"
+                                        v-else></view>
+                                </template>
                             </view>
                         </view>
                     </z-paging>
@@ -121,6 +125,12 @@ const isChoose = (index: number) => {
 };
 
 const handleSelect = (index: number) => {
+    // 要判断只能选择status为2
+    const isCanChoose = dataLists.value[index].status == 2;
+    if (!isCanChoose) {
+        uni.$u.toast("形象正在生成中，请稍后再试");
+        return;
+    }
     if (isChoose(index)) {
         chooseLists.value = chooseLists.value.filter((item) => item !== index);
     } else {

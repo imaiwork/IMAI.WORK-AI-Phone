@@ -59,25 +59,36 @@ class ShanjianVideoTaskController extends BaseApiController
      */
     public function notify(): Json
     {
+        $lockKey = '';
         try {
             $data = $this->request->all();
-            Log::channel('shanjian')->write('接收闪剪参数'.json_encode($data));
+            Log::channel('shanjiannotice')->write('接收闪剪参数'.json_encode($data));
             
-            $key = md5(json_encode($data));
-            $val = cache($key);
-            if ($val) {
-               return $this->fail('重复请求');
+            $taskId = $data['task_id'] ?? '';
+            if (empty($taskId)) {
+                return $this->fail('缺少任务ID');
             }
-            cache($key, 1, 20);
+
+            $lockKey = 'shanjian_video_task_notify_' . $taskId;
+            $lock = cache($lockKey);
+            if ($lock) {
+                return $this->fail('任务正在处理中，请勿重复请求');
+            }
+            cache($lockKey, 1, 300);
 
             $result = ShanjianVideoTaskLogic::notify($data);
+            cache($lockKey, null);
+            
             if (!$result) {
                 return $this->fail(ShanjianVideoTaskLogic::getError());
             }
 
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('shanjian')->write('闪剪回调失败'.$e->getMessage());
+            Log::channel('shanjiannotice')->write('闪剪回调失败'.$e->getMessage());
+            if (!empty($lockKey)) {
+                cache($lockKey, null);
+            }
             return $this->fail('fail');
         }
     }

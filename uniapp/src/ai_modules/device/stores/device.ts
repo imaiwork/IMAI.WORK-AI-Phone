@@ -470,8 +470,13 @@ export const useDeviceStore = defineStore("device", {
                         nickname,
                         extra,
                     });
-                } catch (error) {
-                    this.setPlatformError(appType, "保存账号信息失败");
+                } catch (error: any) {
+                    uni.showToast({
+                        title: error || "保存账号信息失败",
+                        icon: "none",
+                        duration: 3000,
+                    });
+                    this.setPlatformError(appType, error || "保存账号信息失败");
                 }
             }
 

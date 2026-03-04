@@ -44,7 +44,7 @@
                                         class="text-[16px] font-[900] text-tx-primary group-hover:text-primary transition-colors">
                                         {{ item.flow_name }}
                                     </div>
-                                    <div class="text-[12px] text-tx-secondary">
+                                    <div class="text-xs text-tx-secondary">
                                         包含 {{ item.key_stages?.length || 0 }} 个关键阶段
                                     </div>
                                 </div>

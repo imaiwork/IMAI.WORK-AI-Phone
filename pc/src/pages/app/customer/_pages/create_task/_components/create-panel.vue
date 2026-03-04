@@ -334,7 +334,7 @@
                                     <div class="bg-white p-6 rounded-[24px] border border-slate-100">
                                         <label
                                             class="text-[13px] font-black text-slate-400 uppercase tracking-widest mb-3 block ml-1"
-                                            >使用微信</label
+                                            >添加微信</label
                                         >
                                         <ElSelect
                                             v-model="formData.wechat_id"

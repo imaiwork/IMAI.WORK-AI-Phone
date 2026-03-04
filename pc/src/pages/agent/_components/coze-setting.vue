@@ -20,13 +20,13 @@
 
             <div class="px-10 pb-10 pt-6 text-center">
                 <div class="text-[20px] font-[900] text-[#1E293B]">Coze 令牌配置</div>
-                <div class="text-[12px] font-medium text-[#94A3B8] mt-2 leading-relaxed px-2">
+                <div class="text-xs font-medium text-[#94A3B8] mt-2 leading-relaxed px-2">
                     请输入您的个人访问令牌 (PAT)，系统将加密存储该信息以确保与 Coze 服务的安全通讯。
                 </div>
 
                 <div class="mt-8 space-y-4">
                     <div class="text-left">
-                        <span class="text-[12px] font-black text-[#64748B] ml-1">请输入令牌</span>
+                        <span class="text-xs font-black text-[#64748B] ml-1">请输入令牌</span>
                         <div class="mt-2 group">
                             <ElInput
                                 v-model="formData.secret_token"

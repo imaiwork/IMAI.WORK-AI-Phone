@@ -32,7 +32,7 @@
                                 </div>
                                 <div class="text-center">
                                     <div class="text-[16px] font-black text-[#1E293B]">新建知识库</div>
-                                    <div class="text-[12px] font-medium text-[#94A3B8] mt-1">只支持向量知识库</div>
+                                    <div class="text-xs font-medium text-[#94A3B8] mt-1">只支持向量知识库</div>
                                 </div>
                             </div>
                         </div>

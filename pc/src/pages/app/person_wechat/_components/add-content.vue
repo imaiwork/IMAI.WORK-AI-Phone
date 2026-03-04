@@ -151,7 +151,7 @@
             <div class="grow min-h-0 mt-[20px] flex flex-col">
                 <div class="flex items-center gap-[8px] mb-[12px]">
                     <span class="text-[14px] font-[900] text-tx-primary">待发送队列</span>
-                    <span class="text-[12px] text-tx-secondary opacity-60">(共 {{ materialLists.length }}/6 条)</span>
+                    <span class="text-xs text-tx-secondary opacity-60">(共 {{ materialLists.length }}/6 条)</span>
                 </div>
                 <ElScrollbar>
                     <div v-draggable="draggableOptions">

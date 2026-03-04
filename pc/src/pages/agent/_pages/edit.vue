@@ -278,7 +278,7 @@ onMounted(() => {
 }
 
 .new-chat-btn {
-    @apply rounded-[10px] h-[36px] px-[12px] text-[12px] font-[900] bg-slate-50 border-[transparent] text-[#64748B] transition-all;
+    @apply rounded-[10px] h-[36px] px-[12px] text-xs font-[900] bg-slate-50 border-[transparent] text-[#64748B] transition-all;
 
     &:hover {
         @apply bg-[#F1F5F9] text-[#0F172A];

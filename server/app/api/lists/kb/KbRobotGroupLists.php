@@ -43,12 +43,15 @@ class KbRobotGroupLists extends BaseApiDataLists
         if (!empty($this->request->get('sort'))) {
             $model = $model->order('sort', $this->request->get('sort'));
         } else {
-            $model = $model->order('id', 'desc');
+            $model = $model->order('sort', 'desc');
         }
         return $model
             ->order('update_time', 'desc')
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
+            ->each(function ($item) {
+                $item['is_top'] = $item['sort'] == 999 ? 1 : 0;
+            })
             ->toArray();
     }
 

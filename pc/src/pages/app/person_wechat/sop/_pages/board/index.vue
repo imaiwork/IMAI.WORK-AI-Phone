@@ -31,7 +31,7 @@
                 </div>
             </div>
 
-            <div class="ml-auto flex items-center gap-[8px] text-[12px] text-tx-secondary">
+            <div class="ml-auto flex items-center gap-[8px] text-xs text-tx-secondary">
                 <span class="text-primary opacity-70 leading-[0]">
                     <Icon name="el-icon-InfoFilled" />
                 </span>

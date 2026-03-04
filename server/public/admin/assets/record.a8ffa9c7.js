@@ -1,1 +1,0 @@
-import{r as e}from"./index.76ea17d5.js";function r(t){return e.get({url:"/assistants.chatLog/lists",params:t})}function o(t){return e.post({url:"/assistants.chatLog/delete",params:t})}export{o as d,r as g};

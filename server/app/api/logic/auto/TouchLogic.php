@@ -192,7 +192,7 @@ class TouchLogic extends ApiLogic
                 return implode(',', $item['keywords']);
             }, $item->keywords);
             $keywords = explode(',', implode(',', $keywords));
-            $accounts = SvAccount::field('id,account,type')->where('user_id', $item->user_id)->where('type', 'not in', [1, 5])->where('device_code', $item->device_code)->select();
+            $accounts = SvAccount::field('id,account,type,nickname,avatar')->where('user_id', $item->user_id)->where('type', 'not in', [1, 5])->where('device_code', $item->device_code)->select();
             if ($accounts->isEmpty()) {
                 throw new \Exception('该设备没有绑定账号');
             }
@@ -230,7 +230,7 @@ class TouchLogic extends ApiLogic
                         'industry_num' => count($keywords),
                         'content' => json_encode($item->touch_speech, JSON_UNESCAPED_UNICODE),
                         'filter' => is_null($item->comment_screening) ? json_encode(\app\common\service\ConfigService::get('touch_clue', 'comment_screening', []), JSON_UNESCAPED_UNICODE) : json_encode($item->comment_screening, JSON_UNESCAPED_UNICODE),
-                        'send_num' => $account->type == DeviceEnum::ACCOUNT_TYPE_XHS ? 10 : 30,
+                        'send_num' => $account->type == DeviceEnum::ACCOUNT_TYPE_XHS ? 8 : 30,
                         'is_like' => 1,
                         'is_follow' => 1,
                         'send_time' => 0,
@@ -256,6 +256,8 @@ class TouchLogic extends ApiLogic
                         'name' => '自动化截流' . DeviceEnum::getTaskSceneDesc($scene) . '任务' . date('mdHis', $startTime),
                         'account' => $account->account,
                         'account_type' => $account->type,
+                        'nickname' => $account->nickname,
+                        'avatar' => $account->avatar,
                         'device_code' => $item->device_code,
                         'status' => 0,
                         'send_start_time' => $startTime,

@@ -38,7 +38,7 @@
                 </el-tabs>
             </div>
             <el-table size="large" v-loading="pager.loading" :data="pager.lists">
-                <el-table-column label="ID" prop="id" min-width="80" />
+                <el-table-column label="ID" prop="id" min-width="80" fixed="left" />
                 <el-table-column label="头像" min-width="100">
                     <template #default="{ row }">
                         <div class="flex items-center">

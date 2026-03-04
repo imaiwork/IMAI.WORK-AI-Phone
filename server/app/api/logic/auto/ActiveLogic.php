@@ -124,7 +124,7 @@ class ActiveLogic extends ApiLogic
         $item->save();
         Db::startTrans();
         try {
-            $accounts = SvAccount::field('id,account,type')->where('type', '<>', 1)->where('user_id', $item->user_id)->where('device_code', $item->device_code)->select();
+            $accounts = SvAccount::field('id,account,type,nickname,avatar')->where('type', '<>', 1)->where('user_id', $item->user_id)->where('device_code', $item->device_code)->select();
             if($accounts->isEmpty()){
                 throw new \Exception('该设备没有绑定账号');
             }
@@ -164,6 +164,8 @@ class ActiveLogic extends ApiLogic
                     'auto_type' => 1,
                     'account' => $account->account,
                     'account_type' => $account->type,
+                    'nickname' => $account->nickname,
+                    'avatar' => $account->avatar,
                     'device_code' => $item->device_code,
                     'start_time' => $startTime,
                     'end_time' => $endTime,

@@ -26,7 +26,7 @@
                 >
             </div>
             <el-table :data="pager.lists" v-loading="pager.loading">
-                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="id" label="ID" min-width="80" fixed="left" />
                 <el-table-column label="模特">
                     <template #default="{ row }">
                         <div class="w-full flex gap-2">

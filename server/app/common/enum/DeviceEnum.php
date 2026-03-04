@@ -21,6 +21,16 @@ class DeviceEnum
     const TASK_TYPE_CLUES_WECHAT = 9; // 视频号获客加微任务
     const TASK_TYPE_WECHAT_RPA = 10; // 个微rpa任务
 
+    # 自动化任务类型
+    const AUTO_TYPE_CLUES = 21; // 获客
+    const AUTO_TYPE_PUBLISH = 22; // 发布
+    const AUTO_TYPE_WECHAT_CIRCLE = 23; // 客户互动
+    const AUTO_TYPE_COMMENT_CLUE = 24; // 评论区获客
+    const AUTO_TYPE_WECHAT_FRIEND = 25; // 微信加v
+    const AUTO_TYPE_ACTIVE = 26; // 养号
+    const AUTO_TYPE_CLEAN_PHONE = 27; // 清理手机
+    const AUTO_TYPE_TAKE_OVER = 28; // 私信接管
+
 
 
     const ACCOUNT_TYPE_SPH = 1; // 视频号
@@ -85,15 +95,7 @@ class DeviceEnum
 
 
 
-    # 自动化任务类型
-    const AUTO_TYPE_CLUES = 21; // 获客
-    const AUTO_TYPE_PUBLISH = 22; // 发布
-    const AUTO_TYPE_WECHAT_CIRCLE = 23; // 客户互动
-    const AUTO_TYPE_COMMENT_CLUE = 24; // 评论区获客
-    const AUTO_TYPE_WECHAT_FRIEND = 25; // 微信加v
-    const AUTO_TYPE_ACTIVE = 26; // 养号
-    const AUTO_TYPE_CLEAN_PHONE = 27; // 清理手机
-    const AUTO_TYPE_TAKE_OVER = 28; // 私信接管
+
 
 
 

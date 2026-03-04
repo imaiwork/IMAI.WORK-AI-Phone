@@ -148,13 +148,13 @@
                                             :active-value="1"
                                             :inactive-value="0" />
                                     </div>
-                                    <p class="text-[12px] text-[#94A3B8] leading-[1.6] mb-[16px]">
+                                    <p class="text-xs text-[#94A3B8] leading-[1.6] mb-[16px]">
                                         开启后对检索内容进行二次精密排序，建议混合检索时开启。
                                     </p>
                                     <div
                                         v-if="formData.ranking_status === 1"
                                         class="pt-[12px] border-t-[1px] border-[#F1F5F9] border-[transparent]">
-                                        <div class="text-[12px] font-medium mb-[8px]">重排过滤分数</div>
+                                        <div class="text-xs font-medium mb-[8px]">重排过滤分数</div>
                                         <ElSlider v-model="formData.ranking_score" :min="0" :max="1" :step="0.001" />
                                     </div>
                                 </div>
@@ -167,7 +167,7 @@
                                             :active-value="1"
                                             :inactive-value="0" />
                                     </div>
-                                    <p class="text-[12px] text-[#94A3B8] leading-[1.6] mb-[16px]">
+                                    <p class="text-xs text-[#94A3B8] leading-[1.6] mb-[16px]">
                                         结合历史多维度生成相似问题，提升检索精准度。
                                     </p>
                                     <div

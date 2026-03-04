@@ -58,6 +58,7 @@
 </template>
 
 <script setup lang="ts">
+import { batchGetVideoInfoByUrl } from "@/api/app";
 import useMaterialStore from "@/ai_modules/device/stores/material";
 import useUpload from "@/hooks/useUpload";
 import ChooseHistory from "@/ai_modules/device/components/choose-history/choose-history.vue";
@@ -75,7 +76,9 @@ const playData = ref<{ url: string; pic: string }>({ url: "", pic: "" });
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
     count: 9,
+    videoDuration: [1, 59],
     onSuccess: (res: any[]) => {
+        res.map((item) => (item.duration = item.type == "image" ? 2 : item.duration));
         if (replaceMaterialIndex.value !== -1) {
             dataList.value[replaceMaterialIndex.value] = res[0];
         } else {
@@ -84,6 +87,45 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
         replaceMaterialIndex.value = -1;
     },
 });
+
+/**
+ * 尝试通过接口补全列表中视频的时长信息
+ * 若接口报错，静默处理，不影响后续逻辑
+ * @param list 需要补全时长的数据列表（type === 'video' 的项）
+ */
+const fillVideoDuration = async (list: any[]) => {
+    const videoItems = list.filter((item) => item.type === "video");
+    if (videoItems.length === 0) return;
+    const videoUrls = videoItems.filter((item) => !item.duration || item.duration <= 0).map((item) => item.url);
+
+    if (videoUrls.length > 0) {
+        uni.showLoading({ title: "信息获取中...", mask: true });
+
+        try {
+            const { results } = await batchGetVideoInfoByUrl({ video_urls: videoUrls });
+            results
+                .filter((result: any) => result.data.duration <= 59)
+                .forEach((result: any) => {
+                    videoItems[result.index].duration = result.data.duration;
+                });
+        } finally {
+            uni.hideLoading();
+        }
+    }
+};
+
+/**
+ * 将数据插入/替换到 dataList
+ */
+const applyToDataList = (list: any[]) => {
+    const index = replaceMaterialIndex.value;
+    if (index !== -1) {
+        dataList.value.splice(index, 1, ...list);
+    } else {
+        dataList.value.push(...list);
+    }
+    replaceMaterialIndex.value = -1;
+};
 
 const chooseUploadType = () => {
     uni.showActionSheet({
@@ -101,32 +143,41 @@ const chooseUploadType = () => {
     });
 };
 
-const handleChooseMaterial = (list: any[]) => {
-    if (replaceMaterialIndex.value !== -1) {
-        dataList.value[replaceMaterialIndex.value] = list[0];
-    } else {
-        dataList.value.push(...list.map((item) => ({ pic: item.pic, url: item.url, type: "video" })));
+const handleChooseMaterial = async (list: any[]) => {
+    // 是否有超过60秒的视频
+    const hasOver60Video = list.some((item) => item.duration > 59);
+    if (hasOver60Video) {
+        uni.$u.toast("素材中存在超过60秒的视频，将自动过滤掉");
     }
-    replaceMaterialIndex.value = -1;
+    const newList = list
+        .filter((item) => item.duration <= 59)
+        .map((item) => ({
+            pic: item.pic,
+            url: item.url,
+            duration: item.m_type === 1 ? 2 : item.duration,
+            type: item.m_type === 1 ? "image" : "video",
+        }));
+    await fillVideoDuration(newList);
+    applyToDataList(newList);
 };
 
-const handleSelectHistory = (list: any[]) => {
+const handleSelectHistory = async (list: any[]) => {
     const isVideo = showHistoryType.value === "video";
-    const index = replaceMaterialIndex.value;
-
-    const newList = list.map((item) => ({
-        pic: item.pic || item.image,
-        url: isVideo ? item.clip_result_url || item.video_result_url : item.content || item.image,
-        type: showHistoryType.value,
-    }));
-
-    if (index !== -1) {
-        dataList.value.splice(index, 1, ...newList);
-    } else {
-        dataList.value.push(...newList);
+    // 是否有超过60秒的视频
+    const hasOver60Video = list.some((item) => item.duration > 59);
+    if (hasOver60Video) {
+        uni.$u.toast("素材中存在超过60秒的视频，将自动过滤掉");
     }
-
-    replaceMaterialIndex.value = -1;
+    const newList = list
+        .filter((item) => item.duration <= 59)
+        .map((item) => ({
+            pic: item.pic || item.image,
+            url: isVideo ? item.clip_result_url || item.video_result_url : item.content || item.image,
+            type: showHistoryType.value,
+            duration: parseFloat(item.duration),
+        }));
+    await fillVideoDuration(newList);
+    applyToDataList(newList);
 };
 
 const handleReplace = (index: number) => {
@@ -140,9 +191,7 @@ const handleDelete = (index: number) => {
 
 const handlePreview = (item: any) => {
     if (item.type === "image") {
-        uni.previewImage({
-            urls: [item.pic],
-        });
+        uni.previewImage({ urls: [item.pic] });
     } else {
         playData.value = { url: item.url, pic: item.pic };
         showVideoPreview.value = true;

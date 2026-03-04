@@ -36,7 +36,7 @@
                     <div class="flex items-end justify-between mb-6">
                         <div class="flex flex-col gap-1">
                             <div class="text-xl font-[900] text-gray-950 tracking-tight">最近记录</div>
-                            <div class="text-[12px] text-tx-placeholder font-medium">
+                            <div class="text-xs text-tx-placeholder font-medium">
                                 查看及管理您最近的音频转写与实时记录
                             </div>
                         </div>

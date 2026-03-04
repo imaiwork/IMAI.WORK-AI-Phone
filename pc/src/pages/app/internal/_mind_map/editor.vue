@@ -19,7 +19,7 @@
                             <label class="text-[13px] font-black text-[#64748B] uppercase tracking-wider"
                                 >描述需求</label
                             >
-                            <ElButton type="primary" link @click="handleExample()" class="!text-[12px] font-medium"
+                            <ElButton type="primary" link @click="handleExample()" class="!text-xs font-medium"
                                 >查看示例</ElButton
                             >
                         </div>
@@ -111,7 +111,7 @@
                     <div class="mt-8 text-[16px] font-black text-[#1E293B] tracking-tight">
                         AI 正在深度思考并绘制导图...
                     </div>
-                    <div class="mt-2 text-[12px] text-[#94A3B8] font-medium uppercase tracking-widest animate-pulse">
+                    <div class="mt-2 text-xs text-[#94A3B8] font-medium uppercase tracking-widest animate-pulse">
                         Processing nodes & connections
                     </div>
                 </div>

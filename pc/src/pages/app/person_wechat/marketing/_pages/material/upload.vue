@@ -33,9 +33,7 @@
                                 <div class="text-sm font-medium text-tx-regular mt-3">
                                     拖拽{{ materialTypeName }}至此 或 <span class="text-primary">点击上传</span>
                                 </div>
-                                <div class="text-[12px] text-tx-placeholder mt-1">
-                                    {{ uploadTypeHint }}，最多支持 9 个
-                                </div>
+                                <div class="text-xs text-tx-placeholder mt-1">{{ uploadTypeHint }}，最多支持 9 个</div>
                             </div>
                         </upload>
 
@@ -147,7 +145,7 @@
                                     <Icon name="el-icon-Close" :size="12" />
                                 </div>
                             </div>
-                            <div class="flex-1 text-[12px] text-tx-placeholder pt-2 leading-relaxed">
+                            <div class="flex-1 text-xs text-tx-placeholder pt-2 leading-relaxed">
                                 建议尺寸 500x500 像素，<br />支持 JPG/PNG，图片将作为对话消息的缩略图展示。
                             </div>
                         </div>

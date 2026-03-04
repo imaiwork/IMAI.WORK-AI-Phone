@@ -1,0 +1,16 @@
+{
+  "navigationBarTitleText": "任务报表详情",
+  "disableScroll": true,
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-tabs": "../../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "circle-card": "./components/circle-card",
+    "closure-card": "./components/closure-card",
+    "clue-card": "./components/clue-card",
+    "keyword-card": "./components/keyword-card",
+    "wechat-card": "./components/wechat-card"
+  }
+}

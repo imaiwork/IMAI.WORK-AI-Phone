@@ -39,14 +39,14 @@
                         <div class="strategy-card-mini">
                             <div class="flex flex-col">
                                 <span class="font-[900] text-tx-primary text-[14px]">语音回复 (WeChat)</span>
-                                <span class="text-[12px] text-tx-secondary mt-[4px]">支持将语音转文字后回复</span>
+                                <span class="text-xs text-tx-secondary mt-[4px]">支持将语音转文字后回复</span>
                             </div>
                             <ElSwitch v-model="formData.voice_enable" :active-value="1" :inactive-value="0" />
                         </div>
                         <div class="strategy-card-mini">
                             <div class="flex flex-col">
                                 <span class="font-[900] text-tx-primary text-[14px]">分段展示回复</span>
-                                <span class="text-[12px] text-tx-secondary mt-[4px]">按段落逐条展示，模拟真人输入</span>
+                                <span class="text-xs text-tx-secondary mt-[4px]">按段落逐条展示，模拟真人输入</span>
                             </div>
                             <ElSwitch v-model="formData.paragraph_enable" :active-value="1" :inactive-value="0" />
                         </div>
@@ -396,7 +396,7 @@ onMounted(() => {
             @apply text-[15px] font-[900] text-tx-primary;
         }
         .desc {
-            @apply text-[12px] text-tx-secondary mt-[2px];
+            @apply text-xs text-tx-secondary mt-[2px];
         }
     }
 
@@ -444,7 +444,7 @@ onMounted(() => {
             @apply bg-blue-50 border-primary-light-7;
         }
         .el-checkbox__label {
-            @apply pl-0 text-[12px] font-medium;
+            @apply pl-0 text-xs font-medium;
         }
         .el-checkbox__input {
             @apply hidden;

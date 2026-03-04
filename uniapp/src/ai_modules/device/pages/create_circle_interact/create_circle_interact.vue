@@ -256,7 +256,10 @@ const formData = reactive<{
     comment_content: "",
     accounts: [],
     task_frep: 1,
-    time_config: ["09:00", "09:30"],
+    time_config: [
+        uni.$u.timeFormat(new Date(), "hh:MM"),
+        uni.$u.timeFormat(new Date(new Date().getTime() + 30 * 60 * 1000), "hh:MM"),
+    ],
     custom_date: [],
     robot_id: "",
     robot_name: "",

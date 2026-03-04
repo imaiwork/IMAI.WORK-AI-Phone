@@ -81,6 +81,7 @@ const queryParams = reactive<Record<string, any>>({
     page_no: 1,
     page_size: 20,
     video_setting_id: "",
+    auto_type: 0,
 });
 
 const { pager, getLists, resetPage } = usePaging({
@@ -97,9 +98,10 @@ const load = async (e: any) => {
     }
 };
 
-const open = async (id: string) => {
+const open = async ({ id, auto_type }: { id: string; auto_type: number }) => {
     popupRef.value?.open();
     queryParams.video_setting_id = id;
+    queryParams.auto_type = auto_type;
     getLists();
 };
 

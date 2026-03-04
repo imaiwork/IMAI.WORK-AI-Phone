@@ -14,9 +14,7 @@
             </div>
             <div>
                 <h3 class="text-[18px] font-[900] text-[#0F172A] leading-tight">配置接管策略</h3>
-                <p class="text-[12px] text-slate-400 font-medium mt-1 tracking-wide uppercase">
-                    AI Strategy Configuration
-                </p>
+                <p class="text-xs text-slate-400 font-medium mt-1 tracking-wide uppercase">AI Strategy Configuration</p>
             </div>
         </div>
 

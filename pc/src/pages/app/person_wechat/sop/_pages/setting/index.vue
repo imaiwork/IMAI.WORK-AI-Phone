@@ -21,7 +21,7 @@
                                         active-text="ON"
                                         inactive-text="OFF" />
                                 </div>
-                                <p class="text-[12px] text-tx-placeholder leading-relaxed">
+                                <p class="text-xs text-tx-placeholder leading-relaxed">
                                     开启后，系统将在好友通过后自动执行打招呼策略。
                                 </p>
                             </div>
@@ -82,7 +82,7 @@
                         <div class="w-[4px] h-[18px] bg-primary rounded-full"></div>
                         <h3 class="text-[16px] font-[900] text-tx-primary">编辑打招呼素材内容</h3>
                     </div>
-                    <div class="flex items-center text-[12px] text-tx-placeholder bg-gray-50 px-3 py-1 rounded-full">
+                    <div class="flex items-center text-xs text-tx-placeholder bg-gray-50 px-3 py-1 rounded-full">
                         <Icon name="el-icon-Edit" />
                         <span class="ml-1">内容将按顺序逐条发送</span>
                     </div>

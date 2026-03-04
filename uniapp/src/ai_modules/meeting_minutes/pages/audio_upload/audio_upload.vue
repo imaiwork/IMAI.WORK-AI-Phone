@@ -122,7 +122,7 @@ const fileLimit = 10;
 const extension = ["mp3", "wav", "wma", "aac", "ogg", "amr", "flac", "aiff"];
 
 const openFile = async () => {
-    if (tokensValue <= 0) {
+    if (userTokens.value < tokensValue.value) {
         uni.$u.toast("算力不足，请充值！");
         rechargePopupRef.value?.open();
         return;

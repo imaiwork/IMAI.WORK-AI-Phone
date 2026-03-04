@@ -302,10 +302,11 @@ class SvMediaManualTaskLogic extends SvBaseLogic
             if (!is_dir(dirname($root_path . $output))) {
                 mkdir(dirname($root_path . $output), 0777, true);
             }
+    
             $shareUrl = \app\common\service\QrCodeService::save(
                 $shareSchemaUrl,
                 $output,
-                400,
+                600,
                 20
             );
             $url = config('app.app_host') . '/share/index.html?share_url=' .   $shareSchemaUrl;
@@ -318,7 +319,7 @@ class SvMediaManualTaskLogic extends SvBaseLogic
             $qrUrl = \app\common\service\QrCodeService::save(
                 $url,
                 $output,
-                400,
+                600,
                 20
             );
             // 构建返回数据

@@ -12,12 +12,12 @@
                 class="custom-upload">
                 <div class="flex flex-col items-center py-2">
                     <div class="w-12 h-12 rounded-full bg-[#F0F6FF] flex items-center justify-center mb-3">
-                        <Icon name="local-icon-upload" class="text-primary" :size="24" />
+                        <Icon name="local-icon-upload" :size="24" color="var(--color-primary)" />
                     </div>
                     <div class="text-[14px] font-medium text-[#64748B]">
                         拖拽 CSV/Excel 至此，或 <span class="text-primary font-[900]">点击选择文件</span>
                     </div>
-                    <ElButton link type="primary" class="!text-[12px] mt-2 font-black" @click.stop>
+                    <ElButton link type="primary" class="!text-xs mt-2 font-black" @click.stop>
                         <a href="/static/file/template/kn_qa.csv" target="_blank" class="flex items-center gap-1">
                             <Icon name="el-icon-Download" :size="14" /> 下载官方导入模版
                         </a>
@@ -26,8 +26,8 @@
             </ElUpload>
 
             <div class="mt-3 p-3 bg-[#FFF9F0] border border-[#FFE4BA] rounded-xl flex gap-3">
-                <Icon name="el-icon-InfoFilled" color="#ED6A0C" :size="16" class="mt-0.5" />
-                <div class="text-[12px] text-[#A25D00] leading-5 font-medium">
+                <Icon name="el-icon-InfoFilled" color="#ED6A0C" :size="16" />
+                <div class="text-xs text-[#A25D00] leading-5 font-medium">
                     请先完成模版填写后再上传。单文件建议不要超过 <span class="underline">1000条</span> 以保证流畅度。
                     <br />
                     系统将自动去重完全相同的问答对，但含有换行的内容目前暂不支持自动去重。

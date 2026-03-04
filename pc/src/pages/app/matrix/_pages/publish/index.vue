@@ -3,7 +3,7 @@
         <div class="flex-shrink-0 px-8 h-[88px] flex items-center justify-between">
             <div class="flex flex-col">
                 <h1 class="text-xl font-[900] text-gray-950">发布任务管理</h1>
-                <p class="text-[12px] text-tx-placeholder font-medium mt-0.5">监控所有账号的视频与图文发布进度</p>
+                <p class="text-xs text-tx-placeholder font-medium mt-0.5">监控所有账号的视频与图文发布进度</p>
             </div>
 
             <div class="flex items-center gap-3">
@@ -129,7 +129,7 @@
                     prop="create_time"
                     label="创建时间"
                     width="160"
-                    class-name="text-[12px] text-tx-placeholder" />
+                    class-name="text-xs text-tx-placeholder" />
 
                 <ElTableColumn label="操作" width="100" fixed="right" align="right">
                     <template #default="{ row }">
@@ -158,7 +158,7 @@
             </ElTable>
         </div>
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 个分发任务已就绪</div>
+            <div class="text-xs font-medium text-[#CBD5E1]">共计 {{ pager.count }} 个分发任务已就绪</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>

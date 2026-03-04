@@ -51,7 +51,7 @@
                                     class="line-clamp-1 font-black text-[#1E293B] text-[15px] mb-1 group-hover:text-primary transition-colors">
                                     {{ item.ask }}
                                 </h3>
-                                <div class="flex items-center gap-1.5 text-[12px] text-[#94A3B8] font-medium">
+                                <div class="flex items-center gap-1.5 text-xs text-[#94A3B8] font-medium">
                                     <Icon name="el-icon-Clock" :size="12"></Icon>
                                     {{ item.create_time }}
                                 </div>

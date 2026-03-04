@@ -13,7 +13,7 @@
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h2 class="text-[22px] font-black text-[#1E293B] tracking-tight">内容文案库</h2>
-                    <p class="text-[12px] text-[#94A3B8] font-medium mt-1">从库中挑选优质标题与正文描述</p>
+                    <p class="text-xs text-[#94A3B8] font-medium mt-1">从库中挑选优质标题与正文描述</p>
                 </div>
                 <div class="flex items-center gap-4">
                     <div class="flex bg-[#F1F5F9] p-1 rounded-xl">
@@ -146,7 +146,7 @@
                                         v-for="(topic, t_index) in item.topic"
                                         :key="t_index"
                                         class="group/tag relative flex items-center bg-white border border-br px-2 py-1 rounded-lg">
-                                        <span class="text-[#6366F1] font-medium text-[12px] mr-1">#</span>
+                                        <span class="text-[#6366F1] font-medium text-xs mr-1">#</span>
                                         <input
                                             v-model="item.topic[t_index]"
                                             class="bg-transparent border-none outline-none text-[11px] w-[70px] text-[#64748B]"

@@ -14,7 +14,7 @@
             </div>
             <div class="mb-6 relative">
                 <div class="text-[20px] font-[900] text-[#1E293B]">智能接管配置</div>
-                <div class="text-[12px] font-medium text-[#94A3B8] mt-1">设置当前账号的接管模式，实现自动化运营</div>
+                <div class="text-xs font-medium text-[#94A3B8] mt-1">设置当前账号的接管模式，实现自动化运营</div>
             </div>
 
             <ElForm ref="formRef" :model="formData" :rules="rules" label-position="top" class="custom-config-form">

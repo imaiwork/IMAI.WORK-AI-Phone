@@ -75,8 +75,7 @@
                                     </div>
                                 </div>
 
-                                <p
-                                    class="text-[12px] font-medium text-[#64748B] leading-[1.6] line-clamp-2 h-[38px] mb-4">
+                                <p class="text-xs font-medium text-[#64748B] leading-[1.6] line-clamp-2 h-[38px] mb-4">
                                     {{ item.description || "暂无描述信息..." }}
                                 </p>
 

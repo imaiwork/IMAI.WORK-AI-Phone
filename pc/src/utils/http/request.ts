@@ -284,11 +284,14 @@ export class Request {
 
         // 如果没有提供进度回调，则使用原来的方法
         if (!onProgress) {
-            return this.request({
-                ...options,
-                method: RequestMethodsEnum.POST,
-                body: formData,
-            });
+            return this.request(
+                {
+                    ...options,
+                    method: RequestMethodsEnum.POST,
+                    body: formData,
+                },
+                options.requestOptions
+            );
         }
 
         return new Promise((resolve, reject) => {

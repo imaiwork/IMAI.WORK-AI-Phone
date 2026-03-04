@@ -588,6 +588,7 @@ const { processAndAppend } = useMaterial(toRef(formData, "materialList"));
 
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
+    videoDuration: [1, 59],
     onSuccess: (materials: any[]) => {
         const targetList = uploadSource.value === 0 ? "anchorLists" : "materialList";
         const index = replaceMaterialIndex.value;
@@ -610,7 +611,7 @@ const chooseUploadType = (type: 0 | 1) => {
                     showHistory.value = true;
                 }
                 if (res.tapIndex == 1) {
-                    uploadMaterialType.value = 'video'
+                    uploadMaterialType.value = "video";
 
                     if (isFirstOpen.value) {
                         isFirstOpen.value = false;
@@ -674,6 +675,7 @@ const handleSelectHistory = async (lists: any[]) => {
             rawList: normalized,
             urlField: "actualUrl",
             type: "video",
+            maxDuration: 59,
             replaceIndex: replaceMaterialIndex.value,
             onSuccess: () => (showHistory.value = false),
         });
@@ -686,6 +688,7 @@ const handleSelectMaterial = async (res: any[]) => {
         rawList: res,
         urlField: "url",
         type: type as "video" | "image",
+        maxDuration: 59,
         replaceIndex: replaceMaterialIndex.value,
         onSuccess: () => (showMaterialLibrary.value = false),
     });

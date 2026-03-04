@@ -806,19 +806,20 @@ class UploadService
             if ($mediaType === 'video' && $r_frame_rate == '25/1') {
                 // 图片处理
                 $specs = $customSpecs['image'] ?? self::DEFAULT_IMAGE_SPECS;
+                $specs = array_merge(self::DEFAULT_IMAGE_SPECS, $specs);
                 if (!self::isImageCompliant($info, $specs)) {
                     $needTranscode = true;
                 }
             } elseif ($mediaType === 'video') {
                 // 视频处理
                 $specs = $customSpecs['video'] ?? self::DEFAULT_VIDEO_SPECS;
+                $specs = array_merge(self::DEFAULT_VIDEO_SPECS, $specs);
                 if (!self::isVideoCompliant($info, $specs)) {
                     $needTranscode = true;
                 }
             } else {
                 throw new Exception("不支持的媒体类型: " . $mediaType);
             }
-            
             // 执行转码
             if ($needTranscode) {
                 // 生成临时输出路径
@@ -1087,7 +1088,6 @@ class UploadService
         if (!file_exists($inputPath)) {
             throw new Exception("输入文件不存在: " . $inputPath);
         }
-        
         // 获取视频时长信息
         $duration = null;
         if (isset($info['format']['duration'])) {
@@ -1141,7 +1141,7 @@ class UploadService
             "-b:a 128k",
             "-movflags +faststart", // 优化网络播放
         ];
-        
+
         // 只有在明确指定时才限制时长
         if (isset($specs['duration']) && $specs['duration'] > 0) {
             $ffmpegParts[] = "-t " . $specs['duration'];
@@ -1166,9 +1166,8 @@ class UploadService
             $ffmpegParts[] = "-vf scale=" . escapeshellarg($resolution);
         }
         $ffmpegParts[] = escapeshellarg($outputPath);
-        
+
         $ffmpegCommand = implode(" ", $ffmpegParts);
-        
         // 执行命令并捕获详细输出
         $output = shell_exec($ffmpegCommand . " 2>&1");
         // 检查输出文件
@@ -1268,7 +1267,6 @@ class UploadService
         
         // 执行命令并捕获详细输出
         $output = shell_exec($ffmpegCommand . " 2>&1");
-
         // 检查输出文件
         if (!file_exists($outputPath)) {
             $errorMsg = "图片转码失败，输出文件未生成.\n";

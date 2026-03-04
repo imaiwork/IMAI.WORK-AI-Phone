@@ -241,6 +241,8 @@ class PublishLogic extends SvBaseLogic
                     'name' => $params['name'],
                     'account' => $account['account'],
                     'account_type' => $account['type'],
+                    'nickname' => $account['nickname'],
+                    'avatar' => $account['avatar'],
                     'device_code' => $account['device_code'],
                     'matrix_media_setting_id' => $params['matrix_media_setting_id'],
                     'video_setting_id' => 0,

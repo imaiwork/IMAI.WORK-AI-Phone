@@ -11,11 +11,11 @@
                     <div class="flex items-center justify-between">
                         <span class="font-medium text-[#475569] flex items-center gap-2">
                             <Icon name="el-icon-EditPen" />
-                            <span class="text-[12px] font-medium ml-1">源文本测试</span>
+                            <span class="text-xs font-medium ml-1">源文本测试</span>
                         </span>
                         <ElButton v-if="!isRag" type="primary" link class="!font-medium" @click="openVectorSetting">
                             <Icon name="el-icon-Setting" />
-                            <span class="text-[12px] font-medium ml-1">参数配置</span>
+                            <span class="text-xs font-medium ml-1">参数配置</span>
                         </ElButton>
                     </div>
 
@@ -107,11 +107,11 @@
                                             class="w-6 h-6 rounded bg-[#0065fb]/10 flex items-center justify-center text-primary text-[10px] font-black">
                                             #{{ index + 1 }}
                                         </div>
-                                        <span class="text-[12px] font-medium text-[#64748B] truncate max-w-[300px]">
+                                        <span class="text-xs font-medium text-[#64748B] truncate max-w-[300px]">
                                             {{ item.source }}
                                         </span>
                                     </div>
-                                    <ElButton type="primary" link class="!text-[12px]" @click="handleOpenFile(item)">
+                                    <ElButton type="primary" link class="!text-xs" @click="handleOpenFile(item)">
                                         <span class="mr-1">查看源文</span> <Icon name="el-icon-Right" />
                                     </ElButton>
                                 </div>
@@ -337,7 +337,7 @@ getHistoryLists();
         }
     }
     .content {
-        @apply text-[12px] leading-5 text-[#475569] break-all;
+        @apply text-xs leading-5 text-[#475569] break-all;
     }
 }
 

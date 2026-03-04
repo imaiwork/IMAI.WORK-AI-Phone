@@ -418,6 +418,7 @@ const materialTypes = [
 
 const currMaterialType = ref<MaterialTypeEnum>(MaterialTypeEnum.ALL);
 const materialTypeIndex = ref<number>(0);
+const uploadMaterialType = ref<string>("");
 const dataLists = ref<any[]>([]);
 const dataCount = ref<number>(0);
 const pagingRef = shallowRef();
@@ -785,7 +786,9 @@ const handlePlay = (item: any) => {
 };
 
 const { uploadAndProcessFiles, showUploadProgress, uploadMaterialList } = useUpload({
-    fileAccept: ["mp4", "mp3", "m4a", "jpg", "png", "jpeg", "webp"],
+    imageAccept: ["jpg", "png", "jpeg", "webp"],
+    videoAccept: ["mp4"],
+    fileAccept: ["wav", "m4a"],
     isTranscode: true,
     onSuccess: async (materials) => {
         const promises = [];
@@ -799,7 +802,12 @@ const { uploadAndProcessFiles, showUploadProgress, uploadMaterialList } = useUpl
                     duration: item.duration,
                     sort: 0,
                     type: AppTypeEnum.XHS,
-                    m_type: item.type == "image" ? MaterialTypeEnum.IMAGE : MaterialTypeEnum.VIDEO,
+                    m_type:
+                        uploadMaterialType.value == "image"
+                            ? MaterialTypeEnum.IMAGE
+                            : uploadMaterialType.value == "video"
+                            ? MaterialTypeEnum.VIDEO
+                            : MaterialTypeEnum.MUSIC,
                     group_id: currentGroupItem.id,
                 })
             );
@@ -830,12 +838,15 @@ const { uploadAndProcessFiles, showUploadProgress, uploadMaterialList } = useUpl
 
 const handleUploadMaterial = () => {
     uni.showActionSheet({
-        itemList: ["上传图片", "上传视频"],
+        itemList: ["上传图片", "上传视频", "上传音频"],
         success: (res) => {
+            uploadMaterialType.value = res.tapIndex == 0 ? "image" : res.tapIndex == 1 ? "video" : "audio";
             if (res.tapIndex == 0) {
                 uploadAndProcessFiles("image");
-            } else {
+            } else if (res.tapIndex == 1) {
                 uploadAndProcessFiles("video");
+            } else {
+                uploadAndProcessFiles("file");
             }
         },
     });

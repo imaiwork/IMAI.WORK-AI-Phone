@@ -19,19 +19,19 @@
                     class="custom-select !w-[150px]"
                     :show-arrow="false"
                     clearable
-                    @clear="resetPage()"
-                    @change="resetPage()">
+                    @clear="reset()"
+                    @change="reset()">
                     <ElOption label="全部类型" value="" />
                     <ElOption label="数字人" :value="VideoType.DIGITAL_HUMAN" />
                     <ElOption label="口播" :value="VideoType.ORAL_MIX" />
                     <ElOption label="真人" :value="VideoType.TRUE_HUMAN" />
                     <ElOption label="素材" :value="VideoType.MATERIAL_MIX" />
                     <ElOption label="新闻" :value="VideoType.NEWS" />
-                    <ElOption label="句子" :value="VideoType.SENTENCE" />
+                    <ElOption label="一句话" :value="VideoType.SENTENCE" />
                 </ElSelect>
             </div>
         </div>
-        <div class="grow min-h-0">
+        <div class="grow min-h-0 relative" v-spin="{ show: loading, text: loadingText }">
             <ElScrollbar :distance="20" @end-reached="load">
                 <div class="p-4">
                     <div v-if="pager.lists.length">
@@ -41,7 +41,7 @@
                                 v-for="(item, index) in pager.lists"
                                 class="relative cursor-pointer overflow-hidden"
                                 :key="index">
-                                <video-item is-create :item="item" @delete="handleDelete" />
+                                <video-item is-create :item="item" @delete="handleDelete" @retry="handleRetry" />
                             </div>
                         </div>
                         <load-text :is-load="pager.isLoad"></load-text>
@@ -53,13 +53,14 @@
             </ElScrollbar>
         </div>
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between border-t border-br">
-            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条视频创作记录</div>
+            <div class="text-xs font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条视频创作记录</div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { getVideoCreationRecord, deleteVideoCreationRecord } from "@/api/app";
+import { retrySoraTask } from "@/api/digital_human";
 import VideoItem from "@/pages/app/digital_human/_components/video-item.vue";
 
 enum VideoType {
@@ -77,12 +78,23 @@ const queryParams = reactive({
     page_size: 20,
     type: "",
 });
+const loading = ref(false);
+const loadingText = ref("加载中...");
 
 const { pager, getLists, resetPage } = usePaging({
     fetchFun: getVideoCreationRecord,
     params: queryParams,
     isScroll: true,
 });
+
+const reset = async () => {
+    loading.value = true;
+    try {
+        await resetPage();
+    } finally {
+        loading.value = false;
+    }
+};
 
 const load = async (e: any) => {
     if (e == "bottom") {
@@ -106,7 +118,34 @@ const handleDelete = async (data: any) => {
         },
     });
 };
-getLists();
+
+const handleRetry = async (data: any) => {
+    useNuxtApp().$confirm({
+        message: "确定重试吗？",
+        onConfirm: async () => {
+            try {
+                await retrySoraTask({ id: data.id });
+                feedback.msgSuccess("重试成功");
+                getData();
+            } catch (error) {
+                feedback.msgError(error || "重试失败");
+            }
+        },
+    });
+};
+
+const getData = async () => {
+    loading.value = true;
+    try {
+        await getLists();
+    } finally {
+        loading.value = false;
+    }
+};
+
+onMounted(async () => {
+    getData();
+});
 </script>
 
 <style scoped lang="scss">

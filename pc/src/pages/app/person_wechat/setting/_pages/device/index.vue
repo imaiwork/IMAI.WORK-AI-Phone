@@ -67,7 +67,7 @@
 
                 <ElTableColumn prop="create_time" label="接入时间" width="180">
                     <template #default="{ row }">
-                        <span class="text-[12px] text-tx-placeholder">{{ row.create_time }}</span>
+                        <span class="text-xs text-tx-placeholder">{{ row.create_time }}</span>
                     </template>
                 </ElTableColumn>
 
@@ -118,7 +118,7 @@
                     </div>
                     <div>
                         <h3 class="text-[16px] font-black text-tx-primary">绑定新终端</h3>
-                        <p class="text-[12px] text-tx-placeholder mt-0.5">请输入移动端设备的授权码</p>
+                        <p class="text-xs text-tx-placeholder mt-0.5">请输入移动端设备的授权码</p>
                     </div>
                 </div>
 
@@ -135,7 +135,7 @@
                     </ElInput>
                     <div class="bg-amber-50 border border-amber-100 rounded-xl p-4 flex gap-3">
                         <Icon name="el-icon-Warning" color="var(--amber-500)" />
-                        <div class="text-[12px] text-amber-700 leading-relaxed">
+                        <div class="text-xs text-amber-700 leading-relaxed">
                             请确保您的设备已安装最新版插件，并处于联网状态。绑定后系统将自动尝试建立 WebSocket
                             通讯连接。
                         </div>

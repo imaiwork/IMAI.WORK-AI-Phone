@@ -94,7 +94,7 @@ trait DeviceTaskTrait
                 'create_time' => $find['create_time'],
                 'start_time' => $dtask->start_time,
                 'end_time' => $dtask->end_time,
-                'time_interval' => ($dtask->end_time - $dtask->start_time) / 60,
+                'time_interval' => ceil(($dtask->end_time - $dtask->start_time) / 60),
             ];
 
             $data = array(
@@ -1737,10 +1737,10 @@ trait DeviceTaskTrait
             //     'data' => is_array($pushMessage) ? json_encode($pushMessage) : $pushMessage
             // ]);
             //$wechat->add_num += 1;
-            $wechat->is_cooling = 0;
-            $wechat->cooling_time = 0;
-            $wechat->update_time = time();
-            $wechat->save();
+            // $wechat->is_cooling = 0;
+            // $wechat->cooling_time = 0;
+            // $wechat->update_time = time();
+            // $wechat->save();
 
             AiWechatLog::create([
                 'user_id' => $wechat->user_id,
@@ -1752,6 +1752,7 @@ trait DeviceTaskTrait
             SvCrawlingManualTaskRecord::where('id', $record['id'])->update([
                 'wechat_no' => $wechat->account,
                 'wechat_name' => $wechat->nickname,
+                'wechat_avatar' => $wechat->avatar,
                 'remark' => $request['Message'],
                 'exec_task_id' => $request['TaskId'],
                 'exec_time' => date('Y-m-d H:i:s', time()),
@@ -1818,6 +1819,8 @@ trait DeviceTaskTrait
             SvAddWechatRecord::where('id', $record['id'])->update([
                 'wechat_no' => $wechat->account,
                 'wechat_name' => $wechat->nickname,
+                'wechat_avatar' => $wechat->avatar,
+                'remark' => $payload['message'] ?? '',
                 'status' => 2,
                 'result' => '执行中',
                 'update_time' => time(),

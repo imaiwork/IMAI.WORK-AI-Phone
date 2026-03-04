@@ -27,7 +27,7 @@
 
             <div class="flex items-center gap-x-3 pr-2">
                 <div class="h-4 w-[1px] bg-slate-200"></div>
-                <div class="text-[12px] text-tx-placeholder font-medium">
+                <div class="text-xs text-tx-placeholder font-medium">
                     当前限制: <span class="text-primary font-medium">{{ limit }}</span> 项素材
                 </div>
             </div>
@@ -36,7 +36,7 @@
         <div class="grow min-h-0 flex gap-x-3">
             <div class="w-[240px] bg-white rounded-[20px] border border-br flex-shrink-0 overflow-hidden flex flex-col">
                 <div class="p-5 border-b border-[#F8FAFC]">
-                    <div class="text-[12px] text-tx-placeholder font-black uppercase tracking-widest">Category</div>
+                    <div class="text-xs text-tx-placeholder font-black uppercase tracking-widest">Category</div>
                 </div>
                 <div class="flex-1 overflow-y-auto custom-scrollbar p-2">
                     <Sidebar />

@@ -38,7 +38,7 @@ class CommentToCommentHandler extends BaseMessageHandler
             $this->setLog('异常信息' . $e, 'touch');
             $this->payload['reply'] = $e->getMessage();
             $this->payload['code'] =  WorkerEnum::RPA_COMMENT_TO_COMMENT_FAIL;
-            $this->payload['type'] = WorkerEnum::RPA_COMMENT_TO_COMMENT;
+            $this->payload['type'] = WorkerEnum::RPA_COMMENT_TO_COMMENT_CHECK;
             $this->payload['content'] = [
                 'code' =>  WorkerEnum::RPA_COMMENT_TO_COMMENT_FAIL,
                 'msg' => '异常信息:' . $e->getMessage(),
@@ -128,7 +128,7 @@ class CommentToCommentHandler extends BaseMessageHandler
                 'comment_content'     => $content['comment_content'] ?? '',
                 'touch_content'       => $content['touch_content'] ?? '',
             ];
-            SvLeadScrapingRecord::create($insert);
+            //SvLeadScrapingRecord::create($insert);
             $scene = AutomationEnum::SHUT_OFF_COMMENTS;
             self::requestUrl($insert, $scene, $task->user_id, $content['task_id'],  $this->payload['deviceId']);
             return [

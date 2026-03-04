@@ -65,7 +65,7 @@
                                         class="text-[14px] font-[900] text-[#1E293B] line-clamp-1 group-hover:text-primary transition-colors">
                                         {{ item.message || item.file_info?.name || "未命名会话" }}
                                     </div>
-                                    <div class="text-[12px] text-[#64748B] leading-relaxed line-clamp-3">
+                                    <div class="text-xs text-[#64748B] leading-relaxed line-clamp-3">
                                         {{ item.reply || "查看详情内容..." }}
                                     </div>
                                 </div>
@@ -207,6 +207,6 @@ onMounted(() => {
 }
 
 .pop-item {
-    @apply flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium text-[#64748B] cursor-pointer transition-all;
+    @apply flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-[#64748B] cursor-pointer transition-all;
 }
 </style>

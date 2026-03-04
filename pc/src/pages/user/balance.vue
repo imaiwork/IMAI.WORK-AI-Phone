@@ -84,7 +84,7 @@
                                     <div
                                         v-for="(value, key) in row.extra"
                                         :key="key"
-                                        class="text-[12px] flex items-center gap-1">
+                                        class="text-xs flex items-center gap-1">
                                         <span class="text-[#94A3B8] font-medium">{{ key }}:</span>
                                         <span class="text-[#475569] font-medium">{{ value }}</span>
                                     </div>

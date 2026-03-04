@@ -94,7 +94,7 @@
 
                 <ElTableColumn label="创建时间" width="180">
                     <template #default="{ row }">
-                        <span class="text-[12px] text-slate-400 font-medium">{{ row.create_time }}</span>
+                        <span class="text-xs text-slate-400 font-medium">{{ row.create_time }}</span>
                     </template>
                 </ElTableColumn>
 

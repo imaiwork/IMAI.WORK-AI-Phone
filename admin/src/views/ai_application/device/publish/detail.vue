@@ -55,7 +55,7 @@
                 row-key="id"
                 @selection-change="handleSelectionChange">
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
-                <el-table-column label="ID" prop="id" min-width="60" />
+                <el-table-column label="ID" prop="id" min-width="80" />
                 <el-table-column label="发布标题" prop="material_title" min-width="140" show-overflow-tooltip />
                 <el-table-column label="正文内容" prop="material_subtitle" min-width="180" show-overflow-tooltip />
                 <el-table-column label="封面图" prop="pic" min-width="120">

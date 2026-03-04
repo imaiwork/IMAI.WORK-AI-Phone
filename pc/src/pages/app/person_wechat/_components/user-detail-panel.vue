@@ -84,7 +84,7 @@
                         <div class="flex flex-wrap gap-2 flex-1">
                             <div v-for="item in friendTagLists" :key="item.id" class="group relative">
                                 <div
-                                    class="px-3 py-1.5 bg-[#0065fb]/5 border border-[#0065fb]/10 text-primary text-[12px] font-black rounded-xl transition-all group-hover:bg-primary group-hover:text-white">
+                                    class="px-3 py-1.5 bg-[#0065fb]/5 border border-[#0065fb]/10 text-primary text-xs font-black rounded-xl transition-all group-hover:bg-primary group-hover:text-white">
                                     {{ item.tag_name }}
                                 </div>
                                 <div

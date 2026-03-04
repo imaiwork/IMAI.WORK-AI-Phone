@@ -33,7 +33,7 @@
             <view class="space-y-[24rpx]">
                 <view
                     v-if="seekText"
-                    class="btn-dark w-full text-white text-[30rpx] font-semibold rounded-[20rpx] h-[96rpx] flex items-center justify-center relative overflow-hidden"
+                    class="w-full text-white text-[30rpx] font-semibold rounded-[20rpx] h-[96rpx] flex items-center justify-center relative overflow-hidden"
                     style="
                         background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #000000 100%);
                         box-shadow: 0 8rpx 15rpx rgba(0, 0, 0, 0.3), 0 0 0 1rpx rgba(255, 255, 255, 0.1);
@@ -47,12 +47,13 @@
 
                 <view
                     v-if="toText"
-                    class="btn-secondary w-full text-[30rpx] font-medium rounded-[20rpx] h-[96rpx] flex items-center justify-center relative overflow-hidden border border-solid text-[#475569] border-[#e2e8f0]"
+                    class="w-full text-[30rpx] font-medium rounded-[20rpx] h-[96rpx] flex items-center justify-center relative overflow-hidden border border-solid text-[#475569] border-[#e2e8f0]"
                     style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)"
                     @click="emit('to')">
                     <view class="btn-ripple"></view>
                     <text class="relative z-10">{{ toText }}</text>
                 </view>
+                <slot name="custom-btn"></slot>
             </view>
         </view>
     </u-popup>

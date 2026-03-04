@@ -127,7 +127,7 @@
                             <div class="flex items-center justify-between mb-[20px]">
                                 <div>
                                     <div class="text-[14px] font-[900] text-[#0F172A]">对数概率分析 (Logprobs)</div>
-                                    <div class="text-[12px] text-[#94A3B8] mt-[4px]">
+                                    <div class="text-xs text-[#94A3B8] mt-[4px]">
                                         显示模型输出词汇的概率分布情况，通常用于学术或精细化调试。
                                     </div>
                                 </div>

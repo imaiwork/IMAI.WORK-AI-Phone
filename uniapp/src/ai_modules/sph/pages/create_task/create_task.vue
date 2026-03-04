@@ -599,7 +599,7 @@
 
 <script setup lang="ts">
 import { createTask } from "@/api/sph";
-import { getWeChatLists } from "@/api/person_wechat";
+import { getPublishAccountList } from "@/api/device";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import AccountIcon from "@/ai_modules/sph/static/icons/account.svg";
@@ -795,12 +795,12 @@ const { optionsData } = useDictOptions<{
     wechatLists: any[];
 }>({
     wechatLists: {
-        api: getWeChatLists,
-        params: { page_size: 9999 },
+        api: getPublishAccountList,
+        params: { page_size: 9999, type: 1 },
         transformData: (res: any) =>
             res.lists?.map((item: any) => ({
-                text: item.wechat_nickname,
-                value: item.wechat_id,
+                text: item.nickname,
+                value: item.account,
             })),
     },
 });

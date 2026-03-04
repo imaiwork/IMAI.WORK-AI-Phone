@@ -14,10 +14,8 @@ import { navigateTo } from "@/utils/util";
 import { useRoute } from "uniapp-router-next";
 import ChatIcon from "@/static/images/tabbar/chat.png";
 import ChatSelectedIcon from "@/static/images/tabbar/chat_s.png";
-import AgentIcon from "@/static/images/tabbar/agent.png";
-import AgentSelectedIcon from "@/static/images/tabbar/agent_s.png";
-import StaffIcon from "@/static/images/tabbar/staff.png";
-import StaffSelectedIcon from "@/static/images/tabbar/staff_s.png";
+import CreativeIcon from "@/static/images/tabbar/creative.png";
+import CreativeSelectedIcon from "@/static/images/tabbar/creative_s.png";
 import PhoneIcon from "@/static/images/tabbar/phone.png";
 import PhoneSelectedIcon from "@/static/images/tabbar/phone_s.png";
 import MeIcon from "@/static/images/tabbar/me.png";
@@ -29,25 +27,17 @@ const tabbarList = computed(() => {
         {
             iconPath: ChatIcon,
             selectedIconPath: ChatSelectedIcon,
-            text: "工作台",
+            text: "AI助手",
             link: {
                 path: "/pages/index/index",
             },
         },
         {
-            iconPath: AgentIcon,
-            selectedIconPath: AgentSelectedIcon,
-            text: "智能体",
+            iconPath: CreativeIcon,
+            selectedIconPath: CreativeSelectedIcon,
+            text: "AI创作",
             link: {
-                path: "/pages/agent/agent",
-            },
-        },
-        {
-            iconPath: StaffIcon,
-            selectedIconPath: StaffSelectedIcon,
-            text: "AI员工",
-            link: {
-                path: "/pages/staff/staff",
+                path: "/ai_modules/digital_human/pages/index/index",
             },
         },
         {

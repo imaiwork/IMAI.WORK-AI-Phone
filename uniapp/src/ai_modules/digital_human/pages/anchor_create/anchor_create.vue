@@ -537,7 +537,7 @@ const handleUploadAuthVideoAlbum = () => {
 };
 
 const handleCreateAnchor = async () => {
-    if (userTokens.value <= getToken.value) {
+    if (userTokens.value < getToken.value) {
         rechargePopupRef.value?.open();
         return;
     }

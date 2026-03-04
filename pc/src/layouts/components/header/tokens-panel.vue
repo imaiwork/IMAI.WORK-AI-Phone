@@ -25,7 +25,7 @@
                                 消耗明细 <Icon name="el-icon-ArrowRight" :size="10" />
                             </router-link>
                         </div>
-                        <div class="text-[12px] leading-relaxed text-[#64748B] mt-3 font-medium">
+                        <div class="text-xs leading-relaxed text-[#64748B] mt-3 font-medium">
                             算力用于驱动各架构 AI 模型。全面满足从训练到推理的需求，助力响应最优化。
                         </div>
                     </div>
@@ -53,7 +53,7 @@
                                 <div
                                     class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-[#E2E8F0] shadow-sm">
                                     <Icon name="local-icon-tokens" color="#0065FB" :size="14"></Icon>
-                                    <span class="text-[12px] font-black text-primary">
+                                    <span class="text-xs font-black text-primary">
                                         {{ item.score }}<small class="ml-0.5 opacity-70">{{ item.unit }}</small></span
                                     >
                                 </div>

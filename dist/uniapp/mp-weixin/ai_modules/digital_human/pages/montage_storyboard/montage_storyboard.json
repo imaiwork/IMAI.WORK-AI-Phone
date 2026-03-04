@@ -8,6 +8,7 @@
     "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
     "empty": "../../../../components/empty/empty",
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
-    "choose-agent": "../../components/choose-agent/choose-agent"
+    "choose-agent": "../../components/choose-agent/choose-agent",
+    "create-success-pop": "../../components/create-success-pop/create-success-pop"
   }
 }

@@ -400,19 +400,19 @@ class VideoInfoService
      */
     private function checkBatchLimit(int $count): void
     {
-        if ($count > self::MAX_BATCH_SIZE * 5) { // 允许最多5个批次
-            throw new Exception('单次批量处理数量过多，最大允许' . (self::MAX_BATCH_SIZE * 5) . '个');
+        if ($count > self::MAX_BATCH_SIZE * 2) { // 允许最多5个批次
+            throw new Exception('单次批量处理数量过多，最大允许' . (self::MAX_BATCH_SIZE * 2) . '个');
         }
 
-        $ip         = request()->ip();
-        $batchKey   = self::BATCH_LIMIT_KEY . $ip . '_' . date('YmdH');
-        $batchCount = (int)Cache::get($batchKey, 0);
+        // $ip         = request()->ip();
+        // $batchKey   = self::BATCH_LIMIT_KEY . $ip . '_' . date('YmdH');
+        // $batchCount = (int)Cache::get($batchKey, 0);
 
-        if ($batchCount >= 10) { // 每小时最多10次批量请求
-            throw new Exception('批量请求过于频繁，请稍后再试');
-        }
+        // if ($batchCount >= 10) { // 每小时最多10次批量请求
+        //     throw new Exception('批量请求过于频繁，请稍后再试');
+        // }
 
-        Cache::set($batchKey, $batchCount + 1, 3600);
+        // Cache::set($batchKey, $batchCount + 1, 3600);
     }
 
     /**

@@ -61,10 +61,10 @@ class RobotGroupController extends BaseApiController
      * @return Json
      * @author kb
      */
-    public function edit(): Json
+    public function update(): Json
     {
         $params = $this->request->post();
-        $results = KbRobotGroupLogic::edit($params, $this->userId);
+        $results = KbRobotGroupLogic::update($params, $this->userId);
         if ($results === false) {
             return $this->fail(KbRobotGroupLogic::getError());
         }
@@ -99,6 +99,21 @@ class RobotGroupController extends BaseApiController
             return $this->fail(KbRobotGroupLogic::getError());
         }
         return $this->success('加入分组成功');
+    }
+
+    /**
+     * @notes 智能体移除分组
+     * @return Json
+     * @author kb
+     */
+    public function remove(): Json
+    {
+        $params = $this->request->post();
+        $results = KbRobotGroupLogic::remove($params, $this->userId);
+        if ($results === false) {
+            return $this->fail(KbRobotGroupLogic::getError());
+        }
+        return $this->success('移除分组成功');
     }
 
     /**

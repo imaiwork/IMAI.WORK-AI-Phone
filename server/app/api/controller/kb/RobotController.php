@@ -16,7 +16,7 @@ use think\response\Json;
  */
 class RobotController extends BaseApiController
 {
-    public array $notNeedLogin = ['commonLists'];
+    public array $notNeedLogin = ['lists','commonLists'];
 
     /**
      * @notes 智能体列表

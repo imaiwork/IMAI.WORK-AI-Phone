@@ -6,7 +6,7 @@
                     <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
                     <span class="text-[15px] font-[900] text-[#1E293B]">参数配置</span>
                 </div>
-                <p class="text-[12px] font-medium text-[#94A3B8]">请填写下方工作流所需的输入参数</p>
+                <p class="text-xs font-medium text-[#94A3B8]">请填写下方工作流所需的输入参数</p>
             </div>
 
             <div class="grow min-h-0">
@@ -68,7 +68,7 @@
                                                         class="text-[#475569] group-hover:text-primary" />
                                                 </div>
                                                 <span
-                                                    class="text-[#94A3B8] text-[12px] font-medium group-hover:text-primary"
+                                                    class="text-[#94A3B8] text-xs font-medium group-hover:text-primary"
                                                     >点击或拖拽上传文件</span
                                                 >
                                             </div>
@@ -102,7 +102,7 @@
                     <span class="text-[16px] font-[900] text-[#1E293B]">输出结果</span>
                 </div>
                 <div v-if="result" class="flex items-center gap-2">
-                    <span class="text-[12px] font-medium text-[#94A3B8]">处理完成</span>
+                    <span class="text-xs font-medium text-[#94A3B8]">处理完成</span>
                 </div>
             </div>
 
@@ -128,13 +128,13 @@
                                         </div>
                                         <button
                                             v-if="getOutputParams[key]?.type === FormFieldTypeEnum.FILE"
-                                            class="text-[12px] font-black text-primary hover:underline"
+                                            class="text-xs font-black text-primary hover:underline"
                                             @click="downloadFile(value, getOutputParams[key]?.name)">
                                             下载文件
                                         </button>
                                         <button
                                             v-else
-                                            class="text-[12px] font-black text-[#64748B] hover:text-primary transition-colors flex items-center gap-1"
+                                            class="text-xs font-black text-[#64748B] hover:text-primary transition-colors flex items-center gap-1"
                                             @click="copy(value)">
                                             <Icon name="el-icon-DocumentCopy" /> 复制
                                         </button>

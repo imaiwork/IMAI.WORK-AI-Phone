@@ -398,6 +398,7 @@
 
 <script setup lang="ts">
 import { getVideoCreationRecord, deleteVideoCreationRecord, updateVideoCreationRecord } from "@/api/app";
+import { retrySoraTask } from "@/api/digital_human";
 import { drawingRecord, drawingDeleteRecord, getPuzzleTaskList } from "@/api/drawing";
 import { saveImageToPhotosAlbum, saveVideoToPhotosAlbum } from "@/utils/file";
 import PuzzleCard from "@/packages/components/puzzle-card/puzzle-card.vue";
@@ -626,8 +627,12 @@ const triggerPlay = (url: string) => {
 };
 
 const showVideoActions = (item: any, index: number) => {
+    const itemList = ["修改名称", "下载视频", "删除"];
+    if (item.type == 6 && [1, 2].includes(getStatus(item))) {
+        itemList.push("重试");
+    }
     uni.showActionSheet({
-        itemList: ["修改名称", "下载视频", "删除"],
+        itemList,
         success: (res) => {
             if (res.tapIndex === 0) {
                 handleEdit(dataLists.value.findIndex((item: any) => item.id == operateItem.value.id));
@@ -643,6 +648,8 @@ const showVideoActions = (item: any, index: number) => {
                 }
             } else if (res.tapIndex === 2) {
                 handleDelete(index);
+            } else if (res.tapIndex === 3) {
+                handleRetry(index);
             }
         },
     });
@@ -779,6 +786,38 @@ const handleDelete = async (index: number | number[]) => {
                 });
             } finally {
                 uni.hideLoading();
+            }
+        },
+    });
+};
+
+const handleRetry = async (index: number) => {
+    const { id, type } = dataLists.value[index];
+    uni.showModal({
+        title: "您真的要重试吗？",
+        content: "重试后将重新生成视频，且该操作不可逆！",
+        success: async (res) => {
+            if (!res.confirm) return;
+            uni.showLoading({
+                title: "重试中...",
+                mask: true,
+            });
+            try {
+                await retrySoraTask({ id });
+                uni.hideLoading();
+                uni.showToast({
+                    title: "重试成功",
+                    icon: "none",
+                    duration: 3000,
+                });
+                pagingRef.value?.reload();
+            } catch (error) {
+                uni.hideLoading();
+                uni.showToast({
+                    title: "重试失败",
+                    icon: "none",
+                    duration: 3000,
+                });
             }
         },
     });

@@ -4,7 +4,6 @@
             <div class="flex items-center gap-2 mb-3">
                 <div class="w-1.5 h-4 bg-primary rounded-full"></div>
                 <span class="text-[14px] font-[900] text-[#1E293B]">链接解析</span>
-                <span class="text-[12px] text-[#94A3B8] font-medium">支持批量输入，一行一个链接</span>
             </div>
 
             <div class="relative">
@@ -35,7 +34,7 @@
         <div class="grow min-h-0 flex flex-col bg-slate-50 rounded-[24px] border border-[#F1F5F9] overflow-hidden">
             <div class="px-5 py-4 border-b border-[#F1F5F9] bg-white flex items-center justify-between">
                 <div class="text-[13px] font-[900] text-[#1E293B]">解析结果明细</div>
-                <div class="text-[12px] font-medium text-primary bg-[#F0F6FF] px-2 py-0.5 rounded">
+                <div class="text-xs font-medium text-primary bg-[#F0F6FF] px-2 py-0.5 rounded">
                     已解析 {{ formData.length }} 条内容
                 </div>
             </div>
@@ -46,7 +45,7 @@
                         <div v-for="(item, itemIndex) in formData" :key="itemIndex" class="parse-result-card group">
                             <div class="flex items-center gap-2 mb-3 pb-2 border-b border-[#F1F5F9]">
                                 <Icon name="el-icon-Link" class="text-primary" :size="14" />
-                                <span class="text-[12px] font-black text-[#64748B] truncate flex-1">
+                                <span class="text-xs font-black text-[#64748B] truncate flex-1">
                                     {{ item.name }}
                                 </span>
                                 <div
@@ -67,8 +66,7 @@
                     </div>
                 </ElScrollbar>
 
-                <div v-else class="h-full flex flex-col items-center justify-center opacity-40 grayscale">
-                    <Icon name="local-icon-empty" :size="64" />
+                <div v-else class="py-10 opacity-40 grayscale text-center">
                     <p class="text-[13px] font-medium text-[#94A3B8] mt-2">暂无解析数据，请在上方输入链接</p>
                 </div>
             </div>

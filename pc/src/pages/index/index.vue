@@ -4,8 +4,8 @@
             class="w-[220px] h-full fixed top-0 left-[var(--aside-width)] z-[888] border-r border-[#e2e8f0]/60 bg-white transition-all"
             v-show="!hideSidebar">
             <div class="flex flex-col h-full">
-                <!-- <chat-agent />
-                <ElDivider class="!my-2 !border-t-[#e2e8f0]/60" /> -->
+                <chat-agent ref="chatAgentRef" @select-agent="handleSelectAgent" />
+                <ElDivider class="!my-2 !border-t-[#e2e8f0]/60" />
                 <div class="grow min-h-0">
                     <chat-history ref="chatHistoryRef" />
                 </div>
@@ -132,7 +132,50 @@
                     </template>
                 </Chatting>
             </div>
-            <div v-if="chatStore.isLoading" class="absolute top-0 left-0 w-full h-full bg-white"></div>
+
+            <div v-if="loading" class="absolute top-0 left-0 w-full h-full bg-white overflow-hidden z-[8888]">
+                <div class="w-full h-full pt-[100px]">
+                    <div class="md:max-w-3xl lg:max-w-[42rem] xl:max-w-[48rem] 2xl:max-w-[52rem] mx-auto animate-pulse">
+                        <div class="h-10 bg-gray-200 rounded-lg w-80"></div>
+                        <div class="mt-6 flex flex-col xl:flex-row gap-4">
+                            <div class="flex-1 border border-[#EBEBEB] rounded-2xl px-5 py-3">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="h-6 bg-gray-200 rounded w-20"></div>
+                                    <div class="h-5 bg-gray-200 rounded w-16"></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-6 my-5">
+                                    <div class="flex flex-col items-center justify-center" v-for="i in 4" :key="i">
+                                        <div class="w-9 h-9 bg-gray-200 rounded-full"></div>
+                                        <div class="h-4 bg-gray-200 rounded w-20 mt-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 border border-[#EBEBEB] rounded-2xl px-5 py-3">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="h-6 bg-gray-200 rounded w-20"></div>
+                                    <div class="h-5 bg-gray-200 rounded w-16"></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="h-[190px] bg-gray-200 rounded-[10px]" style="grid-row: span 2"></div>
+                                    <div class="h-[92px] bg-gray-200 rounded-[10px]"></div>
+                                    <div class="h-[92px] bg-gray-200 rounded-[10px]"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="mt-[14px] px-5 border border-[#EBEBEB] rounded-[10px] h-[65px] flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-6 h-6 bg-gray-200 rounded"></div>
+                                <div class="h-5 bg-gray-200 rounded w-28"></div>
+                                <div class="h-4 bg-gray-200 rounded w-40"></div>
+                            </div>
+                            <div class="h-5 bg-gray-200 rounded w-16"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -150,8 +193,10 @@ import RedBookIcon from "@/assets/images/redbook_icon.png";
 import DouyinIcon from "@/assets/images/douyin_icon.png";
 import KuaishouIcon from "@/assets/images/kuaishou_icon.png";
 import SphIcon from "@/assets/images/sph_icon.png";
-
+import { storeToRefs } from "pinia";
 // --- 1. 初始化 ---
+
+const loading = ref(true);
 
 const route = useRoute();
 const router = useRouter();
@@ -164,8 +209,11 @@ const hideSidebar = computed(() => appStore.hideSidebar);
 
 const chatStore = useChatStore();
 
+const { chattingRef } = storeToRefs(chatStore);
+
+const chatAgentRef = ref<any>(null);
+
 const {
-    chattingRef,
     isNetwork,
     fileLists,
     taskId,
@@ -180,6 +228,7 @@ const {
 
 const { chatAreaRef, agent, setup, dispose, clear, getAgentList, isAgent, setAgent, setText } = useChatAreaManager({
     onEnter: (text) => {
+        if (isReceiving.value) return;
         contentPost(text);
         chattingRef?.value?.triggerContentPushUp();
     },
@@ -235,6 +284,15 @@ const handleUpdateInputContent = (value: string) => {
     setText(value);
 };
 
+const handleSelectAgent = (agent: any) => {
+    const { type } = agent;
+    if (type === "model_admin") {
+        setAgent(null);
+        return;
+    }
+    setAgent(agent);
+};
+
 watch(
     () => chatStore.taskId,
     () => {
@@ -245,18 +303,33 @@ watch(
 watch(
     () => route.fullPath,
     () => {
-        initialize().then(async () => {
-            await getAgentList();
+        initialize()
+            .then(async () => {
+                await getAgentList();
 
-            if (Number(route.query.agent_id) > 0) {
-                setAgent({
-                    id: route.query.agent_id as string,
-                    name: route.query.agent_name as string,
-                });
-            }
-        });
+                if (Number(route.query.agent_id) > 0) {
+                    setAgent({
+                        id: route.query.agent_id as string,
+                        name: route.query.agent_name as string,
+                    });
+                }
+            })
+            .finally(() => {
+                loading.value = false;
+            });
     },
     { immediate: true }
+);
+
+watch(
+    () => agent.value,
+    (newVal) => {
+        if (!newVal) {
+            chatAgentRef.value.clearSelectedAgent();
+        } else {
+            chatAgentRef.value.selectAgent(newVal.id);
+        }
+    }
 );
 
 onMounted(() => {
@@ -276,18 +349,18 @@ definePageMeta({
 <style lang="scss" scoped>
 :deep(.chat-area-pc) {
     * {
-        font-size: var(--el-font-size-base);
+        font-size: var(--el-font-size-medium);
     }
     svg {
         display: inline;
     }
 
     .chat-rich-text {
-        font-size: var(--el-font-size-base);
+        font-size: var(--el-font-size-medium);
         padding: 8px 0;
         min-height: 80px;
         .chat-grid-input {
-            font-size: var(--el-font-size-base);
+            font-size: var(--el-font-size-medium);
         }
         .at-input {
             line-height: 1;
@@ -299,7 +372,7 @@ definePageMeta({
     }
     .chat-placeholder-wrap {
         padding: 8px 0;
-        font-size: var(--el-font-size-base);
+        font-size: var(--el-font-size-medium);
         font-style: inherit;
     }
 }

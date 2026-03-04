@@ -29,7 +29,7 @@ class CommentToMarkClueHandler extends BaseMessageHandler
             $this->setLog('异常信息' . $e, 'task_complete');
             $this->payload['reply'] = $e->getMessage();
             $this->payload['code'] =  WorkerEnum::RPA_COMMENT_TO_MARK_CLUE_FAIL;
-            $this->payload['type'] = WorkerEnum::RPA_COMMENT_TO_MARK_CLUE;
+            $this->payload['type'] = WorkerEnum::RPA_COMMENT_TO_MARK_CLUE_CHECK;
             $this->payload['content'] = [
                 'code' =>  WorkerEnum::RPA_COMMENT_TO_MARK_CLUE_FAIL,
                 'msg' => '异常信息:' . $e->getMessage(),
@@ -117,7 +117,7 @@ class CommentToMarkClueHandler extends BaseMessageHandler
                 'comment_content'     => $content['comment_content'] ?? '',
                 'touch_content'       => $content['touch_content'] ?? '',
             ];
-            SvLeadScrapingRecord::create($insert);
+            //SvLeadScrapingRecord::create($insert);
             return [
                 'isProceed' => 1,//是否处理 1是 0 否
             ];
@@ -125,7 +125,7 @@ class CommentToMarkClueHandler extends BaseMessageHandler
             $this->setLog('异常信息' . $e, 'task_complete');
             $this->payload['reply'] = $e->getMessage();
             $this->payload['code'] =  WorkerEnum::RPA_COMMENT_TO_MARK_CLUE_FAIL;
-            $this->payload['type'] = WorkerEnum::RPA_COMMENT_TO_MARK_CLUE;
+            $this->payload['type'] = WorkerEnum::RPA_COMMENT_TO_MARK_CLUE_CHECK;
             $this->payload['content'] = [
                 'code' =>  WorkerEnum::RPA_COMMENT_TO_MARK_CLUE_FAIL,
                 'msg' => '异常信息:' . $e->getMessage(),

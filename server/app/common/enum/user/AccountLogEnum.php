@@ -278,6 +278,10 @@ class AccountLogEnum
 
     const TOKENS_DEC_COZE_COPYWRITING = 10203;
     const TOKENS_DEC_DOUYIN_JS = 10204;
+
+    //分镜混剪
+    const TOKENS_DEC_STORYBOARD_VIDEO = 10300;
+
     /**
      * 用户算力（减少类型汇总）
      */
@@ -384,6 +388,8 @@ class AccountLogEnum
         self::TOKENS_DEC_SORA_COPYWRITING,
         self::TOKENS_DEC_HUMAN_AVATAR_SORA,
         self::TOKENS_DEC_SORA_DRAW_AVATAR,
+
+        self::TOKENS_DEC_STORYBOARD_VIDEO,
 
         // 自动化功能
         self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED,
@@ -577,6 +583,7 @@ class AccountLogEnum
             self::TOKENS_DEC_COMBINED_PICTURE_TITLE => '小红书图片合成封面标题内容生成减少算力',
             self::TOKENS_DEC_COMBINED_PICTURE => '小红书图片自动合成减少算力',
             self::TOKENS_DEC_COZE_COPYWRITING => 'Coze智能体文案生成减少算力',
+            self::TOKENS_DEC_STORYBOARD_VIDEO => '分镜生成视频任务减少算力',
             self::TOKENS_DEC_DOUYIN_JS => '【抖音】扫码发布减少算力',
             self::TOKENS_DEC_SORA_VIDEO => '一句话生成视频减少算力',
             self::TOKENS_DEC_SORA_PRO_VIDEO => '一句话生成视频(pro)减少算力',

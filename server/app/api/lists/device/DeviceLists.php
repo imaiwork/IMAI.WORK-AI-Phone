@@ -87,9 +87,12 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
                     ->toArray();
                 // 查询离当前时间节点最近的3个任务（涵盖在执行中的）
                 $currentTime = time();
-                $item['tasks'] = SvDeviceTask::where(['device_code' => $item['device_code'], 'user_id' => $this->userId])
+                $item['tasks'] = SvDeviceTask::where('device_code',$item['device_code'])
+                    ->where('user_id', $this->userId)
                     ->where('status', 'in', [0, 1])
                     ->where('auto_type', $item['auto_type'])
+                    ->where('start_time', '<=', strtotime(date('Y-m-d 23:59:59')))
+                    ->where('end_time', '>=', strtotime(date('Y-m-d 00:00:00')))
                     ->order('start_time asc, status desc')
                     ->orderRaw('ABS(start_time - ' . $currentTime . ') ASC')
                     ->limit(3)
@@ -103,12 +106,24 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
                 if (count($item['tasks']) == 0) {
                     $item['task_count'] = 0;
                     $item['task_complete'] = 0;
+                    $item['task_waiting_count'] = 0;
                 } else {
+                    $item['task_waiting_count'] = SvDeviceTask::where('device_code', $item['device_code'])
+                        ->where('user_id', $this->userId)
+                        ->where('auto_type', $item['auto_type'])
+                        ->where('start_time', '<=', strtotime(date('Y-m-d 23:59:59')))
+                        ->where('end_time', '>=', strtotime(date('Y-m-d 00:00:00')))
+                        ->where('status', 'in', [0, 1])
+                        ->count();
+
                     $item['task_count'] = SvDeviceTask::where('device_code', $item['device_code'])
+                        ->where('user_id', $this->userId)
                         ->where('auto_type', $item['auto_type'])
                         ->where('start_time', '<=', strtotime(date('Y-m-d 23:59:59')))
                         ->where('end_time', '>=', strtotime(date('Y-m-d 00:00:00')))->count();
+
                     $item['task_complete'] = SvDeviceTask::where('device_code', $item['device_code'])
+                        ->where('user_id', $this->userId)
                         ->where('auto_type', $item['auto_type'])
                         ->where('status', '=', 2)
                         ->where('start_time', '<=', strtotime(date('Y-m-d 23:59:59')))

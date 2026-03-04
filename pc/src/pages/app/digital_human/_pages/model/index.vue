@@ -16,7 +16,7 @@
                 <div class="flex items-center gap-x-3">
                     <div class="flex items-center">
                         <div v-if="isDelete" class="flex items-center gap-3">
-                            <div class="px-3 py-1 rounded-lg bg-[#0065FB]/5 text-primary text-[12px] font-black">
+                            <div class="px-3 py-1 rounded-lg bg-[#0065FB]/5 text-primary text-xs font-black">
                                 已选择 {{ selectIndex.length }} 项
                             </div>
                             <div class="w-[1px] h-4 bg-[#E2E8F0]"></div>
@@ -71,7 +71,7 @@
                 <div class="p-4">
                     <template v-if="pager.lists.length">
                         <div
-                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 pb-4">
+                            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 pb-4">
                             <div
                                 v-for="(item, index) in pager.lists"
                                 class="h-[295px] relative cursor-pointer overflow-hidden"
@@ -111,7 +111,7 @@
             </ElScrollbar>
         </div>
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between border-t border-br">
-            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条形象数据</div>
+            <div class="text-xs font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条形象数据</div>
         </div>
     </div>
 </template>

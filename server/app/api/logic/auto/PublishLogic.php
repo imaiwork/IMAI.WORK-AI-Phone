@@ -67,13 +67,13 @@ class PublishLogic extends ApiLogic
             if ($devices->isEmpty()) {
                 throw new \Exception('没有自动化发布设备');
             }
-            
+
             foreach ($devices as $device) {
                 $autoConfig = AutoDeviceConfig::where('device_code', $device->device_code)->findOrEmpty();
                 if ($autoConfig->isEmpty()) {
                     throw new \Exception('设备' . $device->device_code . '没有自动发布配置');
                 }
-                $accounts = SvAccount::field('id, account, type')
+                $accounts = SvAccount::field('id, account, type, nickname, avatar')
                     ->where('type', '<>', 3)
                     ->where('device_code', $device->device_code)->select();
                 if ($accounts->isEmpty()) {
@@ -81,7 +81,7 @@ class PublishLogic extends ApiLogic
                 }
 
                 $sjMedias = ShanjianVideoTask::where('device_code', $device->device_code)
-                    ->field('id, video_setting_id,pic, msg, video_result_url')
+                    ->field('id, video_setting_id,pic, msg, video_result_url, "sj" as task_type')
                     ->where('auto_type', 1)
                     ->where('user_id', $device->user_id)
                     ->where('status', 3)
@@ -100,7 +100,7 @@ class PublishLogic extends ApiLogic
                     ->order('id', 'asc')
                     ->select();
                 $svMedias = SvVideoTask::where('device_code', $device->device_code)
-                    ->field('id, video_setting_id,pic, msg, video_result_url, clip_result_url, automatic_clip')
+                    ->field('id, video_setting_id,pic, msg, video_result_url, clip_result_url, automatic_clip, "sv" as task_type')
                     ->where('auto_type', 1)
                     ->where('user_id', $device->user_id)
                     ->where('automatic_clip', 1)
@@ -142,6 +142,7 @@ class PublishLogic extends ApiLogic
                         ->value('publish_time');
                     $publishTimes = self::getPublishTimes($maxDay, $exec_times, count($medias), $lastPublishTime);
                     foreach ($medias as $mk => $media) {
+                        sleep(1);
                         $publishTime = $publishTimes[$mk];
 
                         //print_r(date('Y-m-d H:i:s', $publishTime) . PHP_EOL);
@@ -174,6 +175,8 @@ class PublishLogic extends ApiLogic
                             'name' => '自动化视频发布任务' . date('YmdHsi', $publishTime),
                             'account' => $account->account,
                             'account_type' => $account->type,
+                            'nickname' => $account->nickname,
+                            'avatar' => $account->avatar,
                             'auto_type' => 1,
                             'device_code' => $device->device_code,
                             'media_type' => 1,
@@ -256,6 +259,20 @@ class PublishLogic extends ApiLogic
                                 'source' => DeviceEnum::TASK_SOURCE_PUBLISH,
                                 'create_time' => time(),
                             ]);
+
+                            if ($media['task_type'] == 'sj') {
+                                ShanjianVideoTask::where('id', $media['id'])->update([
+                                    'is_publish' => 1,
+                                    'update_time' => time(),
+                                ]);
+                            }
+
+                            if ($media['task_type'] == 'sv') {
+                                SvVideoTask::where('id', $media['id'])->update([
+                                    'is_publish' => 1,
+                                    'update_time' => time(),
+                                ]);
+                            }
                         }
                     }
                 }
@@ -323,10 +340,10 @@ class PublishLogic extends ApiLogic
                 throw new \Exception('没有自动化发布设备');
             }
 
-            $accounts = SvAccount::field('id, user_id, account, type, device_code')
+            $accounts = SvAccount::field('id, user_id, account, type, device_code,nickname,avatar')
                 ->where('type', 3)
                 ->where('device_code', '=', $params['device_code'])
-                ->where('device_code', 'in', function ($query){
+                ->where('device_code', 'in', function ($query) {
                     $query->name('sv_device')->where('auto_type', 1)->field('device_code');
                 })->select();
             //print_r($accounts->toArray());die;
@@ -346,7 +363,7 @@ class PublishLogic extends ApiLogic
                 if ($puzzles->isEmpty()) {
                     throw new \Exception('设备' . $account->device_code . '暂时没有可以拼图素材生成');
                 }
-                
+
                 $maxDay =  \app\common\model\sv\SvDeviceTask::where('device_code', $account->device_code)
                     ->where('task_type', DeviceEnum::AUTO_TYPE_PUBLISH)
                     ->where('source', DeviceEnum::TASK_SOURCE_PUBLISH)
@@ -404,6 +421,8 @@ class PublishLogic extends ApiLogic
                         'name' => '自动化拼图发布任务' . date('YmdHsi', $publishTime),
                         'account' => $account->account,
                         'account_type' => $account->type,
+                        'nickname' => $account->nickname,
+                        'avatar' => $account->avatar,
                         'auto_type' => 1,
                         'device_code' => $account->device_code,
                         'media_type' => 2,

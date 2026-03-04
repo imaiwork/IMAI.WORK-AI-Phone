@@ -5,7 +5,7 @@
             title-bold
             :border-bottom="false"
             :background="{
-                background: '#DDEAFB',
+                background: 'transparent',
             }">
         </u-navbar>
         <view class="px-4">

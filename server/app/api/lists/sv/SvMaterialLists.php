@@ -30,6 +30,7 @@ class SvMaterialLists extends BaseApiDataLists implements ListsSearchInterface
                 $item['content']     = FileService::getFileUrl($item['content']);
             }
         }
+        return $list;
     }
 
     public function count(): int

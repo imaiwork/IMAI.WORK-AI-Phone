@@ -52,6 +52,8 @@ class WechatLogic extends ApiLogic
                 $params['create_time'] = time();
                 $params['account'] = $account['account'];
                 $params['account_type'] = $account['type'];
+                $params['nickname'] = SvAccount::where('account', $account['account'])->where('type', 1)->where('user_id', self::$uid)->value('nickname') ?? '';
+                $params['avatar'] = SvAccount::where('account', $account['account'])->where('type', 1)->where('user_id', self::$uid)->value('avatar') ?? '';
                 $params['task_name'] = $params['task_name'] ?? '个微rpa任务' . date('YmdHi');
                 $params['device_code'] = $account['device_code'] ?? '';
                 $params['is_init'] = 0;

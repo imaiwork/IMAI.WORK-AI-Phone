@@ -73,6 +73,7 @@ return [
         //公共数字人形象任务
         'digital_human_anchor_cron' => 'app\common\command\DigitalHumanAnchorCron',
         'wechat_rpa_cron' => 'app\common\command\WechatRpaCron',
+        'kb_cron' => 'app\common\command\KbCron',
     ],
 
     

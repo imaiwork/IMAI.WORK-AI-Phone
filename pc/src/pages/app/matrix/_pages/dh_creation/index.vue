@@ -109,7 +109,7 @@
                                                 color: getStatusHex(item.status),
                                                 backgroundColor: getStatusHex(item.status) + '15',
                                             }"
-                                            class="px-3 py-1 rounded-xl text-[12px] font-medium border border-transparent">
+                                            class="px-3 py-1 rounded-xl text-xs font-medium border border-transparent">
                                             {{ statusMap[item.status] }}
                                         </span>
                                         <span class="text-[#9CA3AF] text-xs font-medium italic"
@@ -150,8 +150,8 @@
                                             {{ item.create_time.split(" ")[0] }}
                                         </span>
                                         <button
-                                            @click.stop="handlePreviewVideoResult(item.id)"
-                                            class="px-5 py-2 rounded-xl bg-[#1F2937] text-white text-[12px] font-medium hover:bg-primary transition-all active:scale-95">
+                                            @click.stop="handlePreviewVideoResult(item)"
+                                            class="px-5 py-2 rounded-xl bg-[#1F2937] text-white text-xs font-medium hover:bg-primary transition-all active:scale-95">
                                             查看成果
                                         </button>
                                     </div>
@@ -291,10 +291,10 @@ const handleDeleteTask = async (id: string, index: number) => {
 
 const previewVideoResultRef = ref<InstanceType<typeof PreviewVideoResult>>();
 const showPreviewVideoResult = ref(false);
-const handlePreviewVideoResult = async (id: string) => {
+const handlePreviewVideoResult = async (item: any) => {
     showPreviewVideoResult.value = true;
     await nextTick();
-    previewVideoResultRef.value?.open(id);
+    previewVideoResultRef.value?.open({ id: item.id, auto_type: item.auto_type });
 };
 
 getLists();

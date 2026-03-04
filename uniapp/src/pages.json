@@ -13,30 +13,6 @@
 			}
 		},
 		{
-			"path": "pages/staff/staff",
-			"style": {
-				"navigationBarTitleText": "",
-				"enablePullDownRefresh": false,
-				"navigationStyle": "custom",
-				"disableScroll": true
-			},
-			"meta": {
-				"share": true
-			}
-		},
-		{
-			"path": "pages/agent/agent",
-			"style": {
-				"navigationBarTitleText": "",
-				"enablePullDownRefresh": false,
-				"navigationStyle": "custom",
-				"disableScroll": true
-			},
-			"meta": {
-				"share": true
-			}
-		},
-		{
 			"path": "pages/user/user",
 			"style": {
 				"navigationBarTitleText": "",
@@ -1177,6 +1153,17 @@
 					"path": "pages/task_statement/task_statement",
 					"style": {
 						"navigationBarTitleText": "任务报表",
+						"disableScroll": true,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/task_statement_detail/task_statement_detail",
+					"style": {
+						"navigationBarTitleText": "任务报表详情",
 						"disableScroll": true,
 						"navigationStyle": "custom"
 					},

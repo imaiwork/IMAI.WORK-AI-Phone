@@ -23,6 +23,8 @@ use app\common\model\sv\SvDeviceCircleLikeReplyRecord;
 use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvAccount;
+use app\common\model\wechat\AiWechatCircleTask;
+
 
 
 /**
@@ -53,23 +55,24 @@ class DisplayLists extends BaseApiDataLists implements ListsSearchInterface
         if (isset($params['account_type']) && !empty($params['account_type'])) {
             if ($params['account_type'] == 2) {
                 $this->searchWhere[] = ['account_type', '=', 1];
-                $this->searchWhere[] = ['task_type', 'in', [5, 7, 8, 9, 25]];
+                $this->searchWhere[] = ['task_type', 'in', [5, 7, 8, 9, 10, 25]];
             } else if ($params['account_type'] == 1) {
                 $this->searchWhere[] = ['account_type', '=', 1];
-                $this->searchWhere[] = ['task_type', 'not in', [5, 7, 8, 9, 25]];
+                $this->searchWhere[] = ['task_type', 'not in', [5, 7, 8, 9, 10, 25]];
             } else {
                 $this->searchWhere[] = ['account_type', '=', $params['account_type']];
             }
         }
         return SvDeviceTask::field('*')
             ->where($this->searchWhere)
-            ->order('id', 'desc')
+            ->order('start_time', 'desc')
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
             ->each(function ($item) {
                 $item->account = SvAccount::field('account,nickname,avatar,type')->where('device_code', $item->device_code)->where('type', $item->account_type)->findOrEmpty()->toArray();
                 $item->device = SvDevice::field('device_name,device_model,status,device_code,sdk_version')->where('device_code', $item->device_code)->findOrEmpty()->toArray();
                 $item->task_type = DeviceEnum::getTaskTypeByAuto($item->task_type);
+
                 switch ($item->source) {
 
                     case DeviceEnum::TASK_SOURCE_PUBLISH: //1
@@ -91,7 +94,7 @@ class DisplayLists extends BaseApiDataLists implements ListsSearchInterface
                         break;
 
                     case DeviceEnum::TASK_SOURCE_FRIENDS: //5
-                        $taskinfo = SvCrawlingManualTaskRecord::where('task_id', $item->sub_task_id)->where('status', 1)->count();
+                        $taskinfo = SvCrawlingManualTaskRecord::where('task_id', $item->sub_task_id)->count();
                         $item->data_info = [
                             'add_wechat_number' => $taskinfo,
                         ];
@@ -100,10 +103,9 @@ class DisplayLists extends BaseApiDataLists implements ListsSearchInterface
                     case DeviceEnum::TASK_SOURCE_CLUES: //4
                         $keyword_number = SvCrawlingTask::where('id', $item->sub_task_id)->value('number_of_implemented_keywords');
                         $clues = SvCrawlingRecord::where('task_id', $item->sub_task_id)->where('reg_content', '<>', '')->group('reg_content')->column('reg_content');
-                        $clues_number = $clues ? count(explode(",", implode(",", $clues))) : 0;
                         $item->data_info = [
                             'keyword_number' => $keyword_number,
-                            'clues_number' => $clues_number,
+                            'clues_number' => count($clues),
                         ];
                         break;
                     case DeviceEnum::TASK_SOURCE_TOUCH: //6
@@ -112,22 +114,45 @@ class DisplayLists extends BaseApiDataLists implements ListsSearchInterface
                         ];
                         break;
                     case DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_PUBLISH: //7
-                        $item->data_info = [];
+                        $item->data_info = [
+                            'publish_number' => AiWechatCircleTask::where('id', $item->sub_data_id)->where('device_code', $item->device_code)->count(),
+                        ];
                         break;
                     case DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT: //8
+                        $like_number  = SvDeviceCircleLikeReplyRecord::where('like_reply_account', $item->sub_data_id)->where('type', 1)->where('device_code', $item->device_code)->count();
+                        $comment_number = SvDeviceCircleLikeReplyRecord::where('like_reply_account', $item->sub_data_id)->where('type', 2)->where('device_code', $item->device_code)->count();
+                        $like_comment_number = SvDeviceCircleLikeReplyRecord::where('like_reply_account', $item->sub_data_id)->where('type', 3)->where('device_code', $item->device_code)->count();
+                        $type = 1;
+                        $number = 0;
+                        if($like_number > 0){
+                            $type = 1;
+                            $number = $like_number;
+                        }
+                        if($comment_number > 0){
+                            $type = 2;
+                            $number = $comment_number;
+                        }
+                        if($like_comment_number > 0){
+                            $type = 3;
+                            $number = $like_comment_number;
+                        }
                         $item->data_info = [
-                            'like_comment_number' => SvDeviceCircleLikeReplyRecord::where('like_reply_account', $item->sub_task_id)->where('device_code', $item->device_code)->count(),
+                            'type' => $type,
+                            'like_comment_number' => $number,
                         ];
                         break;
                     case DeviceEnum::TASK_SOURCE_CLUES_WECHAT: //9
                         $info = SvCrawlingWechatTask::where('id', $item->sub_task_id)->findOrEmpty()->toArray();
                         $item->data_info = [
-                            'add_wechat_number' => SvAddWechatRecord::where('device_code', $item->device_code)->where('crawling_task_id', 'in', $info['craw_task_ids'])->where('status', 1)->count(),
+                            'add_wechat_number' => SvAddWechatRecord::where('device_code', $item->device_code)->where('crawling_task_id', 'in', $info['craw_task_ids'])->count(),
                         ];
                         break;
                     default:
                         break;
                 }
+                $item->start_time_text = date('Y-m-d H:i',  $item->start_time);
+                $item->start_time = date('H:i',  $item->start_time);
+                $item->end_time = date('H:i', $item->end_time);
                 return $item;
             })
             ->toArray();

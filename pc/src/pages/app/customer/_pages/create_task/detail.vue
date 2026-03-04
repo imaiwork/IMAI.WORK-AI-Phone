@@ -118,11 +118,7 @@
             <ElTable height="100%" :data="pager.lists" v-loading="pager.loading">
                 <ElTableColumn prop="username" label="用户名称" min-width="120" show-overflow-tooltip>
                     <template #default="{ row }">
-                        <div class="flex items-center gap-2">
-                            <div
-                                class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-primary font-medium">
-                                {{ row.username?.charAt(0) || "U" }}
-                            </div>
+                        <div class="flex items-center justify-center gap-2">
                             <span class="font-medium text-gray-950">{{ row.username || "-" }}</span>
                         </div>
                     </template>
@@ -164,7 +160,7 @@
                     prop="create_time"
                     label="执行时间"
                     width="160"
-                    class-name="text-tx-placeholder text-[12px]" />
+                    class-name="text-tx-placeholder text-xs" />
 
                 <template #empty>
                     <div class="py-20 flex flex-col items-center">
@@ -175,7 +171,7 @@
         </div>
 
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
-            <div class="text-[12px] font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条线索数据</div>
+            <div class="text-xs font-medium text-[#CBD5E1]">共计 {{ pager.count }} 条线索数据</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>

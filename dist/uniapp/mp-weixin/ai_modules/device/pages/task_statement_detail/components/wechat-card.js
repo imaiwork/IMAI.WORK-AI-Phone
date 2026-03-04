@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../../common/vendor.js"),t=e.defineComponent({__name:"wechat-card",props:{item:null},setup:t=>(m,c)=>({a:e.t(t.item.reg_wechat),b:e.t(t.item.remark||"-"),c:e.t(t.item.execute_name||"-"),d:e.t(t.item.execute_account||"-"),e:e.t(t.item.create_time)})});wx.createComponent(t);

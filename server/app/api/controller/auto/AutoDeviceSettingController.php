@@ -120,19 +120,4 @@ class AutoDeviceSettingController extends BaseApiController
         }
     }
 
-    /**
-     * 处理human_image数据
-     */
-    public function processHumanImageData()
-    {
-        try {
-            $result = AutoDeviceSettingLogic::processHumanImageData();
-            if ($result) {
-                return $this->success('处理成功', AutoDeviceSettingLogic::getReturnData());
-            }
-            return $this->fail(AutoDeviceSettingLogic::getError());
-        } catch (\Exception $e) {
-            return $this->fail($e->getMessage());
-        }
-    }
 }

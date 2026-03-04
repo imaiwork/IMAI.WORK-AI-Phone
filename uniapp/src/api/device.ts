@@ -359,3 +359,28 @@ export const deleteManualPublishTask = (data: Record<string, any>) => {
 export const publishManualPublishTask = (data: Record<string, any>) => {
     return request.post({ url: "/sv.mediaManualTask/publish", data });
 };
+
+// 任务关键词列表
+export const getTaskKeywordList = (data: Record<string, any>) => {
+    return request.get({ url: "/device.display/cluesDetail", data });
+};
+
+// 任务线索词列表
+export const getTaskClueList = (data: Record<string, any>) => {
+    return request.get({ url: "/device.display/keywordDetail", data });
+};
+
+// 任务截流、留痕列表
+export const getTaskClosureList = (data: Record<string, any>) => {
+    return request.get({ url: "/device.display/touchDetail", data });
+};
+
+// 任务朋友圈点赞、评论
+export const getTaskCircleLikeList = (data: Record<string, any>) => {
+    return request.get({ url: "/device.display/wechatCircleThumbCommentDetail", data });
+};
+
+// 任务加微
+export const getTaskAddWechatList = (data: Record<string, any>) => {
+    return request.get({ url: "/device.display/cluesWechatDetail", data });
+};

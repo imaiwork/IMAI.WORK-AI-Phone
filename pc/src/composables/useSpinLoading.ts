@@ -1,5 +1,5 @@
-// composables/useSpinLoading.ts
-import { createApp, ref, defineComponent, nextTick, type App } from "vue";
+import { createApp, ref, defineComponent, h, type App } from "vue";
+import SpinLoading from "@/components/spin-loading/spin-loading.vue";
 
 export interface SpinOptions {
     text?: string;
@@ -23,31 +23,22 @@ export function useSpin(target?: HTMLElement | string, defaultOptions: SpinOptio
 
     const getTargetElement = (): HTMLElement => {
         if (!target) return document.body;
-
         if (typeof target === "string") {
-            const element = document.querySelector(target) as HTMLElement;
-            return element || document.body;
+            return (document.querySelector(target) as HTMLElement) || document.body;
         }
-
         return target;
     };
 
-    const createInstance = async () => {
+    // ✅ 改为同步函数，去掉 async/await
+    const createInstance = () => {
         if (app) return;
 
-        await nextTick();
         const targetElement = getTargetElement();
 
         container = document.createElement("div");
         container.className = "spin-container";
-        container.style.position = "absolute";
-        container.style.top = "0";
-        container.style.left = "0";
-        container.style.right = "0";
-        container.style.bottom = "0";
-        container.style.pointerEvents = "none";
+        container.style.cssText = "position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;";
 
-        // 设置定位
         if (targetElement !== document.body) {
             const position = window.getComputedStyle(targetElement).position;
             if (position === "static") {
@@ -58,44 +49,38 @@ export function useSpin(target?: HTMLElement | string, defaultOptions: SpinOptio
             document.body.appendChild(container);
         }
 
-        try {
-            const { default: SpinLoading } = await import("@/components/spin-loading/spin-loading.vue");
+        const WrapperComponent = defineComponent({
+            name: "SpinWrapper",
+            setup() {
+                return {
+                    visible,
+                    text,
+                    zIndex,
+                    target: targetElement === document.body ? undefined : targetElement,
+                };
+            },
+            render() {
+                return h(SpinLoading, {
+                    visible: this.visible,
+                    text: this.text,
+                    zIndex: this.zIndex,
+                    target: this.target,
+                });
+            },
+        });
 
-            const WrapperComponent = defineComponent({
-                name: "SpinWrapper",
-                setup() {
-                    return {
-                        visible,
-                        text,
-                        zIndex,
-                        target: targetElement === document.body ? undefined : targetElement,
-                    };
-                },
-                render() {
-                    return h(SpinLoading, {
-                        visible: this.visible,
-                        text: this.text,
-                        zIndex: this.zIndex,
-                        target: this.target,
-                    });
-                },
-            });
-
-            app = createApp(WrapperComponent);
-            app.mount(container);
-        } catch (error) {}
+        app = createApp(WrapperComponent);
+        app.mount(container);
     };
 
     return {
-        show: async (options: SpinOptions = {}) => {
-            if (options.text !== undefined) {
-                text.value = options.text;
-            }
-            if (options.zIndex !== undefined) {
-                zIndex.value = options.zIndex;
-            }
+        // ✅ show 也改为同步
+        show: (options: SpinOptions = {}) => {
+            if (options.text !== undefined) text.value = options.text;
+            if (options.zIndex !== undefined) zIndex.value = options.zIndex;
 
-            if (!app) await createInstance();
+            // ✅ 同步创建，立即可用
+            if (!app) createInstance();
 
             visible.value = true;
 
@@ -107,7 +92,6 @@ export function useSpin(target?: HTMLElement | string, defaultOptions: SpinOptio
 
         hide: () => {
             visible.value = false;
-
             if (container) {
                 container.style.pointerEvents = "none";
             }
@@ -130,12 +114,8 @@ export function useSpin(target?: HTMLElement | string, defaultOptions: SpinOptio
     };
 }
 
-// 全局 spin 方法
 export const useGlobalSpin = () => {
-    const instance = useSpin(undefined, {
-        text: "正在处理...",
-    });
-
+    const instance = useSpin(undefined, { text: "正在处理..." });
     return {
         show: (options?: SpinOptions) => {
             instance.show(options);

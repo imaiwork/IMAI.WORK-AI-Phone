@@ -253,12 +253,11 @@
 <script setup lang="ts">
 import config from "@/config";
 import WechatOA from "@/utils/wechat";
-import { createManualAddWechat } from "@/api/device";
+import { createManualAddWechat, getPublishAccountList } from "@/api/device";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { chooseFile } from "@/components/file-upload/choose-file";
 import { uploadFile } from "@/api/app";
 import { useAppStore } from "@/stores/app";
-import { getWeChatLists } from "@/api/person_wechat";
 import { useDictOptions } from "@/hooks/useDictOptions";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { useCopy } from "@/hooks/useCopy";
@@ -312,7 +311,10 @@ const formData = reactive<{
     add_type: "1",
     wechat_id: [],
     wechat_reg_type: 0,
-    time_config: ["09:00", "09:30"],
+    time_config: [
+        uni.$u.timeFormat(new Date(), "hh:MM"),
+        uni.$u.timeFormat(new Date(new Date().getTime() + 30 * 60 * 1000), "hh:MM"),
+    ],
     task_frep: 1,
     device_codes: [],
     custom_date: [],
@@ -342,12 +344,12 @@ const { optionsData } = useDictOptions<{
     wechatLists: any[];
 }>({
     wechatLists: {
-        api: getWeChatLists,
-        params: { page_size: 9999 },
+        api: getPublishAccountList,
+        params: { page_size: 9999, type: 1 },
         transformData: (res: any) =>
             res.lists?.map((item: any) => ({
-                text: item.wechat_nickname,
-                value: item.wechat_id,
+                text: item.nickname,
+                value: item.account,
             })),
     },
 });

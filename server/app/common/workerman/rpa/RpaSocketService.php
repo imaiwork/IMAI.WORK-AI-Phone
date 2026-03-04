@@ -54,7 +54,7 @@ class RpaSocketService
         $connection->lastMessageTime = time();
         //客户端与后端消息链接唯一标识
         if(strpos($data , '"type":"ping"') === false){
-            $this->setLog('新消息:' . $data);
+            $this->setLog('新消息:' . $this->replaceImageInfo($data));
         }
 
         try {
@@ -110,9 +110,10 @@ class RpaSocketService
                     WorkerEnum::RPA_GET_ACCOUNT_APP_DATA_SEND => new \app\common\workerman\rpa\handlers\device\AppDataSendHandler($this), #正在等待数据返回
                     WorkerEnum::RPA_GET_ACCOUNT_APP_COMPLETED => new \app\common\workerman\rpa\handlers\device\AppCompletedHandler($this), #应用执行完成
 
-                    WorkerEnum::RPA_COMMENT_TO_COMMENT => new \app\common\workerman\rpa\handlers\touch\CommentToCommentHandler($this), #评论区评论
-                    WorkerEnum::RPA_COMMENT_TO_MSG => new \app\common\workerman\rpa\handlers\touch\CommentToMsgHandler($this), #评论区私信
-                    WorkerEnum::RPA_COMMENT_TO_MARK_CLUE => new \app\common\workerman\rpa\handlers\touch\CommentToMarkClueHandler($this), #评论区留痕获客
+                    WorkerEnum::RPA_COMMENT_TO_COMMENT_CHECK => new \app\common\workerman\rpa\handlers\touch\CommentToCommentHandler($this), #评论区评论
+                    WorkerEnum::RPA_COMMENT_TO_MSG_CHECK => new \app\common\workerman\rpa\handlers\touch\CommentToMsgHandler($this), #评论区私信
+                    WorkerEnum::RPA_COMMENT_TO_MARK_CLUE_CHECK => new \app\common\workerman\rpa\handlers\touch\CommentToMarkClueHandler($this), #评论区留痕获客
+                    WorkerEnum::RPA_COMMENT_TO_TOUCH_POST => new \app\common\workerman\rpa\handlers\touch\CommentToTouchPostHandler($this), #评论区截流上报
 
                     WorkerEnum::RPA_TAKE_OVER_TASK_RESULT_SAVE => new \app\common\workerman\rpa\handlers\TakeOverTaskResultSaveHandler($this), #接管任务结果保存
 
@@ -140,6 +141,24 @@ class RpaSocketService
         } finally{
             unset($message);
         }
+    }
+
+    private function replaceImageInfo($data)
+    {
+        $payload = json_decode($data, true);
+        $content = !is_array($payload['content']) ? json_decode($payload['content'], true) : $payload['content'];
+
+        if(isset($content['image'])){
+            $content['image'] = '图片内容';
+        }
+
+        if(isset($content['avatar'])){
+            $content['avatar'] = '头像图片内容';
+        }
+
+        $payload['content'] = $content;
+
+        return json_encode($payload, JSON_UNESCAPED_UNICODE);
     }
 
     private function verifyClientRequest(TcpConnection $connection, $message)

@@ -976,6 +976,7 @@ const recorderSuccess = (res: any) => {
 
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
+    videoDuration: [1, 59],
     onSuccess: (materials: any[]) => {
         if (replaceMaterialIndex.value !== -1) {
             formData.materialList[replaceMaterialIndex.value] = materials[0];
@@ -1017,6 +1018,7 @@ const handleSelectMaterial = async (res: any[]) => {
         rawList: res,
         urlField: "url",
         type: type as "video" | "image",
+        maxDuration: 59,
         replaceIndex: replaceMaterialIndex.value,
         onSuccess: () => (showMaterialLibrary.value = false),
     });
@@ -1032,6 +1034,7 @@ const handleSelectHistory = async (res: any[]) => {
         rawList: normalized,
         urlField: "actualUrl",
         type: "video",
+        maxDuration: 59,
         replaceIndex: replaceMaterialIndex.value,
         onSuccess: () => (showChooseHistory.value = false),
     });

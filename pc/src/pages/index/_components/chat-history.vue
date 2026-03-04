@@ -1,14 +1,10 @@
 <template>
     <div class="w-full h-full flex flex-col relative">
-        <div class="px-4 mt-4">
-            <ElButton class="modern-new-btn w-full !h-[48px] !rounded-2xl" type="primary" @click="handleNewSession">
-                <Icon name="local-icon-history_add" :size="18"></Icon>
-                <span class="ml-2 text-[14px] font-[900] tracking-wide">新建智能会话</span>
-            </ElButton>
-            <div class="flex items-center justify-between px-1 mt-8">
+        <div class="px-4 mt-3">
+            <div class="flex items-center justify-between px-1">
                 <div class="flex items-center gap-2 text-slate-400">
                     <Icon name="local-icon-time" :size="14"></Icon>
-                    <span class="text-[12px] font-black uppercase tracking-widest">最近会话</span>
+                    <span class="text-xs font-black uppercase tracking-widest">最近会话</span>
                 </div>
             </div>
         </div>
@@ -16,9 +12,9 @@
         <div class="grow min-h-0">
             <div v-if="isRefreshing" class="px-4 space-y-6 animate-pulse mt-4">
                 <div v-for="i in 2" :key="i">
-                    <div class="h-3 w-12 bg-slate-200 rounded-full mb-4 mx-2"></div>
+                    <div class="h-3 w-12 bg-gray-200 rounded-full mb-4 mx-2"></div>
                     <div class="space-y-2">
-                        <div v-for="j in 3" :key="j" class="h-11 bg-[#f1f5f9]/80 rounded-xl"></div>
+                        <div v-for="j in 3" :key="j" class="h-11 bg-gray-200 rounded-xl"></div>
                     </div>
                 </div>
             </div>

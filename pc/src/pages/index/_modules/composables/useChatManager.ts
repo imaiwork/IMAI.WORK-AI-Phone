@@ -22,6 +22,9 @@ export function useChatManager() {
     const chatStore = useChatStore();
     const userStore = useUserStore();
     const appStore = useAppStore();
+
+    const { chattingRef } = storeToRefs(chatStore);
+
     const { triggerHistoryRefresh } = useChatEventBus();
 
     // --- 从 Store 中获取响应式状态 ---
@@ -35,7 +38,6 @@ export function useChatManager() {
     /**
      * @description 聊天组件的引用 (用于调用其内部方法，如滚动到底部)。
      */
-    const chattingRef = shallowRef<any>(null);
 
     /**
      * @description 可读流的读取器，用于手动中断流。
@@ -43,24 +45,6 @@ export function useChatManager() {
     const streamReader = shallowRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
 
     // --- 私有方法 ---
-
-    /**
-     * @description 滚动聊天窗口到底部。
-     */
-    const chatScrollToBottom = () => {
-        nextTick(() => chattingRef.value?.scrollToBottom());
-    };
-
-    /**
-     * @description 重置浏览器URL，清除查询参数。
-     */
-    const resetURLPath = () => {
-        replaceState({
-            task_id: undefined,
-            agent_name: undefined,
-            agent_id: undefined,
-        });
-    };
 
     /**
      * @description 处理流式响应的数据块。
@@ -73,7 +57,14 @@ export function useChatManager() {
             .forEach((text) => {
                 if (!text) return;
                 try {
-                    const { object, content, task_id: newTaskId, usage, reasoning_content } = JSON.parse(text);
+                    const {
+                        object,
+                        content,
+                        task_id: newTaskId,
+                        usage,
+                        reasoning_content,
+                        check_robot_id,
+                    } = JSON.parse(text);
                     if (newTaskId && !taskId.value) {
                         const firstMessage = chatContentList.value[0];
                         if (firstMessage) {
@@ -105,10 +96,13 @@ export function useChatManager() {
                         }
                         chatStore.updateLastMessage(update);
                     } else if (object === "finished") {
+                        if (check_robot_id) {
+                            chatStore.setAgent({ id: check_robot_id });
+                        }
                         chatStore.updateLastMessage({ consume_tokens: usage });
                     }
+                    chatScrollToBottom();
                 } catch (e) {}
-                chatScrollToBottom();
             });
     };
 
@@ -150,7 +144,6 @@ export function useChatManager() {
                 ) ?? [];
 
             chatStore.chatContentList = historyMessages;
-            chatScrollToBottom();
         } finally {
             chatStore.isLoading = false;
         }
@@ -188,7 +181,6 @@ export function useChatManager() {
         chatStore.startReceiving();
         chattingRef.value?.clearQuote();
         resetScroll();
-        chatScrollToBottom();
 
         // 2. 发起API请求
         try {
@@ -213,7 +205,9 @@ export function useChatManager() {
                         chatStore.stopReceiving();
                         chatStore.clearFiles();
                         userStore.getUser(); // 刷新用户信息（例如，token消耗）
-                        chatScrollToBottom();
+                        setTimeout(() => {
+                            chatScrollToBottom();
+                        }, 100);
                         cb?.();
                     },
                 }
@@ -223,8 +217,6 @@ export function useChatManager() {
             if (error?.type == "cancel") return;
             const errorMessage = error?.type == "cancel" ? "用户已停止内容生成" : error || "消息发送失败";
             chatStore.updateLastMessage({ error: errorMessage, loading: false });
-        } finally {
-            chatScrollToBottom();
         }
     };
 
@@ -241,6 +233,24 @@ export function useChatManager() {
         if (chatConfig.value?.new_chat_prompt) {
             sendMessage(chatConfig.value.new_chat_prompt, true);
         }
+    };
+
+    /**
+     * @description 滚动聊天窗口到底部。
+     */
+    const chatScrollToBottom = () => {
+        nextTick(() => chattingRef.value?.scrollToBottom());
+    };
+
+    /**
+     * @description 重置浏览器URL，清除查询参数。
+     */
+    const resetURLPath = () => {
+        replaceState({
+            task_id: undefined,
+            agent_name: undefined,
+            agent_id: undefined,
+        });
     };
 
     /**

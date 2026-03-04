@@ -262,6 +262,10 @@ class MessageHandler extends BaseMessageHandler
                     $this->updatePrivateMessageStatus($account, $friend, $this->payload['reply']);
                     return;
                 }
+
+                //查询原来的模型名
+                $robot->model = \app\common\model\chat\ModelsCost::where('id', $robot->model_sub_id)->limit(1)->value('alias');
+
                 $this->setLog('机器人:', 'msg');
                 $this->setLog($robot, 'msg');
                 //5 获取ai回复策略数据,未配置策略则提示
@@ -728,7 +732,7 @@ class MessageHandler extends BaseMessageHandler
             // }
 
             $accountWechat = AiWechat::where('wechat_id', '=', function ($query) use ($account) {
-                $query->name('sv_account')->where('device_code', $account['device_code'])->where('type', 1)->where('user_id', $account['user_id'])->field('account');
+                $query->name('sv_account')->where('device_code', $account['device_code'])->where('type', 1)->where('user_id', $account['user_id'])->order('id', 'desc')->limit(1)->field('account');
             })->where('user_id', $account['user_id'])->limit(1)->findOrEmpty();
             if ($accountWechat->isEmpty()) {
                 $this->setLog('账号未绑定微信,请先绑定微信:' . Db::getLastSql(), 'msg');
@@ -1236,6 +1240,7 @@ class MessageHandler extends BaseMessageHandler
                         if ($this->request['model'] != 'deepseek') {
                             $this->request['stream'] = false;
                         }
+                        $this->setLog('socialMediaObtain 回复', 'msg');
                         $response = \app\common\service\ToolsService::Automation()->socialMediaObtain($this->request);
                     }
                     // 执行微信AI消息处理

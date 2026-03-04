@@ -159,7 +159,7 @@ defineExpose({
 <style scoped lang="scss">
 /* 复制按钮药丸样式 */
 .copy-pill-btn {
-    @apply flex items-center justify-center px-4 py-2 rounded-full bg-white text-primary text-[12px] font-black  transform translate-y-2 group-hover:translate-y-0 transition-all duration-300;
+    @apply flex items-center justify-center px-4 py-2 rounded-full bg-white text-primary text-xs font-black  transform translate-y-2 group-hover:translate-y-0 transition-all duration-300;
     border: none;
     cursor: pointer;
     &:hover {

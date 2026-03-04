@@ -185,7 +185,7 @@
                             </ElTableColumn>
                             <ElTableColumn label="最后更新" width="160">
                                 <template #default="{ row }">
-                                    <span class="text-[12px] font-medium text-[#64748B]">{{ row.create_time }}</span>
+                                    <span class="text-xs font-medium text-[#64748B]">{{ row.create_time }}</span>
                                 </template>
                             </ElTableColumn>
 
@@ -230,7 +230,7 @@
                         </ElTable>
                     </div>
                     <div class="shrink-0 h-[72px] px-8 flex items-center justify-between bg-[#f8fafc]/50">
-                        <span class="text-[12px] font-medium text-[#94A3B8]"
+                        <span class="text-xs font-medium text-[#94A3B8]"
                             >显示 {{ pager.lists.length }} 条，共 {{ pager.count }} 条账号数据</span
                         >
                         <pagination v-model="pager" @change="getLists" />
@@ -411,7 +411,7 @@ getDeviceList();
 }
 
 .action-btn {
-    @apply flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-medium text-[#64748B] hover:bg-[#F1F5F9] hover:text-primary transition-all;
+    @apply flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-[#64748B] hover:bg-[#F1F5F9] hover:text-primary transition-all;
 }
 
 .custom-scrollbar::-webkit-scrollbar {

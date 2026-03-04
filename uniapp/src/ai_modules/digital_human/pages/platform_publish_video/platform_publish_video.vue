@@ -161,7 +161,7 @@ const getVideoList = async () => {
 };
 
 const handlePublish = async (item: any) => {
-    if (userTokens.value <= getToken.value) {
+    if (userTokens.value < getToken.value) {
         rechargePopupRef.value?.open();
         return;
     }

@@ -20,7 +20,7 @@
                                 v-for="item in generateTypeTabs"
                                 :key="item.id"
                                 @click="generateType = item.id"
-                                class="px-6 py-1.5 rounded-[10px] text-[12px] font-black cursor-pointer transition-all duration-300"
+                                class="px-6 py-1.5 rounded-[10px] text-xs font-black cursor-pointer transition-all duration-300"
                                 :class="
                                     generateType === item.id
                                         ? 'bg-white text-primary'
@@ -107,9 +107,7 @@
 
                 <div class="bg-white rounded-[24px] p-5 border border-[#F1F5F9] space-y-6">
                     <div>
-                        <div class="text-[12px] font-black text-[#94A3B8] mb-4 uppercase tracking-widest px-1">
-                            风格
-                        </div>
+                        <div class="text-xs font-black text-[#94A3B8] mb-4 uppercase tracking-widest px-1">风格</div>
                         <div class="flex items-center gap-2">
                             <div
                                 v-for="item in styleOptions"
@@ -122,9 +120,7 @@
                     </div>
 
                     <div>
-                        <div class="text-[12px] font-black text-[#94A3B8] mb-4 uppercase tracking-widest px-1">
-                            分辨率
-                        </div>
+                        <div class="text-xs font-black text-[#94A3B8] mb-4 uppercase tracking-widest px-1">分辨率</div>
                         <div class="flex gap-2">
                             <ElSelect
                                 v-model="currResolution"
@@ -139,7 +135,7 @@
                                     :value="item.label" />
                             </ElSelect>
                             <div
-                                class="flex-1 flex items-center gap-2 px-4 h-11 bg-slate-50 border border-[#F1F5F9] rounded-xl text-[12px] font-medium text-[#64748B]">
+                                class="flex-1 flex items-center gap-2 px-4 h-11 bg-slate-50 border border-[#F1F5F9] rounded-xl text-xs font-medium text-[#64748B]">
                                 <span class="opacity-40">W</span> {{ getResolutionSize.width }}
                                 <span class="mx-1 opacity-20">|</span>
                                 <span class="opacity-40">H</span> {{ getResolutionSize.height }}

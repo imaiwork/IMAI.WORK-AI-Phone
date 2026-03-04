@@ -35,7 +35,7 @@
                                     v-if="tokensValue && isRag"
                                     class="mt-6 flex items-center justify-center gap-2 p-3 bg-[#FFF9F0] rounded-xl border border-[#FFE4BA]">
                                     <Icon name="el-icon-WarningFilled" color="#ED6A0C" :size="16" />
-                                    <span class="text-[12px] font-medium text-[#ED6A0C]">
+                                    <span class="text-xs font-medium text-[#ED6A0C]">
                                         本次操作将消耗
                                         <span class="text-[15px] font-black">{{ tokensValue }}</span> 算力
                                     </span>
@@ -57,7 +57,7 @@
 
                         <div
                             v-if="userTokens < tokensValue && isRag"
-                            class="text-[12px] font-medium text-red-500 flex items-center gap-1">
+                            class="text-xs font-medium text-red-500 flex items-center gap-1">
                             <Icon name="el-icon-CircleClose" />
                             当前算力不足 (剩余 {{ userTokens }})
                         </div>

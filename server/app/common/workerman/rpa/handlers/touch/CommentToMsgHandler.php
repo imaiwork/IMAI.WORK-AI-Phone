@@ -35,7 +35,7 @@ class CommentToMsgHandler extends BaseMessageHandler
             $this->setLog('异常信息' . $e, 'task_complete');
             $this->payload['reply'] = $e->getMessage();
             $this->payload['code'] =  WorkerEnum::RPA_COMMENT_TO_MSG_FAIL;
-            $this->payload['type'] = WorkerEnum::RPA_COMMENT_TO_MSG;
+            $this->payload['type'] = WorkerEnum::RPA_COMMENT_TO_MSG_CHECK;
             $this->payload['content'] = [
                 'code' =>  WorkerEnum::RPA_COMMENT_TO_MSG_FAIL,
                 'msg' => '异常信息:' . $e->getMessage(),
@@ -125,7 +125,7 @@ class CommentToMsgHandler extends BaseMessageHandler
                 'comment_content'     => $content['comment_content'] ?? '',
                 'touch_content'       => $content['touch_content'] ?? '',
             ];
-            SvLeadScrapingRecord::create($insert);
+            //SvLeadScrapingRecord::create($insert);
             $autoType = SvDevice::where('device_code', $this->payload['deviceId'])->value('auto_type') ?? 0;
             if ($autoType == 1) {
                 $response = \app\common\service\ToolsService::Automation()->shutOffPrivateLetter($content);
@@ -150,7 +150,7 @@ class CommentToMsgHandler extends BaseMessageHandler
             $this->setLog('异常信息' . $e, 'task_complete');
             $this->payload['reply'] = $e->getMessage();
             $this->payload['code'] =  WorkerEnum::RPA_COMMENT_TO_MSG_FAIL;
-            $this->payload['type'] = WorkerEnum::RPA_COMMENT_TO_MSG;
+            $this->payload['type'] = WorkerEnum::RPA_COMMENT_TO_MSG_CHECK;
             $this->payload['content'] = [
                 'code' =>  WorkerEnum::RPA_COMMENT_TO_MSG_FAIL,
                 'msg' => '异常信息:' . $e->getMessage(),

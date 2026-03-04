@@ -42,8 +42,7 @@
                                         lazy />
                                     <div
                                         class="absolute inset-0 bg-[#0065fb]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <div
-                                            class="px-4 py-2 bg-white rounded-full text-primary text-[12px] font-black">
+                                        <div class="px-4 py-2 bg-white rounded-full text-primary text-xs font-black">
                                             使用此案例
                                         </div>
                                     </div>

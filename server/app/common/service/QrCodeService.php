@@ -9,6 +9,7 @@ use Endroid\QrCode\Color\ColorInterface;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelHigh;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelInterface;
+use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
 use Endroid\QrCode\Logo\Logo;
 use Endroid\QrCode\Logo\LogoInterface;
 use Endroid\QrCode\RoundBlockSizeMode\RoundBlockSizeModeInterface;
@@ -30,7 +31,7 @@ class QrCodeService
     /**
      * 默认配置
      */
-    private const DEFAULT_SIZE = 300;
+    private const DEFAULT_SIZE = 600;
     private const DEFAULT_MARGIN = 10;
     private const DEFAULT_LOGO_WIDTH = 50;
     private const DEFAULT_SAVE_PATH = 'uploads/qrcode/';
@@ -139,7 +140,7 @@ class QrCodeService
             $qrCode = \Endroid\QrCode\QrCode::create($text)
                 ->setSize($size)
                 ->setMargin($margin)
-                ->setErrorCorrectionLevel(new ErrorCorrectionLevelHigh());
+                ->setErrorCorrectionLevel(new ErrorCorrectionLevelMedium());  
 
             $writer = new PngWriter();
             $result = $writer->write($qrCode);

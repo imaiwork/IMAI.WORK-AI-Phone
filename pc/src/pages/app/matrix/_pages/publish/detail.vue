@@ -134,7 +134,7 @@
                                     <h4 class="text-sm font-medium text-[#1E293B] line-clamp-1">
                                         {{ item.material_title }}
                                     </h4>
-                                    <p class="text-[12px] text-[#64748B] leading-relaxed line-clamp-2">
+                                    <p class="text-xs text-[#64748B] leading-relaxed line-clamp-2">
                                         {{ item.material_subtitle }}
                                     </p>
 

@@ -52,6 +52,8 @@ class ActiveLogic extends ApiLogic
                         'user_id' => self::$uid,
                         'account' => $account['account'],
                         'account_type' => $account['type'],
+                        'nickname' => $account['nickname'],
+                        'avatar' => $account['avatar'],
                         'device_code' => $account['device_code'],
                         'start_time' => $time['start_time'],
                         'end_time' => $time['end_time'],

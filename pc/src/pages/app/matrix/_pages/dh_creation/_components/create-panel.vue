@@ -95,11 +95,11 @@
                     <ElTooltip placement="left">
                         <div
                             class="flex items-center gap-x-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-br cursor-help">
-                            <span class="text-[12px] font-medium text-[#64748B]">扣费规则</span>
+                            <span class="text-xs font-medium text-[#64748B]">扣费规则</span>
                             <Icon name="local-icon-tips2" :size="14"></Icon>
                         </div>
                         <template #content>
-                            <div class="text-[12px] leading-6 p-1">
+                            <div class="text-xs leading-6 p-1">
                                 1、若选择原视频音色，音色数量将按照视频数量进行扣费<br />
                                 2、若视频生成失败而音色成功，将扣除音色费用，退回视频费用<br />
                                 3、按照每个视频对应的时长收取合成费用

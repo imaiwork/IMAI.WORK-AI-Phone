@@ -74,7 +74,7 @@
                     <ElButton
                         link
                         :type="isEditMode ? 'warning' : 'info'"
-                        class="!text-[12px] !font-medium"
+                        class="!text-xs !font-medium"
                         @click="isEditMode = !isEditMode">
                         <Icon :name="isEditMode ? 'el-icon-CircleClose' : 'el-icon-Edit'" />
                         <span class="ml-1">
@@ -150,7 +150,7 @@
                                 v-if="!isFriendNoTag"
                                 type="danger"
                                 link
-                                class="!text-[12px]"
+                                class="!text-xs"
                                 @click="openTagPopup('remove', row)">
                                 移出当前标签
                             </ElButton>

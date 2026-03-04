@@ -55,6 +55,8 @@ class LikeReplyLogic extends ApiLogic
                         'task_name' => $params['task_name'],
                         'account' => $account['account'],
                         'account_type' => $account['type'],
+                        'nickname' => $account['nickname'],
+                        'avatar' => $account['avatar'],
                         'start_time' => $time['start_time'],
                         'end_time' => $time['end_time'],
                         'status' => DeviceEnum::TASK_STATUS_WAIT,

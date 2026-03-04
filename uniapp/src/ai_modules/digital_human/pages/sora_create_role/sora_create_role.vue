@@ -464,7 +464,7 @@ const changeRoleStyle = (e: any) => {
 // };
 
 const handleCreateRole = async () => {
-    if (userTokens.value <= getToken.value) {
+    if (userTokens.value < getToken.value) {
         rechargePopupRef.value?.open();
         return;
     }

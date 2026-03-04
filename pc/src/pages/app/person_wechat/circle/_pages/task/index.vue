@@ -262,7 +262,7 @@ getLists();
 
 <style scoped lang="scss">
 .status-pill {
-    @apply flex items-center gap-1.5 px-3 py-1 rounded-full w-fit border text-[12px] font-medium;
+    @apply flex items-center gap-1.5 px-3 py-1 rounded-full w-fit border text-xs font-medium;
 
     .dot {
         @apply w-1.5 h-1.5 rounded-full;

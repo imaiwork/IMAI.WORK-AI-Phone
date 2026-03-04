@@ -5,6 +5,7 @@ namespace app\api\controller\sora;
 
 use app\api\controller\BaseApiController;
 use app\api\logic\sora\SoraVideoSettingLogic;
+use app\api\validate\sora\SoraVideoTaskSettingValidate;
 use think\exception\HttpResponseException;
 use think\response\Json;
 
@@ -82,10 +83,37 @@ class SoraVideoSettingController extends BaseApiController
         }
     }
 
-    public function copywriting(){
+    public function copywriting()
+    {
         try {
             $params = $this->request->post();
             $result = SoraVideoSettingLogic::copywriting($params);
+            if ($result) {
+                return $this->data(SoraVideoSettingLogic::getReturnData());
+            }
+            return $this->fail(SoraVideoSettingLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+
+
+    /**
+     * @desc 重新生成视频
+     * @return \think\response\Json
+     * @date 2026/3/2 12:00
+     * @author MonitorAllen
+     */
+    public function retry()
+    {
+        try {
+            $params = $this->request->post();
+            $validate = new SoraVideoTaskSettingValidate();
+            if (!$validate->scene('retry')->check($params)) {
+                return $this->fail($validate->getError());
+            }
+            $result = SoraVideoSettingLogic::retry($params['id']);
             if ($result) {
                 return $this->data(SoraVideoSettingLogic::getReturnData());
             }

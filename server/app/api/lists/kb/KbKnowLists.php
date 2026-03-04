@@ -4,15 +4,16 @@
 namespace app\api\lists\kb;
 
 use app\api\lists\BaseApiDataLists;
-//use app\common\enum\ChatEnum;
-//use app\common\lists\ListsExtendInterface;
-//use app\common\model\chat\ModelsCost;
 use app\common\model\kb\KbKnow;
-//use app\common\model\kb\KbKnowShared;
 use app\common\model\kb\KbKnowFiles;
 use app\common\model\kb\KbKnowQa;
 use app\common\model\kb\KbKnowTeam;
 use app\common\model\user\User;
+
+//use app\common\enum\ChatEnum;
+//use app\common\lists\ListsExtendInterface;
+//use app\common\model\chat\ModelsCost;
+//use app\common\model\kb\KbKnowShared;
 
 /**
  * 知识库列表
@@ -31,6 +32,7 @@ class KbKnowLists extends BaseApiDataLists
         if (!empty($this->request->get('name'))) {
             $where[] = ['name', 'like', '%'.$this->request->get('name').'%'];
         }
+        $where[] = ['name', '<>', '模型大管家'];
         switch ($type){
             case 1: // 我的知识库
                 $where[] = ['user_id', '=', $this->userId];

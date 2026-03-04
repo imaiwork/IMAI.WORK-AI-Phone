@@ -149,6 +149,9 @@ onShow(checkTaskStatus);
 onUnload(() => {
     clearTimeout(timer);
 });
+onUnmounted(() => {
+    clearTimeout(timer);
+});
 
 onPageScroll((e) => {
     const { scrollTop } = e;

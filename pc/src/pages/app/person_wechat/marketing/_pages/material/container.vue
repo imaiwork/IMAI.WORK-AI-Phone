@@ -148,7 +148,7 @@
         </div>
 
         <div class="flex-shrink-0 px-6 py-4 border-t border-br-extra-light flex justify-between items-center bg-white">
-            <div class="text-[12px] text-tx-placeholder">
+            <div class="text-xs text-tx-placeholder">
                 已选 {{ selectIds.length }} 项，本页共 {{ pager.lists.length }} 项
             </div>
             <pagination v-model="pager" @change="getLists" />

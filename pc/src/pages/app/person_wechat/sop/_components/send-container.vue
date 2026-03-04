@@ -7,9 +7,7 @@
                         <div class="w-1.5 h-4 bg-primary rounded-full"></div>
                         <span class="text-[16px] font-black text-slate-800">推送计划配置</span>
                     </div>
-                    <div class="text-[12px] text-slate-400 font-medium">
-                        共 {{ formData.push_time_list.length }} 条计划
-                    </div>
+                    <div class="text-xs text-slate-400 font-medium">共 {{ formData.push_time_list.length }} 条计划</div>
                 </div>
 
                 <div class="grow min-h-0 py-4">

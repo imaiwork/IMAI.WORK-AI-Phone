@@ -164,7 +164,7 @@
                             <Icon name="el-icon-MagicStick" color="#C2410C" :size="18" />
                             <div class="flex flex-col gap-1">
                                 <span class="text-[13px] font-black text-[#C2410C]">温馨提示：RPA 自动招聘设置</span>
-                                <p class="text-[12px] text-[#9A3412] font-medium leading-relaxed">
+                                <p class="text-xs text-[#9A3412] font-medium leading-relaxed">
                                     初次建立岗位请在“保存”后，前往岗位列表点击“RPA设置”来配置自动投递与筛选逻辑。
                                 </p>
                             </div>

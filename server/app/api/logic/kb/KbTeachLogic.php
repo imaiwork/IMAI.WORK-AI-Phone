@@ -14,6 +14,7 @@ use app\common\model\kb\KbKnowFiles;
 use app\common\model\kb\KbKnowQa;
 use app\common\model\kb\KbKnowTeam;
 use app\common\model\kb\KbKnowTestRecord;
+use app\common\model\kb\KbRobot;
 use app\common\pgsql\KbEmbedding;
 use app\common\service\ai\VectorService;
 use app\common\service\FileService;
@@ -937,6 +938,114 @@ class KbTeachLogic extends BaseLogic
             }
             return $data;
         }catch (Exception $e){
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * @notes 模型大管家文件
+     * @author kb
+     */
+    public static function modelButlerFile($kbId, $userId): int
+    {
+        $file = KbKnowFiles::where('know_id', $kbId)->where('name', '模型大管家')->findOrEmpty();
+        if ($file->isEmpty()) {
+            $file = KbKnowFiles::create([
+                                            'know_id'     => $kbId,
+                                            'name'        => '模型大管家',
+                                            'user_id'     => $userId,
+                                            'size'        => 0,
+                                            'type'        => 'txt',
+                                            'file'        => '',
+                                            'is_qa'       => 0,
+                                            'is_default'  => 0,
+                                            'create_time' => time(),
+                                            'update_time' => time(),
+                                        ]);
+        }
+        return $file->id;
+    }
+
+    /**
+     * @notes 模型大管家训练智能体数据
+     * @author kb
+     */
+    public static function modelButlerRobotInsert($robotId, $KbId, $fdId, $userId): bool
+    {
+        $robot = KbRobot::where('id', $robotId)->findOrEmpty();
+        if ($robot->isEmpty()) {
+            return false;
+        }
+        $post = [
+            'kb_id'    => $KbId,
+            'fd_id'    => $fdId,
+            'question' => '智能体简介：' . $robot->intro."\n 智能体角色设定：" . $robot->roles_prompt . '。',
+            'answer'   => '【【@'.$robot->id.'】】',
+            'images'   => [],
+            'files'    => [],
+            'video'    => [],
+            'uuid'     => '',
+        ];
+        return self::insert($post, $userId);
+    }
+
+    /**
+     * @notes 模型大管家训练智能体数据编辑
+     * @author kb
+     */
+    public static function modelButlerRobotUpdate($robotId, $KbId, $fdId, $userId, $uuid): bool
+    {
+        $robot = KbRobot::where('id', $robotId)->findOrEmpty();
+        if ($robot->isEmpty()) {
+            return false;
+        }
+        $post = [
+            'kb_id'    => $KbId,
+            'fd_id'    => $fdId,
+            'question' => '智能体简介：' . $robot->intro."\n 智能体角色设定：" . $robot->roles_prompt . '。',
+            'answer'   => '【【@'.$robot->id.'】】',
+            'images'   => [],
+            'files'    => [],
+            'video'    => [],
+            'uuid'     => $uuid,
+        ];
+        return self::update($post, $userId);
+    }
+
+    /**
+     * @notes 模型大管家删除智能体数据
+     * @author kb
+    */
+    public static function modelButlerRobotDelete(array $post, int $userId): bool
+    {
+        try {
+            $uuids = $post['uuids'];
+            $kid   = intval($post['kb_id']);
+            // 验证知识库的数据
+            $modelKbEmbedding = new KbEmbedding();
+            $pgEmbeddings = $modelKbEmbedding
+                ->field(['uuid', 'user_id'])
+                ->whereIn('uuid', $uuids)
+                ->where(['kb_id'=>$kid])
+                ->where(['is_delete'=>0])
+                ->select()
+                ->toArray();
+            if (!$pgEmbeddings) {
+                return false;
+            }
+
+            $modelKbEmbedding
+                ->whereIn('uuid', $uuids)
+                ->where(['kb_id'=>$kid])
+                ->where(['is_delete'=>0])
+                ->update([
+                             'is_delete'   => 1,
+                             'delete_time' => time()
+                         ]);
+
+            return true;
+        } catch (Exception $e) {
             self::setError($e->getMessage());
             return false;
         }

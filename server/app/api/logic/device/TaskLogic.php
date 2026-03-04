@@ -124,7 +124,7 @@ class TaskLogic extends ApiLogic
     {
         $query = SvDeviceTask::where('device_code', $deviceCode)
             ->where('auto_type', 0)
-            ->where('user_id', $userId)
+            //->where('user_id', $userId)
             ->where('start_time', '<', $endTime)
             ->where('end_time', '>', $startTime);
 
@@ -504,12 +504,16 @@ class TaskLogic extends ApiLogic
                     AiWechatCircleTask::where('id', $task['sub_data_id'])->select()->delete();
                     break;
                 case DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT:
-                    $taskinfo = SvDeviceCircleLikeReplyAccount::where('id', $task['sub_data_id'])->where('user_id', self::$uid)->findOrEmpty();
-                    if ($taskinfo->isEmpty()) {
-                        throw new \Exception('点赞评论任务不存在');
-                    }
+                    // $taskinfo = SvDeviceCircleLikeReplyAccount::where('id', $task['sub_data_id'])->where('user_id', self::$uid)->findOrEmpty();
+                    // if ($taskinfo->isEmpty()) {
+                    //     throw new \Exception('点赞评论任务不存在');
+                    // }
                     //SvDeviceCircleLikeReply::where('id', $params['sub_task_id'])->select()->delete();
-                    SvDeviceCircleLikeReplyAccount::where('id', $taskinfo['id'])->select()->delete();
+                    SvDeviceCircleLikeReplyAccount::where('id', $task['sub_data_id'])->where('user_id', self::$uid)->select()->delete();
+                    $count = SvDeviceCircleLikeReplyAccount::where('circle_like_reply_id', $params['sub_task_id'])->where('user_id', self::$uid)->count();
+                    if($count == 0){
+                        SvDeviceCircleLikeReply::where('id', $params['sub_task_id'])->select()->delete();
+                    }
                     break;
 
                 case DeviceEnum::TASK_SOURCE_CLUES_WECHAT:

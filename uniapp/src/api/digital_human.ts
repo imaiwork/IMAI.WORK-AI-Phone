@@ -222,35 +222,45 @@ export const createSoraPublishTask = (data: Record<string, any>) => {
 
 // sora 文案生成
 export const generateSoraPrompt = (data: Record<string, any>) => {
-    return request.post({ url: "/sora.SoraVideoSetting/copywriting", data }, { ignoreCancel: true });
+    return request.post({ url: "/sora.soraVideoSetting/copywriting", data }, { ignoreCancel: true });
 };
 
 // sora 角色创建
 export const createSoraRole = (data: Record<string, any>) => {
-    return request.post({ url: "/sora.SoraAnchor/add", data });
+    return request.post({ url: "/sora.soraAnchor/add", data });
 };
 
 // sora 角色列表
 export const getSoraRoleList = (data: Record<string, any>) => {
-    return request.get({ url: "/sora.SoraAnchor/lists", data });
+    return request.get({ url: "/sora.soraAnchor/lists", data });
 };
 
 // sora 角色公共列表
 export const getSoraRolePublicList = (data: Record<string, any>) => {
-    return request.get({ url: "/sora.SoraAnchor/publicLists", data });
+    return request.get({ url: "/sora.soraAnchor/publicLists", data });
 };
 
 // sora 角色删除
 export const deleteSoraRole = (data: Record<string, any>) => {
-    return request.post({ url: "/sora.SoraAnchor/delete", data });
+    return request.post({ url: "/sora.soraAnchor/delete", data });
 };
 
 // sora 角色编辑
 export const editSoraRole = (data: Record<string, any>) => {
-    return request.post({ url: "/sora.SoraAnchor/update", data });
+    return request.post({ url: "/sora.soraAnchor/update", data });
+};
+
+// sora 任务重试
+export const retrySoraTask = (data: Record<string, any>) => {
+    return request.post({ url: "/sora.soraVideoSetting/retry", data });
 };
 
 // 批量克隆形象
 export const batchCloneAnchor = (data: Record<string, any>) => {
     return request.post({ url: "/digitalHuman/createAnchor", data });
+};
+
+// 分镜混剪创建
+export const createMontageStoryboard = (data: Record<string, any>) => {
+    return request.post({ url: "/storyboard.StoryboardVideoSetting/add", data });
 };

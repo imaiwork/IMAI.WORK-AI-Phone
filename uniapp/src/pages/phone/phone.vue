@@ -130,8 +130,10 @@
                                     </view>
                                     <view class="text-[#ff2442] font-medium" v-else> 未获取社媒账号 </view>
                                 </view>
-                                <view class="mt-[30rpx]" v-if="item.status == TaskStatusEnum.IDLE">
-                                    <view class="font-medium">当前任务（{{ item.task_count }}）</view>
+                                <view
+                                    class="mt-[30rpx]"
+                                    v-if="[TaskStatusEnum.IDLE, TaskStatusEnum.WORKING].includes(item.status)">
+                                    <view class="font-medium">当前任务（{{ item.task_waiting_count || 0 }}）</view>
                                     <view class="flex gap-x-10 items-center" v-if="item.tasks?.length > 0">
                                         <view class="flex-1">
                                             <view
@@ -217,7 +219,7 @@
                             <template v-else>
                                 <view class="mt-[34rpx]">
                                     <view class="flex items-center justify-between">
-                                        <template v-if="[0,2].includes(item.is_auto_setting)">
+                                        <template v-if="item.is_empty == 1">
                                             <view
                                                 class="text-[#FF2442] font-medium"
                                                 @click.stop="
@@ -263,7 +265,7 @@
                                             class="flex-1 h-[80rpx] bg-[#FF2442] rounded-[16rpx] flex items-center justify-center gap-x-2"
                                             @click.stop="
                                                 toPage(
-                                                    [0, 2].includes(item.is_auto_setting)
+                                                    item.is_empty == 1
                                                         ? '/ai_modules/device/pages/create_auto_task/create_auto_task'
                                                         : '/ai_modules/device/pages/auto_task/auto_task',
                                                     {
@@ -328,6 +330,14 @@
                 </template>
             </z-paging>
         </view>
+        <dragon-button :x-edge="-20" v-if="deviceList.length > 0">
+            <view
+                class="w-[100rpx] h-[100rpx] rounded-full flex items-center justify-center"
+                style="background: linear-gradient(180deg, rgba(77, 163, 255, 1) 0%, rgba(0, 122, 255, 1) 100%)"
+                @click="toPage('/ai_modules/device/pages/choose_task_type/choose_task_type')">
+                <u-icon name="plus" color="#ffffff" size="34"></u-icon>
+            </view>
+        </dragon-button>
         <tabbar />
     </view>
     <confirm-dialog

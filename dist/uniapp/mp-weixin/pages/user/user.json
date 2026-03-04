@@ -5,6 +5,7 @@
   "disableScroll": true,
   "usingComponents": {
     "u-navbar": "../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "router-navigate": "../../node-modules/uniapp-router-next/components/router-navigate/router-navigate",
     "tabbar": "../../components/tabbar/tabbar",
     "u-button": "../../uni_modules/vk-uview-ui/components/u-button/u-button",

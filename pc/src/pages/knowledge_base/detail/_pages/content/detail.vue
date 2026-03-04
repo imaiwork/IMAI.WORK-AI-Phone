@@ -8,7 +8,7 @@
                         <Icon name="el-icon-ArrowLeft" :size="16"></Icon>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-[12px] font-medium text-[#94A3B8] leading-none mb-1">返回列表</span>
+                        <span class="text-xs font-medium text-[#94A3B8] leading-none mb-1">返回列表</span>
                         <span class="text-[15px] font-[900] text-[#1E293B]">{{ fileName }}</span>
                     </div>
                 </div>
@@ -60,7 +60,7 @@
                                 <div class="flex justify-between items-start mb-3">
                                     <div class="flex items-center gap-2">
                                         <span class="chunk-index">#{{ index + 1 }}</span>
-                                        <span class="text-[12px] text-[#94A3B8] font-medium">{{
+                                        <span class="text-xs text-[#94A3B8] font-medium">{{
                                             item.create_time || "分段详情"
                                         }}</span>
                                     </div>

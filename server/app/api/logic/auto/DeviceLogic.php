@@ -42,8 +42,62 @@ class DeviceLogic extends ApiLogic
             } else {
                 throw new \Exception('当前设备分析报告数据异常，请稍后再试');
             }
-
-
+    
+            if (isset($params['human_image']) && !empty($params['human_image'])) {
+                $humanImageData = $params['human_image'];
+                foreach ($humanImageData as $index => $item) {
+                    if (!isset($item['anchor_url']) || empty($item['anchor_url'])) {
+                        unset($humanImageData[$index]);
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        \think\facade\Log::channel('automediaSetting')->write($errorMsg);
+                        continue;
+                    }
+                    if (!isset($item['width']) || empty($item['width'])) {
+                        unset($humanImageData[$index]);
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        \think\facade\Log::channel('automediaSetting')->write($errorMsg);
+                        continue;
+                    }
+                    if (!isset($item['height']) || empty($item['height'])) {
+                        unset($humanImageData[$index]);
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        \think\facade\Log::channel('automediaSetting')->write($errorMsg);
+                        continue;
+                    }
+                    if (empty($item['chanjing_anchor_id'])) {
+                        unset($humanImageData[$index]);
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        \think\facade\Log::channel('automediaSetting')->write($errorMsg);
+                        continue;
+                    }
+                    if (empty($item['shanjian_anchor_id'])) {
+                        unset($humanImageData[$index]);
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        \think\facade\Log::channel('automediaSetting')->write($errorMsg);
+                        continue;
+                    }
+                }
+                if (count($humanImageData) > 0) {
+                  $params['human_image'] = array_values($humanImageData);
+                }else{
+                    $params['human_image'] = [];
+                }
+            }
+            if (isset($params['clip_material']) && !empty($params['clip_material'])) {
+                $clipMaterialData = $params['clip_material'];
+                foreach ($clipMaterialData as $index => $item) {
+                    if (isset($item['duration']) && $item['duration'] > 59.9) {
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，clip_material：' . json_encode($params['clip_material'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        \think\facade\Log::channel('automediaSetting')->write($errorMsg);
+                        unset($clipMaterialData[$index]);
+                    }
+                }
+                if (count($clipMaterialData) > 0) {
+                    $params['clip_material'] = array_values($clipMaterialData);
+                }else{
+                    $params['clip_material'] = [];
+                }
+            }
             $find = AutoDeviceConfig::where('user_id', self::$uid)->where('device_code', $params['device_code'])->findOrEmpty();
             if (!$find->isEmpty()) {
                 if ($find->status === DeviceEnum::AUTO_CONFIG_STATUS_RUNNING) {
@@ -706,7 +760,7 @@ class DeviceLogic extends ApiLogic
             'industry' => ['AI自动获客'],
             'is_like' => 1, //点赞
             'is_follow' => 1, //评论
-            'content' => ['oi'],
+            'content' => ['你好'],
             'filter' => array_merge(
                 \app\common\service\ConfigService::get('touch_clue',  'comment_screening',  []),
                 [',', '.', '?', '!', '，', '。', '！', '？', '多', '少', '钱', '可', '以', '吗']

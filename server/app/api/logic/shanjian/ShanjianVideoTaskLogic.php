@@ -218,6 +218,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
      */
     public static function notify(array $data): bool
     {
+       
         $notice = $setPublish = false;
         if (!isset($data['task_id']) || empty($data['task_id'])) {
             self::setError('缺少任务ID');
@@ -228,7 +229,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
         $task = ShanjianVideoTask::where('task_id', $data['task_id'])->where('status', 1)->find();
         if (!$task) {
             // 任务不存在或状态已变更，直接返回成功，避免回调方重试
-            Log::channel('shanjian')->info('Notify: 任务不存在或状态已变更，task_id: ' . $data['task_id']);
+            Log::channel('shanjiannotice')->info('Notify: 任务不存在或状态已变更，task_id: ' . $data['task_id']);
             return true;
         }
 
@@ -240,7 +241,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
             // 再次检查任务状态，确保在锁定期间没有被其他进程处理
             if (!$task || $task->status != 1) {
                 Db::commit(); // 任务已被处理，提交空事务并返回
-                Log::channel('shanjian')->info('Notify: 任务在锁定后发现已被处理，task_id: ' . $data['task_id']);
+                Log::channel('shanjiannotice')->info('Notify: 任务在锁定后发现已被处理，task_id: ' . $data['task_id']);
                 return true;
             }
 
@@ -300,7 +301,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 'old' => $old,
                                 'new' => $video_result_url
                             ];
-                            Log::channel('shanjian')->write('获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                            Log::channel('shanjiannotice')->write('获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                             $task->video_result_url = $video_result_url;
                             $task->duration = $data['result']['duration'] ?? '0';;
                         }
@@ -412,7 +413,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
             return true;
         } catch (\Exception $e) {
             Db::rollback();
-            Log::channel('shanjian')->error('Notify 处理失败, task_id: ' . $data['task_id'] . ', Error: ' . $e->getMessage());
+            Log::channel('shanjiannotice')->error('Notify 处理失败, task_id: ' . $data['task_id'] . ', Error: ' . $e->getMessage());
             self::setError($e->getMessage());
             return false;
         }
@@ -599,7 +600,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 $requestdata['materials'] =  $task->material;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
-                            Log::channel('shanjian')->write('合成视频' . json_encode($response));
+                            Log::channel('shanjiannotice')->write('合成视频' . json_encode($response));
 
                             if (!isset($response['data']['taskId']) || empty($response['data']['taskId'])) {
                                 $task->tries = $task->tries + 1;
@@ -677,7 +678,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 $requestdata['introduceCard']['description'] =  $task->card_introduced;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
-                            Log::channel('shanjian')->write('合成视频' . json_encode($response));
+                            Log::channel('shanjiannotice')->write('合成视频' . json_encode($response));
 
                             if (!isset($response['data']['taskId']) || empty($response['data']['taskId'])) {
                                 $task->tries = $task->tries + 1;
@@ -761,7 +762,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 $requestdata['materials'] =  $task->material;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
-                            Log::channel('shanjian')->write('合成视频' . json_encode($response));
+                            Log::channel('shanjiannotice')->write('合成视频' . json_encode($response));
 
                             if (!isset($response['data']['taskId']) || empty($response['data']['taskId'])) {
                                 $task->tries = $task->tries + 1;
@@ -834,7 +835,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 $requestdata['materials'] =  $task->material;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
-                            Log::channel('shanjian')->write('新闻合成视频' . json_encode($response));
+                            Log::channel('shanjiannotice')->write('新闻合成视频' . json_encode($response));
                             if (!isset($response['data']['taskId']) || empty($response['data']['taskId'])) {
                                 $task->tries = $task->tries + 1;
                                 if ($task->tries == 10) {
@@ -878,7 +879,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             break;
                     }
                 } catch (\Exception $e) {
-                    Log::channel('shanjian')->write('合成视频错误' . $e->getMessage());
+                    Log::channel('shanjiannotice')->write('合成视频错误' . $e->getMessage());
                     $task->tries = $task->tries + 1;
                     if ($task->tries == 10) {
                         $task->status = 2;
@@ -888,17 +889,9 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     $task->remark = $e->getMessage();
                     $task->save();
                 }
-
-                if ($setPublish ){
-                    $param = [
-                        'device_code' => $task->device_code,
-                        'sj_video_id' => $task->id
-                    ];
-                    \app\api\logic\auto\PublishLogic::setShanjianPublish($param);
-                }
             }
         } catch (\Exception $e) {
-            Log::channel('shanjian')->info('批量处理视频任务失败' . $e->getMessage());
+            Log::channel('shanjiannotice')->info('批量处理视频任务失败' . $e->getMessage());
         }
     }
 
@@ -909,35 +902,42 @@ class ShanjianVideoTaskLogic extends ApiLogic
     public static function check()
     {
         try {
-            // 修改点1：增加 limit 限制，防止一次查询太多导致长事务
             $tasks = ShanjianVideoTask::where('status', 1)
                 ->where('create_time', '<=', strtotime('-5 minutes'))
                 ->limit(20) 
                 ->select();
 
             foreach ($tasks as $task) {
+                $lockKey = 'shanjian_video_task_notify_' . $task->id;
+                $lock = cache($lockKey);
+                if ($lock) {
+                    continue;
+                }
+                cache($lockKey, 1, 300);
+
                 $setPublish = false;
                 
-                // 1. 先进行外部API调用，避免在事务中持有锁过长时间
                 $params = ['taskId' => $task->result_id, 'task_id' => $task->task_id];
                 $response = \app\common\service\ToolsService::Shanjian()->status($params);
 
-                // 如果API调用失败，或任务仍在处理中，则跳过当前任务，等待下次检查
                 if (
                     !isset($response['code']) ||
                     (isset($response['data']['status']) && $response['data']['status'] == 'processing')
                 ) {
+                    cache($lockKey, null);
                     continue;
                 }
-
+                $lock = cache($lockKey);
+                if ($lock) {
+                    continue;
+                }
                 Db::startTrans();
                 try {
-                    // 在事务中锁定任务行，防止与notify等其他进程并发修改
-                    $item = ShanjianVideoTask::where('id', $task->id)->lock(true)->find();
+                    $item = ShanjianVideoTask::where('id', $task->id)->find();
 
-                    // 再次检查任务状态，确保在锁定期间没有被处理
                     if (!$item || $item->status != 1) {
-                        Db::commit(); // 任务已被处理，提交空事务并继续下一个
+                        Db::commit();
+                        cache($lockKey, null);
                         continue;
                     }
 
@@ -947,6 +947,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         $item->remark = '关联的视频设置不存在，任务超时';
                         $item->save();
                         Db::commit();
+                        cache($lockKey, null);
                         continue;
                     }
                     
@@ -1003,7 +1004,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                         'old' => $old,
                                         'new' => $video_result_url
                                     ];
-                                    Log::channel('shanjian')->write('check获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                                    Log::channel('shanjiannotice')->write('check获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                                     $item->video_result_url = $video_result_url;
                                 }
                                 // 更新视频设置表的成功计数和状态
@@ -1069,19 +1070,20 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         $item->save();
                     }
                     Db::commit();
+                    cache($lockKey, null);
                 } catch (\Exception $e) {
                     Db::rollback();
+                    cache($lockKey, null);
                     $errorMsg = $e->getMessage();
 
                     // 修改点2：关键修复 - 识别锁等待超时
                     if (strpos($errorMsg, 'Lock wait timeout exceeded') !== false) {
-                        // 如果是锁超时，说明 notify 正在处理或数据库繁忙
-                        // 记录警告日志，但【不要】修改任务状态为失败，直接跳过，等待下一次 check
-                        Log::channel('shanjian')->warning('Check 任务锁等待超时，跳过本次处理: ' . $task->task_id);
+                        Log::channel('shanjiannotice')->warning('Check 任务锁等待超时，跳过本次处理: ' . $task->task_id);
+                        cache($lockKey, null);
                         continue; 
                     }
 
-                    Log::channel('shanjian')->error('Check 方法处理任务失败, task_id: ' . $task->task_id . ', Error: ' . $errorMsg);
+                    Log::channel('shanjiannotice')->error('Check 方法处理任务失败, task_id: ' . $task->task_id . ', Error: ' . $errorMsg);
                     
                     // 修改点3：只有非锁超时的真正异常，才标记为失败
                     // 使用 update 直接更新，避免使用旧对象 save 导致的问题
@@ -1107,7 +1109,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
             return true;
         } catch (\Exception|\think\db\exception\DataNotFoundException|\think\db\exception\ModelNotFoundException $e) {
             self::setError($e->getMessage());
-            Log::channel('shanjian')->error('Check 方法整体异常: ' . $e->getMessage());
+            Log::channel('shanjiannotice')->error('Check 方法整体异常: ' . $e->getMessage());
             return false;
         }
     }

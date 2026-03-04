@@ -28,7 +28,7 @@ class DisplayController extends BaseApiController
             if ($result) {
                 return $this->data(DisplayLogic::getReturnData());
             }
-            return $this->fail(DisplayLogic::getReturnData());
+            return $this->fail(DisplayLogic::getError());
         } catch (HttpResponseException $e) {
             return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }
@@ -38,4 +38,60 @@ class DisplayController extends BaseApiController
     {
         return $this->dataLists(new DisplayLists());
     }
+
+    public function cluesDetail()
+    {
+        try {
+            $params = $this->request->get();
+            $result = DisplayLogic::cluesDetail($params);
+            if ($result) {
+                return $this->data(DisplayLogic::getReturnData());
+            }
+            return $this->fail(DisplayLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+    public function touchDetail()
+    {
+        try {
+            $params = $this->request->get();
+            $result = DisplayLogic::touchDetail($params);
+            if ($result) {
+                return $this->data(DisplayLogic::getReturnData());
+            }
+            return $this->fail(DisplayLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    public function wechatCircleThumbCommentDetail()
+    {
+        try {
+            $params = $this->request->get();
+            $result = DisplayLogic::wechatCircleThumbCommentDetail($params);
+            if ($result) {
+                return $this->data(DisplayLogic::getReturnData());
+            }
+            return $this->fail(DisplayLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    public function cluesWechatDetail()
+    {
+        try {
+            $params = $this->request->get();
+            $result = DisplayLogic::cluesWechatDetail($params);
+            if ($result) {
+                return $this->data(DisplayLogic::getReturnData());
+            }
+            return $this->fail(DisplayLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
 }
