@@ -246,7 +246,7 @@
                         fontWeight: 'bold',
                         borderRadius: '20rpx',
                     }"
-                    @click="confirmSelection">
+                    @click="confirmSelection()">
                     确认选择
                 </u-button>
             </view>
@@ -560,6 +560,7 @@ const toTaskConfig = (item: any) => {
  * @returns {boolean} - 是否具备权限
  */
 const checkAccountPlatformPermission = (taskItem: any) => {
+    console.log("checkAccountPlatformPermission", taskItem);
     const { platform } = taskItem;
 
     // 如果没有平台要求，直接通过

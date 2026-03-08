@@ -4,6 +4,13 @@
         "miniprogram": {
             "list": [
                 {
+                    "name": "ai_modules/sph/pages/index/index",
+                    "pathName": "ai_modules/sph/pages/index/index",
+                    "query": "",
+                    "launchMode": "default",
+                    "scene": null
+                },
+                {
                     "name": "ai_modules/digital_human/pages/tone_clone/tone_clone",
                     "pathName": "ai_modules/digital_human/pages/tone_clone/tone_clone",
                     "query": "",

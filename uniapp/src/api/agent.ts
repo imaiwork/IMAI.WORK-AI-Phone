@@ -20,6 +20,11 @@ export function getAgentList(data: any) {
     return request.get({ url: "/kb.robot/lists", data });
 }
 
+// 获取全部智能体列表
+export function getAllAgentList(data: any) {
+    return request.get({ url: "/kb.robot/all", data });
+}
+
 // 删除智能体
 export function deleteAgent(data: any) {
     return request.post({ url: "/kb.robot/del", data });
@@ -33,6 +38,11 @@ export function getCommonAgentList(data: any) {
 // 获取系统智能体列表
 export function getSystemAgentList(data: any) {
     return request.get({ url: "/kb.robot/systemLists", data });
+}
+
+// 获取智能体详情
+export function getAgentDetail(data: any) {
+    return request.get({ url: "/kb.robot/detail", data });
 }
 
 // coze智能体列表

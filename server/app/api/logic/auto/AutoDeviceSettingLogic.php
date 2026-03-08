@@ -342,7 +342,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                         $typeName = '';
                         switch ($type) {
                             case 1:
-                                $typeName = '数字人口播';
+                                $typeName = '数字人口播混剪';
                                 break;
                             case 2:
                                 $typeName = '真人口播';
@@ -379,6 +379,10 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 'update_time' => $currentTime
                             ];
                             $materialDuration = 0;
+                            $extradata = [
+                                'setting_index' => 1,
+                                'create_type' => 'batch'
+                            ];
                             switch ($type) {
                                 case 1:
                                 case 2:
@@ -499,6 +503,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                                     $shanjianVideoSettingData['copywriting'] = json_encode($copywritingResult4, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                     $shanjianVideoSettingData['voice'] =  $firstHumanImage['shanjian_voice_id'] ?? '';
                                     $shanjianVideoSettingData['material'] = $material;
+                                    $extradata['videoDuration'] = 15;
                                     // 新闻体类型需要特殊处理
                                     $scene = 'newsMixCutting';
 
@@ -553,10 +558,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 'material' => $material,
                                 'music_url' => $music_url,
                                 'clip_id' => $clip_id,
-                                'extra' => json_encode([
-                                    'setting_index' => 1,
-                                    'create_type' => 'batch'
-                                ], JSON_UNESCAPED_UNICODE),
+                                'extra' => json_encode($extradata, JSON_UNESCAPED_UNICODE),
                                 'create_time' => time(),
                                 'update_time' => time()
                             ];

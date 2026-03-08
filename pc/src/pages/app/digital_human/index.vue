@@ -27,7 +27,6 @@ sidebar.value = [
         name: "数字人口播混剪",
         components: markRaw(MontageCreate),
         type: SidebarTypeEnum.BOUQUET_MIXING,
-        disabled: true,
     },
     { name: "真人口播视频混剪", components: markRaw(Tone), type: SidebarTypeEnum.REAL_PERSON_MIXING, disabled: true },
     { name: "素材混剪神器", components: markRaw(Audio), type: SidebarTypeEnum.MATERIAL_MIXING, disabled: true },

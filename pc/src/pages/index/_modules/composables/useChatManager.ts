@@ -138,7 +138,7 @@ export function useChatManager() {
                             : {
                                   ...item,
                                   is_reasoning_finished: true,
-                                  form_avatar: chatStore.detail.logo || chatConfig.value?.logo,
+                                  form_avatar: chatConfig.value?.logo,
                                   consume_tokens: item.tokens_info,
                               }
                 ) ?? [];

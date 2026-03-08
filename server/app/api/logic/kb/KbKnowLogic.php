@@ -13,6 +13,7 @@ use app\common\model\kb\KbKnowFiles;
 use app\common\model\kb\KbKnowQa;
 use app\common\model\kb\KbKnowTeam;
 use app\common\model\kb\KbRobot;
+use app\common\model\kb\KbRobotRelation;
 use app\common\model\knowledge\KnowledgeBind;
 use app\common\model\user\User;
 use app\common\pgsql\KbEmbedding;
@@ -23,6 +24,7 @@ use Exception;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
+use think\facade\Db;
 
 class KbKnowLogic extends BaseLogic
 {
@@ -1117,5 +1119,77 @@ class KbKnowLogic extends BaseLogic
                                    ]);
         }
         return $know->id;
+    }
+
+    /**
+     * @notes 后台创建智能体绑定用户定时任务
+     * @author kb
+     */
+    public static function systemKbRobotCheck()
+    {
+        Db::startTrans();
+        try {
+            $robotIds = KbRobot::where('user_id', 0)->column('id');
+            $userIds = KbKnow::where('name', '模型大管家')->column('user_id');
+
+            if (empty($robotIds) || empty($userIds)) {
+                Db::commit();
+                return true;
+            }
+
+            $existingRelationKeys = KbRobotRelation::whereIn('user_id', $userIds)
+                                                   ->whereIn('robot_id', $robotIds)
+                                                   ->select()
+                                                   ->map(function ($item) {
+                                                       // 拼接唯一键：用户ID_机器人ID
+                                                       return $item['user_id'] . '_' . $item['robot_id'];
+                                                   })
+                                                   ->toArray();
+            $existingRelationKeys = array_flip($existingRelationKeys);
+
+            $insertData = [];
+            foreach ($userIds as $userId) {
+                foreach ($robotIds as $robotId) {
+                    $currentKey = $userId . '_' . $robotId;
+                    if (!isset($existingRelationKeys[$currentKey])) {
+                        $insertData[] = [
+                            'robot_id'    => $robotId,
+                            'user_id'     => $userId,
+                            'create_time' => time(),
+                            'is_indexed'  => 0
+                        ];
+                    }
+                }
+            }
+            if (!empty($insertData)) {
+                KbRobotRelation::insertAll($insertData);
+            }
+            Db::commit();
+        } catch (\Exception $e) {
+            Db::rollback();
+            \think\facade\Log::error('模型大管家定时任务绑定关系失败：' . $e->getMessage());
+        }
+        return true;
+    }
+
+    /**
+     * @notes 后台创建智能体添加进用户模型大管家定时任务
+     * @author kb
+     */
+    public static function systemKbRobotInsertModelButlerKbKnow()
+    {
+        $relations = KbRobotRelation::where('is_indexed', 0)->select();
+        if (!$relations->isEmpty()) {
+            $relations = $relations->toArray();
+            foreach ($relations as $relation) {
+                $kbId = self::modelButlerKnow($relation['user_id']);
+                $fdId = KbTeachLogic::modelButlerFile($kbId, $relation['user_id']);
+                $res  = KbTeachLogic::modelButlerRobotInsert($relation['robot_id'], $kbId, $fdId, $relation['user_id']);
+                if ($res) {
+                    KbRobotRelation::where('id', $relation['id'])->update(['is_indexed' => 1]);
+                }
+            }
+        }
+        return true;
     }
 }

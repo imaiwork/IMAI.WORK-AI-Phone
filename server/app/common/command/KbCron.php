@@ -23,6 +23,8 @@ class KbCron extends Command
     protected function execute(Input $input, Output $output)
     {
         KbKnowLogic::modelButlerCheck();
+        KbKnowLogic::systemKbRobotCheck();
+        KbKnowLogic::systemKbRobotInsertModelButlerKbKnow();
         return true;
     }
 }

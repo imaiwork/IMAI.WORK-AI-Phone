@@ -1,6 +1,6 @@
 <template>
     <popup
-        v-model="show"
+        ref="popupRef"
         width="1000px"
         top="8vh"
         style="padding: 0; overflow: hidden"
@@ -65,6 +65,7 @@
                                 class="custom-textarea"
                                 placeholder="描述您的推广目标、受众或核心卖点..." />
 
+                            <!-- 期望文案长度 -->
                             <div
                                 class="mt-6 flex items-center justify-between pt-6 border-t border-dashed border-slate-100"
                                 v-if="isSystem">
@@ -75,12 +76,40 @@
                                         :key="item.id"
                                         class="px-5 h-8 flex items-center justify-center rounded-lg text-xs font-black cursor-pointer transition-all"
                                         :class="[
-                                            currentPromptValue === item.value
+                                            currentPromptValue === item.length
                                                 ? 'bg-white text-primary shadow-sm'
                                                 : 'text-slate-400 hover:text-slate-600',
                                         ]"
-                                        @click="currentPromptValue = item.value">
-                                        {{ item.label }}
+                                        @click="currentPromptValue = item.length">
+                                        {{ item.name }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 生成数量：仅 ORAL_MIX / NEWS / MATERIAL_MIX 显示 -->
+                            <div
+                                v-if="isSystem && showGenerateCount"
+                                class="mt-4 flex items-center justify-between pt-4 border-t border-dashed border-slate-100">
+                                <div class="text-sm font-[1000] text-gray-950 flex items-center gap-1.5">
+                                    生成数量
+                                    <ElTooltip content="一次生成多条文案，方便对比选择" placement="top">
+                                        <div class="cursor-pointer leading-[0]">
+                                            <Icon name="el-icon-QuestionFilled" color="#94a3b8" :size="14" />
+                                        </div>
+                                    </ElTooltip>
+                                </div>
+                                <div class="flex bg-gray-100 p-1 rounded-xl gap-1">
+                                    <div
+                                        v-for="item in generateCountList"
+                                        :key="item.value"
+                                        class="w-10 h-8 flex items-center justify-center rounded-lg text-xs font-black cursor-pointer transition-all"
+                                        :class="[
+                                            currentGenerateCount === item.value
+                                                ? 'bg-white text-primary shadow-sm'
+                                                : 'text-slate-400 hover:text-slate-600',
+                                        ]"
+                                        @click="currentGenerateCount = item.value">
+                                        {{ item.value }}
                                     </div>
                                 </div>
                             </div>
@@ -113,6 +142,7 @@
                             </div>
                         </div>
                     </div>
+
                     <ElScrollbar v-if="resultList.length > 0">
                         <div class="px-4">
                             <div class="space-y-4 pb-10">
@@ -139,7 +169,7 @@
                                                 :maxlength="maxSize || 2000" />
                                         </div>
 
-                                        <div class="flex items-center justify-between mt-5">
+                                        <div v-if="!showGenerateCount" class="flex items-center justify-between mt-5">
                                             <div class="text-[11px] text-slate-400 font-bold flex items-center gap-1">
                                                 <Icon name="el-icon-InfoFilled" />
                                                 文案可直接点击修改
@@ -150,6 +180,13 @@
                                                 使用此文案
                                             </button>
                                         </div>
+
+                                        <div v-else class="mt-5">
+                                            <div class="text-[11px] text-slate-400 font-bold flex items-center gap-1">
+                                                <Icon name="el-icon-InfoFilled" />
+                                                文案可直接点击修改
+                                            </div>
+                                        </div>
                                     </template>
 
                                     <div v-else class="flex flex-col items-center justify-center py-12 gap-4">
@@ -159,6 +196,16 @@
                                             AI Writing...
                                         </div>
                                     </div>
+                                </div>
+
+                                <div
+                                    v-if="showGenerateCount && !isReceiving && finishedResultList.length > 0"
+                                    class="sticky bottom-0 pt-2">
+                                    <button
+                                        class="w-full h-12 bg-slate-950 text-white rounded-2xl text-sm font-[1000] hover:bg-primary transition-all shadow-lg"
+                                        @click="useAllContent">
+                                        使用全部文案（{{ finishedResultList.length }} 条）
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -171,38 +218,29 @@
 <script setup lang="ts">
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
-import { CopywritingTypeEnum } from "@/pages/app/_enums/chatEnum";
+import { CreateVideoTypeEnum } from "@/pages/app/digital_human/_enums";
 import useAgent from "../_hooks/useAgent";
 import AgentSelect from "./agent-select.vue";
 
 const props = withDefaults(
     defineProps<{
-        modelValue: boolean;
-        promptType: CopywritingTypeEnum;
+        promptType: CreateVideoTypeEnum;
         maxSize?: number;
         disabled?: boolean;
     }>(),
     {
-        modelValue: false,
-        promptType: CopywritingTypeEnum.AI_DIGITAL_HUMAN_COPYWRITING,
-        maxSize: 0,
+        promptType: CreateVideoTypeEnum.DIGITAL_HUMAN,
+        maxSize: 500,
         disabled: false,
     }
 );
 
-const emit = defineEmits(["use-content", "update:modelValue", "close"]);
+const emit = defineEmits(["use-content", "close"]);
 
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
 
-const show = computed({
-    get() {
-        return props.modelValue;
-    },
-    set(value: boolean) {
-        emit("update:modelValue", value);
-    },
-});
+const popupRef = shallowRef();
 
 // State
 const contentVal = ref<string>("");
@@ -219,10 +257,22 @@ const agentData = reactive<{
 
 // 字数配置
 const promptList = [
-    { id: 1, label: "短", value: 150 },
-    { id: 2, label: "中", value: 300 },
-    { id: 3, label: "长", value: 1000 },
+    { id: 1, name: "长", length: 500 },
+    { id: 2, name: "中", length: 300 },
+    { id: 3, name: "短", length: 150 },
 ];
+
+// 生成数量配置
+const generateCountList = [
+    { label: "1条", value: 1 },
+    { label: "3条", value: 3 },
+    { label: "5条", value: 5 },
+    { label: "10条", value: 10 },
+    { label: "20条", value: 20 },
+];
+
+// 需要显示生成数量的类型
+const SHOW_COUNT_TYPES = [CreateVideoTypeEnum.ORAL_MIX, CreateVideoTypeEnum.NEWS, CreateVideoTypeEnum.MATERIAL_MIX];
 
 // 随机主题库
 const randomSubjects = [
@@ -238,7 +288,7 @@ const isSelectedAgent = computed(() => {
 });
 
 const getPromptList = computed(() => {
-    return promptList.filter((item) => item.value <= props.maxSize);
+    return promptList.filter((item) => item.length <= props.maxSize);
 });
 
 const getToken = computed(() => {
@@ -246,7 +296,24 @@ const getToken = computed(() => {
     return parseFloat(token);
 });
 
-const currentPromptValue = ref<any>(getPromptList.value[0]?.value);
+const currentPromptValue = ref<any>(getPromptList.value[0]?.length);
+
+const showGenerateCount = computed(() => {
+    return SHOW_COUNT_TYPES.includes(props.promptType);
+});
+
+const currentGenerateCount = ref<number>(generateCountList[0].value);
+
+const finishedResultList = computed(() => {
+    return resultList.value.filter((item) => !item.loading);
+});
+
+watch(
+    () => props.promptType,
+    () => {
+        currentGenerateCount.value = 1;
+    }
+);
 
 const isSystem = computed(() => {
     return agentData.agentType === 1;
@@ -258,15 +325,6 @@ const handleSelectAgent = (item: any) => {
     agentData.agentType = item.agentType;
 };
 
-const open = () => {
-    show.value = true;
-};
-
-const close = () => {
-    show.value = false;
-    emit("close");
-};
-
 const setRandomSubject = () => {
     const randomIndex = Math.floor(Math.random() * randomSubjects.length);
     contentVal.value = randomSubjects[randomIndex];
@@ -274,7 +332,6 @@ const setRandomSubject = () => {
 
 const { result, systemChat, handleGenerate, getDetail } = useAgent({
     onfinish: () => {
-        // 找到
         const currentResult = resultList.value.find((item) => item.loading);
         if (currentResult) {
             currentResult.content = result.value;
@@ -291,7 +348,7 @@ const { result, systemChat, handleGenerate, getDetail } = useAgent({
 });
 
 const handleGeneratePrompt = async () => {
-    if (agentData.agentId === -1 || !agentData.agentId) {
+    if (agentData.agentId === -1) {
         feedback.msgError("请选择智能体");
         return;
     }
@@ -300,6 +357,10 @@ const handleGeneratePrompt = async () => {
         return;
     }
     isReceiving.value = true;
+
+    // 实际生成数量：仅在显示数量选择时使用用户选择值，否则固定为 1
+    const generateCount = showGenerateCount.value ? currentGenerateCount.value : 1;
+
     const currentResult = reactive({
         loading: true,
         content: "",
@@ -308,20 +369,20 @@ const handleGeneratePrompt = async () => {
 
     if (isSystem.value) {
         try {
-            if (isSystem.value) {
-                const { content } = await systemChat({
-                    sn: agentData.agentId,
-                    keywords: contentVal.value,
-                    number: 1,
-                    length: currentPromptValue.value,
+            const { content } = await systemChat({
+                sn: agentData.agentId,
+                keywords: contentVal.value,
+                number: generateCount,
+                length: currentPromptValue.value,
+            });
+            if (content && content.length > 0) {
+                resultList.value.shift();
+                content.forEach((text: string) => {
+                    resultList.value.unshift(reactive({ loading: false, content: text }));
                 });
-                if (content && content.length > 0) {
-                    currentResult.content = content[0];
-                    currentResult.loading = false;
-                }
             }
         } catch (error) {
-            resultList.value.pop();
+            resultList.value.shift();
             feedback.msgError(error || "生成失败，请重试");
         } finally {
             isReceiving.value = false;
@@ -333,19 +394,33 @@ const handleGeneratePrompt = async () => {
     }
 };
 
+// 非生成数量模式：使用单条，回传 string[]
 const useContent = (content: string) => {
     emit("use-content", content);
     close();
 };
 
-const { lockFn: lockSubmit, isLock } = useLockFn(handleGeneratePrompt);
+// 生成数量模式：使用全部，回传 string[]
+const useAllContent = () => {
+    const contents = finishedResultList.value.map((item) => ({
+        title: contentVal.value,
+        content: item.content,
+    }));
+    emit("use-content", contents);
+    close();
+};
 
-watch(show, async (newVal) => {
-    if (newVal) {
-        await nextTick();
-        agentSelectRef?.value.getLists();
-    }
-});
+const open = async () => {
+    popupRef.value.open();
+    await nextTick();
+    agentSelectRef?.value.getLists();
+};
+
+const close = () => {
+    emit("close");
+};
+
+const { lockFn: lockSubmit, isLock } = useLockFn(handleGeneratePrompt);
 
 defineExpose({
     open,
@@ -368,6 +443,9 @@ defineExpose({
         border: none;
         box-shadow: none;
         @apply p-0 bg-[transparent] text-[14px] leading-relaxed font-bold text-slate-700;
+    }
+    .el-input__count {
+        @apply bg-[transparent] bottom-[-12px];
     }
 }
 

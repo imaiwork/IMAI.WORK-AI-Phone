@@ -52,7 +52,7 @@
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-[30rpx]">
+                        <view class="mt-[30rpx]" v-if="false">
                             <view class="font-medium">选择角色(选填)</view>
                             <view class="grid grid-cols-4 mt-[22rpx] gap-x-[16rpx]">
                                 <view
@@ -149,9 +149,9 @@
                                     {{ item.label }}
                                 </view>
                             </view>
-                            <view class="text-[#999999] text-[22rpx] mt-3"
-                                >提示：sora生成视频为官方模型，效果更佳稳定</view
-                            >
+                            <!-- <view class="text-[#999999] text-[22rpx] mt-3"
+                                >提示：sora(pro)生成目前为测试阶段，效果可能不稳定</view
+                            > -->
                         </view>
                         <view class="flex items-center justify-between gap-x-2 mt-[50rpx]">
                             <view class="text-[30rpx] font-medium">生成视频数量</view>
@@ -298,8 +298,8 @@ const videoDurations = [
     { label: "4s(普通)", value: 4, model: "sora-2" },
     { label: "8s(普通)", value: 8, model: "sora-2" },
     { label: "12s(普通)", value: 12, model: "sora-2" },
-    { label: "15s(PRO)", value: 15, model: "sora-2-pro" },
-    { label: "25s(PRO)", value: 25, model: "sora-2-pro" },
+    // { label: "15s(PRO)", value: 15, model: "sora-2-pro" },
+    // { label: "25s(PRO)", value: 25, model: "sora-2-pro" },
 ];
 
 const currVideoDurationIndex = ref<number>(0);
@@ -386,8 +386,8 @@ const handleMinusVideoCount = (type: "minus" | "add") => {
         }
         formData.video_count--;
     } else {
-        if (formData.video_count >= 99) {
-            uni.$u.toast("视频数量最多为99");
+        if (formData.video_count > 10) {
+            uni.$u.toast("视频数量最多为9");
             return;
         }
         formData.video_count++;
@@ -412,8 +412,8 @@ const handleCreateVideo = async () => {
         uni.$u.toast("请输入视频数量");
         return;
     }
-    if (formData.video_count > 99) {
-        uni.$u.toast("视频数量最多为99");
+    if (formData.video_count > 10) {
+        uni.$u.toast("视频数量最多为9");
         return;
     }
     uni.showLoading({

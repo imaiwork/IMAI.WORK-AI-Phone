@@ -5,13 +5,13 @@
                 <div
                     v-for="item in tabList"
                     :key="item.key"
-                    @click="handleTabChange(item.key)"
                     :class="[
                         'flex-1 py-2 text-center text-xs font-black rounded-lg cursor-pointer transition-all',
                         selectedTab === item.key
                             ? 'bg-white text-primary shadow-light'
                             : 'text-slate-500 hover:text-slate-700',
-                    ]">
+                    ]"
+                    @click="handleTabChange(item.key)">
                     {{ item.label }}
                 </div>
             </div>
@@ -21,13 +21,13 @@
             <div
                 v-for="agent in agentList"
                 :key="agent.key"
-                @click="handleAgentChange(agent.key)"
                 :class="[
                     'px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer border transition-all',
                     selectedAgent === agent.key
                         ? 'bg-[#0065fb]/5 text-primary border-[#0065fb]/20'
                         : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300',
-                ]">
+                ]"
+                @click="handleAgentChange(agent.key)">
                 {{ agent.label }}
             </div>
         </div>
@@ -36,17 +36,17 @@
             <ElScrollbar @end-reached="load">
                 <div class="p-3 space-y-2">
                     <div
-                        v-for="item in pager.lists"
+                        v-for="item in computedAgentList"
                         :key="item.id"
-                        @click="handleAgentClick(item)"
                         :class="[
                             'group flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border',
                             isCurrentAgent(item.id)
                                 ? 'bg-[#0065fb]/5 border-[#0065fb]/20 '
                                 : 'bg-white border-[transparent] hover:bg-slate-50',
-                        ]">
+                        ]"
+                        @click="handleAgentClick(item)">
                         <div class="relative">
-                            <img :src="item.image || DouBaoLogo" class="w-10 h-10 object-cover rounded-xl" />
+                            <img :src="item.image" class="w-10 h-10 object-cover rounded-xl" />
                             <div
                                 v-if="isCurrentAgent(item.id)"
                                 class="absolute -right-1 -top-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center border-2 border-white">
@@ -70,11 +70,22 @@
 import { getAgentList, getCozeAgentList, getSystemAgentList } from "@/api/agent";
 import DouBaoLogo from "@/assets/images/doubao.png";
 
+const props = withDefaults(
+    defineProps<{
+        systemAgentIds?: number[];
+        isSora?: boolean;
+    }>(),
+    {
+        systemAgentIds: () => [0, 1, 3, 4, 5, 6],
+        isSora: false,
+    }
+);
+
 const emit = defineEmits(["select-agent", "select-agent-type"]);
 
 const tabList = [
-    { key: "rewrite", label: "文案改写", type: 2 },
     { key: "generate", label: "文案生成", type: 1 },
+    { key: "rewrite", label: "文案改写", type: 2 },
 ];
 const selectedTab = ref(tabList[0].key);
 
@@ -99,10 +110,22 @@ const agentParams = reactive({
 const { pager, getLists, resetPage } = usePaging({
     fetchFun: (params: any) => {
         const currAgent = agentList.value.find((item) => item.key === selectedAgent.value);
+        if (props.isSora && selectedAgent.value === 1) {
+            delete currAgent?.params?.type;
+        }
         return currAgent?.api({ ...params, ...currAgent?.params });
     },
     params: agentParams,
     isScroll: true,
+});
+
+const computedAgentList = computed(() => {
+    if (selectedAgent.value === 1) {
+        return pager.lists
+            .filter((item: any) => (props.systemAgentIds.length > 0 ? props.systemAgentIds.includes(item.id) : true))
+            .map((item: any) => ({ ...item, image: DouBaoLogo }));
+    }
+    return pager.lists;
 });
 
 // 判断是否为当前选中的智能体

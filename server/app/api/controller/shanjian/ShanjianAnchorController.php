@@ -67,7 +67,7 @@ class ShanjianAnchorController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('shanjian')->write('接收闪剪形象合成参数'.json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('shanjiannotice')->write('接收闪剪形象合成参数'.json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             $key = md5(json_encode($data));
             $val = cache($key);
             if ($val) {
@@ -83,7 +83,7 @@ class ShanjianAnchorController extends BaseApiController
 //            Log::channel('shanjian')->write('闪剪回调处理成功');
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('shanjian')->write('闪剪形象回调失败'.$e->getMessage());
+            Log::channel('shanjiannotice')->write('闪剪形象回调失败'.$e->getMessage());
             return $this->fail('fail');
         }
     }
@@ -92,7 +92,7 @@ class ShanjianAnchorController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('shanjian')->write('接收闪剪音色合成参数'.json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('shanjiannotice')->write('接收闪剪音色合成参数'.json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
             $key = md5(json_encode($data));
             $val = cache($key);
@@ -108,7 +108,7 @@ class ShanjianAnchorController extends BaseApiController
             }
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('shanjian')->write('闪剪音色回调失败'.$e->getMessage());
+            Log::channel('shanjiannotice')->write('闪剪音色回调失败'.$e->getMessage());
             return $this->fail('fail');
         }
     }

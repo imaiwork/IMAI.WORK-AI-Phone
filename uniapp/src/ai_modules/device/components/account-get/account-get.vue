@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model="show" title="获取社媒账号" height="90%">
+    <popup-bottom v-model="show" title="获取社媒账号" :mask-close-able="false">
         <template #content>
             <view class="h-full">
                 <scroll-view scroll-y class="h-full">

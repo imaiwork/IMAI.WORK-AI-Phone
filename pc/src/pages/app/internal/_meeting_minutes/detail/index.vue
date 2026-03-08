@@ -80,7 +80,7 @@
                 <Note v-if="activeTypeTab === '3'" v-model="detail.text" @update:model-value="handleNoteUpdate" />
             </div>
         </div>
-        <div class="fixed right-4 top-[100px] z-[1001]">
+        <div class="fixed right-4 top-[100px] z-[1001]" v-if="false">
             <ElButton type="primary" @click="openKnbBind">知识库训练</ElButton>
         </div>
     </div>

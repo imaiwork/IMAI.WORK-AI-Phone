@@ -1,4 +1,4 @@
-import { getAgentList as getAgentListApi } from "@/api/agent";
+import { getAllAgentList as getAgentListApi } from "@/api/agent";
 import ChatArea from "chatarea";
 import "chatarea/lib/ChatArea.css";
 /**
@@ -181,6 +181,13 @@ export function useChatAreaManager(options: UseChatAreaOptions) {
         // 设置之前先清空之前选中的智能体
         if (currentAgent.value?.id) {
             chatAreaInstance.delUserTags([currentAgent.value.id]);
+        }
+        // 先检测agent里面的name 是不是空的，为空的通过id获取name
+        if (!agent.name) {
+            const { name } = agentList.value.find((item) => item.id == agent.id);
+            if (name) {
+                agent.name = name;
+            }
         }
         currentAgent.value = agent;
         chatAreaInstance.setUserTag(agent);

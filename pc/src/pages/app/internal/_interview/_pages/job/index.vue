@@ -28,7 +28,7 @@
             </div>
         </div>
 
-        <div class="grow min-h-0 mt-3">
+        <div class="grow min-h-0 mt-3" v-spin="{ show: loading }">
             <ElScrollbar :distance="20" @end-reached="load" v-if="pager.lists.length > 0">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
                     <div
@@ -133,8 +133,10 @@ import { dayjs } from "element-plus";
 import EditPop from "./_components/edit-pop.vue";
 import RpaEditPop from "./_components/rpa-edit.vue";
 
-const router = useRouter();
+const loading = ref<boolean>(true);
 
+const router = useRouter();
+const { show, hide } = useGlobalSpin();
 const { copy } = useCopy();
 const nuxtApp = useNuxtApp();
 const showEditPop = ref<boolean>(false);
@@ -200,7 +202,7 @@ const handleInterviewRecord = async (id: number) => {
 };
 
 const handleCopyLink = async (id: number) => {
-    feedback.loading("复制中...");
+    show({ text: "复制中..." });
     try {
         const { url } = await generateJobLink({ job_id: id });
         if (url) {
@@ -211,7 +213,7 @@ const handleCopyLink = async (id: number) => {
     } catch (error) {
         feedback.msgError(error);
     } finally {
-        feedback.closeLoading();
+        hide();
     }
 };
 
@@ -233,5 +235,13 @@ const load = async (e: string) => {
     }
 };
 
-getLists();
+const init = async () => {
+    try {
+        await getLists();
+    } finally {
+        loading.value = false;
+    }
+};
+
+init();
 </script>

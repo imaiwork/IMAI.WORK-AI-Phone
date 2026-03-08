@@ -66,7 +66,7 @@
                 </div>
             </div>
         </div>
-        <div class="grow min-h-0">
+        <div class="grow min-h-0" v-spin="{ show: loading, text: '加载中...' }">
             <ElScrollbar :distance="20" @end-reached="load">
                 <div class="p-4">
                     <template v-if="pager.lists.length">
@@ -121,6 +121,8 @@ import { getPublicAnchorList, deleteAnchor, deleteShanjianAnchor, deletePublicAn
 import AnchorVideo from "@/pages/app/_components/anchor-video.vue";
 
 const nuxtApp = useNuxtApp();
+
+const loading = ref<boolean>(true);
 
 const isDelete = ref<boolean>(false);
 const isAllSelect = ref<boolean>(false);
@@ -239,7 +241,15 @@ async function deleteBySourceType(sourceType: string, deleteFunction: Function) 
     await deleteFunction({ id: ids });
 }
 
-getLists();
+const init = async () => {
+    try {
+        await getLists();
+    } finally {
+        loading.value = false;
+    }
+};
+
+init();
 </script>
 
 <style scoped lang="scss">

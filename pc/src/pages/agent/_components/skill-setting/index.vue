@@ -73,7 +73,8 @@
                                             </div>
                                         </div>
                                         <ElButton link type="danger" @click.stop="handleDeleteWorkflow()">
-                                            <Icon name="el-icon-Delete" class="mr-[4px]" />移除
+                                            <Icon name="el-icon-Delete" />
+                                            <span class="ml-1">移除</span>
                                         </ElButton>
                                     </div>
                                     <ElEmpty

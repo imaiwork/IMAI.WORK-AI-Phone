@@ -72,7 +72,7 @@ export enum CreateVideoTypeEnum {
     ALL = 0,
     DIGITAL_HUMAN = 1,
     ORAL_MIX = 2,
-    TRUE_HUMAN = 3,
+    REAL_PERSON_MIXING = 3,
     MATERIAL_MIX = 4,
     NEWS = 5,
     SENTENCE = 6,
@@ -90,4 +90,20 @@ export enum MontageTypeEnum {
     NEWS_BODY = 4,
     // Sora生成视频
     SORA_VIDEO = 5,
+}
+
+export enum MontageStylesType {
+    DIGITAL_PERSON = 1,
+    REAL_PERSON = 2,
+    NEWS = 3,
+    MATERIAL = 4,
+}
+
+export enum MontageStylesChooseType {
+    ALL = 0,
+    HIGH = 1,
+    VARIETY = 2,
+    HOT = 3,
+    SIMPLE = 4,
+    LOCAL = 5,
 }

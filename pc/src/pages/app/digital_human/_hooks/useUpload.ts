@@ -77,7 +77,7 @@ export const useUpload = (options: Options) => {
         size = 100,
         widthResolution = [0, 2048],
         heightResolution = [0, 2048],
-        duration = [15, 60],
+        duration = [1, 59],
         extension = ["mp4", "mov"],
         maxDuration = 10,
         sizeType = ["original", "compressed"],

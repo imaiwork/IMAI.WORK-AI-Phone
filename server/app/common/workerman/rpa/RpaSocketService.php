@@ -289,21 +289,35 @@ class RpaSocketService
     public function onClose(TcpConnection $connection)
     {
         try {
-            // 收集连接信息用于日志
-            $ip = $connection->getRemoteIp();
-            $uid = isset($connection->uid) ? $connection->uid : 'unknown';
-            $name = isset($connection->name) ? $connection->name : '';
-            $reason = isset($connection->closeReason) ? $connection->closeReason : '正常关闭';
-
-            // 详细的关闭日志
-            $this->setLog('连接关闭 [IP:' . $ip . ', UID:' . $uid . ', 名称:' . $name . ', 原因:' . $reason . ']', 'info');
-            
             $deviceid = $connection->deviceid ?? '';
+            $uid = $connection->uid ?? 'unknown';
+            if($connection->deviceid !== '' && $this->redis->get("xhs:device:{$deviceid}") !== $uid){
+                $this->setLog("msg:设备与uid不匹配, uid: $uid, deviceid: ". ($connection->deviceid ?? '') .", name: ". ($connection->name ?? '') .", clientType: ". ($connection->clientType ?? '') .", lastMessageTime: ". ($connection->lastMessageTime ?? ''), 'error');
+                $connection->close();
+                return false;
+            }
+            // 收集连接信息用于日志
+            $log = array(
+                'info' => '连接关闭',
+                'ip' => $connection->getRemoteIp(),
+                'uid' => $connection->uid ?? 'unknown',
+                'name' => $connection->name ?? '',
+                'reason' => $connection->closeReason ?? '正常关闭',
+                'status' => $connection->getStatus(),
+                'port' => $connection->getRemotePort(),
+                'remote_address' => $connection->getRemoteAddress(),
+                'client_type' => $connection->clientType ?? '',
+                'getSendBufferQueueSize' => $connection->getSendBufferQueueSize(),
+                'getRecvBufferQueueSize' => $connection->getRecvBufferQueueSize(),
+                'time' => date('Y-m-d H:i:s', time()),
+            );
+            $this->setLog(json_encode($log, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+
+            
             if(!empty($deviceid)){
                 SvDevice::where('device_code', $deviceid)->update(['status' => 0, 'update_time' => time()]);
                 SvAccount::where('device_code', $deviceid)->update(['status' => 0, 'update_time' => time()]);
             }
-            
             //代表用户下线，清除用户信息
             if (isset($connection->uid)) {
                 $this->_unBind($connection->uid);
@@ -404,14 +418,12 @@ class RpaSocketService
 
         // 添加心跳检测定时器
         // Timer::add(10, function () use ($worker) {
-        //     $timeNow = time();
-        //     $this->setLog("心跳检测定时器触发, 当前时间: ". date('Y-m-d H:i:s', $timeNow), 'info');
-        //     $this->setLog("uidConnections: ". count($worker->uidConnections), 'info');
         //     foreach ($worker->uidConnections as $uid => $connection) {
-        //         // if (isset($connection->lastMessageTime) && ($timeNow - $connection->lastMessageTime) > $this->HEARTBEAT_TIME) {
-        //         //     $connection->close();
-        //         // }
-        //         $this->setLog("uid: $uid, deviceid: ". $connection->deviceid .", name: ". $connection->name .", clientType: ". $connection->clientType .", lastMessageTime: ". $connection->lastMessageTime, 'info');
+        //         if($connection->deviceid !== '' && $this->redis->get("xhs:device:{$connection->deviceid}") !== $uid){
+        //             $connection->close();
+        //             $worker->close($connection);
+        //             $this->setLog("uid: $uid, deviceid: ". $connection->deviceid .", name: ". $connection->name .", clientType: ". $connection->clientType .", lastMessageTime: ". $connection->lastMessageTime, 'info');
+        //         }
         //     }
         // });
     }
@@ -620,7 +632,7 @@ class RpaSocketService
                 return false;
             }
 
-            if (isset($this->worker->uidConnections[$uid]->deviceid)) {
+            if (isset($this->worker->uidConnections[$uid]->deviceid) ) {
                 $deviceid = $this->worker->uidConnections[$uid]->deviceid;
                 $this->redis->del("xhs:device:{$deviceid}");
                 $this->redis->del("xhs:device:{$deviceid}:status");

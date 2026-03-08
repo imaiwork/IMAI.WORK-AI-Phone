@@ -3,11 +3,7 @@
 
 namespace app\common\service\ai;
 
-use app\api\logic\service\TokenLogService;
 use app\common\enum\ChatEnum;
-use app\common\logic\AccountLogLogic;
-use app\common\model\chat\Models;
-use app\common\model\user\User;
 use app\common\service\ToolsService;
 use Exception;
 
@@ -47,7 +43,12 @@ class VectorService
         //TODO 暂时不收费
 //        $unit = TokenLogService::checkToken($userId, 'text_to_vector');
         $params['model'] = $model;
-        $params['document'] = $document;
+        if (mb_strlen($document) > 1024){
+            $params['document'] = mb_substr($document, 0, 1024);
+        }else{
+            $params['document'] = $document;
+        }
+
         $result = ToolsService::VectorKnowledge()->text2vector($params);
 //        if ($result['code']==10000){
 //            $points = ceil($result['data']['usage'] / $unit);

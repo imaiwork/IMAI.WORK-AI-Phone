@@ -277,12 +277,12 @@ class DeviceHandler extends BaseMessageHandler
 
             if (isset($worker->uidConnections[$uid])) {
 
-                foreach ($worker->uidConnections as $connection) {
-                    if($connection->deviceid == $payload['deviceId'] && $connection->uid !== $uid){
-                        $this->setLog('删除设备旧的socket连接, 设备号:' . $connection->deviceid . ', uid:' . $connection->uid . ', name:' . $connection->name, 'ws');
-                        $connection->close();
-                    }
-                }
+                // foreach ($worker->uidConnections as $connection) {
+                //     if($connection->deviceid == $payload['deviceId'] && $connection->uid !== $uid){
+                //         $this->setLog('删除设备旧的socket连接, 设备号:' . $connection->deviceid . ', uid:' . $connection->uid . ', name:' . $connection->name, 'ws');
+                //         $connection->close();
+                //     }
+                // }
 
                 $worker->uidConnections[$uid]->deviceid = $payload['deviceId'] ?? '';
                 $worker->uidConnections[$uid]->apptype = $payload['appType'] ?? 3;

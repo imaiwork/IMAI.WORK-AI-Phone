@@ -40,6 +40,12 @@
                             <material-picker type="video" v-model="item.video_case_url" :limit="1"></material-picker>
                         </div>
                     </el-form-item>
+                    <el-form-item>
+                        <div>
+                            <el-switch v-model="isShowVideoCase"></el-switch>
+                            <div class="form-tips">关闭后，数字人案例视频将关闭预览，方便小程序审核</div>
+                        </div>
+                    </el-form-item>
                     <div class="">
                         <el-button
                             v-perms="['ai_application.digital_human/edit']"
@@ -194,6 +200,15 @@ const banner = computed({
     },
 });
 
+const isShowVideoCase = computed({
+    get() {
+        return config.value?.digital_human.video_case_open == "1";
+    },
+    set(value: boolean) {
+        config.value.digital_human.video_case_open = value ? "1" : "0";
+    },
+});
+
 const caseLists = computed({
     get() {
         return config.value?.digital_human.video_case || [];
@@ -235,9 +250,12 @@ const { lockFn: lockSaveModelList } = useLockFn(async () => {
 
 const { lockFn: lockSaveBanner, isLock: isSaveBanner } = useLockFn(async () => {
     await saveConfig({
-        data: banner.value,
+        data: {
+            banner: "1",
+            video_case_open: "1",
+        },
         type: "digital_human",
-        name: "banner",
+        name: "index",
     });
     appStore.getConfig();
 });
@@ -247,6 +265,11 @@ const { lockFn: lockSaveCaseLists, isLock: isSaveCaseLists } = useLockFn(async (
         data: caseLists.value,
         type: "digital_human",
         name: "video_case",
+    });
+    await saveConfig({
+        data: isShowVideoCase.value ? 1 : 0,
+        type: "digital_human",
+        name: "video_case_open",
     });
 });
 

@@ -196,7 +196,7 @@ const getTypeName = (type: number) => {
     return [
         { name: "数字人口播", key: CreateVideoTypeEnum.DIGITAL_HUMAN },
         { name: "口播混剪", key: CreateVideoTypeEnum.ORAL_MIX },
-        { name: "真人口播", key: CreateVideoTypeEnum.TRUE_HUMAN },
+        { name: "真人口播", key: CreateVideoTypeEnum.REAL_PERSON_MIXING },
         { name: "素材混剪", key: CreateVideoTypeEnum.MATERIAL_MIX },
         { name: "新闻体", key: CreateVideoTypeEnum.NEWS },
         { name: "一句话生成", key: CreateVideoTypeEnum.SENTENCE },

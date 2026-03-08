@@ -103,6 +103,7 @@
                                             v-model="item.title"
                                             placeholder-style="color: #7C7E80; "
                                             type="textarea"
+                                            placeholder="请输入文案标题"
                                             :maxlength="1000"></u-input>
                                         <view class="mt-2 text-[#B2B2B2] text-end">
                                             {{ item.title.length }} / 1000
@@ -216,7 +217,7 @@ const getToken = computed(() => {
 const { result, getDetail, handleGenerate, pollingEnd } = useAgent({
     onfinish: () => {
         chatContentList.value[0].status = "success";
-        chatContentList.value[0].title = isNewsBody.value ? result : contentVal;
+        chatContentList.value[0].title = isNewsBody.value ? result : "";
         chatContentList.value[0].content = result;
         userStore.getUser();
     },
@@ -259,7 +260,7 @@ const contentPost = async (userInput: string) => {
             });
             if (content && content.length > 0) {
                 chatContentList.value = content.map((item: any) => ({
-                    title: isNewsBody.value ? item : userInput,
+                    title: isNewsBody.value ? item : "",
                     content: item,
                     status: "success",
                 }));
@@ -304,9 +305,8 @@ const useContent = () => {
         data: isNewsBody.value
             ? chatContentList.value.filter((item) => item.title.trim() !== "").map((item) => item.title)
             : chatContentList.value
-                  .filter((item) => item.title)
-                  .map((item) => ({ title: item.title, content: item.content }))
-                  .filter((item: { title: string; content: string[] }) => item.title.trim() !== ""),
+                  .filter((item) => item.content)
+                  .map((item) => ({ title: item.title, content: item.content })),
     });
     chatContentList.value = [];
     uni.navigateBack();

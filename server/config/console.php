@@ -74,6 +74,8 @@ return [
         'digital_human_anchor_cron' => 'app\common\command\DigitalHumanAnchorCron',
         'wechat_rpa_cron' => 'app\common\command\WechatRpaCron',
         'kb_cron' => 'app\common\command\KbCron',
+        //分镜混剪视频合成
+        'storyboard_video_task' => 'app\common\command\StoryboardVideoTaskCron',
     ],
 
     

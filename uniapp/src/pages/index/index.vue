@@ -36,7 +36,7 @@
             </view>
         </u-navbar>
         <view class="grow min-h-0 relative z-10 pt-2">
-            <view v-if="chatContentList.length == 0 && currType == 0" class="absolute top-0 h-full w-full z-[33]">
+            <view v-if="chatContentList.length == 0 && currType === 0" class="absolute top-0 h-full w-full z-[33]">
                 <view class="empty-container" v-if="!currAgent && !currModel">
                     <view
                         class="w-[120rpx] h-[120rpx] rounded-full shadow-[0_6rpx_10rpx_4rpx_rgba(105,120,255,0.5)] absolute top-[-30rpx] right-6 mx-auto">
@@ -81,25 +81,26 @@
                     </view>
                 </view>
             </view>
-            <chat-scroll-view
-                v-if="currType == 0"
-                ref="chattingRef"
-                v-model:file-list="fileList"
-                placeholder="发送消息、输入@选择智能体"
-                :is-stop="isStopChat"
-                :content-list="chatContentList"
-                :send-disabled="isReceiving"
-                :tokens="tokensValue"
-                @close="handleChatClose"
-                @add-session="handleAddSession"
-                @update:network="handleUpdateNetwork"
-                @content-post="handleContentPost"
-                @show-history="showHistory = true"
-                @update:agent="handleUpdateAgent"
-                @update:model="handleUpdateModel">
-                <template #content> </template>
-            </chat-scroll-view>
-            <view class="h-full w-full flex flex-col" v-if="currType == 1">
+            <view class="h-full w-full" v-show="currType === 0">
+                <chat-scroll-view
+                    ref="chattingRef"
+                    v-model:file-list="fileList"
+                    placeholder="发送消息、输入@选择智能体"
+                    :is-stop="isStopChat"
+                    :content-list="chatContentList"
+                    :send-disabled="isReceiving"
+                    :tokens="tokensValue"
+                    @close="handleChatClose"
+                    @add-session="handleAddSession"
+                    @update:network="handleUpdateNetwork"
+                    @content-post="handleContentPost"
+                    @show-history="showHistory = true"
+                    @update:agent="handleUpdateAgent"
+                    @update:model="handleUpdateModel">
+                    <template #content> </template>
+                </chat-scroll-view>
+            </view>
+            <view class="h-full w-full flex flex-col" v-show="currType === 1">
                 <view class="mt-4">
                     <scroll-view scroll-x>
                         <view class="flex gap-2 px-[32rpx]">
@@ -175,7 +176,7 @@
                     </z-paging>
                 </view>
             </view>
-            <view class="h-full w-full" v-if="currType == 2">
+            <view class="h-full w-full" v-show="currType === 2">
                 <view class="m-4 mt-2 relative z-10">
                     <u-search
                         v-model="queryParams.name"
@@ -301,7 +302,7 @@
                 </view>
             </view>
         </view>
-        <tabbar v-if="chatContentList.length === 0 || !currAgent || !currModel" />
+        <tabbar v-if="chatContentList.length === 0 && !currAgent && !currModel" />
     </view>
     <popup-bottom v-model="showHistory" title="历史记录" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
         <template #content>
@@ -344,8 +345,6 @@ import { chatSendTextStream, getChatLog, getCreativeRecord } from "@/api/chat";
 import { robotCategory, robotLists, getAgentList, getCozeAgentList, deleteAgent, deleteCozeAgent } from "@/api/agent";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { useDictOptions } from "@/hooks/useDictOptions";
-import { getDeviceList } from "@/api/device";
-import config from "@/config";
 
 // 类型定义
 interface ChatMessage {
@@ -448,9 +447,9 @@ const handleTabChange = async (index: number) => {
     currType.value = tabList.value[index].type;
     currTab.value = index;
     if (currTab.value == 1) {
-        setTimeout(() => {
-            // pagingRobotRef.value?.reload();
-        }, 300);
+        // setTimeout(() => {
+        //     // pagingRobotRef.value?.reload();
+        // }, 300);
     }
 };
 
@@ -615,7 +614,7 @@ const handleStreamMessage = (value: string, result: ChatMessage) => {
         .forEach((text) => {
             if (!text) return;
             try {
-                const { object, content, task_id, usage, reasoning_content } = JSON.parse(text);
+                const { object, content, task_id, usage, check_robot_id, reasoning_content } = JSON.parse(text);
                 if ((content || reasoning_content) && object === "loading") {
                     if (reasoning_content) {
                         result.reasoning_content += reasoning_content;
@@ -628,6 +627,11 @@ const handleStreamMessage = (value: string, result: ChatMessage) => {
                     result.consume_tokens = usage;
                     if (!taskId.value) {
                         taskId.value = task_id;
+                    }
+                    if (check_robot_id) {
+                        chattingRef.value?.handleAgent({
+                            id: check_robot_id,
+                        });
                     }
                     return;
                 }
@@ -768,7 +772,7 @@ const { optionsData } = useDictOptions<{
                 if (state.cate_id) {
                     robotCateIndex.value = data.lists.findIndex((item: any) => item.id == state.cate_id);
                 }
-                pagingRobotRef.value?.reload();
+                // pagingRobotRef.value?.reload();
             }
             return data.lists;
         },
@@ -875,7 +879,6 @@ const handleSelectAgent = async (item: any) => {
         return;
     }
     if (currAgentType.value == 1) {
-        // ✅ 跳转到对话前，记录当前所在的 tab 索引（智能体 tab）
         prevTab.value = currTab.value;
         currType.value = tabList.value[0].type;
         currTab.value = 0;

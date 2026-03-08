@@ -330,7 +330,7 @@
                 </template>
             </z-paging>
         </view>
-        <dragon-button :x-edge="-20" v-if="deviceList.length > 0">
+        <dragon-button :x-edge="-20" :y-edge="100" v-if="deviceList.length > 0">
             <view
                 class="w-[100rpx] h-[100rpx] rounded-full flex items-center justify-center"
                 style="background: linear-gradient(180deg, rgba(77, 163, 255, 1) 0%, rgba(0, 122, 255, 1) 100%)"

@@ -95,7 +95,7 @@
             </view>
             <view class="h-full flex flex-col" v-show="step === 2">
                 <view class="flex justify-center mb-3">
-                    <view class="bg-white rounded-[16rpx] px-[8rpx]">
+                    <view class="bg-white rounded-[16rpx] px-[6rpx]">
                         <view class="w-[360rpx] grid grid-cols-2 relative h-[80rpx]">
                             <view
                                 v-for="(item, index) in ['按顺序文案', '镜头匹配文案']"

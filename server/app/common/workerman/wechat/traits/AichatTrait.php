@@ -81,6 +81,8 @@ trait AichatTrait
                 return;
             }
             $robot = $this->_getWechatRobot($wechat['robot_id']);
+            //查询原来的模型名
+            $robot->model = \app\common\model\chat\ModelsCost::where('id', $robot->model_sub_id)->limit(1)->value('alias');
             $reply = $this->_getReplyStrategy($robot);
             $payload['userId'] = $device['user_id'];
             $isChatroom = strpos($payload['FriendId'], '@chatroom') !== false ? 1 : 0;

@@ -81,6 +81,7 @@ class ChatLists extends BaseApiDataLists implements ListsSearchInterface
                 $logInfo['message'] = mb_substr($logInfo['message'], $startPos, null, 'UTF-8');;
             }
             $user                = User::where('id', $logInfo['user_id'])->field('nickname,avatar')->find();
+            $logInfo['update_time'] = date('Y-m-d H:i:s',ChatLog::where('task_id', $taskId)->order('id', 'desc')->value('update_time'));
             $logInfo['nickname'] = $user['nickname'];
             $logInfo['avatar']   = $user['avatar'];
             $logInfo['robot_name'] = !empty($logInfo['robot_id']) ? KbRobot::where('id', $logInfo['robot_id'])->value('name') : '';

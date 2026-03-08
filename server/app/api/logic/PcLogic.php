@@ -265,6 +265,7 @@ class PcLogic extends BaseLogic
                 'shanjian_auth' => ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI'),
                 'banner' =>  FileService::getFileUrl(ConfigService::get('digital_human', 'banner', $banner)),
                 'video_case' => $videoCases,
+                'video_case_open' => (int)ConfigService::get('digital_human', 'video_case_open', 0),
             ],
             'card_code'                 => [
                 'is_open'   => ConfigService::get('card_code','is_open',0),

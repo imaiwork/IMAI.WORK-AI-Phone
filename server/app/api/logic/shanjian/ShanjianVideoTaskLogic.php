@@ -122,7 +122,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                 return false;
             }
         } catch (\Exception $e) {
-            Log::channel('shanjian')->write('更新视频设置状态错误' . $e->getMessage());
+            Log::channel('shanjiannotice')->write('更新视频设置状态错误' . $e->getMessage());
             return false;
         }
     }
@@ -556,6 +556,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     $volume =  $extra['volume'] ?? 0.3;
                     $volume = (float)$volume;
                     $soundSwitch =  $extra['soundSwitch'] ?? false;
+                    $videoDuration = $extra['videoDuration'] ?? 0;
                     switch ($task->shanjian_type) {
                         case 1:
                             $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
@@ -808,6 +809,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         case 4:
                             $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
                             $unit = TokenLogService::checkToken($task->user_id, 'shanjian_news_mixcut', $duration);
+                         
                             // 更新状态为视频合成中
                             $scene = self::SHANJIAN_NEWS_MIXCUT;
                             $title = str_replace('\\n', "\n", $task->title);;
@@ -833,6 +835,9 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             }
                             if($task->material != ''){
                                 $requestdata['materials'] =  $task->material;
+                            }
+                            if($videoDuration > 0){
+                                $requestdata['processRules']['videoDuration'] = (int)$videoDuration;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
                             Log::channel('shanjiannotice')->write('新闻合成视频' . json_encode($response));
@@ -904,35 +909,35 @@ class ShanjianVideoTaskLogic extends ApiLogic
         try {
             $tasks = ShanjianVideoTask::where('status', 1)
                 ->where('create_time', '<=', strtotime('-5 minutes'))
-                ->limit(20) 
+                ->limit(20)
                 ->select();
 
             foreach ($tasks as $task) {
-                $lockKey = 'shanjian_video_task_notify_' . $task->id;
-                $lock = cache($lockKey);
-                if ($lock) {
-                    continue;
-                }
-                cache($lockKey, 1, 300);
-
-                $setPublish = false;
-                
-                $params = ['taskId' => $task->result_id, 'task_id' => $task->task_id];
-                $response = \app\common\service\ToolsService::Shanjian()->status($params);
-
-                if (
-                    !isset($response['code']) ||
-                    (isset($response['data']['status']) && $response['data']['status'] == 'processing')
-                ) {
-                    cache($lockKey, null);
-                    continue;
-                }
-                $lock = cache($lockKey);
-                if ($lock) {
-                    continue;
-                }
-                Db::startTrans();
                 try {
+                    $lockKey = 'shanjian_video_task_notify_' . $task->id;
+                    $lock = cache($lockKey);
+                    if ($lock) {
+                        continue;
+                    }
+                    $setPublish = false;
+
+                    $params = ['taskId' => $task->result_id, 'task_id' => $task->task_id];
+                    $response = \app\common\service\ToolsService::Shanjian()->status($params);
+
+                    if (
+                        !isset($response['code']) ||
+                        (isset($response['data']['status']) && $response['data']['status'] == 'processing')
+                    ) {
+                        cache($lockKey, null);
+                        continue;
+                    }
+                    $lock = cache($lockKey);
+                    if ($lock) {
+                        continue;
+                    }
+                    cache($lockKey, 1, 300);
+                    Db::startTrans();
+
                     $item = ShanjianVideoTask::where('id', $task->id)->find();
 
                     if (!$item || $item->status != 1) {
@@ -950,7 +955,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         cache($lockKey, null);
                         continue;
                     }
-                    
+
                     // 准备计费和日志参数
                     $typeIDArray = [
                         '1' => AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN,
@@ -959,7 +964,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         '4' => AccountLogEnum::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN
                     ];
                     $typeID = $typeIDArray[$task->shanjian_type] ?? AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN;
-                    
+
                     $sceneArray = [
                         '1' => 'human_video_shanjian',
                         '2' => 'shanjian_realman_broadcast',
@@ -1017,15 +1022,25 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 $newpoints = $item->video_token;
                                 $sl = $newpoints - $points;
                                 $item->video_token = $points;
-                                
+
                                 // 处理退费或补扣逻辑
                                 if ($sl > 0) {
                                     switch ($item->shanjian_type) {
-                                        case 1: $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费'; break;
-                                        case 2: $kf = '真人口播混剪视预扣费超额扣费退费'; break;
-                                        case 3: $kf = '素材混剪视预扣费超额扣费退费'; break;
-                                        case 4: $kf = '新闻体混剪视频预扣费超额扣费退费'; break;
-                                        default: $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费'; break;
+                                        case 1:
+                                            $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费';
+                                            break;
+                                        case 2:
+                                            $kf = '真人口播混剪视预扣费超额扣费退费';
+                                            break;
+                                        case 3:
+                                            $kf = '素材混剪视预扣费超额扣费退费';
+                                            break;
+                                        case 4:
+                                            $kf = '新闻体混剪视频预扣费超额扣费退费';
+                                            break;
+                                        default:
+                                            $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费';
+                                            break;
                                     }
                                     $sl = round($sl, 2);
                                     $extra = ['扣费项目' => $kf, '实际视频时长' => $duration, '算力单价' => $unit, '实际消耗算力' => $points, '之前扣除算力' => $newpoints, '退费算力' => $sl];
@@ -1036,11 +1051,21 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 } else {
                                     $sl = $points - $newpoints;
                                     switch ($item->shanjian_type) {
-                                        case 1: $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣'; break;
-                                        case 2: $kf = '真人口播混剪视频预扣费补足费用补扣'; break;
-                                        case 3: $kf = '素材混剪视频预扣费补足费用补扣'; break;
-                                        case 4: $kf = '新闻体混剪视频预扣费补足费用补扣'; break;
-                                        default: $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣'; break;
+                                        case 1:
+                                            $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣';
+                                            break;
+                                        case 2:
+                                            $kf = '真人口播混剪视频预扣费补足费用补扣';
+                                            break;
+                                        case 3:
+                                            $kf = '素材混剪视频预扣费补足费用补扣';
+                                            break;
+                                        case 4:
+                                            $kf = '新闻体混剪视频预扣费补足费用补扣';
+                                            break;
+                                        default:
+                                            $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣';
+                                            break;
                                     }
                                     $sl = round($sl, 2);
                                     $extra = ['扣费项目' => $kf, '实际视频时长' => $duration, '算力单价' => $unit, '实际消耗算力' => $points, '之前扣除算力' => $newpoints, '补扣算力' => $sl];
@@ -1080,11 +1105,11 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     if (strpos($errorMsg, 'Lock wait timeout exceeded') !== false) {
                         Log::channel('shanjiannotice')->warning('Check 任务锁等待超时，跳过本次处理: ' . $task->task_id);
                         cache($lockKey, null);
-                        continue; 
+                        continue;
                     }
 
                     Log::channel('shanjiannotice')->error('Check 方法处理任务失败, task_id: ' . $task->task_id . ', Error: ' . $errorMsg);
-                    
+
                     // 修改点3：只有非锁超时的真正异常，才标记为失败
                     // 使用 update 直接更新，避免使用旧对象 save 导致的问题
                     try {
@@ -1097,7 +1122,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     }
                 }
 
-                if ($setPublish){
+                if ($setPublish) {
                     $param = [
                         'device_code' => $task->device_code,
                         'sj_video_id' => $task->id
@@ -1107,7 +1132,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
             }
 
             return true;
-        } catch (\Exception|\think\db\exception\DataNotFoundException|\think\db\exception\ModelNotFoundException $e) {
+        } catch (\Exception | \think\db\exception\DataNotFoundException | \think\db\exception\ModelNotFoundException $e) {
             self::setError($e->getMessage());
             Log::channel('shanjiannotice')->error('Check 方法整体异常: ' . $e->getMessage());
             return false;

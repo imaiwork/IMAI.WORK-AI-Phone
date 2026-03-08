@@ -77,162 +77,149 @@
                             </div>
                         </div>
 
-                        <load-text :is-load="anchorPager.isLoad"></load-text>
+                        <load-text :is-load="anchorPager.isLoad" v-if="anchorPager.lists.length > 0"></load-text>
                     </ElScrollbar>
                 </div>
             </div>
         </div>
-        <div class="w-[380px] bg-white flex flex-col relative flex-shrink-0 rounded-[20px] p-6 border border-br">
-            <template v-if="!loading">
-                <header class="mb-5">
-                    <h2 class="text-[24px] font-medium text-slate-800 tracking-tight">生成设置</h2>
-                    <div class="h-1 w-12 bg-primary rounded-full mt-2"></div>
-                </header>
-                <div class="px-5 py-2 rounded-2xl flex items-center gap-x-3 bg-slate-50 border border-br mb-6">
-                    <div class="text-[13px] font-black text-[#64748B]">视频名称</div>
-                    <div class="w-[1px] h-3 bg-[#E2E8F0]"></div>
-                    <div class="flex-1">
-                        <ElInput
-                            v-model="formData.name"
-                            class="custom-input"
-                            placeholder="请输入名称"
-                            maxlength="20"
-                            :input-style="{ textAlign: 'right', fontSize: '15px', fontWeight: '900', color: '#1E293B' }"
-                            clearable />
-                    </div>
+        <div
+            class="w-[380px] bg-white flex flex-col relative flex-shrink-0 rounded-[20px] p-6 border border-br overflow-hidden"
+            v-spin="{ show: loading, text: '加载中...' }">
+            <header class="mb-5">
+                <h2 class="text-[24px] font-medium text-slate-800 tracking-tight">生成设置</h2>
+                <div class="h-1 w-12 bg-primary rounded-full mt-2"></div>
+            </header>
+            <div class="px-5 py-2 rounded-2xl flex items-center gap-x-3 bg-slate-50 border border-br mb-6">
+                <div class="text-[13px] font-black text-[#64748B]">视频名称</div>
+                <div class="w-[1px] h-3 bg-[#E2E8F0]"></div>
+                <div class="flex-1">
+                    <ElInput
+                        v-model="formData.name"
+                        class="custom-input"
+                        placeholder="请输入名称"
+                        maxlength="20"
+                        :input-style="{ textAlign: 'right', fontSize: '15px', fontWeight: '900', color: '#1E293B' }"
+                        clearable />
                 </div>
+            </div>
 
-                <div class="grow min-h-0">
-                    <ElScrollbar class="pr-2">
-                        <div class="mb-6">
-                            <div class="text-[15px] font-[900] text-[#1E293B] mb-3 flex items-center gap-2">
-                                <Icon name="el-icon-Document" color="var(--el-color-primary)" /> 文案输入
-                            </div>
-                            <div class="border border-br rounded-2xl p-4 bg-slate-50 group">
-                                <ElInput
-                                    v-model="formData.msg"
-                                    class="custom-textarea"
-                                    type="textarea"
-                                    placeholder="请输入您的文案..."
-                                    resize="none"
-                                    :maxlength="textLimit"
-                                    :rows="10" />
-                                <div class="flex items-center justify-between mt-4">
-                                    <div class="flex gap-2">
-                                        <button
-                                            @click="handleRandomCopywriter"
-                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-br rounded-2xl text-xs font-medium hover:border-primary hover:text-primary transition-all">
-                                            随机
-                                        </button>
-                                        <button
-                                            @click="openGeneratePrompt"
-                                            class="flex items-center gap-1.5 px-3 py-1.5 bg-[#0065FB]/5 text-primary rounded-2xl text-xs font-black hover:bg-[#0065FB]/10 transition-all">
-                                            AI 生成
-                                        </button>
-                                    </div>
-                                    <div class="text-[11px] font-medium text-[#CBD5E1]">
-                                        {{ formData.msg.length }}/{{ textLimit }}
-                                    </div>
-                                </div>
-                            </div>
+            <div class="grow min-h-0">
+                <ElScrollbar class="pr-2">
+                    <div class="mb-6">
+                        <div class="text-[15px] font-[900] text-[#1E293B] mb-3 flex items-center gap-2">
+                            <Icon name="el-icon-Document" color="var(--el-color-primary)" /> 文案输入
                         </div>
-
-                        <div class="mb-6">
-                            <div class="text-[15px] font-[900] text-[#1E293B] mb-3">训练模型</div>
-                            <ElSelect
-                                v-model="formData.model_version"
-                                class="w-full custom-select"
-                                placeholder="请选择训练模型"
-                                :show-arrow="false"
-                                :disabled="!isPublicAnchor"
-                                @change="handleModelChange">
-                                <ElOption
-                                    v-for="item in modelChannel"
-                                    :key="item.id"
-                                    :value="item.id"
-                                    :label="item.name">
-                                    <div class="flex items-center gap-2">
-                                        <img :src="item.icon" class="w-4 h-4" />
-                                        <span class="font-medium">{{ item.name }}</span>
-                                    </div>
-                                </ElOption>
-                            </ElSelect>
-                            <div v-if="!isPublicAnchor" class="text-[11px] text-orange-400 font-medium mt-2 ml-1">
-                                提示：当前形象仅支持固定模型
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <div class="text-[15px] font-[900] text-[#1E293B] mb-3">音色选择</div>
-                            <ElSelect
-                                v-model="voiceId"
-                                class="w-full custom-select"
-                                placeholder="请选择声音"
-                                :show-arrow="false"
-                                @change="handleVoiceChange">
-                                <ElOption
-                                    v-for="item in voiceList"
-                                    :key="item.id"
-                                    :value="item.id"
-                                    :label="item.name"
-                                    :show-arrow="false">
-                                    <div class="flex items-center justify-between w-full">
-                                        <span class="font-medium">{{ item.name }}</span>
-                                        <ElTag
-                                            size="small"
-                                            :type="item.id == -1 ? 'success' : 'info'"
-                                            round
-                                            effect="light">
-                                            {{ item.builtin === 0 ? "系统" : item.id == -1 ? "原生" : "定制" }}
-                                        </ElTag>
-                                    </div>
-                                </ElOption>
-                            </ElSelect>
-                        </div>
-
-                        <div class="bg-slate-50 border border-br rounded-2xl p-5" v-if="clipConfig.is_open">
-                            <div class="flex justify-between items-center">
-                                <div class="text-[15px] font-[900] text-[#1E293B]">AI 智能剪辑</div>
-                                <ElSwitch v-model="formData.automatic_clip" active-value="1" inactive-value="0" />
-                            </div>
-
-                            <div class="mt-4 pt-4 border-t border-[#E2E8F0]" v-if="false">
-                                <div class="text-xs font-black text-[#94A3B8] uppercase mb-3">背景音乐 (BGM)</div>
-                                <button
-                                    v-if="!formData.music_url"
-                                    @click="openChooseMusic"
-                                    class="w-full h-11 rounded-xl border-2 border-dashed border-[#E2E8F0] flex items-center justify-center gap-2 text-[#94A3B8] hover:text-primary hover:border-primary transition-all">
-                                    <Icon name="local-icon-upload3" :size="14" />
-                                    <span>添加音乐素材</span>
-                                </button>
-                                <div
-                                    v-else
-                                    class="flex items-center justify-between p-3 bg-white rounded-xl border border-primary/20">
-                                    <div class="flex items-center gap-2 overflow-hidden">
-                                        <Icon name="local-icon-music" class="text-primary" />
-                                        <span class="text-[13px] font-medium text-[#1E293B] truncate">{{
-                                            formData.music_name
-                                        }}</span>
-                                    </div>
+                        <div class="border border-br rounded-2xl p-4 bg-slate-50 group">
+                            <ElInput
+                                v-model="formData.msg"
+                                class="custom-textarea"
+                                type="textarea"
+                                placeholder="请输入您的文案..."
+                                resize="none"
+                                :maxlength="textLimit"
+                                :rows="10" />
+                            <div class="flex items-center justify-between mt-4">
+                                <div class="flex gap-2">
                                     <button
-                                        @click="handleDeleteMusic"
-                                        class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 text-[#CBD5E1] hover:text-red-500 transition-all">
-                                        <Icon name="el-icon-Close" :size="12" />
+                                        @click="handleRandomCopywriter"
+                                        class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-br rounded-2xl text-xs font-medium hover:border-primary hover:text-primary transition-all">
+                                        随机
+                                    </button>
+                                    <button
+                                        @click="openGeneratePrompt"
+                                        class="flex items-center gap-1.5 px-3 py-1.5 bg-[#0065FB]/5 text-primary rounded-2xl text-xs font-black hover:bg-[#0065FB]/10 transition-all">
+                                        AI 生成
                                     </button>
                                 </div>
+                                <div class="text-[11px] font-medium text-[#CBD5E1]">
+                                    {{ formData.msg.length }}/{{ textLimit }}
+                                </div>
                             </div>
                         </div>
-                    </ElScrollbar>
-                </div>
+                    </div>
 
-                <div class="mt-6 pt-6 border-t border-br">
-                    <CreatePanel :form-data="formData" @success="handleCreateSuccess" @error="handleCreateError" />
-                </div>
-            </template>
+                    <div class="mb-6">
+                        <div class="text-[15px] font-[900] text-[#1E293B] mb-3">训练模型</div>
+                        <ElSelect
+                            v-model="formData.model_version"
+                            class="w-full custom-select"
+                            placeholder="请选择训练模型"
+                            :show-arrow="false"
+                            :disabled="!isPublicAnchor"
+                            @change="handleModelChange">
+                            <ElOption v-for="item in modelChannel" :key="item.id" :value="item.id" :label="item.name">
+                                <div class="flex items-center gap-2">
+                                    <img :src="item.icon" class="w-4 h-4" />
+                                    <span class="font-medium">{{ item.name }}</span>
+                                </div>
+                            </ElOption>
+                        </ElSelect>
+                        <div v-if="!isPublicAnchor" class="text-[11px] text-orange-400 font-medium mt-2 ml-1">
+                            提示：当前形象仅支持固定模型
+                        </div>
+                    </div>
 
-            <div class="h-full flex flex-col items-center justify-center" v-else>
-                <div class="chat-loader mb-4"></div>
-                <div class="text-xs font-black text-[#94A3B8] tracking-widest uppercase">Preparing Studio...</div>
+                    <div class="mb-6">
+                        <div class="text-[15px] font-[900] text-[#1E293B] mb-3">音色选择</div>
+                        <ElSelect
+                            v-model="voiceId"
+                            class="w-full custom-select"
+                            placeholder="请选择声音"
+                            :show-arrow="false"
+                            @change="handleVoiceChange">
+                            <ElOption
+                                v-for="item in voiceList"
+                                :key="item.id"
+                                :value="item.id"
+                                :label="item.name"
+                                :show-arrow="false">
+                                <div class="flex items-center justify-between w-full">
+                                    <span class="font-medium">{{ item.name }}</span>
+                                    <ElTag size="small" :type="item.id == -1 ? 'success' : 'info'" round effect="light">
+                                        {{ item.builtin === 0 ? "系统" : item.id == -1 ? "原生" : "定制" }}
+                                    </ElTag>
+                                </div>
+                            </ElOption>
+                        </ElSelect>
+                    </div>
+
+                    <div class="bg-slate-50 border border-br rounded-2xl p-5" v-if="clipConfig.is_open">
+                        <div class="flex justify-between items-center">
+                            <div class="text-[15px] font-[900] text-[#1E293B]">AI 智能剪辑</div>
+                            <ElSwitch v-model="formData.automatic_clip" active-value="1" inactive-value="0" />
+                        </div>
+
+                        <div class="mt-4 pt-4 border-t border-[#E2E8F0]" v-if="false">
+                            <div class="text-xs font-black text-[#94A3B8] uppercase mb-3">背景音乐 (BGM)</div>
+                            <button
+                                v-if="!formData.music_url"
+                                @click="openChooseMusic"
+                                class="w-full h-11 rounded-xl border-2 border-dashed border-[#E2E8F0] flex items-center justify-center gap-2 text-[#94A3B8] hover:text-primary hover:border-primary transition-all">
+                                <Icon name="local-icon-upload3" :size="14" />
+                                <span>添加音乐素材</span>
+                            </button>
+                            <div
+                                v-else
+                                class="flex items-center justify-between p-3 bg-white rounded-xl border border-primary/20">
+                                <div class="flex items-center gap-2 overflow-hidden">
+                                    <Icon name="local-icon-music" class="text-primary" />
+                                    <span class="text-[13px] font-medium text-[#1E293B] truncate">{{
+                                        formData.music_name
+                                    }}</span>
+                                </div>
+                                <button
+                                    @click="handleDeleteMusic"
+                                    class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 text-[#CBD5E1] hover:text-red-500 transition-all">
+                                    <Icon name="el-icon-Close" :size="12" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </ElScrollbar>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-br">
+                <CreatePanel :form-data="formData" @success="handleCreateSuccess" @error="handleCreateError" />
             </div>
         </div>
     </div>
@@ -259,7 +246,7 @@
         @confirm="getChooseMusic"></choose-music>
     <generate-prompt
         v-model="showGeneratePrompt"
-        :prompt-type="CopywritingTypeEnum.AI_DIGITAL_HUMAN_COPYWRITING"
+        :prompt-type="CreateVideoTypeEnum.DIGITAL_HUMAN"
         :max-size="textLimit"
         @close="showGeneratePrompt = false"
         @use-content="getGenerateContent"></generate-prompt>
@@ -277,7 +264,7 @@ import {
     SidebarTypeEnum,
 } from "@/pages/app/digital_human/_enums";
 import { ClipStyleMap, ClipStyleEnum } from "@/pages/app/_enums/indexEnum";
-import { CopywritingTypeEnum } from "@/pages/app/_enums/chatEnum";
+import { CreateVideoTypeEnum } from "@/pages/app/digital_human/_enums";
 import GeneratePrompt from "@/pages/app/digital_human/_components/generate-prompt.vue";
 import Upload from "@/components/upload/index.vue";
 import ChooseTone from "@/pages/app/_components/choose-tone.vue";
@@ -645,8 +632,8 @@ const getPromptContent = (content: string) => {
 // 创建成功
 const handleCreateSuccess = () => {
     useNuxtApp().$confirm({
-        title: "创建成功",
-        message: "创建成功，请在数字人管理中或者历史记录查看",
+        title: "任务已提交",
+        message: "创建成功，请在历史记录查看",
         confirmButtonText: "前往查看",
         cancelButtonText: "取消",
         onConfirm: () => {
@@ -757,27 +744,6 @@ init();
 
     50% {
         opacity: 0.5;
-    }
-}
-
-.chat-loader {
-    width: 32px;
-    height: 32px;
-    border: 4px solid #f1f5f9;
-    border-bottom-color: var(--el-color-primary);
-    border-radius: 50%;
-    display: inline-block;
-    box-sizing: border-box;
-    animation: rotation 1s linear infinite;
-}
-
-@keyframes rotation {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
     }
 }
 </style>

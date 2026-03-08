@@ -22,12 +22,12 @@
                     @clear="reset()"
                     @change="reset()">
                     <ElOption label="全部类型" value="" />
-                    <ElOption label="数字人" :value="VideoType.DIGITAL_HUMAN" />
-                    <ElOption label="口播" :value="VideoType.ORAL_MIX" />
-                    <ElOption label="真人" :value="VideoType.TRUE_HUMAN" />
-                    <ElOption label="素材" :value="VideoType.MATERIAL_MIX" />
-                    <ElOption label="新闻" :value="VideoType.NEWS" />
-                    <ElOption label="一句话" :value="VideoType.SENTENCE" />
+                    <ElOption label="数字人" :value="CreateVideoTypeEnum.DIGITAL_HUMAN" />
+                    <ElOption label="口播" :value="CreateVideoTypeEnum.ORAL_MIX" />
+                    <ElOption label="真人" :value="CreateVideoTypeEnum.REAL_PERSON_MIXING" />
+                    <ElOption label="素材" :value="CreateVideoTypeEnum.MATERIAL_MIX" />
+                    <ElOption label="新闻" :value="CreateVideoTypeEnum.NEWS" />
+                    <ElOption label="一句话" :value="CreateVideoTypeEnum.SENTENCE" />
                 </ElSelect>
             </div>
         </div>
@@ -61,17 +61,8 @@
 <script setup lang="ts">
 import { getVideoCreationRecord, deleteVideoCreationRecord } from "@/api/app";
 import { retrySoraTask } from "@/api/digital_human";
+import { CreateVideoTypeEnum } from "@/pages/app/digital_human/_enums";
 import VideoItem from "@/pages/app/digital_human/_components/video-item.vue";
-
-enum VideoType {
-    ALL = 0,
-    DIGITAL_HUMAN = 1,
-    ORAL_MIX = 2,
-    TRUE_HUMAN = 3,
-    MATERIAL_MIX = 4,
-    NEWS = 5,
-    SENTENCE = 6,
-}
 
 const queryParams = reactive({
     page_no: 1,

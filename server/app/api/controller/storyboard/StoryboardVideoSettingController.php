@@ -11,7 +11,6 @@ use think\response\Json;
 /**
  * StoryboardVideoSettingController
  * @desc 分镜一键生成视频
- * @author dagouzi
  */
 class StoryboardVideoSettingController extends BaseApiController
 {
@@ -21,8 +20,6 @@ class StoryboardVideoSettingController extends BaseApiController
     /**
      * @desc 生成视频
      * @return \think\response\Json
-     * @date 2024/9/30 16:26
-     * @author dagouzi
      */
     public function add(): Json
     {
@@ -34,6 +31,19 @@ class StoryboardVideoSettingController extends BaseApiController
         return $this->fail(StoryboardVideoSettingLogic::getError());
     }
 
+    /**
+     * @desc 生成状态
+     * @return \think\response\Json
+     */
+    public function status(): Json
+    {
+        $data = $this->request->post();
+        $result = StoryboardVideoSettingLogic::status($data,$this->userId);
+        if ($result) {
+            return $this->data(StoryboardVideoSettingLogic::getReturnData());
+        }
+        return $this->fail(StoryboardVideoSettingLogic::getError());
+    }
     /**
      * 获取视频设置详情
      */

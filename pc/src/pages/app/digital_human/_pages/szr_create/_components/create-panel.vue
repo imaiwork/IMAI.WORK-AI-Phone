@@ -1,6 +1,20 @@
 <template>
-    <ElButton class="w-full !h-[50px]" type="primary" size="large" :loading="createIsLock" @click="createLockFn">
-        <span class="font-medium text-lg">立即生成视频</span>
+    <ElButton
+        class="w-full !h-[50px] !rounded-[18px]"
+        type="primary"
+        size="large"
+        :loading="isSubmitting"
+        @click="createLockFn">
+        <template v-if="isSubmitting">
+            <span class="animate-spin leading-[0]">
+                <Icon name="el-icon-Loading" color="#fff" :size="20" />
+            </span>
+            <span class="text-white font-[1000] text-[15px] tracking-wide">生成中...</span>
+        </template>
+        <template v-else>
+            <Icon name="el-icon-VideoCamera" color="#fff" :size="20" />
+            <span class="text-white font-[1000] text-[15px] tracking-wide">立即生成视频</span>
+        </template>
     </ElButton>
 </template>
 
@@ -260,7 +274,7 @@ const handleCreate = async () => {
     }
 };
 
-const { lockFn: createLockFn, isLock: createIsLock } = useLockFn(handleCreate);
+const { lockFn: createLockFn, isLock: isSubmitting } = useLockFn(handleCreate);
 
 watch(() => props.formData, getCostRules, { immediate: true });
 </script>

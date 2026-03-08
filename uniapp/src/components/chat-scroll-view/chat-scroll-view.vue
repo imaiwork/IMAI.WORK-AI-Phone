@@ -62,7 +62,7 @@
                             <view
                                 v-if="currAgent.id"
                                 class="bg-white rounded-[16rpx] px-2 h-[60rpx] gap-x-1 border border-solid border-[#E9EBEC] inline-flex items-center relative"
-                                @click="showAgent = true">
+                                @click="openAgentPopup">
                                 <image
                                     :src="currAgent.avatar"
                                     class="w-[28rpx] h-[28rpx] rounded-[24rpx]"
@@ -128,7 +128,7 @@
                         <slot name="chatAreaTop"></slot>
                     </view>
                     <view class="flex-1 flex gap-x-2 items-center">
-                        <slot name="sendLeft" v-if="$slots.sendLeft && !isInputFocus"></slot>
+                        <slot name="sendLeft" v-if="$slots.sendLeft"></slot>
                         <view
                             class="flex-1 bg-white rounded-[48rpx] rounded-tr-[48rpx] border border-solid border-[#F1F1F2] overflow-hidden relative py-[6rpx]">
                             <view v-if="fileList.length" class="p-2 flex">
@@ -154,7 +154,6 @@
                                     hold-keyboard
                                     placeholder-style="color: rgba(0, 0, 0, 0.2); font-size: 26rpx;"
                                     auto-height
-                                    :focus="isInputFocus"
                                     :adjust-position="false"
                                     :placeholder="placeholder"
                                     :show-confirm-bar="false"
@@ -179,7 +178,9 @@
                             </view>
                         </view>
                     </view>
-                    <view class="flex justify-center mt-[20rpx]" v-if="contentList.length > 0">
+                    <view
+                        class="flex justify-center mt-[20rpx]"
+                        v-if="contentList.length > 0 || currAgent.id || currModel.id">
                         <view class="flex items-center rounded-full bg-[#00000008] gap-x-1.5 p-[6rpx]">
                             <u-icon name="/static/images/icons/tips.svg" :size="32"></u-icon>
                             <view class="text-[rgba(0,0,0,0.3)] text-xs">
@@ -387,6 +388,7 @@
                     ref="agentPagingRef"
                     v-model="agentList"
                     :fixed="false"
+                    :auto="false"
                     :safe-area-inset-bottom="true"
                     @query="getAgentList">
                     <view class="flex flex-col gap-4 px-[32rpx] mt-4">
@@ -426,7 +428,7 @@
 <script lang="ts" setup>
 import config from "@/config";
 import { getUserChatConfig, saveUserChatConfig } from "@/api/chat";
-import { getAgentList as getAgentListApi } from "@/api/agent";
+import { getAllAgentList as getAgentListApi, getAgentDetail } from "@/api/agent";
 import { getRect, setFormData } from "@/utils/util";
 import useKeyboardHeight from "@/hooks/useKeyboardHeight";
 import { useAppStore } from "@/stores/app";
@@ -540,7 +542,14 @@ const currAgent = reactive({
     avatar: "",
 });
 
-const handleAgent = (item: any) => {
+const handleAgent = async (item: any) => {
+    if (!item.name) {
+        try {
+            const { name, image } = await getAgentDetail({ id: item.id });
+            item.name = name;
+            item.image = image;
+        } catch (error: any) {}
+    }
     setFormData({ ...item, avatar: item.avatar || item.image }, currAgent);
     userInput.value = "";
     showAgent.value = false;
@@ -654,15 +663,10 @@ const spacerHeight = computed(() => {
 
 const handleInput = (e: any) => {
     if (userInput.value.indexOf("@") == 0 && userInput.value.length == 1) {
-        showAgent.value = true;
+        openAgentPopup();
         // 隐藏键盘
         uni.hideKeyboard();
     }
-};
-
-const isInputFocus = ref(false);
-const handleInputFocus = () => {
-    isInputFocus.value = true;
 };
 
 const contentPost = () => {
@@ -688,6 +692,11 @@ const chatAdd = () => {
 
 const chatClose = () => {
     emit("close");
+};
+
+const openAgentPopup = () => {
+    showAgent.value = true;
+    agentPagingRef.value?.reload();
 };
 
 const checkLogin = () => {
@@ -745,7 +754,6 @@ const getAgentList = async (page_no: number, page_size: number) => {
         const { lists } = await getAgentListApi({
             page_no,
             page_size,
-            source: 1,
         });
         agentPagingRef.value?.complete(lists);
     } catch (error: any) {

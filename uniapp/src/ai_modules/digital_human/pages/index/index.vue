@@ -72,7 +72,7 @@
                                     <image :src="item.pic" class="h-full w-full" mode="aspectFill"></image>
                                     <view
                                         class="text-[20rpx] text-white absolute top-2 left-2"
-                                        v-if="item.automatic_clip">
+                                        v-if="item.automatic_clip == 1">
                                         AI剪辑</view
                                     >
                                     <view

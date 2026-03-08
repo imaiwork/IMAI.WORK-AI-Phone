@@ -21,7 +21,7 @@
             </div>
         </div>
 
-        <div class="grow min-h-0 bg-gray-50/30 overflow-hidden" v-loading="pager.loading">
+        <div class="grow min-h-0 bg-gray-50/30 overflow-hidden" v-spin="{ show: loading }">
             <div v-if="pager.lists && pager.lists.length" class="h-full flex flex-col">
                 <div class="grow min-h-0">
                     <ElScrollbar>
@@ -65,6 +65,8 @@ import RecordCard from "../../_components/record-card.vue";
 import useHandleApi from "../../_hooks/useHandleApi";
 import KnbBind from "@/components/knb-bind/index.vue";
 
+const loading = ref<boolean>(true);
+
 const queryParams = reactive({
     name: "",
 });
@@ -90,5 +92,13 @@ const handleTrain = async (result: any) => {
     knbBindRef.value?.setFormData(result);
 };
 
-getLists();
+const init = async () => {
+    try {
+        await getLists();
+    } finally {
+        loading.value = false;
+    }
+};
+
+init();
 </script>

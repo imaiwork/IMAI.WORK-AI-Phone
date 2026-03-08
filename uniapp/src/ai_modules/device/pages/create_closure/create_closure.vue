@@ -953,7 +953,7 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
                         if (!isCollect.value && formData.comment_content_list.length == 0) {
                             return "触达方式和话术至少添加一个";
                         }
-                        if (formData.comment_type === 1 && formData.fixed_comment_list.length == 0) {
+                        if (isPinLunWork.value && formData.fixed_comment_list.length == 0) {
                             return "固定话术至少添加一个";
                         }
                     }

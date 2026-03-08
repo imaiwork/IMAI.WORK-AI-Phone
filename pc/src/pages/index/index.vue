@@ -128,7 +128,7 @@
                         </div>
                     </template>
                     <template #input>
-                        <div ref="chatAreaRef" class="max-h-[400px] overflow-y-auto dynamic-scroller"></div>
+                        <div ref="chatAreaRef" class="max-h-[200px] overflow-y-auto dynamic-scroller"></div>
                     </template>
                 </Chatting>
             </div>
@@ -230,7 +230,6 @@ const { chatAreaRef, agent, setup, dispose, clear, getAgentList, isAgent, setAge
     onEnter: (text) => {
         if (isReceiving.value) return;
         contentPost(text);
-        chattingRef?.value?.triggerContentPushUp();
     },
     onInputChange: (text, isEmpty) => {
         if (chattingRef.value) {
@@ -269,6 +268,7 @@ const toPage = (type: string) => {
 };
 
 const contentPost = (text: string) => {
+    chattingRef?.value?.triggerContentPushUp();
     sendMessage(text);
     clear();
     chatStore.setAgent(agent.value);
@@ -291,6 +291,7 @@ const handleSelectAgent = (agent: any) => {
         return;
     }
     setAgent(agent);
+    chatStore.setAgent(agent);
 };
 
 watch(
@@ -329,6 +330,21 @@ watch(
         } else {
             chatAgentRef.value.selectAgent(newVal.id);
         }
+    }
+);
+
+watch(
+    () => chatStore.agentValue,
+    (newVal) => {
+        if (!newVal || newVal == "0") {
+            chatAgentRef.value.clearSelectedAgent();
+            return;
+        }
+
+        setAgent({
+            id: newVal.id,
+        });
+        chatAgentRef.value.selectAgent(newVal.id);
     }
 );
 

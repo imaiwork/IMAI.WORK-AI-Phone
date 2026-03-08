@@ -90,7 +90,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
             'Count'    => $number,
             'Width'    => $width,
             'Height'   => $height,
-            'MediaURL' => 'http://' . $ossConfig['bucket'] . '.' . $ossRegion . '.aliyuncs.com/uploads/video/' . date('Ymd') . '/' . $taskId . '_{index}.mp4',
+            'MediaURL' => 'https://' . $ossConfig['bucket'] . '.' . $ossRegion . '.aliyuncs.com/uploads/video/' . date('Ymd') . '/' . $taskId . '_{index}.mp4',
             "Video"    => ['Crf' => $duration]
         ];
 
@@ -136,15 +136,9 @@ class StoryboardVideoSettingLogic extends ApiLogic
                         'height'           => $height,
                         'video_result_url' => '/uploads/video/' . date('Ymd') . '/' . $taskId . '_' . $i . '.mp4'
                     ];
+                    $insertTask['extra']      = '';
+                    StoryboardVideoTask::create($insertTask);
 
-                    if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
-                        self::$returnData['id'][] = $result['data']['id'] ?? '';
-                        $insertTask['extra']      = '';
-                        StoryboardVideoTask::create($insertTask);
-                    } else {
-                        $errorNum += 1;
-                    }
-                    usleep(100000);
                 }
                 self::$returnData                = $setting->toArray();
                 self::$returnData['success_num'] = $successNum;
@@ -155,9 +149,11 @@ class StoryboardVideoSettingLogic extends ApiLogic
                     'extra'       => '',
                     'status'      => $errorNum == 0 ? 2 : ($errorNum == $number ? 4 : 5),
                     'success_num' => $successNum,
-                    'error_num'   => $errorNum
+                    'error_num'   => $errorNum,
+                    'result_id'   => $result['data']['body']['JobId']
                 ];
                 StoryboardVideoSetting::update($update, ['id' => $setting->id]);
+                self::$returnData['result_id'] = $update['result_id'];
                 $mnpMessage = [
                     'openid'   => UserAuth::where('user_id', self::$uid)->order('id', 'desc')->value('openid'),
                     'scene_id' => 402,
@@ -179,15 +175,17 @@ class StoryboardVideoSettingLogic extends ApiLogic
         }
     }
 
-    public static function status($params)
+    public static function status($params,$userId)
     {
         $taskId = $params['task_id'] ?? '';
         if (!$taskId) {
             message('参数错误');
         }
-
         $scene = self::STORYBOARD_VIDEO_STATUS;
-
+        $resultId = StoryboardVideoSetting::where('task_id', $taskId)->value('result_id');
+        $params['result_id'] = "c762789a766f4662aa9f141e547d1563";
+        $response = \app\common\service\ToolsService::storyboard();
+        $result = $response->status($params);
         if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
             self::$returnData = $result;
         } else {
@@ -213,6 +211,9 @@ class StoryboardVideoSettingLogic extends ApiLogic
             switch ($scene) {
                 case self::STORYBOARD_VIDEO_CREATE:
                     $response = $response->create($request);
+                    break;
+                case self::STORYBOARD_VIDEO_STATUS:
+                    $response = $response->status($request);
                     break;
                 default:
             }
@@ -322,7 +323,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
 
     public static function checkStatus()
     {
-        $settings = StoryboardVideoSetting::where('status', 'in', [2, 5])->where('create_time', '<=', strtotime('-40 minutes'))->select()->toArray();
+        $settings = StoryboardVideoSetting::where('status', 'in', [2, 5])->where('create_time', '<=', strtotime('-20 minutes'))->select()->toArray();
         foreach ($settings as $setting) {
             $num = $setting['success_num'] + $setting['error_num'];
             if ($setting['video_count'] == $num) {
@@ -367,5 +368,24 @@ class StoryboardVideoSettingLogic extends ApiLogic
             }
         }
         return false;
+    }
+
+    public static function checkTaskStatus(){
+        $tasks = StoryboardVideoSetting::where('status', '=', 0)->select()->toArray();
+        $service = \app\common\service\ToolsService::storyboard();
+        $ossRegion = ConfigService::get('storage', 'aliyun')['Location'];
+        $pattern   = ['cn-beijing', 'cn-hangzhou', 'cn-shenzhen', 'cn-shanghai'];
+        $region    = self::matchAnySubstring($ossRegion, $pattern);
+        if (!$region){
+            echo '请先配置阿里云OSS存储';
+            return false;
+        }
+        foreach ($tasks as $task) {
+            $params['result_id'] = $task['result_id'];
+            $params['task_id'] = $task['task_id'];
+            $params['region'] = $region;
+            $result = $service->status($params);
+        }
+        return true;
     }
 }

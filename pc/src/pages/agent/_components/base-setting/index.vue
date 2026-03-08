@@ -80,7 +80,7 @@
                                                 >提示词 (System Prompt)</span
                                             >
                                         </div>
-                                        <ElButton link @click="handleWriteExample()">
+                                        <ElButton type="primary" link @click="handleWriteExample()">
                                             <Icon name="el-icon-MagicStick" />
                                             <span class="ml-1">一键填入标准示例</span>
                                         </ElButton>

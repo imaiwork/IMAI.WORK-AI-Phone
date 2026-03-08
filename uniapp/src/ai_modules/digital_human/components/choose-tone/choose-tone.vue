@@ -149,12 +149,15 @@ const isChoose = (voice_id: string) => {
 };
 
 const toggleAudioPlayback = async (item: any) => {
-    if (isPlaying.value && !isChoose(item.voice_id)) {
+    if (isPlaying.value && isChoose(item.voice_id)) {
+        pause();
+        return;
+    }
+
+    if (isPlaying.value) {
         pauseAll();
     }
-    if (isPlaying.value) {
-        pause();
-    }
+
     play(item.builtin === 1 ? item.voice_urls : item.url);
     currVoiceId.value = item.voice_id;
 };

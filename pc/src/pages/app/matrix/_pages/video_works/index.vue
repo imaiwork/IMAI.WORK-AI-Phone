@@ -33,7 +33,7 @@
                 </div>
             </div>
         </div>
-        <div class="grow min-h-0 bg-slate-50">
+        <div class="grow min-h-0 bg-slate-50" v-spin="{ show: loading, text: '加载中...' }">
             <ElScrollbar :distance="20" @end-reached="load">
                 <div class="h-full p-6">
                     <div v-if="pager.lists.length">
@@ -70,6 +70,8 @@
 <script setup lang="ts">
 import { getDigitalHumanVideo, deleteDigitalHumanVideo, updateDigitalHumanVideo } from "@/api/matrix";
 import VideoCard from "../../_components/dh-video-card.vue";
+
+const loading = ref<boolean>(true);
 
 const queryParams = reactive({
     name: "",
@@ -128,7 +130,15 @@ const handlePreviewVideo = async (url: string) => {
     previewVideoRef.value?.setUrl(url);
 };
 
-getLists();
+const init = async () => {
+    try {
+        await getLists();
+    } finally {
+        loading.value = false;
+    }
+};
+
+init();
 </script>
 
 <style scoped lang="scss">

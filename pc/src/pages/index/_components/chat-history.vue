@@ -119,7 +119,7 @@ const groupChatHistoryByTime = computed(() => {
     const groupsMap = new Map<string, any[]>();
 
     chatHistory.value.forEach((session) => {
-        const sessionDate = dayjs(session.create_time);
+        const sessionDate = dayjs(session.update_time);
         const daysDiff = now.diff(sessionDate, "day");
 
         let groupKey: string;

@@ -156,6 +156,9 @@ class KbRobotGroupLogic extends BaseLogic
             if ($robot->isEmpty()) {
                 throw new Exception('智能体不存在');
             }
+            if ($robot->user_id == 0){
+                throw new Exception('系统智能体无法移动');
+            }
 
             $robot->group_id = $params['group_id'];
             $robot->save();

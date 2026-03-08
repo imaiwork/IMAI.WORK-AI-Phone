@@ -41,7 +41,7 @@
                                 class="bg-white rounded-[16rpx] px-[16rpx] py-[28rpx] flex items-center justify-between"
                                 @click="showChooseModel = true">
                                 <view class="ml-[16rpx]">
-                                    {{ selectedModel?.name || "请选择" }}
+                                    {{ getSelectedModelName }}
                                 </view>
                                 <u-icon name="arrow-right" color="#B2B2B2" :size="20"></u-icon>
                             </view>
@@ -297,12 +297,22 @@ const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
 
 // 计算属性
-const selectedModel = computed(() => {
+const getSelectedModelName = computed(() => {
     const { channel } = appStore.getDigitalHumanConfig;
     if (channel && channel.length > 0) {
-        return channel.find((item: any) => item.id == formData.model_version);
+        return (
+            channel
+                .filter(
+                    (item: any) =>
+                        item.status == 1 &&
+                        [DigitalHumanModelVersionEnum.CHANJING, DigitalHumanModelVersionEnum.SHANJIAN].includes(
+                            parseInt(item.id)
+                        )
+                )
+                .find((item: any) => item.id == formData.model_version)?.name || "请选择"
+        );
     }
-    return {};
+    return "请选择";
 });
 
 const tokensRequired = computed(() => {
@@ -322,7 +332,7 @@ const formData = reactive<{
 }>({
     url: "",
     name: "",
-    model_version: DigitalHumanModelVersionEnum.STANDARD,
+    model_version: DigitalHumanModelVersionEnum.SHANJIAN,
 });
 
 const fileName = ref("");

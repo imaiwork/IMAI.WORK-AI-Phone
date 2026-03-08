@@ -24,7 +24,7 @@ class DeviceLogic extends ApiLogic
             $params['user_id'] = self::$uid;
             $params['status'] = DeviceEnum::AUTO_CONFIG_STATUS_WAIT;
 
-            $report = AutoNeedsAnalysis::where('device_code', $params['device_code'])->where('step', 2)->order('id', 'desc')->limit(1)->findOrEmpty();
+            $report = AutoNeedsAnalysis::where('device_code', $params['device_code'])->where('user_id', self::$uid)->where('step', 2)->order('id', 'desc')->limit(1)->findOrEmpty();
             if ($report->isEmpty()) {
                 throw new \Exception('当前设备分析报告不存在，请稍后再试');
             }

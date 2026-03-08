@@ -16,6 +16,7 @@ use app\common\model\kb\KbKnowFiles;
 use app\common\model\kb\KbRobot;
 use app\common\model\kb\KbRobotInstruct;
 use app\common\model\kb\KbRobotRecord;
+use app\common\model\kb\KbRobotRelation;
 use app\common\model\knowledge\Knowledge;
 use app\common\model\knowledge\KnowledgeBind;
 use app\common\model\sv\SvReplyStrategy;
@@ -312,6 +313,22 @@ class KbRobotLogic extends BaseLogic
                     KbTeachLogic::modelButlerRobotUpdate($robot['id'],$mbKbId,$fdId,$userId,$uuid);
                 }
             }
+            //模型大管家检测系统智能体
+            if ($robot['is_indexed'] == 0 && $userId == 0){
+                if ($robot['intro'] != $post['intro'] || $robot['roles_prompt'] != $post['roles_prompt']){
+                    $relations = KbRobotRelation::where('robot_id',$robot['id'])->where('is_indexed',1)->select();
+                    if (!$relations->isEmpty()){
+                        $relations = $relations->toArray();
+                        foreach ($relations as $relation){
+                            $mbKbIdSystem = KbKnow::where('name','模型大管家')->where('user_id',$relation['user_id'])->value('id');
+                            $fdIdSystem = KbKnowFiles::where('know_id',$mbKbIdSystem)->value('id');
+                            $pgsqlSystem = new KbEmbedding();
+                            $uuidSystem = $pgsqlSystem->where('kb_id',$mbKbIdSystem)->where('fd_id',$fdIdSystem)->where('user_id',$relation['user_id'])->where('answer','【【@'.$robot['id'].'】】')->value('uuid');
+                            KbTeachLogic::modelButlerRobotUpdate($robot['id'],$mbKbIdSystem,$fdIdSystem,$relation['user_id'],$uuidSystem);
+                        }
+                    }
+                }
+            }
 
             KbRobot::update([
                                 'kb_type'            => intval($post['kb_type'] ?? 2),
@@ -425,6 +442,25 @@ class KbRobotLogic extends BaseLogic
                         'kb_id' => $mbKbId,
                     ];
                     KbTeachLogic::modelButlerRobotDelete($delPost,$userId);
+                }
+                // 删除系统智能体关联的大管家知识库
+                if ($detail['is_indexed'] == 0 && $userId == 0){
+                    $relations = KbRobotRelation::where('robot_id',$detail['id'])->where('is_indexed',1)->select();
+                    if (!$relations->isEmpty()){
+                        $relations = $relations->toArray();
+                        foreach ($relations as $relation){
+                            $mbKbIdSystem = KbKnow::where('name','模型大管家')->where('user_id',$relation['user_id'])->value('id');
+                            $fdIdSystem = KbKnowFiles::where('know_id',$mbKbIdSystem)->value('id');
+                            $pgsqlSystem = new KbEmbedding();
+                            $uuidSystem = $pgsqlSystem->where('kb_id',$mbKbIdSystem)->where('fd_id',$fdIdSystem)->where('user_id',$relation['user_id'])->where('answer','【【@'.$detail['id'].'】】')->value('uuid');
+                            $delPostSystem = [
+                                'uuids' => [$uuidSystem],
+                                'kb_id' => $mbKbIdSystem,
+                            ];
+                            KbTeachLogic::modelButlerRobotDelete($delPostSystem,$relation['user_id']);
+                            KbRobotRelation::destroy($relation['id']);
+                        }
+                    }
                 }
             }
 

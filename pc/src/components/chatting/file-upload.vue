@@ -180,17 +180,10 @@ const submitFileUpload = async (item: FileParams, index: number) => {
 
 // 粘贴图片
 const onPasteComplete = (params: FileParams) => {
-    const { file, url, status, create_time } = params;
-    // @ts-ignore
-    const findIndex = fileLists.value.findIndex((item) => +new Date(item.create_time) == +new Date(create_time));
-    if (!url || status === UPLOAD_STATUS.ERROR) {
-        fileLists.value.splice(findIndex);
+    if (fileLists.value.length > 0) {
+        fileLists.value[0] = params;
     } else {
-        if (findIndex > -1) {
-            fileLists.value[findIndex] = params;
-        } else {
-            fileLists.value.push(params);
-        }
+        fileLists.value.push(params);
     }
 };
 
@@ -215,8 +208,6 @@ onBeforeUnmount(() => {
 
 usePasteImage({
     handleFun: onPasteComplete,
-    limit: props.fileLimit,
-    fileLists: fileLists.value,
     isPaste: props.isPaste,
 });
 </script>

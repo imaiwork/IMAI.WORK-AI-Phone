@@ -781,8 +781,8 @@ class HumanLogic extends ApiLogic
                     throw new \Exception('音色错误');
                 }
             }
-            if ($model_version == 7 & (trim($width) == '' || trim($height) == '')){
-                throw new \Exception('宽高不能为空');
+            if ($model_version == 7 & (trim($width) == '' || trim($height) == '' || $width == 0 || $height == 0)){
+                throw new \Exception('蝉镜模型宽高不能为空');
             }
 
            

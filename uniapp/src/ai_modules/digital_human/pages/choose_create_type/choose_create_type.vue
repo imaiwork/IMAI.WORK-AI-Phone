@@ -27,6 +27,7 @@
                                         class="w-full h-full rounded-[12rpx]"
                                         mode="aspectFill"></image>
                                     <view
+                                        v-if="isShowVideoCase"
                                         class="absolute top-[50%] left-[50%] z-[888]"
                                         style="transform: translate(-50%, -50%)">
                                         <view
@@ -67,6 +68,7 @@ import VideoPreview from "@/components/video-preview/video-preview.vue";
 
 const appStore = useAppStore();
 
+const isShowVideoCase = computed(() => appStore.getDigitalHumanConfig?.video_case_open == "1");
 const videoCaseLists = computed(() => appStore.getDigitalHumanConfig?.video_case || []);
 
 // 类型列表
@@ -141,7 +143,7 @@ const handleClick = (item: any) => {
     });
 };
 const handlePlay = (url?: string) => {
-    if (!url) return;
+    if (!url || !isShowVideoCase.value) return;
     videoUrl.value = url;
     showVideoPreview.value = true;
 };

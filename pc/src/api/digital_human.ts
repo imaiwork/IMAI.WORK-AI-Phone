@@ -136,6 +136,16 @@ export const addShanjianPerson = (params: Record<string, any>) => {
     return $request.post({ url: "/shanjian.shanjianCharacterDesign/add", params });
 };
 
+// 人设列表
+export const getShanjianPersonList = (params: Record<string, any>) => {
+    return $request.get({ url: "/shanjian.shanjianCharacterDesign/lists", params });
+};
+
+// 人设删除
+export const deleteShanjianPerson = (params: Record<string, any>) => {
+    return $request.post({ url: "/shanjian.shanjianCharacterDesign/delete", params });
+};
+
 // 闪剪形象列表
 export const getShanjianAnchorList = (params: Record<string, any>) => {
     return $request.get({ url: "/shanjian.shanjianAnchor/lists", params });
@@ -154,4 +164,9 @@ export const generateShanjianPrompt = (params: Record<string, any>) => {
 // sora 任务重试
 export const retrySoraTask = (params: Record<string, any>) => {
     return $request.post({ url: "/sora.soraVideoSetting/retry", params });
+};
+
+// 闪剪形象授权列表
+export const shanjianAnchorAuthorizedList = (params: Record<string, any>) => {
+    return $request.get({ url: "/shanjian.shanjianAnchor/authorizedList", params });
 };

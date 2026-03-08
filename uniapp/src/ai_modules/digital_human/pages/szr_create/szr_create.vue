@@ -312,6 +312,7 @@ import CreateSuccessPop from "@/ai_modules/digital_human/components/create-succe
 // 定义锚点数据接口
 interface AnchorItem {
     name: string;
+    id: string;
     model_version: DigitalHumanModelVersionEnum & 0;
     anchor_id: string;
     anchor_ids: {
@@ -478,10 +479,15 @@ const chooseAnchor = (index: number) => {
 
 const handleChooseAnchor = (data: AnchorItem) => {
     // 检查是否已存在相同anchor_id的项目
-    const exists = anchorLists.value.findIndex((item) => item.anchor_id === data.anchor_id);
+    const exists = anchorLists.value.findIndex((item) => item.id === data.id);
     if (exists === -1) {
         anchorLists.value = [data, ...anchorLists.value];
-        chooseAnchor(0);
+        const index = anchorLists.value.findIndex((item: any) => getAnchorStatus(item.status, item.source_type) == 1);
+        if (index === -1) {
+            chooseAnchor(index);
+        } else {
+            chooseAnchor(0);
+        }
     } else {
         chooseAnchor(exists);
     }

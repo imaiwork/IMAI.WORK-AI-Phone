@@ -754,8 +754,7 @@
 						"disableScroll": true
 					},
 					"meta": {
-						"share": true,
-						"auth": true
+						"share": true
 					}
 				},
 				{

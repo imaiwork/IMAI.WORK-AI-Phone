@@ -81,7 +81,7 @@ export function getClipConfig() {
 
 // 获取视频创作记录
 export function getVideoCreationRecord(params?: any) {
-    return $request.get({ url: "/video/creationRecord", params });
+    return $request.get({ url: "/video/creationRecord", params }, { ignoreCancel: true });
 }
 
 // 删除视频创作记录
@@ -102,4 +102,9 @@ export function getVideoTranscodeResult(params: any) {
 // 视频转码
 export function videoTranscode(params: any) {
     return $request.post({ url: "/file/videoTranscoding", params });
+}
+
+// 批量获取视频信息
+export function batchGetVideoInfoByUrl(params: any) {
+    return $request.post({ url: "/videoInfo/batchGetInfo", params });
 }

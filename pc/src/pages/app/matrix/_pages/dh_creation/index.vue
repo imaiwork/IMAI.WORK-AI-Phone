@@ -59,7 +59,7 @@
             </div>
         </div>
 
-        <div class="grow min-h-0">
+        <div class="grow min-h-0" v-spin="{ show: loading, text: '加载中...' }">
             <ElScrollbar :distance="20" @end-reached="load">
                 <div class="p-6">
                     <template v-if="pager.lists.length > 0">
@@ -189,6 +189,8 @@ import PreviewVideoResult from "./_components/preview-video-result.vue";
 
 const route = useRoute();
 
+const loading = ref<boolean>(true);
+
 const queryParams = reactive({
     name: "",
     page_no: 1,
@@ -297,7 +299,15 @@ const handlePreviewVideoResult = async (item: any) => {
     previewVideoResultRef.value?.open({ id: item.id, auto_type: item.auto_type });
 };
 
-getLists();
+const init = async () => {
+    try {
+        await getLists();
+    } finally {
+        loading.value = false;
+    }
+};
+
+init();
 </script>
 
 <style scoped lang="scss">

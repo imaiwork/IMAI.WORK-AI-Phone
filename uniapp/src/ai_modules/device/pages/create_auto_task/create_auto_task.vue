@@ -1056,7 +1056,7 @@ const getAutoTaskDetail = async () => {
         },
         url: item.anchor_url,
         anchor_ids: {
-            shanjian_anchor_id: item.shanjian_voice_id,
+            shanjian_anchor_id: item.shanjian_anchor_id,
             weiju_anchor_id: item.weiju_anchor_id,
             chanjing_anchor_id: item.chanjing_anchor_id,
         },

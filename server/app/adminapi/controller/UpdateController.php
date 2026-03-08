@@ -3,7 +3,6 @@
 
 namespace app\adminapi\controller;
 
-use app\adminapi\controller\BaseAdminController;
 use app\common\service\ConfigService;
 
 /**
@@ -68,11 +67,19 @@ class UpdateController extends BaseAdminController
             'next_version' => $nextVersion,
         ]);
 
-        $version['version_name']    = $response['data']['version_name'];
-        $version['version_number']  = $nextVersion;
-        $version['update_time']     = date('Y-m-d H:i:s');
+        $version['version_name'] = $response['data']['version_name'];
+        $version['version_number'] = $nextVersion;
+        $version['update_time'] = date('Y-m-d H:i:s');
 
         ConfigService::set('website', 'version', $version);
+
+        //TODO 有大面积出问题的风险，暂时不上
+        //停止 Workerman 服务，由 SuperVisord 自动重启
+//        $root = app()->getRootPath();
+//        $root = substr($root, 0, strrpos($root, "/"));
+
+//        exec("cd {$root} && php80 think workerman:server stop");
+
         return $this->success('success');
     }
 }

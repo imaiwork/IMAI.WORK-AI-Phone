@@ -344,9 +344,9 @@
                                             placeholder="选择执行账号">
                                             <ElOption
                                                 v-for="item in deviceOptions.wechatLists"
-                                                :key="item.wechat_id"
-                                                :label="item.wechat_nickname"
-                                                :value="item.wechat_id" />
+                                                :key="item.account"
+                                                :label="item.nickname"
+                                                :value="item.account" />
                                         </ElSelect>
                                     </div>
                                     <div class="bg-white p-6 rounded-[24px] border border-slate-100">
@@ -508,7 +508,7 @@
 </template>
 
 <script setup lang="ts">
-import { createTask } from "~/api/customer";
+import { createTask } from "@/api/customer";
 import dayjs from "dayjs";
 import { AppTypeEnum, TokensSceneEnum } from "@/enums/appEnums";
 import { useCreateTask } from "@/pages/app/customer/_hooks/useCreateTask";

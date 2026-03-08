@@ -6040,6 +6040,11 @@ git-url-parse@^16.0.1:
   dependencies:
     git-up "^8.1.0"
 
+github-markdown-css@^5.9.0:
+  version "5.9.0"
+  resolved "https://registry.npmmirror.com/github-markdown-css/-/github-markdown-css-5.9.0.tgz#bf2a7d8f2cbad3bc89840aca7a4ebd5d6c2d23e3"
+  integrity sha512-tmT5sY+zvg2302XLYEfH2mtkViIM1SWf2nvYoF5N1ZsO0V6B2qZTiw3GOzw4vpjLygK/KG35qRlPFweHqfzz5w==
+
 glob-parent@^5.1.2, glob-parent@~5.1.2:
   version "5.1.2"
   resolved "https://registry.npmmirror.com/glob-parent/-/glob-parent-5.1.2.tgz"
@@ -7508,6 +7513,13 @@ markdown-it-plantuml@^1.4.1:
   version "1.4.1"
   resolved "https://registry.npmmirror.com/markdown-it-plantuml/-/markdown-it-plantuml-1.4.1.tgz"
   integrity sha512-13KgnZaGYTHBp4iUmGofzZSBz+Zj6cyqfR0SXUIc9wgWTto5Xhn7NjaXYxY0z7uBeTUMlc9LMQq5uP4OM5xCHg==
+
+markdown-it-prism@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.npmmirror.com/markdown-it-prism/-/markdown-it-prism-3.0.1.tgz#966751c603b77309aadba86629efc774e6b9b37f"
+  integrity sha512-JVnVGW8Gjw1TUtArXApnb/paeWye9TZW0kWzV2iqIUp1bxw+Rjh0WGg/BschKxn6fd1lCfv4FebSPMlcviGYSQ==
+  dependencies:
+    prismjs "1.30.0"
 
 markdown-it-sub@^2.0.0:
   version "2.0.0"
@@ -9315,7 +9327,7 @@ pretty-time@^1.1.0:
   resolved "https://registry.npmmirror.com/pretty-time/-/pretty-time-1.1.0.tgz"
   integrity sha512-28iF6xPQrP8Oa6uxE6a1biz+lWeTOAPKggvjB8HAs6nVMKZwf5bG++632Dx614hIWgUPkgivRfG+a8uAXGTIbA==
 
-prismjs@^1.29.0:
+prismjs@1.30.0, prismjs@^1.29.0:
   version "1.30.0"
   resolved "https://registry.npmmirror.com/prismjs/-/prismjs-1.30.0.tgz"
   integrity sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==

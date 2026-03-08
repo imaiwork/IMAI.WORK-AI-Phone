@@ -51,7 +51,7 @@
                                 v-for="result in searchResults"
                                 :key="`${result.groupId}-${result.agent.id}`"
                                 class="search-result-item"
-                                :class="{ 'is-active': selectedAgentId === result.agent.id }"
+                                :class="{ 'is-active': selectedAgentId == result.agent.id }"
                                 @click="handleSelectAgent(result.agent)">
                                 <div class="flex items-center gap-3 flex-1 min-w-0">
                                     <ElImage
@@ -190,8 +190,8 @@
                                         :key="agentIndex"
                                         class="agent-item group"
                                         :class="{
-                                            'is-active': selectedAgentId === agent.id,
-                                            'is-popover-open': activeAgentPopoverId === agent.id,
+                                            'is-active': selectedAgentId == agent.id,
+                                            'is-popover-open': activeAgentPopoverId == agent.id,
                                         }"
                                         @click="handleSelectAgent(agent)">
                                         <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -315,7 +315,7 @@ const search = ref("");
 const agentGroupList = ref<any[]>([]);
 const isLoading = ref(true);
 const isExpanded = ref(false);
-const selectedAgentId = ref<number | null>(0);
+const selectedAgentId = ref<number | null>(-1);
 const activeCollapse = ref<number[]>([0]);
 
 // 搜索相关状态
@@ -595,7 +595,7 @@ onUnmounted(() => {
 
 defineExpose({
     clearSelectedAgent: () => {
-        selectedAgentId.value = 0;
+        selectedAgentId.value = -1;
     },
     selectAgent: (agentId: number) => {
         selectedAgentId.value = agentId;

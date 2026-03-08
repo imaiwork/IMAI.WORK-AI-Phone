@@ -1,6 +1,6 @@
 <template>
     <div class="chatting" ref="chattingRef">
-        <div class="flex-1 relative min-h-0" :class="{ 'pb-[200px]': showShare }" v-if="contentList.length">
+        <div class="grow relative min-h-0" :class="{ 'pb-[200px]': showShare }" v-if="contentList.length">
             <div ref="scrollContainerRef" class="scroll-container" @scroll="scroll">
                 <div
                     class="md:max-w-3xl lg:max-w-[42rem] xl:max-w-[48rem] 2xl:max-w-[52rem] mx-auto"
@@ -143,7 +143,7 @@
                                 <file-lists v-model:file-list="fileList" />
                             </div>
                             <div class="flex items-end cursor-pointer px-[18px] relative">
-                                <div class="py-[12px] flex-1 mr-8">
+                                <div class="py-[12px] flex-1">
                                     <slot name="input" v-if="$slots.input"></slot>
                                     <ElInput
                                         v-else
@@ -528,7 +528,7 @@ const triggerContentPushUp = () => {
 
         // 设置容器最小高度，确保旧内容可以被顶上去
         // 最小高度 = 可视高度 + 旧内容高度
-        containerCurrentHeight.value = viewportHeight + currentContentHeight - chattingAreaRef.value.offsetHeight;
+        containerCurrentHeight.value = viewportHeight + currentContentHeight;
 
         // 等待DOM更新后滚动
         setTimeout(() => {
@@ -686,10 +686,10 @@ const contentPost = () => {
         feedback.msgError("文件正在上传中...");
         return;
     }
-
     triggerContentPushUp();
 
     emit("contentPost", inputContent.value);
+
     // 用户发送消息后，触发内容上推效果
     resetScroll();
     cleanInput();
@@ -957,6 +957,9 @@ watch(
 watch(
     () => props.contentList,
     (newVal, oldVal) => {
+        if (newVal.length === 0) {
+            containerCurrentHeight.value = 0; // 重置高度
+        }
         shareContentIndexList.value = [];
         showShare.value = false;
         if (!disabledScroll.value) {
@@ -1065,9 +1068,9 @@ defineExpose({
             @apply text-[#CACACA];
         }
 
-        &.is-focus {
-            min-height: 100px !important;
-        }
+        // &.is-focus {
+        //     min-height: 100px !important;
+        // }
     }
 }
 

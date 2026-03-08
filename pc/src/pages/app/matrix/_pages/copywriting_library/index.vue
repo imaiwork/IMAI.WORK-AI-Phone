@@ -91,7 +91,7 @@
             </div>
         </div>
 
-        <div class="grow min-h-0 bg-slate-50">
+        <div class="grow min-h-0 bg-slate-50" v-spin="{ show: loading, text: '加载中...' }">
             <ElScrollbar :distance="20" @end-reached="load">
                 <div class="p-6">
                     <template v-if="pager.lists.length > 0">
@@ -181,6 +181,8 @@ import { HandleMenuType } from "@/components/handle-menu/typings";
 import { CopywritingTypeEnum, SidebarTypeEnum } from "@/pages/app/matrix/_enums";
 import CreatePanel from "./_components/create-panel.vue";
 const route = useRoute();
+
+const loading = ref<boolean>(true);
 
 const queryParams = reactive({
     name: "",
@@ -284,7 +286,15 @@ const getUpdateCopywritingLibrary = (data: any) => {
     showRenamePopup.value = false;
 };
 
-getLists();
+const init = async () => {
+    try {
+        await getLists();
+    } finally {
+        loading.value = false;
+    }
+};
+
+init();
 </script>
 
 <style scoped lang="scss">

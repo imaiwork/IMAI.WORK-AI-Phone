@@ -30,8 +30,11 @@ class WechatLogic extends ApiLogic
 
             if ((int)$params['is_free_time'] === 1) {
                 $params['time_config'] = [];
+                if (empty($params['custom_date'])) {
+                    $params['custom_date'] = self::getDatesByFrep($params['task_frep']);
+                }
             }
-
+            //print_r($params);die;
             $allTaskInstall = [];
             foreach ($params['accounts'] as $account) {
                 $account['device_code'] = SvAccount::where('account', $account['account'])->where('type', 1)->where('user_id', self::$uid)->value('device_code') ?? '';
@@ -56,6 +59,7 @@ class WechatLogic extends ApiLogic
                 $params['avatar'] = SvAccount::where('account', $account['account'])->where('type', 1)->where('user_id', self::$uid)->value('avatar') ?? '';
                 $params['task_name'] = $params['task_name'] ?? '个微rpa任务' . date('YmdHi');
                 $params['device_code'] = $account['device_code'] ?? '';
+
                 $params['is_init'] = 0;
                 $strategy = SvWechatStrategy::create($params);
                 if (empty($strategy)) {
@@ -210,56 +214,71 @@ class WechatLogic extends ApiLogic
                 //->where('is_init', 0)
                 ->select();
             foreach ($strategies as $strategy) {
-                $tasks = SvDeviceTask::field('start_time, end_time')
-                    ->where('device_code', $strategy->device_code)
-                    ->where('auto_type', 0)
-                    ->where('day', date('Y-m-d', time()))
-                    // ->where('start_time', '<=', time())
-                    //->where('end_time', '>', time())
-                    ->select();
-                $times = [];
-                foreach ($tasks as $time) {
-                    $times[] = [$time['start_time'], $time['end_time']];
-                }
-                // 1. 合并重叠的时间段
-                $mergedBusyRanges = self::mergeTimeRanges($times);
-                // 2. 计算所有空闲时间段
-                $allFreeSlots = self::findFreeTimeSlots($mergedBusyRanges);
-
-                // 3. 过滤出时间间隔大于10分钟的空闲时间段
-                $freeSlotsOver10Min = self::filterByMinDuration($allFreeSlots, 10);
-                if (count($freeSlotsOver10Min) >= 1) {
-                    $time = $freeSlotsOver10Min[0];
-                    list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping($strategy->device_code, DeviceEnum::TASK_TYPE_WECHAT_RPA, $time[0], $time[1], $strategy->user_id, 0);
-                    if ($isOverlap) {
-                        $timeConfig = [
-                            date('H:i', $time[0]) . '-' . date('H:i', $time[1]),
-                        ];
-                        TaskLogic::add([
-                            [
-                                'user_id' => $strategy->user_id,
-                                'device_code' => $strategy->device_code,
-                                'task_type' => DeviceEnum::TASK_TYPE_WECHAT_RPA,
-                                'account' => $strategy->account,
-                                'account_type' => $strategy->account_type,
-                                'task_name' => $strategy->task_name,
-                                'task_scene' => 10,
-                                'status' => 0,
-                                'day' => date('Y-m-d', $time[0]),
-                                'start_time' => $time[0],
-                                'end_time' => $time[1] - 180,
-                                'time_config' => json_encode($timeConfig, JSON_UNESCAPED_UNICODE),
-                                'sub_task_id' => $strategy->id,
-                                'source' => DeviceEnum::TASK_SOURCE_WECHAT_RPA,
-                                'create_time' => time(),
-                            ]
-                        ]);
-                        $strategy->save([
-                            'is_init' => 1,
-                            'update_time' => time(),
-                        ]);
-                    } else {
-                        //\think\facade\Log::channel('device')->write(json_encode($lap, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'wechat');
+                $dates = !empty($strategy->custom_date) ? $strategy->custom_date : self::getDatesByFrep($strategy->task_frep);
+                foreach ($dates as $date) {
+                    //$date = '2026-03-07';
+                    $tasks = SvDeviceTask::field('start_time, end_time')
+                        ->where('device_code', $strategy->device_code)
+                        ->where('auto_type', 0)
+                        ->where('day', $date)
+                        // ->where('start_time', '<=', time())
+                        //->where('end_time', '>', time())
+                        ->select();
+                    $times = [];
+                    foreach ($tasks as $time) {
+                        $times[] = [$time['start_time'], $time['end_time']];
+                    }
+                    // 1. 合并重叠的时间段
+                    $mergedBusyRanges = self::mergeTimeRanges($times);
+                    // 2. 计算所有空闲时间段
+                    $allFreeSlots = self::findFreeTimeSlots($mergedBusyRanges, strtotime($date . ' 00:00:00'), strtotime($date . ' 23:59:59'));
+                    // 3. 过滤出时间间隔大于10分钟的空闲时间段
+                    $freeSlotsOver10Mins = self::filterByMinDuration($allFreeSlots, 10);
+                    // print_r($freeSlotsOver10Min);
+                    // die;
+                    if (count($freeSlotsOver10Mins) >= 1) {
+                        foreach ($freeSlotsOver10Mins as $freeSlotsOver10Min) {
+                            $time = $freeSlotsOver10Min;
+                            list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping(
+                                $strategy->device_code,
+                                DeviceEnum::TASK_TYPE_WECHAT_RPA,
+                                $time[0],
+                                $time[1],
+                                $strategy->user_id,
+                                0,
+                                $date,
+                            );
+                            if ($isOverlap) {
+                                $timeConfig = [
+                                    date('H:i', $time[0]) . '-' . date('H:i', $time[1]),
+                                ];
+                                TaskLogic::add([
+                                    [
+                                        'user_id' => $strategy->user_id,
+                                        'device_code' => $strategy->device_code,
+                                        'task_type' => DeviceEnum::TASK_TYPE_WECHAT_RPA,
+                                        'account' => $strategy->account,
+                                        'account_type' => $strategy->account_type,
+                                        'task_name' => $strategy->task_name,
+                                        'task_scene' => 10,
+                                        'status' => 0,
+                                        'day' => date('Y-m-d', $time[0]),
+                                        'start_time' => $time[0],
+                                        'end_time' => $time[1] - 180,
+                                        'time_config' => json_encode($timeConfig, JSON_UNESCAPED_UNICODE),
+                                        'sub_task_id' => $strategy->id,
+                                        'source' => DeviceEnum::TASK_SOURCE_WECHAT_RPA,
+                                        'create_time' => time(),
+                                    ]
+                                ]);
+                                $strategy->save([
+                                    'is_init' => 1,
+                                    'update_time' => time(),
+                                ]);
+                            } else {
+                                \think\facade\Log::channel('device')->write(json_encode($lap, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'wechat');
+                            }
+                        }
                     }
                 }
             }
@@ -268,6 +287,14 @@ class WechatLogic extends ApiLogic
         }
     }
 
+    private static function getDatesByFrep(int $days)
+    {
+        $dates = [];
+        for ($i = 0; $i < $days; $i++) {
+            $dates[] = date('Y-m-d', strtotime(date('Y-m-d', time()) . '+ ' . $i . ' day'));
+        }
+        return $dates;
+    }
 
     /**
      * 合并时间范围

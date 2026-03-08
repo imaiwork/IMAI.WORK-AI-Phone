@@ -382,6 +382,7 @@ const isCreate = computed(() => {
 const handleUploadAnchorVideo = () => {
     const { upload } = useUpload({
         size: commonUploadLimit.size,
+        sizeType: ["original"],
         widthResolution: [commonUploadLimit.minWidthResolution, commonUploadLimit.maxWidthResolution],
         heightResolution: [commonUploadLimit.minHeightResolution, commonUploadLimit.maxHeightResolution],
         duration: [commonUploadLimit.videoMinDuration, commonUploadLimit.videoMaxDuration],

@@ -120,7 +120,7 @@ class TaskLogic extends ApiLogic
      * @param int|null $excludeTaskId 排除的任务ID（编辑时使用）
      * @return bool 是否存在重叠
      */
-    public static function isTaskTimeOverlapping(string $deviceCode, int $taskType, int $startTime, int $endTime, int $userId, int $taskScene = 10): array
+    public static function isTaskTimeOverlapping(string $deviceCode, int $taskType, int $startTime, int $endTime, int $userId, int $taskScene = 10, string $date = ''): array
     {
         $query = SvDeviceTask::where('device_code', $deviceCode)
             ->where('auto_type', 0)
@@ -131,8 +131,11 @@ class TaskLogic extends ApiLogic
         if ($taskScene > 0) {
             $query->where('task_scene', '<>', $taskScene);
         }
-        $find = $query->findOrEmpty();
 
+        if (!empty($date)) {
+            $query->where('day', $date);
+        }
+        $find = $query->fetchSql(false)->findOrEmpty();
         if ($find->isEmpty()) {
             return [true, []];
         }
@@ -141,22 +144,32 @@ class TaskLogic extends ApiLogic
 
     public static function updateWechatRpaTaskTime(string $deviceCode,  int $endTime)
     {
+
+        SvDeviceTask::where('device_code', $deviceCode)
+                ->where('status', 'in', [0, 1, 3])
+                ->where('task_scene', 10)
+                ->where('day', date('Y-m-d', $endTime))
+                ->delete();
+        return;
+
+
         if ($endTime > time()) {
             $find = SvDeviceTask::where('device_code', $deviceCode)
                 ->where('status', 'in', [0, 1, 3])
                 ->where('task_scene', 10)
                 ->findOrEmpty();
             if (!$find->isEmpty()) {
-                $find->end_time = $endTime - 180;
-                if (($find->end_time - $find->start_time) < 600) {
-                    $find->delete();
-                } else {
-                    $find->time_config = json_encode([
-                        date('H:i', $find->start_time) . '-' . date('H:i', ($endTime - 180)),
-                    ], JSON_UNESCAPED_UNICODE);
-                    $find->update_time = time();
-                    $find->save();
-                }
+                $find->delete();
+                // $find->end_time = $endTime - 180;
+                // if (($find->end_time - $find->start_time) < 600) {
+                //     $find->delete();
+                // } else {
+                //     $find->time_config = json_encode([
+                //         date('H:i', $find->start_time) . '-' . date('H:i', ($endTime - 180)),
+                //     ], JSON_UNESCAPED_UNICODE);
+                //     $find->update_time = time();
+                //     $find->save();
+                // }
             }
         }
     }

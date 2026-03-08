@@ -161,7 +161,7 @@
                                 {{ gerModelVersionName(item.model_version) }}
                             </view>
                             <view
-                                class="text-xs text-[#00000080] mt-2 p-2 bg-[#fef2f2] rounded-[12rpx] border-l-[4rpx] border-solid border-[#fca5a5] text-[#dc2626]"
+                                class="text-xs text-[#00000080] mt-2 p-2 bg-[#fef2f2] rounded-[12rpx] border border-solid border-[#fca5a5] text-[#dc2626]"
                                 v-if="item.remark && item.status == 2">
                                 原因：{{ item.remark }}
                             </view>

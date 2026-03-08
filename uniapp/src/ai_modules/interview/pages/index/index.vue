@@ -64,8 +64,13 @@
 </template>
 
 <script lang="ts" setup>
+import { useUserStore } from "@/stores/user";
 import { getInterviewJobList, getInterviewJobDetail, generateJobLink, interviewCheck } from "@/api/interview";
 import { useCopy } from "@/hooks/useCopy";
+
+const userStore = useUserStore();
+
+const { isLogin } = storeToRefs(userStore);
 
 const state = reactive({
     // 是否是面试者
@@ -175,6 +180,11 @@ const init = async () => {
 onLoad((options: any) => {
     state.job_id = options.job_id;
     state.user_id = options.user_id;
+    if (state.job_id && !isLogin.value) {
+        uni.$u.route({
+            url: "pages/login/login",
+        });
+    }
     init();
 });
 </script>

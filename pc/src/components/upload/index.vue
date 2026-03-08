@@ -245,10 +245,9 @@ export default defineComponent({
 
                     video.addEventListener("loadedmetadata", () => {
                         const { videoWidth, videoHeight, duration } = video;
-                        const fileDuration = Math.floor(duration);
+                        const fileDuration = duration;
                         const isWidthValid = videoWidth >= videoMinWidth && videoWidth <= videoMaxWidth;
                         const isHeightValid = videoHeight >= videoMinHeight && videoHeight <= videoMaxHeight;
-
                         const isDurationValid = fileDuration >= minDuration && fileDuration <= maxDuration;
                         if (!isHeightValid) {
                             feedback.msgError(`上传视频高度不能小于${videoMinHeight}或大于${videoMaxHeight}`);

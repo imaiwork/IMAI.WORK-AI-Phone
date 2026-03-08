@@ -26,7 +26,8 @@ class WorkermanServie extends Command
     protected function execute(Input $input, Output $output)
     {
         // 指令输出
-        $output->writeln('convert start');
+        $output->writeln('workerman server start');
+        $output->writeln('start time: '. date('Y-m-d H:i:s', time()));
 
         $action = $input->getArgument('action');
         $mode = $input->getOption('mode');

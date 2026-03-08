@@ -53,7 +53,7 @@ class KbRobotLogic extends BaseLogic
         $pageNo    = isset($params['page_no']) && $params['page_no'] > 0 ? (int)$params['page_no'] : 1;
         $pageSize  = isset($params['page_size']) && $params['page_size'] > 0 ? (int)$params['page_size'] : 10;
         $offset    = ($pageNo - 1) * $pageSize;
-        $where     = [['user_id', '=', $userId], ['delete_time', '=', null]];
+        $where     = [['user_id', 'in', [0,$userId]], ['delete_time', '=', null]];
         $cozeWhere = [['type', '=', 1], ['source_id', '=', $userId]];
         $flowWhere = [['a.type', '=', 2], ['f.source_id', '=', $userId]];
         $query1    = Db::name('kb_robot')

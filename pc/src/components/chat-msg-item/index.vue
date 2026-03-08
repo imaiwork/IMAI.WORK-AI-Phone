@@ -2,7 +2,22 @@
     <div class="chat-message-item flex gap-x-2">
         <!-- My message -->
         <div v-if="type == 1" class="ml-auto flex flex-col mt-1">
-            <div class="relative group" @mouseenter="showMyContent = true" @mouseleave="handleMyMessageMouseLeave">
+            <div class="flex flex-col gap-2 items-end" v-if="fileLists.length > 0">
+                <div v-for="(file, index) in fileLists" class="relative group">
+                    <file-card :uid="file.uid || index" :name="file.name" :size="file.size" :url="file.url" />
+                    <div
+                        class="rounded-lg absolute top-0 left-0 w-full h-full group-hover:visible invisible bg-[rgba(0,0,0,0.4)] cursor-pointer flex items-center justify-center">
+                        <div>
+                            <ElTooltip content="查看">
+                                <a :href="file.url" target="_blank"
+                                    ><Icon name="el-icon-View" size="18" color="#ffffff"></Icon
+                                ></a>
+                            </ElTooltip>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="relative group mt-2" @mouseenter="showMyContent = true" @mouseleave="handleMyMessageMouseLeave">
                 <div class="message-contain message-contain--my" ref="messageMyRef" v-if="message">
                     <slot name="my"></slot>
                 </div>
@@ -59,21 +74,6 @@
                             <Icon name="local-icon-pencil" :size="16"></Icon>
                         </div>
                     </ElTooltip>
-                </div>
-            </div>
-            <div class="flex flex-col gap-2 mt-2 items-end" v-if="fileLists.length > 0">
-                <div v-for="(file, index) in fileLists" class="relative group">
-                    <file-card :uid="file.uid || index" :name="file.name" :size="file.size" :url="file.url" />
-                    <div
-                        class="rounded-lg absolute top-0 left-0 w-full h-full group-hover:visible invisible bg-[rgba(0,0,0,0.4)] cursor-pointer flex items-center justify-center">
-                        <div>
-                            <ElTooltip content="查看">
-                                <a :href="file.url" target="_blank"
-                                    ><Icon name="el-icon-View" size="18" color="#ffffff"></Icon
-                                ></a>
-                            </ElTooltip>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

@@ -24,13 +24,13 @@ class ShanjianAnchorLogic extends ApiLogic
 
     public static function add(array $params)
     {
-        Log::channel('shanjian')->write('定时任务闪剪');
+        Log::channel('shanjiannotice')->write('定时任务闪剪');
         $user_id      = $params['user_id'] ?? self::$uid;
         $dh_id        = $params['dh_id'];
         $digitalHuman = DigitalHumanAnchor::where('id', $dh_id)->findOrEmpty();
         $task_ids     = json_decode($digitalHuman->task_ids, true);
         if ($digitalHuman->isEmpty()) {
-            Log::channel('shanjian')->write('公共形象未找到');
+            Log::channel('shanjiannotice')->write('公共形象未找到');
             return false;
         }
 
@@ -66,7 +66,7 @@ class ShanjianAnchorLogic extends ApiLogic
             return true;
         } else {
             $msg = $response['message'] ?? '检验失败';
-            Log::channel('shanjian')->write('定时任务闪剪形象创建失败，' . $msg);
+            Log::channel('shanjiannotice')->write('定时任务闪剪形象创建失败，' . $msg);
             $task_ids['shanjian']['status'] = 2;
             $digitalHuman->task_ids         = json_encode($task_ids);
             $digitalHuman->remark           = $msg;
@@ -198,7 +198,7 @@ class ShanjianAnchorLogic extends ApiLogic
                         try {
                             $scene = self::SHANJIAN_VOICE;
                             $response = self::requestUrl($param, $scene, $item->user_id, $item->task_id);
-                            Log::channel('shanjian')->write('闪剪音色结果返回'.json_encode($response,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                            Log::channel('shanjiannotice')->write('闪剪音色结果返回'.json_encode($response,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                             if (isset($response['code']) && $response['code'] == 10000) {
                                 $task_ids['shanjian']['status'] = 1;
                                 $digitalHuman->task_ids = json_encode($task_ids);
@@ -221,7 +221,7 @@ class ShanjianAnchorLogic extends ApiLogic
                             $item->status = 5;
                             $response = $e->getResponse();   // 先拿到 Response 对象
                             $responsedata     = $response->getData(); // 返回的就是数组
-                            Log::channel('shanjian')->write('闪剪音色结果返回2'.json_encode($responsedata,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                            Log::channel('shanjiannotice')->write('闪剪音色结果返回2'.json_encode($responsedata,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
                             $item->remark = $responsedata['msg'] ?? '';
                             $digitalHuman->remark .= '闪剪形象生成失败：'.$item->remark.' ';
@@ -282,7 +282,7 @@ class ShanjianAnchorLogic extends ApiLogic
 
             return true;
         } catch (\Throwable $e) {
-            Log::channel('shanjian')->write('闪剪退费失败'.$e->getMessage());
+            Log::channel('shanjiannotice')->write('闪剪退费失败'.$e->getMessage());
             return false;
         }
     }

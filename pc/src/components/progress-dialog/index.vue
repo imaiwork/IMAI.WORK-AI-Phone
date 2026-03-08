@@ -13,9 +13,7 @@
                 <div class="mb-8 last:mb-0">
                     <div class="flex items-end justify-between mb-3">
                         <div class="flex flex-col gap-1">
-                            <span class="text-[13px] font-black text-slate-400 uppercase tracking-wider"
-                                >File Name</span
-                            >
+                            <span class="text-[13px] font-black text-slate-400 uppercase tracking-wider">文件名称</span>
                             <span class="text-sm font-medium text-slate-700 truncate max-w-[280px]">{{
                                 name || "正在准备文件..."
                             }}</span>

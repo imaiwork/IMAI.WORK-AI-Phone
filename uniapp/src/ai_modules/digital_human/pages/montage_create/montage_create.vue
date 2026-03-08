@@ -810,6 +810,7 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
                         ) {
                             return "口播文案包含内容不能少于3个字，不能超过500个字";
                         }
+
                         return "请至少添加一条文案";
                     } else {
                         return "请至少添加一条音频";
