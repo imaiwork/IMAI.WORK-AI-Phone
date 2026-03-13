@@ -69,6 +69,10 @@ const show = computed({
 const editValue = ref<string>("");
 
 const confirm = () => {
+    if (!editValue.value) {
+        uni.$u.toast("请输入内容");
+        return;
+    }
     emit("confirm", editValue.value);
 };
 
@@ -79,6 +83,7 @@ const close = () => {
 };
 
 const setFormData = (data: any) => {
+    console.log(data);
     editValue.value = data;
 };
 

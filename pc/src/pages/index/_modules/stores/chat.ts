@@ -164,6 +164,7 @@ export const useChatStore = defineStore("chat", () => {
         //     });
         // }
         agentValue.value = agent;
+        // console.log("agentValue", agentValue.value);
     }
 
     function setQuoteText(text: string) {

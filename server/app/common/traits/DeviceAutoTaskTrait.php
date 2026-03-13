@@ -49,6 +49,7 @@ trait DeviceAutoTaskTrait
     public static function sphCluesStartTask(SvDeviceTask $dtask, Output $output, callable $callback)
     {
         try {
+            TokenLogService::checkToken($dtask->user_id,'');
             self::$logtitle = "视频号线索任务[{$dtask->device_code}]";
             $task = SvCrawlingTask::where('id', $dtask->sub_task_id)->findOrEmpty();
             if ($task->isEmpty()) {
@@ -151,7 +152,7 @@ trait DeviceAutoTaskTrait
     {
         try {
             self::$logtitle = "视频号线索任务[{$task->device_code}]";
-
+            TokenLogService::checkToken($task->user_id,'');
             self::checkOnline($task->device_code, 'ws');
             $data = array(
                 'type' => 25,
@@ -210,7 +211,7 @@ trait DeviceAutoTaskTrait
         try {
             self::$logtitle = "视频号发布任务[{$task->device_code}]";
             self::checkOnline($task->device_code, 'ws');
-
+            TokenLogService::checkToken($task->user_id,'');
             $publish = SvPublishSettingDetail::alias('ps')
                 ->field('ps.*')
                 ->join('sv_publish_setting_account pa', 'ps.publish_account_id = pa.id')
@@ -298,7 +299,7 @@ trait DeviceAutoTaskTrait
         try {
             $accountTypeName = DeviceEnum::getAccountTypeDesc($task->account_type);
             self::$logtitle = "RPA [{$accountTypeName}]发布任务[{$task->device_code}]";
-
+            TokenLogService::checkToken($task->user_id,'');
             self::checkOnline($task->device_code, 'ws');
 
             $publish = SvPublishSettingDetail::alias('ps')
@@ -389,6 +390,7 @@ trait DeviceAutoTaskTrait
     public static function wechatCirclePublishTask(SvDeviceTask $task, Output $output, callable $callback)
     {
         try {
+            TokenLogService::checkToken($task->user_id,'');
             self::$logtitle = "微圈发布任务[{$task->device_code}]";
 
             self::checkOnline($task->device_code, 'ws');
@@ -401,7 +403,7 @@ trait DeviceAutoTaskTrait
                     'remark' => '微圈发布任务不存在',
                 ]);
             }
-
+           
             $payload = array(
                 'appType' => $task->account_type,
                 'messageId' => 0,
@@ -467,7 +469,7 @@ trait DeviceAutoTaskTrait
         try {
             self::$logtitle = "自动加好友任务[{$dtask->device_code}]";
             self::checkOnline($dtask->device_code, 'ws');
-
+            TokenLogService::checkToken($dtask->user_id,'');    
             // $records = SvCrawlingManualTaskRecord::alias('a')
             //     ->field('a.*')
             //     ->field('t.add_type, t.add_number, t.add_interval_time, t.add_friends_prompt, t.add_remark_enable, t.remarks, t.wechat_id, t.wechat_reg_type')
@@ -727,7 +729,7 @@ trait DeviceAutoTaskTrait
         try {
             self::$logtitle = "养号任务{$dtask->device_code}";
             self::checkOnline($dtask->device_code, 'ws');
-
+            TokenLogService::checkToken($dtask->user_id,'');    
             $account = SvDeviceActiveAccount::where('id', $dtask->sub_task_id)->findOrEmpty();
             if ($account->isEmpty()) {
                 $output->writeln(Db::getLastSql());
@@ -798,7 +800,7 @@ trait DeviceAutoTaskTrait
         try {
             self::$logtitle = "养号任务结束{$dtask->device_code}";
             self::checkOnline($dtask->device_code, 'ws');
-
+            TokenLogService::checkToken($dtask->user_id,'');    
             $account = SvDeviceActiveAccount::where('id', $dtask->sub_task_id)->findOrEmpty();
             if ($account->isEmpty()) {
                 $output->writeln(Db::getLastSql());
@@ -859,7 +861,7 @@ trait DeviceAutoTaskTrait
         try {
             self::$logtitle = "评论区评论任务{$dtask->device_code}";
             self::checkOnline($dtask->device_code, 'ws');
-
+            TokenLogService::checkToken($dtask->user_id,'');    
             $account = SvLeadScrapingSettingAccount::where('id', $dtask->sub_task_id)->where('task_type', 1)->findOrEmpty();
             if ($account->isEmpty()) {
                 $output->writeln(Db::getLastSql());
@@ -954,6 +956,7 @@ trait DeviceAutoTaskTrait
     public static function touchCommentToMsgTask(SvDeviceTask $dtask, Output $output, callable $callback)
     {
         try {
+            TokenLogService::checkToken($dtask->user_id,'');
             self::$logtitle = "评论区私信任务{$dtask->device_code}";
             self::checkOnline($dtask->device_code, 'ws');
 
@@ -1053,7 +1056,7 @@ trait DeviceAutoTaskTrait
         try {
             self::$logtitle = "留痕获客任务{$dtask->device_code}";
             self::checkOnline($dtask->device_code, 'ws');
-
+            TokenLogService::checkToken($dtask->user_id,'');    
             $account = SvLeadScrapingSettingAccount::where('id', $dtask->sub_task_id)->where('task_type', 3)->findOrEmpty();
             if ($account->isEmpty()) {
                 $output->writeln(Db::getLastSql());
@@ -1153,7 +1156,7 @@ trait DeviceAutoTaskTrait
     {
         try {
             self::$logtitle = "接管任务{$dtask->device_code}";
-
+            TokenLogService::checkToken($dtask->user_id,'');    
             self::checkOnline($dtask->device_code, 'ws');
 
             $account = SvDeviceTakeOverTaskAccount::where('id', $dtask->sub_task_id)->findOrEmpty();
@@ -1235,6 +1238,7 @@ trait DeviceAutoTaskTrait
     private static function _sendChannelAddWechatMessage(array $payload, SvAccount $wechat, array $record)
     {
         try {
+            TokenLogService::checkToken( $wechat->user_id,'');
             //进程通信
             $request = [
                 'DeviceId' => $payload['DeviceCode'],
@@ -1265,7 +1269,6 @@ trait DeviceAutoTaskTrait
             // $wechat->cooling_time = 0;
             // $wechat->update_time = time();
             // $wechat->save();
-
             AiWechatLog::create([
                 'user_id' => $wechat->user_id,
                 'wechat_id' => $wechat->account,
@@ -1332,7 +1335,7 @@ trait DeviceAutoTaskTrait
                 $publish['message'] = '待发布数据丢失:';
                 self::setLog($publish, 'publish');
             }
-
+            TokenLogService::checkToken( $detail['user_id'],'');
 
             $account = SvPublishSettingAccount::where('id', $publish['publish_account_id'])->findOrEmpty();
             if (!$account->isEmpty()) {

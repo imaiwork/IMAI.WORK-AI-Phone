@@ -131,14 +131,14 @@ class AddWechatLogic extends ApiLogic
             $device = SvDevice::where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();
             
             if($device->isEmpty()){
-                throw new \Exception('该设备没有绑定账号');
+                throw new \Exception('该设备没有绑定账号' . $item->device_code);
             }
 
             
 
             $wechat = SvAccount::where('user_id', $item->user_id)->where('device_code', $device->device_code)->where('type', 1)->findOrEmpty();
             if($wechat->isEmpty()){
-                throw new \Exception('该设备绑定的微号不存在');
+                throw new \Exception('该设备绑定的微号不存在' . $item->device_code);
             }   
 
             $maxDay =  \app\common\model\sv\SvDeviceTask::where('device_code', $item->device_code)
@@ -175,13 +175,16 @@ class AddWechatLogic extends ApiLogic
             ];
             \app\common\model\sv\SvDeviceTask::create($deviceTask);
             $item->status = DeviceEnum::AUTO_CONFIG_STATUS_FINISHED;
+            $item->result = '任务生成成功'. date('Y-m-d H:i:s', time());
+            $item->update_time = time();
             $item->save();
             Db::commit();
         } catch (\Throwable $th) {
-            \think\facade\Log::channel('auto')->write($th->__toString(), 'add_wechat');
+            \think\facade\Log::channel('auto')->write('自动化加微任务生成' . $item->device_code . ' ' . $th->__toString() . 'add_wechat');
             Db::rollback();
             $item->status = DeviceEnum::AUTO_CONFIG_STATUS_FAILED;
             $item->result = $th->getMessage();
+            $item->update_time = time();
             $item->save();
             throw new \Exception($th->getMessage());
         }

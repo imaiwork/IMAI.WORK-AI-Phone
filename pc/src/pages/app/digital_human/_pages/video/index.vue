@@ -28,6 +28,7 @@
                     <ElOption label="素材" :value="CreateVideoTypeEnum.MATERIAL_MIX" />
                     <ElOption label="新闻" :value="CreateVideoTypeEnum.NEWS" />
                     <ElOption label="一句话" :value="CreateVideoTypeEnum.SENTENCE" />
+                    <ElOption label="分镜" :value="CreateVideoTypeEnum.STORYBOARD" />
                 </ElSelect>
             </div>
         </div>

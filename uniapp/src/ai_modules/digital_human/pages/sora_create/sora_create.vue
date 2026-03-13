@@ -241,7 +241,7 @@
             </view>
         </template>
     </create-success-pop>
-    <tokens-cost v-if="showTokensCost" v-model="showTokensCost" :type="5" />
+    <tokens-cost v-if="showTokensCost" v-model="showTokensCost" :type="MontageTypeEnum.SORA_VIDEO" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
     <video-preview v-model="showVideoPreview" :video-url="playData.url" :pic="playData.pic" />
 </template>

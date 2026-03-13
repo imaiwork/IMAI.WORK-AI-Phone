@@ -64,7 +64,6 @@ const del = (index: number) => {
 const getFileTypeValue = computed(() => {
     const { name } = props.item;
     const fileName = name.split(".").pop();
-    console.log(fileName);
     switch (fileName) {
         case "txt":
             return { theme: "#FF5588", fileType: "文档", icon: IconFileText };

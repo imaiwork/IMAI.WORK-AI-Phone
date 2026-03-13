@@ -611,17 +611,41 @@ class VideoInfoController extends BaseApiController
                 return ['result' => false, 'url' => '', 'msg' => '选项参数必须是数组'];
             }
 
+            $targetWidth = $options['width'] ?? 960;
+            $targetHeight = $options['height'] ?? 0;
+
+            // ========== 方式1：用FFmpeg命令行解析（无需扩展，兼容性好） ==========
+            $ffmpegCmd = "ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 " . escapeshellarg($videoUrl);
+            exec($ffmpegCmd, $output, $returnVar);
+            if ($returnVar !== 0 || empty($output[0])) {
+                $finalWidth = 320;
+                $finalHeight = 240;
+            }else{
+                list($originWidth, $originHeight) = explode('x', $output[0]);
+                $originWidth = (int)$originWidth;
+                $originHeight = (int)$originHeight;
+
+                // 3. 关键计算：按原比例缩放，适配目标宽/高（只传宽/只传高/都传的情况）
+                $scaleRatio = min(
+                    $targetWidth > 0 ? $targetWidth / $originWidth : 1,
+                    $targetHeight > 0 ? $targetHeight / $originHeight : 1
+                );
+                // 最终等比例尺寸（取整，避免小数）
+                $finalWidth = (int)round($originWidth * $scaleRatio);
+                $finalHeight = (int)round($originHeight * $scaleRatio);
+            }
+
             // 设置默认选项
             $defaultOptions = [
-                'width'   => 320,
-                'height'  => 240,
+                'width'   => $finalWidth,
+                'height'  => $finalHeight,
                 'quality' => 2
             ];
             $options        = array_merge($defaultOptions, $options);
 
             // 验证尺寸限制
-            if ($options['width'] > 1920 || $options['height'] > 1080) {
-                return ['result' => false, 'url' => '', 'msg' => '缩略图尺寸不能超过1920x1080'];
+            if ($options['width'] > 2000 || $options['height'] > 2000) {
+                return ['result' => false, 'url' => '', 'msg' => '缩略图宽高不能超过1920'];
             }
 
             $thumbnailUrl = $this->videoInfoService->generateThumbnail($videoUrl, $time, $options);

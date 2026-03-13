@@ -24,10 +24,15 @@ class SvVideoTaskCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\n 矩阵任务1...'\n");
         SvVideoSettingLogic::check();
+        print_r("\n 矩阵任务2...'\n");
         SvVideoTaskLogic::compositeAnchorCron();
+        print_r("\n 矩阵任务3...'\n");
         SvVideoTaskLogic::compositeVoiceCron();
+        print_r("\n 矩阵任务4...'\n");
         SvVideoTaskLogic::compositeAudioCron();
+        print_r("\n 矩阵任务5...'\n");
         SvVideoTaskLogic::compositeVideoCron();
         return true;
     }

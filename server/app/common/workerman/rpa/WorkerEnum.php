@@ -168,6 +168,7 @@ class WorkerEnum
     public const RPA_COMMENT_TO_MSG_FAIL = 4056; //评论区私信失败;
     public const RPA_COMMENT_TO_MARK_CLUE_FAIL = 4057; //评论区留痕获客失败;
     public const RPA_COMMENT_TO_TOUCH_POST_FAIL = 4058; //评论区截流上报异常;
+    public const TASK_TOKEN_ERROR = 4059; //用户算力不足;
 
 
 

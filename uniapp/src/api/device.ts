@@ -384,3 +384,8 @@ export const getTaskCircleLikeList = (data: Record<string, any>) => {
 export const getTaskAddWechatList = (data: Record<string, any>) => {
     return request.get({ url: "/device.display/cluesWechatDetail", data });
 };
+
+// 截流行业历史记录
+export const getTaskClosureIndustryHistory = () => {
+    return request.get({ url: "/sv.leadScraping/getFilterHistory" });
+};

@@ -422,7 +422,7 @@
         desc="您可以立即去设置发布任务，也可以等待视频生成成功后再发布"
         @to="toPublish"
         @seek="toRecord" />
-    <tokens-cost v-if="showTokensCost" v-model="showTokensCost" :type="2" />
+    <tokens-cost v-if="showTokensCost" v-model="showTokensCost" :type="MontageTypeEnum.REAL_PERSON_AI" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
 </template>
 

@@ -61,7 +61,6 @@
 </template>
 
 <script setup lang="ts">
-import config from "@/config";
 import { useAppStore } from "@/stores/app";
 import CommonBg from "@/ai_modules/digital_human/static/images/common/bg.jpg";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
@@ -71,7 +70,6 @@ const appStore = useAppStore();
 const isShowVideoCase = computed(() => appStore.getDigitalHumanConfig?.video_case_open == "1");
 const videoCaseLists = computed(() => appStore.getDigitalHumanConfig?.video_case || []);
 
-// 类型列表
 const typeList = [
     {
         key: "dh",
@@ -79,8 +77,6 @@ const typeList = [
         desc: "可输出带有任何标题字幕包装的数字人口播视频",
         is_dh: true,
         path: "/ai_modules/digital_human/pages/szr_create/szr_create",
-        videoUrl: config.baseUrl + "static/videos/dh/dh1.mp4",
-        imageUrl: config.baseUrl + "static/videos/dh/dh1.jpg",
     },
     {
         key: "montage",
@@ -88,46 +84,36 @@ const typeList = [
         desc: "数字人+文案+素材智能混剪，自动加字幕/标题/特效，生成爆款视频",
         is_dh: true,
         path: "/ai_modules/digital_human/pages/montage_create/montage_create",
-        videoUrl: config.baseUrl + "static/videos/dh/dh2.mp4",
-        imageUrl: config.baseUrl + "static/videos/dh/dh2.jpg",
     },
     {
         key: "real_person",
         title: "真人口播视频混剪",
         desc: "上传真人口播视频+素材，AI自动剪辑气口、加包装，输出网感口播视频",
         path: "/ai_modules/digital_human/pages/montage_person_create/montage_person_create",
-        videoUrl: config.baseUrl + "static/videos/dh/dh2.mp4",
-        imageUrl: config.baseUrl + "static/videos/dh/dh2.jpg",
     },
     {
         key: "montage_material",
         title: "素材混剪神器",
         desc: "文案+AI配音+多场景素材混剪，自动生成商品种草/产品解说/产品介绍视频",
         path: "/ai_modules/digital_human/pages/montage_material_create/montage_material_create",
-        videoUrl: config.baseUrl + "static/videos/dh/dh2.mp4",
-        imageUrl: config.baseUrl + "static/videos/dh/dh2.jpg",
     },
     {
         key: "news",
         title: "新闻体视频",
         desc: "流量收割机！上传素材+标题+音乐=秒出新闻体混剪视频",
         path: "/ai_modules/digital_human/pages/montage_news_create/montage_news_create",
-        videoUrl: config.baseUrl + "static/videos/dh/dh2.mp4",
-        imageUrl: config.baseUrl + "static/videos/dh/dh2.jpg",
     },
     {
         title: "一句话生成视频",
         desc: "全新Sora2创作大模型，一句话即可生成视频，影视级创作效果",
         path: "/ai_modules/digital_human/pages/sora_create/sora_create",
     },
-    // {
-    //     key: "storyboard",
-    //     title: "分镜混剪视频",
-    //     desc: "支持创建多镜头分组素材，字幕分组等，智能匹配自动出片",
-    //     path: "/ai_modules/digital_human/pages/montage_storyboard/montage_storyboard",
-    //     videoUrl: config.baseUrl + "static/videos/dh/dh2.mp4",
-    //     imageUrl: config.baseUrl + "static/videos/dh/dh2.jpg",
-    // },
+    {
+        key: "storyboard",
+        title: "分镜混剪视频",
+        desc: "支持创建多镜头分组素材，字幕分组等，智能匹配自动出片",
+        path: "/ai_modules/digital_human/pages/montage_storyboard_create/montage_storyboard_create",
+    },
 ];
 
 const showVideoPreview = ref(false);

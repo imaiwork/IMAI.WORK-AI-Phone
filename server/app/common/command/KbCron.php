@@ -22,8 +22,11 @@ class KbCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\n 知识库任务1...'\n");
         KbKnowLogic::modelButlerCheck();
+        print_r("\n 知识库任务2...'\n");
         KbKnowLogic::systemKbRobotCheck();
+        print_r("\n 知识库任务3...'\n");
         KbKnowLogic::systemKbRobotInsertModelButlerKbKnow();
         return true;
     }

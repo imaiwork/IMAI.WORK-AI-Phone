@@ -218,7 +218,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
      */
     public static function notify(array $data): bool
     {
-       
+       return false;
         $notice = $setPublish = false;
         if (!isset($data['task_id']) || empty($data['task_id'])) {
             self::setError('缺少任务ID');
@@ -909,7 +909,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
         try {
             $tasks = ShanjianVideoTask::where('status', 1)
                 ->where('create_time', '<=', strtotime('-5 minutes'))
-                ->limit(20)
+                ->limit(5)
                 ->select();
 
             foreach ($tasks as $task) {
@@ -936,22 +936,16 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         continue;
                     }
                     cache($lockKey, 1, 300);
-                    Db::startTrans();
-
                     $item = ShanjianVideoTask::where('id', $task->id)->find();
-
                     if (!$item || $item->status != 1) {
-                        Db::commit();
                         cache($lockKey, null);
                         continue;
                     }
-
                     $ShanjianVideoSetting = ShanjianVideoSetting::where('id', $item->video_setting_id)->whereIn('status', [1, 2])->findOrEmpty();
                     if ($ShanjianVideoSetting->isEmpty()) {
                         $item->status = 2;
                         $item->remark = '关联的视频设置不存在，任务超时';
                         $item->save();
-                        Db::commit();
                         cache($lockKey, null);
                         continue;
                     }
@@ -980,6 +974,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         '4' => '新闻体混剪视频'
                     ];
                     $remark = $remarkArray[$task->shanjian_type] ?? '数字人口播混剪视频';
+                    Db::startTrans();
 
                     if (isset($response['data']['status'])) {
                         $data = $response['data'];
@@ -1011,6 +1006,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     ];
                                     Log::channel('shanjiannotice')->write('check获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                                     $item->video_result_url = $video_result_url;
+                                    $item->duration = $data['result']['duration'] ?? '0';;
                                 }
                                 // 更新视频设置表的成功计数和状态
                                 $setPublish = self::updateVideoSettingStatus($item->video_setting_id, true);
@@ -1097,7 +1093,11 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     Db::commit();
                     cache($lockKey, null);
                 } catch (\Exception $e) {
-                    Db::rollback();
+                    try {
+                        Db::rollback();
+                    } catch (\Exception $rollbackEx) {
+                        Log::channel('shanjiannotice')->warning('Check 回滚失败: ' . $rollbackEx->getMessage());
+                    }
                     cache($lockKey, null);
                     $errorMsg = $e->getMessage();
 
@@ -1115,7 +1115,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     try {
                         ShanjianVideoTask::where('id', $task->id)->update([
                             'status' => 2,
-                            'remark' => 'Check方法异常：' . $errorMsg
+                            'remark' => 'Check方法异常：' . mb_substr($errorMsg, 0, 100)
                         ]);
                     } catch (\Exception $ex) {
                         // 忽略更新失败状态时的错误

@@ -1,0 +1,1 @@
+import{g as n,o as _,c as a,a as o,C as s,_ as c}from"./entry.252e648d.js";const p=n({__name:"index",props:{width:{type:String,default:"48px"},height:{type:String,default:"48px"}},setup(t){const e=t;return(i,d)=>(_(),a("div",null,[o("div",{class:"loader",style:s({width:e.width,height:e.height})},null,4)]))}});const r=c(p,[["__scopeId","data-v-39a1c487"]]);export{r as _};

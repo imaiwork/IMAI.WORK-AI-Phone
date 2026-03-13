@@ -1042,7 +1042,10 @@ class SvVideoTaskLogic extends SvBaseLogic
                         $item->status = ($data['status'] == 2) ? 13 : 12;
                         // TODO 失败退费
                         if ($item->status == 12) {
+                            HumanVoice::where('voice_id', $item->voice_id)->where('task_id', $item->task_id)->where('model_version', 7)->where('status', 0)->update(['status' => 2, 'remark' => $data['err_msg']]);
                             self::refundTokens($item->user_id, $item->voice_id, $item->task_id, 'human_voice_chanjing');
+                        }else{
+                            HumanVoice::where('voice_id', $item->voice_id)->where('task_id', $item->task_id)->where('model_version', 7)->where('status', 0)->update(['status' => 1]);
                         }
                     } else {
                         $item->status = 0;
@@ -1141,34 +1144,39 @@ class SvVideoTaskLogic extends SvBaseLogic
                 }
 
                 if($item->status == 6 && $item->automatic_clip == 1&& $item->clip_status == 1){
-                    $unit = TokenLogService::checkToken($item->user_id, 'video_clip');
-                    $result_url = FileService::getFileUrl($item->video_result_url);
-                    $params = [
-                        'video_id' => $item->id,
-                        'task_id' => $item->task_id,
-                        'clip_type' => $item->clip_type,
-                        'music_url' => $item->music_url,
-                        'music_type' => $item->music_type,
-                        'msg' => $item->msg,
-                        'result_url' => $result_url,
-                        'type' => 2,
-                    ];
-                    Log::channel('clip')->write('短视频视频剪辑参数'.json_encode($params));
 
 
-                    $response = \app\common\service\ToolsService::Sv()->clip($params);
-                    if (isset($response['code']) && $response['code'] == 10000) {
+                    try {
+                        $unit = TokenLogService::checkToken($item->user_id, 'video_clip');
+                        $result_url = FileService::getFileUrl($item->video_result_url);
+                        $params = [
+                            'video_id' => $item->id,
+                            'task_id' => $item->task_id,
+                            'clip_type' => $item->clip_type,
+                            'music_url' => $item->music_url,
+                            'music_type' => $item->music_type,
+                            'msg' => $item->msg,
+                            'result_url' => $result_url,
+                            'type' => 2,
+                        ];
+                        Log::channel('clip')->write('短视频视频剪辑参数' . json_encode($params));
+                        $response = \app\common\service\ToolsService::Sv()->clip($params);
+                        if (isset($response['code']) && $response['code'] == 10000) {
 
-                        $points = $unit;
-                        $item->clip_token = $points;
-                        if ($points > 0) {
-                            $extra = [];
-                            //token扣除
-                            User::userTokensChange($item->user_id, $points);
-                            //记录日志
-                            AccountLogLogic::recordUserTokensLog(true, $item->user_id, AccountLogEnum::TOKENS_DEC_VIDEO_CLIP, $points,  $item->task_id, $extra);
+                            $points = $unit;
+                            $item->clip_token = $points;
+                            if ($points > 0) {
+                                $extra = [];
+                                //token扣除
+                                User::userTokensChange($item->user_id, $points);
+                                //记录日志
+                                AccountLogLogic::recordUserTokensLog(true, $item->user_id, AccountLogEnum::TOKENS_DEC_VIDEO_CLIP, $points, $item->task_id, $extra);
+                            }
+                            $item->clip_status = 2;
                         }
-                        $item->clip_status = 2;
+                    } catch (\Exception $e) {
+                        $item->clip_status = 4;
+                        $item->remark       = mb_substr($e->getMessage(), 0, 100);
                     }
 
                 }

@@ -184,7 +184,7 @@
 
 <script setup lang="ts">
 import WechatOA from "@/utils/wechat";
-import { createShanjianPublish, createSoraPublishTask } from "@/api/digital_human";
+import { createShanjianPublish, createSoraPublishTask, createMontagePublishTask } from "@/api/digital_human";
 import { isJson } from "@/utils/util";
 import { ListenerTypeEnum, MontageTypeEnum } from "@/ai_modules/digital_human/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
@@ -361,10 +361,14 @@ const createTask = async () => {
     });
     try {
         const isSora = taskType.value === MontageTypeEnum.SORA_VIDEO;
+        const isStoryboard = taskType.value === MontageTypeEnum.STORYBOARD_MIX;
         if (isSora) {
             formData.task_type = 4;
         }
-        const api = isSora ? createSoraPublishTask : createShanjianPublish;
+        if (isStoryboard) {
+            formData.task_type = 5;
+        }
+        const api = isStoryboard ? createMontagePublishTask : isSora ? createSoraPublishTask : createShanjianPublish;
         await api({
             ...formData,
             time_config: formData.time_config.map((item) => `${item.start_time}-${item.end_time}`),

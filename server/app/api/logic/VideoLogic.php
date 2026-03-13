@@ -5,6 +5,7 @@ namespace app\api\logic;
 use app\common\model\human\HumanVideoTask;
 use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\sora\SoraVideoTask;
+use app\common\model\storyboard\StoryboardVideoTask;
 use app\common\service\FileService;
 use think\facade\Db;
 
@@ -21,11 +22,12 @@ class VideoLogic extends ApiLogic
         $pageSize = isset($params['page_size']) && $params['page_size'] > 0 ? (int)$params['page_size'] : 10;
         $offset   = ($pageNo - 1) * $pageSize;
 
-        $type          = !empty($params['type']) ? (int)$params['type'] : 0;
-        $success       = !empty($params['success']) ? 1 : 0;
-        $shanjianWhere = [];
-        $humanWhere = [];
-        $soraWhere = [];
+        $type            = !empty($params['type']) ? (int)$params['type'] : 0;
+        $success         = !empty($params['success']) ? 1 : 0;
+        $shanjianWhere   = [];
+        $humanWhere      = [];
+        $soraWhere       = [];
+        $storyboardWhere = [];
         if (in_array($type, [2, 3, 4, 5])) {
             switch ($type) {
                 case 2:
@@ -50,18 +52,21 @@ class VideoLogic extends ApiLogic
             }
         }
 
-        if ($success){
-            $humanWhere = [
+        if ($success) {
+            $humanWhere      = [
                 ['status', '=', 1],
             ];
             $shanjianWhere[] = ['status', '=', 3];
-            $soraWhere = [
+            $soraWhere       = [
                 ['status', '=', 3],
+            ];
+            $storyboardWhere = [
+                ['status', '=', 3]
             ];
         }
 
         // 查询条件
-        $where = [['user_id', '=', $userId], ['delete_time','=', null]];
+        $where = [['user_id', '=', $userId], ['delete_time', '=', null]];
 
         $query1 = Db::name('human_video_task')
                     ->field([
@@ -129,14 +134,38 @@ class VideoLogic extends ApiLogic
                     ->where($soraWhere)
                     ->buildSql();
 
+        $query4 = Db::name('storyboard_video_task')
+                    ->field([
+                                'id',
+                                'name',
+                                'task_id',
+                                "'10' as model_version",
+                                'status',
+                                'pic',
+                                'video_result_url',
+                                "'0' as automatic_clip",
+                                "'1' as clip_status",
+                                'video_result_url as clip_result_url',
+                                'create_time',
+                                'update_time',
+                                'remark',
+                                "'7' as type",
+                                'duration'
+                            ])
+                    ->where($where)
+                    ->where($storyboardWhere)
+                    ->buildSql();
+
         // 合并子查询sql
-        $unionSql = "({$query1} UNION ALL {$query2} UNION ALL {$query3}) AS t";
+        $unionSql = "({$query1} UNION ALL {$query2} UNION ALL {$query3} UNION ALL {$query4}) AS t";
         if ($type == 1) {
             $unionSql = "({$query1}) AS t";
         } else if (in_array($type, [2, 3, 4, 5])) {
             $unionSql = "({$query2}) AS t";
         } else if ($type == 6) {
             $unionSql = "({$query3}) AS t";
+        } else if ($type == 7) {
+            $unionSql = "({$query4}) AS t";
         }
 
         $lists = Db::table($unionSql)
@@ -166,7 +195,7 @@ class VideoLogic extends ApiLogic
             ];
         }
 
-        $total = self::getTotalCount($where, $shanjianWhere, $humanWhere,$soraWhere, $type ,$success);
+        $total = self::getTotalCount($where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $type, $success);
 
         return [
             'count'      => $total,
@@ -180,22 +209,28 @@ class VideoLogic extends ApiLogic
     /**
      * 计算4个表的总记录数
      */
-    private static function getTotalCount(array $where, $shanjianWhere,$humanWhere, $soraWhere, $type, $success): int
+    private static function getTotalCount(array $where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $type, $success): int
     {
         if ($type === 0) {
-            if ($success){
+            if ($success) {
                 $count1 = Db::name('human_video_task')->where($where)->where($humanWhere)->count();
                 $count2 = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)->count();
                 $count3 = Db::name('sora_video_task')->where($where)->where($soraWhere)->count();
-            }else{
+                $count4 = Db::name('storyboard_video_task')->where($where)->where($storyboardWhere)->count();
+            } else {
                 $count1 = Db::name('human_video_task')->where($where)->count();
                 $count2 = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)->count();
                 $count3 = Db::name('sora_video_task')->where($where)->count();
+                $count4 = Db::name('storyboard_video_task')->where($where)->count();
             }
-            return $count1 + $count2 + $count3;
+            return $count1 + $count2 + $count3 + $count4;
         }
         if ($type == 1) {
-            $count1 = Db::name('human_video_task')->where($where)->count();
+            if ($success) {
+                $count1 = Db::name('human_video_task')->where($where)->where($humanWhere)->count();
+            } else {
+                $count1 = Db::name('human_video_task')->where($where)->count();
+            }
             return $count1;
         }
         if (in_array($type, [2, 3, 4, 5])) {
@@ -203,8 +238,20 @@ class VideoLogic extends ApiLogic
             return $count2;
         }
         if ($type == 6) {
-            $count3 = Db::name('sora_video_task')->where($where)->count();
+            if ($success) {
+                $count3 = Db::name('sora_video_task')->where($where)->where($soraWhere)->count();
+            } else {
+                $count3 = Db::name('sora_video_task')->where($where)->count();
+            }
             return $count3;
+        }
+        if ($type == 7) {
+            if ($success) {
+                $count4 = Db::name('storyboard_video_task')->where($where)->where($storyboardWhere)->count();
+            } else {
+                $count4 = Db::name('storyboard_video_task')->where($where)->count();
+            }
+            return $count4;
         }
         return 0;
     }
@@ -248,6 +295,16 @@ class VideoLogic extends ApiLogic
                                      ->where('task_id', $task_id)
                                      ->where('user_id', self::$uid)
                                      ->find();
+                if (!$task) {
+                    throw new \Exception('视频任务不存在');
+                }
+                $task->delete();
+            }
+            if ($type == 7) {
+                $task = StoryboardVideoTask::where('id', $id)
+                                           ->where('task_id', $task_id)
+                                           ->where('user_id', self::$uid)
+                                           ->find();
                 if (!$task) {
                     throw new \Exception('视频任务不存在');
                 }
@@ -297,6 +354,17 @@ class VideoLogic extends ApiLogic
                                      ->where('task_id', $task_id)
                                      ->where('user_id', self::$uid)
                                      ->find();
+                if (!$task) {
+                    throw new \Exception('视频任务不存在');
+                }
+                $task->name = $name;
+                $task->save();
+            }
+            if ($type == 7) {
+                $task = StoryboardVideoTask::where('id', $id)
+                                           ->where('task_id', $task_id)
+                                           ->where('user_id', self::$uid)
+                                           ->find();
                 if (!$task) {
                     throw new \Exception('视频任务不存在');
                 }

@@ -49,11 +49,17 @@ class SoraVideoTaskController extends BaseApiController
             Log::channel('sora')->write('接收sora参数' . json_encode($data));
             $key = md5(json_encode($data));
             $val = cache($key);
+            $taskId = $data['task_id'] ?? '';
             if ($val) {
-                Log::channel('sora')->write('重复请求');
+                Log::channel('sora')->write($taskId.'重复请求');
                 return $this->fail('重复请求');
             }
             cache($key, 1, 20);
+            $taskKey = 'processing_task_id_'.$taskId;
+            if (cache($taskKey) == 1){
+                Log::channel('sora')->write($taskId.'任务正在处理中');
+                return $this->fail('任务正在处理中');
+            }
             $result = SoraVideoTaskLogic::notifyNew($data);
             if (!$result) {
                 return $this->fail(SoraVideoTaskLogic::getError());

@@ -38,46 +38,90 @@
         <view class="grow min-h-0 relative z-10 pt-2">
             <view v-if="chatContentList.length == 0 && currType === 0" class="absolute top-0 h-full w-full z-[33]">
                 <view class="empty-container" v-if="!currAgent && !currModel">
-                    <view
-                        class="w-[120rpx] h-[120rpx] rounded-full shadow-[0_6rpx_10rpx_4rpx_rgba(105,120,255,0.5)] absolute top-[-30rpx] right-6 mx-auto">
-                        <image :src="websiteConfig.shop_logo" class="w-full h-full rounded-full"></image>
-                    </view>
-                    <view class="pt-[65rpx]">
-                        <view class="px-[56rpx]">
-                            <view class="text-[36rpx] font-medium"> HI~我是AI大管家 </view>
-                            <view class="text-[22rpx] text-[#000000]/30 mt-[12rpx]">你可以试试：</view>
+                    <view class="glow-circle glow-top-right"></view>
+                    <view class="glow-circle glow-bottom-left"></view>
+
+                    <view class="logo-float-wrap">
+                        <view class="logo-ring">
+                            <image
+                                :src="websiteConfig.shop_logo"
+                                class="w-full h-full rounded-full"
+                                mode="aspectFill"></image>
                         </view>
-                        <view class="mt-[18rpx] flex flex-col gap-y-[20rpx] px-2">
-                            <view class="flex flex-wrap gap-x-2 gap-y-2 justify-center">
-                                <view
-                                    v-for="(item, index) in getAIModels"
-                                    :key="index"
-                                    class="bg-[#ffffff]/50 rounded-[100rpx] flex items-center gap-x-2 border-2 border-solid border-white p-[24rpx] shadow-[0_6rpx_10rpx_0_rgba(0,0,0,0.03)]"
-                                    @click="handleSelectModel(item)">
-                                    <image :src="item.logo" class="w-[40rpx] h-[40rpx] rounded-full"></image>
-                                    <text class="text-[28rpx] font-medium">{{ item.name }}</text>
-                                    <text class="tag-text" v-if="item.id == 10">推荐</text>
+                        <view class="status-dot"></view>
+                    </view>
+
+                    <view class="pt-[140rpx] px-[56rpx]">
+                        <view class="text-[40rpx] font-bold text-[#1A1A2E] tracking-wide leading-snug">
+                            Hi，我是 <text class="text-gradient">AI 大管家</text>
+                        </view>
+                        <view class="text-[24rpx] text-[#8A90A8] mt-[14rpx] leading-relaxed">
+                            选择一个模型，开启你的智能对话 ✦
+                        </view>
+                    </view>
+                    <view
+                        class="mx-[56rpx] mt-[32rpx] mb-[28rpx] h-[1px] bg-gradient-to-r from-transparent via-[#C5CEED] to-transparent"></view>
+
+                    <view class="px-[32rpx] pb-[48rpx]">
+                        <view class="flex flex-wrap gap-[12rpx] justify-center">
+                            <view
+                                v-for="(item, index) in getAIModels"
+                                :key="index"
+                                class="model-chip"
+                                @click="handleSelectModel(item)">
+                                <view class="model-chip-inner">
+                                    <image
+                                        :src="item.logo"
+                                        class="w-[44rpx] h-[44rpx] rounded-full flex-shrink-0"></image>
+                                    <text class="text-[28rpx] font-semibold text-[#1A1A2E]">{{ item.name }}</text>
+                                    <view class="recommend-badge" v-if="item.id == 10">
+                                        <text>推荐</text>
+                                    </view>
                                 </view>
                             </view>
                         </view>
                     </view>
                 </view>
-                <view class="w-full h-full flex flex-col items-center pt-20" v-else-if="currAgent">
-                    <image
-                        :src="currAgent.avatar || currAgent.image"
-                        class="w-[120rpx] h-[120rpx] rounded-full"
-                        mode="aspectFill"></image>
-                    <view class="text-[34rpx] font-medium mt-4">
+
+                <view class="agent-selected-wrap" v-else-if="currAgent">
+                    <view class="agent-glow"></view>
+
+                    <view class="agent-avatar-ring">
+                        <view class="agent-avatar-inner">
+                            <image
+                                :src="currAgent.avatar || currAgent.image"
+                                class="w-full h-full rounded-full"
+                                mode="aspectFill"></image>
+                        </view>
+                    </view>
+
+                    <view class="text-[36rpx] font-bold text-[#1A1A2E] mt-[40rpx]">
                         {{ currAgent.name }}
                     </view>
-                    <view class="text-xs text-[#000000]/50 mt-2">
+                    <view class="agent-type-badge mt-[16rpx]">
+                        <view class="badge-dot"></view>
+                        <text class="text-[22rpx] font-medium">智能体</text>
+                    </view>
+                    <view class="text-[24rpx] text-[#8A90A8] mt-[20rpx] px-[80rpx] text-center leading-relaxed">
                         {{ currAgent.intro || currAgent.introduced }}
                     </view>
                 </view>
-                <view class="w-full h-full flex flex-col items-center pt-20" v-else-if="currModel">
-                    <image :src="currModel.logo" class="w-[120rpx] h-[120rpx] rounded-full" mode="aspectFill"></image>
-                    <view class="text-[34rpx] font-medium mt-4">
+
+                <view class="agent-selected-wrap" v-else-if="currModel">
+                    <view class="agent-glow model-glow"></view>
+
+                    <view class="agent-avatar-ring">
+                        <view class="agent-avatar-inner">
+                            <image :src="currModel.logo" class="w-full h-full rounded-full" mode="aspectFill"></image>
+                        </view>
+                    </view>
+
+                    <view class="text-[36rpx] font-bold text-[#1A1A2E] mt-[40rpx]">
                         {{ currModel.name }}
+                    </view>
+                    <view class="agent-type-badge model-badge mt-[16rpx]">
+                        <view class="badge-dot model-dot"></view>
+                        <text class="text-[22rpx] font-medium">AI 模型</text>
                     </view>
                 </view>
             </view>
@@ -90,6 +134,7 @@
                     :content-list="chatContentList"
                     :send-disabled="isReceiving"
                     :tokens="tokensValue"
+                    :is-home="chatContentList.length === 0 && !currAgent && !currModel"
                     @close="handleChatClose"
                     @add-session="handleAddSession"
                     @update:network="handleUpdateNetwork"
@@ -698,6 +743,7 @@ const backChat = async () => {
     await nextTick();
     chattingRef.value?.handleModelClear();
     chattingRef.value?.handleAgentClear();
+    chattingRef.value?.hideKeyboard();
 
     // ✅ 如果是从智能体 tab 跳转过来的，返回时恢复到智能体 tab
     if (prevTab.value !== null) {
@@ -1066,13 +1112,151 @@ onShow(() => {
     transition: all 0.25s ease;
     @apply bg-primary rounded-[6rpx] h-[6rpx] w-[40rpx] absolute bottom-[-2rpx] left-1/2;
 }
-.empty-container {
-    @apply w-[90%] mx-auto mt-10 rounded-[30rpx] relative;
-    background: linear-gradient(180deg, rgba(208, 231, 255, 1) 20%, rgba(232, 236, 252, 1) 70%, transparent 100%);
-}
+
 .tag-text {
     @apply text-white text-[22rpx] font-medium px-[12rpx] py-[4rpx] rounded-[100rpx];
     background: linear-gradient(90deg, rgba(244, 137, 36, 1) 0%, rgba(241, 89, 61, 1) 100%);
+}
+
+.empty-container {
+    @apply w-[92%] mx-auto mt-8 rounded-[40rpx] relative;
+    background: linear-gradient(145deg, #dce8ff 0%, #e8ecff 55%, #f0eeff 100%);
+    box-shadow: 0 8rpx 40rpx 0 rgba(74, 124, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.glow-circle {
+    @apply absolute rounded-full pointer-events-none;
+    filter: blur(40px);
+}
+.glow-top-right {
+    width: 300rpx;
+    height: 300rpx;
+    top: -80rpx;
+    right: -60rpx;
+    background: radial-gradient(circle, rgba(100, 140, 255, 0.3) 0%, transparent 70%);
+}
+.glow-bottom-left {
+    width: 240rpx;
+    height: 240rpx;
+    bottom: -60rpx;
+    left: -40rpx;
+    background: radial-gradient(circle, rgba(160, 120, 255, 0.2) 0%, transparent 70%);
+}
+
+// Logo 悬浮
+.logo-float-wrap {
+    @apply absolute top-[-36rpx] right-[48rpx] w-[120rpx] h-[120rpx];
+}
+.logo-ring {
+    @apply w-full h-full rounded-full overflow-hidden;
+    box-shadow: 0 0 0 4rpx rgba(255, 255, 255, 0.9), 0 0 0 8rpx rgba(74, 124, 255, 0.2),
+        0 12rpx 32rpx rgba(74, 124, 255, 0.35);
+}
+// 在线状态绿点
+.status-dot {
+    @apply absolute bottom-[4rpx] right-[4rpx] w-[24rpx] h-[24rpx] rounded-full bg-[#22C55E];
+    border: 3px solid white;
+    box-shadow: 0 0 8rpx rgba(34, 197, 94, 0.6);
+}
+
+// 渐变文字
+.text-gradient {
+    background: linear-gradient(90deg, #4a7cff 0%, #a855f7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.model-chip {
+    @apply rounded-[100rpx] overflow-hidden;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1.5px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.2s ease;
+    &:active {
+        transform: scale(0.96);
+        box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+    }
+}
+.model-chip-inner {
+    @apply flex items-center gap-x-[14rpx] px-[28rpx] py-[20rpx];
+}
+
+// 推荐徽章
+.recommend-badge {
+    @apply text-white text-[20rpx] font-semibold px-[14rpx] py-[4rpx] rounded-[100rpx] flex-shrink-0;
+    background: linear-gradient(90deg, #f48924 0%, #f1593d 100%);
+    box-shadow: 0 2rpx 8rpx rgba(241, 89, 61, 0.4);
+}
+
+// ===== 已选 Agent / Model 态 =====
+.agent-selected-wrap {
+    @apply w-full h-full flex flex-col items-center pt-[160rpx] relative overflow-hidden;
+}
+
+// 背景光晕
+.agent-glow {
+    @apply absolute top-[60rpx] pointer-events-none rounded-full;
+    width: 400rpx;
+    height: 400rpx;
+    left: 50%;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(74, 124, 255, 0.12) 0%, transparent 70%);
+    filter: blur(20px);
+}
+.model-glow {
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, transparent 70%);
+}
+
+// 头像双环
+.agent-avatar-ring {
+    @apply relative flex items-center justify-center;
+    width: 160rpx;
+    height: 160rpx;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #4a7cff, #a855f7, #4a7cff);
+    padding: 3rpx;
+    box-shadow: 0 0 0 6rpx rgba(74, 124, 255, 0.1), 0 12rpx 40rpx rgba(74, 124, 255, 0.25);
+}
+.agent-avatar-inner {
+    @apply w-full h-full rounded-full overflow-hidden;
+    border: 4rpx solid white;
+}
+
+// 类型徽章
+.agent-type-badge {
+    @apply flex items-center gap-x-[8rpx] px-[24rpx] py-[8rpx] rounded-full;
+    background: rgba(74, 124, 255, 0.08);
+    border: 1px solid rgba(74, 124, 255, 0.2);
+    color: #4a7cff;
+}
+.model-badge {
+    background: rgba(168, 85, 247, 0.08);
+    border-color: rgba(168, 85, 247, 0.2);
+    color: #a855f7;
+}
+.badge-dot {
+    @apply w-[12rpx] h-[12rpx] rounded-full bg-[#4a7cff];
+    box-shadow: 0 0 6rpx rgba(74, 124, 255, 0.6);
+    animation: pulse-dot 2s infinite;
+}
+.model-dot {
+    @apply bg-[#a855f7];
+    box-shadow: 0 0 6rpx rgba(168, 85, 247, 0.6);
+}
+
+@keyframes pulse-dot {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(0.8);
+    }
 }
 
 .robot-cate {

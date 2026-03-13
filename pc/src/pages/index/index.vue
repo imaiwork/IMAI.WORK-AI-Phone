@@ -2,7 +2,8 @@
     <div class="h-full flex relative bg-white">
         <div
             class="w-[220px] h-full fixed top-0 left-[var(--aside-width)] z-[888] border-r border-[#e2e8f0]/60 bg-white transition-all"
-            v-show="!hideSidebar">
+            :class="[hideSidebar ? 'pt-[70px]' : '']"
+            :style="{ left: hideSidebar ? '0' : 'var(--aside-width)' }">
             <div class="flex flex-col h-full">
                 <chat-agent ref="chatAgentRef" @select-agent="handleSelectAgent" />
                 <ElDivider class="!my-2 !border-t-[#e2e8f0]/60" />

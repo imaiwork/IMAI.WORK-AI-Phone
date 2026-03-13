@@ -117,7 +117,7 @@
                                         <image
                                             src="@/ai_modules/device/static/icons/window.svg"
                                             class="w-[20rpx] h-[20rpx]"></image>
-                                        <text class="text-[#BA6F0D]">演示</text>
+                                        <text class="text-[#BA6F0D]">立即执行</text>
                                     </view>
                                 </view>
                                 <view class="flex items-center justify-between mt-2">

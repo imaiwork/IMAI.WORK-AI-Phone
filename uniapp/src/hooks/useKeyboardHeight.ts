@@ -7,6 +7,7 @@ export default function useKeyboardHeight() {
     // 监听键盘高度变化并更新元素高度
     const updateHeight = (res: { height: number }) => {
         dynamicHeight.value = res.height;
+        console.log("dynamicHeight.value", dynamicHeight.value);
     };
 
     const onFocus = () => {
@@ -61,17 +62,17 @@ export default function useKeyboardHeight() {
         }
     });
 
-    onBeforeUnmount(() => {
-        removeKeyboardListener();
-    });
+    // onBeforeUnmount(() => {
+    //     removeKeyboardListener();
+    // });
 
-    onUnmounted(() => {
-        removeKeyboardListener();
-    });
+    // onUnmounted(() => {
+    //     removeKeyboardListener();
+    // });
 
-    onUnload(() => {
-        removeKeyboardListener();
-    });
+    // onUnload(() => {
+    //     removeKeyboardListener();
+    // });
 
     return {
         dynamicHeight,

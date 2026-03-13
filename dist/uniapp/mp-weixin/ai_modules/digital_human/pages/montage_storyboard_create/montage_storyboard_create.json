@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "",
+  "disableScroll": true,
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "empty": "../../../../components/empty/empty",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "choose-agent": "../../components/choose-agent/choose-agent",
+    "create-success-pop": "../../components/create-success-pop/create-success-pop",
+    "tokens-cost": "../../components/tokens-cost/tokens-cost"
+  }
+}

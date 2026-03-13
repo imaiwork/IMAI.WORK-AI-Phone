@@ -1,7 +1,7 @@
 <template>
     <div class="chat-message-item flex gap-x-2">
         <!-- My message -->
-        <div v-if="type == 1" class="ml-auto flex flex-col mt-1">
+        <div v-if="type == 1" class="ml-auto flex flex-col">
             <div class="flex flex-col gap-2 items-end" v-if="fileLists.length > 0">
                 <div v-for="(file, index) in fileLists" class="relative group">
                     <file-card :uid="file.uid || index" :name="file.name" :size="file.size" :url="file.url" />

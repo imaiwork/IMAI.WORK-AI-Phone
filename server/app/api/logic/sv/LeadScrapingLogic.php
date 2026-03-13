@@ -9,6 +9,7 @@ use app\common\model\sv\SvLeadScrapingIndustryLog;
 use app\common\model\sv\SvLeadScrapingRecord;
 use app\common\model\sv\SvLeadScrapingSetting;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
+use app\common\model\sv\SvLeadScrapingFilterHistory;
 use think\facade\Db;
 
 /**
@@ -119,8 +120,11 @@ class LeadScrapingLogic extends SvBaseLogic
 
                 $industries = json_decode($result['industry'], true);
                 foreach ($industries as $industry) {
-                    $log = SvLeadScrapingIndustryLog::where('user_id', self::$uid)->where('keyword', $industry)->findOrEmpty();
+                    $log = SvLeadScrapingIndustryLog::where('user_id', self::$uid)->where('task_type', $params['task_type'])->where('keyword', $industry)->findOrEmpty();
                     if (!$log->isEmpty()) {
+                        continue;
+                    }
+                    if(trim($industry) == ''){
                         continue;
                     }
                     SvLeadScrapingIndustryLog::create([
@@ -203,6 +207,7 @@ class LeadScrapingLogic extends SvBaseLogic
                 }
                 TaskLogic::add($allTaskInstall);
             }
+            self::updateFilterHistory($params);
             Db::commit();
             $result['filter']      = !empty($result['filter']) ? json_decode($result['filter'], true) : [];
             $result['industry']    = !empty($result['industry']) ? implode(';', json_decode($result['industry'], true)) : [];
@@ -214,6 +219,61 @@ class LeadScrapingLogic extends SvBaseLogic
             return true;
         } catch (\Exception $e) {
             Db::rollback();
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    private static function updateFilterHistory(array $params)
+    {
+        $history = SvLeadScrapingFilterHistory::where('user_id', self::$uid)->findOrEmpty();
+        if ($history->isEmpty()) {
+            SvLeadScrapingFilterHistory::create([
+                'user_id'     => self::$uid,
+                'filter'      => $params['task_type'] == 1 ? $params['filter'] : [],
+                'comment_speech' => $params['task_type'] == 1 ? $params['content'] : [],
+
+                'msg_speech' => $params['task_type'] == 2 ? $params['content'] : [],
+
+                'mark_filter' => $params['task_type'] == 3 ? $params['mark_filter'] : [],
+                'mark_speech' => $params['task_type'] == 3 ? $params['content'] : [],
+                'number'     => (int)$params['send_num'],
+                'create_time' => time(),
+            ]);
+        }else{
+            $history->filter = $params['task_type'] == 1 ? $params['filter'] : (empty($history->filter) ? \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []) : $history->filter);
+            $history->comment_speech = $params['task_type'] == 1 ? $params['content'] : (empty($history->comment_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $history->comment_speech);
+
+            $history->msg_speech = $params['task_type'] == 2 ? $params['content'] : (empty($history->msg_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $history->msg_speech);
+            
+            $history->mark_filter = $params['task_type'] == 3 ? $params['filter'] : (empty($history->mark_filter) ? \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []) : $history->mark_filter);
+            $history->mark_speech = $params['task_type'] == 3 ? $params['content'] : (empty($history->mark_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $history->mark_speech);
+            $history->number = (int)$params['send_num'];
+            $history->update_time = time();
+            $history->save();
+        }
+
+        
+    }
+
+    public static function getFilterHistory(array $params)
+    {
+        try {
+            $result = SvLeadScrapingFilterHistory::where('user_id', self::$uid)->order('id', 'desc')->limit(1)->findOrEmpty();
+            if ($result->isEmpty()) {
+                $result['filter'] = \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []);
+                $result['comment_speech'] = \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []);
+
+                $result['msg_speech'] = \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []);
+                
+                $result['mark_filter'] = \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []);
+                $result['mark_speech'] = \app\common\service\ConfigService::get('touch_clue', 'touch_speech', []);
+                $result['number'] = 1;
+            }
+
+            self::$returnData = $result->toArray();
+            return true;
+        } catch (\Exception $e) {
             self::setError($e->getMessage());
             return false;
         }

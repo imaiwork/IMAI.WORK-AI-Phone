@@ -187,7 +187,7 @@ class VideoInfoService
         // 初始化批次结果缓存
         $batchCacheKey = 'batch_result_' . $batchId;
         Cache::set($batchCacheKey, [], 300);
-        
+
         // 5分钟过期
         // 将任务推送到队列
         foreach ($videoUrls as $index => $url) {

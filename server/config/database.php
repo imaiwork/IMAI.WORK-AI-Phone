@@ -81,7 +81,13 @@ return [
             // 数据库编码默认采用utf8
             'charset'     => env('pgsql.charset', 'utf8'),
             // 数据库表前缀
-            'prefix'      => env('pgsql.prefix', 'la_')
+            'prefix'      => env('pgsql.prefix', 'la_'),
+            // 关闭pgsql的SQL监听（禁止生成SQL日志）
+            'trigger_sql' => false,
+            // 关闭字段严格检查
+            'fields_strict' => false,
+            // 关闭断线重连日志
+            'break_reconnect' => false,
         ]
         // 更多的数据库配置信息
     ],

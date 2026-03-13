@@ -591,7 +591,7 @@
 					}
 				},
 				{
-					"path": "pages/montage_storyboard/montage_storyboard",
+					"path": "pages/montage_storyboard_create/montage_storyboard_create",
 					"style": {
 						"navigationBarTitleText": "",
 						"disableScroll": true,

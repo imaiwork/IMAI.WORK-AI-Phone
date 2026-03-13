@@ -38,6 +38,7 @@
                 ref="pagingRef"
                 v-model="dataList"
                 :fixed="false"
+                :loading-more-enabled="taskType == TaskTypeEnum.CLUE"
                 :safe-area-inset-bottom="true"
                 @query="queryList">
                 <view class="px-4">

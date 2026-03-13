@@ -73,7 +73,7 @@
                                             class="text-white bg-[#FF2442] text-[22rpx] font-medium rounded-[10rpx] w-[120rpx] h-[50rpx] flex items-center justify-center mx-auto"
                                             >生成失败</view
                                         >
-                                        <view class="mt-[16rpx] text-center text-[22rpx] text-white px-2">
+                                        <view class="mt-[16rpx] text-center text-[22rpx] text-white px-2 line-clamp-6">
                                             {{ item.remark }}
                                         </view>
                                     </template>
@@ -412,6 +412,7 @@ enum VideoType {
     MATERIAL_MIX = 4,
     NEWS = 5,
     SENTENCE = 6,
+    MONTAGE_STORYBOARD = 7,
 }
 
 enum DrawType {
@@ -437,6 +438,7 @@ const typeList = computed(() => {
             { name: "素材混剪", key: VideoType.MATERIAL_MIX },
             { name: "新闻体", key: VideoType.NEWS },
             { name: "一句话生成", key: VideoType.SENTENCE },
+            { name: "分镜混剪", key: VideoType.MONTAGE_STORYBOARD },
         ];
     } else if (currentTab.value == 1) {
         return [

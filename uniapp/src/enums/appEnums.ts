@@ -125,6 +125,7 @@ export enum TokensSceneEnum {
     AI_SHANJIAN_AUTHORIZED_VIDEO = "ai_shanjian_authorized_video",
     COZE_COPYWRITING = "coze_copywriting",
     PUBLISH_DOUYIN = "douyin_js",
+    STORYBOARD_MIX = "storyboard_video_create",
 }
 
 export enum KnbTypeEnum {

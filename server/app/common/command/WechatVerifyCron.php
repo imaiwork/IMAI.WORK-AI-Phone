@@ -23,6 +23,7 @@ class WechatVerifyCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\n验证微信用户任务1...'\n");
         CrawlingTaskLogic::verifyWeChatCron();
         return true;
     }

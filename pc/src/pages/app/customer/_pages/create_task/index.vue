@@ -82,7 +82,7 @@
                         </div>
                     </template>
                 </ElTableColumn>
-                <ElTableColumn prop="crawl_number" label="已获线索" width="120" align="center">
+                <ElTableColumn prop="crawl_number" label="已获客资" width="120" align="center">
                     <template #default="{ row }">
                         <span class="text-[15px] font-[900] text-primary">{{ row.crawl_number || 0 }}</span>
                     </template>

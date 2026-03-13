@@ -194,7 +194,7 @@ class TouchLogic extends ApiLogic
             $keywords = explode(',', implode(',', $keywords));
             $accounts = SvAccount::field('id,account,type,nickname,avatar')->where('user_id', $item->user_id)->where('type', 'not in', [1, 5])->where('device_code', $item->device_code)->select();
             if ($accounts->isEmpty()) {
-                throw new \Exception('该设备没有绑定账号');
+                throw new \Exception('该设备没有绑定账号' . $item->device_code);
             }
 
             $deviceTask = [];
@@ -293,13 +293,16 @@ class TouchLogic extends ApiLogic
             !empty($deviceTask) && (new \app\common\model\sv\SvDeviceTask())->saveAll($deviceTask);
 
             $item->status = DeviceEnum::AUTO_CONFIG_STATUS_FINISHED;
+            $item->remark = '任务生成成功'. date('Y-m-d H:i:s', time());
+            $item->update_time = time();
             $item->save();
             Db::commit();
         } catch (\Throwable $th) {
-            \think\facade\Log::channel('auto')->write($th->__toString(), 'touch');
+            \think\facade\Log::channel('auto')->write('自动化截流任务生成' . $item->device_code . ' ' . $th->__toString() . 'touch');
             Db::rollback();
             $item->status = DeviceEnum::AUTO_CONFIG_STATUS_FAILED;
             $item->remark = $th->getMessage();
+            $item->update_time = time();
             $item->save();
             throw new \Exception($th->getMessage());
         }

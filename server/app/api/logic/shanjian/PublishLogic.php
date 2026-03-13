@@ -971,6 +971,7 @@ class PublishLogic extends SvBaseLogic
                         $response = \app\common\service\ToolsService::Sv()->getPublishContent([
                             'keywords' => $media['msg'],
                             'task_id' => $task_id,
+                            'shanjian_task_id' => $media['id'],
                             'source' => 'shanjian2',
                             'user_id' => $account['user_id'],
                         ]);

@@ -264,3 +264,8 @@ export const batchCloneAnchor = (data: Record<string, any>) => {
 export const createMontageStoryboard = (data: Record<string, any>) => {
     return request.post({ url: "/storyboard.StoryboardVideoSetting/add", data });
 };
+
+// 分镜混剪发布任务创建
+export const createMontagePublishTask = (data: Record<string, any>) => {
+    return request.post({ url: "/storyboard.publish/add", data });
+};

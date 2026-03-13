@@ -6,6 +6,7 @@ namespace app\common\command;
 use app\api\logic\device\PublishLogic as DevicePublishLogic;
 use app\api\logic\shanjian\PublishLogic as ShanjianPublishLogic;
 use app\api\logic\sora\PublishLogic as SoraPublishLogic;
+use app\api\logic\storyboard\PublishLogic as StoryboardPublishLogic;
 use app\api\logic\sv\PublishLogic;
 use think\console\Command;
 use think\console\Input;
@@ -24,10 +25,16 @@ class PublishDetailCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\n 待发布表任务1...'\n");
         PublishLogic::setPublishDetail();
+        print_r("\n 待发布表任务2...'\n");
         DevicePublishLogic::setPublishDetail();
+        print_r("\n 待发布表任务3...'\n");
         ShanjianPublishLogic::setPublishDetail();
+        print_r("\n 待发布表任务4...'\n");
         SoraPublishLogic::setPublishDetail();
+        print_r("\n 待发布表任务5...'\n");
+        StoryboardPublishLogic::setPublishDetail();
         return true;
     }
 }

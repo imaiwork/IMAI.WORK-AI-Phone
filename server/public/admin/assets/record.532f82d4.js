@@ -1,0 +1,1 @@
+import{r as t}from"./index.845c5930.js";const i=e=>t.get({url:"/interview.interviewRecord/lists",params:e}),n=e=>t.get({url:"/interview.interview/detail",params:e}),o=e=>t.post({url:"/interview.interviewRecord/delete",data:e});export{i as a,o as d,n as g};

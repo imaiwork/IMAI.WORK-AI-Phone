@@ -48,31 +48,43 @@ class DeviceLogic extends ApiLogic
                 foreach ($humanImageData as $index => $item) {
                     if (!isset($item['anchor_url']) || empty($item['anchor_url'])) {
                         unset($humanImageData[$index]);
-                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index . '，anchor_url为空';
                         \think\facade\Log::channel('automediaSetting')->write($errorMsg);
                         continue;
                     }
                     if (!isset($item['width']) || empty($item['width'])) {
                         unset($humanImageData[$index]);
-                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index . '，width为空';
                         \think\facade\Log::channel('automediaSetting')->write($errorMsg);
                         continue;
                     }
                     if (!isset($item['height']) || empty($item['height'])) {
                         unset($humanImageData[$index]);
-                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index . '，height为空';
                         \think\facade\Log::channel('automediaSetting')->write($errorMsg);
                         continue;
                     }
                     if (empty($item['chanjing_anchor_id'])) {
                         unset($humanImageData[$index]);
-                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index . '，chanjing_anchor_id为空';
                         \think\facade\Log::channel('automediaSetting')->write($errorMsg);
                         continue;
                     }
                     if (empty($item['shanjian_anchor_id'])) {
                         unset($humanImageData[$index]);
-                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index;
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index . '，shanjian_anchor_id为空';
+                        \think\facade\Log::channel('automediaSetting')->write($errorMsg);
+                        continue;
+                    }
+                    if (empty($item['voice_id'])) {
+                        unset($humanImageData[$index]);
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index . '，voice_id为空';
+                        \think\facade\Log::channel('automediaSetting')->write($errorMsg);
+                        continue;
+                    }
+                     if (empty($item['shanjian_voice_id'])) {
+                        unset($humanImageData[$index]);
+                        $errorMsg = '用户id'.$params['user_id'].'，设备号'.$params['device_code'].'自动化新增设备配置，human_image数据异常：' . json_encode($params['human_image'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '，索引：' . $index . '，shanjian_voice_id为空';
                         \think\facade\Log::channel('automediaSetting')->write($errorMsg);
                         continue;
                     }
@@ -160,6 +172,80 @@ class DeviceLogic extends ApiLogic
                 $result["contentType1"]       = $analysis["contentType1"] ?? '';
                 $result["contentType2"]       = $analysis["contentType2"] ?? '';
                 $result["contentType3"]       = $analysis["contentType3"] ?? '';
+
+                $imageMaterial = $find->image_material;
+                if (!empty($imageMaterial)) {
+                    if (!is_array($imageMaterial)) {
+                        $imageMaterialArray = json_decode($imageMaterial, true) ?: [];
+                    } else {
+                        $imageMaterialArray = $imageMaterial;
+                    }
+                    $isOldFormat = false;
+                    foreach ($imageMaterialArray as $item) {
+                        if (is_string($item)) {
+                            $isOldFormat = true;
+                            break;
+                        }
+                    }
+                    if ($isOldFormat) {
+                        $newImageMaterial = [];
+                        foreach ($imageMaterialArray as $url) {
+                            $newImageMaterial[] = [
+                                'type' => 'image',
+                                'cover' => $url,
+                                'fileUrl' => $url,
+                                'duration' => '2',
+                                'status' => '0',
+                                'useNumber' => '0',
+                            ];
+                        }
+                        $result['image_material'] = $newImageMaterial;
+                    }
+                }
+
+                $clipMaterial = $find->clip_material;
+                if (!empty($clipMaterial)) {
+                    if (!is_array($clipMaterial)) {
+                        $clipMaterialArray = json_decode($clipMaterial, true) ?: [];
+                    } else {
+                        $clipMaterialArray = $clipMaterial;
+                    }
+                    $imageMaterials = [];
+                    $newClipMaterials = [];
+                    foreach ($clipMaterialArray as $item) {
+                        if (isset($item['type']) && $item['type'] === 'image') {
+                            $imageMaterials[] = [
+                                'type' => 'image',
+                                'cover' => $item['cover'],
+                                'fileUrl' => $item['fileUrl'],
+                                'duration' => $item['duration'] ?? '2',
+                                'status' => $item['status'] ?? '0',
+                                'useNumber' => $item['useNumber'] ?? '0',
+                            ];
+                        } else {
+                            $newClipMaterials[] = [
+                                'type' => $item['type'],
+                                'cover' => $item['cover'],
+                                'fileUrl' => $item['fileUrl'],
+                                'duration' => $item['duration'] ?? '2',
+                                'status' => $item['status'] ?? '0',
+                                'useNumber' => $item['useNumber'] ?? '0',
+                            ];
+                        }
+                    }
+                    if (!empty($imageMaterials)) {
+                        $existingImageMaterial = $result['image_material'] ?? [];
+                        if (is_string($existingImageMaterial)) {
+                            $existingImageMaterial = json_decode($existingImageMaterial, true) ?: [];
+                        }
+                        $mergedImageMaterials = array_merge($existingImageMaterial, $imageMaterials);
+                        $result['image_material'] = array_values($mergedImageMaterials);
+                    }
+                    if (!empty($newClipMaterials)) {
+                        $result['clip_material'] = array_values($newClipMaterials);
+                    }
+                }
+
                 self::$returnData             = $result;
                 self::$returnData['is_empty'] = 0;
             } else {

@@ -133,26 +133,8 @@ const close = () => {
 
 const setFormData = (data: any[]) => {
     // 这里是要判断传入的数据是不是在commentFilterList.value中，如果存在，则checked为true，否则为false
-    commentFilterList.value.forEach((item) => {
-        if (data.some((selectedItem) => selectedItem.value === item.value)) {
-            item.checked = true;
-        } else {
-            item.checked = false;
-        }
-    });
+    commentFilterList.value = data;
 };
-
-watch(
-    () => appStore.getCommentFilterConfig,
-    (newVal) => {
-        if (newVal && newVal.length > 0) {
-            commentFilterList.value = newVal.map((item: string) => ({ value: item, checked: true }));
-        }
-    },
-    {
-        immediate: true,
-    }
-);
 
 defineExpose({
     setFormData,

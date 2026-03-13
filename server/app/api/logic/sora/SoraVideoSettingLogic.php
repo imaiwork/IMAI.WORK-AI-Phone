@@ -482,7 +482,7 @@ class SoraVideoSettingLogic extends ApiLogic
                     $old = NoticeRecord::where('title', 'like', '%' . $setting['name'] . '%')->findOrEmpty();
                     //回调时已通知，避免重复通知
                     if (!$old->isEmpty()) {
-                        return true;
+                        continue;
                     }
                     $mnpMessage = [
                         'openid'   => UserAuth::where('user_id', $setting['user_id'])->order('id', 'desc')->value('openid'),

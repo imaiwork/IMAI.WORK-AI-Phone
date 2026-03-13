@@ -85,7 +85,12 @@ class DeviceEnum
     const TASK_COMMENT_TO_COMMENT = 101; // 评论区评论
     const TASK_COMMENT_TO_MSG = 102; // 评论区私信
     const TASK_COMMENT_TO_MARK_CLUE = 103; // 评论区留痕获客
-    
+
+
+    const TASK_TOKEN_NOTIFY = 1000; // 算力不足通知
+    const TASK_TOKEN_ERROR = 4059; // 用户算力不足
+
+
 
     //自动模式
     const AUTO_CONFIG_STATUS_WAIT = 0; // 待执行

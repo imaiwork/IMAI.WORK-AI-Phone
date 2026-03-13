@@ -61,7 +61,7 @@
 
             <template v-else>
                 <div class="w-full h-full flex flex-col items-center justify-center gap-6 bg-[#1a1d24]">
-                    <div class="relative w-20 h-20 flex items-center justify-center">
+                    <div class="relative w-16 h-16 flex items-center justify-center">
                         <div class="absolute inset-0 rounded-full border-4 border-[#0065fb]/10"></div>
                         <div
                             class="absolute inset-0 rounded-full border-4 border-primary border-t-[transparent] animate-spin"></div>
@@ -70,7 +70,6 @@
                         </span>
                     </div>
                     <div class="text-center">
-                        <div class="text-white text-sm font-black tracking-widest">DIGITAL HUMAN</div>
                         <div class="text-primary text-[10px] font-medium mt-1 animate-pulse">正在构建数字人...</div>
                     </div>
                 </div>

@@ -25,9 +25,13 @@ class SoraVideoTaskCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\nSora视频生成任务1...'\n");
         SoraVideoSettingLogic::checkStatus();
+        print_r("\nSora视频生成任务2...'\n");
         SoraVideoTaskLogic::checkStatus();
+        print_r("\nSora视频生成任务3...'\n");
         SoraAnchorLogic::checkVideoStatus();
+        print_r("\nSora视频生成任务4...'\n");
         SoraAnchorLogic::checkStatus();
 
         return true;

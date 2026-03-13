@@ -138,7 +138,7 @@ class TakeOverLogic extends ApiLogic
         try {
             $accounts = SvAccount::field('id,account,type,nickname,avatar')->where('type', '<>', 1)->where('user_id', $item->user_id)->where('device_code', $item->device_code)->select();
             if($accounts->isEmpty()){
-                throw new \Exception('该设备没有绑定账号');
+                throw new \Exception('该设备没有绑定账号' . $item->device_code);
             }
 
             $task = SvDeviceTakeOverTask::create([
@@ -220,13 +220,16 @@ class TakeOverLogic extends ApiLogic
             //print_r($deviceTask);die;
             (new \app\common\model\sv\SvDeviceTask())->saveAll($deviceTask);
             $item->status = DeviceEnum::AUTO_CONFIG_STATUS_FINISHED;
+            $item->remark = '任务生成成功'. date('Y-m-d H:i:s', time());
+            $item->update_time = time();
             $item->save();
             Db::commit();
         } catch (\Throwable $th) {
-            \think\facade\Log::channel('auto')->write($th->__toString(), 'take_over');
+            \think\facade\Log::channel('auto')->write('自动化私信接管任务生成' . $item->device_code . ' ' . $th->__toString() . 'take_over');
             Db::rollback();
             $item->status = DeviceEnum::AUTO_CONFIG_STATUS_FAILED;
             $item->remark = $th->getMessage();
+            $item->update_time = time();
             $item->save();
             throw new \Exception($th->getMessage());
         }

@@ -21,7 +21,7 @@ class FFmpegFileCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
-
+        print_r("\n 转码任务1...'\n");
         FfmpegFileLogic::taskCron();
         return true;
     }

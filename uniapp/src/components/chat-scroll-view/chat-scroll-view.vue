@@ -52,7 +52,10 @@
                             <view
                                 v-if="currModel.id && !currAgent.id"
                                 class="text-xs bg-white rounded-[16rpx] px-2 h-[60rpx] inline-flex items-center gap-x-1"
-                                @click="showModel = true">
+                                @click="
+                                    showModel = true;
+                                    hideKeyboard();
+                                ">
                                 <image :src="currModel.logo" class="w-[28rpx] h-[28rpx] rounded-full"></image>
                                 <text class="whitespace-nowrap">{{ currModel.name }}</text>
                                 <view class="ml-1 inline-block">
@@ -91,7 +94,10 @@
                             </view>
                             <view
                                 class="flex-shrink-0 flex items-center justify-center gap-x-1 text-xs bg-white rounded-[16rpx] h-[60rpx] px-2"
-                                @click="emit('showHistory')">
+                                @click="
+                                    emit('showHistory');
+                                    hideKeyboard();
+                                ">
                                 <u-icon name="/static/images/icons/history.svg" :size="24"></u-icon>
                                 <text class="text-xs">历史</text>
                             </view>
@@ -194,7 +200,7 @@
         <view
             class="flex-shrink-0"
             :style="{
-                height: spacerHeight + 'px',
+                height: spacerHeight + 'rpx',
             }"></view>
     </view>
     <popup-bottom v-model="showHumanize" title="参数设置" height="85%" custom-class="bg-white" is-disabled-touch>
@@ -606,6 +612,7 @@ const handleSetting = () => {
     checkLogin();
     getChatConfig();
     showHumanize.value = true;
+    hideKeyboard();
 };
 
 const handelChatConfig = async () => {
@@ -642,23 +649,19 @@ const userInput = ref("");
 const scrollTop = ref<number>(0);
 
 const { dynamicHeight, hideKeyboard } = useKeyboardHeight();
+const { safeAreaInsets, windowWidth, platform } = uni.getSystemInfoSync();
+const tabbarHeight = computed(() => {
+    const fixedHeight = platform === "android" ? 95 : 125;
+    return fixedHeight + (safeAreaInsets?.bottom ?? 0);
+});
 const bottomOffset = computed(() => {
-    const { platform } = uni.getSystemInfoSync();
-    const isEmpty = props.contentList.length == 0;
-    if (props.isStaff || props.isCoze) {
-        return isEmpty ? 10 : 48;
-    } else {
-        if (platform === "android") {
-            return isEmpty ? 58 : 40;
-        }
-        return isEmpty ? 90 : 40;
-    }
+    const otherHeight = 70 + (props.isStaff ? 20 : 0);
+    return props.isHome ? tabbarHeight.value + otherHeight : otherHeight;
 });
 
 const spacerHeight = computed(() => {
-    if (dynamicHeight.value <= 0) return 0;
-    const height = dynamicHeight.value - bottomOffset.value;
-    return height > 0 ? height : 0;
+    const height = dynamicHeight.value;
+    return height > 0 ? (height * 750) / windowWidth - bottomOffset.value : 0;
 });
 
 const handleInput = (e: any) => {

@@ -32,6 +32,15 @@
                 </view>
             </scroll-view>
         </view>
+        <view class="px-[32rpx] my-2" v-if="currPlatformTab == 5">
+            <navigator
+                url="/ai_modules/sph/pages/index/index"
+                hover-class="none"
+                class="bg-white h-[90rpx] rounded-[20rpx] flex items-center justify-center">
+                <image src="@/ai_modules/device/static/icons/position.svg" class="w-[32rpx] h-[32rpx]"></image>
+                <text class="text-[30rpx] font-medium ml-2">AI线索采集</text>
+            </navigator>
+        </view>
 
         <view class="grow min-h-0">
             <z-paging

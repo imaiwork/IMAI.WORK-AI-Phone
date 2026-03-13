@@ -164,4 +164,18 @@ class LeadScrapingController extends BaseApiController
         }
     }
 
+
+    public function getFilterHistory()
+    {
+        try {
+            $params = $this->request->get();
+            $result = LeadScrapingLogic::getFilterHistory($params);
+            if ($result) {
+                return $this->success(data: LeadScrapingLogic::getReturnData());
+            }
+            return $this->fail(LeadScrapingLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
 }

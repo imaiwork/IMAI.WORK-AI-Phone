@@ -282,7 +282,7 @@ class PublishLogic extends SvBaseLogic
                         'task_type' => DeviceEnum::TASK_TYPE_PUBLISH,
                         'account' => $account['account'],
                         'account_type' => $account['type'],
-                        'task_name' => '设备闪剪发布任务',
+                        'task_name' => '设备sora发布任务',
                         'status' => 0,
                         'day' => date('Y-m-d', $time['start_time']),
                         'start_time' => $time['start_time'],

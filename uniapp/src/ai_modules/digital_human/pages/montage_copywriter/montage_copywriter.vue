@@ -24,7 +24,9 @@
                         maxlength="500"
                         placeholder-style="color: #C0C3C4;"
                         :auto-height="false" />
-                    <view class="text-right mt-4 text-[#C0C3C4]"> {{ formData.content?.length || 0 }}/500 </view>
+                    <view class="text-right mt-4 text-[#C0C3C4]">
+                        {{ formData.content?.length || 0 }}/{{ copywriterLimit }}
+                    </view>
                 </view>
             </template>
             <template v-else>
@@ -35,7 +37,9 @@
                     :maxlength="1000"
                     height="400"
                     placeholder-style="color: #C0C3C4;" />
-                <view class="text-right mt-4 text-[#C0C3C4]"> {{ formData.title?.length || 0 }}/1000 </view>
+                <view class="text-right mt-4 text-[#C0C3C4]">
+                    {{ formData.title?.length || 0 }}/{{ copywriterLimit }}
+                </view>
             </template>
         </view>
     </view>
@@ -52,6 +56,7 @@ const formData = reactive({
     content: "",
 });
 
+const copywriterLimit = ref(600);
 const isNewsBody = ref(false);
 
 const back = () => {
@@ -100,6 +105,9 @@ onLoad((options: any) => {
             formData.title = data.title;
             formData.content = data.content;
         }
+    }
+    if (options.limit) {
+        copywriterLimit.value = options.limit;
     }
 });
 </script>

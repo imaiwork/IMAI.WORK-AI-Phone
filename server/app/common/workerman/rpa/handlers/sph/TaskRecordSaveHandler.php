@@ -190,6 +190,16 @@ class TaskRecordSaveHandler extends BaseMessageHandler
             unset($this->payload, $content);
             return $result;
         } catch (\Throwable $e) {
+            if($e->getCode() == 4059){
+                \app\common\model\sv\SvDeviceTask::where('sub_task_id', $content['task_id'])
+                    ->where('source', \app\common\enum\DeviceEnum::TASK_SOURCE_CLUES)
+                    ->where('device_code', $this->payload['deviceId'])->update([
+                        'status' => 3,
+                        'remark' => '执行失败:' . $e->getMessage(),
+                        'update_time' => time(),
+                    ]);
+            }
+
             $this->setLog('异常信息' . $e, 'task_record');
             $this->payload['reply'] = "异常信息:" . $e->getMessage();
             $this->payload['code'] =  WorkerEnum::SPH_ADD_WECHAT_ERROR;
@@ -246,7 +256,8 @@ class TaskRecordSaveHandler extends BaseMessageHandler
             $pattern = '/(?:[a-zA-Z][a-zA-Z0-9_-]{5,19}|1[3-9]\d{9})/';
             $blacklist = array();
             $addWechat = array();
-            $checkArray = ["加vx", "加VX", "加v", "加V", "加wx", "加WX", "+wx", "+WX", "+vx", "+VX", "vx:", "VX:", "vx：", "VX：", "+v", "+V", "V:", "V：", "v:", "v："];
+            $checkArray = ["加vx", "加VX", "加v", "加V", "加wx", "加WX", "+wx", "+WX", "+vx", "+VX",  "vx:", "VX:", "vx：", "VX：", "vx", "VX", "Vx", "+v", "+V", "V:", "V：", "v:", "v："];
+
             // if (!$this->containsAnyWithFilter($crawlContent, $checkArray)) {
             //     //指定字符不存在
             //     return [];
@@ -320,7 +331,9 @@ class TaskRecordSaveHandler extends BaseMessageHandler
             $blacklist = array();
 
             $isInWechat = false;
-            $checkArray = ["加vx", "加VX", "加v", "加V", "加wx", "加WX", "+wx", "+WX", "+vx", "+VX", "vx:", "VX:", "vx：", "VX：", "+v", "+V", "V:", "V：", "v:", "v："];
+            $checkArray = ["加vx", "加VX", "加v", "加V", "加wx", "加WX", "+wx", "+WX", "+vx", "+VX",  "vx:", "VX:", "vx：", "VX：", "vx", "VX", "Vx", "+v", "+V", "V:", "V：", "v:", "v："];
+
+
             // if (!$this->containsAnyWithFilter($replyContent, $checkArray)) {
             //     //指定字符不存在
             //     return [false, []];

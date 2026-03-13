@@ -21,9 +21,9 @@
             </view>
         </view>
         <view class="grow min-h-0 mt-6">
-            <z-paging v-model="dataList" ref="pagingRef" :hide-empty-view="true" :fixed="false" @query="queryList">
+            <z-paging v-model="dataList" ref="pagingRef" :hide-empty-view="isShowAi" :fixed="false" @query="queryList">
                 <view class="flex flex-col gap-y-[48rpx] px-4">
-                    <view class="flex items-center gap-x-[20rpx]" @click="handleChoose(-1)">
+                    <view v-if="isShowAi" class="flex items-center gap-x-[20rpx]" @click="handleChoose(-1)">
                         <view
                             class="w-[90rpx] h-[90rpx] rounded-[20rpx] flex items-center justify-center bg-1"
                             style="">
@@ -73,6 +73,9 @@
                         </view>
                     </view>
                 </view>
+                <template #empty v-if="!isShowAi">
+                    <empty />
+                </template>
             </z-paging>
         </view>
         <view class="flex items-center justify-between px-[26rpx] py-4">
@@ -124,6 +127,7 @@ import { useAudio } from "@/hooks/useAudio";
 const { emit } = useEventBusManager();
 const pagingRef = ref<any>(null);
 
+const isShowAi = ref(true);
 const isAiMusic = ref(true);
 const currentMusicId = ref<any>(null);
 const currentVolume = ref(0);
@@ -252,7 +256,7 @@ const handleConfirm = () => {
 };
 
 onLoad((options: any) => {
-    const { volume, music } = options;
+    const { volume, music, is_ai } = options;
     if (music && music.length > 0) {
         chooseList.value = JSON.parse(music);
         isAiMusic.value = chooseList.value.length == 0;
@@ -260,6 +264,9 @@ onLoad((options: any) => {
     if (volume) {
         currentVolume.value = parseFloat(volume);
         changeVolume.value = currentVolume.value * 100;
+    }
+    if (is_ai == "0") {
+        isShowAi.value = false;
     }
 });
 

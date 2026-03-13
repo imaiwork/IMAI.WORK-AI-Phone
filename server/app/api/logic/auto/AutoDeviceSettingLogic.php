@@ -9,6 +9,7 @@ use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\auto\AutoDeviceSetting;
 use app\common\model\auto\AutoDeviceConfig;
+use app\common\model\auto\AutoNeedsAnalysis;
 use app\common\model\hd\HdPuzzle;
 use app\common\model\hd\HdPuzzleSetting;
 use app\common\model\shanjian\ShanjianClipTemplate;
@@ -30,6 +31,7 @@ class AutoDeviceSettingLogic extends ApiLogic
     const COPYWRITING_CREATE = 'copywritingCreate'; //文案创作
     const NEWS_MIXCUT_TITLE = 'newsMixcutTitle'; //新闻标题
     const COMBINED_PICTURE_TITLE = 'combinedPictureTitle'; //组合图片标题
+    const COZE_COPYWRITING = 'cozeCopywriting'; //文案创作
     /**
      * 新增自动设备设置
      * @param array $params 请求参数
@@ -45,10 +47,10 @@ class AutoDeviceSettingLogic extends ApiLogic
             if ($config->isEmpty()) {
                 throw new \Exception('当前设备未配置自动任务，请先配置自动任务');
             }
-            if(empty($config->video_theme)){
+            if (empty($config->video_theme)) {
                 throw new \Exception('当前设备自动任务视频主题不能为空');
             }
-            if(empty($config->text_theme)){
+            if (empty($config->text_theme)) {
                 throw new \Exception('当前设备自动任务文案主题不能为空');
             }
 
@@ -63,7 +65,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                 $find->image_material = $params['image_material'];
                 $find->video_theme = $config->video_theme;
                 $find->text_theme = $config->text_theme;
-                if(is_null($find->exec_date)){
+                if (is_null($find->exec_date)) {
                     $find->exec_date = date('Y-m-d', strtotime('+1 day'));
                 }
                 $find->update_time = time();
@@ -196,7 +198,79 @@ class AutoDeviceSettingLogic extends ApiLogic
         try {
             $find = AutoDeviceSetting::where('user_id', self::$uid)->where('device_code', $params['device_code'])->findOrEmpty();
             if (!$find->isEmpty()) {
-                self::$returnData = $find->toArray();
+                $result                       = $find->toArray();
+                $imageMaterial = $find->image_material;
+                if (!empty($imageMaterial)) {
+                    if (!is_array($imageMaterial)) {
+                        $imageMaterialArray = json_decode($imageMaterial, true) ?: [];
+                    } else {
+                        $imageMaterialArray = $imageMaterial;
+                    }
+                    $isOldFormat = false;
+                    foreach ($imageMaterialArray as $item) {
+                        if (is_string($item)) {
+                            $isOldFormat = true;
+                            break;
+                        }
+                    }
+                    if ($isOldFormat) {
+                        $newImageMaterial = [];
+                        foreach ($imageMaterialArray as $url) {
+                            $newImageMaterial[] = [
+                                'type' => 'image',
+                                'status' => '0',
+                                'useNumber' => '0',
+                                'cover' => $url,
+                                'fileUrl' => $url,
+                                'duration' => '2'
+                            ];
+                        }
+                        $result['image_material'] = $newImageMaterial;
+                    }
+                }
+                $clipMaterial =  $result['clip_material'] ?? '';
+                if (!empty($clipMaterial)) {
+                    if (!is_array($clipMaterial)) {
+                        $clipMaterialArray = json_decode($clipMaterial, true) ?: [];
+                    } else {
+                        $clipMaterialArray = $clipMaterial;
+                    }
+                    $imageMaterials = [];
+                    $newClipMaterials = [];
+                    foreach ($clipMaterialArray as $item) {
+                        if (isset($item['type']) && $item['type'] === 'image') {
+                            $imageMaterials[] = [
+                                'type' => 'image',
+                                'status' =>  $item['status'] ?? '0',
+                                'useNumber' => $item['useNumber'] ?? '0',
+                                'cover' => $item['cover'],
+                                'fileUrl' => $item['fileUrl'],
+                                'duration' => '2'
+                            ];
+                        } else {
+                            $newClipMaterials[] = [
+                                'type' => $item['type'],
+                                'status' =>  $item['status'] ?? '0',
+                                'useNumber' => $item['useNumber'] ?? '0',
+                                'cover' => $item['cover'],
+                                'fileUrl' => $item['fileUrl'],
+                                'duration' => $item['duration'] ?? '2',
+                            ];
+                        }
+                    }
+                    if (!empty($imageMaterials)) {
+                        $existingImageMaterial = $result['image_material'] ?? [];
+                        if (is_string($existingImageMaterial)) {
+                            $existingImageMaterial = json_decode($existingImageMaterial, true) ?: [];
+                        }
+                        $mergedImageMaterials = array_merge($existingImageMaterial, $imageMaterials);
+                        $result['image_material'] = array_values($mergedImageMaterials);
+                    }
+                    if (!empty($newClipMaterials)) {
+                        $result['clip_material'] = array_values($newClipMaterials);
+                    }
+                }
+                self::$returnData             = $result;
             } else {
                 self::$returnData = [
                     'device_code' => $params['device_code'],
@@ -206,7 +280,8 @@ class AutoDeviceSettingLogic extends ApiLogic
                     'clue_theme' => '',
                     'video_theme' => '',
                     'text_theme' => '',
-                    'status' => DeviceEnum::AUTO_CONFIG_STATUS_WAIT
+                    'status' => DeviceEnum::AUTO_CONFIG_STATUS_WAIT,
+                    'device_config_id' => AutoDeviceConfig::where('user_id', self::$uid)->where('device_code', $params['device_code'])->value('id') ?? 0,
                 ];
             }
             return true;
@@ -246,6 +321,7 @@ class AutoDeviceSettingLogic extends ApiLogic
     public static function processHumanImageData(string $deviceCode)
     {
         try {
+            ini_set('max_execution_time', 0);
             $day = date('Y-m-d');
             // 获取自动设备设置记录
             $tasks = AutoDeviceSetting::whereIn('status', [0, 2, 3])
@@ -264,21 +340,174 @@ class AutoDeviceSettingLogic extends ApiLogic
                 $textTheme = $task->text_theme;
                 $execution_day = date('Y-m-d', strtotime($task->execution_day) + 2 * 86400);
                 $task->execution_day = $execution_day;
-                if (trim($videoTheme) == '' ) {
+                if (trim($videoTheme) == '') {
                     $task->remark = '视频主题为空';
                     $task->status = 3;
                     $task->save();
                     continue;
                 }
-                if ( trim($textTheme) == '') {
+                if (trim($textTheme) == '') {
                     $task->remark = '文案主题为空';
                     $task->status = 3;
                     $task->save();
                     continue;
                 }
-                $task->status = 1;
+                // $task->status = 1;
 
-                $task->save();
+                // $task->save();
+                $report = AutoNeedsAnalysis::where('device_code', $task->device_code)->where('user_id', $task->user_id)->where('step', 2)
+                    ->order('id', 'desc')->limit(1)->findOrEmpty()->toArray();
+                if (empty($report)) {
+
+                    $task->remark = '任务运营分析数据为空';
+                    $task->status = 3;
+                    $task->save();
+                    continue;
+                }
+                $analysis = $report['contents'] ?? [];
+                $analysisAnalysisForm = [];
+                if (empty($analysis)) {
+                    $task->remark = '任务运营分析对话数据为空';
+                    $task->status = 3;
+                    $task->save();
+                    continue;
+                } else {
+                    $analysisAnalysisForm = json_decode($analysis, true);
+                    $analysisAnalysisForm = $analysisAnalysisForm['Analysis_Form'];
+                }
+                $analysisFormResult = false;
+                foreach ($analysisAnalysisForm as $key => $item) {
+                    if ($key == 'contents') {
+                        continue;
+                    }
+                    if (empty($item)) {
+                        $task->remark = '未分析到设备需求,字段' . $key . '为空';
+                        $task->status = 3;
+                        $task->save();
+                        $analysisFormResult = true;
+                        break;
+                    }
+                }
+                if ($analysisFormResult) {
+                    continue;
+                }
+                $ipStyle = $analysisAnalysisForm['ipStyle'] ?? '';
+                $ipTalent = $analysisAnalysisForm['ipTalent'] ?? '';
+                $brandStory = $analysisAnalysisForm['brandStory'] ?? '';
+                $accountStage = $analysisAnalysisForm['accountStage'] ?? '';
+                $targetCustomers = $analysisAnalysisForm['targetCustomers'] ?? '';
+                $basicInformation = $analysisAnalysisForm['basicInformation'] ?? '';
+                $contentPreferences = $analysisAnalysisForm['contentPreferences'] ?? '';
+                $productServiceFeatures = $analysisAnalysisForm['productServiceFeatures'] ?? '';
+                $brandAchievementsPositioning = $analysisAnalysisForm['brandAchievementsPositioning'] ?? '';
+
+                $titlecoze['sn'] = 8;
+                $titlecoze['number'] = 1;
+                $titlecoze['length'] = 10;
+                $titlecoze['keywords'] = "我的IP是" . $ipTalent . "，语气像" . $ipStyle . "。
+                            品牌信息：" . $basicInformation . "
+                            目标客户：" . $targetCustomers . "
+                            产品特点：" . $productServiceFeatures . "
+                            品牌故事：" . $brandStory . "
+                            内容偏好：" . $contentPreferences . "
+                            品牌成就与定位：" . $brandAchievementsPositioning . "
+                            账号阶段：" . $accountStage . "
+                            视频主题：" . $videoTheme . "
+                            文案主题：" . $textTheme . "";
+                $titlecozemsg = '';
+                $maxRetries = 5;
+                $retryCount = 0;
+                while (empty($titlecozemsg) && $retryCount < $maxRetries) {
+                    $titleCopywritingResult = self::copywriting($titlecoze, $task->user_id, 4);
+                    $titlecozemsg = $titleCopywritingResult['content']['0'] ?? '';
+                    $retryCount++;
+                }
+
+
+                $clipMaterialRaw = $task->clip_material;
+                $imageMaterialRaw = $task->image_material;
+                $newImageMaterial = [];
+                if (!empty($imageMaterialRaw)) {
+                    if (!is_array($imageMaterialRaw)) {
+                        $nowImageMaterialArray = json_decode($imageMaterialRaw, true) ?: [];
+                    } else {
+                        $nowImageMaterialArray = $imageMaterialRaw;
+                    }
+                    $isOldFormat = false;
+                    foreach ($nowImageMaterialArray as $item) {
+                        if (is_string($item)) {
+                            $isOldFormat = true;
+                            break;
+                        }
+                    }
+                    if ($isOldFormat) {
+                        foreach ($nowImageMaterialArray as $url) {
+                            $newImageMaterial[] = [
+                                'type' => 'image',
+                                'cover' => $url,
+                                'fileUrl' => $url,
+                                'duration' => '2',
+                                'status' => '0',
+                                'useNumber' => '0',
+                            ];
+                        }
+                    } else {
+                        $newImageMaterial = $nowImageMaterialArray;
+                    }
+                }
+                if (!empty($clipMaterialRaw)) {
+                    if (!is_array($clipMaterialRaw)) {
+                        $nowClipMaterialArray = json_decode($clipMaterialRaw, true) ?: [];
+                    } else {
+                        $nowClipMaterialArray = $clipMaterialRaw;
+                    }
+                } else {
+                    $nowClipMaterialArray = [];
+                }
+
+                $newClipMaterials = [];
+                if (!empty($clipMaterialRaw)) {
+                    if (!is_array($clipMaterialRaw)) {
+                        $nowClipMaterialArray = json_decode($clipMaterialRaw, true) ?: [];
+                    } else {
+                        $nowClipMaterialArray = $clipMaterialRaw;
+                    }
+                    $imageMaterials = [];
+                    foreach ($nowClipMaterialArray as $item) {
+                        if (isset($item['type']) && $item['type'] === 'image') {
+                            $imageMaterials[] = [
+                                'type' => 'image',
+                                'cover' => $item['cover'],
+                                'fileUrl' => $item['fileUrl'],
+                                'duration' => '2',
+                                'status' => $item['status'] ?? '0',
+                                'useNumber' => $item['useNumber'] ?? '0',
+                            ];
+                        } else {
+                            $newClipMaterials[] = [
+                                'type' => $item['type'],
+                                'cover' => $item['cover'],
+                                'fileUrl' => $item['fileUrl'],
+                                'duration' => $item['duration'] ?? '2',
+                                'status' => $item['status'] ?? '0',
+                                'useNumber' => $item['useNumber'] ?? '0',
+                            ];
+                        }
+                    }
+                    if (!empty($imageMaterials)) {
+                        $existingImageMaterial = $newImageMaterial ?? [];
+                        if (is_string($existingImageMaterial)) {
+                            $existingImageMaterial = json_decode($existingImageMaterial, true) ?: [];
+                        }
+                        $mergedImageMaterials = array_merge($existingImageMaterial, $imageMaterials);
+                        $newImageMaterial = array_values($mergedImageMaterials);
+                    }
+                    if (!empty($newClipMaterials)) {
+                        $newClipMaterials = array_values($newClipMaterials);
+                    }
+                }
+                $task->clip_material = $newClipMaterials;
+                $task->image_material = $newImageMaterial;
                 Db::startTrans();
                 try {
 
@@ -289,16 +518,16 @@ class AutoDeviceSettingLogic extends ApiLogic
                     $task->human_image = $newhumanImage;
                     // 定义4种shanjiang_type类型
                     // $shanjiangTypes = [1, 2, 3, 5, 4, 6];
-                  //  $shanjiangTypes = [1,2,3,4];
+                    // $shanjiangTypes = [1,2,3,4];
                     $shanjiangTypes = [1,  3, 3, 5, 4, 4];
                     $currentResults = [];
                     $copywritingBreak = false;
                     // 为每种类型创建对应的记录
-                    foreach ($shanjiangTypes as $type) {
+                    foreach ($shanjiangTypes as $key => $type) {
                         $uniqueId = generate_unique_task_id();
 
-                        if (in_array($type, [1,2,5])) {
-                             $firstHumanImage = $humanImage[0] ?? null;
+                        if (in_array($type, [1, 2, 5])) {
+                            $firstHumanImage = $humanImage[0] ?? null;
                             if (empty($firstHumanImage)) {
                                 continue; // 跳过没有元素的任务
                             }
@@ -331,12 +560,73 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 throw new \Exception("新闻体文案生成失败");
                                 continue;
                             }
-                        }elseif ($type == 6) {
+                        } elseif ($type == 6) {
                             $firstTextTheme = $textTheme;
                             if (empty($firstTextTheme)) {
                                 continue; // 跳过没有元素的任务
                             }
                         }
+
+                        switch ($key) {
+                            case 0:
+                                $coze['sn'] = 5;
+                                $coze['number'] = 1;
+                                $coze['length'] = 120;
+                                $coze['keywords'] = "我的IP是" . $ipTalent . "，希望以" . $ipStyle . "的语气生成品牌信息如下：" . $basicInformation . 
+                                "目标客户是" . $targetCustomers . "，产品特点：" . $productServiceFeatures . 
+                                "。品牌故事：" . $brandStory . "，内容偏好：" . $contentPreferences . 
+                                "。品牌成就与定位：" . $brandAchievementsPositioning . "，账号阶段：" . $accountStage . "。";
+                                break;
+                            case 1:
+                                $coze['sn'] = 3;
+                                $coze['number'] = 1;
+                                $coze['length'] = 100;
+                                $coze['keywords'] = "我的IP是" . $ipTalent . "，语气像" . $ipStyle . "。品牌信息：" . $basicInformation . 
+                                "，目标客户：" . $targetCustomers . "。产品特点：" . $productServiceFeatures . "，品牌故事：" . $brandStory .
+                                "。内容偏好：" . $contentPreferences . "，品牌成就与定位：" . $brandAchievementsPositioning . 
+                                "。账号阶段：" . $accountStage . "。";
+                                break;
+                            case 2:
+                                $coze['sn'] = 4;
+                                $coze['number'] = 1;
+                                $coze['length'] = 100;
+                                $coze['keywords'] = "我的IP是" . $ipTalent . "，语气像" . $ipStyle . "。品牌信息：" . $basicInformation . 
+                                "，目标客户：" . $targetCustomers . "。产品特点：" . $productServiceFeatures . "，品牌故事：" . $brandStory . 
+                                "。内容偏好：" . $contentPreferences . "，品牌成就与定位：" . $brandAchievementsPositioning . 
+                                "。账号阶段：" . $accountStage . "。";
+                                break;
+                            case 3:
+                                $coze['sn'] = 0;
+                                $coze['number'] = 1;
+                                $coze['length'] = 120;
+                                $coze['keywords'] = "我的IP是" . $ipTalent . "，语气希望像" . $ipStyle . "一样。品牌信息：" . $basicInformation . 
+                                "，目标客户：" . $targetCustomers . "。产品特点：" . $productServiceFeatures . "，品牌故事：" . $brandStory . 
+                                "。内容偏好：" . $contentPreferences . "，品牌成就与定位：" . $brandAchievementsPositioning . 
+                                "。账号阶段：" . $accountStage . "。";
+                                break;
+                            case 4:
+                                $coze['sn'] = 2;
+                                $coze['number'] = 1;
+                                $coze['length'] = 120;
+                                $coze['keywords'] = "我的IP是" . $ipTalent . "，希望语气偏" . $ipStyle . "。品牌信息：" . $basicInformation . 
+                                "，目标客户：" . $targetCustomers . "。产品特点：" . $productServiceFeatures . "，品牌故事：" . $brandStory . 
+                                "。内容偏好：" . $contentPreferences . "，品牌成就与定位：" . $brandAchievementsPositioning . 
+                                "。账号阶段：" . $accountStage . "。";
+                                break;
+                            case 5:
+                                $coze['sn'] = 2;
+                                $coze['number'] = 1;
+                                $coze['length'] = 120;
+                                $coze['keywords'] = "我的IP是" . $ipTalent . "，希望语气偏" . $ipStyle . "。品牌信息：" . $basicInformation . 
+                                "，目标客户：" . $targetCustomers . "。产品特点：" . $productServiceFeatures . "，品牌故事：" . $brandStory . 
+                                "。内容偏好：" . $contentPreferences . "，品牌成就与定位：" . $brandAchievementsPositioning . 
+                                "。账号阶段：" . $accountStage . "。";
+                                break;
+                            default:
+                                $typeName = '未知类型';
+                                break;
+                        }
+                        $copywritingResult = self::copywriting($coze, $task->user_id, 4);
 
                         // 根据类型设置名称前缀
                         $typeName = '';
@@ -383,29 +673,37 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 'setting_index' => 1,
                                 'create_type' => 'batch'
                             ];
+                            $auto_type = 0;
                             switch ($type) {
                                 case 1:
                                 case 2:
-                                    
+                                    $auto_type = 1;
                                     $clipMaterialArray = $task->clip_material ?: [];
                                     shuffle($clipMaterialArray);
-                                    $randomLength = rand(3, 5);
+                                    $randomLength = rand(1, 2);
                                     $selectedMaterials = array_slice($clipMaterialArray, 0, $randomLength);
 
-                                    foreach ($selectedMaterials as $key => &$value) {
+                                    $imageMaterialArray = $task->image_material ?: [];
+                                    shuffle($imageMaterialArray);
+                                    $randomLength = rand(2, 3);
+                                    $selectedImageMaterials = array_slice($imageMaterialArray, 0, $randomLength);
+
+                                    $mergedMaterials = array_merge($selectedMaterials, $selectedImageMaterials);
+
+                                    foreach ($mergedMaterials as $key => &$value) {
                                         if (isset($value['duration'])) {
                                             $nowDuration = $value['duration'];
-                                        }else{
+                                        } else {
                                             $nowDuration = 2;
                                         }
-                                         $materialDuration += $nowDuration;
-                                        if($materialDuration > 290 || $nowDuration > 59){
-                                            unset($selectedMaterials[$key]);
+                                        $materialDuration += $nowDuration;
+                                        if ($materialDuration > 290 || $nowDuration > 59) {
+                                            unset($mergedMaterials[$key]);
                                             $materialDuration -= $nowDuration;
                                         }
                                     }
 
-                                    $material = json_encode(array_values($selectedMaterials), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                    $material = json_encode(array_values($mergedMaterials), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                     $anchor_id =  [
                                         [
                                             "anchor_id" => $firstHumanImage['shanjian_anchor_id'] ?? '',
@@ -418,8 +716,8 @@ class AutoDeviceSettingLogic extends ApiLogic
                                     $shanjianVideoSettingData['anchor'] = json_encode($anchor_id, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
                                     $shanjianVideoSettingData['material'] = $material;
-
-                                    $shanjianVideoSettingData['copywriting'] = json_encode($copywritingResult, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                    $copywritingResult2 = $copywritingResult['content']['0'] ?? '';
+                                    $shanjianVideoSettingData['copywriting'] = json_encode($copywritingResult2, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                     $voice =  [
                                         [
                                             "voice_id" => $firstHumanImage['shanjian_voice_id'] ?? '',
@@ -434,24 +732,32 @@ class AutoDeviceSettingLogic extends ApiLogic
                                     //   $material = json_encode([$firstHumanImage], JSON_UNESCAPED_UNICODE);
                                     break;
                                 case 3:
+                                    $auto_type = 1;
                                     $clipMaterialArray = $task->clip_material ?: [];
                                     shuffle($clipMaterialArray);
-                                    $randomLength = rand(4, 8);
-                                    $material = array_slice($clipMaterialArray, 0, $randomLength);
+                                    $randomLength = rand(2, 3);
+                                    $selectedMaterials = array_slice($clipMaterialArray, 0, $randomLength);
+
+                                    $imageMaterialArray = $task->image_material ?: [];
+                                    shuffle($imageMaterialArray);
+                                    $randomLength = rand(3, 4);
+                                    $selectedImageMaterials = array_slice($imageMaterialArray, 0, $randomLength);
+
+                                    $mergedMaterials = array_merge($selectedMaterials, $selectedImageMaterials);
                                     $isvideo = false;
-                                    foreach ($material as $key => &$value) {
+                                    foreach ($mergedMaterials as $key => &$value) {
                                         if (isset($value['cover'])) {
                                             $pic = $value['cover'];
-                                            unset($material[$key]['cover']);
+                                            unset($mergedMaterials[$key]['cover']);
                                         }
                                         if (isset($value['duration'])) {
                                             $nowDuration = $value['duration'];
-                                        }else{
+                                        } else {
                                             $nowDuration = 2;
                                         }
-                                         $materialDuration += $nowDuration;
-                                        if($materialDuration > 290 || $nowDuration > 59){
-                                            unset($material[$key]);
+                                        $materialDuration += $nowDuration;
+                                        if ($materialDuration > 290 || $nowDuration > 59) {
+                                            unset($mergedMaterials[$key]);
                                             $materialDuration -= $nowDuration;
                                         }
                                         if (isset($value['type']) && $value['type'] == 'video') {
@@ -463,7 +769,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                                         break; // 跳过没有视频的任务
                                     }
 
-                                    $material = json_encode(array_values($material), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                    $material = json_encode(array_values($mergedMaterials), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                     // 素材类型需要特殊处理
                                     $scene = 'oralMixCutting';
                                     $shanjianVideoSettingData['material'] = $material;
@@ -471,35 +777,42 @@ class AutoDeviceSettingLogic extends ApiLogic
 
                                     break;
                                 case 4:
+                                    $auto_type = 1;
+
                                     $clipMaterialArray = $task->clip_material ?: [];
                                     shuffle($clipMaterialArray);
-                                    $randomLength = rand(3, 5);
-                                    $material = array_slice($clipMaterialArray, 0, $randomLength );
-                                    foreach ($material as $key => &$value) {
+                                    $selectedMaterials = array_slice($clipMaterialArray, 0, 1);
+
+                                    $imageMaterialArray = $task->image_material ?: [];
+                                    shuffle($imageMaterialArray);
+                                    $randomLength = rand(2, 3);
+                                    $selectedImageMaterials = array_slice($imageMaterialArray, 0, $randomLength);
+                                    $mergedMaterials = array_merge($selectedMaterials, $selectedImageMaterials);
+                                    foreach ($mergedMaterials as $key => &$value) {
                                         if (isset($value['duration'])) {
                                             $nowDuration = $value['duration'];
-                                        }else{
+                                        } else {
                                             $nowDuration = 2;
                                         }
-                                         $materialDuration += $nowDuration;
-                                        if($materialDuration > 290 || $nowDuration > 59){
-                                            unset($material[$key]);
+                                        $materialDuration += $nowDuration;
+                                        if ($materialDuration > 290 || $nowDuration > 59) {
+                                            unset($mergedMaterials[$key]);
                                             $materialDuration -= $nowDuration;
                                         }
                                         if (isset($value['cover'])) {
                                             $pic = $value['cover'];
-                                            unset($material[$key]['cover']);
+                                            unset($mergedMaterials[$key]['cover']);
                                         }
                                         if (isset($value['type']) && $value['type'] == 'video') {
                                             $value['soundSwitch'] = true;
                                             $isvideo = true;
                                         }
                                     }
-                                
-                                    // 使用预先生成的文案
-                                    $material = json_encode(array_values($material), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-                                    $copywritingResult4[0]['title'] = $copywriting['content']['0'];
+                                    // 使用预先生成的文案
+                                    $material = json_encode(array_values($mergedMaterials), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+                                    $copywritingResult4['0']['title'] = $copywritingResult['content']['0'] ?? '';
                                     $shanjianVideoSettingData['copywriting'] = json_encode($copywritingResult4, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                     $shanjianVideoSettingData['voice'] =  $firstHumanImage['shanjian_voice_id'] ?? '';
                                     $shanjianVideoSettingData['material'] = $material;
@@ -512,16 +825,16 @@ class AutoDeviceSettingLogic extends ApiLogic
                                     $material = ''; // 默认空字符串
                                     break;
                             }
-                              \think\facade\Log::channel('automedia')->info( $task->id . '时长测试计算' . $materialDuration);
+                            \think\facade\Log::channel('automedia')->info($task->id . '时长测试计算' . $materialDuration);
                             if (!$isvideo) {
                                 continue; // 跳过没有视频的任务
                             }
 
                             $shanjian_voice_id = $firstHumanImage['shanjian_voice_id'] ?? '';
-                            if (!$shanjian_voice_id  && in_array($type,[1,3])) {
+                            if (!$shanjian_voice_id  && in_array($type, [1, 3])) {
                                 continue;
                             }
-                            $clip_template_id = ShanjianClipTemplate::where('scene', $scene)->column('id');
+                            $clip_template_id = ShanjianClipTemplate::where('scene', $scene)->where('auto_type', $auto_type)->column('id');
                             $clip_template_total = count($clip_template_id) - 1;
                             $clip = random_int(0, $clip_template_total);
                             $clip_id =  $clip_template_id[$clip];
@@ -530,11 +843,10 @@ class AutoDeviceSettingLogic extends ApiLogic
                             $shanjianVideoSetting = ShanjianVideoSetting::create($shanjianVideoSettingData);
                             $number = random_int(1, 20);
                             $music_url = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
-                            $taskTitle = $copywritingResult[0]['title'] ?? '';
-                            $taskMsg = $copywritingResult[0]['content'] ?? '';
+                            $taskTitle = $titlecozemsg;
+                            $taskMsg = $copywritingResult['content']['0'] ?? '';
                             if ($type == 4) {
-                                $title = json_decode($copywritingResult4[0]['title'], true);
-                                $taskTitle = implode('\n', $title);
+                                $taskTitle = $copywritingResult4['0']['title'];
                                 $taskMsg = '';
                             }
 
@@ -576,6 +888,10 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 'shanjian_video_task_id' => $shanjianVideoTask->id
                             ];
                         } elseif ($type == 5) {
+                            $svCopywriting[0] = [
+                                'title' => $titlecozemsg,
+                                'content' => $copywritingResult['content']['0'],
+                            ];
                             // 3. 插入到SV视频设置表
                             $svVideoSettingData = [
                                 'user_id' => $task->user_id,
@@ -590,7 +906,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 'device_code' => $task->device_code,
                                 'auto_type' => 1,
                                 'anchor' => json_encode($firstHumanImage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                                'copywriting' => json_encode($copywritingResult, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                                'copywriting' => json_encode($svCopywriting, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                                 'create_time' => time(),
                                 'update_time' => time()
                             ];
@@ -621,7 +937,8 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 'upload_video_url' => $firstHumanImage['anchor_url'] ?? '',
                                 'anchor_name' => $firstHumanImage['name'] ?? '',
                                 'anchor_id' => $firstHumanImage['chanjing_anchor_id'] ?? '',
-                                'msg' => $copywritingResult[0]['content'] ?? '',
+                                // 'voice_id' => $firstHumanImage['voice_id'] ?? '',
+                                'msg' => $svCopywriting[0]['content'] ?? '',
                                 'audio_type' => 1, // 1文案驱动
                                 'extra' => json_encode([
                                     'combination' => '0_0_0',
@@ -631,7 +948,6 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 'update_time' => $currentTime
                             ];
                             SvVideoTask::create($svVideoTaskData);
-
                         } elseif ($type == 6) {
                             $puzzleDate['keywords'] =  $firstTextTheme;
                             // 根据素材数量智能选择合适的数量
@@ -775,17 +1091,16 @@ class AutoDeviceSettingLogic extends ApiLogic
                             }
                         }
                     }
-
                     // 更新字段
                     $task->status = 2;
                     // 保存修改后的素材数组到任务对象
                     $task->save();
                     // // 收集当前任务的处理结果
-                
+
                     // 提交事务
                     Db::commit();
                 } catch (Exception $e) {
-                  //  var_dump($e->__tostring());
+                    //  var_dump($e->__tostring());
                     \think\facade\Log::channel('automedia')->info('自动化失败' . $e->__toString());
                     // 回滚事务
                     Db::rollback();
@@ -843,6 +1158,13 @@ class AutoDeviceSettingLogic extends ApiLogic
                     $channelVersion = 8;
                     $number = $data['number'] ?? 1;
                     break;
+                case 4:
+                    $scene = self::COZE_COPYWRITING;
+                    $channelVersion = 9;
+                    $number = $data['number'] ?? 1;
+                    $sn = $data['sn'] ?? 0;
+                    $length = $data['length'] ?? 60;
+                    break;
                 default:
                     throw new \Exception('参数错误');
             }
@@ -852,11 +1174,21 @@ class AutoDeviceSettingLogic extends ApiLogic
             }
 
             $taskId = generate_unique_task_id();
-            $request = [
-                'keywords' => $keywords,
-                'number' => $number,
-                'channelVersion' => $channelVersion,
-            ];
+            if ($type == 4) {
+                $request = [
+                    'keywords' => $keywords,
+                    'number' => $number,
+                    'sn' => $sn,
+                    'length' => $length
+                ];
+            } else {
+                $request = [
+                    'keywords' => $keywords,
+                    'number' => $number,
+                    'channelVersion' => $channelVersion,
+                ];
+            }
+
             $result = self::requestUrl($request, $scene, $userId, $taskId);
             if (!empty($result) && isset($result['content'])) {
                 return $result;
@@ -878,6 +1210,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                 self::COPYWRITING_CREATE => ['shanjian_copywriting_create', AccountLogEnum::TOKENS_DEC_COZE_TEXT],
                 self::NEWS_MIXCUT_TITLE => ['news_mixcut_title', AccountLogEnum::TOKENS_DEC_NEWS_MIXCUT_TITLE],
                 self::COMBINED_PICTURE_TITLE => ['combined_picture_title', AccountLogEnum::TOKENS_DEC_COMBINED_PICTURE_TITLE],
+                self::COZE_COPYWRITING => ['coze_copywriting',  AccountLogEnum::TOKENS_DEC_COZE_COPYWRITING],
             }; //计费
             $unit = TokenLogService::checkToken($userId, $tokenScene); // 添加辅助参数
             $request['task_id'] = $taskId;
@@ -893,7 +1226,9 @@ class AutoDeviceSettingLogic extends ApiLogic
                 case self::COMBINED_PICTURE_TITLE:
                     $response = \app\common\service\ToolsService::Coze()->title($request);
                     break;
-
+                case self::COZE_COPYWRITING:
+                    $response = \app\common\service\ToolsService::Coze()->settext($request);
+                    break;
                 default:
             } //成功响应，需要扣费
             if (isset($response['code']) && $response['code'] == 10000) {
@@ -913,6 +1248,10 @@ class AutoDeviceSettingLogic extends ApiLogic
                         case self::COMBINED_PICTURE_TITLE:
                             $break = false;
                             $extra = ['生成标题条数' => 1, '算力单价' => $unit, '实际消耗算力' => $points];
+                            break;
+                        case self::COZE_COPYWRITING:
+                            $break = false;
+                            $extra = ['生成文案条数' => 1, '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         default:
                     }

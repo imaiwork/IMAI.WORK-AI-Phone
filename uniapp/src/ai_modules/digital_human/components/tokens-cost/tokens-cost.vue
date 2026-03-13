@@ -63,11 +63,12 @@
 <script setup lang="ts">
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
+import { MontageTypeEnum } from "@/ai_modules/digital_human/enums";
 
 const props = withDefaults(
     defineProps<{
         modelValue: boolean;
-        type: 1 | 2 | 3 | 4 | 5 | 6; // 1: 数字人口播混剪, 2: 真人口播智剪, 3: 素材混剪, 4: 新闻体视频, 5: 一句话生成视频,
+        type: MontageTypeEnum; // 1: 数字人口播混剪, 2: 真人口播智剪, 3: 素材混剪, 4: 新闻体视频, 5: 一句话生成视频,
     }>(),
     {
         type: 1,
@@ -91,33 +92,38 @@ const userStore = useUserStore();
 const getScene = computed(() => {
     const descriptions: Record<number, { title: string; desc: string; key: string | { name: string; key: string }[] }> =
         {
-            1: {
+            [MontageTypeEnum.REAL_PERSON_MIX]: {
                 title: "数字人口播混剪",
                 desc: "数字人+文案+素材智能混剪",
                 key: TokensSceneEnum.HUMAN_VIDEO_SHANJIAN,
             },
-            2: {
+            [MontageTypeEnum.REAL_PERSON_AI]: {
                 title: "真人口播智剪",
                 desc: "上传真人口播视频，输出网感口播视频",
                 key: TokensSceneEnum.SHANJIAN_CLIP_VIDEO,
             },
-            3: {
+            [MontageTypeEnum.MATERIAL_MIX]: {
                 title: "素材混剪",
                 desc: "上传素材文案，自动生成视频",
                 key: TokensSceneEnum.SHANJIAN_MATERIAL_VIDEO,
             },
-            4: {
+            [MontageTypeEnum.NEWS_BODY]: {
                 title: "新闻体视频",
                 desc: "自动生成新闻体混剪视频",
                 key: TokensSceneEnum.SHANJIAN_NEWS_VIDEO,
             },
-            5: {
+            [MontageTypeEnum.SORA_VIDEO]: {
                 title: "一句话生成视频",
                 desc: "一段话或根据场景生成视频",
                 key: [
                     { name: "普通版", key: TokensSceneEnum.SORA_VIDEO },
                     { name: "PRO版", key: TokensSceneEnum.SORA_PRO_VIDEO },
                 ],
+            },
+            [MontageTypeEnum.STORYBOARD_MIX]: {
+                title: "分镜混剪",
+                desc: "分镜混剪",
+                key: TokensSceneEnum.STORYBOARD_MIX,
             },
         };
     return descriptions[props.type];

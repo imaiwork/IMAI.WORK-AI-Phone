@@ -23,6 +23,7 @@ class LianlianAnalysisCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\n AI陪练分析任务...'\n");
         LianLianLogic::analysisCron();
         return true;
     }

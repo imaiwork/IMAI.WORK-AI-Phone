@@ -30,7 +30,7 @@ class VideoTaskController extends BaseApiController
             $type = $this->request->param('human_type');
             $modelVersion = $this->request->param('model_version');
             $data = $this->request->all();
-            Log::channel('sv')->write('接收数字人参数'.json_encode($data));
+            Log::channel('sv')->write('接收数字人参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             $key = md5(json_encode($data));
             $val =  cache($key);
             if ($val){

@@ -39,7 +39,7 @@
 
         <div v-else class="flex flex-col">
             <div v-if="isSearchMode" class="flex-1">
-                <ElScrollbar max-height="400px">
+                <ElScrollbar max-height="600px">
                     <div class="px-3">
                         <div v-if="searchResults.length === 0" class="text-center py-8">
                             <Icon name="el-icon-Search" :size="36" color="#d1d5db" class="mb-3"></Icon>

@@ -139,6 +139,7 @@ return [
             'path'           => app()->getRootPath() . '/runtime/log/auto/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
+            'apart_level'   =>  ['publish'],
         ],
         'ffmpeg' => [
             'type'           => 'File',

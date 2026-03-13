@@ -23,6 +23,7 @@ class HdStatus extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\n 图片生成状态1...'\n");
         HdLogic::cron();
         return true;
     }

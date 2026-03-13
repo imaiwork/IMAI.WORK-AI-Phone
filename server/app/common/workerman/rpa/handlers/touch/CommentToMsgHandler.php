@@ -65,6 +65,8 @@ class CommentToMsgHandler extends BaseMessageHandler
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区私信任务不存在: ' . \think\facade\Db::getLastSql());
             }
 
+            TokenLogService::checkToken($task->user_id,'');
+            
             $setting = SvLeadScrapingSetting::where('id', $task->scraping_id)->findOrEmpty();
             if ($setting->isEmpty()) {
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务配置不存在');
@@ -147,6 +149,15 @@ class CommentToMsgHandler extends BaseMessageHandler
                 'isProceed' => 1, //是否处理 1是 0 否
             ];
         } catch (\Exception $e) {
+            if($e->getCode() == 4059){
+                \app\common\model\sv\SvDeviceTask::where('sub_task_id', $content['task_id'])
+                    ->where('source', \app\common\enum\DeviceEnum::TASK_SOURCE_TOUCH)
+                    ->where('device_code', $this->payload['deviceId'])->update([
+                        'status' => 3,
+                        'remark' => '执行失败:' . $e->getMessage(),
+                        'update_time' => time(),
+                    ]);
+            }
             $this->setLog('异常信息' . $e, 'task_complete');
             $this->payload['reply'] = $e->getMessage();
             $this->payload['code'] =  WorkerEnum::RPA_COMMENT_TO_MSG_FAIL;

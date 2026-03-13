@@ -288,7 +288,7 @@ class DigitalHumanLogic extends ApiLogic
                 return true;
             }
             $lists = $lists->toArray();
-            Log::channel('shanjian')->write('定时任务开启：' . json_encode($lists, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('digital')->write('定时任务开启：' . json_encode($lists, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             foreach ($lists as $item) {
                 $anchorFile = FfmpegFile::where('uri', '=', FileService::setFileUrl($item['result_url']))->findOrEmpty();
                 $authFile   = FfmpegFile::where('uri', '=', $item['authorized_url'])->findOrEmpty();
@@ -303,7 +303,7 @@ class DigitalHumanLogic extends ApiLogic
 //                    }
                     continue;
                 }
-                Log::channel('shanjian')->write('定时任务执行：' . $item['id']);
+                Log::channel('digital')->write('定时任务执行：' . $item['id']);
                 $shanjianData = [
                     'user_id'        => $item['user_id'],
                     'dh_id'          => $item['id'],
@@ -427,7 +427,7 @@ class DigitalHumanLogic extends ApiLogic
         if ($lists->isEmpty()) {
             return true;
         }
-        Log::channel('shanjian')->write('退费查询：' . json_encode($lists, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        Log::channel('digital')->write('退费查询：' . json_encode($lists, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         $lists = $lists->toArray();
         foreach ($lists as $item) {
@@ -437,12 +437,13 @@ class DigitalHumanLogic extends ApiLogic
                 continue;
             }
             $shanjian = ShanjianAnchor::where('dh_id', $item['id'])->findOrEmpty();
-            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->findOrEmpty();
+//            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->findOrEmpty();
             $chanjing = HumanAnchor::where('model_version', 7)->where('dh_id', $item['id'])->findOrEmpty();
-            if ($shanjian->isEmpty() || $weiju->isEmpty() || $chanjing->isEmpty()) {
+//            if ($shanjian->isEmpty() || $weiju->isEmpty() || $chanjing->isEmpty()) {
+            if ($shanjian->isEmpty() || $chanjing->isEmpty()) {
                 continue;
             }
-            Log::channel('shanjian')->write('退费处理开始：' . $item['id']);
+            Log::channel('digital')->write('退费处理开始：' . $item['id']);
 
             $task_ids['shanjian']['task_id'] = $shanjian['task_id'] ?? '';
             $task_ids['shanjian']['status']  = $shanjian['status'] ?? 0;
@@ -456,12 +457,18 @@ class DigitalHumanLogic extends ApiLogic
             $publicAnchor = DigitalHumanAnchor::where('id', $item['id'])->find();
             $task_ids = json_decode($publicAnchor['task_ids'], true);
 
-            if (($task_ids['shanjian']['status'] == 2 || $task_ids['shanjian']['status'] == 5) && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 1) {
+//            if (($task_ids['shanjian']['status'] == 2 || $task_ids['shanjian']['status'] == 5) && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 1) {
+            if (($task_ids['shanjian']['status'] == 2 || $task_ids['shanjian']['status'] == 5) && $task_ids['chanjing']['status'] == 1) {
                 // weiju失败退费
-                self::refundTokens($weiju->user_id, $weiju->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR);
-                $weiju->status = 2;
-                $weiju->remark = '公共数字人合成失败';
-                $weiju->save();
+//                self::refundTokens($weiju->user_id, $weiju->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR);
+//                $weiju->status = 2;
+//                $weiju->remark = '公共数字人合成失败';
+//                $weiju->save();
+                // shanjian失败退费
+                self::refundTokens($shanjian->user_id, $shanjian->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN);
+                $shanjian->status = 2;
+                $shanjian->remark = '公共数字人合成失败';
+                $shanjian->save();
                 // chanjing失败退费
                 self::refundTokens($chanjing->user_id, $chanjing->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_CHANJING);
                 $chanjing->status = 2;
@@ -469,7 +476,8 @@ class DigitalHumanLogic extends ApiLogic
                 $chanjing->save();
                 $order = true;
             } else
-                if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 2 && $task_ids['chanjing']['status'] == 1) {
+//                if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 2 && $task_ids['chanjing']['status'] == 1) {
+                if ($task_ids['shanjian']['status'] == 6 && $task_ids['chanjing']['status'] == 1) {
                     // shanjian失败退费
                     self::refundTokens($shanjian->user_id, $shanjian->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN);
                     $shanjian->status = 2;
@@ -481,20 +489,20 @@ class DigitalHumanLogic extends ApiLogic
                     $chanjing->remark = '公共数字人合成失败';
                     $chanjing->save();
                     $order = true;
-                } else
-                    if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 2) {
-                        // shanjian失败退费
-                        self::refundTokens($shanjian->user_id, $shanjian->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN);
-                        $shanjian->status = 2;
-                        $shanjian->remark = '公共数字人合成失败';
-                        $shanjian->save();
-                        // chanjing失败退费
-                        self::refundTokens($weiju->user_id, $weiju->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR);
-                        $chanjing->status = 2;
-                        $chanjing->remark = '公共数字人合成失败';
-                        $chanjing->save();
-                        $order = true;
-                    }
+                }
+//                else if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 2) {
+//                        // shanjian失败退费
+//                        self::refundTokens($shanjian->user_id, $shanjian->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN);
+//                        $shanjian->status = 2;
+//                        $shanjian->remark = '公共数字人合成失败';
+//                        $shanjian->save();
+//                        // chanjing失败退费
+//                        self::refundTokens($weiju->user_id, $weiju->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR);
+//                        $chanjing->status = 2;
+//                        $chanjing->remark = '公共数字人合成失败';
+//                        $chanjing->save();
+//                        $order = true;
+//                    }
 
             if ($order) {
                 $task_ids['shanjian']['task_id'] = $shanjian['task_id'] ?? '';
@@ -506,7 +514,7 @@ class DigitalHumanLogic extends ApiLogic
                 $update['task_ids']              = json_encode($task_ids);
                 DigitalHumanAnchor::where('id', $item['id'])->update($update);
             }
-            Log::channel('shanjian')->write('退费处理结束：' . $item['id']);
+            Log::channel('digital')->write('退费处理结束：' . $item['id']);
 
         }
         return true;

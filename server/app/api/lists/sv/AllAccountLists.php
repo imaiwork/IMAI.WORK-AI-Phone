@@ -33,8 +33,9 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
      */
     public function lists(): array
     {
-        $this->searchWhere[] = ['w.user_id', '=', $this->userId];
-
+        if ($this->userId > 0) {
+            $this->searchWhere[] = ['w.user_id', '=', $this->userId];
+        }
         return SvAccount::alias('w')
             ->field('w.user_id,w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,w.update_time,w.extra,w.type,
                     s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id, d.device_name,d.device_model')

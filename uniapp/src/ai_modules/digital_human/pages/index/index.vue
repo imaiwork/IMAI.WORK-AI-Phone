@@ -33,10 +33,10 @@
                         src="@/ai_modules/digital_human/static/images/home/mask_bg1.png"
                         class="w-[100rpx] h-[100rpx] absolute bottom-1 right-2"></image>
                 </view>
-                <view class="menu-card" @click="toPage(MenuKey.FRAGMENT_MIX)">
+                <view class="menu-card" @click="toPage(MenuKey.MONTAGE_MIX)">
                     <view class="w-full h-full p-[38rpx]">
-                        <view class="text-[30rpx] font-medium">分镜混剪</view>
-                        <view class="text-[22rpx] text-[#000000]/50 mt-[8rpx]"> 多镜智能融合 </view>
+                        <view class="text-[30rpx] font-medium">数字人口播混剪</view>
+                        <view class="text-[22rpx] text-[#000000]/50 mt-[8rpx]"> 智剪爆款视频 </view>
                     </view>
                     <image
                         src="@/ai_modules/digital_human/static/images/home/mask_bg2.png"
@@ -142,7 +142,7 @@
                         </view>
                     </scroll-view>
                     <view v-else class="my-4">
-                        <empty :size="250" />
+                        <empty :size="220" />
                     </view>
                     <view v-if="anchorLists.length >= 3" class="fade-mask-right"> </view>
                 </view>
@@ -177,6 +177,7 @@ import MontageScanIcon from "@/ai_modules/digital_human/static/icons/scan.svg";
 import MaterialLibraryIcon from "@/ai_modules/digital_human/static/icons/material_library.svg";
 import ImageCreateIcon from "@/ai_modules/digital_human/static/icons/image_create.svg";
 import BombCopyIcon from "@/ai_modules/digital_human/static/icons/bomb_copy.svg";
+import StoryboardIcon from "@/ai_modules/digital_human/static/icons/storyboard.svg";
 import AnchorVideo from "@/ai_modules/digital_human/components/anchor-video/anchor-video.vue";
 
 enum MenuKey {
@@ -196,9 +197,8 @@ enum MenuKey {
     BOMB_COPY = "bomb_copy",
     FRAGMENT_MIX = "fragment_mix",
     SCAN_PUBLISH_WORKS = "scan_publish_works",
+    MONTAGE_MIX = "montage_mix",
 }
-
-const appStore = useAppStore();
 
 const worksLists = ref<any[]>([]);
 const anchorLists = ref<any[]>([]);
@@ -215,6 +215,7 @@ const utils_2 = [
     { label: "数字人形象", key: MenuKey.ANCHOR, icon: AnchorCloneIcon },
     { label: "数字人声音", key: MenuKey.TONE, icon: ToneCloneIcon },
     { label: "图片创作", key: MenuKey.IMAGE_CREATE, icon: ImageCreateIcon },
+    { label: "分镜混剪", key: MenuKey.FRAGMENT_MIX, icon: StoryboardIcon },
     // { label: "爆款仿写", key: MenuKey.BOMB_COPY, icon: BombCopyIcon },
     // { label: "文案提取", key: MenuKey.TEXT_EXTRACT, icon: TextExtractIcon },
     { label: "扫码发布", key: MenuKey.SCAN_PUBLISH_WORKS, icon: MontageScanIcon },
@@ -232,10 +233,11 @@ const pageMap: Record<string, string | (() => void)> = {
     [MenuKey.PLATFORM_PUBLISH]: "/ai_modules/digital_human/pages/platform_publish_works/platform_publish_works",
     [MenuKey.SORA]: "/ai_modules/digital_human/pages/sora_create/sora_create",
     [MenuKey.MATERIAL_LIBRARY]: "/packages/pages/material_library/material_library",
-    [MenuKey.FRAGMENT_MIX]: () => uni.$u.toast("敬请期待"),
+    [MenuKey.FRAGMENT_MIX]: "/ai_modules/digital_human/pages/montage_storyboard_create/montage_storyboard_create",
     [MenuKey.BOMB_COPY]: () => uni.$u.toast("敬请期待"),
     [MenuKey.IMAGE_CREATE]: "/ai_modules/drawing/pages/create_task/create_task",
     [MenuKey.SCAN_PUBLISH_WORKS]: "/ai_modules/digital_human/pages/platform_publish_works/platform_publish_works",
+    [MenuKey.MONTAGE_MIX]: "/ai_modules/digital_human/pages/montage_create/montage_create",
 };
 
 // 根据不同的类型获取不同的status值

@@ -21,7 +21,7 @@ class HdPuzzleCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
-
+        print_r("\n 拼图任务...'\n");
         HdPuzzleLogic::taskCron();
         return true;
     }

@@ -6,6 +6,7 @@
                     <Icon name="local-icon-time" :size="14"></Icon>
                     <span class="text-xs font-black uppercase tracking-widest">最近会话</span>
                 </div>
+                <nuxt-link class="text-xs text-slate-400" to="/creation">全部</nuxt-link>
             </div>
         </div>
 
@@ -23,8 +24,7 @@
                 <ElScrollbar v-if="chatHistory.length > 0" :distance="20" @end-reached="load">
                     <div class="px-3 pb-6">
                         <div v-for="group in groupChatHistoryByTime" :key="group.date" class="mt-4">
-                            <div
-                                class="sticky top-0 z-[10] backdrop-blur-md text-[11px] font-black text-slate-400 px-3 py-2 flex items-center gap-2">
+                            <div class="text-[11px] font-black text-slate-400 px-3 py-2 flex items-center gap-2">
                                 <span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
                                 {{ group.date }}
                             </div>
@@ -197,7 +197,7 @@ onMounted(() => {
 }
 
 .session-item {
-    @apply flex items-center gap-3 px-3 h-11 cursor-pointer rounded-xl relative overflow-hidden;
+    @apply flex items-center gap-3 px-3 h-[35px] cursor-pointer rounded-xl relative overflow-hidden;
     @apply text-slate-600 border border-[transparent];
 
     // 悬停样式 + popover 打开时的样式

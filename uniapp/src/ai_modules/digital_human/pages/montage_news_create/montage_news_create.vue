@@ -157,6 +157,7 @@
                                 v-for="(item, index) in formData.copywriterList"
                                 :key="index"
                                 class="copywriter-item"
+                                :class="{ 'copywriter-item--error': !isSingleCopywriterValid(item) }"
                                 @click="handleSelectCopywriter(index)">
                                 <view class="min-h-[80rpx] leading-5">
                                     {{ item }}
@@ -165,6 +166,29 @@
                                     class="absolute right-2 top-2 rounded-full flex item-center justify-center w-4 h-4 bg-[#0000004C]"
                                     @click.stop="handleDeleteCopywriter(index)">
                                     <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                </view>
+                                <view class="flex items-center justify-between mt-2">
+                                    <view class="flex items-center gap-x-1">
+                                        <template v-if="item.length > copywriterLimit">
+                                            <u-icon name="info-circle-fill" color="#f56c6c"></u-icon>
+                                            <text class="text-xs text-error"
+                                                >文案超出{{ copywriterLimit }}字限制，请修改</text
+                                            >
+                                        </template>
+                                        <template v-else-if="item.trim().length < 3">
+                                            <u-icon name="info-circle-fill" color="#f56c6c"></u-icon>
+                                            <text class="text-xs text-error">文案不能少于3个字</text>
+                                        </template>
+                                    </view>
+                                    <text
+                                        class="text-xs text-right"
+                                        :class="
+                                            item.length > copywriterLimit
+                                                ? 'text-error font-medium'
+                                                : 'text-[#000000]/50'
+                                        ">
+                                        {{ item.length }} / {{ copywriterLimit }}
+                                    </text>
                                 </view>
                             </view>
                         </view>
@@ -402,7 +426,7 @@
         desc="您可以立即去设置发布任务，也可以等待视频生成成功后再发布"
         @to="toPublish"
         @seek="toRecord" />
-    <tokens-cost v-if="showTokensCost" v-model="showTokensCost" :type="4" />
+    <tokens-cost v-if="showTokensCost" v-model="showTokensCost" :type="MontageTypeEnum.NEWS_BODY" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
 </template>
 
@@ -482,8 +506,7 @@ const videoPreview = reactive({
     poster: "",
     url: "",
 });
-
-// 编辑文案索引
+const copywriterLimit = 1000;
 const editCopywriterIndex = ref(-1);
 
 const showTokensCost = ref(false);
@@ -491,7 +514,10 @@ const showCreateSuccess = ref(false);
 const createResult = ref<any>(null);
 const rechargePopupRef = shallowRef();
 
-//判断是否可以下一步
+const isSingleCopywriterValid = (text: string): boolean => {
+    return text.trim().length >= 3 && text.length <= copywriterLimit;
+};
+
 const canStepProceed = (stepNumber: number) => {
     const strategy: Record<number, () => boolean> = {
         1: () => formData.materialList.length > 0,
@@ -509,7 +535,6 @@ const canStepProceed = (stepNumber: number) => {
     return strategy[stepNumber]?.() ?? false;
 };
 
-// 计算当前步骤是否可以点击“下一步”
 const canNext = computed(() => canStepProceed(step.value));
 
 const handleStep = (targetStep: number, type?: "next" | "prev") => {
@@ -553,7 +578,7 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
 };
 
 const isContentValid = () => {
-    return formData.copywriterList.every((title: any) => title.trim().length >= 3 && title.trim().length <= 1000);
+    return formData.copywriterList.every((title: any) => isSingleCopywriterValid(title));
 };
 
 const handleEditMaterial = (index?: number) => {
@@ -590,6 +615,7 @@ const handleShowCopywriter = (data?: any) => {
         params: {
             data: data || "",
             isNewsBody: 1,
+            limit: copywriterLimit,
         },
     });
 };
@@ -758,6 +784,9 @@ onLoad(() => {
 <style scoped lang="scss">
 .copywriter-item {
     @apply relative rounded-[16rpx] bg-white shadow-[0rpx_6rpx_12rpx_0_rgba(0,0,0,0.03)] p-4;
+    &--error {
+        @apply border border-solid border-error bg-[#f56c6c]/50;
+    }
 }
 .type-item {
     @apply flex flex-col items-center justify-center rounded-[16rpx] text-[#00000080] relative z-10 transition-colors duration-500 text-xs;

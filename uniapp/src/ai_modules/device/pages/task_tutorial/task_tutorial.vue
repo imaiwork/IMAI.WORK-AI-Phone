@@ -53,7 +53,12 @@
 
 <script setup lang="ts">
 import config from "@/config";
+import { useAppStore } from "@/stores/app";
 import { CreateTypeEnum } from "@/ai_modules/device/enums";
+
+const appStore = useAppStore();
+
+const isShowVideoCase = computed(() => appStore.getDigitalHumanConfig?.video_case_open == "1");
 
 const richMenuList = ref([
     {
@@ -150,6 +155,9 @@ const previewUrl = ref("");
 const showPreview = ref(false);
 
 const handleNav = (item: any) => {
+    if (!isShowVideoCase.value) {
+        return;
+    }
     const urls = {
         [CreateTypeEnum.IMAGE_PUBLISH]: `${config.baseUrl}static/videos/task_image_publish.mp4`,
         [CreateTypeEnum.VIDEO_PUBLISH]: `${config.baseUrl}static/videos/task_video_publish.mp4`,

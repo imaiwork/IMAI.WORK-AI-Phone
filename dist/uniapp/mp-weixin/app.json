@@ -65,7 +65,7 @@
         "pages/platform_publish_video/platform_publish_video",
         "pages/platform_publish_copywriter/platform_publish_copywriter",
         "pages/platform_publish_ai_copywriter/platform_publish_ai_copywriter",
-        "pages/montage_storyboard/montage_storyboard",
+        "pages/montage_storyboard_create/montage_storyboard_create",
         "pages/montage_storyboard_title/montage_storyboard_title"
       ]
     },

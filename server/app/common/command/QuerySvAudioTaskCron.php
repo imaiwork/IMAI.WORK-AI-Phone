@@ -23,7 +23,9 @@ class QuerySvAudioTaskCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\n 矩阵任务查询1...'\n");
         SvVideoTaskLogic::queryVoiceCron();
+        print_r("\n 矩阵任务查询2...'\n");
         SvVideoTaskLogic::queryAudioCron();
         return true;
     }

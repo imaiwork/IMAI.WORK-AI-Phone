@@ -2705,6 +2705,9 @@ class HumanLogic extends ApiLogic
                 case  6:
                     $scene = 'human_video_ymt';
                     break;
+                case  7:
+                    $scene = 'human_voice_chanjing';
+                    break;     
                 default:
                     $scene = 'human_video';
                     break;
@@ -2742,6 +2745,18 @@ class HumanLogic extends ApiLogic
 
     }
 
+    public static function voiceCron(){
+        HumanVoice::where('status', 0)
+        ->where('model_version', 7)
+        ->where('create_time', '<=', strtotime('-60 minutes'))
+        ->order('id', 'desc')
+        ->limit(5)
+        ->select()
+        ->each(function ($item) {
+            HumanVoice::where('id', $item['id'])->where('model_version', 7)->whereIn('status', 0)->update(['status' => 2, 'remark' => '创作超时']);
+            self::refundTokens($item['user_id'], $item['voice_id'], $item['task_id'], 'human_voice_chanjing');
+        });
+    }
 
     /**
      * 请求上游接口与计费

@@ -17,7 +17,7 @@ use think\exception\HttpResponseException;
 class DeviceController extends BaseApiController
 {
 
-    public array $notNeedLogin = ['bind'];
+    public array $notNeedLogin = ['bind', 'accountLists'];
 
     /**
      * @desc 获取列表
@@ -25,6 +25,11 @@ class DeviceController extends BaseApiController
     public function lists()
     {
         return $this->dataLists(new DeviceLists());
+    }
+
+    public function accountLists()
+    {
+        return $this->dataLists(new \app\api\lists\sv\AllAccountLists());
     }
 
     public function detail()

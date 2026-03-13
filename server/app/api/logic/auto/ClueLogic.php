@@ -162,7 +162,7 @@ class ClueLogic extends ApiLogic
 
             $wechat = \app\common\model\sv\SvAccount::where('device_code', $item->device_code)->where('user_id', $item->user_id)->where('type', 1)->findOrEmpty();
             if ($wechat->isEmpty()) {
-                throw new \Exception('请绑定个微，并获取微信账号信息');
+                throw new \Exception('请绑定个微，并获取微信账号信息' . $item->device_code);
             }
             $maxDay =  \app\common\model\sv\SvDeviceTask::where('device_code', $item->device_code)
                 ->where('task_type', DeviceEnum::AUTO_TYPE_CLUES)
@@ -243,13 +243,16 @@ class ClueLogic extends ApiLogic
             ];
             \app\common\model\sv\SvDeviceTask::create($deviceTask);
             $item->status = DeviceEnum::AUTO_CONFIG_STATUS_FINISHED;
+            $item->remark = '任务生成成功'. date('Y-m-d H:i:s', time());
+            $item->update_time = time();
             $item->save();
             Db::commit();
         } catch (\Throwable $th) {
-            \think\facade\Log::channel('auto')->write($th->__toString(), 'clue');
+            \think\facade\Log::channel('auto')->write('自动化获客任务生成' . $item->device_code . ' ' . $th->__toString() . 'clue');
             Db::rollback();
             $item->status = DeviceEnum::AUTO_CONFIG_STATUS_FAILED;
             $item->remark = $th->getMessage();
+            $item->update_time = time();
             $item->save();
             throw new \Exception($th->getMessage());
         }

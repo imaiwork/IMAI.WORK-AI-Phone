@@ -23,6 +23,7 @@ class QuerySvCopywritingTaskCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\n 矩阵文案查询1...'\n");
         SvCopywritingTaskLogic::queryCopywritingCron();
         return true;
     }

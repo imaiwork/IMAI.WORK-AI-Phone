@@ -25,6 +25,7 @@ class OssMigrationCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\n oss迁移...'\n");
         $key = 'oss_migration_cron';
         try {
             $storage = ConfigService::get('storage', 'default', 'local');

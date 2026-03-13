@@ -94,7 +94,8 @@ class TokenLogService
             $need_token = 30;
         }
         if ($userInfo['tokens'] < $need_token) {
-            throw new \Exception('用户算力不足');
+            self::sendNotify($userInfo['id'], '用户算力不足');
+            throw new \Exception('用户算力不足', 4059);
         }
         //
         //        AccountLogLogic::add(
@@ -107,5 +108,31 @@ class TokenLogService
         //        );
 
         return $use_token;
+    }
+
+    private static function sendNotify(int $uid, string $msg )
+    {
+        $devices = \app\common\model\sv\SvDevice::where('user_id', $uid)->where('status', 'in', [1, 2])->select();
+        foreach ($devices as $device) {
+            $payload = array(
+                'type' => \app\common\enum\DeviceEnum::TASK_TOKEN_NOTIFY, // 接管任务启动
+                'appType' => 0,
+                'content' => json_encode(array(
+                    'deviceId' => $device->device_code,
+                    'code' => \app\common\enum\DeviceEnum::TASK_TOKEN_ERROR,
+                    'msg' => $msg
+                ), JSON_UNESCAPED_UNICODE),
+                'deviceId' => $device->device_code,
+                'appVersion' => '2.1.1',
+                'messageId' => 0,
+            );
+
+            \think\facade\Log::channel('device')->info(json_encode($payload, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
+            $channel = "device.{$device->device_code}.message";
+            \Channel\Client::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+            \Channel\Client::publish($channel, [
+                'data' => json_encode($payload)
+            ]);
+        }
     }
 }

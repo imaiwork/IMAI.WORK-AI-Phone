@@ -87,9 +87,31 @@ const queryList = async (page_no: number, page_size: number) => {
             page_size,
             type: props.type || "",
         });
-        pagingRef.value?.complete(lists.filter((item: any) => item.status == 3));
+        pagingRef.value?.complete(lists.filter((item: any) => getStatus(item) == 1));
     } catch (error) {
         console.error("查询历史记录失败:", error);
+    }
+};
+
+const getStatus = (item: any) => {
+    const { type, status } = item || {};
+
+    if (type === 1) {
+        if (status === 0 || status === 1 || status === 2) {
+            return status;
+        }
+        return 3;
+    } else {
+        if (status === 0) {
+            return 0;
+        }
+        if (status === 3) {
+            return 1;
+        }
+        if (status === 2) {
+            return 2;
+        }
+        return 3;
     }
 };
 

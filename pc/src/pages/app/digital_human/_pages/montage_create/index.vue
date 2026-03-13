@@ -998,7 +998,10 @@ const handleCreateVideo = async () => {
             copywriting: formData.copywriting.map(({ title, content }) => ({ title, content })),
             music: formData.music.map((item: any) => item.content),
             clip: formData.clip.map((item: any) => ({ clip_template_id: item })),
-            extra: formData.extra,
+            extra: {
+                ...formData.extra,
+                volume: formData.extra.volume.toFixed(1),
+            },
         };
 
         await createShanjianTask(params);

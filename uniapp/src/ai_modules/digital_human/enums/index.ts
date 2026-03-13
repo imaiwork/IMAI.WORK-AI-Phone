@@ -87,6 +87,8 @@ export enum MontageTypeEnum {
     NEWS_BODY = 4,
     // Sora生成视频
     SORA_VIDEO = 5,
+    // 分镜混剪
+    STORYBOARD_MIX = 6,
 }
 
 export enum MontageStylesType {

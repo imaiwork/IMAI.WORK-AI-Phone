@@ -141,7 +141,7 @@
                     </template>
                 </ElTableColumn>
 
-                <ElTableColumn label="线索检验" width="120">
+                <ElTableColumn label="线索检验" min-width="120">
                     <template #default="{ row }">
                         <div class="status-indicator" :class="getStatusClass(row.status)">
                             <span class="dot"></span>

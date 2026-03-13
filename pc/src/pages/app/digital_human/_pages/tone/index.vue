@@ -81,7 +81,11 @@
                             </div>
                         </template>
                     </ElTableColumn>
-
+                    <ElTableColumn label="备注" min-width="180">
+                        <template #default="{ row }">
+                            <em class="text-[13px] font-medium text-[#94A3B8]">{{ row.remark }}</em>
+                        </template>
+                    </ElTableColumn>
                     <ElTableColumn label="创建时间" min-width="180">
                         <template #default="{ row }">
                             <span class="text-[13px] font-medium text-[#94A3B8]">{{ row.create_time }}</span>

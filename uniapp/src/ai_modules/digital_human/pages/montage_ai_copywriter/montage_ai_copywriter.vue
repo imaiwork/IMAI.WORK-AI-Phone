@@ -79,7 +79,9 @@
                             </view>
                             <template v-else>
                                 <template v-if="!isNewsBody">
-                                    <view class="text-[28rpx] font-medium mr-4">
+                                    <view
+                                        class="text-[28rpx] font-medium mr-4"
+                                        v-if="montageType !== MontageTypeEnum.STORYBOARD_MIX">
                                         <u-input
                                             v-model="item.title"
                                             placeholder-style="color: #7C7E80; "

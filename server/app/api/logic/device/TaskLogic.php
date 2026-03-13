@@ -704,25 +704,12 @@ class TaskLogic extends ApiLogic
             $task['device_info'] = SvDevice::where('device_code', $task['device_code'])->findOrEmpty()->toArray();
 
 
-            if ($task['account_type'] == 1) {
+            $where = [
+                'device_code' => $task['device_code'],
+                'account' => $task['account']
+            ];
+            $task['account_info'] = SvAccount::where($where)->findOrEmpty()->toArray();
 
-                $where = [
-                    'wechat_id' => $task['account'],
-                    'user_id' => self::$uid,
-                ];
-                $account_info =  AiWechat::where($where)->findOrEmpty()->toArray();
-                if (!$account_info) {
-                    $task['account_info'] = '';
-                } else {
-                    $task['account_info'] = $account_info;
-                }
-            } else {
-                $where = [
-                    'device_code' => $task['device_code'],
-                    'account' => $task['account']
-                ];
-                $task['account_info'] = SvAccount::where($where)->findOrEmpty()->toArray();
-            }
             $task['task_category'] = !in_array($source, [7, 8]) ? DeviceEnum::getAccountTypeDesc($task['account_type']) . DeviceEnum::getTaskTypeDesc($task['task_type']) : DeviceEnum::getTaskSceneDesc($task['task_type']);
             $task['start_time'] = date('H:i', $task['start_time']);
             $task['end_time'] = date('H:i', $task['end_time']);

@@ -241,7 +241,10 @@
                                             :key="index"
                                             class="rounded-[12rpx] font-medium flex items-center justify-center z-10 transition-colors duration-500"
                                             :class="{ 'text-primary': commentIndex === index }"
-                                            @click="commentIndex = index">
+                                            @click="
+                                                commentIndex = index;
+                                                reloadIndustryHistory();
+                                            ">
                                             {{ item }}
                                         </view>
                                         <view
@@ -594,7 +597,7 @@
         v-model="showKeywordsEdit"
         :title="getKeywordsTitle"
         @confirm="handleKeywordsEditConfirm" />
-    <comment-filter v-model="showCommentFilterEdit" @confirm="handleCommentFilterConfirm" />
+    <comment-filter ref="commentFilterRef" v-model="showCommentFilterEdit" @confirm="handleCommentFilterConfirm" />
     <confirm-dialog
         v-model="showCreateTaskSuccessDialog"
         center
@@ -689,6 +692,7 @@ import {
     createInteractionTask,
     getClosureIndustryHistory,
     deleteClosureIndustryHistory,
+    getTaskClosureIndustryHistory,
 } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { useAppStore } from "@/stores/app";
@@ -796,7 +800,7 @@ const commentTimeType = ref<"content" | "comment">("comment");
 const keywordsEditRef = ref<InstanceType<typeof KeywordsEdit>>();
 const chooseAgeRef = ref<InstanceType<typeof ChooseAge>>();
 const industryHistoryPagingRef = shallowRef();
-
+const commentFilterRef = ref<InstanceType<typeof CommentFilter>>();
 const keywordsEditType = ref<"clue" | "comment" | "comment_content" | "fixed_comment">("clue");
 const keywordsEditIndex = ref<number>(-1);
 
@@ -1043,6 +1047,7 @@ const handleCommentFilterClear = () => {
         success: (res) => {
             if (res.confirm) {
                 formData.comment_filter_list = [];
+                commentFilterMap[currentFilterMapKey.value] = [];
             }
         },
     });
@@ -1055,6 +1060,7 @@ const handleCommentTypeClear = () => {
         success: (res) => {
             if (res.confirm) {
                 formData.comment_content_list = [];
+                commentContentMap[commentIndex.value] = []; // 同步清空当前 tab 的 map
             }
         },
     });
@@ -1062,7 +1068,7 @@ const handleCommentTypeClear = () => {
 
 const openCommentFilterEdit = () => {
     showCommentFilterEdit.value = true;
-    keywordsEditRef.value?.setFormData(formData.comment_filter_list);
+    commentFilterRef.value?.setFormData(formData.comment_filter_list);
 };
 
 const handleCommentFilterEdit = (index: number) => {
@@ -1074,10 +1080,12 @@ const handleCommentFilterEdit = (index: number) => {
 
 const handleCommentFilterDelete = (index: number) => {
     formData.comment_filter_list.splice(index, 1);
+    commentFilterMap[currentFilterMapKey.value] = [...formData.comment_filter_list];
 };
 
 const handleCommentFilterConfirm = (data: any) => {
     formData.comment_filter_list = data;
+    commentFilterMap[currentFilterMapKey.value] = [...data];
 };
 
 const handleEditCommentContent = (index: number) => {
@@ -1301,7 +1309,7 @@ const handleCreateTaskSuccess = () => {
 const getIndustryHistory = async (page_no: number, page_size: number) => {
     try {
         const { lists } = await getClosureIndustryHistory({
-            task_type: isComment.value ? 1 : 2,
+            task_type: isCollect.value ? 3 : isComment.value ? 1 : 2,
             page_no,
             page_size,
         });
@@ -1311,21 +1319,53 @@ const getIndustryHistory = async (page_no: number, page_size: number) => {
     }
 };
 
-watch(
-    () => [appStore.getCommentFilterConfig, appStore.getCommentContentConfig],
-    (newVal) => {
-        if (newVal[0] && newVal[0].length > 0) {
-            formData.comment_filter_list = newVal[0].map((item: string) => ({
+const reloadIndustryHistory = () => {
+    industryHistoryPagingRef.value?.reload();
+};
+
+const commentContentMap = reactive<Record<number, string[]>>({
+    0: [],
+    1: [],
+});
+
+const commentFilterMap = reactive<Record<string, { value: string; checked: boolean; id: number }[]>>({
+    closure: [],
+    collect: [],
+});
+
+const currentFilterMapKey = computed(() => (isCollect.value ? "collect" : "closure"));
+
+watch(commentIndex, (newIndex, oldIndex) => {
+    commentContentMap[oldIndex] = [...formData.comment_content_list];
+    formData.comment_content_list = [...commentContentMap[newIndex]];
+});
+
+const getClosureCommonHistory = async () => {
+    try {
+        const { comment_speech, msg_speech, mark_speech, filter, mark_filter } = await getTaskClosureIndustryHistory();
+
+        commentContentMap[0] = [...comment_speech];
+        commentContentMap[1] = [...(msg_speech ?? [])];
+
+        commentFilterMap["closure"] = filter ?? [];
+        commentFilterMap["collect"] = mark_filter ?? [];
+
+        formData.comment_content_list = [...commentContentMap[commentIndex.value]];
+
+        formData.comment_filter_list = [...commentFilterMap[currentFilterMapKey.value]].map(
+            (item: any, index: number) => ({
+                id: index,
                 value: item,
                 checked: true,
-            }));
-        }
-        if (newVal[1] && newVal[1].length > 0) {
-            formData.comment_content_list = newVal[1];
-        }
-    },
-    { immediate: true }
-);
+            })
+        );
+        formData.fixed_comment_list = mark_speech;
+        await nextTick();
+        commentFilterRef.value?.setFormData(formData.comment_filter_list);
+    } catch (error) {
+        historyIndustry.value = [];
+    }
+};
 
 onLoad((options: any) => {
     createType.value = options.type as CreateTypeEnum;
@@ -1353,6 +1393,8 @@ onLoad((options: any) => {
             }));
         }
     });
+    getIndustryHistory(1, 10);
+    getClosureCommonHistory();
 });
 </script>
 <style lang="scss" scoped>

@@ -23,6 +23,7 @@ class DeviceRpaCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
+        print_r("\n设备rpa执行定时任务1...'\n");
         DeviceLogic::execDeviceRpaCron();
         return true;
     }

@@ -996,7 +996,12 @@ const getCreateAutoTaskParams = () => {
             cover: item.pic,
             duration: item.duration || 0,
         })),
-        image_material: materialStore.imageList.map((item: any) => item.url),
+        image_material: materialStore.imageList.map((item: any) => ({
+            type: item.type,
+            fileUrl: item.url,
+            cover: item.pic,
+            duration: item.duration,
+        })),
     };
 };
 
@@ -1068,7 +1073,10 @@ const getAutoTaskDetail = async () => {
         pic: item.cover,
     }));
     materialStore.imageList = res.image_material.map((item: any) => ({
-        url: item,
+        type: item.type,
+        url: item.fileUrl,
+        pic: item.cover,
+        duration: item.duration,
     }));
     setFormData(analysisRes?.analysis?.result?.Analysis_Form || {}, formData);
     // 判断是不是需要直接显示到第二步

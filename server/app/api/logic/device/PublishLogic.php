@@ -789,7 +789,6 @@ class PublishLogic extends SvBaseLogic
         print_r('执行发布记录拉取任务');
         ini_set('max_execution_time', 0);
         try {
-
             $accounts = SvPublishSettingAccount::alias('pa')
                 ->field('pa.*, ps.time_config, ps.publish_frep,pa.device_code as devicecode, ps.custom_date')
                 ->field('vs.id as matrix_media_setting_id, vs.media_count, vs.media_url, vs.media_type, vs.copywriting as media_copywriting')
@@ -806,16 +805,15 @@ class PublishLogic extends SvBaseLogic
                         ->group('publish_account_id')->select();
                 })
                 ->select()->toArray();
-            //print_r(Db::getLastSql());die;
+            //print_r($accounts);
             // print_r("count: " . count($accounts));
             $insertData = [];
             $videoIds = [];
             foreach ($accounts as $key => $account) {
 
                 $medias = self::_getMedias($account);
-                //print_r($medias);die;
                 if (empty($medias)) {
-                    array_push($insertData, [
+                    $add = SvPublishSettingDetail::create([
                         'publish_id' => $account['publish_id'],
                         'publish_account_id' => $account['id'],
                         'video_task_id' => 0, //视频任务id，关联sv_video_tas
@@ -843,6 +841,7 @@ class PublishLogic extends SvBaseLogic
                         'create_time' => time(),
                         'task_type' => 3
                     ]);
+                    $add->refresh();
                     SvPublishSettingAccount::where('id', $account['id'])->update(['status' => 2, 'publish_end' => date('Y-m-d', time()), 'update_time' => time()]);
                     SvPublishSetting::where('id', $account['publish_id'])->update(['status' => 3, 'publish_end' => date('Y-m-d', time()), 'update_time' => time()]);
                     continue;
@@ -857,7 +856,7 @@ class PublishLogic extends SvBaseLogic
                         ->where('account', $account['account'])
                         ->find();
                     if (empty($detail)) {
-                        array_push($insertData, [
+                        $add = SvPublishSettingDetail::create([
                             'publish_id' => $account['publish_id'],
                             'publish_account_id' => $account['id'],
                             'video_task_id' => 0, //视频任务id，关联sv_video_tas
@@ -883,8 +882,10 @@ class PublishLogic extends SvBaseLogic
                             'create_time' => time(),
                             'task_type' => 3
                         ]);
+                        $add->refresh();
                         array_push($videoIds, $media['id']);
                         $status = 1;
+                        sleep(1);
                     }
                 }
                 //print_r($insertData);die;
@@ -895,67 +896,64 @@ class PublishLogic extends SvBaseLogic
                 ]);
                 SvPublishSetting::where('id', $account['publish_id'])->update(['status' => 2, 'publish_end' => date('Y-m-d', time()), 'update_time' => time()]);
             }
-            //print_r($insertData);die;
-            if (!empty($insertData)) {
-                $model = new SvPublishSettingDetail();
-                $model->saveAll($insertData);
-            }
-
             self::$returnData = $insertData;
             return true;
         } catch (\Exception $e) {
-            // print_r($e->__toString());
-            // die;
+            \think\facade\Log::channel('device')->write($e->__toString(), 'publish');
             return false;
         }
     }
-
-    /**
-     * 检查发布状态
-     * @param array $account
-     * @return bool
-     */
-    private static function _checkPublishStatus(array $account, array &$usedVideoIds)
-    {
-        //原视频任务状态
-        //        $settingStatus = SvMatrixMediaSetting::where('id',  $account['matrix_media_setting_id'])->group('status')->column('status');
-        //print_r($settingStatus);die;
-        //提取同任务同账号类型中已经生成的待发布视频id
-        $video_ids = SvPublishSettingDetail::where('publish_id', $account['publish_id'])
-            //->where('publish_account_id', $account['id'])
-            ->where('account_type', $account['account_type'])
-            ->where('task_type', 3)
-            ->column('video_task_id');
-        //为空则返回false
-        if (empty($video_ids)) {
-            return false;
-        }
-        $usedVideoIds[$account['account_type']] = array_values(array_unique(array_merge($usedVideoIds[$account['account_type']] ?? [], $video_ids)));
-
-        //查询当前账号已经生成的数量
-        $count = SvPublishSettingDetail::where('publish_id', $account['publish_id'])
-            ->where('publish_account_id', $account['id'])
-            ->where('account_type', $account['account_type'])
-            ->where('task_type', 3)
-            ->count();
-
-        if ($count == $account['count']) {
-            SvPublishSettingAccount::where('id', $account['id'])->update([
-                'task_status' => 2,
-            ]);
-            return true;
-        }
-        if ($count < $account['count']) {
-            SvPublishSettingAccount::where('id', $account['id'])->update([
-                'task_status' => 2,
-                'count' => $count,
-            ]);
-            return true;
-        }
-    }
-
 
     private static function getTimes(array $account)
+    {
+        // $maxTime = SvPublishSettingDetail::where('publish_id', $account['publish_id'])
+        //     ->where('publish_account_id', $account['id'])
+        //     ->where('account_type', $account['account_type'])
+        //     ->where('task_type', 3)
+        //     ->order('publish_time desc')
+        //     ->limit(1)
+        //     ->value('publish_time');
+        //print_r($account);die;
+        $timeConfig = json_decode($account['time_config'], true);
+        $times = array();
+
+        foreach ($timeConfig as $config) {
+            $date = $config['date'];
+            $_times = $config['times'];
+            foreach ($_times as $time) {
+
+                $startDate = $date;
+                $tmps = explode('-', $time);
+                $st = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[0]}")));
+                $et = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[1]}")));
+                $interval = floor(($et - $st) / 4);
+
+
+                $existTimes = SvPublishSettingDetail::where('device_code', $account['device_code'])
+                    ->where('task_type', 3)
+                    ->where('publish_time', 'between time', [$st, $et])
+                    ->column('publish_time');
+                //print_r($existTimes);die;
+                for ($i = 0; $i < 4; $i++) {
+                    $publishTime = date('Y-m-d H:i:s', $st + ($interval * $i));
+
+                    if (strtotime($publishTime) <= time()) {
+                        continue;
+                    }
+
+                    if (in_array($publishTime, $existTimes)) {
+                        continue;
+                    }
+                    array_push($times, $publishTime);
+                }
+            }
+        }
+        sort($times);
+        return $times;
+    }
+
+
+    private static function getTimes1(array $account)
     {
         $maxTime = SvPublishSettingDetail::where('publish_id', $account['publish_id'])
             ->where('publish_account_id', $account['id'])
@@ -973,60 +971,6 @@ class PublishLogic extends SvBaseLogic
             5 => [], //快手
         );
         $timeConfig = json_decode($account['time_config'], true);
-        $customDate =  is_null($account['custom_date']) ? [] : json_decode($account['custom_date'], true);
-        // if (!empty($customDate)) {
-        //     $startDate = $account['publish_start'];
-        //     for ($i = 0; $i <= ceil($account['count'] / $account['publish_frep']); $i++) {
-        //         foreach ($timeConfig as $time) {
-        //             $startDate = $account['publish_start'];
-        //             $startDate = date('Y-m-d', strtotime("{$startDate} +" . $i . " day"));
-
-        //             $tmps = explode('-', $time);
-        //             $st = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[0]}")));
-        //             $et = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[1]}")));
-
-        //             if ($st < time() || $et < time()) {
-        //                 $startDate = date('Y-m-d', strtotime("{$startDate} +" . ($i + 1) . " day"));
-        //                 $st = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[0]}")));
-        //                 $et = strtotime(date('Y-m-d H:i:s', strtotime("{$startDate} {$tmps[1]}")));
-        //             }
-
-
-        //             $interval = floor(($et - $st) / 4);
-        //             $xhsPublishTime = date('Y-m-d H:i:s', $st + ($interval * 0));
-        //             $dyPublishTime = date('Y-m-d H:i:s', $st + ($interval * 1));
-        //             $ksPublishTime = date('Y-m-d H:i:s', $st + ($interval * 2));
-        //             $vtPublishTime = date('Y-m-d H:i:s', $st + ($interval * 3));
-        //             if ($maxTime) {
-        //                 if (strtotime($xhsPublishTime) <= strtotime($maxTime) || strtotime($xhsPublishTime) <= time()) {
-        //                     continue;
-        //                 }
-        //                 if (strtotime($dyPublishTime) <= strtotime($maxTime) || strtotime($dyPublishTime) <= time()) {
-        //                     continue;
-        //                 }
-        //                 if (strtotime($ksPublishTime) <= strtotime($maxTime) || strtotime($ksPublishTime) <= time()) {
-        //                     continue;
-        //                 }
-        //                 if (strtotime($vtPublishTime) <= strtotime($maxTime) || strtotime($vtPublishTime) <= time()) {
-        //                     continue;
-        //                 }
-        //             }
-
-        //             $times[3][] = !in_array($xhsPublishTime, $times[3]) ? $xhsPublishTime : date('Y-m-d H:i:s', strtotime($xhsPublishTime) + (($i + 1)  * 86400));
-        //             $times[4][] = !in_array($dyPublishTime, $times[4]) ? $dyPublishTime :  date('Y-m-d H:i:s', strtotime($dyPublishTime) + (($i + 1)  * 86400));
-        //             $times[5][] = !in_array($ksPublishTime, $times[5]) ? $ksPublishTime :  date('Y-m-d H:i:s', strtotime($ksPublishTime) + (($i + 1)  * 86400));
-        //             $times[1][] = !in_array($vtPublishTime, $times[1]) ? $vtPublishTime :  date('Y-m-d H:i:s', strtotime($vtPublishTime) + (($i + 1)  * 86400));
-        //         }
-        //         sort($times[3]);
-        //         sort($times[4]);
-        //         sort($times[5]);
-        //         sort($times[1]);
-
-        //         //$startDate = date('Y-m-d', strtotime("{$startDate} +1 day"));
-        //     }
-        // } else {
-        // }
-
         foreach ($timeConfig as $config) {
             $date = $config['date'];
             $_times = $config['times'];
@@ -1065,6 +1009,8 @@ class PublishLogic extends SvBaseLogic
         sort($times[4]);
         sort($times[5]);
         sort($times[1]);
+
+
         return $times;
     }
 
@@ -1312,8 +1258,8 @@ class PublishLogic extends SvBaseLogic
             $media_copywriting = json_decode($account['media_copywriting'], true);
             //print_r($account);die;
             $timeDict = self::getTimes($account);
-
-            $times = $timeDict[$account['account_type']] ?? [];
+            //print_r($timeDict);die;
+            $times = $timeDict;
             if (empty($timeDict)) {
                 return [];
             }

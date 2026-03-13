@@ -129,14 +129,14 @@ const applyToDataList = (list: any[]) => {
 
 const chooseUploadType = () => {
     uni.showActionSheet({
-        itemList: ["从相册选择图片", "从相册选择视频", "从图片素材库选择", "从视频素材库选择", "从创作库选择"],
+        itemList: ["从相册选择视频", "从视频素材库选择", "从创作库选择"],
         success: (res) => {
             const { tapIndex } = res;
-            if ([0, 1].includes(tapIndex)) uploadAndProcessFiles(tapIndex === 0 ? "image" : "video");
-            else if ([2, 3].includes(tapIndex)) {
-                showHistoryType.value = tapIndex === 3 ? "video" : "image";
+            if ([0].includes(tapIndex)) uploadAndProcessFiles("video");
+            else if ([1].includes(tapIndex)) {
+                showHistoryType.value = "video";
                 showChooseMaterial.value = true;
-            } else if (tapIndex === 4) {
+            } else if ([2].includes(tapIndex)) {
                 showHistory.value = true;
             }
         },
