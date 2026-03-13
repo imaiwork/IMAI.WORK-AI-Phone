@@ -112,7 +112,7 @@
                                     </view>
                                     <view
                                         v-if="!item.disabled"
-                                        class="rounded-[10rpx] h-[44rpx] w-[120rpx] flex items-center justify-center gap-x-1 bg-[#FDF3E3]"
+                                        class="rounded-[10rpx] h-[44rpx] px-2 flex items-center justify-center gap-x-1 bg-[#FDF3E3]"
                                         @click.stop="handleDemo(item)">
                                         <image
                                             src="@/ai_modules/device/static/icons/window.svg"
