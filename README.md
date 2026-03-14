@@ -1,13 +1,18 @@
 
 
+## 支持项目
+
+如果您觉得项目有价值，欢迎给我们 Star ⭐ ，给与Star后凭截图获取项目所有宣传PPT源文件、PSD、sketch源文件:
+
+<p align="center">
+  <img src="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png"  alt="打赏码">
+</p>
 
 
 
 <p align="center">
   <a href="https://imai.work" target="_blank"><img src="https://update.imai.work/uploads/images/20251205/202512051358425fb334225.png" width="100%" alt="IMAI.WORK Logo" /></a>
 </p>
-
-IMAI.WORK 是一款专为 B2B 企业设计的全自动 AI 获客开源系统。通过 AI 驱动的手机自动化技术，彻底革新传统获客模式，实现"手机还在干活，电脑还在干活，但人不见了"的全自动获客体验。
 
 
 <p align="center">
@@ -20,6 +25,14 @@ IMAI.WORK 是一款专为 B2B 企业设计的全自动 AI 获客开源系统。�
 
 
 
+
+
+<p align="center">
+<a href="https://yijianshi.feishu.cn/space/preview/docx/WN4Fd4Yk3o6WEKxGKAWcvlVtnlf" target="_blank">在线演示</a>｜
+<a href="https://imai.work">官方网站</a>｜
+<a href="./README-EN.md">English</a>
+</p>
+
 <p align="center">
   <a href="https://vuejs.org/"><img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D" alt="Vue.js" /></a>
   <a href="https://uniapp.dcloud.net.cn/"><img src="https://img.shields.io/badge/UniApp-3.x-2B9939" alt="UniApp" /></a>
@@ -31,27 +44,21 @@ IMAI.WORK 是一款专为 B2B 企业设计的全自动 AI 获客开源系统。�
   <a href="https://www.uipath.com/"><img src="https://img.shields.io/badge/RPA-2023-fa4616" alt="RPA" /></a>
 </p>
 
+IMAI.WORK 是一款专为 B2B 企业设计的全自动 AI 获客开源系统。通过 AI 驱动的手机自动化技术，彻底革新传统获客模式，实现"手机还在干活，电脑还在干活，但人不见了"的全自动获客体验。
 
 
-## 企业实力
+![1](https://update.imai.work/uploads/images/20260314/20260314111803aaf4a5763.png)
+![2](https://update.imai.work/uploads/images/20260314/202603141118132e5255772.png)
+![3](https://update.imai.work/uploads/images/20260314/20260314111811821bc3845.png)
+![4](https://update.imai.work/uploads/images/20260314/20260314111811fb77f8831.png)
+![5](https://update.imai.work/uploads/images/20260314/2026031411181282ee54476.png)
+![6](https://update.imai.work/uploads/images/20260314/202603141118086c0f71152.png)
+![7](https://update.imai.work/uploads/images/20260314/202603141118131bb4c7764.png)
+![8](https://update.imai.work/uploads/images/20260314/202603141118128d6604394.png)
+![9(https://update.imai.work/uploads/images/20260314/202603141118087a4f07170.png)
+![10](https://update.imai.work/uploads/images/20260314/202603141118392b3957350.png)
+![11](https://update.imai.work/uploads/images/20260314/20260314111840621cc4373.png)
 
-原创公司2017年成立，9年研发，8年互联网SaaS经验，5年AI研发经验，研发人员占比 90% 以上。2022年基于NLP（大语言模型的前身）研发应用《获客兔》在抖音开放平台持续霸榜第三名5个月。
-
-2024年上线《IMAI.WORK V1.0版本》，2025年2月《IMAI.WORK V4.0版本》灰度测试期间，获得240+付费客户内测。预计2025年12月18号《IMAI.WORK》正式版正式发布。
-
-### 权威认证
-
-- ✌️ 研发圈子唯一清华系出身团队
-- ✌️ 国家级科技型创新企业
-- ✌️ 国家计算机软件著作权登记证书
-- 🏆 技术圈gitee最具价值开源项目
-
-### 国家级权威背书
-
-1. 获得江苏盐城市创业大赛第二名
-2. 获得上海芯智加速营第三名
-3. 获得上海国资浦软最具合作价值奖
-4. 某国资控股上市公司在筹备二轮投资
 
 ## 核心功能
 
@@ -83,7 +90,7 @@ IMAI.WORK 是一款专为 B2B 企业设计的全自动 AI 获客开源系统。�
 
 ```bash
 # 克隆仓库
-git clone https://github.com/imai-work/imai-work.git
+git clone https://gitee.com/tsinghua-open/imaiwork.git
 
 # 进入项目目录
 cd imai-work
@@ -99,95 +106,17 @@ https://yijianshi.feishu.cn/wiki/K4VdwEtb7ikiOnkmv2ScIX67nGf?from=from_copylink
 
 启动完成后，访问 http://域名 进入系统。
 
-## 系统截图
 
-## 📌 功能模块截图示例
-### PC主界面
-![AI个微截图](https://update.imai.work/uploads/images/20251205/202512051317304f45a3353.png)  
-![AI个微截图](https://update.imai.work/uploads/images/20251205/20251205131730f3e638090.png)
-![AI个微截图](https://update.imai.work/uploads/images/20251205/20251205131730a62396833.png)
+## 查看演示
 
-### 1. AI个微 & 矩阵发布（RPA智能手机）
-自动化微信/多账号管理、好友聊天、SOP营销、朋友圈管理
-![AI个微截图](https://update.imai.work/uploads/images/20251205/20251205135842304c58380.png)  
-![AI个微截图](https://update.imai.work/uploads/images/20251205/20251205135842454fa5073.png)
-![AI个微截图](https://update.imai.work/uploads/images/20251205/202512051358420daf06339.png)
-![AI个微截图](https://update.imai.work/uploads/images/20251205/202512051358420daf06339.png)
-![AI个微截图](https://update.imai.work/uploads/images/20251205/20251205135842e8f1f8570.png)
-![AI个微截图](https://update.imai.work/uploads/images/20251205/2025120513584383b7e8455.png)
-
-### 2. 视频号 & 小红书 AI 自动获客
-视频号自动爬取、私信引导、批量发布；小红书自动引流与内容发布  
-![截图](https://update.imai.work/uploads/images/20251205/20251205135842bb9be4903.png)
-![截图](https://update.imai.work/uploads/images/20251205/20251205135859088502809.png)
-![截图](https://update.imai.work/uploads/images/20251205/20251205135859df5a53651.png)
-![截图](https://update.imai.work/uploads/images/20251205/202512051358594ce740213.png)
+### 效果演示（查看抖音视频效果）
+https://v.douyin.com/yUegwFIbenk/ 复制此链接，打开Dou音搜索，直接观看视频！
 
 
-### 3. AI会议纪要
-实时会议记录、音视频转写、多语言翻译、摘要与思维导图生成  
-![会议纪要截图](https://update.imai.work/uploads/images/20251205/202512051358591a5473497.png)  
-![会议纪要截图](https://update.imai.work/uploads/images/20251205/20251205135859195978338.png)  
+### 小程序&PC演示
+> https://demo.imai.work/
 
-### 4. AI数字人及视频创作
-数字人形象克隆、音色克隆、视频合成、智能剪辑与混剪  
-![AI数字人截图](https://update.imai.work/uploads/images/20251205/2025120513585959bc61345.png)  
-![AI数字人截图](https://update.imai.work/uploads/images/20251205/202512051359003d3e60600.png)
-![AI数字人截图](https://update.imai.work/uploads/images/20251205/2025120513590004ec13878.png)
-![AI数字人截图](https://update.imai.work/uploads/images/20251205/20251205135912f49500846.png) 
-![AI数字人截图](https://update.imai.work/uploads/images/20251205/20251205135859423f08727.png) 
-
-
-
-### 5. AI美工
-文生图/图生图、商品海报生成、模特换衣、图生视频  
-![AI美工截图](https://update.imai.work/uploads/images/20251205/20251205135912661304070.png)  
-![AI美工截图](https://update.imai.work/uploads/images/20251205/20251205135912a24c33516.png)  
-
-
-### 6. AI工作台聊天
-多模型切换、智能体调用、文件理解、联网搜索  
-![AI聊天截图](https://update.imai.work/uploads/images/20251205/202512051359121f0e09255.png)    
-
-### 7. AI陪练
-场景模拟、练习报告、自定义场景训练  
-![AI陪练截图](https://update.imai.work/uploads/images/20251205/20251205135912071e89104.png)  
-
-
-### 8. AI人事
-岗位管理、自动招聘、AI面试、面试报告与数据导出  
-![AI人事截图](https://update.imai.work/uploads/images/20251205/202512051359122514d2265.png)  
-![AI人事截图](https://update.imai.work/uploads/images/20251205/202512051359122a9c66641.png)
-
-
-### 9. AI思维导图
-自动生成结构化思维导图  
-![思维导图截图](https://update.imai.work/uploads/images/20251205/20251205135912f9ccd3833.png)  
-
-### 10. 知识库（RAG & 向量）
-知识库管理、训练、智能切片、向量检索、多知识库挂载  
-![知识库截图](https://update.imai.work/uploads/images/20251205/20251205135912619c74751.png)  
-
-
-### 11. OEM & AI智能体
-品牌授权、自定义智能体模型、文件解析、网页/公众号/API调用  
-![OEM截图](https://update.imai.work/uploads/images/20251205/202512051359122bd992345.png)  
-![AI智能体截图](https://update.imai.work/uploads/images/20251205/20251205135921f4fe02740.png)
-![AI智能体截图](https://update.imai.work/uploads/images/20251205/20251205135921802619834.png)
-
-
-
-## 贡献指南
-
-1. Fork 项目
-2. 创建分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'feat: add amazing feature'`)
-4. 推送分支 (`git push origin feature/amazing-feature`)
-5. 提交 Pull Request
-
-## 📢 特别通知
-
-**`******提交Pull Requests大于1次，评审通过可免费获得商业授权码，如多次，每次可获得最少5000元-10万不等的二次开发合并******`**
+> 小程序微信搜索：IMAIWORK数字员工
 
 
 ### Commit 类型
@@ -212,13 +141,6 @@ https://yijianshi.feishu.cn/wiki/K4VdwEtb7ikiOnkmv2ScIX67nGf?from=from_copylink
 [![Star History Chart](https://api.star-history.com/svg?repos=imaiwork/IMAI.WORK-AI-Phone&type=date&legend=top-left)](https://www.star-history.com/#imaiwork/IMAI.WORK-AI-Phone&type=date&legend=top-left)
 
 
-## 支持项目
-
-如果您觉得项目有价值，欢迎给我们 Star ⭐ ，给与Star后凭截图获取项目所有宣传PPT源文件、PSD、sketch源文件:
-
-<p align="center">
-  <img src="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png"  alt="打赏码">
-</p>
 
 ## 联系我们
 
