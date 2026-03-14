@@ -44,7 +44,7 @@
   <a href="https://www.uipath.com/"><img src="https://img.shields.io/badge/RPA-2023-fa4616" alt="RPA" /></a>
 </p>
 
-IMAI.WORK 是一款专为 B2B 企业设计的全自动 AI 获客开源系统。通过 AI 驱动的手机自动化技术，彻底革新传统获客模式，实现"手机还在干活，电脑还在干活，但人不见了"的全自动获客体验。
+IMAI.WORK 是一款专为 B2B 企业设计的全自动 AI 获客开源系统。通过 Openclaw 驱动的手机自动化技术，彻底革新传统获客模式，实现"手机还在干活，电脑还在干活，但人不见了"的全自动获客体验。
 
 
 ![1](https://update.imai.work/uploads/images/20260314/20260314111803aaf4a5763.png)
@@ -55,8 +55,7 @@ IMAI.WORK 是一款专为 B2B 企业设计的全自动 AI 获客开源系统。�
 ![6](https://update.imai.work/uploads/images/20260314/202603141118086c0f71152.png)
 ![7](https://update.imai.work/uploads/images/20260314/202603141118131bb4c7764.png)
 ![8](https://update.imai.work/uploads/images/20260314/202603141118128d6604394.png)
-![9(https://update.imai.work/uploads/images/20260314/202603141118087a4f07170.png)
-![10](https://update.imai.work/uploads/images/20260314/202603141118392b3957350.png)
+![9](https://update.imai.work/uploads/images/20260314/202603141118087a4f07170.png)
 ![11](https://update.imai.work/uploads/images/20260314/20260314111840621cc4373.png)
 
 
