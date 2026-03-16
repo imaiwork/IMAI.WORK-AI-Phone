@@ -118,24 +118,6 @@ https://v.douyin.com/yUegwFIbenk/ 复制此链接，打开Dou音搜索，直接�
 > 小程序微信搜索：IMAIWORK数字员工
 
 
-### Commit 类型
-
-- `feat`: 新功能
-- `fix`: 修复问题
-- `docs`: 文档更新
-- `style`: 代码格式调整
-- `refactor`: 代码重构
-- `perf`: 性能优化
-- `test`: 测试相关
-- `chore`: 构建过程或辅助工具变动
-
-## 许可证
-
-本项目采用自定义双重许可证:
-
-- **社区版许可**: 可用于学习、研究和非商业用途
-- **商业许可**: 如需商业使用，请联系https://imai.work/ 
-
 ## Star 历史
 [![Star History Chart](https://api.star-history.com/svg?repos=imaiwork/IMAI.WORK-AI-Phone&type=date&legend=top-left)](https://www.star-history.com/#imaiwork/IMAI.WORK-AI-Phone&type=date&legend=top-left)
 
