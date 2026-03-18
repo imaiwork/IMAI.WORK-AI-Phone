@@ -312,6 +312,7 @@ const emit = defineEmits<{
 }>();
 
 const search = ref("");
+const agentList = ref<{ name: string; id: string; image: string }[]>([]);
 const agentGroupList = ref<any[]>([]);
 const isLoading = ref(true);
 const isExpanded = ref(false);
@@ -537,7 +538,6 @@ const confirmAgentGroup = () => {
 // 获取智能体分组列表
 const getAgentGroupList = async () => {
     const { lists } = await getAgentGroupListApi({ page_no: 1, page_size: 1000 });
-    const { lists: agentList } = await getAllAgentList({ page_no: 1, page_size: 15000 });
 
     const groupMap = new Map();
 
@@ -550,7 +550,7 @@ const getAgentGroupList = async () => {
     });
 
     // 分配智能体到分组
-    agentList.forEach((agent) => {
+    agentList.value.forEach((agent: { name: string; id: string; image: string; group_id: number }) => {
         const groupId = agent.group_id || 0;
 
         if (groupMap.has(groupId)) {
@@ -583,10 +583,6 @@ const init = async () => {
     }
 };
 
-onMounted(() => {
-    init();
-});
-
 onUnmounted(() => {
     if (searchDebounceTimer.value) {
         clearTimeout(searchDebounceTimer.value);
@@ -599,6 +595,11 @@ defineExpose({
     },
     selectAgent: (agentId: number) => {
         selectedAgentId.value = agentId;
+    },
+    init: (list: any[]) => {
+        agentList.value = list;
+
+        init();
     },
 });
 </script>

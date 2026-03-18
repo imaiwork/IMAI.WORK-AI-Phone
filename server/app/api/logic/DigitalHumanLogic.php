@@ -252,6 +252,7 @@ class DigitalHumanLogic extends ApiLogic
                 'type'    => 20,
                 'uri'     => $params['anchor_url']
             ];
+            Log::channel('ffmpeg')->write('ffmpeg转码1'.json_encode($anchorData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             FfmpegFileLogic::addFfmpegFile($anchorData);
             self::$returnData = $dh->refresh()->toArray();
             return true;

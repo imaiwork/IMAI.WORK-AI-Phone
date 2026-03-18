@@ -62,6 +62,7 @@ export async function saveImageToPhotosAlbum(url: string) {
     downloading.value = true;
     try {
         const res: any = await uni.downloadFile({ url, timeout: 10000 });
+        console.log(res.tempFilePath);
         await uni.saveImageToPhotosAlbum({
             filePath: res.tempFilePath,
         });
@@ -112,7 +113,7 @@ export async function saveImageToPhotosAlbum(url: string) {
         }
         uni.showToast({
             title: error.errMsg || "保存失败",
-            icon: "success",
+            icon: "none",
             duration: 3000,
         });
     }

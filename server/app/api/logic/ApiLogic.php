@@ -51,7 +51,9 @@ class ApiLogic extends BaseLogic
                 foreach ($payload['accounts'] as $account) {
                     $find = \app\common\model\sv\SvAccount::field('id,user_id,device_code')->where('account', $account['account'])->where('type', $account['type'])->where('user_id', self::$uid)->limit(1)->findOrEmpty();
                     if ($find->isEmpty()) {
-                        throw new \Exception('账号不存在');
+                        $msg = $account['type'] == 1 ? '微信账号' : '账号';
+                        $msg .= '不存在,请在设备关联中添加账号';
+                        throw new \Exception($account['account'] . $msg);
                     }
                     $device = \app\common\model\sv\SvDevice::where('device_code', $find->device_code)->where('user_id', self::$uid)->where('auto_type', 1)->limit(1)->findOrEmpty();
                     if (!$device->isEmpty()) {
@@ -110,11 +112,20 @@ class ApiLogic extends BaseLogic
                 'task_status' => ($status = \app\common\model\auto\AutoDeviceAddWechatConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->value('status')) !== null ? $status : 0,
                 'is_config' => \app\common\model\auto\AutoDeviceAddWechatConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1,
             ],
+            'circle_like_reply_setting' => [
+                'task_status' => ($status = \app\common\model\auto\AutoDeviceCircleLikeReplyConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->value('status')) !== null ? $status : 0,
+                'is_config' => \app\common\model\auto\AutoDeviceCircleLikeReplyConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1,
+            ],
+            'wechat_circle_setting' => [
+                'task_status' => ($status = \app\common\model\auto\AutoDeviceWechatCircleConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->value('status')) !== null ? $status : 0,
+                'is_config' => \app\common\model\auto\AutoDeviceWechatCircleConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1,
+            ],
             'analysis' => [
                 'task_status' => 2,
                 'is_config' => !empty($find->analysis) ? self::checkAnalysis($find->analysis) : 0,
             ]
         );
+        
         $status = [];
         $isConfig = [];
         foreach ($setting as $key => $value) {

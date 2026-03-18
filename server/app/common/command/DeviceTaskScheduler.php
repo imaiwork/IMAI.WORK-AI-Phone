@@ -942,7 +942,7 @@ class DeviceTaskScheduler extends Command
                     'userId' => $task->user_id,
                     'startTime' => $task->start_time_str,
                     'endTime' => $task->end_time_str,
-                    'content' => \app\common\model\sv\SvDeviceCircleLikeReplyAccount::where('id', $task->sub_task_id)->findOrEmpty()->task_name ?? $task->task_name,
+                    'content' => \app\common\model\sv\SvDeviceCircleLikeReply::where('id', $task->sub_task_id)->findOrEmpty()->task_name ?? $task->task_name,
                     'status' => $task->status,
                     'autoType' => $task->auto_type,
                 ]);
@@ -970,7 +970,7 @@ class DeviceTaskScheduler extends Command
                 'userId' => $task->user_id,
                 'startTime' => $task->start_time_str,
                 'endTime' => $task->end_time_str,
-                'content' => \app\common\model\sv\SvDeviceCircleLikeReplyAccount::where('id', $task->sub_task_id)->findOrEmpty()->task_name ?? $task->task_name,
+                'content' => \app\common\model\sv\SvDeviceCircleLikeReply::where('id', $task->sub_task_id)->findOrEmpty()->task_name ?? $task->task_name,
                 'status' => $task->status,
                 'autoType' => $task->auto_type,
             ]);

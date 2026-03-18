@@ -60,7 +60,9 @@
                             </view>
                             <view class="grid grid-cols-3 gap-x-[20rpx] mt-[40rpx]">
                                 <view class="flex flex-col items-center">
-                                    <view class="text-[34rpx] font-medium">{{ userTokens || "-" }}</view>
+                                    <view class="text-[34rpx] font-medium">{{
+                                        userTokens || `${isLogin ? "0" : "-"}`
+                                    }}</view>
                                     <view
                                         class="text-[#000000]/40 flex items-center mt-1 text-[22rpx] font-medium gap-x-[6rpx]"
                                         @click="handleUtils('recharge')">
@@ -69,14 +71,18 @@
                                     </view>
                                 </view>
                                 <view class="flex flex-col items-center">
-                                    <view class="text-[34rpx] font-medium">{{ videoCount || "-" }}</view>
+                                    <view class="text-[34rpx] font-medium">{{
+                                        videoCount || `${isLogin ? "0" : "-"}`
+                                    }}</view>
                                     <view
                                         class="text-[#000000]/40 flex items-center mt-1 text-[22rpx] font-medium gap-x-[6rpx]">
                                         <text>我的创作</text>
                                     </view>
                                 </view>
                                 <view class="flex flex-col items-center">
-                                    <view class="text-[34rpx] font-medium">{{ anchorCount || "-" }}</view>
+                                    <view class="text-[34rpx] font-medium">{{
+                                        anchorCount || `${isLogin ? "0" : "-"}`
+                                    }}</view>
                                     <view
                                         class="text-[#000000]/40 flex items-center mt-1 text-[22rpx] font-medium gap-x-[6rpx]">
                                         <text>数字人</text>
@@ -84,46 +90,66 @@
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-[62rpx] px-[26rpx]" v-if="isLogin">
-                            <view class="relative h-[260rpx] p-[20rpx] rounded-[30rpx] recharge-card">
-                                <view>
-                                    <image
-                                        :src="`${config.baseUrl}static/images/mp/tokens_badge.png`"
-                                        class="w-[144rpx] h-[150rpx] absolute top-[-25rpx] right-[50rpx]"></image>
-                                </view>
-                                <view class="h-[200rpx] w-full relative mt-2">
-                                    <view class="w-full absolute top-0 left-0">
+                        <view class="px-[26rpx]" v-if="isLogin">
+                            <view class="mt-[62rpx]">
+                                <view class="relative h-[260rpx] p-[20rpx] rounded-[30rpx] recharge-card">
+                                    <view>
                                         <image
-                                            :src="`${config.baseUrl}static/images/mp/tokens_bg.png`"
-                                            class="w-full"
-                                            mode="widthFix"></image>
+                                            :src="`${config.baseUrl}static/images/mp/tokens_badge.png`"
+                                            class="w-[144rpx] h-[150rpx] absolute top-[-25rpx] right-[50rpx]"></image>
                                     </view>
+                                    <view class="h-[200rpx] w-full relative mt-2">
+                                        <view class="w-full absolute top-0 left-0">
+                                            <image
+                                                :src="`${config.baseUrl}static/images/mp/tokens_bg.png`"
+                                                class="w-full"
+                                                mode="widthFix"></image>
+                                        </view>
 
-                                    <view class="flex items-center justify-between relative z-10 pt-[70rpx] px-8">
-                                        <view class="flex flex-col items-center" @click="handleUtils('recharge')">
-                                            <image
-                                                :src="`${config.baseUrl}static/images/mp/user_tokens_1.png`"
-                                                class="w-[40rpx] h-[40rpx]"></image>
-                                            <text class="mt-[12rpx] text-black">算力充值</text>
-                                        </view>
-                                        <view class="flex flex-col items-center" @click="handleUtils('rule')">
-                                            <image
-                                                :src="`${config.baseUrl}static/images/mp/user_tokens_2.png`"
-                                                class="w-[40rpx] h-[40rpx]"></image>
-                                            <text class="mt-[12rpx]">算力规则</text>
-                                        </view>
-                                        <view class="flex flex-col items-center" @click="handleUtils('card')">
-                                            <image
-                                                :src="`${config.baseUrl}static/images/mp/user_tokens_3.png`"
-                                                class="w-[40rpx] h-[40rpx]"></image>
-                                            <text class="mt-[12rpx]">卡密兑换</text>
+                                        <view class="flex items-center justify-between relative z-10 pt-[70rpx] px-8">
+                                            <view class="flex flex-col items-center" @click="handleUtils('recharge')">
+                                                <image
+                                                    :src="`${config.baseUrl}static/images/mp/user_tokens_1.png`"
+                                                    class="w-[40rpx] h-[40rpx]"></image>
+                                                <text class="mt-[12rpx] text-black">算力充值</text>
+                                            </view>
+                                            <view class="flex flex-col items-center" @click="handleUtils('rule')">
+                                                <image
+                                                    :src="`${config.baseUrl}static/images/mp/user_tokens_2.png`"
+                                                    class="w-[40rpx] h-[40rpx]"></image>
+                                                <text class="mt-[12rpx]">算力规则</text>
+                                            </view>
+                                            <view class="flex flex-col items-center" @click="handleUtils('card')">
+                                                <image
+                                                    :src="`${config.baseUrl}static/images/mp/user_tokens_3.png`"
+                                                    class="w-[40rpx] h-[40rpx]"></image>
+                                                <text class="mt-[12rpx]">卡密兑换</text>
+                                            </view>
                                         </view>
                                     </view>
                                 </view>
                             </view>
-                        </view>
-                        <view class="mt-[24rpx] px-[26rpx]" v-if="isLogin">
-                            <view class="bg-white rounded-[30rpx] px-[40rpx]">
+                            <view class="mt-[24rpx] bg-white rounded-[20rpx] p-[20rpx] grid grid-cols-2 gap-x-[20rpx]">
+                                <div
+                                    class="bg-[#FFF8F2] rounded-[20rpx] p-[32rpx] relative"
+                                    @click="handleUtils('agent')">
+                                    <view class="text-[#4F302B] font-bold text-[30rpx]">代理中心</view>
+                                    <view class="text-[#4F302B]/50 text-xs font-medium mt-[6rpx]">用户和激活</view>
+                                    <image
+                                        :src="`${config.baseUrl}static/images/mp/agent_center.png`"
+                                        class="w-[90rpx] h-[90rpx] absolute right-2 top-3"></image>
+                                </div>
+                                <view
+                                    class="bg-[#FFF8F2] rounded-[20rpx] p-[32rpx] relative"
+                                    @click="handleUtils('agent_invite_poster')">
+                                    <view class="text-[#4F302B] font-bold text-[30rpx]">邀请好友</view>
+                                    <view class="text-[#4F302B]/50 text-xs font-medium mt-[6rpx]">携手共拓商机</view>
+                                    <image
+                                        :src="`${config.baseUrl}static/images/mp/invite_friend.png`"
+                                        class="w-[90rpx] h-[90rpx] absolute right-2 top-3"></image>
+                                </view>
+                            </view>
+                            <view class="mt-[24rpx] bg-white rounded-[20rpx] px-[40rpx]">
                                 <router-navigate
                                     to="/packages/pages/user_balance/user_balance"
                                     hover-class="none"
@@ -230,7 +256,7 @@
                         <view class="mt-[12rpx] opacity-50"> 实时响应、技术专家协同 </view>
                         <view class="mt-[72rpx]">
                             <image
-                                :src="getCustomerService.wx_image"
+                                :src="getServiceQrcode"
                                 show-menu-by-longpress
                                 class="w-[400rpx] h-[400rpx] rounded-[24rpx]"></image>
                         </view>
@@ -270,6 +296,7 @@
 import config from "@/config";
 import { getPublicAnchorList } from "@/api/digital_human";
 import { getVideoCreationRecord } from "@/api/app";
+import { getAgentUserParentQrcode } from "@/api/user";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
 import { updateUser } from "@/api/account";
@@ -301,6 +328,10 @@ const getCustomerService = computed(() => {
     return {};
 });
 
+const getServiceQrcode = computed(() => {
+    return agentUserParentQrcode.value || getCustomerService.value.wx_image;
+});
+
 const showUpdateUserPopup = ref(false);
 
 const handleUpdateUser = async (value: any) => {
@@ -330,6 +361,20 @@ const handleUtils = (type: string) => {
             break;
         case "rule":
             pathUrl = "/packages/pages/tokens_rule/tokens_rule";
+            break;
+        case "agent":
+            if (userInfo.value.is_distribution_agent != 1) {
+                uni.$u.toast("您不是代理，无法进入代理中心");
+                return;
+            }
+            pathUrl = "/packages/pages/agent/agent";
+            break;
+        case "agent_invite_poster":
+            if (userInfo.value.is_distribution_agent != 1) {
+                uni.$u.toast("您不是代理，无法进入代理中心");
+                return;
+            }
+            pathUrl = "/packages/pages/agent_invite_poster/agent_invite_poster";
             break;
     }
     uni.$u.route({
@@ -380,10 +425,20 @@ const getVideoCount = async () => {
     videoCount.value = count;
 };
 
+const agentUserParentQrcode = ref("");
+const getAgentParentQrcode = async () => {
+    if (!isLogin.value) {
+        return;
+    }
+    const res = await getAgentUserParentQrcode();
+    agentUserParentQrcode.value = res.qr_code;
+};
+
 onShow(() => {
     userStore.getUser();
     getAnchorCount();
     getVideoCount();
+    getAgentParentQrcode();
 });
 </script>
 

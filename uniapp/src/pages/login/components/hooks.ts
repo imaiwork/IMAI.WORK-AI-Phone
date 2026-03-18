@@ -10,11 +10,12 @@ import {
     uniAppLogin,
     mnpAuthBind,
 } from "@/api/account";
+import { bindUser } from "@/api/user";
 import { useUserStore } from "@/stores/user";
 import { useRouter, useRoute } from "uniapp-router-next";
 import { onLoad } from "@dcloudio/uni-app";
 import cache from "@/utils/cache";
-import { BACK_URL } from "@/enums/constantEnums";
+import { BACK_URL, USER_SN } from "@/enums/constantEnums";
 import { series } from "@/utils/util";
 import { getClient } from "@/utils/client";
 // #ifdef H5
@@ -182,6 +183,15 @@ export function useLoginWay() {
     };
 
     const loginAfter = (() => {
+        const bindUsers = async () => {
+            const user_sn = cache.get(USER_SN);
+            try {
+                if (user_sn) {
+                    await bindUser({ sn: user_sn }, loginData.value.token);
+                    cache.remove(USER_SN);
+                }
+            } catch (error) {}
+        };
         const updateUsers = async () => {
             if (loginData.value.is_new_user && !showLoginPopup.value) {
                 try {
@@ -197,7 +207,7 @@ export function useLoginWay() {
                 return Promise.reject();
             }
         };
-        return series(updateUsers, checkIsBindMobile);
+        return series(bindUsers, updateUsers, checkIsBindMobile);
     })();
 
     const bindWx = async () => {

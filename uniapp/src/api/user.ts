@@ -111,3 +111,68 @@ export function getRpaQrcode() {
 export function getRpaQrcodeStatus() {
     return request.post({ url: "/user/getDeviceBindStatus" });
 }
+
+// 获取代理下级列表
+export function getAgentSubList(data: any) {
+    return request.get({ url: "/distributionAgent.distributionAgent/subLists", data });
+}
+
+// 获取代理卡密列表
+export function getAgentCardList(data: any) {
+    return request.get({ url: "/distributionAgent.distributionAgentCard/lists", data });
+}
+
+// 生成卡密
+export function generateAgentCard(data: any) {
+    return request.post({ url: "/distributionAgent.distributionAgentCard/generate", data });
+}
+
+// 删除卡密
+export function deleteAgentCard(data: any) {
+    return request.post({ url: "/distributionAgent.DistributionAgentCard/delete", data });
+}
+
+// 获取卡密套餐
+export function getAgentCardPackageList(data: any) {
+    return request.get({ url: "/distributionAgent.DistributionAgentCard/packages", data });
+}
+
+// 设置代理用户联系二维码
+export function setAgentUserContactQrcode(data: any) {
+    return request.post({ url: "/distributionAgent.DistributionAgent/setQrCode", data });
+}
+
+// 获取代理用户信息
+export function getAgentUserInfo() {
+    return request.get({ url: "/distributionAgent.DistributionAgent/info" });
+}
+
+// 获取代理用户上级二维码
+export function getAgentUserParentQrcode() {
+    return request.get({ url: "/distributionAgent.DistributionAgent/getSuperiorQrCode" });
+}
+
+// 获取代理分享二维码
+export function getAgentUserShareQrcode(data: any) {
+    return request.get({ url: "/distributionAgent.DistributionAgent/getBindMnpCode", data });
+}
+
+// 赠送算力
+export function agentGiftTokens(data: any) {
+    return request.post({ url: "/distributionAgent.DistributionAgent/giftTokens", data });
+}
+
+// 设置代理等级
+export function setAgentLevel(data: any) {
+    return request.post({ url: "/distributionAgent.DistributionAgent/setLevel", data });
+}
+
+// 移除代理用户
+export function deleteAgentSub(data: any) {
+    return request.post({ url: "/distributionAgent.DistributionAgent/removeSub", data });
+}
+
+// 获取代理等级
+export function getAgentLevel() {
+    return request.get({ url: "/distributionAgent.DistributionAgent/getAgentConfig" });
+}

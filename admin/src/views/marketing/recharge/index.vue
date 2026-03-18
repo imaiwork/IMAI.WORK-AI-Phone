@@ -42,7 +42,7 @@
                     <template #default="{ row }">
                         <el-button type="primary" link>
                             <router-link
-                                v-perms="['finance.marketing.rp/add:edit']"
+                                v-perms="['finance.marketing.rp/edit']"
                                 :to="{
                                     path: getRoutePath('finance.marketing.rp/add:edit'),
                                     query: {
@@ -53,7 +53,11 @@
                                 编辑
                             </router-link>
                         </el-button>
-                        <el-button v-perms="['recharge.package/del']" type="danger" link @click="handleDelete(row.id)">
+                        <el-button
+                            v-perms="['finance.marketing.rp/delete']"
+                            type="danger"
+                            link
+                            @click="handleDelete(row.id)">
                             删除
                         </el-button>
                     </template>
@@ -83,15 +87,6 @@ const rules = {};
 const getRechargeConfig = async () => {
     const data = await getRechargeSettingConfig();
     formData.is_ios_open = data.is_ios_open;
-};
-
-const setFormData = async (row: any) => {
-    for (const key in formData) {
-        if (row[key] != null && row[key] != undefined) {
-            //@ts-ignore
-            formData[key] = row[key];
-        }
-    }
 };
 
 const { isLock, lockFn: lockSubmit } = useLockFn(async () => {

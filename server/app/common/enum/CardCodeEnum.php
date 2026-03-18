@@ -9,7 +9,8 @@ namespace app\common\enum;
 class CardCodeEnum
 {
 
-    const TYPE_TOKENS  = 3;
+    const TYPE_TOKENS = 3;
+    const TYPE_DISTRIBUTION_TOKENS = 5;
 
     /**
      * @notes 获取卡密类型
@@ -21,10 +22,11 @@ class CardCodeEnum
     public static function getTypeDesc($from = true)
     {
         $desc = [
-            self::TYPE_TOKENS      => '算力值',
+            self::TYPE_TOKENS => '算力值',
+            self::TYPE_DISTRIBUTION_TOKENS => '代理算力卡',
         ];
-        if(true === $from){
-            return $from;
+        if (true === $from) {
+            return $desc;
         }
         return $desc[$from] ?? '';
     }

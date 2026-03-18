@@ -337,6 +337,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $musicMode = $controlParams['music'] ?? 1; // music控制music_url
         $clipMode = $controlParams['clip'] ?? 1; // clip控制clip_id
         $materialMode = $controlParams['material'] ?? 1; // material控制material选择
+        $aimusicMode = $controlParams['ai_music'] ?? false; 
 
         $copywritingDatanum = count($copywritingData) * 0.5;
         $materialDatanum = count($materialData);
@@ -384,7 +385,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
                 // 音乐选择：1=顺序，0=随机
                 if (count($musicData) == 0) {
-                    $music_url = $music;
+                    if ($aimusicMode) {
+                         $music_url = $music;
+                    } else {
+                        $music_url = '';
+                    }
                 } else {
                     if ($musicMode == 1) {
                         // 顺序选择
@@ -726,6 +731,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $musicMode = $controlParams['music'] ?? 1; // 控制music_url选择模式
         $clipMode = $controlParams['clip'] ?? 1; // 控制clip_id选择模式
         $video_count = $controlParams['video_count'] ?? 1; // 每个素材生成的视频数量
+        $aimusicMode = $controlParams['aimusic'] ?? false; // 控制是否使用默认音乐
 
         // 获取基础资源数量
         $anchorCount = count($anchorData);
@@ -763,7 +769,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     }
                 } else {
                     // 没有music数据时，每个视频使用不同的随机音乐
-                    $music_url = $defaultMusic;
+                     if ($aimusicMode) {
+                         $music_url = $defaultMusic;
+                    } else {
+                        $music_url = '';
+                    }
                     $musicStrategy = 'default_random';
                 }
 
@@ -981,6 +991,9 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $clipData = $decodedData['clip'] ?? [];
         $musicData = $decodedData['music'] ?? [];
         $extraData = $decodedData['extra'] ?? [];
+        $aimusicMode = $extraData['aimusic'] ?? false; // 控制是否使用默认音乐
+
+
 
         $voice=  $params['voice']??'';
         if (empty($voice)) {
@@ -1085,8 +1098,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
                         $musicStrategy = 'random';
                     }
                 } else {
-                    // 没有music数据时使用默认音乐
-                    $music_url = $defaultMusic;
+                    // 控制是否使用默认音乐
+                    if ($aimusicMode) {
+                        $music_url = $defaultMusic;
+                    } else {
+                        $music_url = '';
+                    }
                     $musicStrategy = 'default_random';
                 }
 
@@ -1918,6 +1935,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $clipMode = $extraData['clip'] ?? 1; // 1=顺序，0=随机
         $contentMode = $extraData['content_mode'] ?? 1; // 1=顺序，0=随机
         $video_count = $extraData['video_count'] ?? 1; // 每个素材生成的视频数量
+        $aimusicMode = $extraData['aimusic'] ?? false; // 控制是否使用默认音乐
 
         // 计算资源数量
         $materialCount = count($materialData);
@@ -1991,8 +2009,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
                         $musicStrategy = 'random';
                     }
                 } else {
-                    // 没有music数据时使用默认音乐
-                    $music_url = $defaultMusic;
+                    // 控制是否使用默认音乐
+                    if ($aimusicMode) {
+                        $music_url = $defaultMusic;
+                    } else {
+                        $music_url = '';
+                    }
                     $musicStrategy = 'default_random';
                 }
             

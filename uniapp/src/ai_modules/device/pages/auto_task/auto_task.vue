@@ -301,15 +301,20 @@ enum TaskKeyEnum {
     CLUES_SETTING = "clues_setting",
     TAKEOVER_SETTING = "takeover_setting",
     PUBLISH_SETTING = "publish_setting",
-    CIRCLE_INTERACTION = "circle_interaction",
     TOUCH_SETTING = "touch_setting",
     ADD_WECHAT_SETTING = "add_wechat_setting",
     AUTO_ACCOUNT = "auto_account",
+    CIRCLE_INTERACTION = "circle_like_reply_setting",
+    CIRCLE_RELEASE = "wechat_circle_setting",
 }
 
 const userStore = useUserStore();
 
-const { platform, sortedPlatform, connectWebSocket, initializePlatform, handleGetAccount } = useDevice();
+const { platform, sortedPlatform, connectWebSocket, initializePlatform, handleGetAccount } = useDevice({
+    onAccountsUpdated: async () => {
+        getDetail();
+    },
+});
 
 const pagingRef = ref<any>(null);
 
@@ -356,6 +361,14 @@ const taskMap: any = {
             platform.value[AppTypeEnum.KUAISHOU],
             { activeIcon: SphIcon, name: "视频号", type: AppTypeEnum.SPH },
         ],
+        color: "#BCFFB5",
+    },
+    // 朋友圈发布
+    circle_release: {
+        key: TaskKeyEnum.CIRCLE_RELEASE,
+        name: "朋友圈发布",
+        status: 0,
+        platform: [{ activeIcon: CircleIcon, type: AppTypeEnum.WECHAT }],
         color: "#BCFFB5",
     },
     // 朋友圈互动
@@ -420,11 +433,15 @@ const taskTimeConfig = ref<any[]>([
         ...taskMap.social_media_content,
         time: ["08:00", "08:30"],
     },
+    // 朋友圈发布
+    {
+        ...taskMap.circle_release,
+        time: ["08:30", "09:00"],
+    },
     // 朋友圈互动
     {
         ...taskMap.circle_interaction,
-        time: ["08:30", "10:00"],
-        disabled: true,
+        time: ["09:00", "10:00"],
     },
     // 评论区获客
     {
@@ -441,7 +458,6 @@ const taskTimeConfig = ref<any[]>([
     {
         ...taskMap.circle_interaction,
         time: ["14:00", "15:00"],
-        disabled: true,
     },
     // 评论区获客
     {
@@ -532,12 +548,15 @@ const toTaskConfig = (item: any) => {
         [TaskKeyEnum.CLUES_SETTING]: "/ai_modules/device/pages/setting_clue/setting_clue",
         [TaskKeyEnum.PUBLISH_SETTING]: "/ai_modules/device/pages/setting_publish/setting_publish",
         [TaskKeyEnum.TAKEOVER_SETTING]: "/ai_modules/device/pages/setting_private_take/setting_private_take",
-        [TaskKeyEnum.CIRCLE_INTERACTION]: "/ai_modules/device/pages/setting_circle/setting_circle",
+        [TaskKeyEnum.CIRCLE_RELEASE]: "/ai_modules/device/pages/setting_circle/setting_circle",
+        [TaskKeyEnum.CIRCLE_INTERACTION]:
+            "/ai_modules/device/pages/setting_circle_interact_auto/setting_circle_interact_auto",
         [TaskKeyEnum.TOUCH_SETTING]: "/ai_modules/device/pages/setting_ca/setting_ca",
         [TaskKeyEnum.ADD_WECHAT_SETTING]: "/ai_modules/device/pages/setting_add_wechat/setting_add_wechat",
     };
 
     const params: any = {
+        id: deviceDetail.value.id,
         type: key,
         device_code: deviceCode.value,
     };
@@ -560,7 +579,6 @@ const toTaskConfig = (item: any) => {
  * @returns {boolean} - 是否具备权限
  */
 const checkAccountPlatformPermission = (taskItem: any) => {
-    console.log("checkAccountPlatformPermission", taskItem);
     const { platform } = taskItem;
 
     // 如果没有平台要求，直接通过
@@ -697,6 +715,15 @@ const handleDemo = (item: any) => {
                         demoParams.value.source = 7;
                         handleCheckRealTask();
                         break;
+                    case TaskKeyEnum.CIRCLE_RELEASE:
+                        demoParams.value.account_type = item.platform[0].type;
+                        demoParams.value.source = 9;
+                        handleCheckRealTask();
+                        break;
+                    case TaskKeyEnum.CIRCLE_INTERACTION:
+                        demoParams.value.account_type = item.platform[0].type;
+                        demoParams.value.source = 10;
+                        handleCheckRealTask();
                 }
             }
         },

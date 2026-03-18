@@ -28,7 +28,9 @@
                     </div>
                     <div class="flex flex-col">
                         <span class="text-sm font-medium text-[#1E293B]">本地直接上传</span>
-                        <span class="text-[10px] text-[#94A3B8]">支持常见视频/图片格式</span>
+                        <span class="text-[10px] text-[#94A3B8]"
+                            >支持常见{{ type == PublishTaskTypeEnum.VIDEO ? "视频" : "图片" }}格式</span
+                        >
                     </div>
                 </div>
             </upload>

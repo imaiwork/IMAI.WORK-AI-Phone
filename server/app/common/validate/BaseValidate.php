@@ -82,4 +82,38 @@ class BaseValidate extends Validate
         // 3.成功返回数据
         return $params;
     }
+
+    /**
+     * @notes 切面验证接收到的参数、show只返回0
+     * @param null $scene 场景验证
+     * @param array $validateData 验证参数，可追加和覆盖掉接收的参数
+     * @return array
+     * @author 令狐冲
+     * @date 2021/12/27 14:13
+     */
+    public function goApiCheck($scene = null, array $validateData = []): array
+    {
+        //接收参数
+        if ($this->method == 'GET') {
+            $params = request()->get();
+        } else {
+            $params = request()->post();
+        }
+        //合并验证参数
+        $params = array_merge($params, $validateData);
+
+        //场景
+        if ($scene) {
+            $result = $this->scene($scene)->check($params);
+        } else {
+            $result = $this->check($params);
+        }
+
+        if (!$result) {
+            $exception = is_array($this->error) ? implode(';', $this->error) : $this->error;
+            JsonService::pc_throw($exception);
+        }
+        // 3.成功返回数据
+        return $params;
+    }
 }

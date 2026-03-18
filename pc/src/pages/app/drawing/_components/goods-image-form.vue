@@ -276,14 +276,22 @@ watchEffect(() => {
 });
 
 defineExpose({
-    getFormData: () => ({
-        params: { ...formData, custom_template: "false", style: styleKey.value },
-        type_name: generateTypeTabs.find((item) => item.id === generateType.value)?.name,
-        style_name: styleOptions.find((item) => item.key === styleKey.value)?.label,
-    }),
+    getFormData: () => {
+        if (generateType.value === GenerateTypeEnum.PLATFORM_CHOICE) {
+            formData.prompt = "";
+        }
+
+        return {
+            params: { ...formData, custom_template: "false", style: styleKey.value },
+            type_name: generateTypeTabs.find((item) => item.id === generateType.value)?.name,
+            style_name: styleOptions.find((item) => item.key === styleKey.value)?.label,
+        };
+    },
     validateForm: () => {
         return new Promise((resolve, reject) => {
             if (!formData.image) return reject(feedback.msgWarning("请上传商品图"));
+            if (generateType.value === GenerateTypeEnum.PLATFORM_CHOICE && !formData.template_name)
+                return reject(feedback.msgWarning("请选择场景预设"));
             if (generateType.value === GenerateTypeEnum.CREATIVE_DESCRIPTION && !formData.prompt)
                 return reject(feedback.msgWarning("请添加描述"));
             resolve(true);

@@ -16,7 +16,7 @@ use think\response\Json;
  */
 class UploadController extends BaseApiController
 {
-    public array $notNeedLogin = ['wechatUpload','svfile'];
+    public array $notNeedLogin = ['wechatUpload','svfile','screenshot'];
 
     /**
      * @notes 上传图片
@@ -125,6 +125,16 @@ class UploadController extends BaseApiController
     {
         try {
             $result = UploadService::file(0, 0, FileEnum::SOURCE_USER);
+            return $this->success('上传成功', $result);
+        } catch (Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    public function screenshot(){
+        try {
+            $params = $this->request->post();
+            $result = UploadService::screenshot($params);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
             return $this->fail($e->getMessage());

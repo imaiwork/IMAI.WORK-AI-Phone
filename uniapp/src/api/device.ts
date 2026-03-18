@@ -389,3 +389,23 @@ export const getTaskAddWechatList = (data: Record<string, any>) => {
 export const getTaskClosureIndustryHistory = () => {
     return request.get({ url: "/sv.leadScraping/getFilterHistory" });
 };
+
+// 24h朋友圈发布配置更新
+export const updateAutoCirclePublishTaskConfig = (data: Record<string, any>) => {
+    return request.post({ url: "/auto.wechatCircleConfig/update", data });
+};
+
+// 24h朋友圈发布配置详情
+export const getAutoCirclePublishTaskConfigDetail = (data: Record<string, any>) => {
+    return request.get({ url: "/auto.wechatCircleConfig/detail", data });
+};
+
+// 24h朋友圈互动任务配置
+export const updateAutoCircleInteractionTaskConfig = (data: Record<string, any>) => {
+    return request.post({ url: "/auto.likeReply/update", data });
+};
+
+// 24h朋友圈互动任务配置详情
+export const getAutoCircleInteractionTaskConfigDetail = (data: Record<string, any>) => {
+    return request.get({ url: "/auto.likeReply/detail", data });
+};

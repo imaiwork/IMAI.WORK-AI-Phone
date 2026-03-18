@@ -8,7 +8,9 @@ use app\api\logic\auto\TouchLogic;
 use app\api\logic\auto\ActiveLogic;
 use app\api\logic\auto\TakeOverLogic;
 use app\api\logic\auto\AddWechatLogic;
+use app\api\logic\auto\LikeReplyLogic;
 use app\api\logic\auto\AutoDeviceSettingLogic;
+use app\api\logic\auto\AutoDeviceWechatCircleConfigLogic;
 use app\api\logic\auto\PublishLogic;
 use app\common\model\auto\AutoDeviceConfig;
 use think\console\Command;
@@ -50,7 +52,10 @@ class AutoDeviceCreateCron extends Command
                 TakeOverLogic::autoTakeoverTaskCron(0, $device->device_code); //自动私信接管任务
                 ActiveLogic::autoActiveTaskCron(0, $device->device_code); //自动养号任务
                 AddWechatLogic::autoAddWechatTaskCron(0, $device->device_code); //自动添加微信任务
+                LikeReplyLogic::autoLikeReplyTaskCron(0, $device->device_code); //自动点赞回复任务
                 AutoDeviceSettingLogic::processHumanImageData($device->device_code); //自动创建发布任务
+                AutoDeviceWechatCircleConfigLogic::processCircleData($device->device_code); //自动创建发布任务
+
             }
 
             return true;

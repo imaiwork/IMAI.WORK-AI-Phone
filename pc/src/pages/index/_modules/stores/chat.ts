@@ -147,6 +147,12 @@ export const useChatStore = defineStore("chat", () => {
         });
     }
 
+    function setAgentId(id: string) {
+        replaceState({
+            agent_id: id,
+        });
+    }
+
     /**
      * @description 设置或取消当前智能体。
      * 如果传入的智能体与当前相同，则取消选择并清空聊天，实现"切换"效果。
@@ -269,6 +275,7 @@ export const useChatStore = defineStore("chat", () => {
         setDetail,
         setTaskId,
         setAgent,
+        setAgentId,
         addMessage,
         clearChat,
         startReceiving,

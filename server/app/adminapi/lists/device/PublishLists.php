@@ -50,9 +50,10 @@ class PublishLists extends BaseAdminDataLists implements ListsSearchInterface
                 }
 
                 // 请求在线状态
-                $detial = SvPublishSettingDetail::where('publish_account_id',$item->id)->where('status', 0)->order('id', 'asc')->limit(1)->find();
-                $item['next_publish_time'] = !empty($detial) ? $detial['publish_time'] : '';
-                $item['exec_time'] = !empty($detial) ? date('Y-m-d H:i:s', $item['exec_time']) : '';
+                $detial = SvPublishSettingDetail::where('publish_account_id',$item->id)->where('status', 0)->order('id', 'asc')->limit(1)->findOrEmpty();
+                $item['next_publish_time'] = !$detial->isEmpty() ? $detial->publish_time : $item->create_time;
+                $item['exec_time'] = !$detial->isEmpty() ? date('Y-m-d H:i:s', $detial->exec_time) : $item->create_time;
+                
                 $startDate =strtotime($item['publish_start']);
 
                 if($item->publish_end == '' ){
@@ -63,6 +64,13 @@ class PublishLists extends BaseAdminDataLists implements ListsSearchInterface
                 $item['publish_cycle'] = (int)(($endDate - $startDate) / 86400);
 
 
+                if($item->status === 1) {
+                    $rows = SvPublishSettingDetail::where('publish_account_id', $item['id'])->where('status', 'in', [0, 3])->count();
+                    if($rows === 0) {
+                        $item->status = 2;
+                        $item->save();
+                    }
+                }
 
 
             })

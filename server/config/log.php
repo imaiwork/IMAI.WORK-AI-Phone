@@ -189,6 +189,12 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
+         'wechatCircle' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/wechatCircle/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
         // 其它日志通道配置
     ],
 

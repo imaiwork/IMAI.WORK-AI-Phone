@@ -42,6 +42,15 @@
                             </el-button>
                         </div>
                     </div>
+                    <div class="basis-20 flex flex-1 flex-col py-[10px] justify-center items-center">
+                        <div class="text-tx-regular">代理等级</div>
+                        <div class="mt-2 flex items-center text-[20px]">
+                            {{ getGradeName }}
+                            <el-button type="primary" v-perms="['user.user/edit']" link @click="handleAgentGrade">
+                                调整
+                            </el-button>
+                        </div>
+                    </div>
                 </div>
                 <el-form-item label="用户编号：">
                     {{ formData.sn }}
@@ -129,6 +138,25 @@
                 <el-form-item label="最近登录时间：">
                     {{ formData.login_time || "-" }}
                 </el-form-item>
+                <el-form-item label="上级邀请人">
+                    {{ formData.distribution_parent_name || "-" }}
+                    <el-button type="primary" link @click="handleEditDistributionParent">
+                        <icon name="el-icon-EditPen" />
+                    </el-button>
+                </el-form-item>
+                <el-form-item label="代理资格：">
+                    <span class="text-[#F2A626]">{{ formData.distribution_level > 0 ? "已开通" : "未开通" }}</span>
+                    <router-link
+                        v-if="formData.distribution_level > 0"
+                        :to="{
+                            path: getRoutePath('marketing.agent/detail'),
+                            query: {
+                                id: formData.id,
+                            },
+                        }">
+                        <el-button link type="primary"> 查看代理信息</el-button>
+                    </router-link>
+                </el-form-item>
             </el-form>
             <el-button
                 v-if="formData.is_blacklist == 0"
@@ -163,26 +191,44 @@
         </el-card>
         <account-adjust v-bind="adjustState" v-model:show="adjustState.show" @confirm="handleConfirmAdjust" />
         <reset-password-pop v-if="popShow" ref="resetPasswordRef" @close="popShow = false" />
-        <VipAdjust v-if="showVip" ref="vipRef" @success="getDetails" @close="showVip = false"></VipAdjust>
-        <UserType
+        <vip-adjust v-if="showVip" ref="vipRef" @success="getDetails" @close="showVip = false"></vip-adjust>
+        <leader-adjust
+            v-if="showLeaderAdjust"
+            ref="leaderAdjustRef"
+            :user-info="formData"
+            @success="getDetails"
+            @close="showLeaderAdjust = false">
+        </leader-adjust>
+        <agent-parent-adjust
+            v-if="showDistributionParent"
+            ref="distributionParentRef"
+            :user-info="formData"
+            @success="getDetails"
+            @close="showDistributionParent = false">
+        </agent-parent-adjust>
+        <user-type
             v-if="showUserType"
             v-model:user_type="userTypeState.user_type"
             ref="userTypeRef"
             @success="changeUserType"
-            @close="showUserType = false"></UserType>
+            @close="showUserType = false"></user-type>
     </div>
 </template>
 
 <script lang="ts" setup name="consumerDetail">
 import type { FormInstance } from "element-plus";
+import { getAgentGradeConfig } from "@/api/marketing/agent";
 import { accountLog } from "@/api/finance";
 import { getUserDetail, userEdit, blackList, adjustTokens } from "@/api/consumer";
 import { isEmpty } from "@/utils/util";
+import { getRoutePath } from "@/router";
 import AccountAdjust from "../components/account-adjust.vue";
 import feedback from "@/utils/feedback";
 import resetPasswordPop from "../components/reset-password-pop.vue";
 import VipAdjust from "../components/vip-adjust.vue";
 import UserType from "../components/user-type.vue";
+import LeaderAdjust from "../components/leader-adjust.vue";
+import AgentParentAdjust from "../components/agent-parent-adjust.vue";
 import { usePaging } from "@/hooks/usePaging";
 const resetPasswordRef = shallowRef();
 const popShow = ref(false);
@@ -207,6 +253,8 @@ const formData = reactive({
     is_blacklist: 0,
     multipoint_login: 1,
     orders: [],
+    distribution_level: 0,
+    distribution_parent_name: "",
 });
 
 const avatar = ref("");
@@ -262,6 +310,15 @@ const {
     params: orderQueryParams,
 });
 
+const gradeList = ref<any[]>([]);
+const getGradeList = async () => {
+    const res = await getAgentGradeConfig();
+    gradeList.value = res;
+};
+
+const getGradeName = computed(() => {
+    return gradeList.value.find((item) => item.level == formData.distribution_level)?.name || "普通用户";
+});
 const getDetails = async () => {
     const data = await getUserDetail({
         id: route.query.id,
@@ -355,6 +412,24 @@ const resetPassword = async () => {
     resetPasswordRef.value.open(formData.id);
 };
 
+const showLeaderAdjust = ref<boolean>(false);
+const leaderAdjustRef = shallowRef();
+const handleAgentGrade = async () => {
+    showLeaderAdjust.value = true;
+    await nextTick();
+    leaderAdjustRef.value?.open(formData);
+};
+
+const showDistributionParent = ref<boolean>(false);
+const distributionParentRef = shallowRef();
+
+const handleEditDistributionParent = async () => {
+    showDistributionParent.value = true;
+    await nextTick();
+    distributionParentRef.value?.open(formData.id);
+};
+
+getGradeList();
 getDetails();
 </script>
 

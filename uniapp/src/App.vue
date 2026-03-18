@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { bindUser } from "./api/user";
 import { useAppStore } from "./stores/app";
 import { useUserStore } from "./stores/user";
 import cache from "./utils/cache";
@@ -13,11 +14,15 @@ const userStore = useUserStore();
 
 const cacheInvite = (query: any = {}) => {
     const { share_id, code } = query;
-    const user_sn = query.user_sn || strToParams(decodeURIComponent(query["scene"]))["user_sn"];
+    const user_sn = query.sn || strToParams(decodeURIComponent(query["scene"]))["sn"];
     if (share_id) {
         cache.set(SHARE_ID, share_id);
     }
     if (user_sn) {
+        if (userStore.isLogin) {
+            bindUser({ sn: user_sn }, userStore.token!);
+            return;
+        }
         cache.set(USER_SN, user_sn);
     }
     if (code) {

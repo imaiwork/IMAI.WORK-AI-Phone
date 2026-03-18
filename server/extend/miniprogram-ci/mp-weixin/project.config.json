@@ -12,7 +12,6 @@
         "newFeature": true,
         "bigPackageSizeSupport": true,
         "ignoreUploadUnusedFiles": true,
-        "packNpmRelationList": [],
         "babelSetting": {
             "ignore": [],
             "disablePlugins": [],

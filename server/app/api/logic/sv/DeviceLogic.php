@@ -57,7 +57,7 @@ class DeviceLogic extends SvBaseLogic
             $data = $device->toArray();
 
             //添加设备rpa配置
-            self::addDeviceRpa($data);
+            //self::addDeviceRpa($data);
 
             self::$returnData = $data;
             return true;

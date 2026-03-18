@@ -212,6 +212,9 @@ const fetchDetail = async (id: string | number) => {
                 sendContainerRef.value?.setDateList(timeLists);
             }, 150);
         }
+        if (result.flow_id) {
+            flowId.value = result.flow_id.map((item: any) => parseInt(item));
+        }
         detail.value = result;
     } finally {
         loading.value = false;
@@ -245,18 +248,21 @@ const handleMainSave = async () => {
 
 const handleSendContainerSuccess = async () => {
     if (!detail.value?.id) return;
-
-    await sopPushUpdate({
-        ...detail.value,
-        status: 2,
-    });
-    await sopPushMemberAdd({
-        id: taskFormData.id,
-        flow_id: flowId.value,
-        push_type: taskFormData.push_type,
-    });
-    await fetchDetail(detail.value.id);
-    feedback.msgSuccess("保存成功");
+    try {
+        await sopPushUpdate({
+            ...detail.value,
+            status: 2,
+        });
+        await sopPushMemberAdd({
+            id: taskFormData.id,
+            flow_id: flowId.value,
+            push_type: taskFormData.push_type,
+        });
+        await fetchDetail(detail.value.id);
+        feedback.msgSuccess("保存成功");
+    } catch (error) {
+        await fetchDetail(detail.value.id);
+    }
 };
 
 const init = async () => {

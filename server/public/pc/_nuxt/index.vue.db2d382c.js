@@ -1,1 +1,0 @@
-import{g as n,o as t,c,b as s,y as a}from"./entry.252e648d.js";const i={class:"gizmo-shadow-stroke relative flex w-full h-full items-center justify-center rounded-full bg-white"},m=n({__name:"index",props:{iconSize:{type:Number,default:20}},setup(e){return(l,r)=>{const o=a;return t(),c("div",i,[s(o,{name:"local-icon-app",size:e.iconSize},null,8,["size"])])}}});export{m as _};

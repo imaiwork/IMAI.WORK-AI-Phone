@@ -391,21 +391,26 @@
                                 </view>
                             </view>
                             <view class="rounded-[20rpx] bg-white p-[30rpx] mt-[18rpx]">
-                                <view v-if="anchorList.length > 0" class="grid grid-cols-3 gap-x-[20rpx]">
+                                <scroll-view scroll-x v-if="anchorList.length > 0">
                                     <view
-                                        v-for="(item, index) in anchorList.slice(0, 3)"
-                                        :key="index"
-                                        class="aspect-[3/4] rounded-[20rpx] overflow-hidden relative">
-                                        <image :src="item.pic" class="w-full h-full" mode="aspectFill"></image>
+                                        class="flex whitespace-nowrap gap-x-[20rpx]"
+                                        :class="`grid-cols-${anchorList.length}`">
                                         <view
-                                            class="absolute top-0 left-0 w-full h-full flex items-center justify-center z-[222]">
-                                            <image
-                                                src="/static/images/icons/play.svg"
-                                                class="w-[48rpx] h-[48rpx]"
-                                                @click="previewVideo(item)"></image>
+                                            v-for="(item, index) in anchorList"
+                                            :key="index"
+                                            class="shrink-0 w-[172rpx] h-[230rpx] rounded-[20rpx] overflow-hidden relative">
+                                            <image :src="item.pic" class="w-full h-full" mode="aspectFill"></image>
+                                            <view
+                                                class="absolute top-0 left-0 w-full h-full flex items-center justify-center z-[222]">
+                                                <image
+                                                    src="/static/images/icons/play.svg"
+                                                    class="w-[48rpx] h-[48rpx]"
+                                                    @click="previewVideo(item)"></image>
+                                            </view>
                                         </view>
                                     </view>
-                                </view>
+                                </scroll-view>
+
                                 <view v-else class="flex flex-col items-center justify-center gap-y-[20rpx] py-4">
                                     <view class="text-center text-[#0000004d]">你还没有添加数字人形象</view>
                                     <view class="text-primary font-medium" @click="toPage('anchor_material')">
@@ -425,32 +430,37 @@
                                 </view>
                             </view>
                             <view class="rounded-[20rpx] bg-white p-[30rpx] mt-[18rpx]">
-                                <view class="grid grid-cols-3 gap-x-[20rpx]" v-if="videoList.length > 0">
+                                <scroll-view scroll-x v-if="videoList.length > 0">
                                     <view
-                                        v-for="(item, index) in videoList.slice(0, 3)"
-                                        :key="index"
-                                        class="aspect-[3/4] rounded-[20rpx] relative overflow-hidden">
-                                        <image :src="item.pic" class="w-full h-full" mode="aspectFill"></image>
+                                        class="flex whitespace-nowrap gap-x-[20rpx]"
+                                        :class="`grid-cols-${videoList.length}`">
                                         <view
-                                            class="absolute bottom-0 h-[40rpx] w-full bg-[#00000080] flex items-center justify-center z-[88]">
-                                            <image
-                                                v-if="item.type === 'image'"
-                                                src="@/ai_modules/digital_human/static/icons/pic.svg"
-                                                class="w-[24rpx] h-[24rpx]"></image>
-                                            <image
-                                                v-else
-                                                src="@/ai_modules/digital_human/static/icons/video.svg"
-                                                class="w-[24rpx] h-[24rpx]"></image>
-                                        </view>
-                                        <view
-                                            class="absolute top-0 left-0 w-full h-full flex items-center justify-center z-[222]">
-                                            <image
-                                                src="/static/images/icons/play.svg"
-                                                class="w-[48rpx] h-[48rpx]"
-                                                @click="previewVideo(item)"></image>
+                                            v-for="(item, index) in videoList"
+                                            :key="index"
+                                            class="shrink-0 w-[172rpx] h-[230rpx] rounded-[20rpx] relative overflow-hidden">
+                                            <image :src="item.pic" class="w-full h-full" mode="aspectFill"></image>
+                                            <view
+                                                class="absolute bottom-0 h-[40rpx] w-full bg-[#00000080] flex items-center justify-center z-[88]">
+                                                <image
+                                                    v-if="item.type === 'image'"
+                                                    src="@/ai_modules/digital_human/static/icons/pic.svg"
+                                                    class="w-[24rpx] h-[24rpx]"></image>
+                                                <image
+                                                    v-else
+                                                    src="@/ai_modules/digital_human/static/icons/video.svg"
+                                                    class="w-[24rpx] h-[24rpx]"></image>
+                                            </view>
+                                            <view
+                                                class="absolute top-0 left-0 w-full h-full flex items-center justify-center z-[222]">
+                                                <image
+                                                    src="/static/images/icons/play.svg"
+                                                    class="w-[48rpx] h-[48rpx]"
+                                                    @click="previewVideo(item)"></image>
+                                            </view>
                                         </view>
                                     </view>
-                                </view>
+                                </scroll-view>
+
                                 <view v-else class="flex flex-col items-center justify-center gap-y-[20rpx] py-4">
                                     <view class="text-center text-[#0000004d]">你还没有添加视频剪辑素材</view>
                                     <view class="text-primary font-medium" @click="toPage('video_material')">
@@ -470,17 +480,20 @@
                                 </view>
                             </view>
                             <view class="rounded-[20rpx] bg-white p-[30rpx] mt-[18rpx]">
-                                <view class="grid grid-cols-3 gap-x-[20rpx]" v-if="imageList.length > 0">
-                                    <view
-                                        class="aspect-[3/4] rounded-[20rpx]"
-                                        v-for="(item, index) in imageList.slice(0, 3)"
-                                        :key="index">
-                                        <image
-                                            :src="item.url"
-                                            class="w-full h-full rounded-[20rpx]"
-                                            mode="aspectFill"></image>
+                                <scroll-view scroll-x v-if="imageList.length > 0">
+                                    <view class="flex whitespace-nowrap gap-x-[20rpx]">
+                                        <view
+                                            class="shrink-0 w-[172rpx] h-[230rpx] rounded-[20rpx]"
+                                            v-for="(item, index) in imageList"
+                                            :key="index">
+                                            <image
+                                                :src="item.url"
+                                                class="w-full h-full rounded-[20rpx]"
+                                                mode="aspectFill"></image>
+                                        </view>
                                     </view>
-                                </view>
+                                </scroll-view>
+
                                 <view v-else class="flex flex-col items-center justify-center gap-y-[20rpx] py-4">
                                     <view class="text-center text-[#0000004d]">你还没有添加图文剪辑素材</view>
                                     <view class="text-primary font-medium" @click="toPage('image_material')">

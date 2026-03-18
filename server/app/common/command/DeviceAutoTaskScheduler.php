@@ -223,9 +223,6 @@ class DeviceAutoTaskScheduler extends Command
                 case DeviceEnum::AUTO_TYPE_PUBLISH: // 发布任务
                     $this->executePublishTask($task, $output);
                     break;
-                case DeviceEnum::AUTO_TYPE_WECHAT_CIRCLE: // 客户互动任务
-                    $this->executeWechatCircleTask($task, $output);
-                    break;
                 case DeviceEnum::AUTO_TYPE_COMMENT_CLUE: // 评论区获客任务
                     $this->executeCommentClueTask($task, $output);
                     break;
@@ -240,6 +237,12 @@ class DeviceAutoTaskScheduler extends Command
                     break;
                 case DeviceEnum::AUTO_TYPE_TAKE_OVER: // 私信接管任务
                     $this->executeTakeOverTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_WECHAT_CIRCLE: // 朋友圈发布任务
+                    $this->executeWechatCircleTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_WECHAT_CIRCLE_THUMB_COMMENT: // 朋友圈点赞评论任务
+                    $this->executeWechatCircleThumbCommentTask($task, $output);
                     break;
                 default:
                     throw new \Exception("未知的任务类型: {$task->task_type}");
@@ -274,9 +277,6 @@ class DeviceAutoTaskScheduler extends Command
                 case DeviceEnum::AUTO_TYPE_PUBLISH: // 发布任务
                     $this->executePublishCompletedTask($task, $output);
                     break;
-                case DeviceEnum::AUTO_TYPE_WECHAT_CIRCLE: // 客户互动任务
-                    $this->executeWechatCircleCompletedTask($task, $output);
-                    break;
                 case DeviceEnum::AUTO_TYPE_COMMENT_CLUE: // 评论区获客任务
                     $this->executeCommentClueCompletedTask($task, $output);
                     break;
@@ -291,6 +291,12 @@ class DeviceAutoTaskScheduler extends Command
                     break;
                 case DeviceEnum::AUTO_TYPE_TAKE_OVER: // 私信接管任务
                     $this->executeTakeOverCompletedTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_WECHAT_CIRCLE: // 朋友圈发布任务
+                    $this->executeWechatCircleCompletedTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_WECHAT_CIRCLE_THUMB_COMMENT: // 朋友圈点赞评论任务
+                    $this->executeWechatCircleThumbCommentCompletedTask($task, $output);
                     break;
                 default:
                     throw new \Exception("未知的任务类型: {$task->task_type}");
@@ -311,6 +317,56 @@ class DeviceAutoTaskScheduler extends Command
         }
     }
 
+
+    protected function executeWechatCircleThumbCommentTask(SvDeviceTask $task, Output $output)
+    {
+        if ($this->isDev) {
+            $output->writeln("执行朋友圈点赞评论任务 - 设备: {$task->device_code}");
+        }
+
+        self::wechatCircleThumbCommentTask($task, $output, function ($result) use ($task) {
+            $task->status = $result['status'];
+            $task->remark = $result['remark'];
+            $task->update_time = time();
+            $task->save();
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvDeviceCircleLikeReply::where('id', $task->sub_task_id)->findOrEmpty()->task_name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        });
+
+        $this->setTaskLog("朋友圈点赞评论任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
+
+    protected function executeWechatCircleThumbCommentCompletedTask(SvDeviceTask $task, Output $output)
+    {
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行点赞评论任务完成 - 设备: {$task->device_code}");
+            }
+            self::wechatCircleThumbCommentCompletedTask($task, $output);
+            $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+            $task->remark = '点赞评论任务完成';
+            $task->update_time = time();
+            $task->save();
+
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+            $this->setTaskLog("执行点赞评论任务完成: ID={$task->id}, 设备={$task->device_code}");
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvDeviceCircleLikeReply::where('id', $task->sub_task_id)->findOrEmpty()->task_name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        }
+    }
 
 
     /**

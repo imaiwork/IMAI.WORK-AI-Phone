@@ -45,7 +45,7 @@
                                 @click="selectItem(item)">
                                 <view class="w-11 h-11 rounded-full flex items-center justify-center shadow-md">
                                     <image
-                                        :src="item.image || item.avatar"
+                                        :src="item.logo || item.avatar"
                                         class="w-full h-full rounded-full"
                                         mode="aspectFill"
                                         lazy-load />
@@ -75,8 +75,8 @@
 </template>
 
 <script setup lang="ts">
+import config from "@/config";
 import { getAgentList, getCozeAgentList, getSystemAgentList } from "@/api/agent";
-import DouBaoLogo from "@/ai_modules/digital_human/static/images/common/doubao.png";
 
 const props = defineProps({
     modelValue: {
@@ -138,11 +138,9 @@ const queryList = async (page_no: number, page_size: number) => {
         });
         if (selectedAgent.value === 1) {
             pagingRef.value?.complete(
-                res
-                    .filter((item: any) =>
-                        props.systemAgentIds.length > 0 ? props.systemAgentIds.includes(item.id) : true
-                    )
-                    .map((item: any) => ({ ...item, image: DouBaoLogo }))
+                res.filter((item: any) =>
+                    props.systemAgentIds.length > 0 ? props.systemAgentIds.includes(item.id) : true
+                )
             );
         } else {
             pagingRef.value?.complete(res?.lists);

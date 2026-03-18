@@ -5,7 +5,7 @@ const defaultOptions = {
     count: 9,
     imageAccept: ["jpg", "png", "jpeg"],
     imageSize: 20,
-    imageResolution: [Infinity, Infinity],
+    imageResolution: [2000, 2000],
     videoAccept: ["mp4", "mov"],
     videoSize: 200,
     videoDuration: [1, 600],

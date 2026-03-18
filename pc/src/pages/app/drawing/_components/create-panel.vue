@@ -14,7 +14,7 @@
                 <div class="flex items-center justify-between mb-5 px-1">
                     <div class="flex items-center gap-1.5">
                         <div class="w-1.5 h-1.5 rounded-full bg-[#0065fb] opacity-60"></div>
-                        <span class="text-xs font-black text-[#64748B] uppercase tracking-wider">Estimated Cost</span>
+                        <span class="text-xs font-black text-[#64748B] uppercase tracking-wider">预计消耗</span>
                         <span class="text-[13px] font-[900] text-[#1E293B] ml-1">
                             {{ consumeTokens }}
                             <span class="text-[10px] text-[#94A3B8] font-medium">{{ consumeTokensUnit }}</span>
@@ -207,7 +207,6 @@ const handlePromptUse = (prompt: string) => {
 };
 
 const handleGenerate = async () => {
-    console.log(getTokensCount.value);
     if (userTokens.value < getTokensCount.value) {
         feedback.msgPowerInsufficient();
         return;

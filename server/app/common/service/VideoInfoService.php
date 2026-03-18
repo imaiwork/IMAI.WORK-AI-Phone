@@ -1184,7 +1184,7 @@ class VideoInfoService
             $output                                   = shell_exec($cmd . ' -version 2>&1');
             $debugInfo['ffmpeg_commands_check'][$cmd] = [
                 'command_output' => $output ?: 'No output',
-                'available'      => ($output && (strpos($output, 'ffmpeg6 version') !== false || strpos($output, 'ffmpeg6 version') !== false))
+                'available'      => ($output && (strpos($output, 'ffmpeg version') !== false || strpos($output, 'ffmpeg6 version') !== false))
             ];
         }
 

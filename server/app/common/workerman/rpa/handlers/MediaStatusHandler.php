@@ -10,6 +10,7 @@ use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\model\sv\SvDeviceTask;
 use app\common\workerman\rpa\WorkerEnum;
 use app\common\enum\DeviceEnum;
+use app\common\model\sv\SvDeviceTaskLog;
 
 
 
@@ -73,10 +74,27 @@ class MediaStatusHandler extends BaseMessageHandler
             // 主任务状态修改
             $task = SvDeviceTask::where($where)->findOrEmpty();
             if (!$task->isEmpty()) {
-                $task->status = (int)$status === 1 ? DeviceEnum::TASK_STATUS_FINISHED : DeviceEnum::TASK_STATUS_FAILED;
+                $maps = [
+                    1 => DeviceEnum::TASK_STATUS_FINISHED,
+                    2 => DeviceEnum::TASK_STATUS_FAILED,
+                    3 => DeviceEnum::TASK_STATUS_RUNNING,
+                ];
+
+                $task->status = $maps[$status] ?? DeviceEnum::TASK_STATUS_RUNNING;
                 $task->remark = $content['msg'] ?? '';
                 $task->update_time = time();
                 $task->save();
+
+                // 记录日志
+                SvDeviceTaskLog::create([
+                    'user_id' => $task->user_id,
+                    'task_id' => $task->id,
+                    'task_source' => $task->source,
+                    'device_code' => $task->device_code,
+                    'message' => $content['msg'] ?? '',
+                    'image' => $content['imageUrl'] ?? '',
+                    'create_time' => time(),
+                ]);
             }
             $this->payload['reply'] = '发布数据状态已更新';
             $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);

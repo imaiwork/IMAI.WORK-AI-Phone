@@ -23,14 +23,15 @@
         "pages/404/404",
         "pages/choose_file/choose_file",
         "pages/creation/creation",
-        "pages/material_library/material_library"
+        "pages/material_library/material_library",
+        "pages/agent/agent",
+        "pages/agent_invite_poster/agent_invite_poster"
       ]
     },
     {
       "root": "ai_modules/digital_human",
       "pages": [
         "pages/index/index",
-        "pages/video_upload/video_upload",
         "pages/szr_create/szr_create",
         "pages/tone_clone/tone_clone",
         "pages/audio_manage/audio_manage",
@@ -151,9 +152,11 @@
         "pages/create_circle/create_circle",
         "pages/create_circle_interact/create_circle_interact",
         "pages/setting_circle_interact/setting_circle_interact",
+        "pages/setting_circle_interact_auto/setting_circle_interact_auto",
         "pages/rpa_code/rpa_code",
         "pages/task_tutorial/task_tutorial",
-        "pages/create_wechat_private/create_wechat_private"
+        "pages/create_wechat_private/create_wechat_private",
+        "pages/setting_prompt/setting_prompt"
       ]
     },
     {

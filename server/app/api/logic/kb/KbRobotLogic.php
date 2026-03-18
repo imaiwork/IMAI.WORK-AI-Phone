@@ -803,31 +803,37 @@ class KbRobotLogic extends BaseLogic
                 [
                     'id' => 0,
                     'name' => '豆包口播文案',
+                    'logo' =>  config('app.app_host') .'/static/images/robot/1.png',
                     'description' => '豆包满血版本',
                 ],
                 [
                     'id' => 1,
                     'name' => '门店获客文案智能体',
+                    'logo' =>  config('app.app_host') .'/static/images/robot/2.png',
                     'description' => '生成实体门店引流获客到店文案',
                 ],
                 [
                     'id' => 2,
                     'name' => '新闻体吸睛标题',
+                    'logo' =>  config('app.app_host') .'/static/images/robot/3.png',
                     'description' => '快速生成IP人设文案',
                 ],
                 [
                     'id' => 3,
                     'name' => '招商加盟文案生成',
+                    'logo' =>  config('app.app_host') .'/static/images/robot/4.png',
                     'description' => '快速生爆款招商加盟文案',
                 ],
                 [
                     'id' => 4,
                     'name' => '营销推广',
+                    'logo' =>  config('app.app_host') .'/static/images/robot/5.png',
                     'description' => '玩转营销场景',
                 ],
                 [
                     'id' => 5,
                     'name' => '口播文案',
+                    'logo' =>  config('app.app_host') .'/static/images/robot/6.png',
                     'description' => '口播必备神器',
                 ],
             ];
@@ -835,12 +841,14 @@ class KbRobotLogic extends BaseLogic
             return [
                 [
                  'id' => 6,
-                    'name' => '文案改写',
+                    'name' => '文案改写',   
+                    'logo' =>  config('app.app_host') .'/static/images/robot/1.png',
                     'description' => '文案改写神器'
                     ],
                 [
                 'id' => 7,
-                'name' => 'sora文案',
+                'name' => 'sora文案',   
+                'logo' =>  config('app.app_host') .'/static/images/robot/2.png',
                 'description' => 'sora2文案优化'
                  ]
             ];
@@ -848,41 +856,49 @@ class KbRobotLogic extends BaseLogic
             return [
                 [
                     'id' => 0,
+                    'logo' =>  config('app.app_host') .'/static/images/robot/1.png',
                     'name' => '豆包口播文案',
                     'description' => '豆包满血版本',
                 ],
                 [
                     'id' => 1,
+                    'logo' =>  config('app.app_host') .'/static/images/robot/2.png',
                     'name' => '门店获客文案智能体',
                     'description' => '生成实体门店引流获客到店文案',
                 ],
                 [
                     'id' => 2,
+                    'logo' =>  config('app.app_host') .'/static/images/robot/3.png',
                     'name' => '新闻体吸睛标题',
                     'description' => '快速生成IP人设文案',
                 ],
                 [
                     'id' => 3,
+                    'logo' =>  config('app.app_host') .'/static/images/robot/4.png',
                     'name' => '招商加盟文案生成',
                     'description' => '快速生爆款招商加盟文案',
                 ],
                 [
                     'id' => 4,
+                    'logo' =>  config('app.app_host') .'/static/images/robot/5.png',
                     'name' => '营销推广',
                     'description' => '玩转营销场景',
                 ],
                 [
                     'id' => 5,
+                    'logo' =>  config('app.app_host') .'/static/images/robot/6.png',
                     'name' => '口播文案',
                     'description' => '口播必备神器',
                 ],
                 [
-                 'id' => 6,
+                 'id' => 6, 
+                    'logo' =>  config('app.app_host') .'/static/images/robot/1.png',
                     'name' => '文案改写',
                     'description' => '文案改写神器'
                     ],
                 [
                 'id' => 7,
+                'logo' =>  config('app.app_host') .'/static/images/robot/2.png',
                 'name' => 'sora文案',
                 'description' => 'sora2文案优化'
                  ]

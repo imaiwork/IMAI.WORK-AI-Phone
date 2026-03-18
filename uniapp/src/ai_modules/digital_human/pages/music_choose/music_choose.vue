@@ -23,7 +23,7 @@
         <view class="grow min-h-0 mt-6">
             <z-paging v-model="dataList" ref="pagingRef" :hide-empty-view="isShowAi" :fixed="false" @query="queryList">
                 <view class="flex flex-col gap-y-[48rpx] px-4">
-                    <view v-if="isShowAi" class="flex items-center gap-x-[20rpx]" @click="handleChoose(-1)">
+                    <view v-if="isShowAi" class="flex items-center gap-x-[20rpx]" @click="handleChooseAi">
                         <view
                             class="w-[90rpx] h-[90rpx] rounded-[20rpx] flex items-center justify-center bg-1"
                             style="">
@@ -128,7 +128,7 @@ const { emit } = useEventBusManager();
 const pagingRef = ref<any>(null);
 
 const isShowAi = ref(true);
-const isAiMusic = ref(true);
+const isAiMusic = ref(false);
 const currentMusicId = ref<any>(null);
 const currentVolume = ref(0);
 const changeVolume = ref(0);
@@ -209,13 +209,24 @@ const isChoose = (data: any) => {
     return chooseList.value.some((item: any) => item.id == data.id);
 };
 
-const handleChoose = (data: any) => {
-    if (data == -1) {
+// 点击 AI 音乐库：与普通音乐互斥，支持取消
+const handleChooseAi = () => {
+    if (isAiMusic.value) {
+        // 已选中则取消
+        isAiMusic.value = false;
+    } else {
+        // 未选中则选中，同时清空普通音乐列表
         isAiMusic.value = true;
         chooseList.value = [];
-        return;
     }
-    isAiMusic.value = false;
+};
+
+// 点击普通音乐：与 AI 音乐互斥，支持多选/取消
+const handleChoose = (data: any) => {
+    if (isAiMusic.value) {
+        // 已选中 AI 音乐，先取消 AI 音乐再选中普通音乐
+        isAiMusic.value = false;
+    }
     if (isChoose(data)) {
         chooseList.value = chooseList.value.filter((item: any) => item.id != data.id);
     } else {
@@ -238,17 +249,11 @@ const handleConfirmVolume = () => {
 };
 
 const handleConfirm = () => {
-    if (chooseList.value.length == 0 && !isAiMusic.value) {
-        uni.showToast({
-            title: "请选择音乐",
-            icon: "none",
-        });
-        return;
-    }
+    // 允许不选择音乐直接确定，此时 music 为空数组，isAiMusic 为 false
     emit("confirm", {
         type: ListenerTypeEnum.CHOOSE_MUSIC,
         data: {
-            music: isAiMusic.value ? [] : chooseList.value,
+            music: isAiMusic.value ? -1 : chooseList.value,
             volume: currentVolume.value.toFixed(1),
         },
     });
@@ -256,10 +261,9 @@ const handleConfirm = () => {
 };
 
 onLoad((options: any) => {
-    const { volume, music, is_ai } = options;
+    const { volume, music, is_ai, ai_music } = options;
     if (music && music.length > 0) {
         chooseList.value = JSON.parse(music);
-        isAiMusic.value = chooseList.value.length == 0;
     }
     if (volume) {
         currentVolume.value = parseFloat(volume);
@@ -268,6 +272,7 @@ onLoad((options: any) => {
     if (is_ai == "0") {
         isShowAi.value = false;
     }
+    isAiMusic.value = ai_music == "true";
 });
 
 onUnload(() => {

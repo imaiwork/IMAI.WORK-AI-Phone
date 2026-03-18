@@ -17,11 +17,11 @@
 
         <div class="grow min-h-0">
             <ElTable :data="pager.lists" v-loading="pager.loading" height="100%">
-                <ElTableColumn label="微信账号信息" min-width="220">
+                <ElTableColumn label="微信账号信息" min-width="240">
                     <template #default="{ row }">
                         <div class="flex items-center justify-center gap-3 pl-2">
                             <div
-                                class="w-10 h-10 rounded-xl bg-[#22c55e]/5 flex items-center justify-center text-green-500 border border-[#22c55e]/10">
+                                class="shrink-0 w-10 h-10 rounded-xl bg-[#22c55e]/5 flex items-center justify-center text-green-500 border border-[#22c55e]/10">
                                 <Icon name="local-icon-wechat" :size="24" />
                             </div>
                             <div class="flex flex-col">

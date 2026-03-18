@@ -190,6 +190,42 @@
                                     <empty text="内容还在生成中，请耐心等待..." :size="240" />
                                 </view>
                             </template>
+
+                            <view
+                                class="bg-white rounded-[20rpx] p-5 mt-3"
+                                v-if="detailData.log && detailData.log.length > 0">
+                                <view class="font-medium text-[28rpx] mb-4">执行日志</view>
+                                <view class="relative">
+                                    <view
+                                        class="absolute left-[19rpx] top-[20rpx] bottom-[20rpx] w-[2rpx] bg-[#0000000a]"></view>
+                                    <view
+                                        v-for="(item, index) in detailData.log"
+                                        :key="item.id"
+                                        class="flex gap-x-3 mb-5 last:mb-0">
+                                        <view class="flex-shrink-0 flex flex-col items-center w-[40rpx]">
+                                            <view
+                                                class="w-[20rpx] h-[20rpx] rounded-full mt-[8rpx] z-10"
+                                                :class="index === 0 ? 'bg-primary' : 'bg-[#0000001a]'"></view>
+                                        </view>
+                                        <view class="flex-1 pb-1">
+                                            <view class="text-[26rpx] text-[#000000cc] leading-relaxed">{{
+                                                item.message
+                                            }}</view>
+                                            <view class="text-[22rpx] text-[#0000004d] mt-1">{{
+                                                item.create_time
+                                            }}</view>
+                                            <view v-if="item.image" class="mt-2">
+                                                <image
+                                                    :src="item.image"
+                                                    class="w-full rounded-[12rpx]"
+                                                    style="height: 320rpx"
+                                                    mode="aspectFill"
+                                                    @click="handlePreviewLogImage(item.image)"></image>
+                                            </view>
+                                        </view>
+                                    </view>
+                                </view>
+                            </view>
                         </view>
                     </scroll-view>
                 </view>
@@ -332,6 +368,14 @@ const handlePreviewImage = (index?: number) => {
             current: index,
         });
     }
+};
+
+// 预览日志图片
+const handlePreviewLogImage = (url: string) => {
+    uni.previewImage({
+        urls: [url],
+        current: 0,
+    });
 };
 
 const getDetail = async (data: any) => {

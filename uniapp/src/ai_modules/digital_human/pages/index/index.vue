@@ -150,7 +150,6 @@
         </view>
         <tabbar />
     </view>
-    <choose-model v-model="showChooseModel" @confirm="handleChooseModel" />
     <video-preview-v2
         v-model:show="showVideoPreview"
         :video-url="playItem.url"
@@ -160,23 +159,16 @@
 
 <script setup lang="ts">
 import config from "@/config";
-import { useAppStore } from "@/stores/app";
 import { getVideoCreationRecord } from "@/api/app";
 import { getPublicAnchorList } from "@/api/digital_human";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { ModeTypeEnum } from "@/ai_modules/digital_human/enums";
-import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
-import VideoMixIcon from "@/ai_modules/digital_human/static/icons/video_mix.svg";
 import AnchorCloneIcon from "@/ai_modules/digital_human/static/icons/anchor_clone.svg";
 import ToneCloneIcon from "@/ai_modules/digital_human/static/icons/tone_clone.svg";
-import TextExtractIcon from "@/ai_modules/digital_human/static/icons/text_extract.svg";
-import MeCloneIcon from "@/ai_modules/digital_human/static/icons/me_clone.svg";
 import MeCreateIcon from "@/ai_modules/digital_human/static/icons/me_create.svg";
-import MontageRecordIcon from "@/ai_modules/digital_human/static/icons/montage_record.svg";
 import MontageScanIcon from "@/ai_modules/digital_human/static/icons/scan.svg";
 import MaterialLibraryIcon from "@/ai_modules/digital_human/static/icons/material_library.svg";
 import ImageCreateIcon from "@/ai_modules/digital_human/static/icons/image_create.svg";
-import BombCopyIcon from "@/ai_modules/digital_human/static/icons/bomb_copy.svg";
 import StoryboardIcon from "@/ai_modules/digital_human/static/icons/storyboard.svg";
 import AnchorVideo from "@/ai_modules/digital_human/components/anchor-video/anchor-video.vue";
 
@@ -272,14 +264,6 @@ const toPage = (key: string) => {
     } else {
         uni.$u.route({ url: target });
     }
-};
-
-const showChooseModel = ref(false);
-const handleChooseModel = (id: string) => {
-    showChooseModel.value = false;
-    uni.$u.route({
-        url: `/ai_modules/digital_human/pages/video_upload/video_upload?type=${ModeTypeEnum.ANCHOR}&model_version=${id}`,
-    });
 };
 
 const handlePlay = (url: string, pic: string) => {

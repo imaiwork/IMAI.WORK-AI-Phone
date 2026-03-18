@@ -24,7 +24,7 @@ class CardCodeController extends BaseAdminController
     public function getOtherList()
     {
         return [
-            'type_list'    => CardCodeEnum::getTypeDesc()
+            'type_list' => CardCodeEnum::getTypeDesc()
         ];
     }
 
@@ -50,8 +50,8 @@ class CardCodeController extends BaseAdminController
     {
         $post = (new CardCodeValidate())->post()->goCheck('add');
         $result = (new CardCodeLogic())->add($post);
-        if(true === $result) {
-            return $this->success('添加成功',[],1,1);
+        if (true === $result) {
+            return $this->success('添加成功', [], 1, 1);
         }
         return $this->fail($result);
     }
@@ -67,7 +67,7 @@ class CardCodeController extends BaseAdminController
     {
         (new CardCodeValidate())->goCheck('id');
         $detail = (new CardCodeLogic())->detail($this->request->get('id'));
-        return $this->success('',$detail);
+        return $this->success('', $detail);
     }
 
 
@@ -81,7 +81,7 @@ class CardCodeController extends BaseAdminController
     {
         (new CardCodeValidate())->post()->goCheck('id');
         (new CardCodeLogic())->del($this->request->post('id'));
-        return $this->success('删除成功',[],1,1);
+        return $this->success('删除成功', [], 1, 1);
     }
 
 
@@ -94,7 +94,7 @@ class CardCodeController extends BaseAdminController
     public function getConfig()
     {
         $config = (new CardCodeLogic())->getConfig();
-        return $this->success('',$config);
+        return $this->success('', $config);
     }
 
 

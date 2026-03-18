@@ -211,7 +211,7 @@ class AccountLogEnum
     const TOKENS_INC_ADMIN = 9102;
     const TOKENS_INC_RECHARGE = 9103;
 
-    const TOKENS_INC_CARDCODE_GIVE  = 9105;  //卡密兑换赠送算力值
+    const TOKENS_INC_CARDCODE_GIVE = 9105;  //卡密兑换赠送算力值
 
     const TOKENS_DEC_AI_XHS = 9104;
     const TOKENS_INC_SHANJIAN_TYPE1 = 9150;
@@ -219,11 +219,11 @@ class AccountLogEnum
     const TOKENS_INC_SHANJIAN_TYPE3 = 9152;
     const TOKENS_INC_SHANJIAN_TYPE4 = 9153;
 
-     /**
+    /**
      * 短视频
      */
     const TOKENS_DEC_SPH_ADD_FRIENDS = 10001;
-    const TOKENS_DEC_SPH_PRIVATE_CHAT = 10002;  
+    const TOKENS_DEC_SPH_PRIVATE_CHAT = 10002;
     const TOKENS_DEC_SPH_SEARCH_TERMS = 10003;
 
     /**
@@ -236,9 +236,9 @@ class AccountLogEnum
     const TOKENS_DEC_SPH_LOCAL_OCR = 11004;
 
     const TOKENS_DEC_COZE_AGENT_CHAT = 10100;
-    const TOKENS_DEC_COZE_WORKFLOW= 10101;
-    const TOKENS_DEC_COZE_TEXT= 10102;
-    const TOKENS_DEC_COZE_PUBLISH_CONTENT_GENERATED= 10103;
+    const TOKENS_DEC_COZE_WORKFLOW = 10101;
+    const TOKENS_DEC_COZE_TEXT = 10102;
+    const TOKENS_DEC_COZE_PUBLISH_CONTENT_GENERATED = 10103;
 
     const TOKENS_DEC_MATRIX_COPYWRITING = 10104;
     const TOKENS_DEC_SORA_COPYWRITING = 10105;
@@ -246,6 +246,12 @@ class AccountLogEnum
     const TOKENS_DEC_SORA_PRO_VIDEO = 10107;
     const TOKENS_DEC_HUMAN_AVATAR_SORA = 10108;
     const TOKENS_DEC_SORA_DRAW_AVATAR = 10109;
+
+    // 分销代理
+    const TOKENS_DEC_DISTRIBUTION_TRANSFER = 12000;
+    const TOKENS_INC_DISTRIBUTION_TRANSFER = 12001;
+    const TOKENS_DEC_DISTRIBUTION_CARD = 12002;
+    const TOKENS_INC_DISTRIBUTION_CARD_REFUND = 12003;
 
     // 自动化功能
     // 社媒平台
@@ -255,13 +261,13 @@ class AccountLogEnum
     const TOKENS_DEC_AUTOMATION_SHUT_OFF_PRIVATE_LETTER = 10304; // 自动化截流触达
     const TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN = 10309;    // 自动化社媒平台私信接管
     const TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_NURSING = 10310;   // 自动化社媒平台自动养号
-    
+
     // 朋友圈
     const TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS = 10305;    // 自动化朋友圈评论
     const TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_RELEASED = 10306;   // 自动化朋友圈发布
     const TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_PRAISE = 10307;     // 自动化朋友圈点赞
     const TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND = 10308;         // 自动化自动加微
-    
+
     // OCR功能
     const TOKENS_DEC_AUTOMATION_OCR_LOCAL = 10311;  // 自动化获客视频号OCR
     const TOKENS_DEC_AUTOMATION_OCR_IMG = 10312;   // 自动化获客本地OCR
@@ -391,7 +397,7 @@ class AccountLogEnum
 
         self::TOKENS_DEC_STORYBOARD_VIDEO,
 
-        // 自动化功能
+            // 自动化功能
         self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED,
         self::TOKENS_DEC_AUTOMATION_SHUT_OFF_COMMENTS,
         self::TOKENS_DEC_AUTOMATION_SHUT_OFF_OBTAIN,
@@ -406,9 +412,9 @@ class AccountLogEnum
         self::TOKENS_DEC_AUTOMATION_OCR_IMG,
         self::TOKENS_DEC_AUTOMATION_ACCOUNT_IP_ANALYSIS,
 
-
-        
-       
+            // 分销代理
+        self::TOKENS_DEC_DISTRIBUTION_TRANSFER,
+        self::TOKENS_DEC_DISTRIBUTION_CARD,
     ];
 
 
@@ -424,6 +430,8 @@ class AccountLogEnum
         self::TOKENS_INC_SHANJIAN_TYPE3,
         self::TOKENS_INC_SHANJIAN_TYPE4,
         self::TOKENS_INC_CARDCODE_GIVE,
+        self::TOKENS_INC_DISTRIBUTION_TRANSFER,
+        self::TOKENS_INC_DISTRIBUTION_CARD_REFUND,
     ];
 
 
@@ -459,124 +467,124 @@ class AccountLogEnum
     public static function getChangeTypeDesc($changeType, $flag = false)
     {
         $desc = [
-            self::UM_DEC_ADMIN           => '平台减少余额',
-            self::UM_INC_ADMIN           => '平台增加余额',
-            self::UM_INC_RECHARGE        => '充值增加余额',
+            self::UM_DEC_ADMIN => '平台减少余额',
+            self::UM_INC_ADMIN => '平台增加余额',
+            self::UM_INC_RECHARGE => '充值增加余额',
             self::UM_DEC_RECHARGE_REFUND => '充值订单退款减少余额',
 
 
-            self::TOKENS_INC_REGISTER               => '注册增加算力',
-            self::TOKENS_INC_HUMAN                  => '数字人视频合成退费',
-            self::TOKENS_INC_SHANJIAN_TYPE1        => '克隆数字人混剪剪辑视频预扣费超额扣费退费',
-            self::TOKENS_INC_SHANJIAN_TYPE2        => '真人口播混剪视预扣费超额扣费退费',
-            self::TOKENS_INC_SHANJIAN_TYPE3        => '素材混剪视频预扣费超额扣费退费',
-            self::TOKENS_INC_SHANJIAN_TYPE4        => '新闻体混剪视频预扣费超额扣费退费',
-            self::TOKENS_INC_ADMIN                  => '平台增加算力',
-            self::TOKENS_INC_RECHARGE               => '购买算力加油包',
-            self::TOKENS_DEC_ADMIN                  => '平台减少算力',
-            self::TOKENS_DEC_RECHARGE_REFUND        => '充值订单退款减少算力',
-            self::TOKENS_DEC_COMMON_CHAT            => '通用聊天减少算力',
-            self::TOKENS_DEC_TEXT_TO_IMAGE          => '文生图减少算力',
-            self::TOKENS_DEC_TEXT_TO_POSTERIMAGE    => '文生海报图减少算力',
-            self::TOKENS_DEC_VOLC_TEXT_TO_IMAGE     => '即梦文生图减少算力',
+            self::TOKENS_INC_REGISTER => '注册增加算力',
+            self::TOKENS_INC_HUMAN => '数字人视频合成退费',
+            self::TOKENS_INC_SHANJIAN_TYPE1 => '克隆数字人混剪剪辑视频预扣费超额扣费退费',
+            self::TOKENS_INC_SHANJIAN_TYPE2 => '真人口播混剪视预扣费超额扣费退费',
+            self::TOKENS_INC_SHANJIAN_TYPE3 => '素材混剪视频预扣费超额扣费退费',
+            self::TOKENS_INC_SHANJIAN_TYPE4 => '新闻体混剪视频预扣费超额扣费退费',
+            self::TOKENS_INC_ADMIN => '平台增加算力',
+            self::TOKENS_INC_RECHARGE => '购买算力加油包',
+            self::TOKENS_DEC_ADMIN => '平台减少算力',
+            self::TOKENS_DEC_RECHARGE_REFUND => '充值订单退款减少算力',
+            self::TOKENS_DEC_COMMON_CHAT => '通用聊天减少算力',
+            self::TOKENS_DEC_TEXT_TO_IMAGE => '文生图减少算力',
+            self::TOKENS_DEC_TEXT_TO_POSTERIMAGE => '文生海报图减少算力',
+            self::TOKENS_DEC_VOLC_TEXT_TO_IMAGE => '即梦文生图减少算力',
             self::TOKENS_DEC_VOLC_TEXT_TO_POSTERIMAGE => '即梦文生海报图减少算力',
-            self::TOKENS_DEC_IMAGE_TO_IMAGE         => '图生图减少算力',
-            self::TOKENS_DEC_GOODS_IMAGE            => '商品图减少算力',
-            self::TOKENS_DEC_MODEL_IMAGE            => '模特图减少算力',
-            self::TOKENS_DEC_MEETING                => '会议减少算力',
-            self::TOKENS_DEC_MIND_MAP               => '思维导图减少算力',
-            self::TOKENS_DEC_SCENE_CHAT             => '场景聊天减少算力',
-            self::TOKENS_DEC_OPENAI_CHAT            => 'OpenAI聊天减少算力',
-            self::TOKENS_DEC_GEMINI_CHAT            => 'Jemini聊天减少算力',
-            self::TOKENS_DEC_IMAGE_PROMPT           => '生图文案减少算力',
-            self::TOKENS_DEC_VOLC_VIDEO_PROMPT      => '生成视频文案减少算力',
-            self::TOKENS_DEC_EXPIRE                 => 'token 加油包过期',
+            self::TOKENS_DEC_IMAGE_TO_IMAGE => '图生图减少算力',
+            self::TOKENS_DEC_GOODS_IMAGE => '商品图减少算力',
+            self::TOKENS_DEC_MODEL_IMAGE => '模特图减少算力',
+            self::TOKENS_DEC_MEETING => '会议减少算力',
+            self::TOKENS_DEC_MIND_MAP => '思维导图减少算力',
+            self::TOKENS_DEC_SCENE_CHAT => '场景聊天减少算力',
+            self::TOKENS_DEC_OPENAI_CHAT => 'OpenAI聊天减少算力',
+            self::TOKENS_DEC_GEMINI_CHAT => 'Jemini聊天减少算力',
+            self::TOKENS_DEC_IMAGE_PROMPT => '生图文案减少算力',
+            self::TOKENS_DEC_VOLC_VIDEO_PROMPT => '生成视频文案减少算力',
+            self::TOKENS_DEC_EXPIRE => 'token 加油包过期',
 
-            self::TOKENS_DEC_HUMAN_AVATAR           => '数字人形象 - 标准版减少算力',
-            self::TOKENS_DEC_HUMAN_AUDIO            => '数字人音频 - 标准版减少算力',
-            self::TOKENS_DEC_HUMAN_VOICE            => '数字人音色 - 标准版减少算力',
-            self::TOKENS_DEC_HUMAN_VIDEO            => '数字人视频 - 标准版减少算力',
+            self::TOKENS_DEC_HUMAN_AVATAR => '数字人形象 - 标准版减少算力',
+            self::TOKENS_DEC_HUMAN_AUDIO => '数字人音频 - 标准版减少算力',
+            self::TOKENS_DEC_HUMAN_VOICE => '数字人音色 - 标准版减少算力',
+            self::TOKENS_DEC_HUMAN_VIDEO => '数字人视频 - 标准版减少算力',
 
-            self::TOKENS_DEC_HUMAN_AVATAR_PRO       => '数字人形象 - 极致版减少算力',
-            self::TOKENS_DEC_HUMAN_AUDIO_PRO        => '数字人音频 - 极致版减少算力',
-            self::TOKENS_DEC_HUMAN_VOICE_PRO        => '数字人音色 - 极致版减少算力',
-            self::TOKENS_DEC_HUMAN_VIDEO_PRO        => '数字人视频 - 极致版减少算力',
+            self::TOKENS_DEC_HUMAN_AVATAR_PRO => '数字人形象 - 极致版减少算力',
+            self::TOKENS_DEC_HUMAN_AUDIO_PRO => '数字人音频 - 极致版减少算力',
+            self::TOKENS_DEC_HUMAN_VOICE_PRO => '数字人音色 - 极致版减少算力',
+            self::TOKENS_DEC_HUMAN_VIDEO_PRO => '数字人视频 - 极致版减少算力',
 
-            self::TOKENS_DEC_HUMAN_AVATAR_YM       => '数字人形象 - 优秘V5减少算力',
-            self::TOKENS_DEC_HUMAN_AUDIO_YM        => '数字人音频 - 优秘V5减少算力',
-            self::TOKENS_DEC_HUMAN_VOICE_YM        => '数字人音色 - 优秘V5减少算力',
-            self::TOKENS_DEC_HUMAN_VIDEO_YM        => '数字人视频 - 优秘V5减少算力',
-            self::TOKENS_DEC_HUMAN_PROMPT          => '数字人口播文案提示词减少算力',
-            self::TOKENS_DEC_HUMAN_COPYWRITING     => '数字人口播文案减少算力',
+            self::TOKENS_DEC_HUMAN_AVATAR_YM => '数字人形象 - 优秘V5减少算力',
+            self::TOKENS_DEC_HUMAN_AUDIO_YM => '数字人音频 - 优秘V5减少算力',
+            self::TOKENS_DEC_HUMAN_VOICE_YM => '数字人音色 - 优秘V5减少算力',
+            self::TOKENS_DEC_HUMAN_VIDEO_YM => '数字人视频 - 优秘V5减少算力',
+            self::TOKENS_DEC_HUMAN_PROMPT => '数字人口播文案提示词减少算力',
+            self::TOKENS_DEC_HUMAN_COPYWRITING => '数字人口播文案减少算力',
 
 
-            self::TOKENS_DEC_AI_LIANLIAN           => 'AI陪练减少算力',
-            self::TOKENS_DEC_AI_WECHAT             => 'AI微信减少算力',
-            self::TOKENS_DEC_AI_XHS                => 'AI小红书减少算力',
-            // self::TOKENS_DEC_AUDIO_TEXT             => '音频转文字减少算力',
-            self::TOKENS_DEC_AI_RESUME             => 'AI简历分析减少算力',
-            self::TOKENS_DEC_AI_MARK               => 'AI面试评分减少算力',
-            self::TOKENS_DEC_AI_INTERVIEW_CHAT     => 'AI面试聊天减少算力',
-            self::TOKENS_DEC_HUMAN_AVATAR_YMT      => '数字人形象 - 优秘V7-减少算力',
-            self::TOKENS_DEC_HUMAN_AUDIO_YMT       => '数字人音频 - 优秘V7-减少算力',
-            self::TOKENS_DEC_HUMAN_VOICE_YMT       => '数字人音色 - 优秘V7-减少算力',
-            self::TOKENS_DEC_HUMAN_VIDEO_YMT       => '数字人视频 - 优秘V7-减少算力',
+            self::TOKENS_DEC_AI_LIANLIAN => 'AI陪练减少算力',
+            self::TOKENS_DEC_AI_WECHAT => 'AI微信减少算力',
+            self::TOKENS_DEC_AI_XHS => 'AI小红书减少算力',
+                // self::TOKENS_DEC_AUDIO_TEXT             => '音频转文字减少算力',
+            self::TOKENS_DEC_AI_RESUME => 'AI简历分析减少算力',
+            self::TOKENS_DEC_AI_MARK => 'AI面试评分减少算力',
+            self::TOKENS_DEC_AI_INTERVIEW_CHAT => 'AI面试聊天减少算力',
+            self::TOKENS_DEC_HUMAN_AVATAR_YMT => '数字人形象 - 优秘V7-减少算力',
+            self::TOKENS_DEC_HUMAN_AUDIO_YMT => '数字人音频 - 优秘V7-减少算力',
+            self::TOKENS_DEC_HUMAN_VOICE_YMT => '数字人音色 - 优秘V7-减少算力',
+            self::TOKENS_DEC_HUMAN_VIDEO_YMT => '数字人视频 - 优秘V7-减少算力',
 
-            self::TOKENS_DEC_KNOWLEDGE_RETRIEVE    => '知识库检索减少算力',
-            self::TOKENS_DEC_KNOWLEDGE_CREATE      => '知识库创建减少算力',
-            self::TOKENS_DEC_KNOWLEDGE_CHAT        => '知识库聊天减少算力',
+            self::TOKENS_DEC_KNOWLEDGE_RETRIEVE => '知识库检索减少算力',
+            self::TOKENS_DEC_KNOWLEDGE_CREATE => '知识库创建减少算力',
+            self::TOKENS_DEC_KNOWLEDGE_CHAT => '知识库聊天减少算力',
 
-            self::KEYWORD_TO_TITLE                 => 'Ai标题生成费用扣除减少算力',
-            self::KEYWORD_TO_SUBTITLE              => 'Ai正文描述生成费用扣除减少算力',
-            self::KEYWORD_TO_COPYWRITING           => 'Ai文案生成费用扣除减少算力',
+            self::KEYWORD_TO_TITLE => 'Ai标题生成费用扣除减少算力',
+            self::KEYWORD_TO_SUBTITLE => 'Ai正文描述生成费用扣除减少算力',
+            self::KEYWORD_TO_COPYWRITING => 'Ai文案生成费用扣除减少算力',
 
-            self::TOKENS_INC_CARDCODE_GIVE         => '卡密兑换增加算力',
-            self::TOKENS_DEC_VOLC_TEXT_TO_VIDEO    => '即梦文生视频减少算力',
-            self::TOKENS_DEC_VOLC_IMAGE_TO_VIDEO   => '即梦图生视频减少算力',
+            self::TOKENS_INC_CARDCODE_GIVE => '卡密兑换增加算力',
+            self::TOKENS_DEC_VOLC_TEXT_TO_VIDEO => '即梦文生视频减少算力',
+            self::TOKENS_DEC_VOLC_IMAGE_TO_VIDEO => '即梦图生视频减少算力',
             self::TOKENS_DEC_DOUBAO_IMAGE_TO_IMAGE => 'Doubao模型图生图减少算力',
-            self::TOKENS_DEC_DOUBAO_TEXT_TO_IMAGE  => 'Doubao模型文生图减少算力',
-            self::TOKENS_DEC_DOUBAO_TEXT_TO_VIDEO  => 'Seedance 1.0 pro模型文生视频减少算力',
+            self::TOKENS_DEC_DOUBAO_TEXT_TO_IMAGE => 'Doubao模型文生图减少算力',
+            self::TOKENS_DEC_DOUBAO_TEXT_TO_VIDEO => 'Seedance 1.0 pro模型文生视频减少算力',
             self::TOKENS_DEC_DOUBAO_IMAGE_TO_VIDEO => 'Seedance 1.0 pro模型图生视频减少算力',
             self::TOKENS_DEC_DOUBAO_TEXT_TO_POSTERIMAGE => 'Doubao模型文生海报图减少算力',
 
             self::TOKENS_DEC_HUMAN_AVATAR_CHANJING => '数字人形象 - 蝉镜-减少算力',
-            self::TOKENS_DEC_HUMAN_VOICE_CHANJING  => '数字人音色 - 蝉镜-减少算力',
-            self::TOKENS_DEC_HUMAN_AUDIO_CHANJING  => '数字人音频 - 蝉镜-减少算力',
-            self::TOKENS_DEC_HUMAN_VIDEO_CHANJING  => '数字人视频 - 蝉镜-减少算力',
+            self::TOKENS_DEC_HUMAN_VOICE_CHANJING => '数字人音色 - 蝉镜-减少算力',
+            self::TOKENS_DEC_HUMAN_AUDIO_CHANJING => '数字人音频 - 蝉镜-减少算力',
+            self::TOKENS_DEC_HUMAN_VIDEO_CHANJING => '数字人视频 - 蝉镜-减少算力',
 
             self::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN => '口播混剪形象克隆扣费减少算力',
-            self::TOKENS_DEC_HUMAN_VOICE_SHANJIAN  => '极速版音色克隆扣费减少算力',
-            self::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN  => '口播混剪视频克隆扣费减少算力',
-            self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN  => '真人口播混剪扣费减少算力',
+            self::TOKENS_DEC_HUMAN_VOICE_SHANJIAN => '极速版音色克隆扣费减少算力',
+            self::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN => '口播混剪视频克隆扣费减少算力',
+            self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN => '真人口播混剪扣费减少算力',
             self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN => '素材混剪视频扣费减少算力',
-            self::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN  => '新闻体视频扣费减少算力',
-            self::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN_ADD  => '克隆数字人混剪剪辑视频预扣费补足费用补扣',
-            self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN_ADD  => '真人口播混剪视频预扣费补足费用补扣',
-            self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN_ADD  => '素材混剪视频预扣费补足费用补扣',
-            self::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN_ADD  => '新闻体混剪视频预扣费补足费用补扣',
-            self::TOKENS_DEC_AI_SHANJIAN_AUTHORIZED_VIDEO  => 'AI自动生成授权形象视频扣费减少算力',
+            self::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN => '新闻体视频扣费减少算力',
+            self::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN_ADD => '克隆数字人混剪剪辑视频预扣费补足费用补扣',
+            self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN_ADD => '真人口播混剪视频预扣费补足费用补扣',
+            self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN_ADD => '素材混剪视频预扣费补足费用补扣',
+            self::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN_ADD => '新闻体混剪视频预扣费补足费用补扣',
+            self::TOKENS_DEC_AI_SHANJIAN_AUTHORIZED_VIDEO => 'AI自动生成授权形象视频扣费减少算力',
 
 
 
 
 
-            self::TOKENS_DEC_HUMAN_EXT             => '数字人视频合成补扣',
+            self::TOKENS_DEC_HUMAN_EXT => '数字人视频合成补扣',
 
 
-            self::TOKENS_DEC_SPH_ADD_WECHAT        => '视频号获客减少算力',
-            self::TOKENS_DEC_SPH_ADD_FRIENDS       => '视频号获客加好友话术自动去重减少算力',
-            self::TOKENS_DEC_SPH_PRIVATE_CHAT      => '视频号获客主动私聊话术去重减少算力',
-            self::TOKENS_DEC_SPH_SEARCH_TERMS      => '视频号获客检索关键词减少算力',
-            
-            self::TOKENS_DEC_AI_REPLY_LIKE         => 'AI朋友圈评论点赞减少算力',
-            self::TOKENS_DEC_VIDEO_CLIP            => '视频剪辑减少算力',
-            self::TOKENS_DEC_TEXT_TO_VECTOR        => '文本转向量减少算力',
+            self::TOKENS_DEC_SPH_ADD_WECHAT => '视频号获客减少算力',
+            self::TOKENS_DEC_SPH_ADD_FRIENDS => '视频号获客加好友话术自动去重减少算力',
+            self::TOKENS_DEC_SPH_PRIVATE_CHAT => '视频号获客主动私聊话术去重减少算力',
+            self::TOKENS_DEC_SPH_SEARCH_TERMS => '视频号获客检索关键词减少算力',
+
+            self::TOKENS_DEC_AI_REPLY_LIKE => 'AI朋友圈评论点赞减少算力',
+            self::TOKENS_DEC_VIDEO_CLIP => '视频剪辑减少算力',
+            self::TOKENS_DEC_TEXT_TO_VECTOR => '文本转向量减少算力',
             self::TOKENS_DEC_CREATE_VECTOR_KNOWLEDGE => '创建向量知识库减少算力',
-            self::TOKENS_DEC_SPH_OCR               => '视频号OCR减少算力',
-            self::TOKENS_DEC_SPH_LOCAL_OCR         => '本地OCR减少算力',
-            self::TOKENS_DEC_COZE_AGENT_CHAT       => 'Coze智能体聊天减少算力',
-            self::TOKENS_DEC_COZE_WORKFLOW         => 'Coze智能体工作流减少算力',
-            self::TOKENS_DEC_COZE_TEXT             => '口播混剪视频文案生成减少算力',
+            self::TOKENS_DEC_SPH_OCR => '视频号OCR减少算力',
+            self::TOKENS_DEC_SPH_LOCAL_OCR => '本地OCR减少算力',
+            self::TOKENS_DEC_COZE_AGENT_CHAT => 'Coze智能体聊天减少算力',
+            self::TOKENS_DEC_COZE_WORKFLOW => 'Coze智能体工作流减少算力',
+            self::TOKENS_DEC_COZE_TEXT => '口播混剪视频文案生成减少算力',
             self::TOKENS_DEC_COZE_PUBLISH_CONTENT_GENERATED => 'Coze发布内容生成减少算力',
             self::TOKENS_DEC_MATRIX_COPYWRITING => '矩阵文案生成减少算力',
             self::TOKENS_DEC_NEWS_MIXCUT_TITLE => '新闻体标题生成减少算力',
@@ -591,7 +599,7 @@ class AccountLogEnum
             self::TOKENS_DEC_HUMAN_AVATAR_SORA => '一句话生成视频角色创建减少算力',
             self::TOKENS_DEC_SORA_DRAW_AVATAR => '一句话生成视频真人角色转绘减少算力',
 
-            // 自动化功能描述
+                // 自动化功能描述
             self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED => '自动化社媒平台发布减少算力',
             self::TOKENS_DEC_AUTOMATION_SHUT_OFF_COMMENTS => '自动化截流评论减少算力',
             self::TOKENS_DEC_AUTOMATION_SHUT_OFF_OBTAIN => '自动化截流私信减少算力',
@@ -605,6 +613,12 @@ class AccountLogEnum
             self::TOKENS_DEC_AUTOMATION_OCR_LOCAL => '自动化获客视频号OCR减少算力',
             self::TOKENS_DEC_AUTOMATION_OCR_IMG => '自动化获客本地OCR减少算力',
             self::TOKENS_DEC_AUTOMATION_ACCOUNT_IP_ANALYSIS => '自动化获客账号Ip人设分析报告减少算力',
+
+                // 分销代理
+            self::TOKENS_DEC_DISTRIBUTION_TRANSFER => '分销代理转赠下级减少算力',
+            self::TOKENS_INC_DISTRIBUTION_TRANSFER => '上级代理转赠增加算力',
+            self::TOKENS_DEC_DISTRIBUTION_CARD => '分销代理卡密制卡扣除算力',
+            self::TOKENS_INC_DISTRIBUTION_CARD_REFUND => '分销代理卡密删除退回算力',
         ];
         if ($flag) {
             return $desc;
@@ -621,7 +635,7 @@ class AccountLogEnum
      */
     public static function getUserMoneyChangeTypeDesc()
     {
-        $UMChangeType   = self::getUserMoneyChangeType();
+        $UMChangeType = self::getUserMoneyChangeType();
         $changeTypeDesc = self::getChangeTypeDesc('', true);
         return array_filter($changeTypeDesc, function ($key) use ($UMChangeType) {
             return in_array($key, $UMChangeType);
@@ -637,7 +651,7 @@ class AccountLogEnum
      */
     public static function getUserTokensChangeTypeDesc()
     {
-        $UMChangeType   = self::getUserTokensChangeType();
+        $UMChangeType = self::getUserTokensChangeType();
         $changeTypeDesc = self::getChangeTypeDesc('', true);
         return array_filter($changeTypeDesc, function ($key) use ($UMChangeType) {
             return in_array($key, $UMChangeType);

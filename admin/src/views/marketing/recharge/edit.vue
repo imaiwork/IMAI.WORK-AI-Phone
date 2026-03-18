@@ -35,6 +35,9 @@
                         </el-input>
                     </div>
                 </el-form-item>
+                <el-form-item label="状态" prop="status">
+                    <el-switch v-model="formData.status" :active-value="1" :inactive-value="0" />
+                </el-form-item>
             </el-card>
             <el-card shadow="never" class="!border-none mt-4">
                 <div class="font-medium mb-[20px]">套餐内容</div>
@@ -52,7 +55,7 @@
                 </el-form-item>
                 <el-form-item label="排序">
                     <div class="w-[380px]">
-                        <el-input-number v-model="formData.sort"> </el-input-number>
+                        <el-input-number v-model="formData.sort" :min="0" :max="9999"> </el-input-number>
                         <div class="form-tips">默认为0，数值越大排越前面</div>
                     </div>
                 </el-form-item>

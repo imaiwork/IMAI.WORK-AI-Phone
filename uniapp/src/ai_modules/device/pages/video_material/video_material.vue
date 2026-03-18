@@ -1,6 +1,6 @@
 <template>
     <view class="h-screen flex flex-col">
-        <view class="font-medium text-[30rpx] mx-4 mt-4">剪辑素材({{ dataList.length }})</view>
+        <view class="font-medium text-[30rpx] mx-4 mt-4">视频素材({{ dataList.length }})</view>
 
         <view class="grow min-h-0">
             <scroll-view scroll-y class="h-full">

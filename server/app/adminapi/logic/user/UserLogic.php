@@ -6,18 +6,17 @@ use app\common\enum\user\AccountLogEnum;
 use app\common\enum\user\UserTerminalEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\logic\BaseLogic;
+use app\common\model\distribution\DistributionAgent;
+use app\common\model\recharge\GiftPackageOrder;
+use app\common\model\survey\Surveys;
 use app\common\model\user\User;
+use app\common\model\user\UserTokensLog;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
-use app\common\service\UserService;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use think\facade\Db;
-use think\facade\Config;
-use app\common\model\recharge\GiftPackageOrder;
-use app\common\model\recharge\GiftPackage;
-use app\common\model\survey\Surveys;
-use app\common\model\user\UserTokensLog;
 use Exception;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use think\facade\Config;
+use think\facade\Db;
 
 /**
  * 用户逻辑层
@@ -55,7 +54,7 @@ class UserLogic extends BaseLogic
 
         $user = User::where(['id' => $userId])->field($field)
             ->findOrEmpty();
-        
+
         $user['channel'] = UserTerminalEnum::getTermInalDesc($user['channel']);
 
         $user->sex = $user->getData('sex');
@@ -69,7 +68,31 @@ class UserLogic extends BaseLogic
         $user['orders'] = [];
 
         // 累计算力使用次数
-        $user['tokens_times']   = UserTokensLog::where('user_id', $userId)->where('task_id', '<>', '')->count('DISTINCT task_id');
+        $user['tokens_times'] = UserTokensLog::where('user_id', $userId)->where('task_id', '<>', '')->count('DISTINCT task_id');
+
+        // 分销代理信息
+        $distribution = \app\common\model\distribution\DistributionAgent::where('user_id', $userId)->findOrEmpty();
+        if (!$distribution->isEmpty()) {
+            $user['distribution_level'] = $distribution->level;
+            $user['distribution_parent_id'] = $distribution->parent_id;
+            $user['distribution_become_time'] = $distribution->become_time;
+            $user['distribution_status'] = $distribution->status;
+
+            if ($distribution->parent_id > 0) {
+                $user['distribution_parent_name'] = \app\common\model\user\User::where('id', $distribution->parent_id)->value('nickname') ?? '';
+            } else {
+                $user['distribution_parent_name'] = '系统';
+            }
+
+            $user['distribution_downline_count'] = \app\common\model\distribution\DistributionAgent::where('parent_id', $userId)->count();
+        } else {
+            $user['distribution_level'] = 0;
+            $user['distribution_parent_id'] = 0;
+            $user['distribution_parent_name'] = '系统';
+            $user['distribution_become_time'] = 0;
+            $user['distribution_status'] = 1;
+            $user['distribution_downline_count'] = 0;
+        }
 
         return $user->toArray();
     }
@@ -88,6 +111,32 @@ class UserLogic extends BaseLogic
             'id' => $params['id'],
             $params['field'] => $params['value']
         ]);
+    }
+
+    /**
+     * @notes 更新用户分销信息
+     * @param array $params
+     * @author MonitorAllen
+     * @date 
+     */
+    public static function setDistributionInfo(array $params)
+    {
+        $agent = DistributionAgent::where('user_id', $params['id'])->findOrEmpty();
+        if ($agent->isEmpty()) {
+            $agent->user_id = $params['id'];
+            $agent->create_time = time();
+        }
+        $agent->{$params['field']} = $params['value'];
+        $agent->update_time = time();
+
+        if ($params['field'] == 'level' && $params['value'] > 0) {
+            $agent->status = 1;
+            if ($agent->become_time == 0) {
+                $agent->become_time = time();
+            }
+        }
+
+        return $agent->save();
     }
 
 
@@ -189,7 +238,7 @@ class UserLogic extends BaseLogic
     }
 
 
-     /**
+    /**
      * @notes 更新用户信息
      * @param array $params
      * @return User
@@ -221,7 +270,7 @@ class UserLogic extends BaseLogic
         try {
             $userSn = User::createUserSn();
             $passwordSalt = Config::get('project.unique_identification');
-            $password     = create_password($params['password'], $passwordSalt);
+            $password = create_password($params['password'], $passwordSalt);
 
             if ($params['password'] != $params['password_confirm']) {
                 throw new Exception('两次密码不一致');
@@ -241,14 +290,14 @@ class UserLogic extends BaseLogic
             }
 
             $user = User::create([
-                'sn'        => $userSn,
-                'avatar'    => FileService::setFileUrl($params['avatar']),
+                'sn' => $userSn,
+                'avatar' => FileService::setFileUrl($params['avatar']),
                 'real_name' => $params['real_name'] ?? '',
-                'nickname'  => $params['nickname']  ?? '',
-                'mobile'    => $params['mobile'] ?? '',
-                'account'   => $params['mobile'] ?? '',
-                'password'  => $password,
-                'channel'   => UserTerminalEnum::ADMIN,
+                'nickname' => $params['nickname'] ?? '',
+                'mobile' => $params['mobile'] ?? '',
+                'account' => $params['mobile'] ?? '',
+                'password' => $password,
+                'channel' => UserTerminalEnum::ADMIN,
             ]);
             return true;
         } catch (Exception $e) {
@@ -265,9 +314,9 @@ class UserLogic extends BaseLogic
     {
         $fileinfo = $file->getRealPath();
         $spreadsheet = IOFactory::load($fileinfo);
-        $sheet       = $spreadsheet->getActiveSheet();
-        $rows        = $sheet->toArray(null, true, true, true); // 二维数组
-        $salt  = Config::get('project.unique_identification');
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray(null, true, true, true); // 二维数组
+        $salt = Config::get('project.unique_identification');
         $defaultAvatar = ConfigService::get('default_image', 'user_avatar');
         /* 1. 预生成所有数据 */
         $insertData = [];
@@ -275,8 +324,10 @@ class UserLogic extends BaseLogic
         $modelUser = new User();
 
         foreach ($rows as $k => $row) {
-            if ($k == 1) continue; // 跳过表头
-            if ($row['A'] == '' || $row['B'] == '') continue;
+            if ($k == 1)
+                continue; // 跳过表头
+            if ($row['A'] == '' || $row['B'] == '')
+                continue;
             $mobile = trim($row['A']);
             $token = trim($row['B']);
 
@@ -291,18 +342,18 @@ class UserLogic extends BaseLogic
                 throw new Exception("第" . ($k + 1) . "行手机已被占用,换一个吧！");
             }
             $token = round($token, 2);
-            $sn   = User::createUserSn();          // 还是原规则
-            $pwd  = create_password($mobile, $salt);
+            $sn = User::createUserSn();          // 还是原规则
+            $pwd = create_password($mobile, $salt);
 
             $insertData[] = [
-                'sn'        => $sn,
-                'account'   => $mobile,
-                'mobile'    => $mobile,
-                'password'  => $pwd,
-                'nickname'  => '用户' . $sn,
-                'tokens'    => $token,
-                'avatar'    => $defaultAvatar,
-                'channel'   => UserTerminalEnum::ADMIN,
+                'sn' => $sn,
+                'account' => $mobile,
+                'mobile' => $mobile,
+                'password' => $pwd,
+                'nickname' => '用户' . $sn,
+                'tokens' => $token,
+                'avatar' => $defaultAvatar,
+                'channel' => UserTerminalEnum::ADMIN,
                 'create_time' => $now,
                 'update_time' => $now,
             ];

@@ -29,6 +29,8 @@ use app\common\model\sv\SvPublishSettingDetail;
 use app\common\model\user\User;
 use app\common\model\wechat\AiWechatCircleTask;
 use app\common\model\wechat\AiWechatCircleTaskConfig;
+use app\common\model\sv\SvDeviceCircleLikeReply;
+use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
 use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatLog;
 use app\common\service\FileService;
@@ -461,6 +463,100 @@ trait DeviceAutoTaskTrait
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
+        }
+    }
+
+    public static function wechatCircleThumbCommentTask(SvDeviceTask $task, Output $output, callable $callback)
+    {
+        try {
+            self::$logtitle = "微圈点赞评论任务[{$task->device_code}]";
+
+            self::checkOnline($task->device_code, 'ws');
+
+            $comment = SvDeviceCircleLikeReplyAccount::where('id', $task->sub_data_id)->where('status', 0)->where('auto_type', $task->auto_type)->findOrEmpty();
+            if ($comment->isEmpty()) {
+                self::setLog("微圈点赞评论任务不存在:\n" . Db::getLastSql(), 'thumb_comment');
+                return $callback([
+                    'status' => -1,
+                    'remark' => '微圈点赞评论任务不存在',
+                ]);
+            }
+            $option = SvDeviceCircleLikeReply::where('id', $comment['circle_like_reply_id'])->findOrEmpty();
+            if ($option->isEmpty()) {
+                self::setLog("微圈点赞评论选项不存在:\n" . Db::getLastSql(), 'thumb_comment');
+                return $callback([
+                    'status' => -1,
+                    'remark' => '微圈点赞评论选项不存在',
+                ]);
+            }
+
+
+            $payload = array(
+                'appType' => $task->account_type,
+                'messageId' => 0,
+                'type' => DeviceEnum::WECHAT_CIRCLE_LIKE_COMMENT,
+                'deviceId' => $task->device_code,
+                'appVersion' => '2.4.0',
+                'content' => json_encode([
+                    'taskId' => $comment->id,
+                    'auto_type' => 1,
+                    "hasLiked" => ($option->action === 1 || $option->action === 3) ? 1 : 0, //点赞
+                    "hasComment" => ($option->action === 2 || $option->action === 3) ? 1 : 0, //评论
+                    "planCoverage" => $option->range, //当天   1、3天内   2、7天内
+                    "interactionConut" => $option->number,  //互动数量
+                    "timeInterval" => $option->interval,  //互动间隔/分钟
+                    "commentType" => $option->comment_type,  //AI识别并评论   1、不评论   2、固定评论
+                    "commentContent" =>  $option->comment ?? '', //固定评论内容
+                    'account' => $task->account,
+                    'account_type' => $task->account_type,
+                    'start_time' => $task->start_time,
+                    'end_time' => $task->end_time,
+                    'time_interval' => ($task->end_time - $task->start_time) / 60,
+
+                ], JSON_UNESCAPED_UNICODE)
+            );
+            self::setLog(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'thumb_comment');
+            $channel = "device.{$comment['device_code']}.message";
+            ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+            ChannelClient::publish($channel, [
+                'data' => json_encode($payload)
+            ]);
+
+            $comment->status = 1;
+            $comment->update_time = time();
+            $comment->save();
+
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 1,
+                    'remark' => '任务执行中',
+                ]);
+            }
+        } catch (\Throwable $th) {
+            self::setLog($th->getTraceAsString(), 'thumb_comment');
+            $output->writeln("任务执行失败：" . $th->getMessage());
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 3,
+                    'remark' => '任务执行失败：' . $th->getMessage(),
+                ]);
+            }
+            throw new \Exception($th->getMessage(), $th->getCode());
+        }
+    }
+
+    public static function wechatCircleThumbCommentCompletedTask(SvDeviceTask $task, Output $output)
+    {
+        try {
+            $comment = SvDeviceCircleLikeReplyAccount::where('id', $task->sub_data_id)->where('status', 1)->where('auto_type', $task->auto_type)->findOrEmpty();
+            if ($comment->isEmpty()) {
+                self::setLog("微圈点赞评论任务不存在:\n" . Db::getLastSql(), 'thumb_comment');
+            }
+            $comment->status = 2;
+            $comment->update_time = time();
+            $comment->save();
+        } catch (\Throwable $th) {
+            //throw $th;
         }
     }
 

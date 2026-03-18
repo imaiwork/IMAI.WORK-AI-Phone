@@ -30,32 +30,33 @@ class CardCodeLogic extends BaseLogic
      * @author kb
      * @date 2023/7/11 16:29
      */
-    public function checkCard(string $sn,int $userId)
+    public function checkCard(string $sn, int $userId)
     {
-        try{
+        try {
             $cardCode = $this->checkSn($sn)['card_code'];
             $content = '';
             $validTime = '';
             $now = time();
-            switch ($cardCode->type){
+            switch ($cardCode->type) {
                 case CardCodeEnum::TYPE_TOKENS:
+                case CardCodeEnum::TYPE_DISTRIBUTION_TOKENS:
                     $content = $cardCode->balance;
                     break;
             }
             return [
-                'id'            => $cardCode->id,
-                'sn'            => $cardCode->sn,
-                'type'          => $cardCode->type,
-                'type_desc'     => CardCodeEnum::getTypeDesc($cardCode->type),
-                'content'       => $content,
-                'valid_time'    => $validTime,
-                'failure_time'  => date('Y-m-d H:i:s',$cardCode->valid_end_time).' 前可使用'
+                'id' => $cardCode->id,
+                'sn' => $cardCode->sn,
+                'type' => $cardCode->type,
+                'type_desc' => CardCodeEnum::getTypeDesc($cardCode->type),
+                'content' => $content,
+                'valid_time' => $validTime,
+                'failure_time' => $cardCode->valid_end_time > 0 ? date('Y-m-d H:i:s', $cardCode->valid_end_time) . ' 前可使用' : '永久有效'
             ];
-        }catch (Exception $e){
+        } catch (Exception $e) {
             return $e->getMessage();
         }
 
-        
+
     }
 
     /**
@@ -64,27 +65,26 @@ class CardCodeLogic extends BaseLogic
      * @author kb
      * @date 2023/7/11 17:11
      */
-    public function useCard($sn,$userId)
+    public function useCard($sn, $userId)
     {
-        try{
+        try {
 
-            $cache = Cache::get('card_code_'.$sn);
-            Cache::set('card_code_'.$sn,$sn,2);
-            if($cache){
+            $cache = Cache::get('card_code_' . $sn);
+            Cache::set('card_code_' . $sn, $sn, 2);
+            if ($cache) {
                 throw new Exception('请勿频繁操作');
             }
 
             Db::startTrans();
             $cardData = $this->checkSn($sn);
             $cardCode = $cardData['card_code'];
-            $cardCodeRecord = $cardData['card_code_record'];
             $user = User::findOrEmpty($userId);
 
 
             //兑换算力值
-            if(CardCodeEnum::TYPE_TOKENS == $cardCode->type){
+            if (in_array($cardCode->type, [CardCodeEnum::TYPE_TOKENS, CardCodeEnum::TYPE_DISTRIBUTION_TOKENS])) {
                 $balance = $cardCode['balance'] ?? 0;
-                if($balance > 0){
+                if ($balance > 0) {
                     //用户添加次数
                     $user->tokens += $balance;
                     $user->save();
@@ -102,15 +102,30 @@ class CardCodeLogic extends BaseLogic
                     );
                 }
             }
-            // 更新卡密兑换记录
-            $cardCodeRecord->user_id = $userId;
-            $cardCodeRecord->status = 1;
-            $cardCodeRecord->use_time = time();
-            $cardCodeRecord->save();
+            if (!empty($cardData['is_direct']) && $cardData['is_direct']) {
+                $cardCode->used_num += 1;
+                $cardCode->save();
+
+                // 动态新增一条子表兑换记录，用于日志/后台检索是谁兑换了这几次卡密
+                CardCodeRecord::create([
+                    'card_id' => $cardCode->id,
+                    'sn' => $cardCode->sn . "_" . $cardCode->used_num,
+                    'status' => 1,
+                    'use_time' => time(),
+                    'user_id' => $userId,
+                ]);
+            } else {
+                // 更新子表卡密记录（向下兼容老数据）
+                $cardCodeRecord = $cardData['card_code_record'];
+                $cardCodeRecord->user_id = $userId;
+                $cardCodeRecord->status = 1;
+                $cardCodeRecord->use_time = time();
+                $cardCodeRecord->save();
+            }
 
             Db::commit();
             return true;
-        }catch (Exception $e){
+        } catch (Exception $e) {
             // 回滚事务
             Db::rollback();
             return $e->getMessage();
@@ -128,28 +143,52 @@ class CardCodeLogic extends BaseLogic
     public function checkSn($sn)
     {
 
-        if(empty($sn)){
+        if (empty($sn)) {
             throw new Exception('查询失败，请输入卡密');
         }
 
-        $cardCodeRecord = CardCodeRecord::where(['sn'=>$sn])->findOrEmpty();
-        if($cardCodeRecord->isEmpty()) {
+        // 优先验证主表的SN
+        $cardCode = CardCode::where(['sn' => $sn])->findOrEmpty();
+        if (!$cardCode->isEmpty()) {
+            if ($cardCode->used_num >= $cardCode->card_num) {
+                throw new Exception('查询失败，卡密已无剩余使用次数');
+            }
+            $now = time();
+            if ($now < $cardCode->valid_start_time) {
+                throw new Exception('该卡密未到生效时间');
+            }
+            if ($cardCode->valid_end_time > 0 && $cardCode->valid_end_time < $now) {
+                throw new Exception('卡密已过期');
+            }
+            return [
+                'card_code' => $cardCode,
+                'is_direct' => true
+            ];
+        }
+
+        // 兼容旧版：去记录表查询子表的SN
+        $cardCodeRecord = CardCodeRecord::where(['sn' => $sn])->findOrEmpty();
+        if ($cardCodeRecord->isEmpty()) {
             throw new Exception('查询失败，卡密编号不存在');
         }
-        if($cardCodeRecord->status){
-            throw new Exception('查询失败，卡密已被使用');
+        if ($cardCodeRecord->status) {
+            throw new Exception('查询失败，该次卡密已被使用');
         }
         $cardCode = CardCode::where(['id' => $cardCodeRecord->card_id])->findOrEmpty();
+        if ($cardCode->isEmpty()) {
+            throw new Exception('查询失败，主卡密信息丢失');
+        }
         $now = time();
-        if($now < $cardCode->valid_start_time) {
+        if ($now < $cardCode->valid_start_time) {
             throw new Exception('该卡密未到生效时间');
         }
-        if($cardCode->valid_end_time < $now) {
+        if ($cardCode->valid_end_time > 0 && $cardCode->valid_end_time < $now) {
             throw new Exception('卡密已过期');
         }
         return [
-            'card_code'         => $cardCode,
-            'card_code_record'  => $cardCodeRecord
+            'card_code' => $cardCode,
+            'card_code_record' => $cardCodeRecord,
+            'is_direct' => false
         ];
     }
 

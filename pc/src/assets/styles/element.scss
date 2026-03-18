@@ -110,4 +110,76 @@
     .el-input-number.is-controls-right[class*="small"] [class*="increase"] {
         --el-input-number-controls-height: 12px;
     }
+    .el-pagination {
+        --el-pagination-bg-color: transparent;
+
+        button {
+            @apply bg-white border border-slate-200 rounded-xl w-9 h-9 m-0 transition-all hover:text-primary flex items-center justify-center;
+
+            &:disabled {
+                @apply bg-[transparent] border-slate-100 text-slate-200;
+            }
+
+            .el-icon {
+                @apply font-black text-base text-center w-auto;
+            }
+        }
+        .el-pagination__total {
+            @apply text-[11px] font-black text-slate-300 uppercase tracking-[0.15em] mr-2;
+        }
+        .el-pagination__jump {
+            @apply ml-2 text-[11px] font-black text-slate-400 uppercase tracking-widest;
+
+            .el-input {
+                @apply mx-2 w-14;
+            }
+
+            .el-input__wrapper {
+                @apply bg-white border border-slate-200 rounded-xl px-2 h-9 transition-all;
+                box-shadow: none;
+            }
+
+            .el-input__inner {
+                @apply text-xs font-[1000] text-slate-700 text-center;
+            }
+
+            .el-pagination__jump-prev,
+            .el-pagination__jump-next {
+                display: none;
+            }
+        }
+        .el-pagination__sizes {
+            @apply mx-2;
+
+            .el-select {
+                .el-select__wrapper {
+                    @apply bg-white border border-slate-200 rounded-xl px-3 h-9 transition-all min-h-[36px];
+                    box-shadow: none;
+                }
+
+                .el-select__placeholder {
+                    @apply text-[11px] font-[1000] text-slate-700;
+                }
+
+                .el-input__suffix .el-icon {
+                    @apply text-slate-400 font-black;
+                }
+            }
+        }
+        &.is-background .el-pager li {
+            @apply border border-slate-200 rounded-xl w-9 h-9 text-xs font-black text-slate-400 transition-all bg-white;
+
+            // 省略号样式
+            &.number {
+                @apply flex items-center justify-center;
+            }
+        }
+        .el-pager li {
+            @apply border-solid;
+        }
+        &.is-background .btn-next,
+        &.is-background .btn-prev {
+            @apply border-solid border-slate-200 bg-white;
+        }
+    }
 }

@@ -1,8 +1,8 @@
 <template>
-    <ErrorTemplate.define v-slot="{ msg }">
+    <ErrorTemplate.define v-slot="{ msg, status }">
         <div class="flex flex-col gap-2 items-center justify-center py-8">
             <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-2">
-                <Icon name="local-icon-error_fill" :size="24" color="#EF4444"></Icon>
+                <Icon name="local-icon-error_fill" :size="24" color="#ffffff"></Icon>
             </div>
             <div class="text-[15px] font-black text-[#1E293B] text-center">
                 {{ msg || "生成失败" }}
@@ -12,7 +12,7 @@
     </ErrorTemplate.define>
 
     <div class="flex flex-col w-full bg-white rounded-[20px] h-full border border-[#F1F5F9] overflow-hidden">
-        <div class="h-[72px] flex items-center justify-between px-8 border-b border-[#F1F5F9] bg-white">
+        <div class="shrink-0 h-[72px] flex items-center justify-between px-8 border-b border-[#F1F5F9] bg-white">
             <div class="flex items-center gap-x-3">
                 <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary">
                     <Icon name="el-icon-Picture" :size="20" v-if="type === 'image'"></Icon>
@@ -48,7 +48,7 @@
                                     "{{ item.prompt }}"
                                 </div>
                                 <div
-                                    class="p-1.5 rounded-lg bg-white border border-br opacity-0 group-hover/prompt:opacity-100 transition-all cursor-pointer hover:text-primary"
+                                    class="p-1.5 rounded-lg bg-white border border-br opacity-0 group-hover:opacity-100 transition-all cursor-pointer hover:text-primary"
                                     @click="copy(item.prompt)">
                                     <Icon name="el-icon-DocumentCopy" :size="14"></Icon>
                                 </div>
@@ -57,10 +57,10 @@
 
                         <div class="gap-4 grid" :class="`grid-cols-${item.images?.length || item.video?.length || 4}`">
                             <template v-if="type == 'image'">
-                                <div v-for="(image, index) in item.images" :key="index" class="result-card group/item">
+                                <div v-for="(image, index) in item.images" :key="index" class="result-card group">
                                     <div
                                         v-if="image.loading"
-                                        class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-white/80 backdrop-blur-md">
+                                        class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#ffffff]/80 rounded-2xl">
                                         <div class="modern-loader">
                                             <div class="loader-ring"></div>
                                             <div class="loader-dot"></div>
@@ -80,9 +80,9 @@
                                         class="absolute inset-0 flex items-center justify-center bg-[#F1F5F9]"
                                         v-else-if="image.status == 1">
                                         <div
-                                            class="absolute inset-0 bg-black/40 opacity-0 group-hover/item:opacity-100 transition-all z-20 flex items-end p-4">
+                                            class="absolute inset-0 bg-[#000000]/40 opacity-0 group-hover:opacity-100 transition-all z-20 flex items-end p-4">
                                             <div
-                                                class="flex gap-2 transform translate-y-2 group-hover/item:translate-y-0 transition-transform">
+                                                class="flex gap-2 transform translate-y-2 group-hover:translate-y-0 transition-transform">
                                                 <ElTooltip content="下载" placement="bottom">
                                                     <div class="action-btn" @click.stop="downloadFile(image.url)">
                                                         <Icon name="el-icon-Download" :size="16"></Icon>
@@ -98,7 +98,7 @@
                                         </div>
                                         <ElImage
                                             fit="contain"
-                                            class="w-full h-full transform transition-transform duration-700 group-hover/item:scale-110"
+                                            class="w-full h-full transform transition-transform duration-700 group-hover:scale-110"
                                             preview-teleported
                                             :src="image.url"
                                             :preview-src-list="[image.url]" />
@@ -107,7 +107,9 @@
                                     <div
                                         v-else
                                         class="absolute inset-0 bg-white flex items-center justify-center rounded-2xl border border-red-50">
-                                        <ErrorTemplate.reuse :msg="image.msg"></ErrorTemplate.reuse>
+                                        <ErrorTemplate.reuse
+                                            :msg="image.msg"
+                                            :status="image.status"></ErrorTemplate.reuse>
                                     </div>
                                 </div>
                             </template>
@@ -127,12 +129,12 @@
                                     <template v-else-if="video.status == 1">
                                         <video :src="video.url" class="w-full h-full object-cover"></video>
                                         <div
-                                            class="absolute inset-0 bg-black/20 group-hover/vid:bg-black/40 transition-all flex items-center justify-center">
+                                            class="absolute inset-0 bg-[#000000]/20 group-hover:bg-[#000000]/40 transition-all flex items-center justify-center">
                                             <div class="play-trigger" @click.stop="playVideo(video.url)">
                                                 <Icon name="el-icon-VideoPlay" :size="48" color="white"></Icon>
                                             </div>
                                             <div
-                                                class="absolute top-4 right-4 opacity-0 group-hover/vid:opacity-100 transition-opacity">
+                                                class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <div class="action-btn" @click.stop="downloadFile(video.url)">
                                                     <Icon name="el-icon-Download" :size="16"></Icon>
                                                 </div>
@@ -142,7 +144,9 @@
                                     <div
                                         v-else
                                         class="absolute inset-0 bg-white flex items-center justify-center rounded-2xl">
-                                        <ErrorTemplate.reuse :msg="video.msg"></ErrorTemplate.reuse>
+                                        <ErrorTemplate.reuse
+                                            :msg="video.msg"
+                                            :status="video.status"></ErrorTemplate.reuse>
                                     </div>
                                 </div>
                             </template>
@@ -196,6 +200,7 @@ const playVideo = async (url: string) => {
 
 const ErrorTemplate = createReusableTemplate<{
     msg?: string;
+    status?: number;
 }>();
 
 // --- 动态加载文字逻辑 ---

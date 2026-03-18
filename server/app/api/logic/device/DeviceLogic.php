@@ -159,10 +159,15 @@ class DeviceLogic extends ApiLogic
             \app\common\model\auto\AutoDeviceTakeOverConfig::where('user_id', self::$uid)->where('device_code', $find->device_code)->select()->delete();
             // 删除设备截流获客任务配置
             \app\common\model\auto\AutoDeviceTouchConfig::where('user_id', self::$uid)->where('device_code', $find->device_code)->select()->delete();
+            // 删除设备点赞评论任务配置
+            \app\common\model\auto\AutoDeviceCircleLikeReplyConfig::where('user_id', self::$uid)->where('device_code', $find->device_code)->select()->delete();
+            // 删除设备点赞评论任务账号
+            \app\common\model\auto\AutoDeviceWechatCircleConfig::where('user_id', self::$uid)->where('device_code', $find->device_code)->select()->delete();
 
-            \app\common\model\sv\SvDeviceTask::where('user_id', self::$uid)->where('device_code', $find->device_code)->where('auto_type', 1)->select()->delete();
-            \app\common\model\sv\SvPublishSettingAccount::where('user_id', self::$uid)->where('device_code', $find->device_code)->where('auto_type', 1)->select()->delete();
-            \app\common\model\sv\SvPublishSettingDetail::where('user_id', self::$uid)->where('device_code', $find->device_code)->where('auto_type', 1)->select()->delete();
+            \app\common\model\sv\SvDeviceTaskLog::where('device_code', $find->device_code)->select()->delete();
+
+            // \app\common\model\sv\SvPublishSettingAccount::where('user_id', self::$uid)->where('device_code', $find->device_code)->where('auto_type', 1)->select()->delete();
+            // \app\common\model\sv\SvPublishSettingDetail::where('user_id', self::$uid)->where('device_code', $find->device_code)->where('auto_type', 1)->select()->delete();
 
             $find->delete();
             self::$returnData = $find->toArray();

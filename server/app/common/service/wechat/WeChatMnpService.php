@@ -90,7 +90,6 @@ class WeChatMnpService
 
     /**
      * @notes 获取小程序码
-     * @param string $scene
      * @param string $page
      * @param int $width
      * @return string
@@ -99,10 +98,17 @@ class WeChatMnpService
     public function getMnpCodeUrl(string $page, int $width = 430, $savePath = '/tmp/mnp-wxacode-123.png', $params = [])
     {
         try {
+            if (isset($params['auth_key'])){
+                $scene = '1011&auth_key=' . $params['auth_key'];
+            }
+
+            if (isset($params['sn'])){
+                $scene = '1011&sn=' . $params['sn'];
+            }
 
             $response = $this->app->getClient()->postJson('/wxa/getwxacodeunlimit', [
                 'page' => $page,
-                'scene' => isset($params['auth_key']) ? '1011&auth_key=' . $params['auth_key'] : '1011',
+                'scene' => $scene ?? '1011',
                 'width' => $width,
                 'check_path' => true
             ]);

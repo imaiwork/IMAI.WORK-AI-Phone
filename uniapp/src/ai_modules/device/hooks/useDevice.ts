@@ -39,7 +39,7 @@ export function useDevice(options: UseDeviceOptions = {}) {
         stopGetAccount: () => deviceStore.stopGetAccount(),
         resetPlatforms: () => deviceStore.resetPlatformStatus(),
         initializePlatform: (accounts: any) => deviceStore.initializePlatformFromDetail(accounts),
-
+        onAccountsUpdated: () => options.onAccountsUpdated?.(),
         // WebSocket 相关
         close: () => deviceStore.closeWebSocket(),
     };

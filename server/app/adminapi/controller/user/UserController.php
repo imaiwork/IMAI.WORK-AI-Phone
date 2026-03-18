@@ -56,6 +56,17 @@ class UserController extends BaseAdminController
         return $this->success('操作成功', [], 1, 1);
     }
 
+    /**
+     * @notes 编辑用户分销信息
+     * @return \think\response\Json
+     */
+    public function setDistribution()
+    {
+        $params = (new \app\adminapi\validate\user\UserDistributionValidate())->post()->goCheck('setInfo');
+        UserLogic::setDistributionInfo($params);
+        return $this->success('操作成功', [], 1, 1);
+    }
+
 
     /**
      * @notes 调整用户余额
@@ -90,7 +101,7 @@ class UserController extends BaseAdminController
         return $this->fail($res);
     }
 
-     /**
+    /**
      * @notes 编辑用户信息
      * @return \think\response\Json
      * @author 段誉
@@ -113,17 +124,18 @@ class UserController extends BaseAdminController
         return $this->success('创建成功', [], 1, 1);
     }
 
-    public function import(){
+    public function import()
+    {
         try {
             $file = $this->request->file('file');
             $res = UserLogic::import($file);
             $data['import'] = $res;
-            if ($res){
-                return $this->success('导入成功',$data,1,0);
+            if ($res) {
+                return $this->success('导入成功', $data, 1, 0);
             }
-            $this->fail('导入失败',$data,0,0);
+            $this->fail('导入失败', $data, 0, 0);
         } catch (\Exception $e) {
-            return $this->fail('导入失败: ' . $e->getMessage(),['import'=>false],0,0);
+            return $this->fail('导入失败: ' . $e->getMessage(), ['import' => false], 0, 0);
         }
     }
 }

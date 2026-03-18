@@ -40,7 +40,7 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface
                 // 请求在线状态
                 $account = SvAccount::where('device_code',$item->device_code)->field('id,type,account')->select()->toArray();
                 $item['account'] =  $account;
-                $this->addDeviceRpa($item);
+                //$this->addDeviceRpa($item);
             })
             ->toArray();
     }

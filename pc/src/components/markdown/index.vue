@@ -1,5 +1,5 @@
 <template>
-    <div class="markdown-card" :class="['markdown-body', theme === 'dark' ? 'dark' : '']" :data-color-mode="theme">
+    <div class="markdown-card" :class="['markdown-body']">
         <McMarkdownCard :content="content" :typing="typing" :typing-options="typingOptions" :md-plugins="mdPlugins">
             <!-- 头部 -->
             <template v-if="$slots.header" #header="{ codeBlockData }">

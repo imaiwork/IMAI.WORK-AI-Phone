@@ -2,6 +2,7 @@
 
 namespace app\common\model\cardcode;
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 
 /**
  * Class CardCode
@@ -9,5 +10,7 @@ use app\common\model\BaseModel;
  */
 class CardCode extends BaseModel
 {
+    use SoftDelete;
+    protected string $deleteTime = 'delete_time';
 
 }

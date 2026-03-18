@@ -115,3 +115,8 @@ export function userSurveyDel(params: any) {
 export function userBatchImport(params: any) {
     return request.post({ url: "/user.user/import", params });
 }
+
+// 修改代理上级
+export function adjustLeader(params: any) {
+    return request.post({ url: "/user.user/setDistribution", params });
+}

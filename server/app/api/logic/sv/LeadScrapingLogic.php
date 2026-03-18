@@ -60,8 +60,8 @@ class LeadScrapingLogic extends SvBaseLogic
                 if ((int)$params['industry_type'] === 0) {
                     self::setError('行业不能为空');
                     return false;
-                }else{
-                   $params['industry'] = json_encode(explode(';', $params['industry']), JSON_UNESCAPED_UNICODE);
+                } else {
+                    $params['industry'] = json_encode(explode(';', $params['industry']), JSON_UNESCAPED_UNICODE);
                 }
             }
 
@@ -124,7 +124,7 @@ class LeadScrapingLogic extends SvBaseLogic
                     if (!$log->isEmpty()) {
                         continue;
                     }
-                    if(trim($industry) == ''){
+                    if (trim($industry) == '') {
                         continue;
                     }
                     SvLeadScrapingIndustryLog::create([
@@ -230,30 +230,28 @@ class LeadScrapingLogic extends SvBaseLogic
         if ($history->isEmpty()) {
             SvLeadScrapingFilterHistory::create([
                 'user_id'     => self::$uid,
-                'filter'      => $params['task_type'] == 1 ? $params['filter'] : [],
-                'comment_speech' => $params['task_type'] == 1 ? $params['content'] : [],
+                'filter'      => ($params['task_type'] == 1 || $params['task_type'] == 2) ? $params['filter'] : \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []),
+                'comment_speech' => $params['task_type'] == 1 ? $params['content'] : \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []),
 
-                'msg_speech' => $params['task_type'] == 2 ? $params['content'] : [],
+                'msg_speech' => $params['task_type'] == 2 ? $params['content'] : \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []),
 
-                'mark_filter' => $params['task_type'] == 3 ? $params['mark_filter'] : [],
-                'mark_speech' => $params['task_type'] == 3 ? $params['content'] : [],
+                'mark_filter' => $params['task_type'] == 3 ? $params['filter'] : \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []),
+                'mark_speech' => $params['task_type'] == 3 ? $params['content'] : \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []),
                 'number'     => (int)$params['send_num'],
                 'create_time' => time(),
             ]);
-        }else{
-            $history->filter = $params['task_type'] == 1 ? $params['filter'] : (empty($history->filter) ? \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []) : $history->filter);
+        } else {
+            $history->filter = ($params['task_type'] == 1 || $params['task_type'] == 2) ? $params['filter'] : (empty($history->filter) ? \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []) : $history->filter);
             $history->comment_speech = $params['task_type'] == 1 ? $params['content'] : (empty($history->comment_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $history->comment_speech);
 
             $history->msg_speech = $params['task_type'] == 2 ? $params['content'] : (empty($history->msg_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $history->msg_speech);
-            
+
             $history->mark_filter = $params['task_type'] == 3 ? $params['filter'] : (empty($history->mark_filter) ? \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []) : $history->mark_filter);
             $history->mark_speech = $params['task_type'] == 3 ? $params['content'] : (empty($history->mark_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $history->mark_speech);
             $history->number = (int)$params['send_num'];
             $history->update_time = time();
             $history->save();
         }
-
-        
     }
 
     public static function getFilterHistory(array $params)
@@ -265,12 +263,20 @@ class LeadScrapingLogic extends SvBaseLogic
                 $result['comment_speech'] = \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []);
 
                 $result['msg_speech'] = \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []);
-                
+
                 $result['mark_filter'] = \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []);
                 $result['mark_speech'] = \app\common\service\ConfigService::get('touch_clue', 'touch_speech', []);
                 $result['number'] = 1;
-            }
+            } else {
 
+                $result->filter = empty($result->filter) ? \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []) : $result->filter;
+                $result->comment_speech = empty($result->comment_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $result->comment_speech;    
+
+                $result->msg_speech = empty($result->msg_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $result->msg_speech;
+
+                $result->mark_filter = empty($result->mark_filter) ? \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []) : $result->mark_filter;
+                $result->mark_speech = empty($result->mark_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $result->mark_speech;
+            }
             self::$returnData = $result->toArray();
             return true;
         } catch (\Exception $e) {

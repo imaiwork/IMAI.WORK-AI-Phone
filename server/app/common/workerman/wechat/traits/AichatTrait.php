@@ -701,7 +701,10 @@ trait AichatTrait
     private function _sendMessage(array $request)
     {
         // 解析消息
-        $this->parseReplyImageToSend($request);
+        // 固定话术图片回复的图片链接无需解析
+        if (!isset($request['keyword_image_reply']) || !$request['keyword_image_reply']){
+            $this->parseReplyImageToSend($request);
+        }
 
         $message_type = $request['is_chatroom'] === 1 ? ($request['message_type'] != 2 ? 22 : $request['message_type']) : $request['message_type'];
         $aiContent = TalkToFriendTaskHandler::handle([
@@ -867,6 +870,8 @@ trait AichatTrait
                     $matcher->setKeywords([$keyword]);
                     $resultMatch = $matcher->isMatch($request['message']);
                     if ($resultMatch['matched']) {
+                        //固定话术图片回复的图片链接无需解析
+                        $request['keyword_image_reply'] = true;
                         $this->_parseMessage($request, $item->reply);
                         $match = true;
                         $matcher->destroy();
@@ -882,6 +887,8 @@ trait AichatTrait
 
                 } else {
                     if ($request['message'] == $keyword) {
+                        //固定话术图片回复的图片链接无需解析
+                        $request['keyword_image_reply'] = true;
                         $this->_parseMessage($request, $item->reply);
                         $match = true;
                     }

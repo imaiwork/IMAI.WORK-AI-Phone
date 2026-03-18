@@ -2,7 +2,13 @@
     <view class="h-full flex flex-col min-h-0">
         <view class="flex flex-col flex-1 min-h-0 py-4 relative" v-if="contentList.length">
             <view class="scroll-view-content flex-1 flex min-h-0">
-                <scroll-view scroll-y ref="contentRef" :scroll-top="scrollTop">
+                <scroll-view
+                    scroll-y
+                    ref="contentRef"
+                    :scroll-top="scrollTop"
+                    :scroll-with-animation="false"
+                    @scroll="handleScroll"
+                    @scrolltolower="handleScrollToLower">
                     <view v-if="contentList.length" class="content-box">
                         <view v-for="(item, index) in contentList" :key="`${item.id} + ${index} + ''`">
                             <view class="pb-4">
@@ -23,13 +29,6 @@
                     </view>
                     <slot v-else name="empty"></slot>
                 </scroll-view>
-            </view>
-            <view class="w-full flex justify-center mb-2 absolute bottom-0" v-if="dynamicHeight == 0">
-                <view
-                    class="flex items-center justify-center rounded-full px-[16rpx] h-[76rpx] w-[228rpx] border border-solid border-[#EDEDEE]"
-                    @click="chatAdd()">
-                    <text class="text-xs text-[#989898]">开启全新对话</text>
-                </view>
             </view>
         </view>
         <view class="grow min-h-0 relative" v-if="contentList.length == 0">
@@ -150,7 +149,6 @@
                                         <image src="/static/images/icons/add2.svg" class="w-full h-full"></image>
                                     </view>
                                 </view>
-
                                 <textarea
                                     class="!w-full max-h-[300rpx] overflow-y-auto text-[26rpx] px-2 py-[24rpx]"
                                     ref="textareaRef"
@@ -221,9 +219,9 @@
                                         :max="5"
                                         @change="changeHumanizeParams($event, 'context_num', 0)" />
                                 </view>
-                                <view class="text-xs flex-shrink-0 w-[80rpx] text-center"
-                                    >{{ humanizeParams.context_num }}条</view
-                                >
+                                <view class="text-xs flex-shrink-0 w-[80rpx] text-center">
+                                    {{ humanizeParams.context_num }}条
+                                </view>
                             </view>
                         </view>
                         <view v-if="currModel.model_id != ModelIdEnum.CLAUDE_SONNET_4_5">
@@ -431,6 +429,7 @@
         </template>
     </popup-bottom>
 </template>
+
 <script lang="ts" setup>
 import config from "@/config";
 import { getUserChatConfig, saveUserChatConfig } from "@/api/chat";
@@ -441,6 +440,7 @@ import { useAppStore } from "@/stores/app";
 import { ModelIdEnum } from "@/enums/appEnums";
 import FileItem from "./components/file-item.vue";
 import { useUserStore } from "@/stores/user";
+
 const props = withDefaults(
     defineProps<{
         contentList: any[];
@@ -465,6 +465,7 @@ const props = withDefaults(
         isStaff: false,
     }
 );
+
 const emit = defineEmits<{
     (event: "update:modelValue", value: any[]): void;
     (event: "contentPost", value: any): void;
@@ -478,7 +479,6 @@ const emit = defineEmits<{
 }>();
 
 const appStore = useAppStore();
-
 const isLogin = computed(() => useUserStore().isLogin);
 
 const currModel = ref<any>({
@@ -495,9 +495,7 @@ const getAIModels = computed(() =>
 const selectedNetwork = ref(false);
 const handleNetwork = () => {
     if (!isLogin.value) {
-        uni.$u.route({
-            url: "/pages/login/login",
-        });
+        uni.$u.route({ url: "/pages/login/login" });
         return;
     }
     selectedNetwork.value = !selectedNetwork.value;
@@ -513,7 +511,6 @@ const fileList = computed({
     },
 });
 
-// 判断发送框是否禁用
 const isSendDisabled = computed(() => {
     const flag = fileList.value.length === 0 ? !userInput.value : false;
     return props.sendDisabled || flag;
@@ -523,9 +520,7 @@ const handleFileUpload = () => {
     checkLogin();
     uni.$u.route({
         url: "/packages/pages/choose_file/choose_file",
-        params: {
-            limit: 1,
-        },
+        params: { limit: 1 },
     });
 };
 
@@ -568,29 +563,26 @@ const handleAgentClear = () => {
     currAgent.avatar = "";
     emit("update:agent", null);
 };
+
 const showHumanize = ref(false);
 const humanizeParams = reactive({
-    top_p: 0.5, //词汇多样性（0.01-1）
-    temperature: 1, //结果相似性（0-2）
-    presence_penalty: 0.1, //特定词重复率 (0-1)
-    frequency_penalty: 2, //重复词频率(-2到2）
-    context_num: 3, //上下文数量（1-5）
-    top_logprobs: 10, //显示前几个候选词对数概率(0到20)
-    logprobs: 0, //显示候选词 0关闭 1开启
-    max_tokens: 4096, //返回长度(1到999999)
+    top_p: 0.5,
+    temperature: 1,
+    presence_penalty: 0.1,
+    frequency_penalty: 2,
+    context_num: 3,
+    top_logprobs: 10,
+    logprobs: 0,
+    max_tokens: 4096,
 });
 
 const getMaxTemperature = computed(() => {
-    if (currModel.value.model_id == ModelIdEnum.DEEPSEEK) {
-        return 2;
-    }
+    if (currModel.value.model_id == ModelIdEnum.DEEPSEEK) return 2;
     return 1;
 });
 
 const getMaxTokens = computed(() => {
-    if (currModel.value.model_id == ModelIdEnum.DEEPSEEK) {
-        return 4096;
-    }
+    if (currModel.value.model_id == ModelIdEnum.DEEPSEEK) return 4096;
     return 10000;
 });
 
@@ -599,7 +591,6 @@ const changeHumanizeParams = (event: any, key: string, step: number) => {
     if (step == 0) {
         humanizeParams[key as keyof typeof humanizeParams] = value;
     } else {
-        //判断value是否为正整数，如果是，则直接显示，不是则保留step位小数
         if (Number.isInteger(value)) {
             humanizeParams[key as keyof typeof humanizeParams] = value;
         } else {
@@ -616,10 +607,7 @@ const handleSetting = () => {
 };
 
 const handelChatConfig = async () => {
-    uni.showLoading({
-        title: "保存中...",
-        mask: true,
-    });
+    uni.showLoading({ title: "保存中...", mask: true });
     try {
         await saveUserChatConfig({
             model_id: currModel.value.model_id,
@@ -627,33 +615,36 @@ const handelChatConfig = async () => {
             ...humanizeParams,
         });
         uni.hideLoading();
-        uni.showToast({
-            title: "保存成功",
-            icon: "none",
-            duration: 3000,
-        });
+        uni.showToast({ title: "保存成功", icon: "none", duration: 3000 });
         showHumanize.value = false;
     } catch (error: any) {
         uni.hideLoading();
-        uni.showToast({
-            title: error || "保存失败",
-            icon: "none",
-            duration: 3000,
-        });
+        uni.showToast({ title: error || "保存失败", icon: "none", duration: 3000 });
     }
 };
 
 const contentRef = shallowRef();
-
 const userInput = ref("");
 const scrollTop = ref<number>(0);
 
+// ===== 滚动控制相关变量 =====
+// 是否禁用自动滚动到底部（用户手动向上滑动时禁用）
+const disabledScroll = ref(false);
+// 记录上一次的滚动位置，用于判断滚动方向
+const previousScrollTop = ref(0);
+// 标记当前是否是由代码触发的滚动，避免误判用户行为
+const isProgrammaticScroll = ref(false);
+// scrolltolower 防抖定时器
+let scrollToLowerTimer: ReturnType<typeof setTimeout> | null = null;
+
 const { dynamicHeight, hideKeyboard } = useKeyboardHeight();
 const { safeAreaInsets, windowWidth, platform } = uni.getSystemInfoSync();
+
 const tabbarHeight = computed(() => {
     const fixedHeight = platform === "android" ? 95 : 125;
     return fixedHeight + (safeAreaInsets?.bottom ?? 0);
 });
+
 const bottomOffset = computed(() => {
     const otherHeight = 70 + (props.isStaff ? 20 : 0);
     return props.isHome ? tabbarHeight.value + otherHeight : otherHeight;
@@ -667,9 +658,41 @@ const spacerHeight = computed(() => {
 const handleInput = (e: any) => {
     if (userInput.value.indexOf("@") == 0 && userInput.value.length == 1) {
         openAgentPopup();
-        // 隐藏键盘
         uni.hideKeyboard();
     }
+};
+
+/**
+ * scroll 事件处理
+ * - 代码触发的滚动（isProgrammaticScroll=true）：只更新 previousScrollTop，不改变 disabledScroll
+ * - 用户手动向上滑动超过 50px：禁用自动滚动
+ * - 注意：不在此处做"接近底部恢复"的判断，避免用户手动滑到接近底部时被误触发滚底
+ */
+const handleScroll = (e: any) => {
+    const currentScrollTop = e.detail.scrollTop;
+
+    if (isProgrammaticScroll.value) {
+        // ✅ 代码滚动期间完全忽略，不更新任何状态
+        return;
+    }
+
+    if (currentScrollTop < previousScrollTop.value - 50) {
+        disabledScroll.value = true;
+    }
+
+    previousScrollTop.value = currentScrollTop;
+};
+
+/**
+ * scrolltolower 事件：用户真正滚动到底部时才恢复自动滚动
+ * 加防抖避免边界抖动反复触发
+ */
+const handleScrollToLower = () => {
+    if (scrollToLowerTimer) clearTimeout(scrollToLowerTimer);
+    scrollToLowerTimer = setTimeout(() => {
+        disabledScroll.value = false;
+        // ✅ 不在这里赋 previousScrollTop，由 handleScroll 自己维护
+    }, 100);
 };
 
 const contentPost = () => {
@@ -680,6 +703,11 @@ const contentPost = () => {
     }
     if (props.sendDisabled) return;
     emit("contentPost", userInput.value);
+
+    // 发送消息时重置滚动禁用状态，确保新消息可以自动滚到底部
+    disabledScroll.value = false;
+    previousScrollTop.value = 0;
+
     nextTick(() => {
         scrollToBottom();
     });
@@ -687,10 +715,6 @@ const contentPost = () => {
     userInput.value = "";
     fileList.value = [];
     emit("update:fileList", []);
-};
-
-const chatAdd = () => {
-    emit("add-session");
 };
 
 const chatClose = () => {
@@ -704,18 +728,44 @@ const openAgentPopup = () => {
 
 const checkLogin = () => {
     if (!isLogin.value) {
-        uni.$u.route({
-            url: "/pages/login/login",
-        });
+        uni.$u.route({ url: "/pages/login/login" });
         return;
     }
 };
 
 const { proxy }: any = getCurrentInstance();
+
+/**
+ * scrollToBottom
+ * 1. disabledScroll 为 true 时直接跳过
+ * 2. 标记 isProgrammaticScroll，避免代码滚动被误判为用户手动向上滑动
+ * 3. 解决 scrollTop 值相同时 scroll-view 不响应的问题：先赋 height-1，再赋 height
+ */
 const scrollToBottom = async () => {
+    if (disabledScroll.value) return;
+
     await nextTick();
     getRect(".content-box", false, proxy).then((res: any) => {
-        scrollTop.value = res.height;
+        const targetTop = res.height;
+
+        // ✅ 先同步设置标记，再修改 scrollTop，避免时序问题
+        isProgrammaticScroll.value = true;
+
+        if (scrollTop.value === targetTop) {
+            scrollTop.value = targetTop - 1;
+            nextTick(() => {
+                scrollTop.value = targetTop;
+            });
+        } else {
+            scrollTop.value = targetTop;
+        }
+
+        // ✅ 用固定延迟重置，覆盖滚动动画时间
+        setTimeout(() => {
+            isProgrammaticScroll.value = false;
+            // 同步一次实际位置，给下次方向判断用
+            previousScrollTop.value = targetTop;
+        }, 300);
     });
 };
 
@@ -754,10 +804,7 @@ const agentList = ref<any[]>([]);
 const agentPagingRef = shallowRef();
 const getAgentList = async (page_no: number, page_size: number) => {
     try {
-        const { lists } = await getAgentListApi({
-            page_no,
-            page_size,
-        });
+        const { lists } = await getAgentListApi({ page_no, page_size });
         agentPagingRef.value?.complete(lists);
     } catch (error: any) {
         agentPagingRef.value?.complete([]);
@@ -765,31 +812,46 @@ const getAgentList = async (page_no: number, page_size: number) => {
 };
 
 const toPage = (page: string) => {
-    uni.$u.route({
-        url: `/ai_modules/${page}/pages/index/index`,
-    });
+    uni.$u.route({ url: `/ai_modules/${page}/pages/index/index` });
 };
 
 watch(
     () => appStore.getAiModelConfig,
     (val) => {
-        if (val) {
-            getChatConfig();
+        if (val) getChatConfig();
+    },
+    { deep: true, immediate: true }
+);
+
+watch(
+    () => props.contentList,
+    (newVal) => {
+        // 列表清空时，重置所有滚动状态
+        if (newVal.length === 0) {
+            disabledScroll.value = false;
+            previousScrollTop.value = 0;
+            isProgrammaticScroll.value = false;
+            scrollTop.value = 0;
         }
     },
-    {
-        deep: true,
-        immediate: true,
-    }
+    { deep: false }
 );
 
 onUnmounted(() => {
     chatClose();
     hideKeyboard();
+    // 清理防抖定时器，避免内存泄漏
+    if (scrollToLowerTimer) clearTimeout(scrollToLowerTimer);
 });
 
 defineExpose({
     scrollToBottom,
+    resetScroll: () => {
+        disabledScroll.value = false;
+        previousScrollTop.value = 0;
+        isProgrammaticScroll.value = false;
+        scrollTop.value = 0;
+    },
     setUserInput,
     getChatConfig: () => {
         return {
@@ -807,10 +869,7 @@ defineExpose({
     handleModel,
     handleModelClear,
     hideKeyboard,
-    // 弹起键盘
-    openKeyboard: () => {
-        // handleInputFocus();
-    },
+    openKeyboard: () => {},
 });
 </script>
 

@@ -51,10 +51,11 @@ class WechatUserService
         $this->unionid = $response['unionid'] ?? '';
         $this->nickname = $response['nickname'] ?? '';
         $this->headimgurl = $response['headimgurl'] ?? '';
-        $this->mobile = $response['phoneNumber']?? '';
+        $this->mobile = $response['phoneNumber'] ?? '';
     }
 
-    public function checkPhoneNumber(){
+    public function checkPhoneNumber()
+    {
         $user = User::alias('u')
             ->field('u.id,u.sn,u.mobile,u.nickname,u.avatar,u.mobile,u.is_disable,u.is_new_user')
             //->join('user_auth au', 'au.user_id = u.id')
@@ -62,9 +63,9 @@ class WechatUserService
             //->where('au.openid', '=', $this->openid)
             ->findOrEmpty();
 
-        if($user->isEmpty()){
+        if ($user->isEmpty()) {
             return false;
-        }else{
+        } else {
             return true;
         }
     }
@@ -85,9 +86,9 @@ class WechatUserService
             ->field('u.id,u.sn,u.mobile,u.nickname,u.avatar,u.mobile,u.is_disable,u.is_new_user')
             ->join('user_auth au', 'au.user_id = u.id', 'left');
 
-        if($check){
+        if ($check) {
             $query->where('u.mobile', '=', $this->mobile);
-        }else{
+        } else {
             $query->where(function ($query) use ($openid, $unionid) {
                 $query->whereOr(['au.openid' => $openid]);
                 if (isset($unionid) && $unionid) {
@@ -96,7 +97,7 @@ class WechatUserService
             });
         }
         $user = $query->findOrEmpty();
-        
+
         $this->user = $user;
         return $this;
     }
@@ -170,7 +171,7 @@ class WechatUserService
 
         $this->user->save();
 
-        
+
         //注册赠送算力
         if (!empty($tokens)) {
             AccountLogLogic::add(
@@ -182,8 +183,15 @@ class WechatUserService
                 AccountLogEnum::getChangeTypeDesc(AccountLogEnum::TOKENS_INC_REGISTER)
             );
         }
+
+        // 分销邀请绑定
+        $inviterId = request()->param('inviter_id', 0);
+        if ($inviterId > 0) {
+            \app\api\logic\LoginLogic::bindInviter($this->user->id, $inviterId);
+        }
+
         $userAuth = UserAuth::where('openid', $this->openid)->findOrEmpty();
-        if(!$userAuth->isEmpty()){
+        if (!$userAuth->isEmpty()) {
             $userAuth->openid = $userAuth->openid . '_' . $userAuth->user_id;
             $userAuth->save();
         }
@@ -206,43 +214,43 @@ class WechatUserService
      */
     private function updateUser($type = 1): void
     {
-        
+
         // 无头像需要更新头像
         if (empty($this->user->avatar)) {
             $this->user->avatar = $this->getAvatarByWechat();
             $this->user->save();
         }
 
-        if($this->mobile){
+        if ($this->mobile) {
             $this->user->mobile = $this->mobile;
             $this->user->save();
         }
 
         $find = UserAuth::where('openid', $this->openid)->where('user_id', '<>', $this->user->id)->findOrEmpty();
-        if(!$find->isEmpty()){
+        if (!$find->isEmpty()) {
             $find->openid = $find->openid . '_' . $find->user_id;
             $find->save();
         }
-        
-        $where['user_id'] =  $this->user->id;
-        $where['openid'] =  $this->openid;
-        if ($type == 0){
+
+        $where['user_id'] = $this->user->id;
+        $where['openid'] = $this->openid;
+        if ($type == 0) {
             unset($where['openid']);
         }
         $userAuth = UserAuth::where($where)
             ->findOrEmpty();
-        if ($type == 0){//小程序只能存在一个openid
+        if ($type == 0) {//小程序只能存在一个openid
             $userAuth->openid = $this->openid;
             $userAuth->user_id = $this->user->id;
         }
-        
+
         // 无该端授权信息，新增一条
         if ($userAuth->isEmpty()) {
             $userAuth->user_id = $this->user->id;
             $userAuth->openid = $this->openid;
             $userAuth->unionid = $this->unionid;
             $userAuth->terminal = $this->terminal;
-           
+
             //$userAuth->save();
         } else {
             if (empty($userAuth['unionid']) && !empty($this->unionid)) {
@@ -250,7 +258,7 @@ class WechatUserService
                 //$userAuth->save();
             }
         }
-        
+
         $userAuth->save();
     }
 

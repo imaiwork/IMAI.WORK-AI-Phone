@@ -36,9 +36,9 @@
                         @change="resetPage"
                         @keyup.enter="resetPage">
                         <el-option label="全部" value="" />
-                        <el-option label="等待处理" :value="1" />
-                        <el-option label="执行中" :value="2" />
-                        <el-option label="已完成" :value="3" />
+                        <el-option label="待执行" :value="0" />
+                        <el-option label="发布中" :value="1" />
+                        <el-option label="已完成" :value="2" />
                     </el-select>
                 </el-form-item>
                 <el-form-item label="创作时间">
@@ -90,13 +90,13 @@
                             <div
                                 class="w-[6px] h-[6px] rounded-full"
                                 :class="{
-                                    'bg-[#FFBC50]': (row.status = 1),
-                                    'bg-primary': row.status == 2,
-                                    'bg-[#3BB840]': row.status == 3,
+                                    'bg-[#FFBC50]': row.status == 0,
+                                    'bg-primary': row.status == 1,
+                                    'bg-[#3BB840]': row.status == 2,
                                 }"></div>
-                            <div v-if="row.status == 1">待执行</div>
-                            <div v-else-if="row.status == 2">发布中</div>
-                            <div v-else-if="row.status == 3">已完成</div>
+                            <div v-if="row.status == 0">待执行</div>
+                            <div v-else-if="row.status == 1">发布中</div>
+                            <div v-else-if="row.status == 2">已完成</div>
                             <div v-else>-</div>
                         </div>
                     </template>

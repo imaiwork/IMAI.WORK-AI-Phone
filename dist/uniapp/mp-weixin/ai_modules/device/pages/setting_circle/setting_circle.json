@@ -1,9 +1,8 @@
 {
-  "navigationBarTitleText": "朋友圈互动设置",
+  "navigationBarTitleText": "发布朋友圈配置",
   "usingComponents": {
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "u-radio": "../../../../uni_modules/vk-uview-ui/components/u-radio/u-radio",
-    "u-radio-group": "../../../../uni_modules/vk-uview-ui/components/u-radio-group/u-radio-group",
-    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input"
+    "empty": "../../../../components/empty/empty",
+    "video-preview": "../../../../components/video-preview/video-preview"
   }
 }

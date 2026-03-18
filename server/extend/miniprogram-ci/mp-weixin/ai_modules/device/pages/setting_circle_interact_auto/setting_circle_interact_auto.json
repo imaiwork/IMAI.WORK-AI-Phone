@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "朋友圈互动配置",
+  "usingComponents": {
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-slider": "../../../../uni_modules/vk-uview-ui/components/u-slider/u-slider",
+    "keywords-edit": "../../components/keywords-edit/keywords-edit"
+  }
+}

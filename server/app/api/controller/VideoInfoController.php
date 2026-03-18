@@ -649,6 +649,10 @@ class VideoInfoController extends BaseApiController
             }
 
             $thumbnailUrl = $this->videoInfoService->generateThumbnail($videoUrl, $time, $options);
+            if (!$thumbnailUrl) {
+                return ['result' => false, 'url' => '', 'msg' => '缩略图生成失败'];
+            }
+
             $localPath    = public_path() . $thumbnailUrl;
             $thumbnailUrl = FileService::getFileUrl($thumbnailUrl);
             $default      = ConfigService::get('storage', 'default', 'local');
@@ -658,17 +662,14 @@ class VideoInfoController extends BaseApiController
                     $url     = UploadService::uploadToOSS($localPath, $ossPath);
                 }
             }
-            if ($thumbnailUrl) {
-                return [
-                    'result'  => true,
-                    'msg'     => '缩略图生成成功',
-                    'url'     => isset($url) ? FileService::getFileUrl($url) : $thumbnailUrl,
-                    'time'    => $time,
-                    'options' => $options
-                ];
-            } else {
-                return ['result' => false, 'url' => '', 'msg' => '缩略图生成失败'];
-            }
+
+            return [
+                'result'  => true,
+                'msg'     => '缩略图生成成功',
+                'url'     => isset($url) ? FileService::getFileUrl($url) : $thumbnailUrl,
+                'time'    => $time,
+                'options' => $options
+            ];
 
         } catch (Exception $e) {
             return ['result' => false, 'url' => '', 'msg' => $e->getMessage()];

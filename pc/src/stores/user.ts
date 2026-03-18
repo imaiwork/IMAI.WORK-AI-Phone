@@ -30,7 +30,7 @@ export const useUserStore = defineStore("userStore", {
     },
     getters: {
         isLogin: (state) => !!state.token,
-        userTokens: (state) => parseFloat(state.userInfo.tokens),
+        userTokens: (state) => parseFloat(state.userInfo.tokens || 0),
         getTokenByScene: (state) => (scene: string) => state.tokensConfig.find((item) => item.scene === scene) || {},
     },
     actions: {

@@ -46,7 +46,7 @@
                         ]"
                         @click="handleAgentClick(item)">
                         <div class="relative">
-                            <img :src="item.image" class="w-10 h-10 object-cover rounded-xl" />
+                            <img :src="item.logo" class="w-10 h-10 object-cover rounded-xl" />
                             <div
                                 v-if="isCurrentAgent(item.id)"
                                 class="absolute -right-1 -top-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center border-2 border-white">
@@ -68,7 +68,6 @@
 
 <script setup lang="ts">
 import { getAgentList, getCozeAgentList, getSystemAgentList } from "@/api/agent";
-import DouBaoLogo from "@/assets/images/doubao.png";
 
 const props = withDefaults(
     defineProps<{
@@ -121,9 +120,9 @@ const { pager, getLists, resetPage } = usePaging({
 
 const computedAgentList = computed(() => {
     if (selectedAgent.value === 1) {
-        return pager.lists
-            .filter((item: any) => (props.systemAgentIds.length > 0 ? props.systemAgentIds.includes(item.id) : true))
-            .map((item: any) => ({ ...item, image: DouBaoLogo }));
+        return pager.lists.filter((item: any) =>
+            props.systemAgentIds.length > 0 ? props.systemAgentIds.includes(item.id) : true
+        );
     }
     return pager.lists;
 });

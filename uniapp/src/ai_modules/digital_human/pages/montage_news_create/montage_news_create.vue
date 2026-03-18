@@ -256,7 +256,7 @@
                             <navigator
                                 :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
                                     formData.music
-                                )}&volume=${formData.extra.volume}`"
+                                )}&volume=${formData.extra.volume}&ai_music=${formData.extra.ai_music}`"
                                 hover-class="none"
                                 class="flex items-center gap-x-1">
                                 <view>
@@ -264,7 +264,8 @@
                                         共<text class="mx-1 text-primary font-medium">{{ formData.music.length }}</text
                                         >个
                                     </template>
-                                    <text class="text-[#000000]/70" v-else>AI音乐库</text>
+                                    <text class="text-[#000000]/70" v-else-if="formData.extra.ai_music">AI音乐库</text>
+                                    <text class="text-[#000000]/70" v-else>无</text>
                                 </view>
                                 <u-icon name="arrow-right" :size="20" color="#B2B2B2"></u-icon>
                             </navigator>
@@ -466,6 +467,7 @@ const formData = reactive<{
     shanjian_type: MontageTypeEnum;
     music: any[];
     extra: {
+        ai_music: boolean;
         volume: number;
         clip: number;
         music: number;
@@ -483,6 +485,7 @@ const formData = reactive<{
     shanjian_type: MontageTypeEnum.NEWS_BODY,
     music: [],
     extra: {
+        ai_music: true,
         volume: 0.5,
         clip: 0,
         music: 0,
@@ -771,7 +774,13 @@ onLoad(() => {
             }
         }
         if (type === ListenerTypeEnum.CHOOSE_MUSIC) {
-            formData.music = data.music;
+            if (data.music == -1) {
+                formData.extra.ai_music = true;
+                formData.music = [];
+            } else {
+                formData.music = data.music;
+                formData.extra.ai_music = false;
+            }
             formData.extra.volume = data.volume;
         }
         if (type === ListenerTypeEnum.CHOOSE_VIDEO_STYLES) {

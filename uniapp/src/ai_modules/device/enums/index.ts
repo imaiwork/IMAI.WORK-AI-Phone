@@ -28,6 +28,7 @@ export enum ListenerTypeEnum {
     CLUE_LIST = "clue-list",
     // 朋友圈
     CIRCLE_INTERACT = "circle-interact",
+    CIRCLE_INTERACT_PROMPT = "circle-interact-prompt",
 }
 
 // 创建类型

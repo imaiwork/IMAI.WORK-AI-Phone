@@ -194,6 +194,15 @@ export function useChatAreaManager(options: UseChatAreaOptions) {
     };
 
     /**
+     * @description 设置智能体列表。
+     * @param agentList - 智能体列表。
+     */
+    const setAgentList = async (lists: { name: string; id: string; image: string }[]) => {
+        agentList.value = lists;
+        updateAgentList(lists);
+    };
+
+    /**
      * @description 手动插入文本
      * @param text
      */
@@ -208,27 +217,15 @@ export function useChatAreaManager(options: UseChatAreaOptions) {
         chatAreaInstance.updateUserList(agentList);
     };
 
-    /**
-     * @description 从API获取智能体列表。
-     */
-    const getAgentList = async () => {
-        try {
-            const { lists } = await getAgentListApi({ page_size: 1500, source: 1 });
-            agentList.value = lists.map((item) => ({ name: item.name, id: item.id }));
-            updateAgentList(agentList.value);
-        } catch (error) {
-            console.error("获取智能体列表失败:", error);
-        }
-    };
-
     return {
         chatAreaRef,
         agent: currentAgent,
+        agentList,
+        setAgentList,
         setup,
         clear,
         dispose,
         getText,
-        getAgentList,
         isAgent,
         setAgent,
         setText,

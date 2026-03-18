@@ -62,7 +62,7 @@ class ShanjianVideoTaskController extends BaseApiController
         $lockKey = '';
         try {
             $data = $this->request->all();
-            Log::channel('shanjiannotice')->write('接收闪剪参数'.json_encode($data));
+            Log::channel('shanjiannotice')->write('接收闪剪参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             
             $taskId = $data['task_id'] ?? '';
             if (empty($taskId)) {

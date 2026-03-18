@@ -21,6 +21,7 @@ use app\common\model\sv\SvPublishSettingAccount;
 use app\common\model\sv\SvPublishSettingDetail;
 use app\common\model\wechat\AiWechat;
 use app\common\model\sv\SvWechatStrategy;
+use app\common\model\sv\SvDeviceTaskLog;
 
 use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\model\wechat\AiWechatCircleTask;
@@ -551,6 +552,8 @@ class TaskLogic extends ApiLogic
             }
 
             SvDeviceTask::Where('id', $params['id'])->where('user_id', self::$uid)->delete();
+            \app\common\model\sv\SvDeviceTaskLog::where('task_id', $params['id'])->select()->delete();
+
             Db::commit();
             return true;
         } catch (\Exception $e) {
@@ -714,6 +717,8 @@ class TaskLogic extends ApiLogic
             $task['start_time'] = date('H:i', $task['start_time']);
             $task['end_time'] = date('H:i', $task['end_time']);
             $task['task_type'] = DeviceEnum::getTaskTypeByAuto($task['task_type']);
+            $task['log'] = SvDeviceTaskLog::where('task_id', $params['id'])->order('create_time', 'asc')->select()->toArray();
+            
             self::$returnData = $task;
             return true;
         } catch (\Exception $e) {

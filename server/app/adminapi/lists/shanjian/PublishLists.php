@@ -56,12 +56,20 @@ class PublishLists extends BaseAdminDataLists implements ListsSearchInterface
                 $item['count'] = SvPublishSettingAccount::where('publish_id', $item['id'])->sum('count');
                 $item['published_count'] = SvPublishSettingDetail::where('publish_id', $item['id'])->where('status', 'in', [1, 2])->count();
 
-                if ((int)$item['published_count'] > (int)$item['count']) {
-                    $item['count'] = $item['published_count'];
-                    if ($item->status === 2) {
+                // if ((int)$item['published_count'] > (int)$item['count']) {
+                //     $item['count'] = $item['published_count'];
+                //     if ($item->status === 2) {
+                //         $item->status = 3;
+                //     }
+                // }
+
+                if($item->status === 2) {
+                    $rows = SvPublishSettingDetail::where('publish_id', $item['id'])->where('status', 'in', [0, 3])->count();
+                    if($rows === 0) {
                         $item->status = 3;
                     }
                 }
+                
                 $item->save();
                 ///$times = SvPublishSettingDetail::where('publish_id', $item['id'])->where('status', 'in', [0, 3])->column('publish_time');
                 $item['times'] = array_map(function ($time) {

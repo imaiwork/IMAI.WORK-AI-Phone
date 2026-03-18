@@ -35,7 +35,7 @@
                                 class="absolute inset-0 w-full h-full object-cover blur-xl opacity-20 scale-110" />
                             <img :src="formData[type]" class="relative z-10 w-full h-full object-contain p-2" />
                             <div
-                                class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center justify-center">
+                                class="absolute inset-0 bg-[#000000]/20 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center justify-center">
                                 <div class="px-4 py-1.5 bg-white rounded-full text-xs font-black text-[#1E293B]">
                                     更换素材
                                 </div>
@@ -104,6 +104,8 @@
                                     show-progress
                                     :show-file-list="false"
                                     :accept="accept"
+                                    :max-size="5"
+                                    :image-resolution="[4096, 4096]"
                                     @success="getUploadModelImage">
                                     <div
                                         class="h-[140px] w-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-br bg-gray-50/50 hover:border-primary hover:bg-blue-50/50 transition-all cursor-pointer group">
@@ -207,12 +209,12 @@ const imageResolution = [4096, 4096];
 
 const getUploadImage = (result: any, type: string) => {
     const uri = result.data.uri;
-    if (formData.type == FashionImageTypeEnum.DRESS) {
-        formData.upper_clothes = uri;
-        formData.lower_clothes = formData.upper_clothes;
-        return;
-    }
     formData[type] = uri;
+    // if (formData.type == FashionImageTypeEnum.DRESS) {
+    //     formData.upper_clothes = uri;
+    //     formData.lower_clothes = formData.upper_clothes;
+    //     return;
+    // }
 };
 
 // 图片上传 End
@@ -340,6 +342,10 @@ watchEffect(() => {
 
 defineExpose({
     getFormData: () => {
+        if (formData.type == FashionImageTypeEnum.DRESS) {
+            formData.upper_clothes = formData.dress;
+            formData.lower_clothes = formData.dress;
+        }
         return {
             params: {
                 upper_clothes: formData.upper_clothes,
@@ -353,24 +359,28 @@ defineExpose({
     },
     validateForm: () => {
         return new Promise((resolve, reject) => {
-            if (!formData.upper_clothes) {
-                feedback.msgWarning("请上传上衣");
-                reject(false);
-                return;
-            }
-            if (formData.type == FashionImageTypeEnum.UPPER_LOWER_CLOTHES) {
-                if (!formData.lower_clothes) {
-                    feedback.msgWarning("请上传下装");
-                    reject(false);
-                    return;
-                }
+            const isDress = formData.type === FashionImageTypeEnum.DRESS;
+
+            if (isDress && !formData.dress) {
+                feedback.msgWarning("请上传全身装");
+                return reject(false);
             }
 
-            if (formData.persons.length == 0) {
-                feedback.msgWarning("请选择模特");
-                reject(false);
-                return;
+            if (!isDress && !formData.upper_clothes) {
+                feedback.msgWarning("请上传上装");
+                return reject(false);
             }
+
+            if (!isDress && !formData.lower_clothes) {
+                feedback.msgWarning("请上传下装");
+                return reject(false);
+            }
+
+            if (formData.persons.length === 0) {
+                feedback.msgWarning("请选择模特");
+                return reject(false);
+            }
+
             resolve(true);
         });
     },

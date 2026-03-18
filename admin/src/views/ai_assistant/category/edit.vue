@@ -36,7 +36,7 @@
                 </el-form-item>
                 <el-form-item label="排序" prop="sort">
                     <div>
-                        <el-input class="ls-input" v-model="formData.sort" />
+                        <el-input class="ls-input" v-model="formData.sort" :min="0" :max="9999" />
                         <div class="form-tips">默认为0，数值越大排越前面</div>
                     </div>
                 </el-form-item>

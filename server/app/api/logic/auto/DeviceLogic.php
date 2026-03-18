@@ -33,12 +33,14 @@ class DeviceLogic extends ApiLogic
             if (
                 isset($reportJson['Operations']['contentType1']) && !empty($reportJson['Operations']['contentType1']) &&
                 isset($reportJson['Operations']['contentType2']) && !empty($reportJson['Operations']['contentType2']) &&
-                isset($reportJson['Operations']['contentType3']) && !empty($reportJson['Operations']['contentType3'])
+                isset($reportJson['Operations']['contentType3']) && !empty($reportJson['Operations']['contentType3']) &&
+                isset($reportJson['Operations']['industryType']) && !empty($reportJson['Operations']['industryType'])
 
             ) {
                 $params['contentType3'] = $reportJson['Operations']['contentType3'];
                 $params['contentType2'] = $reportJson['Operations']['contentType2'];
                 $params['contentType1'] = $reportJson['Operations']['contentType1'];
+                $params['industryType'] = $reportJson['Operations']['industryType'];
             } else {
                 throw new \Exception('当前设备分析报告数据异常，请稍后再试');
             }
@@ -127,6 +129,7 @@ class DeviceLogic extends ApiLogic
                     "contentType1"     => $params['contentType1'] ?? "", //内容类型1
                     "contentType2"     => $params["contentType2"] ?? "", //内容类型2
                     "contentType3"     => $params["contentType3"] ?? "", //内容类型3
+                    "industryType"     => $params["industryType"] ?? "", //行业类型
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 $find->save();
 
@@ -135,6 +138,7 @@ class DeviceLogic extends ApiLogic
                 $result["contentType1"] = $analysis["contentType1"] ?? '';
                 $result["contentType2"] = $analysis["contentType2"] ?? '';
                 $result["contentType3"] = $analysis["contentType3"] ?? '';
+                $result["industryType"] = $analysis["industryType"] ?? ''; //行业类型
                 self::$returnData       = $result;
             } else {
                 $params['create_time']     = time();
@@ -146,6 +150,7 @@ class DeviceLogic extends ApiLogic
                     "contentType1"     => $params['contentType1'] ?? "", //内容类型1
                     "contentType2"     => $params["contentType2"] ?? "", //内容类型2
                     "contentType3"     => $params["contentType3"] ?? "", //内容类型3
+                    "industryType"     => $params["industryType"] ?? "", //行业类型
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 $result                 = AutoDeviceConfig::create($params);
                 $result                 = $result->toArray();
@@ -153,6 +158,7 @@ class DeviceLogic extends ApiLogic
                 $result["contentType1"] = $analysis["contentType1"] ?? '';
                 $result["contentType2"] = $analysis["contentType2"] ?? '';
                 $result["contentType3"] = $analysis["contentType3"] ?? '';
+                $result["industryType"] = $analysis["industryType"] ?? ''; //行业类型
                 self::$returnData       = $result;
             }
             return true;
@@ -607,7 +613,7 @@ class DeviceLogic extends ApiLogic
                 break;
             case DeviceEnum::AUTO_DEMO_PUBLISH_CIRCLE:
 
-                $task = self::getAutoPublishCircleTask($params);
+                $task = self::getAutoPublishCircleTask($params, $account);
                 $payload = array(
                     'appType' => $account->type,
                     'messageId' => 0,
@@ -615,20 +621,19 @@ class DeviceLogic extends ApiLogic
                     'deviceId' => $params['device_code'],
                     'appVersion' => '2.7.3',
                     'content' => json_encode([
-                        'material_id' => 0,
-                        'title' => '👍',
-                        'type' => 1,
-                        'list' => [
-                            'https://demo.imai.work/uploads/demo/1.mp4',
-                        ],
+                        'publish_platform' => 2,
+                        'material_id' => $task['material_id'],
+                        'title' => $task['title'],
+                        'type' => $task['type'],
+                        'list' => $task['list'],
                         'isLocation' => 0,
                         'location' => '',
                         'isScheduledTime' => true,
-                        'scheduledTime' => date('Y-m-d H:i:s', time()),
-                        'taskId' => 0,
-                        'body' => '👍',
-                        'tag' => '',
-                        'comment' => '',
+                        'scheduledTime' => $task['send_time'] ?? date('Y-m-d H:i:s', time()),
+                        'taskId' => $task['material_id'],
+                        'body' => $task['body'],
+                        'tag' => $task['tag'] ?? '',
+                        'comment' => $task['comment'] ?? '',
                         'isSend' => 0,
                         'isDemoData' => $task['is_demo_data'],
                     ], JSON_UNESCAPED_UNICODE)
@@ -769,7 +774,7 @@ class DeviceLogic extends ApiLogic
         return $publish->toArray();
     }
 
-    private static function getAutoPublishCircleTask(array $params)
+    private static function getAutoPublishCircleTask(array $params, SvAccount $account)
     {
         $payload = [
             'material_id' => 0,
@@ -778,10 +783,6 @@ class DeviceLogic extends ApiLogic
             'list' => [
                 'https://demo.imai.work/uploads/demo/1.mp4',
             ],
-            'isLocation' => 0,
-            'location' => '',
-            'isScheduledTime' => true,
-            'scheduledTime' => date('Y-m-d H:i:s', time()),
             'taskId' => 0,
             'body' => '👍',
             'tag' => '',
@@ -789,7 +790,37 @@ class DeviceLogic extends ApiLogic
             'is_demo_data' => 1,
         ];
 
-        return $payload;
+        $task = SvDeviceTask::where('device_code', $params['device_code'])
+            ->where('task_type', DeviceEnum::TASK_TYPE_WECHAT_CIRCLE)
+            ->where('account_type', $account->type)
+            ->where('user_id', self::$uid)
+            ->order('id', 'desc')
+            ->limit(1)
+            ->findOrEmpty();
+       
+        if ($task->isEmpty()) {
+            return $payload;
+        }
+
+        $publish = \app\common\model\wechat\AiWechatCircleTask::field('*')
+            ->where('id', $task->sub_data_id)
+            ->where('device_code', '=', $task->device_code)
+            ->where('wechat_id', $task->account)
+            ->order('send_time desc')
+            ->limit(1)
+            ->findOrEmpty();
+        if ($publish->isEmpty()) {
+            return $payload;
+        }
+        $publish->id = 0;
+        $publish->publish_platform = $account->type;
+        $publish->material_id = $publish->id;
+        $publish->title = $publish->content;
+        $publish->list = $publish->attachment_content;
+        $publish->body = $publish->content;
+        $publish->type = $publish->attachment_type == 1 ? 2 : 1;
+        $publish->is_demo_data = 0;
+        return $publish->toArray();
     }
 
     private static function getAutoFriendTask(array $params)

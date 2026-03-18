@@ -208,4 +208,19 @@ class UserController extends BaseApiController
         }
         return $this->fail(UserLogic::getError());
     }
+
+    /**
+     * 绑定上级用户
+     * @return Json
+     */
+    public function bindUser(): Json
+    {
+        $params = $this->request->post();
+        $params['user_id'] = $this->userId;
+        $res = UserLogic::bindUser($params);
+        if ($res) {
+            return $this->success('绑定成功');
+        }
+        return $this->fail(UserLogic::getError());
+    }
 }

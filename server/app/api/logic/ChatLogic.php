@@ -827,7 +827,7 @@ class ChatLogic extends ApiLogic
                 ->where('assistant_id', $params['assistant_id'])
                 ->whereIn('chat_type', [AccountLogEnum::TOKENS_DEC_COMMON_CHAT, AccountLogEnum::TOKENS_DEC_SCENE_CHAT, AccountLogEnum::TOKENS_DEC_KNOWLEDGE_CHAT, AccountLogEnum::TOKENS_DEC_OPENAI_CHAT])
                 ->where('task_id', $params['task_id'])
-                ->field('id,user_id,task_id,assistant_id,message,reasoning_content,usage_tokens,reply,file_ids,create_time,extra,quotes')
+                ->field('id,user_id,task_id,robot_id,assistant_id,message,reasoning_content,usage_tokens,reply,file_ids,create_time,extra,quotes')
                 ->order('id asc')->select()
                 ->each(function ($item) use (&$logList) {
 
@@ -845,6 +845,11 @@ class ChatLogic extends ApiLogic
 
                     $user_avatar = User::where('id', $item['user_id'])->value('avatar') ?? '';
                     $assistants_avatar = Assistants::where('id', $item['assistant_id'] ?: 1)->value('logo') ?? '';
+                    if (!empty($item['robot_id'])){
+                        $robot = KbRobot::field('name,image')->where('id', $item['robot_id'])->findOrEmpty();
+                    }
+                    $robot_avatar = !empty($robot['image']) ? $robot['image'] : '';
+                    $robot_name = !empty($robot['name']) ? $robot['name'] : '';
 
                     if (mb_strpos($item['message'], '请根据以下知识库内容回答问题：', 0, 'UTF-8') !== false) {
                         $lastSepPos      = mb_strrpos($item['message'], '问题：', 0, 'UTF-8');
@@ -865,7 +870,8 @@ class ChatLogic extends ApiLogic
                     ];
 
                     $logList[] = [
-                        'avatar' => FileService::getFileUrl($assistants_avatar),
+                        'avatar' => !empty($robot_avatar) ? FileService::getFileUrl($robot_avatar) : FileService::getFileUrl($assistants_avatar),
+                        'robot_name' => $robot_name,
                         'reply' => $item['reply'],
                         'reasoning_content' => $item['reasoning_content'],
                         'type' => 2,

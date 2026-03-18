@@ -3,14 +3,20 @@
 namespace app\api\logic\shanjian;
 
 use app\api\logic\ApiLogic;
+use app\api\logic\auto\AutoDeviceSettingLogic;
+use app\api\logic\device\TaskLogic;
 use app\api\logic\service\TokenLogService;
+use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\ModelConfig;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\model\sv\SvAccount;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
+use app\common\model\wechat\AiWechatCircleTask;
+use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\service\FileService;
 use think\facade\Db;
 use think\facade\Log;
@@ -111,14 +117,15 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     $setPublish = true;
                     $videoSetting->status = 4;
                 }
-
             }
 
             $videoSetting->save();
 
-            if ($videoSetting->auto_type == 1 && $setPublish){
+            if ($videoSetting->wechat_type == 1 && $setPublish && $videoSetting->auto_type == 1) {
                 return true;
-            }else{
+            } elseif ($videoSetting->auto_type == 1 && $setPublish) {
+                return true;
+            } else {
                 return false;
             }
         } catch (\Exception $e) {
@@ -218,7 +225,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
      */
     public static function notify(array $data): bool
     {
-       return false;
+        return false;
         $notice = $setPublish = false;
         if (!isset($data['task_id']) || empty($data['task_id'])) {
             self::setError('缺少任务ID');
@@ -318,16 +325,16 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
                             switch ($task->shanjian_type) {
                                 case 1:
-                                    $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费' ;
+                                    $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费';
                                     break;
                                 case 2:
                                     $kf = '真人口播混剪视预扣费超额扣费退费';
                                     break;
                                 case 3:
-                                    $kf = '素材混剪视预扣费超额扣费退费' ;
+                                    $kf = '素材混剪视预扣费超额扣费退费';
                                     break;
                                 case 4:
-                                    $kf = '新闻体混剪视频预扣费超额扣费退费' ;
+                                    $kf = '新闻体混剪视频预扣费超额扣费退费';
                                     break;
                                 default:
                                     $kf = '克隆数字人混剪剪辑视频预扣费超额扣费退费';
@@ -335,7 +342,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             }
                             $sl =  round($sl, 2);
                             //调整可用余额
-                            $extra = ['扣费项目' => $kf,'实际视频时长' => $duration, '算力单价' => $unit, '实际消耗算力' => $points, '之前扣除算力' => $newpoints, '退费算力' => $sl];
+                            $extra = ['扣费项目' => $kf, '实际视频时长' => $duration, '算力单价' => $unit, '实际消耗算力' => $points, '之前扣除算力' => $newpoints, '退费算力' => $sl];
 
                             $user->tokens += $sl;
                             $user->save();
@@ -355,23 +362,23 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             $sl = $points - $newpoints;
                             switch ($task->shanjian_type) {
                                 case 1:
-                                    $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣' ;
+                                    $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣';
                                     break;
                                 case 2:
-                                    $kf = '真人口播混剪视频预扣费补足费用补扣' ;
+                                    $kf = '真人口播混剪视频预扣费补足费用补扣';
                                     break;
                                 case 3:
-                                    $kf = '素材混剪视频预扣费补足费用补扣' ;
+                                    $kf = '素材混剪视频预扣费补足费用补扣';
                                     break;
                                 case 4:
-                                    $kf = '新闻体混剪视频预扣费补足费用补扣' ;
+                                    $kf = '新闻体混剪视频预扣费补足费用补扣';
                                     break;
                                 default:
-                                    $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣' ;
+                                    $kf = '克隆数字人混剪剪辑视频预扣费补足费用补扣';
                                     break;
                             }
                             $sl =  round($sl, 2);
-                            $extra = ['扣费项目' => $kf,'实际视频时长' =>$duration, '算力单价' => $unit, '实际消耗算力' => $points, '之前扣除算力' => $newpoints, '补扣算力' => $sl];
+                            $extra = ['扣费项目' => $kf, '实际视频时长' => $duration, '算力单价' => $unit, '实际消耗算力' => $points, '之前扣除算力' => $newpoints, '补扣算力' => $sl];
 
                             $user->tokens -= $sl;
                             $user->save();
@@ -394,7 +401,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
             $task->update_time = time();
             $task->save();
-            if ($notice){
+            if ($notice) {
                 ApiLogic::sendNotice([
                     'userId' => $task->user_id,
                     'content' => $task->name,
@@ -403,7 +410,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
             }
             Db::commit();
 
-            if ($setPublish){
+            if ($setPublish) {
                 $param = [
                     'device_code' => $task->device_code,
                     'sj_video_id' => $task->id
@@ -458,8 +465,8 @@ class ShanjianVideoTaskLogic extends ApiLogic
                 self::SHANJIAN_REALMAN_BROADCAST => ['shanjian_realman_broadcast', AccountLogEnum::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN],
                 self::SHANJIAN_BROADCAST_MIXCUT => ['shanjian_broadcast_mixcut', AccountLogEnum::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN],
                 self::SHANJIAN_NEWS_MIXCUT => ['shanjian_news_mixcut', AccountLogEnum::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN],
-            };//计费
-            $unit = TokenLogService::checkToken($userId, $tokenScene);// 添加辅助参数
+            }; //计费
+            $unit = TokenLogService::checkToken($userId, $tokenScene); // 添加辅助参数
             $request['task_id'] = $taskId;
             $request['user_id'] = $userId;
             $request['now'] = time();
@@ -481,7 +488,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     $response = $response->newsMixcut($request);
                     break;
                 default:
-            }//成功响应，需要扣费
+            } //成功响应，需要扣费
 
             if (isset($response['code']) && $response['code'] == 10000) {
                 $duration = $response['data']['data']['duration'] ?? 0;
@@ -559,46 +566,47 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     $videoDuration = $extra['videoDuration'] ?? 0;
                     switch ($task->shanjian_type) {
                         case 1:
-                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
+                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8') / 3);
                             $unit = TokenLogService::checkToken($task->user_id, 'human_video_shanjian', $duration);
                             // 更新状态为视频合成中
                             $scene = self::SHANJIAN_VIDEO;
- 
+
                             $requestdata = [
                                 'styleId' => $task->clip_id,
                                 'virtualmanId' => $task->anchor_id,
                                 'packRules' => [
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
-                                        "audioUrl" => $task->music_url,
                                         "volume" => $volume
                                     ],
                                 ],
                                 'processRules' => [
                                     "watermarkShow" => false,
                                 ]
-                                ];
-                            if ( $task->title != '') {
+                            ];
+                            if ($task->title != '') {
                                 $requestdata['title'] = $task->title;
                             }
-                            if ( $task->audio_url != '') {
+                            if ($task->audio_url != '') {
                                 $requestdata['audioUrl'] = $task->audio_url;
-                            }else{
+                            } else {
                                 $requestdata['speakerId'] =  $task->voice_id;
                                 $requestdata['content'] =  $task->msg;
-
                             }
-                            if($task->card_name != ''){
+                            if ($task->card_name != '') {
                                 $requestdata['introduceCard']['name'] = $task->card_name;
                             }
-                            if($task->card_introduced != ''){
+                            if ($task->card_introduced != '') {
                                 $requestdata['introduceCard']['description'] =  $task->card_introduced;
                             }
-                            if ($soundSwitch){
+                            if ($soundSwitch) {
                                 $requestdata['materialSoundSwitch'] = !($soundSwitch == "false") && (bool)$soundSwitch;
                             }
-                            if($task->material != ''){
+                            if ($task->material != '') {
                                 $requestdata['materials'] =  $task->material;
+                            }
+                            if ($task->music_url != '') {
+                                $requestdata['packRules']['backgroundMusic']['audioUrl'] =  $task->music_url;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
                             Log::channel('shanjiannotice')->write('合成视频' . json_encode($response));
@@ -648,7 +656,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             break;
 
                         case 2:
-                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
+                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8') / 3);
                             $unit = TokenLogService::checkToken($task->user_id, 'shanjian_realman_broadcast', $duration);
                             // 更新状态为视频合成中
                             $scene = self::SHANJIAN_REALMAN_BROADCAST;
@@ -658,7 +666,6 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 'packRules' => [
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
-                                        "audioUrl" => $task->music_url,
                                         "volume" =>  $volume
                                     ],
                                 ],
@@ -666,17 +673,20 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     "watermarkShow" => false,
                                 ]
                             ];
-                            if($task->material != ''){
+                            if ($task->material != '') {
                                 $requestdata['materials'] =  $task->material;
                             }
-                            if ($soundSwitch){
+                            if ($soundSwitch) {
                                 $requestdata['materialSoundSwitch'] = !($soundSwitch == "false") && (bool)$soundSwitch;
                             }
-                            if($task->card_name != ''){
+                            if ($task->card_name != '') {
                                 $requestdata['introduceCard']['name'] = $task->card_name;
                             }
-                            if($task->card_introduced != ''){
+                            if ($task->card_introduced != '') {
                                 $requestdata['introduceCard']['description'] =  $task->card_introduced;
+                            }
+                            if ($task->music_url != '') {
+                                $requestdata['packRules']['backgroundMusic']['audioUrl'] =  $task->music_url;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
                             Log::channel('shanjiannotice')->write('合成视频' . json_encode($response));
@@ -690,7 +700,6 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     }
                                     $task->status = 2;
                                     $setPublish = self::updateVideoSettingStatus($task->video_setting_id, false);
-
                                 }
                                 $task->save();
                                 return;
@@ -724,7 +733,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             }
                             break;
                         case 3:
-                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
+                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8') / 3);
                             $unit = TokenLogService::checkToken($task->user_id, 'shanjian_broadcast_mixcut', $duration);
                             // 更新状态为视频合成中
                             $scene = self::SHANJIAN_BROADCAST_MIXCUT;
@@ -734,7 +743,6 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 'packRules' => [
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
-                                        "audioUrl" => $task->music_url,
                                         "volume" => $volume
                                     ],
                                 ],
@@ -743,24 +751,26 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 ]
                             ];
 
-                            if ( $task->title != '') {
+                            if ($task->title != '') {
                                 $requestdata['title'] = $task->title;
                             }
-                            if ( $task->audio_url != '') {
+                            if ($task->audio_url != '') {
                                 $requestdata['audioUrl'] = $task->audio_url;
-                            }else{
+                            } else {
                                 $requestdata['speakerId'] =  $task->voice_id;
                                 $requestdata['content'] =  $task->msg;
-
                             }
-                            if($task->card_name != ''){
+                            if ($task->card_name != '') {
                                 $requestdata['introduceCard']['name'] = $task->card_name;
                             }
-                            if($task->card_introduced != ''){
+                            if ($task->card_introduced != '') {
                                 $requestdata['introduceCard']['description'] =  $task->card_introduced;
                             }
-                            if($task->material != ''){
+                            if ($task->material != '') {
                                 $requestdata['materials'] =  $task->material;
+                            }
+                            if ($task->music_url != '') {
+                                $requestdata['packRules']['backgroundMusic']['audioUrl'] =  $task->music_url;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
                             Log::channel('shanjiannotice')->write('合成视频' . json_encode($response));
@@ -807,9 +817,9 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             }
                             break;
                         case 4:
-                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8')/3);
+                            $duration =  (int)(mb_strlen($task->msg, 'UTF-8') / 3);
                             $unit = TokenLogService::checkToken($task->user_id, 'shanjian_news_mixcut', $duration);
-                         
+
                             // 更新状态为视频合成中
                             $scene = self::SHANJIAN_NEWS_MIXCUT;
                             $title = str_replace('\\n', "\n", $task->title);;
@@ -819,7 +829,6 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                 'packRules' => [
                                     "backgroundMusic" => [
                                         "audioSwitch" => true,
-                                        "audioUrl" => $task->music_url,
                                         "volume" => $volume
                                     ],
                                 ],
@@ -827,17 +836,20 @@ class ShanjianVideoTaskLogic extends ApiLogic
                                     "watermarkShow" => false,
                                 ]
                             ];
-                            if($task->card_name != ''){
+                            if ($task->card_name != '') {
                                 $requestdata['introduceCard']['name'] = $task->card_name;
                             }
-                            if($task->card_introduced != ''){
+                            if ($task->card_introduced != '') {
                                 $requestdata['introduceCard']['description'] =  $task->card_introduced;
                             }
-                            if($task->material != ''){
+                            if ($task->material != '') {
                                 $requestdata['materials'] =  $task->material;
                             }
-                            if($videoDuration > 0){
+                            if ($videoDuration > 0) {
                                 $requestdata['processRules']['videoDuration'] = (int)$videoDuration;
+                            }
+                            if ($task->music_url != '') {
+                                $requestdata['packRules']['backgroundMusic']['audioUrl'] =  $task->music_url;
                             }
                             $response = self::requestUrl($requestdata, $scene, $task->user_id, $task->task_id);
                             Log::channel('shanjiannotice')->write('新闻合成视频' . json_encode($response));
@@ -914,33 +926,36 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
             foreach ($tasks as $task) {
                 try {
+                    var_dump($task->id);
                     $lockKey = 'shanjian_video_task_notify_' . $task->id;
                     $lock = cache($lockKey);
-                    if ($lock) {
-                        continue;
-                    }
+                    // if ($lock) {
+                    //     continue;
+                    // }
                     $setPublish = false;
 
                     $params = ['taskId' => $task->result_id, 'task_id' => $task->task_id];
                     $response = \app\common\service\ToolsService::Shanjian()->status($params);
-
+                    var_dump($response);
                     if (
                         !isset($response['code']) ||
                         (isset($response['data']['status']) && $response['data']['status'] == 'processing')
                     ) {
+                        var_dump(3333);
                         cache($lockKey, null);
                         continue;
                     }
                     $lock = cache($lockKey);
-                    if ($lock) {
-                        continue;
-                    }
+                    // if ($lock) {
+                    //     continue;
+                    // }
                     cache($lockKey, 1, 300);
                     $item = ShanjianVideoTask::where('id', $task->id)->find();
                     if (!$item || $item->status != 1) {
                         cache($lockKey, null);
                         continue;
                     }
+                    var_dump(4545);
                     $ShanjianVideoSetting = ShanjianVideoSetting::where('id', $item->video_setting_id)->whereIn('status', [1, 2])->findOrEmpty();
                     if ($ShanjianVideoSetting->isEmpty()) {
                         $item->status = 2;
@@ -978,6 +993,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
                     if (isset($response['data']['status'])) {
                         $data = $response['data'];
+                        var_dump($data);
                         switch ($data['status']) {
                             case 'failed':
                                 $item->video_token = 0;
@@ -1121,13 +1137,128 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         // 忽略更新失败状态时的错误
                     }
                 }
-
-                if ($setPublish) {
+                if ($setPublish && $task->auto_type == 1 && $task->wechat_type == 0) {
                     $param = [
                         'device_code' => $task->device_code,
                         'sj_video_id' => $task->id
                     ];
                     \app\api\logic\auto\PublishLogic::setShanjianPublish($param);
+                }
+                if ($setPublish && $task->wechat_type == 1) {
+                    $extrainfo = $task->extra;
+                    $wechatIds = [];
+                    $accounts = SvAccount::where('device_code', $task->device_code)
+                        ->where('type', 1)
+                        ->where('user_id', $task->user_id)
+                        ->select();
+
+                    foreach ($accounts as $account) {
+                        $wechatIds[] = $account->account;
+                    }
+
+                    if (empty($wechatIds)) {
+                        Log::channel('wechatCircle')->error('设备号: ' . $task->device_code . ', 错误信息: 该设备没有绑定微信账号' );
+                        continue;
+                    }
+                    $coze['sn'] = 0;
+                    $coze['number'] = 1;
+                    $coze['length'] = 120;
+                    $coze['keywords'] = $extrainfo['industry_type'] ?? '';
+                    $content = '';
+                    $maxRetries = 3;
+                    $retryCount = 0;
+                    while (empty($content) && $retryCount < $maxRetries) {
+                        $copywritingResult = AutoDeviceSettingLogic::copywriting($coze, $task->user_id, 4);
+                        $content = $copywritingResult['content']['0'] ?? '';
+                        $retryCount++;
+                    }
+
+                    $execTime = $extrainfo['exec_time'] ?: '["08:30-09:00"]';
+                    if (is_string($execTime)) {
+                        $execTime = json_decode($execTime, true) ?: ['08:30-09:00'];
+                    }
+
+                    $sendTimeDelay = 3;
+                    if (!empty($execTime) && is_array($execTime)) {
+                        $firstTimeRange = $execTime[0] ?? '08:30-09:00';
+                        $timeParts = explode('-', $firstTimeRange);
+                        if (!empty($timeParts[0])) {
+                            $baseTime = trim($timeParts[0]);
+                        }
+                    }
+
+                    $sendTimeStr = date('Y-m-d') . ' ' . ($baseTime ?? '08:30') . ':00';
+                    $sendTimestamp = strtotime($sendTimeStr) + ($sendTimeDelay * 60);
+
+                    $allTaskInstall = [];
+
+                    foreach ($wechatIds as $wechatId) {
+                        if (empty($video_result_url)) {
+                            Log::channel('wechatCircle')->error('设备号: ' . $task->device_code . ', 错误信息: 生产的视频链接错误' );
+                            continue;
+                        }
+                        $video_result_url = FileService::getFileUrl($video_result_url);
+                        $taskConfig = AiWechatCircleTaskConfig::create([
+                            'user_id' => $task->user_id,
+                            'task_name' => '自动化朋友圈发布任务'. date('YmdHi'),
+                            'content' => $content,
+                            'attachment_type' => 2,
+                            'attachment_content' => [$video_result_url],
+                            'wechat_ids' => [$wechatId],
+                            'status' => 1,
+                            'auto_type' => 1,
+                            'date' => date('Y-m-d'),
+                            'time_config' => $firstTimeRange,
+                            'create_time' => time(),
+                            'update_time' => time(),
+                        ]);
+
+                        $circleTask = AiWechatCircleTask::create([
+                            'user_id' => $task->user_id,
+                            'task_name' => '自动化朋友圈发布任务' . date('YmdHi'),
+                            'task_config_id' => $taskConfig->id,
+                            'device_code' => $task->device_code,
+                            'wechat_id' => $wechatId,
+                            'task_id' => time() . rand(100, 999),
+                            'task_type' => 1,
+                            'auto_type' => 1,
+                            'content' => $content,
+                            'attachment_type' => 2,
+                            'attachment_content' => [$video_result_url],
+                            'send_time' => date('Y-m-d H:i:s', $sendTimestamp),
+                            'date' => date('Y-m-d H:i:s', time()),
+                            'send_status' => 0,
+                            'create_time' => time()
+                        ]);
+
+                        $allTaskInstall[] = [
+                            'user_id' => $task->user_id,
+                            'device_code' => $task->device_code,
+                            'task_type' => DeviceEnum::TASK_TYPE_WECHAT_CIRCLE,
+                            'account' => $wechatId,
+                            'account_type' => 1,
+                            'task_name' => '自动化朋友圈发布任务' . date('YmdHi'),
+                            'status' => 0,
+                            'auto_type' => 1,
+                            'day' => date('Y-m-d', $sendTimestamp),
+                            'time_config' => json_encode($execTime, JSON_UNESCAPED_UNICODE),
+                            'start_time' => $sendTimestamp,
+                            'end_time' => $sendTimestamp + 1800,
+                            'sub_task_id' => $taskConfig->id,
+                            'sub_data_id' => $circleTask->id,
+                            'source' => DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_PUBLISH,
+                            'create_time' => time(),
+                        ];
+
+                        TaskLogic::updateWechatRpaTaskTime($task->device_code, $sendTimestamp);
+                        $item->is_publish = 1;
+                        $item->update_time = time();
+                        $item->save();
+                    }
+
+                    if (!empty($allTaskInstall)) {
+                        TaskLogic::add($allTaskInstall);
+                    } 
                 }
             }
 
@@ -1138,7 +1269,4 @@ class ShanjianVideoTaskLogic extends ApiLogic
             return false;
         }
     }
-
-
-
 }

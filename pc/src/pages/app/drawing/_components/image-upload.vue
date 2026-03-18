@@ -57,9 +57,6 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 保持原有 Props 和逻辑不变，确保业务无缝对接
- */
 interface Props {
     maxSize?: number;
     minSize?: number;
@@ -85,7 +82,6 @@ const formData: any = defineModel("modelValue");
 
 const getUploadImage = (res: any) => {
     const { uri } = res.data;
-    console.log(uri);
     formData.value[props.imgKey] = uri;
     emit("change", uri);
 };
@@ -129,12 +125,10 @@ const getUploadImage = (res: any) => {
 /* 下方上传触发区 */
 .upload-trigger-section {
     .upload-dropzone {
-        @apply w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 border-2 border-dashed border-br 
-               transition-all cursor-pointer hover:border-[#0065fb] hover:bg-[#F5F7FF];
+        @apply w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 border-2 border-dashed border-br transition-all cursor-pointer hover:border-[#0065fb] hover:bg-[#F5F7FF];
 
         .icon-circle {
-            @apply w-10 h-10 rounded-xl bg-white shadow-light flex items-center justify-center text-[#94A3B8] 
-                   transition-all group-hover:text-primary group-hover:shadow-light;
+            @apply w-10 h-10 rounded-xl bg-white shadow-light flex items-center justify-center text-[#94A3B8] transition-all group-hover:text-primary group-hover:shadow-light;
         }
 
         .text-content {

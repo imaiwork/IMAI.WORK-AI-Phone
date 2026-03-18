@@ -6,7 +6,7 @@
         <el-form class="mt-4" ref="formRef" :model="formData" label-width="120px" :rules="formRules">
             <el-card shadow="never" class="!border-none">
                 <div class="text-xl font-medium mb-[20px]">基础配置</div>
-                <el-form-item label="图标" prop="logo" v-if="type == '4'">
+                <el-form-item label="图标" prop="logo" v-if="type != '3'">
                     <material-picker v-model="formData.logo" />
                 </el-form-item>
                 <el-form-item label="AI名称" prop="name">

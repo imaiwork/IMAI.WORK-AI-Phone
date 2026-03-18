@@ -35,8 +35,11 @@ const formData = reactive({
 const handelSubmit = async () => {
     const params = {
         ...formData,
-        scene_id:
-            formData.scene_id && formData.scene_id.length > 0 ? formData.scene_id[formData.scene_id.length - 1] : "",
+        scene_id: formData.id
+            ? formData.scene_id
+            : formData.scene_id && formData.scene_id.length > 0
+            ? formData.scene_id[formData.scene_id.length - 1]
+            : "",
         template_info: JSON.stringify(formData.template_info),
         preliminary_ask: JSON.stringify(formData.preliminary_ask),
     };

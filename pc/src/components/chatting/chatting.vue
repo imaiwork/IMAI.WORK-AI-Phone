@@ -142,7 +142,7 @@
                                 v-if="fileList.length > 0">
                                 <file-lists v-model:file-list="fileList" />
                             </div>
-                            <div class="flex items-end cursor-pointer px-[18px] relative">
+                            <div class="flex items-end cursor-text px-[18px] relative">
                                 <div class="py-[12px] flex-1">
                                     <slot name="input" v-if="$slots.input"></slot>
                                     <ElInput

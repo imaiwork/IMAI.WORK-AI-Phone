@@ -213,6 +213,7 @@ class PublishLogic extends ApiLogic
                 $sjMedias = ShanjianVideoTask::where('device_code', $device->device_code)
                     ->field('id, video_setting_id,pic, msg, video_result_url, "sj" as task_type')
                     ->where('auto_type', 1)
+                    ->where('wechat_type', 0)
                     ->where('user_id', $device->user_id)
                     ->where('status', 3)
                     ->where('is_publish', 0)

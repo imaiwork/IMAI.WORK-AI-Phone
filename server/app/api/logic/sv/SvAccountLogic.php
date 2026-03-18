@@ -197,9 +197,19 @@ class SvAccountLogic extends SvBaseLogic
                 ];
                 SvSetting::create($setting);
             }
+
+            if((int)$params['account_type'] === 1){
+                \app\common\model\wechat\AiWechatSetting::where('wechat_id', $params['account'])->update([
+                    'open_ai' => $params['open_ai'] ?? 0,
+                    'robot_id' => $params['robot_id'] ?? 0,
+                    'takeover_mode' => $params['takeover_mode'] ?? 0,
+                    'update_time' => time(),
+                ]);
+            }
             unset($params['account_type']);
             // 更新设置
             SvSetting::where('account', $account->account)->update($params);
+            
 
             self::$returnData = $setting->refresh()->toArray();
             return true;

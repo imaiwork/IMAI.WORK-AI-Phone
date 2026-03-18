@@ -223,6 +223,14 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
                 'task_status' => ($status = \app\common\model\auto\AutoDeviceAddWechatConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->value('status')) !== null ? $status : 0,
                 'is_config' => \app\common\model\auto\AutoDeviceAddWechatConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1,
             ],
+            'circle_like_reply_setting' => [
+                'task_status' => ($status = \app\common\model\auto\AutoDeviceCircleLikeReplyConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->value('status')) !== null ? $status : 0,
+                'is_config' => \app\common\model\auto\AutoDeviceCircleLikeReplyConfig::where('user_id', $this->userId)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1,
+            ],
+            'wechat_circle_setting' => [
+                'task_status' => ($status = \app\common\model\auto\AutoDeviceWechatCircleConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->value('status')) !== null ? $status : 0,
+                'is_config' => \app\common\model\auto\AutoDeviceWechatCircleConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1,
+            ],
             'analysis' => [
                 'task_status' => 2,
                 'is_config' => self::checkAnalysis($find),

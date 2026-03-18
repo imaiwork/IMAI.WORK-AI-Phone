@@ -195,6 +195,7 @@ import DouyinIcon from "@/assets/images/douyin_icon.png";
 import KuaishouIcon from "@/assets/images/kuaishou_icon.png";
 import SphIcon from "@/assets/images/sph_icon.png";
 import { storeToRefs } from "pinia";
+import { useAgent } from "./_modules/composables/useAgent";
 // --- 1. 初始化 ---
 
 const loading = ref(true);
@@ -227,7 +228,7 @@ const {
     stopStream,
 } = useChatManager();
 
-const { chatAreaRef, agent, setup, dispose, clear, getAgentList, isAgent, setAgent, setText } = useChatAreaManager({
+const { chatAreaRef, agent, setup, dispose, clear, isAgent, setAgent, setText, setAgentList } = useChatAreaManager({
     onEnter: (text) => {
         if (isReceiving.value) return;
         contentPost(text);
@@ -238,6 +239,8 @@ const { chatAreaRef, agent, setup, dispose, clear, getAgentList, isAgent, setAge
         }
     },
 });
+
+const { agentList, getAgentList } = useAgent();
 
 const socialPlatformList = [
     {
@@ -293,6 +296,7 @@ const handleSelectAgent = (agent: any) => {
     }
     setAgent(agent);
     chatStore.setAgent(agent);
+    chatStore.setAgentId(agent.id);
 };
 
 watch(
@@ -308,10 +312,13 @@ watch(
         initialize()
             .then(async () => {
                 await getAgentList();
-
-                if (Number(route.query.agent_id) > 0) {
+                setAgentList(agentList.value);
+                await nextTick();
+                chatAgentRef.value.init(agentList.value);
+                const agentId = route.query.agent_id as string;
+                if (Number(agentId) > 0) {
                     setAgent({
-                        id: route.query.agent_id as string,
+                        id: agentId,
                         name: route.query.agent_name as string,
                     });
                 }

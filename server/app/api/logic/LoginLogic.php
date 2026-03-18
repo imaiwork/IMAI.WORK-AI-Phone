@@ -3,7 +3,6 @@
 
 namespace app\api\logic;
 
-use think\response\Json;
 use app\api\logic\service\{WechatUserService};
 use app\api\logic\service\UserTokenService;
 use app\common\cache\WebScanLoginCache;
@@ -11,15 +10,7 @@ use app\common\enum\{LoginEnum, user\AccountLogEnum, user\UserTerminalEnum, YesN
 use app\common\logic\AccountLogLogic;
 use app\common\logic\BaseLogic;
 use app\common\model\user\{User, UserAuth};
-use app\common\service\{
-    ConfigService,
-    FileService,
-    wechat\WeChatConfigService,
-    wechat\WeChatMnpService,
-    wechat\WeChatOaService,
-    wechat\WeChatRequestService,
-    wechat\WeChatUrllinkService
-};
+use app\common\service\{ConfigService, FileService, wechat\WeChatConfigService, wechat\WeChatMnpService, wechat\WeChatOaService, wechat\WeChatRequestService};
 use think\facade\{Config, Db};
 
 /**
@@ -246,7 +237,7 @@ class LoginLogic extends BaseLogic
             }
 
             return $userInfo;
-        } catch (\Exception  $e) {
+        } catch (\Exception $e) {
             self::$error = $e->getMessage();
             return false;
         }
@@ -267,7 +258,7 @@ class LoginLogic extends BaseLogic
         try {
             //通过code获取微信 openid
             $response = (new WeChatMnpService())->getMnpResByCode($params['code']);
-            $response['phoneNumber'] = $params['phoneNumber'] ??  '';
+            $response['phoneNumber'] = $params['phoneNumber'] ?? '';
             $userServer = new WechatUserService($response, UserTerminalEnum::WECHAT_MMP);
 
             $check = $userServer->checkPhoneNumber();//检查手机号是否已被绑定
@@ -279,7 +270,7 @@ class LoginLogic extends BaseLogic
 
             Db::commit();
             return $userInfo;
-        } catch (\Exception  $e) {
+        } catch (\Exception $e) {
             Db::rollback();
             self::$error = $e->getMessage();
             return false;
@@ -340,7 +331,7 @@ class LoginLogic extends BaseLogic
             $response['terminal'] = UserTerminalEnum::WECHAT_MMP;
 
             return self::createAuth($response);
-        } catch (\Exception  $e) {
+        } catch (\Exception $e) {
             self::$error = $e->getMessage();
             return false;
         }
@@ -364,7 +355,7 @@ class LoginLogic extends BaseLogic
             $response['terminal'] = UserTerminalEnum::WECHAT_OA;
 
             return self::createAuth($response);
-        } catch (\Exception  $e) {
+        } catch (\Exception $e) {
             self::$error = $e->getMessage();
             return false;
         }
@@ -539,29 +530,29 @@ class LoginLogic extends BaseLogic
     public static function mnpAuthStatus(array $params): array|bool
     {
         try {
-            $authKey = $params['auth_key']??'';
+            $authKey = $params['auth_key'] ?? '';
             if (!$authKey) {
                 throw new \Exception('参数错误');
             }
             $user = User::alias('u')
-                        ->leftJoin('user_session us', 'us.user_id = u.id')
-                        ->where('us.auth_key', $authKey)
-                        ->where('us.terminal',UserTerminalEnum::PC)
-                        ->field('u.id,u.account,u.mobile,u.nickname,u.sn,u.avatar,us.token,us.update_time')
-                        ->findOrEmpty();
-            if ($user->isEmpty()){
+                ->leftJoin('user_session us', 'us.user_id = u.id')
+                ->where('us.auth_key', $authKey)
+                ->where('us.terminal', UserTerminalEnum::PC)
+                ->field('u.id,u.account,u.mobile,u.nickname,u.sn,u.avatar,us.token,us.update_time')
+                ->findOrEmpty();
+            if ($user->isEmpty()) {
                 throw new \Exception('未授权');
             }
             $time = time() - strtotime($user->update_time);
             if ($time < 60) {
                 return [
-                           'msg'=>'授权成功',
-                           'nickname' => $user->nickname,
-                           'sn' => $user->sn,
-                           'mobile' => $user->mobile,
-                           'avatar' => $user->avatar,
-                           'token' => $user->token
-                       ];
+                    'msg' => '授权成功',
+                    'nickname' => $user->nickname,
+                    'sn' => $user->sn,
+                    'mobile' => $user->mobile,
+                    'avatar' => $user->avatar,
+                    'token' => $user->token
+                ];
             }
             throw new \Exception('未授权');
         } catch (\Exception $e) {
@@ -569,5 +560,4 @@ class LoginLogic extends BaseLogic
             return false;
         }
     }
-
 }

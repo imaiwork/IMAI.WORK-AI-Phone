@@ -39,7 +39,7 @@
                 </div>
             </div>
 
-            <div class="grow min-h-0 px-4">
+            <div class="grow min-h-0">
                 <ElTable
                     v-loading="pager.loading"
                     :data="pager.lists"

@@ -9,6 +9,7 @@ use app\common\model\hd\HdImage;
 use app\common\model\hd\HdImageCases;
 use app\common\model\hd\HdLog;
 use app\common\model\user\User;
+use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
 use think\facade\Db;
 use think\facade\Log;
@@ -75,7 +76,7 @@ class HdLogic extends ApiLogic
      * @date 2024/7/6 15:57
      * @author dagouzi
      */
-    public static function saveLog($type, $request_id, $params, $task_id, $sub_task_id,$status = 0,$model = 1,$image = '')
+    public static function saveLog($type, $request_id, $params, $task_id, $sub_task_id,$status = 0,$model = 1,$image = '',&$images = [])
     {
 
         if($image != ''){
@@ -104,6 +105,7 @@ class HdLogic extends ApiLogic
                 'task_completion' => 0,
             ];
             HdImage::create($imageData);
+            $images[] = FileService::getFileUrl($image);
         }
         return true;
     }
@@ -530,8 +532,9 @@ class HdLogic extends ApiLogic
                 if($image){
                     $image = FileService::downloadFileBySource($image, 'image');
                     $sub_task_results[$key]['image'] = FileService::getFileUrl($image);
+                    $result['sub_task_results'][$key]['image'] = $sub_task_results[$key]['image'];
                 }
-                
+
                 if ($sub_task->isEmpty()) {
                     
                     $sub_task_data = [
@@ -718,9 +721,16 @@ class HdLogic extends ApiLogic
             AccountLogLogic::recordUserTokensLog(true, $userId, $tokenCode, $points, $taskId, $extra);
         }
 
-        //换衣报错
+        //换衣报错退费
         if ($response['code'] == 15011){
             self::setError($response['message'] ?? '生成失败');
+            $taskId = $request['task_id'];
+            $count = UserTokensLog::where('user_id', $userId)->where('change_type', AccountLogEnum::TOKENS_DEC_MODEL_IMAGE)->where('action', 2)->where('task_id', $taskId)->count();
+            //查询是否已返还
+            if (UserTokensLog::where('user_id', $userId)->where('change_type', AccountLogEnum::TOKENS_DEC_MODEL_IMAGE)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
+                $points = UserTokensLog::where('user_id', $userId)->where('change_type', AccountLogEnum::TOKENS_DEC_MODEL_IMAGE)->where('task_id', $taskId)->value('change_amount') ?? 0;
+                AccountLogLogic::recordUserTokensLog(false, $userId, AccountLogEnum::TOKENS_DEC_MODEL_IMAGE, $points, $taskId);
+            }
             return [];
         }
 
@@ -770,7 +780,11 @@ class HdLogic extends ApiLogic
         }
 
         $sub_task_ids[0] = $response['sub_task_ids'] ?? '';
-        self::saveLog($type, $response['request_id'], $params, $response['task_id'], $sub_task_ids,1,2,$response['image_urls']);
+
+        self::saveLog($type, $response['request_id'], $params, $response['task_id'], $sub_task_ids,1,2,$response['image_urls'],$images);
+        if (!empty($images)){
+            $response['image_urls'] = $images[0];
+        }
         self::$returnData = ['result' => $response];
         return true;
     }
@@ -798,7 +812,10 @@ class HdLogic extends ApiLogic
 
         $sub_task_ids[0] = $response['sub_task_ids'] ?? '';
         //豆包文生图
-        self::saveLog($type, $response['request_id']??'', $params, $response['task_id']??'', $sub_task_ids, 1, 3, $response['image_urls']);
+        self::saveLog($type, $response['request_id']??'', $params, $response['task_id']??'', $sub_task_ids, 1, 3, $response['image_urls'],$images);
+        if (!empty($images)){
+            $response['image_urls'] = $images[0];
+        }
         self::$returnData = ['result' => $response];
         return true;
     }
@@ -812,11 +829,13 @@ class HdLogic extends ApiLogic
 
             $sub_task_ids[0] = $response['sub_task_ids'] ?? '';
 
-            self::saveLog(4, $response['request_id']??'', $params, $response['task_id']??'', $sub_task_ids, 1, 3, $response['image_urls']);
+            self::saveLog(4, $response['request_id']??'', $params, $response['task_id']??'', $sub_task_ids, 1, 3, $response['image_urls'],$images);
+            if (!empty($images)){
+                $response['image_urls'] = $images[0];
+            }
             self::$returnData = ['result' => $response];
             return true;
         } catch (\Throwable $th) {
-            //self::setError($th->getMessage());
             throw new \Exception($th->getMessage());
             return false;
         }

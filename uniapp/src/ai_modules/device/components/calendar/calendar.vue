@@ -40,6 +40,8 @@
 </template>
 
 <script setup lang="ts">
+import { isIOS } from "@/utils/client";
+
 interface Day {
     date: string;
     day: number;
@@ -75,14 +77,26 @@ const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 const selectedDate = ref<string[]>([]);
 
+const toDateStr = (year: number, month: number, day: number): string => {
+    return `${year}-${month}-${day}`;
+};
+
+const normalizeInputDate = (dateStr: string): string => {
+    return dateStr.replace(/\//g, "-");
+};
+
+const toOutputDate = (dateStr: string): string => {
+    return isIOS() ? dateStr.replace(/-/g, "/") : dateStr;
+};
+
 watch(
     () => props.modelValue,
     (newValue) => {
         let newSelected: string[] = [];
         if (Array.isArray(newValue)) {
-            newSelected = [...newValue];
+            newSelected = newValue.map(normalizeInputDate);
         } else if (typeof newValue === "string" && newValue) {
-            newSelected = [newValue];
+            newSelected = [normalizeInputDate(newValue)];
         }
 
         if (JSON.stringify(selectedDate.value) !== JSON.stringify(newSelected)) {
@@ -104,10 +118,9 @@ const weeks = computed(() => {
 const generateCalendar = (year: number, month: number) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayDate = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    const todayDate = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
-    const date = new Date(year, month - 1, 1);
-    const firstDay = date.getDay();
+    const firstDay = new Date(year, month - 1, 1).getDay();
     const daysInMonth = new Date(year, month, 0).getDate();
 
     const calendarDays: Day[] = [];
@@ -118,7 +131,7 @@ const generateCalendar = (year: number, month: number) => {
     const prevMonth = prevMonthEndDate.getMonth() + 1;
     for (let i = firstDay; i > 0; i--) {
         const day = prevMonthLastDay - i + 1;
-        const dateStr = `${prevMonthYear}-${prevMonth}-${day}`;
+        const dateStr = toDateStr(prevMonthYear, prevMonth, day);
         const dateObj = new Date(prevMonthYear, prevMonth - 1, day);
         const isDisabledByMethod = props.disabledDateMethod(dateObj);
         calendarDays.push({
@@ -131,7 +144,7 @@ const generateCalendar = (year: number, month: number) => {
     }
 
     for (let i = 1; i <= daysInMonth; i++) {
-        const dateStr = `${year}-${month}-${i}`;
+        const dateStr = toDateStr(year, month, i);
         const isToday = dateStr === todayDate;
         const dateObj = new Date(year, month - 1, i);
         const isDisabledByMethod = props.disabledDateMethod(dateObj);
@@ -151,7 +164,7 @@ const generateCalendar = (year: number, month: number) => {
         const nextMonth = nextMonthStartDate.getMonth() + 1;
         let nextDay = 1;
         while (calendarDays.length < gridCells) {
-            const dateStr = `${nextMonthYear}-${nextMonth}-${nextDay}`;
+            const dateStr = toDateStr(nextMonthYear, nextMonth, nextDay);
             const dateObj = new Date(nextMonthYear, nextMonth - 1, nextDay);
             const isDisabledByMethod = props.disabledDateMethod(dateObj);
             calendarDays.push({
@@ -179,10 +192,10 @@ const selectDate = (day: Day) => {
         } else {
             selectedDate.value.push(dateStr);
         }
-        emit("update:modelValue", selectedDate.value);
+        emit("update:modelValue", selectedDate.value.map(toOutputDate));
     } else {
         selectedDate.value = [dateStr];
-        emit("update:modelValue", dateStr);
+        emit("update:modelValue", toOutputDate(dateStr));
     }
 
     if (!day.isCurrentMonth) {
@@ -191,7 +204,8 @@ const selectDate = (day: Day) => {
         currentMonth.value = month;
         generateCalendar(currentYear.value, currentMonth.value);
     }
-    emit("selectDate", props.multiSelect ? selectedDate.value : dateStr);
+
+    emit("selectDate", props.multiSelect ? selectedDate.value.map(toOutputDate) : toOutputDate(dateStr));
 };
 
 const prevMonth = () => {
@@ -218,43 +232,49 @@ const backToToday = (doSelect: boolean) => {
     currentMonth.value = today.getMonth() + 1;
 
     if (doSelect) {
-        const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+        const todayStr = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
         if (props.multiSelect) {
             if (!selectedDate.value.includes(todayStr)) {
                 selectedDate.value.push(todayStr);
             }
-            emit("update:modelValue", selectedDate.value);
+            emit("update:modelValue", selectedDate.value.map(toOutputDate));
         } else {
             selectedDate.value = [todayStr];
-            emit("update:modelValue", todayStr);
+            emit("update:modelValue", toOutputDate(todayStr));
         }
-        emit("selectDate", props.multiSelect ? selectedDate.value : todayStr);
+        emit("selectDate", props.multiSelect ? selectedDate.value.map(toOutputDate) : toOutputDate(todayStr));
     }
     generateCalendar(currentYear.value, currentMonth.value);
 };
 
 const locateToDate = (date: string) => {
-    const dateObj = new Date(date);
+    const normalized = normalizeInputDate(date);
+    const parts = normalized.split("-").map(Number);
+    if (parts.length < 3 || parts.some(isNaN)) {
+        return;
+    }
+    const [y, m, d] = parts;
+    const dateObj = new Date(y, m - 1, d);
     if (isNaN(dateObj.getTime())) {
         return;
     }
-    currentYear.value = dateObj.getFullYear();
-    currentMonth.value = dateObj.getMonth() + 1;
-    const dateStr = `${dateObj.getFullYear()}-${dateObj.getMonth() + 1}-${dateObj.getDate()}`;
+    currentYear.value = y;
+    currentMonth.value = m;
+    const dateStr = toDateStr(y, m, d);
 
     if (props.multiSelect) {
         const index = selectedDate.value.indexOf(dateStr);
         if (index === -1) {
             selectedDate.value.push(dateStr);
         }
-        emit("update:modelValue", selectedDate.value);
+        emit("update:modelValue", selectedDate.value.map(toOutputDate));
     } else {
         selectedDate.value = [dateStr];
-        emit("update:modelValue", dateStr);
+        emit("update:modelValue", toOutputDate(dateStr));
     }
 
     generateCalendar(currentYear.value, currentMonth.value);
-    emit("selectDate", props.multiSelect ? selectedDate.value : dateStr);
+    emit("selectDate", props.multiSelect ? selectedDate.value.map(toOutputDate) : toOutputDate(dateStr));
 };
 
 const clearSelectedDates = () => {
@@ -270,11 +290,12 @@ const clearSelectedDates = () => {
 const clearSingleSelectedDate = (dateToClear: string) => {
     if (!props.multiSelect) return;
 
-    const index = selectedDate.value.indexOf(dateToClear);
+    const normalized = normalizeInputDate(dateToClear);
+    const index = selectedDate.value.indexOf(normalized);
     if (index > -1) {
         selectedDate.value.splice(index, 1);
-        emit("update:modelValue", selectedDate.value);
-        emit("selectDate", selectedDate.value);
+        emit("update:modelValue", selectedDate.value.map(toOutputDate));
+        emit("selectDate", selectedDate.value.map(toOutputDate));
     }
 };
 
@@ -288,21 +309,21 @@ onMounted(() => {
     const today = new Date();
 
     if (selectedDate.value.length > 0) {
-        const dateObj = new Date(selectedDate.value[0]);
-        currentYear.value = dateObj.getFullYear();
-        currentMonth.value = dateObj.getMonth() + 1;
+        const parts = selectedDate.value[0].split("-").map(Number);
+        currentYear.value = parts[0];
+        currentMonth.value = parts[1];
     } else {
         currentYear.value = today.getFullYear();
         currentMonth.value = today.getMonth() + 1;
     }
 
     if (selectedDate.value.length === 0 && props.isToday) {
-        const todayStr = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+        const todayStr = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
         selectedDate.value = [todayStr];
         if (props.multiSelect) {
-            emit("update:modelValue", [todayStr]);
+            emit("update:modelValue", [toOutputDate(todayStr)]);
         } else {
-            emit("update:modelValue", todayStr);
+            emit("update:modelValue", toOutputDate(todayStr));
         }
     }
 

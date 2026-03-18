@@ -208,6 +208,20 @@
 						"share": true,
 						"auth": true
 					}
+				},
+				{
+					"path": "pages/agent/agent",
+					"style": {
+						"navigationBarTitleText": "代理中心",
+						"navigationStyle": "custom",
+						"disableScroll": true
+					}
+				},
+				{
+					"path": "pages/agent_invite_poster/agent_invite_poster",
+					"style": {
+						"navigationBarTitleText": "邀请好友海报"
+					}
 				}
 			]
 		},
@@ -223,16 +237,6 @@
 					},
 					"meta": {
 						"share": true
-					}
-				},
-				{
-					"path": "pages/video_upload/video_upload",
-					"style": {
-						"navigationBarTitleText": "视频上传",
-						"navigationBarBackgroundColor": "#F9FAFB"
-					},
-					"meta": {
-						"auth": true
 					}
 				},
 				{
@@ -1118,7 +1122,7 @@
 				{
 					"path": "pages/setting_circle/setting_circle",
 					"style": {
-						"navigationBarTitleText": "朋友圈互动设置"
+						"navigationBarTitleText": "发布朋友圈配置"
 					}
 				},
 				{
@@ -1210,6 +1214,15 @@
 					}
 				},
 				{
+					"path": "pages/setting_circle_interact_auto/setting_circle_interact_auto",
+					"style": {
+						"navigationBarTitleText": "朋友圈互动配置"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
 					"path": "pages/rpa_code/rpa_code",
 					"style": {
 						"navigationBarTitleText": "设备绑定码"
@@ -1236,6 +1249,12 @@
 					},
 					"meta": {
 						"auth": true
+					}
+				},
+				{
+					"path": "pages/setting_prompt/setting_prompt",
+					"style": {
+						"navigationBarTitleText": "提示词设置"
 					}
 				}
 			]

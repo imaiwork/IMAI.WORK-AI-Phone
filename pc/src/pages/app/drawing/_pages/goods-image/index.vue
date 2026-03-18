@@ -31,7 +31,7 @@ onEvent("update:formData", async (data: any) => {
     const { type_name, style_name, params } = data;
     const resultData = reactive({
         date: dayjs().format("YYYY-MM-DD HH:mm"),
-        prompt: params.prompt,
+        prompt: params?.prompt || "",
         tags: [params.resolution?.join("*"), type_name, style_name, params.template_name_zh],
         images: [] as ResultItem[],
         formData: data,

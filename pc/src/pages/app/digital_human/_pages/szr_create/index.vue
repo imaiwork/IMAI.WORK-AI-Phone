@@ -245,7 +245,8 @@
         @close="showChooseMusic = false"
         @confirm="getChooseMusic"></choose-music>
     <generate-prompt
-        v-model="showGeneratePrompt"
+        v-if="showGeneratePrompt"
+        ref="generatePromptRef"
         :prompt-type="CreateVideoTypeEnum.DIGITAL_HUMAN"
         :max-size="textLimit"
         @close="showGeneratePrompt = false"
@@ -376,13 +377,6 @@ const openVideo = async (url: string) => {
     videoPreviewPlayerRef.value?.setUrl(url);
 };
 
-// 打开上传弹窗
-const handleOpenUpload = async (type: ModeTypeEnum) => {
-    showUpload.value = true;
-    await nextTick();
-    uploadFormRef.value?.open(type);
-};
-
 /** 形象操作 Start */
 
 // 当前形象索引
@@ -410,16 +404,6 @@ const loadMoreAnchor = async (e) => {
         await getAnchorLists();
     }
 };
-
-// 获取当前形象
-const currentAnchor = computed(() => {
-    const data = anchorPager.lists[currentAnchorIndex.value] || {};
-    return {
-        ...data,
-        name: formData.name,
-        anchor_name: data.anchor_id ? data.name : data.anchor_name,
-    };
-});
 
 const isPublicAnchor = computed(() => {
     if (anchorPager.lists.length === 0 || currentAnchorIndex.value === -1) return false;
@@ -516,13 +500,15 @@ const handleRandomCopywriter = () => {
 
 /** 文案操作 Start */
 const showGeneratePrompt = ref(false);
-
+const generatePromptRef = shallowRef<InstanceType<typeof GeneratePrompt>>();
 const openGeneratePrompt = async () => {
     if (!formData.model_version) {
         feedback.msgWarning("请先选择形象~");
         return;
     }
     showGeneratePrompt.value = true;
+    await nextTick();
+    generatePromptRef.value?.open();
 };
 
 const getGenerateContent = (content: string) => {

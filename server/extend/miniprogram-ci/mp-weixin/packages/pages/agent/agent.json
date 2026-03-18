@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "代理中心",
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-search": "../../../uni_modules/vk-uview-ui/components/u-search/u-search",
+    "empty": "../../../components/empty/empty",
+    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
+    "popup-bottom": "../../../components/popup-bottom/popup-bottom",
+    "u-input": "../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "upload-progress": "../../../components/upload-progress/upload-progress"
+  }
+}

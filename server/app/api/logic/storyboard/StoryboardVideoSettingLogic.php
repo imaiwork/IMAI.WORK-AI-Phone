@@ -364,7 +364,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
 
     public static function checkStatus()
     {
-        $settings = StoryboardVideoSetting::where('status', 'in', [0, 1, 2])->where('create_time', '<=', strtotime('-20 minutes'))->select()->toArray();
+        $settings = StoryboardVideoSetting::where('status', 'in', [0, 1, 2])->where('create_time', '<=', strtotime('-10 minutes'))->select()->toArray();
         foreach ($settings as $setting) {
             $num = $setting['success_num'] + $setting['error_num'];
             if ($setting['video_count'] == $num) {
@@ -463,9 +463,11 @@ class StoryboardVideoSettingLogic extends ApiLogic
                             $videoTask->video_token      = ceil($job['Duration'] / 60) * $unit;
                             $videoTask->save();
                             $successNum++;
-                        } else {
+                        } else if ($job['Status'] == 'Init'){
+                            continue;
+                        }else{
                             $videoTask->status = 2;
-                            $videoTask->remark = '参数错误，视频生成失败';
+                            $videoTask->remark = '系统繁忙，视频生成失败，请稍后重试';
                             $videoTask->save();
                             $errorNum++;
                             $return = true;
@@ -556,6 +558,9 @@ class StoryboardVideoSettingLogic extends ApiLogic
         $result = '生成失败';
         if (str_contains($message, 'The prefix of the specified')) {
             $result = '仅支持阿里云存储的素材';
+        }
+        if (str_contains($message, 'reason: AccessDenied')) {
+            $result = '阿里云oss拒绝访问，请检查oss设置';
         }
         return $result;
     }

@@ -78,7 +78,6 @@ export function useChatManager() {
                         chatStore.setTaskId(newTaskId);
                         replaceState({
                             task_id: newTaskId,
-                            agent_name: agentValue.value?.name,
                             agent_id: agentValue.value?.id,
                         });
                     } else if (newTaskId && newTaskId !== taskId.value) {
@@ -115,6 +114,7 @@ export function useChatManager() {
         if (!taskId.value || taskId.value === "undefined") return;
 
         chatStore.isLoading = true;
+        console.log(agentValue.value);
         try {
             const data = await getChatLog({
                 page_no: 1,
@@ -138,12 +138,13 @@ export function useChatManager() {
                             : {
                                   ...item,
                                   is_reasoning_finished: true,
-                                  form_avatar: chatConfig.value?.logo,
+                                  form_avatar: item.avatar || agentValue.value?.image || chatConfig.value?.logo,
                                   consume_tokens: item.tokens_info,
                               }
                 ) ?? [];
 
             chatStore.chatContentList = historyMessages;
+            chatScrollToBottom();
         } finally {
             chatStore.isLoading = false;
         }
@@ -170,7 +171,7 @@ export function useChatManager() {
         const botMessage: ChatMessage = {
             type: 2,
             loading: true,
-            form_avatar: chatStore.detail.logo || chatConfig.value?.logo,
+            form_avatar: agentValue.value?.image || chatStore.detail.logo || chatConfig.value?.logo,
             is_reasoning_finished: isDeep.value,
             error: "",
             reply: "",

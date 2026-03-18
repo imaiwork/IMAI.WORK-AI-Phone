@@ -8,6 +8,8 @@ use app\api\logic\auto\TouchLogic;
 use app\api\logic\auto\ActiveLogic;
 use app\api\logic\auto\TakeOverLogic;
 use app\api\logic\auto\AddWechatLogic;
+use app\api\logic\auto\LikeReplyLogic;
+
 use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\auto\PublishLogic;
 use app\common\model\auto\AutoDeviceConfig;
@@ -53,6 +55,7 @@ class AutoDeviceFristCreateCron extends Command
                     TakeOverLogic::autoTakeoverTaskCron(1, $device->device_code); //自动私信接管任务
                     ActiveLogic::autoActiveTaskCron(1, $device->device_code); //自动养号任务
                     TouchLogic::autoTouchTaskCron(1, $device->device_code); //截流获客任务
+                    LikeReplyLogic::autoLikeReplyTaskCron(1, $device->device_code); //自动点赞回复任务
                     $device->is_first = 1;
                     $device->save();
                 }
@@ -80,7 +83,8 @@ class AutoDeviceFristCreateCron extends Command
         //$active_setting = \app\common\model\auto\AutoDeviceActiveConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1;
         $publish_setting = \app\common\model\auto\AutoDeviceSetting::where('user_id', $find->user_id)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1;
         $add_wechat_setting = \app\common\model\auto\AutoDeviceAddWechatConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1;
-        if ($clue_setting === 1 && $touch_setting === 1 && $takeover_setting === 1 && $publish_setting === 1 && $add_wechat_setting === 1) {
+        $like_reply_setting = \app\common\model\auto\AutoDeviceCircleLikeReplyConfig::where('user_id', $find->user_id)->where('device_code', $find->device_code)->findOrEmpty()->isEmpty() ? 0 : 1;
+        if ($clue_setting === 1 && $touch_setting === 1 && $takeover_setting === 1 && $publish_setting === 1 && $add_wechat_setting === 1 && $like_reply_setting === 1) {
             return true;
         }
         $msg = array(
@@ -91,6 +95,7 @@ class AutoDeviceFristCreateCron extends Command
             'takeover_setting' => $takeover_setting,
             'publish_setting' => $publish_setting,
             'add_wechat_setting' => $add_wechat_setting,
+            'like_reply_setting' => $like_reply_setting,
         );
         Log::channel('auto')->info(json_encode($msg, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
         return false;

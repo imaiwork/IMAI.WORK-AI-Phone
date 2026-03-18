@@ -4,7 +4,7 @@
 namespace app\api\logic;
 
 
-use app\common\{enum\notice\NoticeEnum, enum\user\UserTerminalEnum, enum\YesNoEnum, logic\BaseLogic, model\user\User, model\user\UserAuth, service\FileService, service\sms\SmsDriver, service\wechat\WeChatMnpService};
+use app\common\{enum\notice\NoticeEnum, enum\user\UserTerminalEnum, enum\YesNoEnum, logic\BaseLogic, model\distribution\DistributionAgent, model\user\User, model\user\UserAuth, service\FileService, service\sms\SmsDriver, service\wechat\WeChatMnpService};
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use GuzzleHttp\Client;
@@ -42,7 +42,22 @@ class UserLogic extends BaseLogic
 
         $user['has_password'] = !empty($user['password']);
         $user->hidden(['password']);
-        return $user->toArray();
+
+        $user = $user->toArray();
+
+        // 查找用户是否为代理用户
+        $agent = DistributionAgent::where('user_id', $user['id'])->findOrEmpty();
+        if (!$agent->isEmpty()) {
+            if ($agent['status'] == 0 || $agent['level'] == 0){
+                $user['is_distribution_agent'] = YesNoEnum::NO;
+            }else{
+                $user['is_distribution_agent'] = YesNoEnum::YES;
+            }
+        } else {
+            $user['is_distribution_agent'] = YesNoEnum::NO;
+        }
+
+        return $user;
     }
 
 
@@ -286,13 +301,13 @@ class UserLogic extends BaseLogic
     {
         try {
             $deviceBindCode = User::where('id', '=', $params['user_id'])->value('device_bind_qrcode');
-            $host           = env('app.host');
-            $domain         = parse_url($host)['host'] ?? $_SERVER['HTTP_HOST'];
+            $host = env('app.host');
+            $domain = parse_url($host)['host'] ?? $_SERVER['HTTP_HOST'];
             if (empty($deviceBindCode) || !file_exists(public_path() . $deviceBindCode)) {
-                $uuid       = (Uuid::uuid4())->toString();
-                $writer     = new PngWriter();
+                $uuid = (Uuid::uuid4())->toString();
+                $writer = new PngWriter();
                 $publicPath = '/qrcode/user/' . $uuid . '.png';
-                $filePath   = root_path() . 'public' . $publicPath;
+                $filePath = root_path() . 'public' . $publicPath;
 
                 //创建目录
                 if (!is_dir(dirname($filePath))) {
@@ -300,34 +315,34 @@ class UserLogic extends BaseLogic
                     mkdir(dirname($filePath), 0777, true);
                 }
 
-                $jsonData   = json_encode([
-                                    'domain'        => $domain,
-                                    'user_id'       => $params['user_id'],
-                                    'uuid'          => $uuid,
-                            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                $QrCode     = QrCode::create($jsonData)
-                                ->setSize(150) // 尺寸
-                                ->setMargin(10);
-                $Result     = $writer->write($QrCode);
+                $jsonData = json_encode([
+                    'domain' => $domain,
+                    'user_id' => $params['user_id'],
+                    'uuid' => $uuid,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $QrCode = QrCode::create($jsonData)
+                    ->setSize(150) // 尺寸
+                    ->setMargin(10);
+                $Result = $writer->write($QrCode);
                 $Result->saveToFile($filePath);
                 User::update([
-                                 'id'                 => $params['user_id'],
-                                 'device_bind_qrcode' => $publicPath
-                             ]);
+                    'id' => $params['user_id'],
+                    'device_bind_qrcode' => $publicPath
+                ]);
                 $url = 'https://' . $domain . $publicPath;
-            }else{
+            } else {
                 // 从图片路径中获取uuid
                 $uuid = pathinfo(basename($deviceBindCode), PATHINFO_FILENAME);
-                $url  = 'https://' . $domain . $deviceBindCode;
+                $url = 'https://' . $domain . $deviceBindCode;
             }
 
             self::$returnData = [
                 'user_id' => $params['user_id'],
-                'url'     => $url,
-                'uuid'    => $uuid,
+                'url' => $url,
+                'uuid' => $uuid,
             ];
             return true;
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             self::setError($e->getMessage());
             return false;
         }
@@ -343,36 +358,36 @@ class UserLogic extends BaseLogic
     public static function getDeviceBindStatus(array $params): bool
     {
         try {
-            $user    = User::where('id', '=', $params['user_id'])->find();
-            $status  = 1;
+            $user = User::where('id', '=', $params['user_id'])->find();
+            $status = 1;
             $message = '绑定成功';
             if ($user['device_bind_num'] == 0) {
-                $status  = 0;
+                $status = 0;
                 $message = '设备未绑定';
             }
             if ((time() - $user['device_bind_time']) > 15) {
-                $status  = 0;
+                $status = 0;
                 $message = '设备未绑定，请稍后再试';
             }
 
             $domain = $_SERVER['HTTP_HOST'];
-            $uuid   = pathinfo(basename($user['device_bind_code']), PATHINFO_FILENAME);
+            $uuid = pathinfo(basename($user['device_bind_code']), PATHINFO_FILENAME);
             $params = [
                 'user_id' => $user['id'],
-                'domain'  => $domain,
-                'uuid'    => $uuid,
+                'domain' => $domain,
+                'uuid' => $uuid,
             ];
-            $res    = self::getDeviceBindRequest($params);
+            $res = self::getDeviceBindRequest($params);
 
             if (empty($res)) {
-                $status  = 0;
+                $status = 0;
                 $message = '绑定失败';
             }
 
             self::$returnData = [
-                'status'  => $status,
+                'status' => $status,
                 'message' => $message,
-                'device_code' => User::where('id', '=', $params['user_id'])->value('last_bind_device_code')??''
+                'device_code' => User::where('id', '=', $params['user_id'])->value('last_bind_device_code') ?? ''
             ];
             return true;
         } catch (GuzzleException $e) {
@@ -386,25 +401,25 @@ class UserLogic extends BaseLogic
      */
     public static function getDeviceBindRequest($params): array
     {
-        $auth     = \app\common\service\ToolsService::Auth();
-        $url      = $auth::CODE_REQUEST_URL;
-        $token    = $auth::CODE_REQUEST_TOKEN;
-        $body     = [
+        $auth = \app\common\service\ToolsService::Auth();
+        $url = $auth::CODE_REQUEST_URL;
+        $token = $auth::CODE_REQUEST_TOKEN;
+        $body = [
             'user_id' => $params['user_id'],
-            'domain'  => $params['domain'],
-            'uuid'    => $params['uuid'],
+            'domain' => $params['domain'],
+            'uuid' => $params['uuid'],
         ];
-        $option   = [
+        $option = [
             'headers' => [
                 'Authorization' => 'Bearer ' . $token,
-                'Content-Type'  => 'application/json'
+                'Content-Type' => 'application/json'
             ],
-            'json'    => $body
+            'json' => $body
         ];
-        $client   = new Client();
-        $rsp      = $client->request('POST', $url, $option);
+        $client = new Client();
+        $rsp = $client->request('POST', $url, $option);
         $contents = $rsp->getBody()->getContents();
-        $data     = json_decode($contents, true);
+        $data = json_decode($contents, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             return [];
@@ -413,5 +428,51 @@ class UserLogic extends BaseLogic
             return $data;
         }
         return [];
+    }
+
+    /**
+     * 绑定代理
+     */
+    public static function bindUser($params): bool
+    {
+        try {
+            $sn = $params['sn'];
+            if (empty($sn)) {
+                throw new \Exception('请输入上级用户编号');
+            }
+            $inviter = User::where('sn', '=', $sn)->findOrEmpty();
+            if ($inviter->isEmpty()) {
+                throw new \Exception('上级用户不存在');
+            }
+            if ($inviter['id'] == $params['user_id']) {
+                throw new \Exception('无法绑定自己');
+            }
+            // 邀请人是否为代理、验证代理状态
+            $inviterAgent = DistributionAgent::where('user_id', $inviter['id'])->findOrEmpty();
+            if ($inviterAgent->isEmpty() || $inviterAgent->status == 0) {
+                throw new \Exception('上级用户还不是代理');
+            }
+            $agent = DistributionAgent::where('user_id', $params['user_id'])->findOrEmpty();
+            if ($agent->isEmpty()) {
+                DistributionAgent::create([
+                    'user_id' => $params['user_id'],
+                    'parent_id' => $inviter['id'],
+                    'level' => 0,   // 默认为普通用户
+                    'status' => 1,  // 默认为启用
+                    'become_time' => time(),
+                ]);
+            } else if ($agent['parent_id'] != 0) {
+                throw new \Exception('已存在上级用户，无法再次绑定');
+            } else {
+                DistributionAgent::update([
+                    'parent_id' => $inviter['id'],
+                    'become_time' => time(),
+                ], ['user_id' => $params['user_id']]);
+            }
+            return true;
+        } catch (\Exception $e) {
+            self::setError($e->getMessage() ?? '绑定失败');
+            return false;
+        }
     }
 }

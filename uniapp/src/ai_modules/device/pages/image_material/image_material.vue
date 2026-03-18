@@ -50,48 +50,61 @@ const { imageList } = storeToRefs(materialStore);
 const dataList = ref<any[]>(JSON.parse(JSON.stringify(imageList.value)));
 const showChooseMaterial = ref(false);
 const showHistory = ref(false);
+
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
     imageAccept: ["jpg", "jpeg", "png", "webp"],
     fileAccept: ["jpg", "jpeg", "png", "webp"],
     onSuccess: (res: any[]) => {
-        dataList.value.push(...res.map((item) => ({ pic: item.pic || item.url, url: item.url, type: "image" })));
+        dataList.value.push(...res.map(({ pic, url }) => ({ pic: pic ?? url, url, type: "image" })));
     },
 });
 
+const appendImageItem = (src: string, pic?: string) =>
+    new Promise<void>((resolve) => {
+        uni.getImageInfo({
+            src,
+            success: ({ width, height }) => {
+                if (width > 2000 || height > 2000) {
+                    uni.$u.toast("选择素材中宽高2000以上的图片将被过滤");
+                } else {
+                    dataList.value.push({ pic: pic ?? src, url: src, type: "image" });
+                }
+                resolve();
+            },
+            fail: () => resolve(),
+        });
+    });
+
 const chooseUploadType = () => {
+    const actions = [
+        () => uploadAndProcessFiles("file"),
+        () => uploadAndProcessFiles("image"),
+        () => (showChooseMaterial.value = true),
+        () => (showHistory.value = true),
+    ];
     uni.showActionSheet({
         itemList: ["从微信聊天中选择", "从相册选择图片", "从素材库中选择", "从创作库选择素材"],
-        success: (res) => {
-            if (res.tapIndex === 0) uploadAndProcessFiles("file");
-            else if (res.tapIndex === 1) uploadAndProcessFiles("image");
-            else if (res.tapIndex === 2) showChooseMaterial.value = true;
-            else if (res.tapIndex === 3) showHistory.value = true;
-        },
+        success: ({ tapIndex }) => actions[tapIndex]?.(),
     });
 };
 
 const handleChooseMaterial = (list: any[]) => {
-    dataList.value.push(...list.map((item) => ({ pic: item.pic, url: item.url, type: "image" })));
+    list.forEach((item) => appendImageItem(item.url, item.pic));
 };
 
 const handleSelectHistory = (list: any[]) => {
-    dataList.value.push(...list.map((item) => ({ pic: item.image, url: item.image, type: "image" })));
+    list.forEach((item) => appendImageItem(item.image));
 };
 
-const handleDelete = (index: number) => {
-    dataList.value.splice(index, 1);
-};
+const handleDelete = (index: number) => dataList.value.splice(index, 1);
 
 const previewImage = (index: number) => {
-    uni.previewImage({
-        urls: dataList.value.map((item) => item.pic),
-        current: index,
-    });
+    uni.previewImage({ urls: dataList.value.map((item) => item.pic), current: index });
 };
 
 const handleConfirm = () => {
-    if (dataList.value.length === 0) {
+    if (!dataList.value.length) {
         uni.$u.toast("请至少选择一个图片素材");
         return;
     }

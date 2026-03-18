@@ -36,9 +36,10 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
         if ($this->userId > 0) {
             $this->searchWhere[] = ['w.user_id', '=', $this->userId];
         }
-        return SvAccount::alias('w')
+
+        $svAccount = SvAccount::alias('w')
             ->field('w.user_id,w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,w.update_time,w.extra,w.type,
-                    s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id, d.device_name,d.device_model')
+                    s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id, d.device_name,d.device_model, "sv" as source')
             ->join('sv_device d', 'd.device_code = w.device_code', 'left')
             ->leftJoin('sv_setting s', 's.account = w.account')
             ->where($this->searchWhere)
@@ -69,6 +70,34 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
                 return $item;
             })
             ->toArray();
+        if((int)$this->request->get('type', 0) === 1){
+            $account = array_column($svAccount, 'account');
+            $wechatAccount = AiWechat::alias('w')
+            ->field('w.user_id,w.id,w.device_code,w.wechat_id as account,w.wechat_nickname as nickname,w.wechat_avatar as avatar,w.wechat_status as status,w.create_time, s.model, 
+            s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type, s.robot_id, 1 as type, "wechat" as source')
+            ->join('ai_wechat_setting s', 's.wechat_id = w.wechat_id')
+            ->where('w.user_id', $this->userId)
+            ->where('w.wechat_id', 'not in', $account)
+            ->order(['s.sort' => 'desc', 'w.id' => 'desc'])
+            ->select()
+            ->each(function ($item) {
+                if (empty($item['takeover_mode'])) {
+                    $item['takeover_mode'] = 0;
+                }
+
+                if (empty($item['robot_id'])) {
+                    $item['robot_id'] = 0;
+                }
+
+                $item['robot_name'] = KbRobot::where('id', $item['robot_id'])->where('user_id', $this->userId)->value('name', '');
+
+                $item['wechat_status'] = 0;
+                
+            })
+            ->toArray();
+            $svAccount = array_merge($svAccount, $wechatAccount);
+        }
+        return $svAccount;
     }
 
 

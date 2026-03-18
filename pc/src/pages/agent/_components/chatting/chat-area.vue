@@ -16,7 +16,7 @@
             </div>
         </div>
         <!-- 聊天内容区域 -->
-        <div class="grow min-h-0" v-loading="loading">
+        <div class="grow min-h-0 pt-3" v-loading="loading">
             <slot></slot>
         </div>
     </div>

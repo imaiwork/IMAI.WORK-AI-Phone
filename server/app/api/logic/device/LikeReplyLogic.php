@@ -70,6 +70,8 @@ class LikeReplyLogic extends ApiLogic
                         'auto_type' => 0,
                         'account' => $account['account'],
                         'account_type' => $account['type'],
+                        'nickname' => $account['nickname'],
+                        'avatar' => $account['avatar'],
                         'task_name' => '朋友圈点赞评论任务',
                         'status' => 0,
                         'day' => date('Y-m-d',$time['start_time']),

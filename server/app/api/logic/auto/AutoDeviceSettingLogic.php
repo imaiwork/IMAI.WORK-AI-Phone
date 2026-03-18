@@ -571,7 +571,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                             case 0:
                                 $coze['sn'] = 5;
                                 $coze['number'] = 1;
-                                $coze['length'] = 120;
+                                $coze['length'] = 100;
                                 $coze['keywords'] = "我的IP是" . $ipTalent . "，希望以" . $ipStyle . "的语气生成品牌信息如下：" . $basicInformation . 
                                 "目标客户是" . $targetCustomers . "，产品特点：" . $productServiceFeatures . 
                                 "。品牌故事：" . $brandStory . "，内容偏好：" . $contentPreferences . 
@@ -580,7 +580,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                             case 1:
                                 $coze['sn'] = 3;
                                 $coze['number'] = 1;
-                                $coze['length'] = 100;
+                                $coze['length'] = 80;
                                 $coze['keywords'] = "我的IP是" . $ipTalent . "，语气像" . $ipStyle . "。品牌信息：" . $basicInformation . 
                                 "，目标客户：" . $targetCustomers . "。产品特点：" . $productServiceFeatures . "，品牌故事：" . $brandStory .
                                 "。内容偏好：" . $contentPreferences . "，品牌成就与定位：" . $brandAchievementsPositioning . 
@@ -589,7 +589,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                             case 2:
                                 $coze['sn'] = 4;
                                 $coze['number'] = 1;
-                                $coze['length'] = 100;
+                                $coze['length'] = 80;
                                 $coze['keywords'] = "我的IP是" . $ipTalent . "，语气像" . $ipStyle . "。品牌信息：" . $basicInformation . 
                                 "，目标客户：" . $targetCustomers . "。产品特点：" . $productServiceFeatures . "，品牌故事：" . $brandStory . 
                                 "。内容偏好：" . $contentPreferences . "，品牌成就与定位：" . $brandAchievementsPositioning . 
@@ -598,7 +598,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                             case 3:
                                 $coze['sn'] = 0;
                                 $coze['number'] = 1;
-                                $coze['length'] = 120;
+                                $coze['length'] = 100;
                                 $coze['keywords'] = "我的IP是" . $ipTalent . "，语气希望像" . $ipStyle . "一样。品牌信息：" . $basicInformation . 
                                 "，目标客户：" . $targetCustomers . "。产品特点：" . $productServiceFeatures . "，品牌故事：" . $brandStory . 
                                 "。内容偏好：" . $contentPreferences . "，品牌成就与定位：" . $brandAchievementsPositioning . 
@@ -607,7 +607,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                             case 4:
                                 $coze['sn'] = 2;
                                 $coze['number'] = 1;
-                                $coze['length'] = 120;
+                                $coze['length'] = 80;
                                 $coze['keywords'] = "我的IP是" . $ipTalent . "，希望语气偏" . $ipStyle . "。品牌信息：" . $basicInformation . 
                                 "，目标客户：" . $targetCustomers . "。产品特点：" . $productServiceFeatures . "，品牌故事：" . $brandStory . 
                                 "。内容偏好：" . $contentPreferences . "，品牌成就与定位：" . $brandAchievementsPositioning . 
@@ -616,7 +616,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                             case 5:
                                 $coze['sn'] = 2;
                                 $coze['number'] = 1;
-                                $coze['length'] = 120;
+                                $coze['length'] = 80;
                                 $coze['keywords'] = "我的IP是" . $ipTalent . "，希望语气偏" . $ipStyle . "。品牌信息：" . $basicInformation . 
                                 "，目标客户：" . $targetCustomers . "。产品特点：" . $productServiceFeatures . "，品牌故事：" . $brandStory . 
                                 "。内容偏好：" . $contentPreferences . "，品牌成就与定位：" . $brandAchievementsPositioning . 
@@ -1137,7 +1137,7 @@ class AutoDeviceSettingLogic extends ApiLogic
         }
     }
 
-    private static function copywriting(array $data, int $userId, $type)
+    public static function copywriting(array $data, int $userId, $type)
     {
         try {
 
