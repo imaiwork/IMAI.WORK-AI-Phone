@@ -204,28 +204,106 @@
                                     <span class="text-[15px] font-black text-[#1E293B]">发送执行策略</span>
                                 </div>
                                 <div class="mt-4 flex flex-col gap-4">
-                                    <!-- <ElRadioGroup v-model="formData.task_type" class="custom-radio-group">
-                                        <ElRadio :value="0" border class="strategy-radio">立即发送</ElRadio>
-                                        <ElRadio :value="1" border class="strategy-radio">定时发送</ElRadio>
-                                    </ElRadioGroup> -->
-                                    <ElDatePicker
-                                        v-model="formData.date"
-                                        type="date"
-                                        :disabled="!!formData.id"
-                                        :disabled-date="getDisabledDate"
-                                        value-format="YYYY-MM-DD"
-                                        placeholder="请选择确切的发送时间"
-                                        class="!w-full custom-datepicker" />
-                                    <!-- 时间选择 -->
-                                    <ElTimePicker
-                                        v-model="formData.time_config"
-                                        :disabled="!!formData.id"
-                                        format="HH:mm"
-                                        is-range
-                                        value-format="HH:mm"
-                                        range-separator="至"
-                                        placeholder="请选择确切的发送时间"
-                                        class="!w-full custom-timepicker" />
+                                    <!-- 执行类型选择 -->
+                                    <div>
+                                        <div class="text-sm font-medium text-[#64748B] mb-3">执行类型</div>
+                                        <div class="bg-slate-50 rounded-2xl p-1.5 inline-flex w-full">
+                                            <div
+                                                v-for="opt in taskExecTypeOptions"
+                                                :key="opt.value"
+                                                @click="formData.task_exec_type = opt.value"
+                                                :class="[
+                                                    'flex-1 py-3 text-center text-sm font-black rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center gap-2',
+                                                    formData.task_exec_type === opt.value
+                                                        ? 'bg-white text-primary shadow-sm'
+                                                        : 'text-slate-400 hover:text-slate-600',
+                                                ]">
+                                                <Icon :name="opt.icon" :size="16" />
+                                                <span>{{ opt.label }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 立即执行 - 执行时长设置 -->
+                                    <div v-if="formData.task_exec_type === 1" class="space-y-4">
+                                        <div
+                                            class="p-3 rounded-2xl border border-slate-100 bg-gradient-to-r from-[#eff6ff]/50 to-[#e0e7ff]/50">
+                                            <div class="flex justify-between items-center mb-4">
+                                                <div>
+                                                    <div class="text-sm font-black text-slate-700 mb-1">
+                                                        任务执行时长
+                                                    </div>
+                                                    <div class="text-xs text-slate-400">
+                                                        当内容执行完成后，任务会根据设定时间提前结束
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center gap-3">
+                                                    <button
+                                                        @click="handleExecuteMinuteChange(-1)"
+                                                        class="w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center transition-colors">
+                                                        <Icon name="el-icon-Minus" :size="16" />
+                                                    </button>
+                                                    <div class="flex items-center gap-1 min-w-[80px] justify-center">
+                                                        <ElInput
+                                                            v-model="formData.minutes"
+                                                            v-number-input="{ min: 1, max: 9999 }"
+                                                            class="!w-16 text-center font-bold" />
+                                                        <span class="text-sm text-slate-500 whitespace-nowrap"
+                                                            >分钟</span
+                                                        >
+                                                    </div>
+                                                    <button
+                                                        @click="handleExecuteMinuteChange(1)"
+                                                        class="w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center transition-colors">
+                                                        <Icon name="el-icon-Plus" :size="16" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="bg-blue-50 rounded-xl p-3 border border-blue-100">
+                                                <div class="flex items-center gap-2 text-blue-600">
+                                                    <Icon name="el-icon-InfoFilled" :size="14" />
+                                                    <span class="text-xs font-medium">立即执行模式</span>
+                                                </div>
+                                                <div class="text-xs text-blue-500 mt-1">
+                                                    任务将在确认后立即开始执行，请确保设备在线
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 定时执行 - 日期和时间选择 -->
+                                    <template v-if="formData.task_exec_type === 0">
+                                        <ElDatePicker
+                                            v-model="formData.date"
+                                            type="date"
+                                            :disabled="!!formData.id"
+                                            :disabled-date="getDisabledDate"
+                                            value-format="YYYY-MM-DD"
+                                            placeholder="请选择确切的发送时间"
+                                            class="!w-full custom-datepicker" />
+                                        <!-- 时间选择 -->
+                                        <ElTimePicker
+                                            v-model="formData.time_config"
+                                            :disabled="!!formData.id"
+                                            format="HH:mm"
+                                            is-range
+                                            value-format="HH:mm"
+                                            range-separator="至"
+                                            placeholder="请选择确切的发送时间"
+                                            class="!w-full custom-timepicker" />
+                                    </template>
+
+                                    <!-- 立即执行时显示执行状态 -->
+                                    <div v-if="formData.task_exec_type === 1">
+                                        <div
+                                            class="flex items-center justify-between h-16 px-4 bg-green-50 border border-green-200 rounded-xl">
+                                            <span class="text-sm font-medium text-green-700">今日发布时间</span>
+                                            <div
+                                                class="px-4 py-2 rounded-full bg-green-100 text-green-600 font-medium text-sm">
+                                                立即执行
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -291,16 +369,26 @@
         :type="formData.attachment_type"
         @close="showMaterialPicker = false"
         @select="handleConfirmMaterial" />
+
+    <task-conflict-pop
+        v-if="showTaskConflictDialog"
+        ref="taskConflictPopRef"
+        :messages="taskConflictMessages.messages"
+        :errors="taskConflictMessages.errors"
+        @close="showTaskConflictDialog = false"
+        @confirm="handleConfirmCreateTask" />
 </template>
 <script setup lang="ts">
 import { dayjs, type FormInstance, type InputInstance } from "element-plus";
 import { circleTaskAdd } from "@/api/person_wechat";
+import { checkTaskPublishTime } from "@/api/device";
 import { MaterialTypeEnum } from "@/pages/app/person_wechat/_enums";
 import EmojiContainer from "../../_components/emoji.vue";
 import LinkCard from "../../_components/link-card.vue";
 import MiniProgramCard from "../../_components/mini-program-card.vue";
 import MaterialPicker from "../../_components/material-picker.vue";
 import useGlobalSettings from "../../_hooks/useGlobalSettings";
+import TaskConflictPop from "@/pages/app/_components/task-conflict-pop.vue";
 import { setRangeText } from "@/utils/dom";
 
 // ** 1. 类型定义与组件接口 **
@@ -315,6 +403,9 @@ type FormData = {
     date: string;
     wechat_ids?: string[];
     time_config: string[];
+    task_exec_type: number; // 新增：0-定时执行，1-立即执行
+    minutes: number; // 新增：执行时长（分钟）
+    task_ids: string[]; // 新增：冲突任务ID
 };
 
 const props = withDefaults(
@@ -341,28 +432,45 @@ const nuxtApp = useNuxtApp();
 
 // ** 3. 表单状态与验证 **
 
+// 新增：执行类型选项
+const taskExecTypeOptions = [
+    { icon: "el-icon-VideoPlay", label: "立即执行", value: 1 },
+    { icon: "el-icon-Clock", label: "定时执行", value: 0 },
+];
+
 const formData = computed({
     get: () => props.modelValue,
     set: (value: FormData) => emit("update:modelValue", value),
 });
 
 const formRef = shallowRef<FormInstance>();
-const rules = {
-    content: [{ required: true, message: "请输入朋友圈基础文本内容" }],
-    date: [
-        { required: true, message: "请选择朋友圈发送时间" },
-        {
-            validator: (rule, value, callback) => {
-                if (value && dayjs(value).isBefore(dayjs().add(30, "minutes"))) {
-                    callback(new Error("发送时间不能小于当前时间30分钟"));
-                } else {
-                    callback();
-                }
-            },
-        },
-    ],
-    wechat_ids: [{ required: true, message: "请选择发送账号" }],
-};
+const rules = computed(() => {
+    const baseRules = {
+        content: [{ required: true, message: "请输入朋友圈基础文本内容" }],
+        wechat_ids: [{ required: true, message: "请选择发送账号" }],
+    };
+
+    // 定时执行时需要验证日期
+    if (formData.value.task_exec_type === 0) {
+        return {
+            ...baseRules,
+            date: [
+                { required: true, message: "请选择朋友圈发送时间" },
+                {
+                    validator: (rule, value, callback) => {
+                        if (value && dayjs(value).isBefore(dayjs().add(30, "minutes"))) {
+                            callback(new Error("发送时间不能小于当前时间30分钟"));
+                        } else {
+                            callback();
+                        }
+                    },
+                },
+            ],
+        };
+    }
+
+    return baseRules;
+});
 
 const assetData = reactive({
     image: [] as string[],
@@ -371,6 +479,10 @@ const assetData = reactive({
     mini_program: {} as Record<string, any>,
 });
 
+// 新增：任务冲突相关状态
+const showTaskConflictDialog = ref(false);
+const taskConflictMessages = reactive<{ messages: string[]; errors: any[] }>({ messages: [], errors: [] });
+const taskConflictPopRef = shallowRef<InstanceType<typeof TaskConflictPop>>();
 // ** 4. 内容与表情符号状态 **
 
 const contentRef = ref<InputInstance>();
@@ -409,6 +521,14 @@ const hasLinkOrMiniProgramAsset = computed(() => {
 
 // 禁用当前日期之前的日期
 const getDisabledDate = (time: Date) => time.getTime() < dayjs().startOf("day").valueOf();
+
+// 新增：执行时长调整函数
+const handleExecuteMinuteChange = (delta: number) => {
+    const newValue = formData.value.minutes + delta;
+    if (newValue >= 1) {
+        formData.value.minutes = newValue;
+    }
+};
 
 /**
  * 处理文件上传成功事件
@@ -548,6 +668,42 @@ const prepareAttachmentContent = (): any[] => {
     }
 };
 
+// 新增：执行创建任务的函数
+const executeCreateTask = async () => {
+    try {
+        // 判断附加内容是不是为空
+        if (!formData.value.attachment_content) {
+            formData.value.attachment_type = MaterialTypeEnum.TEXT;
+        }
+
+        // 如果是立即发送，清空发送时间
+        if (formData.value.task_exec_type === 1) {
+            formData.value.date = "";
+            formData.value.time_config = [];
+        }
+
+        // 提交表单
+        await circleTaskAdd({
+            ...formData.value,
+            time_config:
+                formData.value.task_exec_type === 1
+                    ? ""
+                    : `${formData.value.time_config[0]}-${formData.value.time_config[1]}`,
+        });
+        feedback.msgSuccess("创建成功");
+        emit("close");
+        emit("success");
+    } catch (error) {
+        feedback.msgError(error);
+    }
+};
+
+// 新增：确认创建任务（处理冲突后）
+const handleConfirmCreateTask = async () => {
+    showTaskConflictDialog.value = false;
+    await executeCreateTask();
+};
+
 /**
  * 处理表单提交
  */
@@ -565,7 +721,7 @@ const handleCreate = async () => {
         feedback.msgWarning("请上传图片或视频");
         return;
     }
-    if (formData.value.time_config.length === 2) {
+    if (formData.value.task_exec_type === 0 && formData.value.time_config.length === 2) {
         const [start, end] = formData.value.time_config;
         if (dayjs(end, "HH:mm").diff(dayjs(start, "HH:mm"), "minutes") < 30) {
             feedback.msgWarning("时间间隔不能小于30分钟");
@@ -576,28 +732,32 @@ const handleCreate = async () => {
         feedback.msgWarning("请选择发送账号");
         return;
     }
-    try {
-        // 判断附加内容是不是为空
-        if (!formData.value.attachment_content) {
-            formData.value.attachment_type = MaterialTypeEnum.TEXT;
-        }
 
-        // 如果是立即发送，清空发送时间
-        if (formData.value.task_type === 0) {
-            formData.value.date = "";
-        }
+    // 立即执行需要检测冲突
+    if (formData.value.task_exec_type === 1) {
+        try {
+            const { messages, task_ids, errors } = await checkTaskPublishTime({
+                device_codes: formData.value.wechat_ids,
+                task_exec_type: formData.value.task_exec_type,
+                minutes: formData.value.minutes,
+            });
 
-        // 提交表单
-        await circleTaskAdd({
-            ...formData.value,
-            time_config: `${formData.value.time_config[0]}-${formData.value.time_config[1]}`,
-        });
-        feedback.msgSuccess("创建成功");
-        emit("close");
-        emit("success");
-    } catch (error) {
-        feedback.msgError(error);
+            if ((messages && messages.length > 0) || (errors && errors.length > 0)) {
+                taskConflictMessages.messages = messages;
+                taskConflictMessages.errors = errors;
+                formData.value.task_ids = task_ids;
+                showTaskConflictDialog.value = true;
+                await nextTick();
+                taskConflictPopRef.value?.open();
+                return;
+            }
+        } catch (error: any) {
+            feedback.msgError(error);
+            return;
+        }
     }
+
+    await executeCreateTask();
 };
 
 const { lockFn, isLock } = useLockFn(handleCreate);

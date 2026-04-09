@@ -101,6 +101,13 @@ trait AichatTrait
                 ])->log();
                 return;
             }
+            if ($isChatroom === 1 && (int)$wechat['takeover_type'] === 1) {
+                $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('仅限私聊')->withContext([
+                    'data' => $wechat,
+                    'msg' => '仅限私聊，群聊消息不回复'
+                ])->log();
+                return;
+            }
 
             $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('聊天模型gpt')->withContext(['data' => $wechat, 'msg' => '聊天模型'])->log();
 

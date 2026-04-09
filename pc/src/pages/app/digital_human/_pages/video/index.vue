@@ -29,6 +29,7 @@
                     <ElOption label="新闻" :value="CreateVideoTypeEnum.NEWS" />
                     <ElOption label="一句话" :value="CreateVideoTypeEnum.SENTENCE" />
                     <ElOption label="分镜" :value="CreateVideoTypeEnum.STORYBOARD" />
+                    <ElOption label="爆款仿写" :value="CreateVideoTypeEnum.HOT_WRITE" />
                 </ElSelect>
             </div>
         </div>

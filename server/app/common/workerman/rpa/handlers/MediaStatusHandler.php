@@ -4,6 +4,9 @@ namespace app\common\workerman\rpa\handlers;
 
 use app\common\workerman\rpa\BaseMessageHandler;
 use Workerman\Connection\TcpConnection;
+
+use app\common\model\sv\SvPublishSetting;
+use app\common\model\sv\SvPublishSettingAccount;
 use app\common\model\sv\SvPublishSettingDetail;
 use app\common\model\wechat\AiWechatCircleTask;
 use app\common\model\wechat\AiWechatCircleTaskConfig;
@@ -38,7 +41,7 @@ class MediaStatusHandler extends BaseMessageHandler
             $mediaId = $content['material_id'] ?? 0;
             $status = $content['status'] ?? 0;
             $where = [];
-            if($this->publishPlatform === DeviceEnum::PUBLISH_PLATFORM_WX){
+            if ($this->publishPlatform === DeviceEnum::PUBLISH_PLATFORM_WX) {
                 $media = AiWechatCircleTask::where('id', $mediaId)->findOrEmpty();
                 if (!$media->isEmpty()) {
                     $media->send_status = $status === 1 ? 2 : 3;
@@ -53,7 +56,7 @@ class MediaStatusHandler extends BaseMessageHandler
                     ['device_code', '=', $media->device_code],
                     ['account', '=', $media->wechat_id],
                 ];
-            }else{
+            } else {
                 $media = SvPublishSettingDetail::where('id', $mediaId)->findOrEmpty();
                 if (!$media->isEmpty()) {
                     $media->status = $status;
@@ -61,6 +64,17 @@ class MediaStatusHandler extends BaseMessageHandler
                     $media->update_time = time();
                     $media->exec_time = time();
                     $media->save();
+                    $find = SvPublishSettingDetail::where('publish_account_id', $media->publish_account_id)->where('status', 'in', [0, 3])->findOrEmpty();
+                    if ($find->isEmpty() && ((int)$status === 1 || (int)$status === 2)) {
+                        SvPublishSettingAccount::where('id', $media->publish_account_id)->update([
+                            'status' => 2,
+                            'update_time' => time()
+                        ]);
+                        SvPublishSetting::where('id', $media->publish_id)->update([
+                            'status' => 3,
+                            'update_time' => time()
+                        ]);
+                    }
                 }
                 $where = [
                     ['sub_task_id', '=', $media->publish_account_id],
@@ -69,7 +83,7 @@ class MediaStatusHandler extends BaseMessageHandler
                     ['account', '=', $media->account],
                 ];
             }
-            
+
 
             // 主任务状态修改
             $task = SvDeviceTask::where($where)->findOrEmpty();
@@ -105,7 +119,7 @@ class MediaStatusHandler extends BaseMessageHandler
             $this->payload['code'] =  WorkerEnum::DEVICE_ERROR_CODE;
             $this->payload['type'] = 'error';
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }

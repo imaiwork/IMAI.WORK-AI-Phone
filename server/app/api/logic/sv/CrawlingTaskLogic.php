@@ -65,6 +65,7 @@ class CrawlingTaskLogic extends SvBaseLogic
 
             $params['wechat_id'] = implode(',', $params['wechat_id']);
             $params['wechat_reg_type'] = $params['wechat_reg_type'] ?? 0;
+            $params['wechat_time_config'] = empty($params['wechat_time_config']) ? [] : [$params['wechat_time_config']];
 
             if ((int)$params['add_type'] === 1 && empty($params['wechat_id'])) {
                 throw new \Exception('请配置添加微信的客服微信');
@@ -74,9 +75,27 @@ class CrawlingTaskLogic extends SvBaseLogic
             }
             $params['remarks'] = json_encode($params['remarks'], JSON_UNESCAPED_UNICODE);
 
-            if (!isset($params['time_config']) || empty($params['time_config'])) {
-                throw new \Exception('请配置任务执行时间区间');
+
+            $is_overlap = $params['task_exec_type'] ?? 0;
+            if ((int)$is_overlap === 1) {
+                \app\api\logic\device\TaskLogic::updateTaskStatusByIds($params['task_ids']);
+                $params['time_config'] = [
+                    date('H:i', time()) . '-' . date('H:i', (time() + (60 * (int)$params['minutes']))),
+                ];
+                $params['custom_date'] = [
+                    date('Y-m-d', time())
+                ];
+                unset($params['task_ids']);
+            } else {
+                if (!isset($params['time_config']) || empty($params['time_config'])) {
+                    throw new \Exception('请配置任务执行时间区间');
+                }
             }
+
+            if(is_string($params['time_config'])){
+                $params['time_config'] = [$params['time_config']];
+            }
+
 
             $params['custom_date'] = is_null($params['custom_date']) ? [] : $params['custom_date'];
 
@@ -87,6 +106,9 @@ class CrawlingTaskLogic extends SvBaseLogic
             $params['time_config'] = json_encode($params['time_config'], JSON_UNESCAPED_UNICODE);
             $params['exec_time'] = $params['time_config'];
             $crawTaskIds = [];
+
+            //print_r($params);die;
+
             foreach ($times as $key => $time) {
                 $params['start_time'] = $time['start_time'];
                 $params['end_time'] = $time['end_time'];
@@ -95,13 +117,16 @@ class CrawlingTaskLogic extends SvBaseLogic
 
                 //将关键词平均分配给设备
                 foreach ($devices as $device => $val) {
-                    list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device, DeviceEnum::TASK_TYPE_CLUES, $time['start_time'], $time['end_time'], self::$uid);
-                    if (!$isOverlap) {
-                        $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                        $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
-                        throw new \Exception($msg);
-                    }
 
+                    if ((int)$is_overlap === 0) {
+                        list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device, DeviceEnum::TASK_TYPE_CLUES, $time['start_time'], $time['end_time'], self::$uid);
+                        if (!$isOverlap) {
+                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                            throw new \Exception($msg);
+                        }
+                    }
 
                     $arrDeviceData[] = [
                         'user_id'     => self::$uid,
@@ -112,12 +137,15 @@ class CrawlingTaskLogic extends SvBaseLogic
                         'update_time' => time(),
                         'status'      => 1,
                     ];
+                    $account  = SvAccount::where('device_code',  $device)->where('type', 1)->where('user_id', self::$uid)->findOrEmpty();;
                     array_push($allTaskInstall, [
                         'user_id' => self::$uid,
                         'device_code' => $device,
                         'task_type' => DeviceEnum::TASK_TYPE_CLUES,
-                        'account' => self::getSphAccount($device),
+                        'account' => $account->account ?? '',
                         'account_type' => 1,
+                        'nickname' => $account->nickname ?? '',
+                        'avatar' => $account->avatar ?? '', 
                         'task_name' => '视频号自动获客任务',
                         'status' => 0,
                         'day' => date('Y-m-d', $task->start_time),
@@ -129,34 +157,37 @@ class CrawlingTaskLogic extends SvBaseLogic
                         'create_time' => time(),
                     ]);
                     \app\api\logic\device\TaskLogic::updateWechatRpaTaskTime($device, $task->start_time);
-                    if(isset($params['add_type']) && isset($params['wechat_time_type']) && (int)$params['add_type'] === 1 && (int)$params['wechat_time_type'] === 0){
+                    if (isset($params['add_type']) && isset($params['wechat_time_type']) && (int)$params['add_type'] === 1 && (int)$params['wechat_time_type'] === 0) {
                         $st = $time['end_time'] + 180;
                         $et = $st + ((int)$params['add_number'] * (int)$params['add_interval_time'] * 60);
-                        if(($et - $st) < (5 *60)){
-                            $et = $st + (5 *60);
+                        if (($et - $st) < (5 * 60)) {
+                            $et = $st + (5 * 60);
                         }
-                        list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device, DeviceEnum::TASK_TYPE_ACTIVE, $st, $et, self::$uid);
-                        if (!$isOverlap) {
-                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
-                            throw new \Exception($msg);
+                        if ((int)$is_overlap === 0) {
+                            list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device, DeviceEnum::TASK_TYPE_ACTIVE, $st, $et, self::$uid);
+                            if (!$isOverlap) {
+                                $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                                $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                                throw new \Exception($msg);
+                            }
                         }
+
                         self::createWechatTask($params, $device, [$task->id], $st, $et, $allTaskInstall);
                     }
                 }
-
-                
             }
 
-            if(isset($params['add_type']) && isset($params['wechat_time_type']) && (int)$params['add_type'] === 1 && (int)$params['wechat_time_type'] === 1){
+            if (isset($params['add_type']) && isset($params['wechat_time_type']) && (int)$params['add_type'] === 1 && (int)$params['wechat_time_type'] === 1) {
                 $wechatTimes = \app\api\logic\device\TaskLogic::getTimes($params['wechat_time_config'], date('Y-m-d', time()), $params['wechat_task_frep'], $params['wechat_custom_date']);
                 foreach ($wechatTimes as $key => $time) {
                     foreach ($devices as $device => $val) {
-                        list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device, DeviceEnum::TASK_TYPE_ACTIVE, $time['start_time'], $time['end_time'], self::$uid);
-                        if (!$isOverlap) {
-                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
-                            throw new \Exception($msg);
+                        if ((int)$is_overlap === 0) {
+                            list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device, DeviceEnum::TASK_TYPE_ACTIVE, $time['start_time'], $time['end_time'], self::$uid);
+                            if (!$isOverlap) {
+                                $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                                $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                                throw new \Exception($msg);
+                            }
                         }
                         self::createWechatTask($params, $device, $crawTaskIds, $time['start_time'], $time['end_time'], $allTaskInstall);
                     }
@@ -190,7 +221,7 @@ class CrawlingTaskLogic extends SvBaseLogic
 
     private static function createWechatTask(array $params, string $device, array $taskIds, int $st, int $et, array &$allTaskInstall)
     {
-        $et = $et - 180;
+        $et = $et - 120;
         $_task = SvCrawlingWechatTask::create([
             'user_id' => self::$uid,
             'name' => '视频号加微任务' . date('mdHis', time()),
@@ -202,16 +233,19 @@ class CrawlingTaskLogic extends SvBaseLogic
             'create_time' => time(),
             'update_time' => time(),
         ]);
+        $account  = SvAccount::where('device_code',  $device)->where('type', 1)->where('user_id', self::$uid)->findOrEmpty();;
         array_push($allTaskInstall, [
             'user_id' => self::$uid,
             'device_code' => $device,
             'task_type' => DeviceEnum::TASK_TYPE_CLUES_WECHAT,
-            'account' => self::getSphAccount($device),
+            'account' => $account->account ?? '',
             'account_type' => 1,
+            'nickname' => $account->nickname ?? '',
+            'avatar' => $account->avatar ?? '', 
             'task_name' => '视频号获客加微任务',
             'status' => 0,
             'day' => date('Y-m-d', $st),
-            'time_config' => json_encode( array(
+            'time_config' => json_encode(array(
                 date('H:i', $st) . "-" . date('H:i', $et),
             ), JSON_UNESCAPED_UNICODE),
             'start_time' => $st,
@@ -219,8 +253,8 @@ class CrawlingTaskLogic extends SvBaseLogic
             'sub_task_id' => $_task->id,
             'source' => DeviceEnum::TASK_SOURCE_CLUES_WECHAT, //sv_crawling_task
             'create_time' => time(),
-        ]);    
-    }    
+        ]);
+    }
 
     private static function setOldTaskStatus(int $task_id)
     {
@@ -483,11 +517,11 @@ class CrawlingTaskLogic extends SvBaseLogic
                 self::setError('设备不存在');
                 return false;
             }
-            if ($find['auto_type'] == 1){
+            if ($find['auto_type'] == 1) {
                 $response = \app\common\service\ToolsService::Automation()->ocrImg($params);
                 $scene = "automation_ocr_img";
                 $changetype = AccountLogEnum::TOKENS_DEC_AUTOMATION_OCR_IMG;
-            }else{
+            } else {
                 $response = \app\common\service\ToolsService::Sv()->ocr($params);
                 $scene = "sph_ocr";
                 $changetype = AccountLogEnum::TOKENS_DEC_SPH_OCR;
@@ -537,11 +571,11 @@ class CrawlingTaskLogic extends SvBaseLogic
                 return false;
             }
 
-            if ($find['auto_type'] == 1){
+            if ($find['auto_type'] == 1) {
                 $response = \app\common\service\ToolsService::Automation()->ocrLocal($params);
                 $scene = "automation_ocr_local";
                 $changetype = AccountLogEnum::TOKENS_DEC_AUTOMATION_OCR_LOCAL;
-            }else{
+            } else {
                 $response = \app\common\service\ToolsService::Sv()->localOcr($params);
                 $scene = "sph_local_ocr";
                 $changetype = AccountLogEnum::TOKENS_DEC_SPH_LOCAL_OCR;

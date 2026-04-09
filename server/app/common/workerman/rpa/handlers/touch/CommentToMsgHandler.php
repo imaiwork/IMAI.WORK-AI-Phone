@@ -72,7 +72,30 @@ class CommentToMsgHandler extends BaseMessageHandler
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务配置不存在');
             }
 
-            $hash = hash('sha256', $content['task_id'] . $content['author_name'] . $content['content']);
+            $hash = hash('sha256', $content['author_name'] . $content['content']);
+            $device = SvDevice::where('device_code', $this->payload['deviceId'])->findOrEmpty();
+            //校验是否超过ip人设中互动限制
+            if ($device->auto_type == 1 && $device->persona_id > 0) {
+                $config = \app\common\model\aiPersona\AiPersonaTrafficConfig::where('user_id', $device->user_id)->where('persona_id', $device->persona_id)->findOrEmpty();
+                if ($config->isEmpty()) {
+                    throw new \Exception($this->platform[$this->appType] . '截流获客ip人设配置不存在');
+                }
+
+                $recordCount = SvLeadScrapingRecord::where([
+                    ['device_code', '=', $this->payload['deviceId']],
+                    ['task_type', '=', 2],
+                    ['account_type', '=', $this->appType]
+                ])->where('create_time', 'between', [strtotime(date('Y-m-d 00:00:00')), strtotime(date('Y-m-d 23:59:59'))])
+                ->count();
+                if ($recordCount >= $config->comment_number) {
+                    $this->setLog('异常信息' . $config->comment_number . '条互动限制已超过', 'task_complete');
+                    return [
+                        'isProceed' => 0, //是否处理 1是 0 否
+                    ];
+                }
+            }
+
+
 
             if ((int)$setting->is_execed_clues  === 1) {
                 $find = SvLeadScrapingRecord::where([
@@ -128,8 +151,8 @@ class CommentToMsgHandler extends BaseMessageHandler
                 'touch_content'       => $content['touch_content'] ?? '',
             ];
             //SvLeadScrapingRecord::create($insert);
-            $autoType = SvDevice::where('device_code', $this->payload['deviceId'])->value('auto_type') ?? 0;
-            if ($autoType == 1) {
+           
+            if ($device->auto_type == 1) {
                 $response = \app\common\service\ToolsService::Automation()->shutOffPrivateLetter($content);
                 if (isset($response['code']) && $response['code'] == 10000) {
                     //检查扣费

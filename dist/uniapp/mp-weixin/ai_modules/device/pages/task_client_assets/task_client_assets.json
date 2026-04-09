@@ -1,0 +1,13 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-tabs": "../../../../uni_modules/vk-uview-ui/components/u-tabs/u-tabs",
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "u-calendar": "../../../../uni_modules/vk-uview-ui/components/u-calendar/u-calendar",
+    "clue-detail-pop": "./components/clue-detail-pop",
+    "follow-detail-pop": "./components/follow-detail-pop"
+  }
+}

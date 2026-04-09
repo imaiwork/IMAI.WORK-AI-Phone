@@ -248,12 +248,18 @@
         :show-close="false"
         @close="handleCreateTaskSuccess"
         @confirm="handleCreateTaskSuccess" />
+    <task-conflict-dialog
+        v-if="showTaskMsgPop"
+        v-model="showTaskMsgPop"
+        :messages="taskMsgPopContent"
+        @close="showTaskMsgPop = false"
+        @confirm="handleTaskMsgPopConfirm" />
 </template>
 
 <script setup lang="ts">
 import config from "@/config";
 import WechatOA from "@/utils/wechat";
-import { createManualAddWechat, getPublishAccountList } from "@/api/device";
+import { createManualAddWechat, getPublishAccountList, checkTaskPublishTime } from "@/api/device";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { chooseFile } from "@/components/file-upload/choose-file";
 import { uploadFile } from "@/api/app";
@@ -263,6 +269,8 @@ import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { useCopy } from "@/hooks/useCopy";
 import ClueCard from "@/ai_modules/device/components/clue-card/clue-card.vue";
 import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
+import TaskConflictDialog from "@/ai_modules/device/components/task-conflict-dialog/task-conflict-dialog.vue";
+
 const { on } = useEventBusManager();
 
 const appStore = useAppStore();
@@ -298,6 +306,9 @@ const formData = reactive<{
     task_frep: number;
     device_codes: string[];
     custom_date: string[];
+    task_exec_type: number;
+    minutes: number;
+    task_ids: string[];
 }>({
     name: `自动加好友任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`,
     crawling_task_ids: [],
@@ -318,6 +329,9 @@ const formData = reactive<{
     task_frep: 1,
     device_codes: [],
     custom_date: [],
+    task_exec_type: 1,
+    minutes: 30,
+    task_ids: [],
 });
 
 const taskList = ref<any[]>([]);
@@ -337,7 +351,8 @@ const editRemarkIndex = ref(-1);
 
 const currentFrequency = ref(0);
 const taskErrorMsg = ref("");
-
+const showTaskMsgPop = ref(false);
+const taskMsgPopContent = ref<string[]>([]);
 const showCreateTaskSuccessDialog = ref(false);
 
 const { optionsData } = useDictOptions<{
@@ -532,7 +547,7 @@ const handleDeleteRemark = (index: number) => {
 const handleCreateTaskSuccess = () => {
     showCreateTaskSuccessDialog.value = false;
     uni.$u.route({
-        url: "/pages/phone/phone",
+        url: "/ai_modules/device/pages/index/index",
         type: "reLaunch",
     });
 };
@@ -554,6 +569,39 @@ const handleCreateTask = async () => {
         uni.$u.toast("请选择时间");
         return false;
     }
+    if (formData.task_exec_type == 1) {
+        if (formData.minutes < 1) return uni.$u.toast("执行时间不能小于1分钟");
+        if (formData.minutes > 9999) return uni.$u.toast("执行时间不能超过9999分钟");
+    }
+    if (formData.task_exec_type === 1) {
+        uni.showLoading({ title: "检测冲突中...", mask: true });
+        try {
+            const { messages, task_ids } = await checkTaskPublishTime({
+                device_codes: formData.device_codes,
+                minutes: formData.minutes,
+            });
+
+            uni.hideLoading();
+
+            if (messages && messages.length > 0) {
+                taskMsgPopContent.value = messages;
+                formData.task_ids = task_ids;
+                showTaskMsgPop.value = true;
+                return;
+            }
+
+            await executeCreateTask();
+        } catch (error: any) {
+            uni.hideLoading();
+            taskErrorMsg.value = error;
+            uni.$u.toast(error);
+        }
+    } else {
+        await executeCreateTask();
+    }
+};
+
+const executeCreateTask = async () => {
     uni.showLoading({
         title: "创建中...",
         mask: true,
@@ -578,7 +626,7 @@ const handleCreateTask = async () => {
                 success: (res) => {
                     if (res.confirm) {
                         uni.$u.route({
-                            url: "/pages/phone/phone",
+                            url: "/ai_modules/device/pages/index/index",
                         });
                     }
                 },
@@ -592,6 +640,10 @@ const handleCreateTask = async () => {
             });
         }
     }
+};
+
+const handleTaskMsgPopConfirm = async () => {
+    await executeCreateTask();
 };
 
 watch(

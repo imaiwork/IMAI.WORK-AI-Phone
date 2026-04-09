@@ -294,6 +294,28 @@
                             <view class="text-[30rpx] font-medium"> 时间设置 </view>
                             <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
                                 <view>
+                                    <view class="bg-[#F4F5F9] rounded-[16rpx] p-[6rpx] flex mb-[36rpx] gap-2">
+                                        <view
+                                            v-for="(item, index) in taskExecTypeOptions"
+                                            class="flex-1 flex items-center justify-center gap-x-[8rpx] h-[72rpx] rounded-[12rpx] text-[28rpx]"
+                                            :key="index"
+                                            :class="
+                                                formData.task_exec_type === item.value
+                                                    ? 'bg-white text-primary font-medium shadow-[0_2rpx_8rpx_rgba(0,0,0,0.06)]'
+                                                    : 'text-[#00000066]'
+                                            "
+                                            @click="formData.task_exec_type = item.value">
+                                            <u-icon
+                                                :name="item.icon"
+                                                size="32"
+                                                :color="
+                                                    formData.task_exec_type === item.value ? '#2979ff' : '#00000066'
+                                                "></u-icon>
+                                            <text>{{ item.text }}</text>
+                                        </view>
+                                    </view>
+                                </view>
+                                <view class="mt-[28rpx]" v-if="formData.task_exec_type === 0">
                                     <view class="text-[#7C7E80]">任务频率</view>
                                     <view class="mt-[22rpx]">
                                         <view class="flex flex-wrap gap-x-2 gap-y-3">
@@ -314,6 +336,7 @@
                                         </view>
                                     </view>
                                 </view>
+
                                 <view class="mt-[28rpx]" v-if="formData.custom_date.length && currentFrequency == 5">
                                     <view class="flex items-center justify-between">
                                         <view class="text-[#7C7E80]">任务时间</view>
@@ -343,9 +366,52 @@
                                         </view>
                                     </view>
                                 </view>
+                                <view class="mt-[28rpx]" v-if="formData.task_exec_type === 1">
+                                    <view
+                                        class="flex items-center justify-between pb-[36rpx] border-[0] border-b-[1rpx] border-solid border-[#F4F5F9] mb-[36rpx]">
+                                        <view>
+                                            <view class="font-medium text-[28rpx] text-[#333]">任务执行时间</view>
+                                            <view class="text-[#00000066] text-[22rpx] mt-[10rpx] leading-[1.6]">
+                                                当内容执行完成后，任务会根据<br />设定时间提前结束
+                                            </view>
+                                        </view>
+                                        <view class="flex items-center gap-x-[16rpx]">
+                                            <view
+                                                class="w-[60rpx] h-[60rpx] rounded-[12rpx] border border-solid border-[#EDEDED] flex items-center justify-center bg-[#FAFAFA]"
+                                                @click="handleExecuteMinuteChange(-1)">
+                                                <text class="text-[36rpx] text-[#333] leading-none">-</text>
+                                            </view>
+                                            <view class="max-w-[130rpx] flex items-center justify-center">
+                                                <u-input
+                                                    class="flex-1 font-bold"
+                                                    v-model="formData.minutes"
+                                                    type="digit"
+                                                    placeholder=""
+                                                    :custom-style="{ textAlign: 'center' }" />
+
+                                                <text class="text-[#00000066] text-[26rpx]"> 分钟</text>
+                                            </view>
+                                            <view
+                                                class="w-[60rpx] h-[60rpx] rounded-[12rpx] border border-solid border-[#EDEDED] flex items-center justify-center bg-[#FAFAFA]"
+                                                @click="handleExecuteMinuteChange(1)">
+                                                <text class="text-[36rpx] text-[#333] leading-none">+</text>
+                                            </view>
+                                        </view>
+                                    </view>
+                                </view>
                                 <view class="mt-[28rpx]">
                                     <view class="text-[#7C7E80]">每日执行时间</view>
-                                    <view class="mt-[12rpx] flex items-center gap-x-4">
+                                    <template v-if="formData.task_exec_type == 1">
+                                        <view
+                                            class="mt-[12rpx] flex items-center justify-between h-[90rpx] border-[0] border-b-[1rpx] border-solid border-[#EDEDED]">
+                                            <text class="text-[#333] font-medium text-[28rpx]">今日发布时间</text>
+                                            <view
+                                                class="px-[24rpx] py-[10rpx] rounded-full bg-[#EEF3FF] text-primary font-medium text-[26rpx]">
+                                                立即执行
+                                            </view>
+                                        </view>
+                                    </template>
+                                    <view class="mt-[12rpx] flex items-center gap-x-4" v-else>
                                         <view
                                             class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
                                             <picker
@@ -595,13 +661,20 @@
         content="创建成功，回到首页？"
         @close="handleCreateTaskSuccess"
         @confirm="handleCreateTaskSuccess" />
+    <task-conflict-dialog
+        v-if="showTaskMsgPop"
+        v-model="showTaskMsgPop"
+        :messages="taskMsgPopContent"
+        @close="showTaskMsgPop = false"
+        @confirm="handleTaskMsgPopConfirm" />
 </template>
 
 <script setup lang="ts">
 import { createTask } from "@/api/sph";
-import { getPublishAccountList } from "@/api/device";
+import { getPublishAccountList, checkTaskPublishTime } from "@/api/device";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
 import AccountIcon from "@/ai_modules/sph/static/icons/account.svg";
 import AccountPrimaryIcon from "@/ai_modules/sph/static/icons/account_primary.svg";
 import VideoIcon from "@/ai_modules/sph/static/icons/video.svg";
@@ -610,7 +683,7 @@ import { ListenerTypeEnum } from "@/ai_modules/sph/enums";
 import { AppTypeEnum, TokensSceneEnum } from "@/enums/appEnums";
 import { useDictOptions } from "@/hooks/useDictOptions";
 import ClueEdit from "@/ai_modules/sph/components/clue-edit/clue-edit.vue";
-import { useEventBusManager } from "@/hooks/useEventBusManager";
+import TaskConflictDialog from "@/ai_modules/sph/components/task-conflict-dialog/task-conflict-dialog.vue";
 
 enum CrawlType {
     ACCOUNT = 1,
@@ -679,6 +752,9 @@ const formData = reactive<{
     wechat_task_frep: number;
     wechat_time_config: [string, string];
     wechat_custom_date: string[];
+    task_exec_type: number;
+    minutes: number;
+    task_ids: string[];
 }>({
     name: `视频号获客任务${uni.$u.timeFormat(Date.now(), "yyyymmddhhMM")}`,
     crawl_type: 1,
@@ -706,7 +782,15 @@ const formData = reactive<{
     wechat_task_frep: 1,
     wechat_time_config: ["09:00", "09:15"],
     wechat_custom_date: [],
+    task_exec_type: 1,
+    minutes: 15,
+    task_ids: [],
 });
+
+const taskExecTypeOptions = [
+    { icon: "arrow-upward", text: "即时执行", value: 1 },
+    { icon: "clock", text: "定时执行", value: 0 },
+];
 
 const showClueEdit = ref(false);
 const clueEditRef = shallowRef();
@@ -718,16 +802,13 @@ const showAddRemark = ref(false);
 const editRemarkIndex = ref(-1);
 const addRemarkContent = ref("");
 const customDateType = ref<1 | 2>(1);
-// 当前任务频率
 const currentFrequency = ref(0);
-// 当前加微任务频率
 const currentWechatFrequency = ref(0);
-// 是否展开任务时间
 const isExpandDate = ref(false);
-// 是否展开加微任务时间
 const isWechatExpandDate = ref(false);
-// 任务冲突
 const taskErrorMsg = ref("");
+const showTaskMsgPop = ref(false);
+const taskMsgPopContent = ref<string[]>([]);
 
 const timeInterval = 15;
 
@@ -950,6 +1031,11 @@ const handleWechatEndTimeChange = (e: any) => {
     }
     formData.wechat_time_config[1] = value;
 };
+const handleExecuteMinuteChange = (delta: number) => {
+    const next = Number(formData.minutes) + delta;
+    if (next < 1) return;
+    formData.minutes = next;
+};
 
 const handleWechatEndTimeClick = () => {
     if (!formData.wechat_time_config[0]) {
@@ -966,55 +1052,71 @@ const handleCreateTaskSuccess = () => {
     });
 };
 
-const handleCreateTask = async () => {
-    if (formData.device_codes.length == 0) {
-        uni.$u.route({
-            url: "/ai_modules/device/pages/device_choose/device_choose",
-        });
-        return;
-    }
-    if (formData.time_config[0] == "" || formData.time_config[1] == "") {
-        uni.$u.toast("请选择时间");
-        return;
-    }
-    uni.showLoading({
-        title: "创建中...",
-        mask: true,
-    });
+const executeCreateTask = async () => {
+    uni.showLoading({ title: "创建中...", mask: true });
     try {
         await createTask({
             ...formData,
-            time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
-            wechat_time_config: [`${formData.wechat_time_config[0]}-${formData.wechat_time_config[1]}`],
+            time_config: formData.task_exec_type === 1 ? "" : `${formData.time_config[0]}-${formData.time_config[1]}`,
+            wechat_time_config:
+                formData.wechat_time_type === 1
+                    ? `${formData.wechat_time_config[0]}-${formData.wechat_time_config[1]}`
+                    : "",
             type: [AppTypeEnum.SPH],
         });
+
         uni.hideLoading();
         showCreateTaskSuccessDialog.value = true;
     } catch (error: any) {
+        uni.hideLoading();
         taskErrorMsg.value = error;
-        uni.hideLoading();
-        uni.hideLoading();
-        if (error.indexOf("24小时自动执行任务") > -1) {
-            uni.showModal({
-                title: "提示",
-                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
-                success: (res) => {
-                    if (res.confirm) {
-                        uni.$u.route({
-                            url: "/pages/phone/phone",
-                        });
-                    }
-                },
-            });
-        } else {
-            taskErrorMsg.value = error;
-            uni.showToast({
-                title: error,
-                icon: "none",
-                duration: 3000,
-            });
+        uni.$u.toast(error);
+    }
+};
+
+const handleCreateTask = async () => {
+    if (!formData.name) return uni.$u.toast("请输入任务名称");
+    if (formData.device_codes.length === 0) return uni.$u.toast("请选择设备");
+    if (formData.task_exec_type === 0) {
+        if (!formData.time_config[0] || !formData.time_config[1]) {
+            return uni.$u.toast("请设置每日执行时间");
         }
     }
+    if (formData.task_exec_type == 1) {
+        if (formData.minutes < 1) return uni.$u.toast("执行时间不能小于1分钟");
+        if (formData.minutes > 9999) return uni.$u.toast("执行时间不能超过9999分钟");
+    }
+
+    if (formData.task_exec_type === 1) {
+        uni.showLoading({ title: "检测冲突中...", mask: true });
+        try {
+            const { messages, task_ids } = await checkTaskPublishTime({
+                device_codes: formData.device_codes,
+                minutes: formData.minutes,
+            });
+
+            uni.hideLoading();
+
+            if (messages && messages.length > 0) {
+                taskMsgPopContent.value = messages;
+                formData.task_ids = task_ids;
+                showTaskMsgPop.value = true;
+                return;
+            }
+
+            await executeCreateTask();
+        } catch (error: any) {
+            uni.hideLoading();
+            taskErrorMsg.value = error;
+            uni.$u.toast(error);
+        }
+    } else {
+        await executeCreateTask();
+    }
+};
+
+const handleTaskMsgPopConfirm = async () => {
+    await executeCreateTask();
 };
 
 watch(

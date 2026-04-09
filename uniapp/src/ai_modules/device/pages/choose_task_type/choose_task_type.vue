@@ -1,173 +1,268 @@
 <template>
-    <view class="p-4">
-        <view class="grid grid-cols-2 gap-[30rpx]">
+    <view class="h-screen bg-[#F8FAFD] flex flex-col">
+        <view class="flex flex-1 overflow-hidden">
             <view
-                v-for="(item, index) in taskTypeList"
-                :key="index"
-                class="relative flex flex-col bg-white rounded-[32rpx] p-[32rpx] transition-all active:scale-95 shadow-[0_8rpx_20rpx_rgba(0,0,0,0.04)]"
-                @click="handleClick(item)">
-                <view class="flex flex-col items-start gap-y-[20rpx]">
-                    <view class="w-[88rpx] h-[88rpx] rounded-[24rpx] flex items-center justify-center bg-[#f7f8fa]">
-                        <image :src="item.icon" class="w-[52rpx] h-[52rpx]"></image>
-                    </view>
-
-                    <view class="flex flex-col gap-y-[8rpx]">
-                        <view class="text-[32rpx] font-semibold text-[#1a1a1a] leading-tight">{{ item.title }}</view>
-                        <view class="text-[24rpx] text-[#909399] leading-relaxed line-clamp-1">{{ item.desc }}</view>
-                    </view>
-                </view>
-
+                class="flex flex-col w-[140rpx] flex-shrink-0 bg-white pt-[10rpx] pb-[40rpx]"
+                style="box-shadow: 2rpx 0 12rpx rgba(153, 171, 198, 0.1)">
                 <view
-                    class="mt-[32rpx] pt-[24rpx] border-t border-[#f2f2f2] flex items-center justify-between"
-                    @click.stop="handlePreview(item)">
-                    <text class="text-[22rpx] text-[#c0c4cc]">查看演示</text>
-                    <view class="w-[36rpx] h-[36rpx] rounded-full bg-[#f0f2f5] flex items-center justify-center">
-                        <u-icon name="arrow-right" size="12" color="#909399"></u-icon>
+                    v-for="(tab, index) in tabs"
+                    :key="index"
+                    class="relative flex flex-col items-center justify-center py-[30rpx] px-[10rpx]"
+                    @click="activeTab = index">
+                    <view
+                        v-if="activeTab === index"
+                        class="absolute left-0 top-[50%] w-[6rpx] h-[50rpx] rounded-r-full bg-primary"
+                        :style="{ transform: 'translateY(-50%)' }">
+                    </view>
+
+                    <view class="z-10 flex flex-col items-center gap-[8rpx]">
+                        <u-icon :name="tab.icon" size="24" :color="activeTab === index ? '#0065fb' : '#A0AEC0'">
+                        </u-icon>
+                        <text
+                            class="text-[20rpx] font-medium text-center"
+                            :class="activeTab === index ? 'text-primary' : 'text-[#A0AEC0]'"
+                            >{{ tab.label }}</text
+                        >
                     </view>
                 </view>
             </view>
+
+            <scroll-view scroll-y class="flex-1 pt-[10rpx] pb-[40rpx]">
+                <view class="flex flex-col px-[24rpx] gap-[16rpx]">
+                    <view class="flex items-center justify-between py-[16rpx]">
+                        <view class="flex items-center gap-[10rpx]">
+                            <view
+                                class="w-[6rpx] h-[28rpx] rounded-full"
+                                :style="{ background: tabs[activeTab].themeColor }">
+                            </view>
+                            <text class="text-[26rpx] font-medium text-[#2D3748]">
+                                {{ tabs[activeTab].subtitle }}
+                            </text>
+                        </view>
+                    </view>
+
+                    <view
+                        v-for="(item, index) in currentMenuList"
+                        :key="index"
+                        class="bg-white rounded-[28rpx] px-[32rpx] pt-[32rpx] pb-[24rpx]"
+                        style="box-shadow: 0 4rpx 20rpx rgba(153, 171, 198, 0.13), 0 0 0 1px rgba(226, 232, 240, 0.6)"
+                        hover-class="opacity-75"
+                        @click="handleNav(item)">
+                        <view class="flex items-start justify-between mb-[28rpx]">
+                            <view class="flex flex-col gap-[10rpx]">
+                                <text class="text-[36rpx] font-bold text-[#1A202C]">{{ item.title }}</text>
+                                <text class="text-[26rpx]" :style="{ color: item.color }">{{ item.desc }}</text>
+                            </view>
+                            <view
+                                class="w-[80rpx] h-[80rpx] rounded-[20rpx] flex items-center justify-center flex-shrink-0"
+                                :style="{ background: item.lightColor }">
+                                <u-icon :name="item.icon" size="30" :color="item.color"></u-icon>
+                            </view>
+                        </view>
+
+                        <view class="flex items-center justify-between">
+                            <view class="flex gap-[10rpx] flex-wrap flex-1">
+                                <view
+                                    v-for="(p, pi) in item.platforms"
+                                    :key="pi"
+                                    class="px-[18rpx] py-[6rpx] rounded-full"
+                                    style="border: 1rpx solid #e2e8f0">
+                                    <text class="text-[22rpx] text-[#718096]">{{ p }}</text>
+                                </view>
+                            </view>
+                            <view
+                                class="w-[48rpx] h-[48rpx] flex items-center justify-center flex-shrink-0"
+                                @click.stop="handlePreview(item)">
+                                <u-icon name="arrow-right" size="16" color="#CBD5E0"></u-icon>
+                            </view>
+                        </view>
+                    </view>
+                </view>
+            </scroll-view>
         </view>
     </view>
+
     <video-preview v-model="showPreview" :video-url="previewUrl"></video-preview>
 </template>
 
 <script setup lang="ts">
 import config from "@/config";
 import { CreateTypeEnum } from "@/ai_modules/device/enums";
-import TaskImgIcon from "@/ai_modules/device/static/images/common/task_type_img.png";
-import TaskVideoIcon from "@/ai_modules/device/static/images/common/task_type_video.png";
-import TaskClueIcon from "@/ai_modules/device/static/images/common/task_type_clue.png";
-import TaskMsgIcon from "@/ai_modules/device/static/images/common/task_type_msg.png";
-import TaskFriendIcon from "@/ai_modules/device/static/images/common/task_type_friend.png";
-import TaskYhIcon from "@/ai_modules/device/static/images/common/task_type_yh.png";
-import TaskCircleIcon from "@/ai_modules/device/static/images/common/task_type_circle.png";
-import TaskCollectIcon from "@/ai_modules/device/static/images/common/task_type_collect.png";
-import TaskCommentIcon from "@/ai_modules/device/static/images/common/task_type_comment.png";
-import TaskWechatMsgIcon from "@/ai_modules/device/static/images/common/task_type_wechat.png";
 
-const taskTypeList = [
-    {
-        title: "发布图文",
-        desc: "自动/定时发布",
-        icon: TaskImgIcon,
-        disabled: false,
-        type: CreateTypeEnum.IMAGE_PUBLISH,
-    },
-    {
-        title: "发布视频",
-        desc: "自动/定时发布",
-        icon: TaskVideoIcon,
-        disabled: false,
-        type: CreateTypeEnum.VIDEO_PUBLISH,
-    },
-    {
-        title: "自动获线索",
-        desc: "无人工Ai获客",
-        icon: TaskClueIcon,
-        disabled: false,
-        type: CreateTypeEnum.CLUE_AUTO,
-    },
-    {
-        title: "私聊接管",
-        desc: "自动处理信息",
-        icon: TaskMsgIcon,
-        disabled: false,
-        type: CreateTypeEnum.CHAT_MANAGE,
-    },
-    {
-        title: "截流获客",
-        desc: "评论区评论/私信",
-        icon: TaskCommentIcon,
-        disabled: false,
-        type: CreateTypeEnum.COMMENT_MARKETING,
-    },
-    {
-        title: "留痕获客",
-        desc: "仅点赞/关注等互动",
-        icon: TaskCollectIcon,
-        disabled: false,
-        type: CreateTypeEnum.COLLECT_MARKETING,
-    },
-    {
-        title: "发朋友圈",
-        desc: "朋友圈发布内容",
-        icon: TaskCircleIcon,
-        disabled: false,
-        type: CreateTypeEnum.CIRCLE,
-    },
-    {
-        title: "朋友圈互动",
-        desc: "朋友圈点赞/评论",
-        icon: TaskCircleIcon,
-        disabled: false,
-        type: CreateTypeEnum.CIRCLE_INTERACT,
-    },
-    {
-        title: "自动加好友",
-        desc: "聚焦省心省力",
-        icon: TaskFriendIcon,
-        disabled: false,
-        type: CreateTypeEnum.FRIEND_ADD,
-    },
-    {
-        title: "自动养号",
-        desc: "模拟真人养",
-        icon: TaskYhIcon,
-        disabled: false,
-        type: CreateTypeEnum.ACCOUNT_MAINTAIN,
-    },
-    {
-        title: "个微接管",
-        desc: "自动处理个微回复",
-        icon: TaskWechatMsgIcon,
-        disabled: false,
-        type: CreateTypeEnum.WECHAT_MSG,
-    },
+const activeTab = ref(0);
+
+const tabs = [
+    { label: "内容分发", icon: "share", subtitle: "一键发布社媒平台", themeColor: "#0065fb", lightColor: "#EBF2FF" },
+    { label: "AI获客", icon: "search", subtitle: "全域智能自动获客", themeColor: "#7C4DFF", lightColor: "#F2EEFF" },
+    { label: "私域运营", icon: "grid", subtitle: "智能管理私域流量", themeColor: "#F50057", lightColor: "#FFE6EE" },
+    { label: "客服接管", icon: "chat", subtitle: "7x24h自动回复信息", themeColor: "#FF6D00", lightColor: "#FFF2E6" },
 ];
+
+const menuMap: Record<number, any[]> = {
+    // ── 内容分发 ──
+    0: [
+        {
+            title: "发布图文",
+            icon: "photo",
+            desc: "自动/定时发布",
+            color: "#0065fb",
+            lightColor: "#EBF2FF",
+            platforms: ["小红书", "视频号", "抖音", "快手"],
+            key: CreateTypeEnum.IMAGE_PUBLISH,
+            navUrl: "/ai_modules/device/pages/create_task/create_task?type=2",
+        },
+        {
+            title: "发布视频",
+            icon: "play-circle",
+            desc: "自动/定时发布",
+            color: "#7C4DFF",
+            lightColor: "#F2EEFF",
+            platforms: ["小红书", "视频号", "抖音", "快手"],
+            key: CreateTypeEnum.VIDEO_PUBLISH,
+            navUrl: "/ai_modules/device/pages/create_task/create_task?type=1",
+        },
+        {
+            title: "发布朋友圈",
+            icon: "moments",
+            desc: "朋友圈发布内容",
+            color: "#00BFA5",
+            lightColor: "#E6F9F6",
+            platforms: ["朋友圈"],
+            key: CreateTypeEnum.CIRCLE,
+            navUrl: "/ai_modules/device/pages/create_circle/create_circle",
+        },
+    ],
+    // ── AI获客 ──
+    1: [
+        {
+            title: "自动获线索",
+            icon: "account-fill",
+            desc: "无人工Ai获客",
+            color: "#00BFA5",
+            lightColor: "#E6F9F6",
+            platforms: ["视频号"],
+            key: CreateTypeEnum.CLUE_AUTO,
+            navUrl: "/ai_modules/sph/pages/create_task/create_task",
+        },
+        {
+            title: "截流获客",
+            icon: "account-fill",
+            desc: "评论区评论/私信",
+            color: "#FF6D00",
+            lightColor: "#FFF2E6",
+            platforms: ["小红书", "抖音", "快手"],
+            key: CreateTypeEnum.COMMENT_MARKETING,
+            navUrl: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.COMMENT_MARKETING}`,
+        },
+        {
+            title: "留痕获客",
+            icon: "account-fill",
+            desc: "点赞/关注等互动",
+            color: "#0065fb",
+            lightColor: "#EBF2FF",
+            platforms: ["小红书", "抖音", "快手"],
+            key: CreateTypeEnum.COLLECT_MARKETING,
+            navUrl: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.COLLECT_MARKETING}`,
+        },
+    ],
+    // ── 私域运营 ──
+    2: [
+        {
+            title: "自动加好友",
+            icon: "account-fill",
+            desc: "线索客资自动加好友",
+            color: "#FF6D00",
+            lightColor: "#FFF2E6",
+            platforms: ["微信"],
+            key: CreateTypeEnum.FRIEND_ADD,
+            navUrl: "/ai_modules/device/pages/create_add_wechat/create_add_wechat",
+        },
+        {
+            title: "朋友圈互动",
+            icon: "moments",
+            desc: "朋友圈自动点赞/评论",
+            color: "#00BFA5",
+            lightColor: "#E6F9F6",
+            platforms: ["朋友圈"],
+            key: CreateTypeEnum.CIRCLE_INTERACT,
+            navUrl: "/ai_modules/device/pages/create_circle_interact/create_circle_interact",
+        },
+        {
+            title: "自动养号",
+            icon: "thumb-up",
+            desc: "智能模拟真人操控",
+            color: "#F50057",
+            lightColor: "#FFE6EE",
+            platforms: ["朋友圈"],
+            key: CreateTypeEnum.ACCOUNT_MAINTAIN,
+            navUrl: "/ai_modules/device/pages/create_account_building/create_account_building",
+        },
+    ],
+    // ── 客服接管 ──
+    3: [
+        {
+            title: "私信接管",
+            icon: "chat",
+            desc: "AI自动接管平台私信",
+            color: "#FF6D00",
+            lightColor: "#FFF2E6",
+            platforms: ["小红书", "抖音", "快手"],
+            key: CreateTypeEnum.CHAT_MANAGE,
+            navUrl: "/ai_modules/device/pages/create_private_take/create_private_take",
+        },
+        {
+            title: "个微接管",
+            icon: "chat-fill",
+            desc: "自动处理个微回复",
+            color: "#00BFA5",
+            lightColor: "#E6F9F6",
+            platforms: ["微信"],
+            key: CreateTypeEnum.WECHAT_MSG,
+            navUrl: "/ai_modules/device/pages/create_wechat_private/create_wechat_private",
+        },
+    ],
+};
+
+const currentMenuList = computed(() => menuMap[activeTab.value] ?? []);
 
 const previewUrl = ref("");
 const showPreview = ref(false);
 
-const handleClick = (item: any) => {
-    if (item.disabled) {
-        uni.$u.toast("敬请期待~");
-        return;
-    }
-    const urls = {
-        [CreateTypeEnum.IMAGE_PUBLISH]: "/ai_modules/device/pages/create_task/create_task?type=2",
-        [CreateTypeEnum.VIDEO_PUBLISH]: "/ai_modules/device/pages/create_task/create_task?type=1",
-        [CreateTypeEnum.CLUE_AUTO]: "/ai_modules/sph/pages/create_task/create_task",
-        [CreateTypeEnum.CHAT_MANAGE]: "/ai_modules/device/pages/create_private_take/create_private_take",
-        [CreateTypeEnum.COMMENT_MARKETING]: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.COMMENT_MARKETING}`,
-        [CreateTypeEnum.COLLECT_MARKETING]: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.COLLECT_MARKETING}`,
-        [CreateTypeEnum.FRIEND_ADD]: "/ai_modules/device/pages/create_add_wechat/create_add_wechat",
-        [CreateTypeEnum.ACCOUNT_MAINTAIN]: "/ai_modules/device/pages/create_account_building/create_account_building",
-        [CreateTypeEnum.CIRCLE]: "/ai_modules/device/pages/create_circle/create_circle",
-        [CreateTypeEnum.CIRCLE_INTERACT]: "/ai_modules/device/pages/create_circle_interact/create_circle_interact",
-        [CreateTypeEnum.WECHAT_MSG]: "/ai_modules/device/pages/create_wechat_private/create_wechat_private",
-    };
-    uni.navigateTo({
-        url: urls[item.type as keyof typeof urls],
-    });
+const videoUrls: Record<string, string> = {
+    [CreateTypeEnum.IMAGE_PUBLISH]: `${config.baseUrl}static/videos/task_image_publish.mp4`,
+    [CreateTypeEnum.VIDEO_PUBLISH]: `${config.baseUrl}static/videos/task_video_publish.mp4`,
+    [CreateTypeEnum.CLUE_AUTO]: `${config.baseUrl}static/videos/task_clue_auto.mp4`,
+    [CreateTypeEnum.CHAT_MANAGE]: `${config.baseUrl}static/videos/task_chat_manage.mp4`,
+    [CreateTypeEnum.COMMENT_MARKETING]: `${config.baseUrl}static/videos/task_comment_marketing.mp4`,
+    [CreateTypeEnum.COLLECT_MARKETING]: `${config.baseUrl}static/videos/task_collect_marketing.mp4`,
+    [CreateTypeEnum.FRIEND_ADD]: `${config.baseUrl}static/videos/task_friend_add.mp4`,
+    [CreateTypeEnum.ACCOUNT_MAINTAIN]: `${config.baseUrl}static/videos/task_account_maintain.mp4`,
+    [CreateTypeEnum.CIRCLE]: `${config.baseUrl}static/videos/task_publish_circle.mp4`,
+    [CreateTypeEnum.CIRCLE_INTERACT]: `${config.baseUrl}static/videos/task_circle_comment.mp4`,
+    [CreateTypeEnum.WECHAT_MSG]: `${config.baseUrl}static/videos/task_wechat_msg.mp4`,
 };
-const handlePreview = (item: any) => {
-    const urls = {
-        [CreateTypeEnum.IMAGE_PUBLISH]: `${config.baseUrl}static/videos/task_image_publish.mp4`,
-        [CreateTypeEnum.VIDEO_PUBLISH]: `${config.baseUrl}static/videos/task_video_publish.mp4`,
-        [CreateTypeEnum.CLUE_AUTO]: `${config.baseUrl}static/videos/task_clue_auto.mp4`,
-        [CreateTypeEnum.CHAT_MANAGE]: `${config.baseUrl}static/videos/task_chat_manage.mp4`,
-        [CreateTypeEnum.COMMENT_MARKETING]: `${config.baseUrl}static/videos/task_comment_marketing.mp4`,
-        [CreateTypeEnum.COLLECT_MARKETING]: `${config.baseUrl}static/videos/task_collect_marketing.mp4`,
-        [CreateTypeEnum.FRIEND_ADD]: `${config.baseUrl}static/videos/task_friend_add.mp4`,
-        [CreateTypeEnum.ACCOUNT_MAINTAIN]: `${config.baseUrl}static/videos/task_account_maintain.mp4`,
-        [CreateTypeEnum.CIRCLE]: `${config.baseUrl}static/videos/task_publish_circle.mp4`,
-        [CreateTypeEnum.CIRCLE_INTERACT]: `${config.baseUrl}static/videos/task_circle_comment.mp4`,
-        [CreateTypeEnum.WECHAT_MSG]: `${config.baseUrl}static/videos/task_wechat_msg.mp4`,
-    };
 
-    previewUrl.value = urls[item.type as keyof typeof urls];
+// 点击卡片 → 跳转创建任务
+const handleNav = (item: any) => {
+    uni.navigateTo({ url: item.navUrl });
+};
+
+// 点击箭头 → 视频预览弹窗
+const handlePreview = (item: any) => {
+    previewUrl.value = videoUrls[item.key] ?? "";
     showPreview.value = true;
+};
+
+const handleGlobalConfig = () => {
+    uni.navigateTo({ url: "/ai_modules/device/pages/global_config/global_config" });
 };
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.bg-primary {
+    background: linear-gradient(135deg, #0065fb, #4d9fff);
+}
+view {
+    transition: all 0.25s ease;
+}
+</style>

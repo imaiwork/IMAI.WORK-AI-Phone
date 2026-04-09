@@ -92,6 +92,14 @@ class TokenLogService
             $need_token = 100;
         }else if(in_array($scene, ['volc_img_to_img_v2','volc_txt_to_img_v2', 'volc_txt_to_posterimg_v2'])) {
             $need_token = 30;
+        }else if(in_array($scene, ['sora_video_create'])) {
+            $need_token = $use_token * $num;
+        }else if(in_array($scene, ['storyboard_video_create'])) {
+            $need_token = $use_token * $num;
+        }else if(in_array($scene, ['ai_persona_analysis'])) {
+            $need_token = $use_token;
+        }else if(in_array($scene, ['ai_persona_report'])) {
+            $need_token = $use_token;
         }
         if ($userInfo['tokens'] < $need_token) {
             self::sendNotify($userInfo['id'], '用户算力不足');
@@ -112,7 +120,7 @@ class TokenLogService
 
     private static function sendNotify(int $uid, string $msg )
     {
-        $devices = \app\common\model\sv\SvDevice::where('user_id', $uid)->where('status', 'in', [1, 2])->select();
+        $devices = \app\common\model\sv\SvDevice::where('user_id', $uid)->select();
         foreach ($devices as $device) {
             $payload = array(
                 'type' => \app\common\enum\DeviceEnum::TASK_TOKEN_NOTIFY, // 接管任务启动

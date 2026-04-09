@@ -78,7 +78,7 @@ const props = defineProps({
     },
     maskCloseAble: {
         type: Boolean,
-        default: true,
+        default: false,
     },
 });
 const emit = defineEmits(["update:modelValue", "close"]);

@@ -43,7 +43,7 @@
                 <view class="grow min-h-0 mt-[38rpx]">
                     <view class="h-full">
                         <z-paging ref="anchorPagingRef" v-model="anchorLists" :fixed="false" @query="getAnchorList">
-                            <view class="grid grid-cols-3 gap-4 px-4 pb-4">
+                            <view class="grid grid-cols-3 gap-2 px-4 pb-4">
                                 <view
                                     v-for="(item, index) in anchorLists"
                                     :key="index"
@@ -272,57 +272,15 @@
                 </view>
             </view>
             <view v-show="step === 4" class="h-full flex flex-col">
-                <view class="mx-4">
-                    <text class="font-medium">混剪素材（共{{ formData.materialList.length }}个）</text>
-                    <view class="mt-1 text-xs text-[#0000004d]">
-                        总量限制：全部素材总时长不得超过{{ montageConfig.materialTotalDuration }}分钟 (图片按{{
-                            montageConfig.imageDuration
-                        }}秒/张，视频按实际时长/个)</view
-                    >
-                </view>
+                <material-duration-bar :material-list="formData.materialList" />
                 <view class="grow min-h-0">
                     <scroll-view scroll-y class="h-full">
-                        <view class="grid grid-cols-3 gap-[26rpx] p-4">
-                            <view v-for="(item, index) in formData.materialList" :key="index" class="relative">
-                                <view
-                                    class="h-[220rpx] rounded-[12rpx] relative overflow-hidden"
-                                    @click="previewMaterial(item)">
-                                    <image
-                                        :src="item.pic"
-                                        class="w-full h-full rounded-[12rpx]"
-                                        mode="aspectFill"></image>
-                                    <view
-                                        class="absolute bottom-0 h-[40rpx] w-full bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[88]">
-                                        <image
-                                            v-if="item.type === 'image'"
-                                            src="@/ai_modules/digital_human/static/icons/pic.svg"
-                                            class="w-[24rpx] h-[24rpx]"></image>
-                                        <image
-                                            v-else
-                                            src="@/ai_modules/digital_human/static/icons/video.svg"
-                                            class="w-[24rpx] h-[24rpx]"></image>
-                                    </view>
-                                    <view class="absolute bottom-4 w-full z-[89] flex justify-center">
-                                        <view class="dh-version-name" @click.stop="handleReplaceMaterial(index)">
-                                            替换
-                                        </view>
-                                    </view>
-                                </view>
-                                <view
-                                    class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
-                                    @click="handleDeleteMaterial(index)">
-                                    <u-icon name="close" color="#ffffff" size="16"></u-icon>
-                                </view>
-                            </view>
-                            <view
-                                class="bg-white rounded-[12rpx] flex flex-col items-center justify-center h-[220rpx]"
-                                @click="chooseUploadType">
-                                <image
-                                    src="@/ai_modules/digital_human/static/icons/add.svg"
-                                    class="w-[40rpx] h-[40rpx]"></image>
-                                <text class="text-xs text-[#4E5158] mt-[24rpx]">添加素材</text>
-                            </view>
-                        </view>
+                        <material-container
+                            :material-list="formData.materialList"
+                            @preview="previewMaterial"
+                            @replace="handleReplaceMaterial"
+                            @delete="handleDeleteMaterial"
+                            @upload="chooseUploadType" />
                     </scroll-view>
                 </view>
             </view>
@@ -614,7 +572,7 @@
     <choose-character v-if="showCharacter" v-model="showCharacter" @select="handleSelectCharacter" />
     <choose-material
         v-model="showMaterialLibrary"
-        :limit="uploadMaterialType == 'image' ? 9 : 1"
+        :limit="9"
         :type="uploadMaterialType"
         @select="handleSelectMaterial" />
     <choose-history v-model="showChooseHistory" :limit="1" @select="handleSelectHistory"></choose-history>
@@ -685,6 +643,8 @@ import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose
 import ChooseAudioType from "@/ai_modules/digital_human/components/choose-audio-type/choose-audio-type.vue";
 import ChooseAgent from "@/ai_modules/digital_human/components/choose-agent/choose-agent.vue";
 import RecorderControl from "@/ai_modules/digital_human/components/recorder-control/recorder-control.vue";
+import MaterialDurationBar from "@/ai_modules/digital_human/components/material-duration-bar/material-duration-bar.vue";
+import MaterialContainer from "@/ai_modules/digital_human/components/material-container/material-container.vue";
 const { on } = useEventBusManager();
 
 const userStore = useUserStore();
@@ -962,6 +922,7 @@ const {
     uploadMaterialList: uploadAudioMaterialList,
 } = useUpload({
     count: 1,
+    isFetchVideoInfo: true,
     fileAccept: ["mp3", "wav", "m4a", "MP3", "WAV", "M4A"],
     fileSize: 100,
     onSuccess: async (res: any) => {
@@ -1011,6 +972,7 @@ const recorderSuccess = (res: any) => {
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
     videoDuration: [1, 59],
+    isFetchVideoInfo: true,
     onSuccess: (materials: any[]) => {
         if (replaceMaterialIndex.value !== -1) {
             formData.materialList[replaceMaterialIndex.value] = materials[0];

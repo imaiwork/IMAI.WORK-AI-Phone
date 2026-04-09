@@ -405,7 +405,11 @@ const cardFormData = reactive<{
 const packageList = ref<any[]>([]);
 
 const getPackageName = computed(() => {
-    return packageList.value.find((item) => item.id === cardFormData.package)?.name || "选择生成套餐";
+    const currentPackage = packageList.value.find((item) => item.id === cardFormData.package);
+    if (currentPackage) {
+        return `${currentPackage.name}`;
+    }
+    return "选择生成套餐";
 });
 
 const handleTabChange = (index: number) => {
@@ -645,7 +649,10 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
 
 const getPackageList = async () => {
     const { lists } = await getAgentCardPackageList({ page_size: 1000 });
-    packageList.value = lists;
+    packageList.value = lists.map((item: any) => ({
+        ...item,
+        name: `${item.name} · ${item.tokens}点`,
+    }));
 };
 
 const agentUserInfo = ref<any>({});

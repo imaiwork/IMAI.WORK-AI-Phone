@@ -261,7 +261,7 @@ const handleUnbindDevice = () => {
                         duration: 3000,
                     });
                     uni.$u.route({
-                        url: "/pages/phone/phone",
+                        url: "/ai_modules/device/pages/index/index",
                         type: "reLaunch",
                     });
                 } catch (error: any) {

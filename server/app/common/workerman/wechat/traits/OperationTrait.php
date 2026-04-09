@@ -120,9 +120,7 @@ trait OperationTrait
             throw new \Exception("未开启打招呼配置", 400);
         }
 
-        if ($greet->greet_after_ai_enable == 0) {
-            throw new \Exception("打招呼非AI接管", 400);
-        }
+        
 
         // 给好友发消息
         foreach ($greet->greet_content as $key => $content) {
@@ -218,6 +216,18 @@ trait OperationTrait
             \Channel\Client::publish($channel, [
                 'data' => $data
             ]);
+        }
+
+        if ($greet->greet_after_ai_enable == 1) {
+            $friend->takeover_mode = 1;
+            $friend->open_ai = 1;
+            $friend->update_time = time();
+            $friend->save();
+        }else{
+            $friend->takeover_mode = 0;
+            $friend->open_ai = 0;
+            $friend->update_time = time();
+            $friend->save();
         }
     }
 

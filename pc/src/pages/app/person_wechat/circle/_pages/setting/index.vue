@@ -24,7 +24,7 @@
 
         <div class="grow min-h-0 flex gap-x-3 overflow-hidden">
             <ElScrollbar class="w-full">
-                <div class="flex flex-wrap lg:flex-nowrap gap-3 pb-6">
+                <div class="flex flex-col gap-3 pb-6">
                     <div
                         class="flex-1 min-w-[450px] bg-white rounded-[20px] border border-br flex flex-col overflow-hidden">
                         <div
@@ -42,7 +42,7 @@
                                 inactive-text="已关闭" />
                         </div>
 
-                        <div class="p-8 space-y-7">
+                        <div class="p-8 space-y-7" v-if="false">
                             <div class="strategy-item">
                                 <div class="label-group">
                                     <span class="main-label">响应延迟时间</span>
@@ -52,6 +52,7 @@
                                     <ElInputNumber
                                         v-model="formData.reply_interval_time"
                                         :min="0"
+                                        disabled
                                         controls-position="right"
                                         class="custom-number" />
                                     <span class="text-[13px] font-medium text-tx-placeholder">分钟后执行</span>
@@ -145,7 +146,7 @@
                                 style="--el-switch-on-color: #f97316" />
                         </div>
 
-                        <div class="p-8 space-y-7">
+                        <div class="p-8 space-y-7" v-if="false">
                             <div class="strategy-item">
                                 <div class="label-group">
                                     <span class="main-label">响应延迟时间</span>

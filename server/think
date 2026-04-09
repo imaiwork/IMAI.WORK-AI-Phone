@@ -1,6 +1,8 @@
 #!/usr/bin/env php
 <?php
 namespace think;
+error_reporting(E_ALL & ~E_DEPRECATED);
+
 
 // 命令行入口文件
 // 加载基础文件

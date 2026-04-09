@@ -22,7 +22,11 @@
         <view class="relative grow min-h-0">
             <scroll-view scroll-y class="h-full">
                 <view class="px-[32rpx]">
-                    <view v-if="isIOS()">
+                    <view
+                        v-if="
+                            (isIOS() && rechargeConfig.is_ios_open === 0) ||
+                            (isAndroid() && rechargeConfig.is_android_open === 0)
+                        ">
                         <view class="flex items-center gap-x-2 justify-center">
                             <image src="@/packages/static/icons/title_line.svg" class="w-[50rpx] h-[10rpx]"></image>
                             <view class="text-center text-[#384166] text-[26rpx]"> 小程序暂不提供IOS端充值功能 </view>
@@ -236,7 +240,7 @@ import { useLockFn } from "@/hooks/useLockFn";
 import { PayStatusEnum } from "@/enums/appEnums";
 import { useUserStore } from "@/stores/user";
 import { series } from "@/utils/util";
-import { isIOS } from "@/utils/client";
+import { isAndroid, isIOS } from "@/utils/client";
 import { useAppStore } from "@/stores/app";
 import config from "@/config";
 
@@ -246,6 +250,7 @@ const userStore = useUserStore();
 
 const userTokens = computed(() => userStore.userTokens);
 const cardCodeConfig = computed(() => appStore.getCardCodeConfig);
+const rechargeConfig = computed(() => appStore.getRechargeConfig);
 const getServerConfig = computed(() => {
     const { customer_service } = appStore.getWebsiteConfig;
     return {

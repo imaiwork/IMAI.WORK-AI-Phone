@@ -7,9 +7,9 @@
     "u-radio": "../../../../uni_modules/vk-uview-ui/components/u-radio/u-radio",
     "u-radio-group": "../../../../uni_modules/vk-uview-ui/components/u-radio-group/u-radio-group",
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
-    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
     "base-setting": "../../components/base-setting/base-setting",
-    "choose-robot": "../../components/choose-robot/choose-robot"
+    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog",
+    "choose-agent": "../../components/choose-agent/choose-agent"
   }
 }

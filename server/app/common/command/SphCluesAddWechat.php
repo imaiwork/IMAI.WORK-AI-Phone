@@ -4,6 +4,7 @@
 namespace app\common\command;
 
 use app\api\logic\sv\CrawlingTaskLogic;
+use app\api\logic\sv\SvAddWechatRecordLogic;
 use think\console\Command;
 use think\console\Input;
 use think\console\Output;
@@ -23,7 +24,9 @@ class SphCluesAddWechat extends Command
 
     protected function execute(Input $input, Output $output)
     {
-        //CrawlingTaskLogic::sphCluesAddWechat();
+        //CrawlingTaskLogic::sphCluesAddWechat();   
+        print_r("\n 微信线索获取意图...'\n");
+        SvAddWechatRecordLogic::acquiringIntent();
         return true;
     }
 }

@@ -136,7 +136,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -194,7 +194,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -259,7 +259,7 @@ trait DeviceTaskTrait
             ChannelClient::publish($channel, [
                 'data' => json_encode($payload)
             ]);
-            self::setRpaPublishStatus($publish);
+            //self::setRpaPublishStatus($publish);
 
 
             if (is_callable($callback)) {
@@ -275,7 +275,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -377,7 +377,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -452,7 +452,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -546,7 +546,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -657,7 +657,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -680,7 +680,7 @@ trait DeviceTaskTrait
                 ->where('a.status', 4)
                 ->where('t.id', $dtask->sub_task_id)
                 ->order('a.id', 'desc')
-                //->limit(10)
+                ->limit(20)
                 ->select()
                 ->toArray();
 
@@ -829,7 +829,7 @@ trait DeviceTaskTrait
                 //     self::setLog('冷却中，等待后可继续添加', 'add_wechat');
                 //     continue;
                 // }
-                
+
 
                 $wechat = SvAccount::where('device_code', $dtask->device_code)->where('type', 1)->limit(1)->findOrEmpty();
                 if ($wechat->isEmpty()) {
@@ -875,7 +875,7 @@ trait DeviceTaskTrait
                         'start_time' => $dtask->start_time,
                         'end_time' => $dtask->end_time,
                         'time_interval' => ($dtask->end_time - $dtask->start_time) / 60,
-                        'send_wechat_ids' => $sendWechatIds,
+                        'send_wechat_ids' => array_slice($sendWechatIds, 0, 10),
                         'add_interval_time' => $add_interval_time,
                         'msg' => '加微任务运行'
                     ), JSON_UNESCAPED_UNICODE),
@@ -905,7 +905,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -934,7 +934,7 @@ trait DeviceTaskTrait
                 ->where('t.wechat_id', 'not in', ['', null]) // 过滤掉wechat_id为空的记录
                 //->where('t.status', 'in', [1, 2]) // 过滤掉已完成、已暂停、已删除的任务
                 ->whereRaw('t.exec_add_count > t.completed_add_count') // 过滤掉已执行加微次数大于等于注册类型的记录
-                //->limit(10)
+                ->limit(20)
                 ->order('r.id', 'desc')
                 ->select()
                 ->toArray();
@@ -1101,7 +1101,7 @@ trait DeviceTaskTrait
                 //     //self::setLog('冷却中，等待后可继续添加', 'add_wechat');
                 //     continue;
                 // }
-                
+
 
                 $wechat = SvAccount::where('device_code', $dtask->device_code)->where('type', 1)->limit(1)->findOrEmpty();
                 if ($wechat->isEmpty()) {
@@ -1148,7 +1148,7 @@ trait DeviceTaskTrait
                         'start_time' => $dtask->start_time,
                         'end_time' => $dtask->end_time,
                         'time_interval' => ($dtask->end_time - $dtask->start_time) / 60,
-                        'send_wechat_ids' => $sendWechatIds,
+                        'send_wechat_ids' => array_slice($sendWechatIds, 0, 10),
                         'add_interval_time' => $add_interval_time,
                         'msg' => '加微任务运行'
                     ), JSON_UNESCAPED_UNICODE),
@@ -1178,7 +1178,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -1251,7 +1251,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -1288,7 +1288,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -1357,7 +1357,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -1396,7 +1396,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -1494,7 +1494,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -1592,7 +1592,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -1691,7 +1691,7 @@ trait DeviceTaskTrait
             if (is_callable($callback)) {
                 return $callback([
                     'status' => 3,
-                    'remark' => '任务执行失败：' . $th->getMessage(),
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
                 ]);
             }
             throw new \Exception($th->getMessage(), $th->getCode());
@@ -1947,5 +1947,14 @@ trait DeviceTaskTrait
             $content = json_encode($content, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         }
         Log::channel('device')->{$level}(self::$logtitle . "\n" . $content);
+    }
+
+    private static function getErrorMsg($e)
+    {
+        $error = $e->getMessage();
+        if (strpos($error, 'scocket') !== false) {
+            $error = 'socket服务器连接失败';
+        }
+        return $error;
     }
 }

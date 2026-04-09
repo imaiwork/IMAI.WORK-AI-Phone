@@ -126,6 +126,10 @@ export enum TokensSceneEnum {
     COZE_COPYWRITING = "coze_copywriting",
     PUBLISH_DOUYIN = "douyin_js",
     STORYBOARD_MIX = "storyboard_video_create",
+    PERSONA_REPORT_ANALYSIS = "automation_account_ip_analysis",
+    AI_PERSONA_ANALYSIS = "ai_persona_analysis",
+    AI_PERSONA_REPORT = "ai_persona_report",
+    HOT_WRITE = "video_copywriting_imitation",
 }
 
 export enum KnbTypeEnum {
@@ -262,4 +266,16 @@ export const DigitalHumanModelVersionEnumMap = {
     [DigitalHumanModelVersionEnum.ELITE]: "尊享",
     [DigitalHumanModelVersionEnum.CHANJING]: "蝉镜",
     [DigitalHumanModelVersionEnum.SHANJIAN]: "闪剪",
+};
+
+export enum PersonTypeEnum {
+    PERSONAL_IP = 1,
+    BUSINESS_SERVICE = 2,
+    LOCAL_BUSINESS = 3,
+}
+
+export const PersonTypeMap = {
+    [PersonTypeEnum.PERSONAL_IP]: "个人IP",
+    [PersonTypeEnum.BUSINESS_SERVICE]: "企业服务",
+    [PersonTypeEnum.LOCAL_BUSINESS]: "本地商家",
 };

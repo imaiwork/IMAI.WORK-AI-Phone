@@ -26,6 +26,19 @@ class TakeOverLogic extends ApiLogic
             //校验只能选择一种平台
             self::checkAutoDevice($params);
             TaskLogic::checkAccounts($params['accounts']);
+
+            $is_overlap = $params['task_exec_type'] ?? 0;
+            if ((int)$is_overlap === 1) {
+                \app\api\logic\device\TaskLogic::updateTaskStatusByIds($params['task_ids']);
+                $params['time_config'] = [
+                    date('H:i', time()) . '-' . date('H:i', (time() + (60 * (int)$params['minutes']))),
+                ];
+                $params['custom_date'] = [
+                    date('Y-m-d', time())
+                ];
+                unset($params['task_ids']);
+            }
+
             $times = TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
 
             $params['user_id'] = self::$uid;
@@ -40,12 +53,15 @@ class TakeOverLogic extends ApiLogic
                 $account = array_merge($account, $find);
 
                 foreach ($times as $time) {
-                    list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_TAKEOVER, $time['start_time'], $time['end_time'], self::$uid);
-                    if (!$isOverlap) {
-                        $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                        $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
-                        throw new \Exception($msg);
+                    if ((int)$is_overlap === 0) {
+                        list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_TAKEOVER, $time['start_time'], $time['end_time'], self::$uid);
+                        if (!$isOverlap) {
+                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                            throw new \Exception($msg);
+                        }
                     }
+
 
                     $row = SvDeviceTakeOverTaskAccount::create([
                         'take_over_id' => $task->id,
@@ -65,6 +81,8 @@ class TakeOverLogic extends ApiLogic
                         'task_type' => DeviceEnum::TASK_TYPE_TAKEOVER,
                         'account' => $account['account'],
                         'account_type' => $account['type'],
+                        'nickname' => $account['nickname'],
+                        'avatar' => $account['avatar'],
                         'task_name' => '设备接管任务',
                         'status' => 0,
                         'day' => date('Y-m-d', $time['start_time']),

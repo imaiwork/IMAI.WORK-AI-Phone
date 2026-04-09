@@ -21,6 +21,8 @@
     "choose-tone": "../../components/choose-tone/choose-tone",
     "choose-audio-type": "../../components/choose-audio-type/choose-audio-type",
     "choose-agent": "../../components/choose-agent/choose-agent",
-    "recorder-control": "../../components/recorder-control/recorder-control"
+    "recorder-control": "../../components/recorder-control/recorder-control",
+    "material-duration-bar": "../../components/material-duration-bar/material-duration-bar",
+    "material-container": "../../components/material-container/material-container"
   }
 }

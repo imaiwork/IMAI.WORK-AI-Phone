@@ -177,6 +177,10 @@ export function useChatAreaManager(options: UseChatAreaOptions) {
      * @param agent - 要设置的智能体对象。
      */
     const setAgent = async (agent: Agent) => {
+        if (!agent) {
+            currentAgent.value = null;
+            return;
+        }
         await nextTick(); // 等待DOM更新
         // 设置之前先清空之前选中的智能体
         if (currentAgent.value?.id) {

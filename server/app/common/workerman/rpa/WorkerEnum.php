@@ -25,6 +25,7 @@ class WorkerEnum
     );
 
     # rpa指令类型
+    public const RPA_DEVICE_HEARTBEAT = 0; # 设备心跳
     public const RPA_DEVICE_INFO = 1; # 设备信息状态
     public const RPA_USER_INFO = 2; # 用户信息状态
     public const RPA_PRIVATE_MESSAGE = 3; # 私聊列表

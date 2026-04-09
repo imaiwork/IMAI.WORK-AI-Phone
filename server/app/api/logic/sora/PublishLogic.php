@@ -696,9 +696,9 @@ class PublishLogic extends SvBaseLogic
 
     public static function setPublishDetail()
     {
-        print_r("\n执行发布记录拉取任务\n");
-        \think\facade\Log::channel('publish')->write("\n-------------------------------\n");
-        \think\facade\Log::channel('publish')->write("执行发布记录拉取任务");
+        // print_r("\n执行发布记录拉取任务\n");
+        // \think\facade\Log::channel('publish')->write("\n-------------------------------\n");
+        // \think\facade\Log::channel('publish')->write("执行发布记录拉取任务");
         ini_set('max_execution_time', 0);
         try {
             $accounts = SvPublishSettingAccount::alias('pa')

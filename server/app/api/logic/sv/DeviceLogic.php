@@ -50,6 +50,7 @@ class DeviceLogic extends SvBaseLogic
                 $params['wechat_device_code'] = $wechatCode;
             }
 
+            $params['is_first'] = 1;
             // 添加设备  
             $device = SvDevice::create($params);
 

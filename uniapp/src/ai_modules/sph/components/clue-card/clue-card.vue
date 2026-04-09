@@ -112,7 +112,7 @@ const getStatusText = (status: number) => {
     if (status == 1) return "线索有效";
     if (status == 2) return "线索无效";
     if (status == 3) return "内含有效";
-    return "未知状态";
+    return "待处理";
 };
 
 // 简单的日期格式化，去掉秒或者年份，视情况而定

@@ -176,7 +176,7 @@ class ClueLogic extends ApiLogic
             $times = explode('-', $item->exec_time);
 
             $startTime = strtotime($date . ' ' . $times[0] . ':00') > time() ? strtotime($date . ' ' . $times[0] . ':00') : strtotime(date('Y-m-d ' . $times[0] . ':00', strtotime('+1 day')));
-            $endTime =  strtotime(date('Y-m-d', $startTime) . ' ' . $times[1] . ':00') - 180;
+            $endTime =  strtotime(date('Y-m-d', $startTime) . ' ' . $times[1] . ':00') - 120;
 
             $params = [
                 'name' => '自动化视频号获客任务' . date('mdHis', $startTime),

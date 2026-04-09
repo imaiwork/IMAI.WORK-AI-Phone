@@ -146,6 +146,7 @@ const chooseUploadType = () => {
 const { processAndAppend } = useMaterial(toRef(materialList, "value"));
 
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
+    isFetchVideoInfo: true,
     isTranscode: true,
     videoDuration: [1, 59],
     onSuccess: (res: any[]) => {
@@ -172,7 +173,6 @@ const handleSelectHistory = async (lists: any[]) => {
         replaceIndex: replaceMaterialIndex.value,
         onSuccess: () => (showHistory.value = false),
     });
-    console.log(materialList.value);
 };
 
 const handleSelectMaterial = async (res: any[]) => {

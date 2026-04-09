@@ -35,6 +35,7 @@ export const useMaterial = (materialListRef: any) => {
                             item.duration = durationMap.get(item[urlField]) || 0;
                         }
                     });
+                } catch (error) {
                 } finally {
                     uni.hideLoading();
                 }

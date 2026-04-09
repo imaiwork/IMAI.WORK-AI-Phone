@@ -32,7 +32,7 @@ class TaskLists extends BaseApiDataLists implements ListsSearchInterface
     public function setSearch(): array
     {
         return [
-            '=' => ['task_type', 'device_code', 'account_type'],
+            '=' => ['task_type', 'device_code', 'account_type', 'status'],
             '%like%' => ['task_name']
         ];
     }
@@ -62,7 +62,15 @@ class TaskLists extends BaseApiDataLists implements ListsSearchInterface
             ->each(function ($item) {
                 $item['start_time'] = date('H:i', $item['start_time']);
                 $item['end_time'] = date('H:i', $item['end_time']);
-                $item['task_category'] = !in_array($item['source'], [7, 8])? DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskTypeDesc($item['task_type']) : DeviceEnum::getTaskSceneDesc($item['task_type']);
+                $item['account_type'] = $item['source'] === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $item['account_type'];
+                $item['task_category'] = !in_array($item['source'], [5, 7, 8])? DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskTypeDesc($item['task_type']) : DeviceEnum::getTaskSceneDesc($item['task_type']);
+                if(
+                    in_array($item['task_type'], [DeviceEnum::TASK_TYPE_TAKEOVER, DeviceEnum::AUTO_TYPE_TAKE_OVER]) && 
+                    $item['source'] == DeviceEnum::TASK_SOURCE_TAKEOVER && 
+                    $item['account_type'] == DeviceEnum::ACCOUNT_TYPE_SPH){
+                    $item['task_category'] = '微信私信接管';
+                }
+
                 $item['device_name'] = SvDevice::where('device_code', $item['device_code'])->value('device_name');
                 $item['name'] = '';
                 switch ($item['source']) {

@@ -64,7 +64,7 @@ return [
             'format'         => '[%s][%s] %s',
             'apart_level'   =>  [
                 'error', 'info', 'send', 'device', 'user', 'msg', 'msg_list', 'card', 'cron', 'bind', 'init', 'note', 'post',
-                'task_delete', 'task_paused', 'task_recovery', 'task_send', 'task_record','channel', 'ws'
+                'task_delete', 'task_paused', 'task_recovery', 'task_send', 'task_record','channel', 'ws', 'heart'
             ],
         ],
         'wechat_socket' => [
@@ -192,6 +192,24 @@ return [
          'wechatCircle' => [
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/wechatCircle/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'acquiringIntent' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/acquiringIntent/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+         'ipVideoSynthesis' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/ipVideoSynthesis/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'ipPersona' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/ipPersona/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],

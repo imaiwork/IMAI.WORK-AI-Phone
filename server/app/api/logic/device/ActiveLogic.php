@@ -26,11 +26,23 @@ class ActiveLogic extends ApiLogic
         try {
             self::checkAutoDevice($params);
             TaskLogic::checkAccounts($params['accounts']);
-            
+
+            $is_overlap = $params['task_exec_type'] ?? 0;
+            if ((int)$is_overlap === 1) {
+                \app\api\logic\device\TaskLogic::updateTaskStatusByIds($params['task_ids']);
+                $params['time_config'] = [
+                    date('H:i', time()) . '-' . date('H:i', (time() + (60 * (int)$params['minutes']))),
+                ];
+                $params['custom_date'] = [
+                    date('Y-m-d', time())
+                ];
+                unset($params['task_ids']);
+            }
+
             $times = TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
             $params['user_id'] = self::$uid;
             $accounts = $params['accounts'];
-            $params['task_name'] =  $params['task_name'] ??  '养号任务' . date('mdHis', time()) ;
+            $params['task_name'] =  $params['task_name'] ??  '养号任务' . date('mdHis', time());
             $params['accounts'] = json_encode($params['accounts'], JSON_UNESCAPED_UNICODE);
             $params['time_config'] = json_encode($params['time_config'], JSON_UNESCAPED_UNICODE);
             $task = SvDeviceActive::create($params);
@@ -40,12 +52,15 @@ class ActiveLogic extends ApiLogic
                 $account = array_merge($account, $find);
 
                 foreach ($times as $time) {
-                    list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_ACTIVE, $time['start_time'], $time['end_time'], self::$uid);
-                    if (!$isOverlap) {
-                        $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                        $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
-                        throw new \Exception($msg);
+                    if ((int)$is_overlap === 0) {
+                        list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_ACTIVE, $time['start_time'], $time['end_time'], self::$uid);
+                        if (!$isOverlap) {
+                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                            throw new \Exception($msg);
+                        }
                     }
+
 
                     $row = SvDeviceActiveAccount::create([
                         'active_id' => $task->id,
@@ -63,17 +78,19 @@ class ActiveLogic extends ApiLogic
                     array_push($allTaskInstall, [
                         'user_id' => self::$uid,
                         'device_code' => $account['device_code'],
-                        'task_type' => DeviceEnum::TASK_TYPE_ACTIVE,  
+                        'task_type' => DeviceEnum::TASK_TYPE_ACTIVE,
                         'account' => $account['account'],
                         'account_type' => $account['type'],
+                        'nickname' => $account['nickname'],
+                        'avatar' => $account['avatar'],
                         'task_name' => '设备养号任务',
                         'status' => 0,
-                        'day' => date('Y-m-d',$time['start_time']),
+                        'day' => date('Y-m-d', $time['start_time']),
                         'start_time' => $time['start_time'],
                         'end_time' => $time['end_time'],
                         'time_config' => $params['time_config'],
                         'sub_task_id' => $row->id,
-                        'source' => DeviceEnum::TASK_SOURCE_ACTIVE,//sv_device_active_account
+                        'source' => DeviceEnum::TASK_SOURCE_ACTIVE, //sv_device_active_account
                         'create_time' => time(),
                     ]);
                     TaskLogic::updateWechatRpaTaskTime($account['device_code'], $time['start_time']);
@@ -117,24 +134,23 @@ class ActiveLogic extends ApiLogic
                 self::setError('任务不存在');
                 return false;
             }
-            if ($info['account_type'] == 1){
+            if ($info['account_type'] == 1) {
                 $where = [
-                    'device_code'=> $info['device_code'],
+                    'device_code' => $info['device_code'],
                     'wechat_id' => $info['account']
                 ];
                 $info['account_info'] = AiWechat::where($where)->findOrEmpty()->toArray();
-            }else{
+            } else {
                 $where = [
-                    'device_code'=> $info['device_code'],
+                    'device_code' => $info['device_code'],
                     'account' => $info['account']
                 ];
                 $info['account_info'] = SvAccount::where($where)->findOrEmpty()->toArray();
-
             }
             $info['task_name'] = $params['task_name'];
             $info['task_category'] = $params['task_category'];
-            $info['start_time'] = date('H:i',$info['start_time']);
-            $info['end_time'] = date('H:i',$info['end_time']);
+            $info['start_time'] = date('H:i', $info['start_time']);
+            $info['end_time'] = date('H:i', $info['end_time']);
             $info['device_info'] = SvDevice::where('device_code', $info['device_code'])->findOrEmpty()->toArray();
             self::$returnData = $info;
             return true;

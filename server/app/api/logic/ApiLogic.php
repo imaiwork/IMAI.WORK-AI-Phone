@@ -4,11 +4,52 @@ namespace app\api\logic;
 
 use app\common\logic\BaseLogic;
 use app\common\model\user\UserAuth;
+use app\common\model\aiPersona\AiPersona;
 use app\api\logic\WechatLogic;
 
+use app\common\model\sv\SvDevice;
+
+use app\common\model\sv\SvDeviceTask;
 class ApiLogic extends BaseLogic
 {
     public static $uid = 0;
+
+    public static function deleteOldPersonaTask(SvDevice $device, string $msg)
+    {
+        
+        $find = SvDeviceTask::where('device_code', $device->device_code)
+            ->where('auto_type', 1)
+            ->where('day', date('Y-m-d'))
+            ->where('status', 1)
+            ->findOrEmpty();
+        if (!$find->isEmpty()) {
+            $payload = array(
+                'type' => \app\common\enum\DeviceEnum::TASK_PERSONA_RESET, // 重置人设
+                'appType' => 0,
+                'content' => json_encode(array(
+                    'deviceId' => $find->device_code,
+                    'code' => \app\common\enum\DeviceEnum::TASK_PERSONA_ERROR,
+                    'msg' => $msg
+                ), JSON_UNESCAPED_UNICODE),
+                'deviceId' => $find->device_code,
+                'appVersion' => '2.8.2',
+                'messageId' => 0,
+            );
+
+            \think\facade\Log::channel('device')->info(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+            $channel = "device.{$find->device_code}.message";
+            \Channel\Client::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+            \Channel\Client::publish($channel, [
+                'data' => json_encode($payload)
+            ]);
+            $find->delete();
+        }
+        
+        SvDeviceTask::where('device_code', $device->device_code)
+            ->where('auto_type', 1)
+            ->where('day', date('Y-m-d'))
+            ->select()->delete();
+    }
 
     public static function sendNotice(array $payload, $type = 'task')
     {
@@ -27,7 +68,15 @@ class ApiLogic extends BaseLogic
                     'end_time' => $payload['endTime'],
                     'status' => \app\common\enum\DeviceEnum::getTaskStatusDesc($payload['status']),
                 );
-            } else {
+            } else if ($type == 'video') {
+                $data = array(
+                    'openid' => $openId,
+                    'scene_id' => 402,
+                    'name' => $payload['content'],
+                    'status' => $payload['status'],
+                    'time' => $payload['time'] ?? date('Y-m-d H:i:s', time()),
+                );
+            } elseif ($type == 'device') {
                 $data = array(
                     'openid' => $openId,
                     'scene_id' => 402,
@@ -37,7 +86,7 @@ class ApiLogic extends BaseLogic
                 );
             }
             WechatLogic::sendMnpMessage($data);
-            \think\facade\Log::channel('notice')->write(json_encode(['openId' => $openId, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+            //\think\facade\Log::channel('notice')->write(json_encode(['openId' => $openId, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
         } catch (\Throwable $th) {
             \think\facade\Log::channel('notice')->write(json_encode(['openId' => $openId, 'payload' => $payload, 'error' => $th->getMessage()], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
         }
@@ -156,5 +205,57 @@ class ApiLogic extends BaseLogic
             }
         }
         return $is_config;
+    }
+
+    public static function getPersonaRule(AiPersona $persona)
+    {
+        if ($persona->persona_type == 1) {
+            $rule = \app\common\model\aiPersona\AiPersonaIndividual::where('persona_id', $persona->id)->findOrEmpty();
+            $personality_tags = implode(',', $rule->personality_tags);
+            $monetize_paths = implode(',', $rule->monetize_paths);
+            $identity = implode(',', $rule->identity);
+            $rule->clue_content = "\"我的昵称/网名是{$rule->nickname}，真实身份/职业是{$identity}，希望以{$personality_tags}的性格标签语气生成内容。
+
+            我能提供的核心价值如下：
+            {$rule->core_value}
+
+            想吸引的粉丝是{$rule->target_audience}，主要变现路径：{$monetize_paths}。
+
+            个人高光/逆袭故事：{$rule->highlight_story}。\"
+
+            我的产品内容：{$persona->main_business}";
+        } elseif ($persona->persona_type == 2) {
+            $rule = \app\common\model\aiPersona\AiPersonaEnterprise::where('persona_id', $persona->id)->findOrEmpty();
+            $brand_tone = implode(',', $rule->brand_tone);
+            $account_goal = implode(',', $rule->account_goal);
+            $spokesperson = implode(',', $rule->spokesperson);
+            $rule->clue_content = "我的企业/品牌名称是{$rule->brand_name}，由{$spokesperson}代表公司出镜，希望以{$brand_tone}的品牌调性生成内容。
+
+            主打的产品/解决方案如下：
+
+            {$rule->main_product}
+
+            目标客户画像是{$rule->target_customer}，账号核心目的：{$account_goal}。
+
+            行业背书/标杆案例：{$rule->industry_case}。";
+        } elseif ($persona->persona_type == 3) {
+            $rule = \app\common\model\aiPersona\AiPersonaLocal::where('persona_id', $persona->id)->findOrEmpty();
+            $store_atmosphere = implode(',', $rule->store_atmosphere);
+            $content_preference = implode(',', $rule->content_preference);
+            $spokesperson = implode(',', $rule->spokesperson);
+            $rule->clue_content = "我的门店及所在商圈是{$rule->store_name}，由{$spokesperson}出镜揽客，希望以{$store_atmosphere}的门店氛围感生成内容。
+
+            我们的招牌特色如下：
+
+            {$rule->signature_feature}
+
+            主要想吸引进店的客户是{$rule->target_customer}，偏好的引流内容：{$content_preference}。
+
+            开店初衷/门店优势：{$rule->open_story}。";
+        } else {
+            self::setError('IP人设类型错误');
+            return false;
+        }
+        return $rule;
     }
 }

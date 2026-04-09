@@ -1,6 +1,8 @@
 <?php
 
 namespace app\api\logic\sv;
+
+
 use think\facade\Db;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvPublishSettingAccount;
@@ -14,6 +16,12 @@ use app\common\model\sv\SvSetting;
 class SvAccountLogic extends SvBaseLogic
 {
 
+    protected static $platformMap = [
+        1 => '微信(视频号)',
+        3 => '小红书',
+        4 => '抖音',
+        5 => '快手'
+    ];
     /**
      * @desc 添加
      * @param array $params
@@ -23,28 +31,25 @@ class SvAccountLogic extends SvBaseLogic
     {
 
         try {
+            //self::checkAccount($params);
             // 获取设备信息
             $device = self::deviceInfo($params['device_code']);
             if (is_bool($device)) {
                 return false;
             }
 
-            // 获取信息
+            SvAccount::where('device_code', $params['device_code'])->where('type', $params['type'])->select()->delete();
+            
+
+            //获取信息
             $account = self::accountInfo($params['account'], false, $params['type']);
             if ($account instanceof SvAccount) {
-                if($account->device_code != $params['device_code']){
+                if ($account->device_code != $params['device_code']) {
                     self::setError('该账号已经绑定在设备：' . $account->device_code);
                     return false;
                 }
-                $params['user_id'] = self::$uid;
-                $params['update_time'] = time();
-                $res = SvAccount::where('account', $params['account'])->where('user_id', self::$uid)->update($params);
-                $account = self::accountInfo($params['account'], false, $params['type']);
-
-                $data = $account->toArray();
-                self::$returnData = $data;
-                return true;
             }
+            SvSetting::where('account', $params['account'])->select()->delete();
 
             $params['user_id'] = self::$uid;
 
@@ -106,35 +111,89 @@ class SvAccountLogic extends SvBaseLogic
         }
     }
 
+
+    public static function updateSvAccount(array $params)
+    {
+        Db::startTrans();
+        try {
+            $params['status'] = 1;
+            SvAccount::where('device_code', $params['device_code'])->where('type', $params['type'])->select()->delete();
+            $oldSetting = SvSetting::where('account', $params['account'])->findOrEmpty();
+            if (!$oldSetting->isEmpty()) {
+                SvSetting::where('id', $oldSetting->id)->delete();
+            }
+            // 获取信息
+            unset($params['id']);
+            $params['user_id'] = self::$uid;
+
+            // 添加
+            $account = SvAccount::create($params);
+            $data = $account->toArray();
+            self::$returnData = $data;
+            // 添加默认设置
+            $setting = SvSetting::where('account', $account->account)->findOrEmpty();
+            if ($setting->isEmpty()) {
+                $setting = [
+                    'takeover_type' => 1,
+                    'account' => $account->account,
+                    'user_id' => self::$uid,
+                    'open_ai' => $oldSetting->open_ai ?: 0,
+                    'robot_id' => $oldSetting->robot_id ?: 0,
+                    'takeover_mode' => $oldSetting->takeover_mode ?: 0,
+                ];
+                SvSetting::create($setting);
+            }
+
+            // 获取设备信息
+            $device = self::deviceInfo($params['device_code']);
+            if (is_bool($device)) {
+                Db::rollback();
+                return false;
+            }
+
+            Db::commit();
+            return true;
+        } catch (\Exception $e) {
+            Db::rollback();
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
     /**
      * @desc 更新
      * @param array $params
      * @return bool
      */
-    public static function updateSvAccount(array $params)
-    {  Db::startTrans();
+    public static function updateSvAccount1(array $params)
+    {
+      
+        Db::startTrans();
         try {
             $params['status'] = 1;
+            self::checkAccount($params);
+            SvAccount::where('account', $params['account'])->where('type', $params['type'])->select()->delete();
+            SvSetting::where('account', $params['account'])->select()->delete();
             // 获取信息
             $account = self::accountInfo($params['account'], false, $params['type']);
             if (is_bool($account)) {
-                if(isset($params['id']) && $params['id'] > 0){
-                    $account = SvAccount::where('id', $params['id'])->where('user_id', self::$uid)->findOrEmpty();
-                    if ($account->isEmpty()) {
-                        self::setError('账号不存在');
-                        return false;
-                    }
-                    SvPublishSettingAccount::where('account', $account['account'])
-                        ->where('user_id', self::$uid)
-                        ->where('status',1)
-                        ->where('account_type', $account['type'])
-                        ->update(['status'=>0]);
-                }
+                // if (isset($params['id']) && $params['id'] > 0) {
+                //     $account = SvAccount::where('id', $params['id'])->where('user_id', self::$uid)->findOrEmpty();
+                //     if ($account->isEmpty()) {
+                //         self::setError('账号不存在');
+                //         return false;
+                //     }
+                //     SvPublishSettingAccount::where('account', $account['account'])
+                //         ->where('user_id', self::$uid)
+                //         ->where('status', 1)
+                //         ->where('account_type', $account['type'])
+                //         ->update(['status' => 0]);
+                // }
 
 
                 unset($params['id']);
                 $params['user_id'] = self::$uid;
-                
+
+
                 // 添加
                 $account = SvAccount::create($params);
                 $data = $account->toArray();
@@ -149,7 +208,7 @@ class SvAccountLogic extends SvBaseLogic
                     ];
                     SvSetting::create($setting);
                 }
-            }else{
+            }  else  {
                 unset($params['id']);
                 SvAccount::where('id', $account->id)->update($params);
                 self::$returnData = $account->refresh()->toArray();
@@ -168,6 +227,20 @@ class SvAccountLogic extends SvBaseLogic
             Db::rollback();
             self::setError($e->getMessage());
             return false;
+        }
+    }
+
+    private static function checkAccount(array $params)
+    {
+        try {
+            $account = SvAccount::where('type', $params['type'])->where('device_code', $params['device_code'])->where('user_id', self::$uid)->findOrEmpty();
+            if (!$account->isEmpty()) {
+                if ($params['account'] !== $account->account) {
+                    throw new \Exception('该设备已经绑定了' . self::$platformMap[$account->type] . '账号' . $account->account . '(' . $account->nickname . ')');
+                }
+            }
+        } catch (\Throwable $th) {
+            throw new \Exception($th->getMessage());
         }
     }
 
@@ -198,7 +271,7 @@ class SvAccountLogic extends SvBaseLogic
                 SvSetting::create($setting);
             }
 
-            if((int)$params['account_type'] === 1){
+            if ((int)$params['account_type'] === 1) {
                 \app\common\model\wechat\AiWechatSetting::where('wechat_id', $params['account'])->update([
                     'open_ai' => $params['open_ai'] ?? 0,
                     'robot_id' => $params['robot_id'] ?? 0,
@@ -209,7 +282,7 @@ class SvAccountLogic extends SvBaseLogic
             unset($params['account_type']);
             // 更新设置
             SvSetting::where('account', $account->account)->update($params);
-            
+
 
             self::$returnData = $setting->refresh()->toArray();
             return true;
@@ -257,15 +330,15 @@ class SvAccountLogic extends SvBaseLogic
             $account->delete();
             SvPublishSettingAccount::where('account', $account['account'])
                 ->where('user_id', self::$uid)
-                ->where('status',1)
+                ->where('status', 1)
                 ->where('account_type', $account['type'])
-                ->update(['status'=>0]);
+                ->update(['status' => 0]);
 
             Db::commit();
             return true;
         } catch (\Exception $e) {
             Db::rollback();
-//            clogger($e);
+            //            clogger($e);
             self::setError($e->getMessage());
             return false;
         }

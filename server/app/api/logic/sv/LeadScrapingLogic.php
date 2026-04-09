@@ -38,14 +38,25 @@ class LeadScrapingLogic extends SvBaseLogic
                 'name'      => $params['name'] ?? '',
                 'status'    => 0,
             ];
+
+            $is_overlap = $params['task_exec_type'] ?? 0;
+            if ((int)$is_overlap === 1) {
+                \app\api\logic\device\TaskLogic::updateTaskStatusByIds($params['task_ids']);
+                $params['time_config'] = [
+                    date('H:i', time()) . '-' . date('H:i', (time() + (60 * (int)$params['minutes']))),
+                ];
+                $params['task_date'] = [
+                    date('Y-m-d', time())
+                ];
+
+                $params['task_frep'] = 1;
+                
+            }
+            unset($params['task_ids']);
+
+
             $leadScraping = SvLeadScrapingSetting::create($insertData);
             $leadScraping = $leadScraping->refresh();
-            //查询任务明细是否存在
-            //            $leadScrapingRecord = SvLeadScrapingRecord::where('scraping_id', $params['id'])->where('user_id', self::$uid)->findOrEmpty();
-            //            if (!$leadScrapingRecord->isEmpty() && $leadScrapingRecord['status'] !== 0) {
-            //                self::setError('任务正在执行中，不能修改');
-            //                return false;
-            //            }
 
             if (isset($params['filter']) && is_array($params['filter'])) {
                 $params['filter'] = json_encode($params['filter'], JSON_UNESCAPED_UNICODE);
@@ -146,27 +157,21 @@ class LeadScrapingLogic extends SvBaseLogic
                         ];
                     }
                 }
-                //                switch ($result['task_type']) {
-                //                    case 1:
-                //                        $taskType = DeviceEnum::TASK_COMMENT_TO_COMMENT;
-                //                        break;
-                //                    case 2:
-                //                        $taskType = DeviceEnum::TASK_COMMENT_TO_MSG;
-                //                        break;
-                //                    default:
-                //                        $taskType = DeviceEnum::TASK_COMMENT_TO_MARK_CLUE;
-                //                }
+
                 foreach (json_decode($result['accounts'], true) as $account) {
                     $find = SvAccount::where('account', $account['account'])->where('type', $account['type'])->where('user_id', self::$uid)->limit(1)->find()->toArray();
                     $account = array_merge($account, $find);
                     foreach ($times as $time) {
                         //判断时间是否冲突
-                        list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_TOUCH, $time['start_time'], $time['end_time'], self::$uid);
-                        if (!$isOverlap) {
-                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                            $msg     = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type']) . "】与当前所选时间冲突";
-                            throw new \Exception($msg);
+                        if ((int)$is_overlap === 0) {
+                            list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_TOUCH, $time['start_time'], $time['end_time'], self::$uid);
+                            if (!$isOverlap) {
+                                $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                                $msg     = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type']) . "】与当前所选时间冲突";
+                                throw new \Exception($msg);
+                            }
                         }
+
                         $startTime        = $time['start_time'];
                         $endTime          = $time['end_time'];
                         $subTask          = SvLeadScrapingSettingAccount::create([
@@ -192,6 +197,8 @@ class LeadScrapingLogic extends SvBaseLogic
                             'task_scene'   => $result['task_type'],
                             'account'      => $account['account'],
                             'account_type' => $account['type'],
+                            'nickname'     => $account['nickname'],
+                            'avatar'       => $account['avatar'],
                             'task_name'    => $result['name'] . ' - ' . self::formatType((int)$account['type']),
                             'status'       => 0,
                             'day'          => date('Y-m-d', $startTime),
@@ -270,7 +277,7 @@ class LeadScrapingLogic extends SvBaseLogic
             } else {
 
                 $result->filter = empty($result->filter) ? \app\common\service\ConfigService::get('touch_clue', 'comment_screening', []) : $result->filter;
-                $result->comment_speech = empty($result->comment_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $result->comment_speech;    
+                $result->comment_speech = empty($result->comment_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $result->comment_speech;
 
                 $result->msg_speech = empty($result->msg_speech) ? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []) : $result->msg_speech;
 

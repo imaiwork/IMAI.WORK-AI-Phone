@@ -1,1289 +1,426 @@
 <template>
-    <view class="h-screen flex flex-col bg-[#EEF0F6]">
-        <u-navbar
-            :border-bottom="false"
-            :is-fixed="false"
-            :is-back="chatContentList.length > 0 || currAgent || currModel"
-            :background="{ background: 'transparent' }"
-            is-custom-back-icon
-            :custom-back="backChat">
-            <template #custom-back-icon v-if="chatContentList.length > 0 || currAgent || currModel">
-                <view class="flex items-center gap-x-4">
-                    <view class="glass-btn back-btn">
-                        <u-icon name="arrow-left" :size="30"></u-icon>
-                    </view>
-                    <view v-if="chatContentList.length > 0" class="glass-btn icon-btn" @click="handleAddSession">
-                        <image src="/static/images/icons/chat_new.svg" class="w-[28rpx] h-[28rpx]" />
-                    </view>
-                </view>
-            </template>
+    <view class="min-h-screen bg-[#F4F6FB] pb-[120rpx]">
+        <view class="w-full h-[670rpx] absolute top-0 left-0">
+            <image :src="`${config.baseUrl}static/images/mp/index_bg.png`" class="w-full h-full" mode="aspectFill" />
+        </view>
 
-            <view class="navbar-center" v-if="chatContentList.length == 0 && !currAgent && !currModel">
-                <view class="glass-tabs" v-if="tabList.length > 1">
-                    <view
-                        v-for="(tab, index) in tabList"
-                        :key="`${tab.type}-${tab.name}`"
-                        class="glass-tab-item"
-                        :class="{ 'glass-tab-active': currTab === index }"
-                        @click="handleTabChange(index)">
-                        <text class="glass-tab-text" :class="{ 'glass-tab-text-active': currTab === index }">
-                            {{ tab.name }}
-                        </text>
-                    </view>
+        <view class="px-[48rpx] pt-[140rpx] relative z-10">
+            <view class="text-[52rpx] font-bold text-white leading-tight">AI 智能数字员工</view>
+            <view class="text-[26rpx] text-[#ffffff]/60 mt-[12rpx]">助力企业高效增长，让业务自动运转</view>
+            <view class="mt-[32rpx] flex items-center gap-[20rpx]">
+                <view class="flex items-center gap-[10rpx] bg-[#ffffff]/15 rounded-[100rpx] px-[28rpx] py-[14rpx]">
+                    <view class="w-[12rpx] h-[12rpx] rounded-full bg-[#52FFB0]" />
+                    <text class="text-white text-[24rpx] font-medium">1台手机 = 6个员工</text>
                 </view>
-                <view class="page-title" v-else>
-                    <text class="title-text">AI 智能体</text>
-                </view>
-            </view>
-        </u-navbar>
-
-        <view class="grow min-h-0 relative z-10 pt-2">
-            <view v-if="chatContentList.length == 0 && currType === 0" class="absolute top-0 w-full h-full z-[33]">
-                <view class="welcome-card" v-if="!currAgent && !currModel">
-                    <view class="welcome-body">
-                        <view class="welcome-title">
-                            Hi，我是
-                            <text class="title-gradient">AI 大管家</text>
-                        </view>
-                        <view class="welcome-sub">选择一个模型，开启你的智能对话 ✦</view>
-
-                        <view class="model-grid">
-                            <view
-                                v-for="(item, index) in getAIModels"
-                                :key="index"
-                                class="model-chip"
-                                @click="handleSelectModel(item)">
-                                <image :src="item.logo" class="chip-logo" mode="aspectFill"></image>
-                                <text class="chip-name">{{ item.name }}</text>
-                                <view class="chip-badge" v-if="item.id == 10">推荐</view>
-                            </view>
-                        </view>
-                    </view>
-                </view>
-
-                <view class="agent-selected" v-else-if="currAgent">
-                    <view class="selected-glow agent-glow-color"></view>
-                    <view class="selected-avatar-ring">
-                        <image
-                            :src="currAgent.avatar || currAgent.image"
-                            class="selected-avatar"
-                            mode="aspectFill"></image>
-                    </view>
-                    <view class="selected-name">{{ currAgent.name }}</view>
-                    <view class="selected-intro">{{ currAgent.intro || currAgent.introduced }}</view>
-                </view>
-
-                <view class="agent-selected" v-else-if="currModel">
-                    <view class="selected-glow model-glow-color"></view>
-                    <view class="selected-avatar-ring model-ring">
-                        <image :src="currModel.logo" class="selected-avatar" mode="aspectFill"></image>
-                    </view>
-                    <view class="selected-name">{{ currModel.name }}</view>
-                </view>
-            </view>
-
-            <view class="h-full w-full" v-show="currType === 0">
-                <chat-scroll-view
-                    ref="chattingRef"
-                    v-model:file-list="fileList"
-                    placeholder="发送消息、输入@选择智能体"
-                    :is-stop="isStopChat"
-                    :content-list="chatContentList"
-                    :send-disabled="isReceiving"
-                    :tokens="tokensValue"
-                    :is-home="chatContentList.length === 0 && !currAgent && !currModel"
-                    @close="handleChatClose"
-                    @add-session="handleAddSession"
-                    @update:network="handleUpdateNetwork"
-                    @content-post="handleContentPost"
-                    @show-history="showHistory = true"
-                    @update:agent="handleUpdateAgent"
-                    @update:model="handleUpdateModel">
-                    <template #content> </template>
-                </chat-scroll-view>
-            </view>
-            <view class="h-full w-full flex flex-col" v-show="currType === 1">
-                <view class="mt-4">
-                    <scroll-view scroll-x>
-                        <view class="flex gap-2 px-[32rpx]">
-                            <view
-                                v-for="item in agentCateLists"
-                                class="text-[#959FAF] font-medium px-[24rpx] h-[64rpx] flex items-center rounded-full whitespace-nowrap"
-                                :class="{
-                                    'bg-black !text-white': currAgentType == item.value,
-                                }"
-                                :key="item.value"
-                                @click="handleAgentCateClick(item)">
-                                <view>{{ item.label }}</view>
-                            </view>
-                        </view>
-                    </scroll-view>
-                </view>
-                <view class="grow min-h-0 mt-4">
-                    <z-paging
-                        ref="pagingCozeRef"
-                        v-model="agentList"
-                        :fixed="false"
-                        :safe-area-inset-bottom="true"
-                        @query="handleQueryAgentList">
-                        <view class="space-y-2 px-[32rpx]">
-                            <view
-                                class="bg-white rounded-[20rpx] flex p-[28rpx] relative"
-                                v-for="(item, index) in agentList"
-                                :key="index"
-                                @click="handleSelectAgent(item)">
-                                <view class="w-[100rpx] h-[100rpx] shrink-0">
-                                    <image
-                                        :src="item.image || item.avatar"
-                                        class="w-full h-full rounded-full"
-                                        mode="aspectFill"></image>
-                                </view>
-                                <view class="flex-1 ml-[30rpx] mt-1">
-                                    <view class="flex items-center gap-x-2">
-                                        <view class="line-clamp-1 break-all font-medium text-[30rpx]">{{
-                                            item.name
-                                        }}</view>
-                                        <view
-                                            class="shrink-0 rounded-[60rpx] px-[14rpx] py-[6rpx] text-[22rpx] font-medium"
-                                            :class="[
-                                                item.source == 1
-                                                    ? 'bg-[#0065fb]/5 text-primary'
-                                                    : 'bg-[#FDF3E3] text-[#A13016]',
-                                            ]">
-                                            {{ item.source == 0 ? "官方" : "用户" }}
-                                        </view>
-                                    </view>
-                                    <view class="mt-1 line-clamp-2 text-xs text-[#737373] break-all">
-                                        {{ item.intro || item.introduced }}
-                                    </view>
-                                    <view class="mt-2">
-                                        <view
-                                            class="text-primary bg-[#0065fb]/5 rounded-[60rpx] px-[26rpx] py-[12rpx] font-medium w-fit">
-                                            <u-icon name="chat" :size="28" color="#0065fb"></u-icon>
-                                            <text class="ml-1">去对话</text></view
-                                        >
-                                    </view>
-                                </view>
-                                <view
-                                    class="p-1 shrink-0 h-fit absolute top-2 right-2 z-[22]"
-                                    v-if="item.source == 1"
-                                    @click.stop="handleMore(item)">
-                                    <u-icon name="more-dot-fill" :size="24" color="#999999"></u-icon>
-                                </view>
-                            </view>
-                        </view>
-                        <template #empty>
-                            <empty />
-                        </template>
-                    </z-paging>
-                </view>
-            </view>
-            <view class="h-full w-full" v-show="currType === 2">
-                <view class="m-4 mt-2 relative z-10">
-                    <u-search
-                        v-model="queryParams.name"
-                        bg-color="#ffffff"
-                        :show-action="false"
-                        placeholder="请输入关键词"
-                        @search="search"
-                        @clear="clear"></u-search>
-                </view>
-                <view class="grow min-h-0 relative z-10">
-                    <view class="h-full flex">
-                        <view
-                            class="w-[248rpx] h-full flex flex-col overflow-hidden flex-shrink-0 rounded-tr-[36rpx] bg-white">
-                            <view class="grow min-h-0">
-                                <scroll-view scroll-y class="h-full">
-                                    <view
-                                        v-for="(item, index) in optionsData.robotCate"
-                                        class="robot-cate"
-                                        :key="index"
-                                        :class="[
-                                            {
-                                                'robot-cate-active': robotCateActiveMenu == index,
-                                            },
-                                            {
-                                                'robot-cate-brother':
-                                                    robotSubCateIndex == item.sub_list.length - 1 &&
-                                                    isCurrMenu(item.sub_list),
-                                            },
-                                            {
-                                                'robot-cate-first': robotSubCateIndex == 0 && isCurrMenu(item.sub_list),
-                                            },
-                                        ]"
-                                        @click="handleRobotCate(index)">
-                                        <view class="robot-cate-item">
-                                            <view class="robot-cate-item-wrap">
-                                                <view class="flex items-center gap-2 w-full">
-                                                    <view class="flex-1 text-[#6D6E70] text-xs font-medium">{{
-                                                        item.name
-                                                    }}</view>
-                                                    <u-icon
-                                                        :name="
-                                                            robotCateActiveMenu == index ? 'arrow-down' : 'arrow-right'
-                                                        "
-                                                        :size="24"
-                                                        color="#707173"></u-icon>
-                                                </view>
-                                                <view class="text-[20rpx] text-[#D0D0D0] mt-1">
-                                                    {{ item.sub_list.length }}
-                                                </view>
-                                            </view>
-                                        </view>
-                                        <template v-if="robotCateActiveMenu == index">
-                                            <view
-                                                v-for="(subItem, subIndex) in item.sub_list"
-                                                :key="`${index}-${subIndex}`"
-                                                class="sub-robot"
-                                                :class="{
-                                                    'sub-robot-active': currSubId == subItem.id,
-                                                    'sub-robot-last':
-                                                        robotSubCateIndex != 0 &&
-                                                        robotSubCateIndex - 1 == subIndex &&
-                                                        isCurrMenu(item.sub_list),
-                                                }"
-                                                @click.stop="handleRobotSubCate(subIndex, subItem.id)">
-                                                <view class="sub-robot-item">
-                                                    <view class="text-xs text-[#9A9A9C] line-clamp-1">
-                                                        {{ subItem.name }}
-                                                    </view>
-                                                </view>
-                                            </view>
-                                        </template>
-                                    </view>
-                                </scroll-view>
-                            </view>
-                        </view>
-                        <view class="flex-1 flex flex-col min-h-0 overflow-hidden">
-                            <view class="text-[20rpx] font-medium text-[#6D6E70] mt-2 mx-[24rpx] mb-4">
-                                {{ total }}个智能体
-                            </view>
-                            <view class="grow relative">
-                                <view
-                                    class="flex justify-center items-center absolute w-full h-full"
-                                    v-if="queryLoading">
-                                    <view class="loader"> </view>
-                                </view>
-                                <z-paging
-                                    ref="pagingRobotRef"
-                                    v-model="robots"
-                                    :auto="true"
-                                    :fixed="false"
-                                    :safe-area-inset-bottom="true"
-                                    @query="queryRobotList">
-                                    <view class="pl-[24rpx] pr-[16rpx] flex flex-col gap-4">
-                                        <view
-                                            v-for="(item, index) in robots"
-                                            :key="index"
-                                            class="bg-white p-[24rpx] rounded-[24rpx]"
-                                            @click="handleRobot(item)">
-                                            <view class="flex gap-2">
-                                                <image
-                                                    :src="item.logo"
-                                                    lazy
-                                                    class="rounded-full w-[108rpx] h-[108rpx] flex-shrink-0"
-                                                    mode="aspectFill"></image>
-                                                <view class="">
-                                                    <text class="font-medium mt-1 line-clamp-1">{{ item.name }}</text>
-                                                    <view class="text-[20rpx] mt-1 text-[#9C9C9E] line-clamp-2">
-                                                        {{ item.description }}
-                                                    </view>
-                                                </view>
-                                            </view>
-                                        </view>
-                                    </view>
-                                    <template #empty>
-                                        <view class="mx-4">
-                                            <empty />
-                                        </view>
-                                    </template>
-                                </z-paging>
-                            </view>
-                        </view>
-                    </view>
+                <view class="flex items-center gap-[10rpx] bg-[#ffffff]/15 rounded-[100rpx] px-[28rpx] py-[14rpx]">
+                    <view class="w-[12rpx] h-[12rpx] rounded-full bg-[#FFD452]" />
+                    <text class="text-white text-[24rpx] font-medium">7×24h 自动运行</text>
                 </view>
             </view>
         </view>
-        <tabbar v-if="chatContentList.length === 0 && !currAgent && !currModel" />
-    </view>
-    <popup-bottom v-model="showHistory" title="历史记录" :is-disabled-touch="true" custom-class="bg-[#F9FAFB]">
-        <template #content>
-            <view class="h-full py-[30rpx]">
-                <z-paging
-                    ref="pagingRef"
-                    v-model="recordLists"
-                    :fixed="false"
-                    :safe-area-inset-bottom="true"
-                    @query="handleQueryRecordList">
-                    <view class="flex flex-col gap-4 px-[32rpx]">
-                        <view
-                            class="bg-white rounded-[24rpx] p-[24rpx]"
-                            v-for="(item, index) in recordLists"
-                            :key="index"
-                            @click="handleSelectRecord(item)">
-                            <view class="flex items-center justify-between">
-                                <view class="text-[#AEAFB0] text-xs bg-[#F9FAFB] rounded-[12rpx] py-[4rpx] px-[8rpx]">
-                                    {{ item.create_time }}
-                                </view>
+
+        <view class="px-[28rpx] mt-[50rpx] relative z-10">
+            <view class="grid gap-[16rpx]" style="grid-template-columns: repeat(2, 1fr)">
+                <view
+                    class="rounded-[28rpx] p-[36rpx] relative overflow-hidden"
+                    style="
+                        grid-area: 1/1/3/2;
+                        background: linear-gradient(160deg, #f0f2fd 0%, #fefefe 100%);
+                        box-shadow: 0 8rpx 40rpx rgba(43, 91, 245, 0.1);
+                        border: 3rpx solid rgba(255, 255, 255, 0.9);
+                    "
+                    @click="toPage('/ai_modules/person/pages/index/index')">
+                    <view class="text-[36rpx] font-bold text-[#1a1a2e]">人设 IP</view>
+                    <view class="text-[#000000]/35 text-[22rpx] mt-[10rpx]">24h 任务内容配置</view>
+                    <view
+                        class="mt-[28rpx] inline-flex items-center gap-[8rpx] bg-primary rounded-[100rpx] px-[28rpx] py-[14rpx]">
+                        <text class="text-white text-[24rpx] font-medium">立即添加</text>
+                    </view>
+                    <view class="absolute bottom-[10rpx] right-[10rpx]">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/blue_notepad_4562.png`"
+                            class="w-[130rpx] h-[120rpx]" />
+                    </view>
+                </view>
+
+                <view
+                    class="rounded-[28rpx] p-[32rpx] relative overflow-hidden h-[150rpx]"
+                    style="
+                        background: linear-gradient(160deg, #f0f2fd 0%, #fefefe 100%);
+                        box-shadow: 0 8rpx 40rpx rgba(43, 91, 245, 0.08);
+                        border: 3rpx solid rgba(255, 255, 255, 0.9);
+                    "
+                    @click="toPage('/packages/pages/operate_case/operate_case')">
+                    <view class="text-[30rpx] font-bold text-[#1a1a2e]">运营案例</view>
+                    <view class="text-[#000000]/35 text-[22rpx] mt-[8rpx]">行业专属模版</view>
+                    <view class="absolute bottom-[-28rpx] right-[8rpx]">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/aurora_spark_7842.png`"
+                            class="w-[110rpx] h-[110rpx]" />
+                    </view>
+                </view>
+
+                <view
+                    class="rounded-[28rpx] p-[32rpx] relative overflow-hidden h-[150rpx]"
+                    style="
+                        background: linear-gradient(160deg, #f0f2fd 0%, #fefefe 100%);
+                        box-shadow: 0 8rpx 40rpx rgba(43, 91, 245, 0.08);
+                        border: 3rpx solid rgba(255, 255, 255, 0.9);
+                    "
+                    @click="toPage('/ai_modules/device/pages/index/index')">
+                    <view class="text-[30rpx] font-bold text-[#1a1a2e]">设备列表</view>
+                    <view class="mt-[10rpx] flex items-center gap-[10rpx]">
+                        <text class="text-[#000000]/35 text-[22rpx]">我的设备</text>
+                        <text class="text-primary font-bold text-[26rpx]">{{ deviceCount }}</text>
+                    </view>
+                    <view class="absolute bottom-[-28rpx] right-[8rpx]">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/phantom_tide_1763.png`"
+                            class="w-[110rpx] h-[100rpx]" />
+                    </view>
+                </view>
+            </view>
+
+            <view class="mt-[20rpx] bg-white rounded-[28rpx]" style="box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06)">
+                <view class="grid grid-cols-4">
+                    <view
+                        class="flex flex-col items-center py-[32rpx] gap-[12rpx]"
+                        @click="toPage('/ai_modules/device/pages/task_calendar/task_calendar')">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/ember_glow_6309.png`"
+                            class="w-[80rpx] h-[80rpx]" />
+                        <text class="text-[24rpx] font-medium text-[#333]">任务日历</text>
+                    </view>
+                    <view
+                        class="flex flex-col items-center py-[32rpx] gap-[12rpx]"
+                        @click="toPage('/ai_modules/device/pages/task_statement/task_statement')">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/frost_bloom_2847.png`"
+                            class="w-[80rpx] h-[80rpx]" />
+                        <text class="text-[24rpx] font-medium text-[#333]">数据报表</text>
+                    </view>
+                    <view
+                        class="flex flex-col items-center py-[32rpx] gap-[12rpx]"
+                        @click="toPage('/ai_modules/device/pages/task_client_assets/task_client_assets')">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/lunar_echo_5512.png`"
+                            class="w-[80rpx] h-[80rpx]" />
+                        <text class="text-[24rpx] font-medium text-[#333]">客资线索</text>
+                    </view>
+                    <view
+                        class="flex flex-col items-center py-[32rpx] gap-[12rpx]"
+                        @click="toPage('/packages/pages/course/course')">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/cobalt_flare_8834.png`"
+                            class="w-[80rpx] h-[80rpx]" />
+                        <text class="text-[24rpx] font-medium text-[#333]">使用教程</text>
+                    </view>
+                </view>
+            </view>
+
+            <view class="mt-[32rpx]" @click="toPage('/ai_modules/device/pages/task_statement/task_statement')">
+                <view class="flex items-center justify-between mb-[16rpx] px-[4rpx]">
+                    <view class="flex items-center gap-[16rpx]">
+                        <view class="w-[6rpx] h-[32rpx] rounded-full bg-primary" />
+                        <text class="font-bold text-[28rpx] text-[#1a1a2e]">今日概览</text>
+                        <text class="text-[#000000]/30 text-[22rpx]">{{ getDate }} {{ getWeek }}</text>
+                    </view>
+                    <view
+                        class="text-primary font-medium text-[26rpx] bg-[#EBF1FE] rounded-[100rpx] px-[24rpx] py-[10rpx]"
+                        @click="toPage('/ai_modules/device/pages/choose_task_type/choose_task_type')">
+                        + 添加任务
+                    </view>
+                </view>
+
+                <view class="bg-white rounded-[28rpx] p-[36rpx]" style="box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06)">
+                    <view class="flex items-center justify-between">
+                        <view class="flex gap-[60rpx]">
+                            <view>
+                                <view class="text-[22rpx] text-[#000000]/40 font-medium mb-[8rpx]">今日任务</view>
+                                <view class="text-[72rpx] font-bold text-primary leading-none">{{
+                                    statistics.today_task_count || 0
+                                }}</view>
                             </view>
-                            <view class="line-clamp-3 mt-4 text-[26rpx]">
-                                {{ item.message || item.file_info.name }}
+                            <view>
+                                <view class="text-[22rpx] text-[#000000]/40 font-medium mb-[8rpx]">已完成</view>
+                                <view class="text-[72rpx] font-bold text-[#1a1a2e] leading-none">{{
+                                    statistics.today_complete_task_count || 0
+                                }}</view>
                             </view>
                         </view>
+                        <semi-circle-progress
+                            :size="120"
+                            :stroke-width="8"
+                            :progress="statistics.today_rate || 0"
+                            bg-color="#EDF4FB">
+                            <view class="text-primary font-bold text-[28rpx]">{{ statistics.today_rate }}%</view>
+                        </semi-circle-progress>
                     </view>
-                    <template #empty>
-                        <empty />
-                    </template>
-                </z-paging>
+
+                    <view class="my-[28rpx] h-[1rpx] bg-[#F0F0F0]" />
+
+                    <view class="grid grid-cols-3 gap-[16rpx]">
+                        <view class="bg-[#F8F9FF] rounded-[20rpx] px-[20rpx] py-[22rpx]">
+                            <view class="flex items-center justify-between mb-[10rpx]">
+                                <text class="text-[22rpx] text-[#000000]/40">工作设备</text>
+                                <image src="/static/images/icons/windows.svg" class="w-[28rpx] h-[28rpx]" />
+                            </view>
+                            <view class="text-[44rpx] font-bold text-[#1a1a2e]">{{
+                                statistics.worker_device_count || 0
+                            }}</view>
+                        </view>
+                        <view class="bg-[#F8F9FF] rounded-[20rpx] px-[20rpx] py-[22rpx]">
+                            <view class="flex items-center justify-between mb-[10rpx]">
+                                <text class="text-[22rpx] text-[#000000]/40">触达(人)</text>
+                                <image src="/static/images/icons/user_star.svg" class="w-[28rpx] h-[28rpx]" />
+                            </view>
+                            <view class="text-[44rpx] font-bold text-[#1a1a2e]">{{
+                                statistics.today_touch_number || 0
+                            }}</view>
+                        </view>
+                        <view class="bg-[#F8F9FF] rounded-[20rpx] px-[20rpx] py-[22rpx]">
+                            <view class="flex items-center justify-between mb-[10rpx]">
+                                <text class="text-[22rpx] text-[#000000]/40">曝光(人)</text>
+                                <image src="/static/images/icons/user_star.svg" class="w-[28rpx] h-[28rpx]" />
+                            </view>
+                            <view class="text-[44rpx] font-bold text-[#1a1a2e]">{{
+                                statistics.today_expose_number || 0
+                            }}</view>
+                        </view>
+                    </view>
+                </view>
             </view>
-        </template>
-    </popup-bottom>
-    <recharge-popup ref="rechargePopupRef"></recharge-popup>
+
+            <view class="mt-[36rpx]" @click="toPage('/ai_modules/device/pages/task_statement/task_statement')">
+                <view class="flex items-center gap-[16rpx] mb-[16rpx] px-[4rpx]">
+                    <view class="w-[6rpx] h-[32rpx] rounded-full bg-primary" />
+                    <text class="font-bold text-[28rpx] text-[#1a1a2e]">实时数据分析</text>
+                </view>
+
+                <view class="grid grid-cols-3 gap-[16rpx] mb-[20rpx]">
+                    <view
+                        class="bg-white rounded-[24rpx] py-[32rpx] flex flex-col items-center"
+                        style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05)">
+                        <view class="text-[44rpx] font-bold text-primary">{{
+                            statistics.seven_expose_number || 0
+                        }}</view>
+                        <view class="text-[#000000]/40 text-[22rpx] mt-[8rpx]">近7日曝光</view>
+                    </view>
+                    <view
+                        class="bg-white rounded-[24rpx] py-[32rpx] flex flex-col items-center"
+                        style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05)">
+                        <view class="text-[44rpx] font-bold text-[#F88700]">{{
+                            statistics.seven_touch_number || 0
+                        }}</view>
+                        <view class="text-[#000000]/40 text-[22rpx] mt-[8rpx]">近7日触达</view>
+                    </view>
+                    <view
+                        class="bg-white rounded-[24rpx] py-[32rpx] flex flex-col items-center"
+                        style="box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05)">
+                        <view class="text-[44rpx] font-bold text-[#00B478]">{{
+                            statistics.seven_intention_number || 0
+                        }}</view>
+                        <view class="text-[#000000]/40 text-[22rpx] mt-[8rpx]">近7日意向</view>
+                    </view>
+                </view>
+
+                <view
+                    class="bg-white rounded-[28rpx] p-[36rpx] mb-[16rpx]"
+                    style="box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06)">
+                    <view class="flex items-center gap-[20rpx]">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/solar_drift_4471.png`"
+                            class="w-[80rpx] h-[80rpx] flex-shrink-0" />
+                        <view class="flex-1">
+                            <view class="text-[30rpx] font-bold text-[#1a1a2e]">AI 智能获客</view>
+                            <view class="text-[22rpx] text-[#000000]/35 mt-[6rpx]">自动私信 / 评论触达</view>
+                        </view>
+                        <view
+                            class="text-primary text-[22rpx] font-medium bg-[#EBF1FE] px-[20rpx] py-[10rpx] rounded-[100rpx]">
+                            转化率 {{ statistics.ai_clues.rate || 0 }}%
+                        </view>
+                    </view>
+                    <view class="mt-[24rpx] flex items-center justify-between text-[24rpx] mb-[14rpx]">
+                        <text class="text-[#000000]/40"
+                            >触达：<text class="text-[#1a1a2e] font-bold">{{
+                                statistics.ai_clues.touch_number || 0
+                            }}</text></text
+                        >
+                        <text class="text-[#000000]/40"
+                            >意向：<text class="text-[#1a1a2e] font-bold">{{
+                                statistics.ai_clues.expose_number || 0
+                            }}</text></text
+                        >
+                    </view>
+                    <u-line-progress :percent="statistics.ai_clues.rate || 0" :show-text="false" />
+                </view>
+
+                <view
+                    class="bg-white rounded-[28rpx] p-[36rpx] mb-[16rpx]"
+                    style="box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06)">
+                    <view class="flex items-center gap-[20rpx]">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/neon_pulse_3156.png`"
+                            class="w-[80rpx] h-[80rpx] flex-shrink-0" />
+                        <view class="flex-1">
+                            <view class="text-[30rpx] font-bold text-[#1a1a2e]">AI 内容运营</view>
+                            <view class="text-[22rpx] text-[#000000]/35 mt-[6rpx]">AI 生成 / 自动发布</view>
+                        </view>
+                    </view>
+                    <view class="mt-[24rpx] grid grid-cols-2 gap-[16rpx]">
+                        <view
+                            class="bg-[#F8F9FF] rounded-[20rpx] px-[28rpx] py-[24rpx] flex items-center justify-between">
+                            <view class="text-[22rpx] text-[#000000]/40 font-medium leading-relaxed">
+                                <view>生成数</view>
+                                <view>(条)</view>
+                            </view>
+                            <view class="text-[52rpx] font-bold text-[#1a1a2e]">{{
+                                statistics.content_operation.count || 0
+                            }}</view>
+                        </view>
+                        <view
+                            class="bg-[#FFF8EE] rounded-[20rpx] px-[28rpx] py-[24rpx] flex items-center justify-between">
+                            <view class="text-[22rpx] text-[#000000]/40 font-medium leading-relaxed">
+                                <view>发布成功</view>
+                                <view>(条)</view>
+                            </view>
+                            <view class="text-[52rpx] font-bold text-[#F88700]">{{
+                                statistics.content_operation.publish_count || 0
+                            }}</view>
+                        </view>
+                    </view>
+                </view>
+
+                <view
+                    class="bg-white rounded-[28rpx] p-[36rpx] mb-[16rpx]"
+                    style="box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06)">
+                    <view class="flex items-center gap-[20rpx]">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/mystic_orbit_2958.png`"
+                            class="w-[80rpx] h-[80rpx] flex-shrink-0" />
+                        <view class="flex-1">
+                            <view class="text-[30rpx] font-bold text-[#1a1a2e]">AI 智能客服</view>
+                            <view class="text-[22rpx] text-[#000000]/35 mt-[6rpx]">客服自动回复 / AI 接管私信</view>
+                        </view>
+                        <view
+                            class="text-[#21ACC2] text-[22rpx] font-medium bg-[#E0FAFA] px-[20rpx] py-[10rpx] rounded-[100rpx]">
+                            引流 {{ statistics.ai_customer.drainage || 0 }}%
+                        </view>
+                    </view>
+                    <view class="mt-[24rpx] flex items-center justify-between text-[24rpx] mb-[14rpx]">
+                        <text class="text-[#000000]/40"
+                            >接待：<text class="text-[#1a1a2e] font-bold">{{
+                                statistics.ai_customer.receive || 0
+                            }}</text></text
+                        >
+                    </view>
+                    <!-- <u-line-progress :percent="0" :height="10" :show-text="false" /> -->
+                </view>
+
+                <view class="bg-white rounded-[28rpx] p-[36rpx]" style="box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06)">
+                    <view class="flex items-center gap-[20rpx]">
+                        <image
+                            :src="`${config.baseUrl}static/images/mp/crystal_wave_9023.png`"
+                            class="w-[80rpx] h-[80rpx] flex-shrink-0" />
+                        <view class="flex-1">
+                            <view class="text-[30rpx] font-bold text-[#1a1a2e]">AI 销售跟进</view>
+                            <view class="text-[22rpx] text-[#000000]/35 mt-[6rpx]">自动拉群 / 自动加好友</view>
+                        </view>
+                        <view
+                            class="text-[#FF6A57] text-[22rpx] font-medium bg-[#FFF0EE] px-[20rpx] py-[10rpx] rounded-[100rpx]">
+                            拉群 {{ statistics.ai_sales.group || 0 }}
+                        </view>
+                    </view>
+                    <view class="mt-[24rpx] flex items-center justify-between text-[24rpx] mb-[14rpx]">
+                        <text class="text-[#000000]/40"
+                            >接待：<text class="text-[#1a1a2e] font-bold">{{
+                                statistics.ai_sales.add_friends || 0
+                            }}</text></text
+                        >
+                    </view>
+                    <!-- <u-line-progress :percent="statistics.ai_sales.rate" :height="10" :show-text="false" /> -->
+                </view>
+            </view>
+        </view>
+
+        <tabbar />
+    </view>
 </template>
-<script lang="ts" setup>
-import { useUserStore } from "@/stores/user";
-import { useAppStore } from "@/stores/app";
-import { chatSendTextStream, getChatLog, getCreativeRecord } from "@/api/chat";
-import { robotCategory, robotLists, getAgentList, getCozeAgentList, deleteAgent, deleteCozeAgent } from "@/api/agent";
-import { TokensSceneEnum } from "@/enums/appEnums";
-import { useDictOptions } from "@/hooks/useDictOptions";
 
-// 类型定义
-interface ChatMessage {
-    type: 1 | 2; // 1: 用户消息, 2: AI回复
-    message?: string;
-    fileList?: FileInfo[];
-    loading?: boolean;
-    reply?: string;
-    reasoning_content?: string;
-    consume_tokens?: Record<string, any>;
-    is_reasoning_finished?: boolean;
-    tokens_info?: Record<string, any>;
-    file_info?: Record<string, any>;
-}
+<script setup lang="ts">
+import config from "@/config";
+import { getHomeDisplay } from "@/api/app";
+import { getDeviceList as getDeviceListApi } from "@/api/device";
+import { setFormData } from "@/utils/util";
 
-interface FileInfo {
-    url: string;
-    name: string;
-    size: number;
-    type: string;
-}
-
-interface ChatLogParams {
-    page_no: number;
-    page_size: number;
-    assistant_id: number;
-    task_id?: string;
-}
-
-enum PageKeyEnum {
-    LOGIN = "login",
-    CREATE_TASK = "create_task",
-    VIEW_SCHEDULE = "view_schedule",
-    AI_CUSTOMER = "ai_customer",
-    DH = "dh",
-    DIGITAL_CREATION = "dh_creation",
-    DIGITAL_PERSON_CLONE = "digital_person_clone",
-    PUBLISH_IMG = "publish_img",
-    PUBLISH_VIDEO = "publish_video",
-    MY_CREATION = "my_creation",
-    AI_PUZZLE = "ai_puzzle",
-    MATERIAL_LIBRARY = "material_library",
-    MEETING_MINUTES = "meeting_minutes",
-    DIGITAL_PERSON_BROADCAST = "digital_person_broadcast",
-    ORAL_VIDEO_MIX = "oral_video_mix",
-    REAL_PERSON_BROADCAST = "real_person_broadcast",
-    MATERIAL_MIX = "material_mix",
-    ONE_SENTENCE_GENERATION = "one_sentence_generation",
-    NEWS_BODY_GENERATION = "news_body_generation",
-    DEVICE_BIND = "device_bind",
-    DEVICE_CONFIG = "device_config",
-}
-
-// 状态管理
-const appStore = useAppStore();
-const userStore = useUserStore();
-const { chatConfig } = toRefs(appStore);
-const websiteConfig = computed(() => appStore.getWebsiteConfig);
-const { userTokens, isLogin } = toRefs(userStore);
-const tokensValue = userStore.getTokenByScene(TokensSceneEnum.CHAT)?.score;
-
-const getAIModels = computed(() =>
-    (appStore.getAiModelConfig?.channel || []).filter((item: any) => item.status == "1")
-);
-
-// 组件引用
-const rechargePopupRef = ref();
-const chattingRef = shallowRef();
-const pagingRef = shallowRef();
-
-// 页面状态
-const safeAreaTop = ref<number>(50);
-const isAgent = ref(false);
-const isNetwork = ref(false);
-const showHistory = ref(false);
-const isReceiving = ref(false);
-const isStopChat = ref(false);
-const fileList = ref<FileInfo[]>([]);
-const chatContentList = ref<ChatMessage[]>([]);
-const taskId = ref<string>("");
-const recordLists = ref<any[]>([]);
-
-const currAgent = ref<any>(null);
-const currModel = ref<any>(null);
-
-const isShowRobot = computed(() => appStore.getIsShowRobot);
-
-// 初始化Tab列表
-const tabList = ref<any[]>([
-    { name: "对话", type: 0 },
-    { name: "智能体", type: 1 },
-]);
-const currTab = ref(0);
-const currType = ref(tabList.value[0].type);
-
-// ✅ 新增：记录选择智能体前所在的 tab 索引，用于返回时恢复
-const prevTab = ref<number | null>(null);
-
-const handleTabChange = async (index: number) => {
-    currType.value = tabList.value[index].type;
-    currTab.value = index;
-    if (currTab.value == 1) {
-        // setTimeout(() => {
-        //     // pagingRobotRef.value?.reload();
-        // }, 300);
-    }
-};
-
-// 流式请求读取器
-let streamReader: any = null;
-
-// 聊天记录请求参数
-const chatLogParams = reactive<ChatLogParams>({
-    page_no: 1,
-    page_size: 1500,
-    assistant_id: 0,
+const getDate = computed(() => {
+    return uni.$u.timeFormat(new Date().getTime(), "yyyy.mm.dd");
+});
+const getWeek = computed(() => {
+    const weekMap: Record<number, string> = {
+        0: "星期日",
+        1: "星期一",
+        2: "星期二",
+        3: "星期三",
+        4: "星期四",
+        5: "星期五",
+        6: "星期六",
+    };
+    return `${weekMap[new Date().getDay()]}`;
 });
 
-/**
- * 网络状态更新处理
- */
-const handleUpdateNetwork = (value: boolean) => {
-    isNetwork.value = value;
+const toPage = (url: string) => {
+    uni.navigateTo({ url });
 };
 
-/**
- * 选择模型处理
- */
-const handleSelectModel = (item: any) => {
-    currModel.value = item;
-    chattingRef.value?.handleModel(item);
+const deviceCount = ref(0);
+const getDeviceCount = async () => {
+    const { count } = await getDeviceListApi({ page_no: 1, page_size: 1 });
+    deviceCount.value = count;
 };
 
-/**
- * 历史记录选择处理
- */
-const handleSelectRecord = async (item: any) => {
-    const { robot_id, avatar, robot_name, task_id } = item;
-    chattingRef.value?.setAgentConfig({
-        id: robot_id,
-        avatar,
-        name: robot_name,
-    });
-    taskId.value = task_id;
-    await getChatList();
-    showHistory.value = false;
-};
-
-/**
- * 查询历史记录列表
- */
-const handleQueryRecordList = async (page_no: number, page_size: number) => {
-    try {
-        const { lists } = await getCreativeRecord({
-            page_no,
-            page_size,
-            scene_id: 0,
-            type: 1,
-        });
-        pagingRef.value?.complete(lists);
-    } catch (error) {
-        pagingRef.value?.complete([]);
-    }
-};
-
-/**
- * 获取聊天记录
- */
-const getChatList = async () => {
-    try {
-        const data = await getChatLog({
-            ...chatLogParams,
-            task_id: taskId.value,
-        });
-        const transformData = data?.map((item: ChatMessage) => {
-            if (item.type === 1)
-                return {
-                    ...item,
-                    fileList: item?.file_info
-                        ? Array.isArray(item.file_info)
-                            ? item.file_info
-                            : [item.file_info]
-                        : [],
-                };
-            return {
-                ...item,
-                is_reasoning_finished: true,
-                consume_tokens: item.tokens_info,
-            };
-        });
-
-        chatContentList.value = transformData;
-
-        await nextTick();
-        setTimeout(() => {
-            chattingRef.value.scrollToBottom();
-        }, 150);
-    } catch (err) {
-        console.error("获取聊天记录失败:", err);
-    }
-};
-
-/**
- * 发送消息处理
- */
-const handleContentPost = async (userInput?: string, isNewChat: boolean = false) => {
-    if (userTokens.value <= 1) {
-        uni.$u.toast("算力不足，请充值！");
-        rechargePopupRef.value?.open();
-        return;
-    }
-    if (isReceiving.value) return;
-
-    if (!isNewChat) {
-        chatContentList.value.push({
-            type: 1,
-            message: userInput,
-            fileList: fileList.value,
-        });
-    }
-
-    const result = reactive<ChatMessage>({
-        type: 2,
-        loading: true,
-        reply: "",
-        reasoning_content: "",
-        consume_tokens: {},
-    });
-    chatContentList.value.push(result);
-    isReceiving.value = true;
-
-    try {
-        await chatSendTextStream(
-            {
-                message: userInput,
-                task_id: taskId.value,
-                open_reasoning: 0,
-                is_network_search: isNetwork.value ? 1 : 0,
-                file_info: fileList.value[0],
-                ...(chattingRef.value?.getChatConfig?.() || {}),
-            },
-            {
-                onstart(reader) {
-                    streamReader = reader;
-                    isStopChat.value = true;
-                },
-                onmessage(value) {
-                    handleStreamMessage(value, result);
-                },
-                onclose() {
-                    handleStreamClose(result);
-                },
-            }
-        );
-    } catch (error: any) {
-        handleStreamError(error, result);
-    }
-
-    nextTick(() => chattingRef.value.scrollToBottom());
-};
-
-/**
- * 处理流式消息
- */
-const handleStreamMessage = (value: string, result: ChatMessage) => {
-    value
-        .trim()
-        .split("data:")
-        .forEach((text) => {
-            if (!text) return;
-            try {
-                const { object, content, task_id, usage, check_robot_id, reasoning_content } = JSON.parse(text);
-                if ((content || reasoning_content) && object === "loading") {
-                    if (reasoning_content) {
-                        result.reasoning_content += reasoning_content;
-                    } else {
-                        result.reply += content;
-                    }
-                }
-                if (object === "finished") {
-                    result.loading = false;
-                    result.consume_tokens = usage;
-                    if (!taskId.value) {
-                        taskId.value = task_id;
-                    }
-                    if (check_robot_id) {
-                        chattingRef.value?.handleAgent({
-                            id: check_robot_id,
-                        });
-                    }
-                    return;
-                }
-                chattingRef.value.scrollToBottom();
-            } catch (error) {
-                console.error("解析流式消息失败:", error);
-            }
-        });
-};
-
-/**
- * 处理流式请求关闭
- */
-const handleStreamClose = (result: ChatMessage) => {
-    result.loading = false;
-    resetChat();
-    userStore.getUser();
-    setTimeout(() => chattingRef.value.scrollToBottom(), 600);
-};
-
-/**
- * 处理流式请求错误
- */
-const handleStreamError = (error: any, result: ChatMessage) => {
-    result.reply = error.errno === 600004 ? "用户已停止内容生成" : error || "发生错误";
-    if (error.errno !== 600004) {
-        uni.$u.toast(error);
-    }
-    result.loading = false;
-    resetChat();
-};
-
-/**
- * 添加新会话
- */
-const handleAddSession = () => {
-    taskId.value = "";
-    chatContentList.value = [];
-    resetChat();
-    handleChatClose();
-    handleContentPost(chatConfig.value.new_chat_prompt, true);
-};
-
-/**
- * 重置聊天状态
- */
-const resetChat = () => {
-    fileList.value = [];
-    isReceiving.value = false;
-    isStopChat.value = false;
-};
-
-/**
- * 返回聊天
- */
-const backChat = async () => {
-    chatContentList.value = [];
-    resetChat();
-    handleChatClose();
-    await nextTick();
-    chattingRef.value?.handleModelClear();
-    chattingRef.value?.handleAgentClear();
-    chattingRef.value?.hideKeyboard();
-
-    // ✅ 如果是从智能体 tab 跳转过来的，返回时恢复到智能体 tab
-    if (prevTab.value !== null) {
-        currTab.value = prevTab.value;
-        currType.value = tabList.value[prevTab.value].type;
-        prevTab.value = null;
-    }
-};
-
-/**
- * 关闭聊天
- */
-const handleChatClose = () => {
-    //#ifdef H5
-    streamReader?.cancel();
-    //#endif
-    //#ifdef MP-WEIXIN
-    streamReader?.abort();
-    //#endif
-    isReceiving.value = false;
-    isStopChat.value = false;
-};
-
-/**
- * 监听文件选择
- */
-const watchFile = () => {
-    uni.$on("chooseFile", (data: FileInfo[]) => {
-        fileList.value = data;
-    });
-};
-
-// 页面状态
-const state = reactive({
-    cate_id: "",
-});
-
-// AI助理（机器人）部分
-const robotCateIndex = ref<number>(0);
-const robotCateActiveMenu = ref<number>(-1);
-const pagingRobotRef = shallowRef();
-const robots = ref<any[]>([]);
-const total = ref<number>(0);
-const queryParams = reactive({
-    type: 3,
-    scene_id: "",
-    name: "",
-});
-const queryLoading = ref<boolean>(false);
-
-// AI智能体部分
-const pagingCozeRef = shallowRef();
-const agentCateLists = [
-    { label: "智能体", value: 1 },
-    { label: "智能体RPO", value: 2 },
-    { label: "工作流", value: 3 },
-];
-const currAgentType = ref<any>(1);
-const agentList = ref<any[]>([]);
-
-const { optionsData } = useDictOptions<{
-    robotCate: any[];
-}>({
-    robotCate: {
-        api: robotCategory,
-        params: {
-            pageSize: 9999,
-            pid: 0,
-        },
-        transformData: (data) => {
-            if (data.lists.length) {
-                if (state.cate_id) {
-                    robotCateIndex.value = data.lists.findIndex((item: any) => item.id == state.cate_id);
-                }
-                // pagingRobotRef.value?.reload();
-            }
-            return data.lists;
-        },
+const statistics = reactive({
+    today_task_count: 0,
+    today_complete_task_count: 0,
+    today_rate: 0,
+    worker_device_count: 0,
+    today_touch_number: "",
+    today_expose_number: 0,
+    seven_expose_number: "",
+    seven_touch_number: 0,
+    seven_intention_number: 0,
+    ai_clues: {
+        //智能获客
+        touch_number: 0,
+        expose_number: 0,
+        rate: 0,
+    },
+    content_operation: {
+        //内容运营
+        count: 0,
+        publish_count: 0,
+    },
+    ai_customer: {
+        //智能客服
+        receive: 0,
+        drainage: 0,
+    },
+    ai_sales: {
+        //ai销售跟进
+        add_friends: 0,
+        group: 0,
     },
 });
 
-const robotSubCateIndex = ref<number>(-1);
-const currSubId = ref<number>();
-
-/**
- * 搜索机器人
- */
-const search = async () => {
-    pagingRobotRef.value?.reload();
+const getHomeDisplayData = async () => {
+    const data = await getHomeDisplay();
+    setFormData(data, statistics);
 };
-
-/**
- * 清除搜索关键词并重新加载
- */
-const clear = async () => {
-    pagingRobotRef.value?.reload();
-};
-
-/**
- * 查询机器人列表
- */
-const queryRobotList = async (pageNo: number, pageSize: number) => {
-    try {
-        const { lists = [], count } = await robotLists({
-            page_size: pageSize,
-            page_no: pageNo,
-            ...queryParams,
-        });
-        total.value = count;
-        pagingRobotRef.value?.complete(lists);
-        queryLoading.value = false;
-    } catch (error) {
-        console.error("查询机器人列表失败:", error);
-        queryLoading.value = false;
-        pagingRobotRef.value?.complete(false);
-    }
-};
-
-/**
- * 点击一级机器人分类
- */
-const handleRobotCate = (index: number) => {
-    if (index == robotCateActiveMenu.value) {
-        robotCateActiveMenu.value = -1;
-        return;
-    }
-    robotCateActiveMenu.value = index;
-};
-
-/**
- * 点击二级机器人分类
- */
-const handleRobotSubCate = (index: number, id: number) => {
-    if (index == robotSubCateIndex.value && id == currSubId.value) {
-        return;
-    }
-    currSubId.value = id;
-    robotSubCateIndex.value = index;
-    queryLoading.value = true;
-
-    const currSubLists = optionsData.robotCate[robotCateActiveMenu.value]?.sub_list;
-    queryParams.scene_id = currSubLists[index]?.id;
-    pagingRobotRef.value?.reload();
-};
-
-/**
- * 检查当前二级分类是否属于给定的一级分类列表
- */
-const isCurrMenu = (lists: any[]) => {
-    return lists.some((item) => item.id == currSubId.value);
-};
-
-/**
- * 点击机器人项
- */
-const handleRobot = (data: any) => {
-    uni.$u.route({
-        url: "/packages/pages/robot_chat/robot_chat",
-        params: {
-            id: data.id,
-        },
-    });
-};
-
-/**
- * 点击智能体分类
- */
-const handleAgentCateClick = (item: any) => {
-    currAgentType.value = item.value;
-    pagingCozeRef.value?.reload();
-};
-
-/**
- * 点击智能体项
- */
-const handleSelectAgent = async (item: any) => {
-    if (!isLogin.value) {
-        uni.$u.route({ url: "/pages/login/login" });
-        return;
-    }
-    if (currAgentType.value == 1) {
-        prevTab.value = currTab.value;
-        currType.value = tabList.value[0].type;
-        currTab.value = 0;
-        await nextTick();
-        chattingRef.value?.handleAgent(item);
-    } else {
-        uni.$u.route({
-            url: "/packages/pages/coze_chat/coze_chat",
-            params: {
-                id: item.id,
-                type: item.type,
-            },
-        });
-    }
-};
-
-/**
- * 更新智能体
- */
-const handleUpdateAgent = (item: any) => {
-    currAgent.value = item;
-};
-
-/**
- * 更新模型
- */
-const handleUpdateModel = (item: any) => {
-    currModel.value = item;
-};
-
-/**
- * 更多操作
- */
-const handleMore = (item: any) => {
-    uni.showActionSheet({
-        itemList: ["删除"],
-        success: (res) => {
-            if (res.tapIndex == 0) {
-                uni.showModal({
-                    title: "提示",
-                    content: "确定删除该智能体吗？",
-                    success: async (res) => {
-                        if (res.confirm) {
-                            uni.showLoading({
-                                title: "删除中...",
-                                mask: true,
-                            });
-                            try {
-                                const api = currAgentType.value == 1 ? deleteAgent : deleteCozeAgent;
-                                await api({ id: item.id });
-                                uni.hideLoading();
-                                uni.showToast({
-                                    title: "删除成功",
-                                    icon: "none",
-                                    duration: 3000,
-                                });
-                                agentList.value = agentList.value.filter((value) => value.id != item.id);
-                            } catch (error: any) {
-                                uni.hideLoading();
-                                uni.showToast({
-                                    title: error,
-                                    icon: "none",
-                                    duration: 3000,
-                                });
-                            }
-                        }
-                    },
-                });
-            }
-        },
-    });
-};
-
-/**
- * 查询智能体列表
- */
-const handleQueryAgentList = async (page_no: number, page_size: number) => {
-    try {
-        const isType1 = currAgentType.value === 1;
-        const api = isType1 ? getAgentList : getCozeAgentList;
-        const params = {
-            page_no,
-            page_size,
-            ...(isType1 ? {} : { type: currAgentType.value === 2 ? 1 : 2 }),
-        };
-        // @ts-ignore
-        const response = await api(params);
-        pagingCozeRef.value?.complete(response.lists || []);
-    } catch (error) {
-        console.error("查询智能体列表失败:", error);
-        pagingCozeRef.value?.complete(false);
-    }
-};
-
-/**
- * 初始化
- */
-const init = async (options?: Record<string, any>) => {
-    await nextTick();
-    if (options?.agent_name) {
-        chattingRef.value?.setAgentConfig({
-            name: options.agent_name,
-            id: options.agent_id,
-            avatar: options.agent_logo,
-        });
-        isAgent.value = true;
-        await nextTick();
-        chattingRef.value?.openKeyboard();
-    }
-};
-
-watch(
-    () => isShowRobot.value,
-    (newVal) => {
-        const assistantTabIndex = tabList.value.findIndex((tab) => tab.type === 2);
-        if (assistantTabIndex > -1) {
-            tabList.value.splice(assistantTabIndex, 1);
-            if (currTab.value >= tabList.value.length) {
-                currTab.value = 0;
-                currType.value = tabList.value[0].type;
-            }
-        }
-
-        if (newVal == "1") {
-            tabList.value.push({ name: "AI助理", type: 2 });
-        }
-
-        if (currTab.value >= tabList.value.length) {
-            currTab.value = 0;
-            currType.value = tabList.value[0].type;
-        }
-    },
-    { immediate: true }
-);
-
-// 生命周期钩子
-onMounted(() => {
-    const { safeArea } = uni.$u.sys();
-    safeAreaTop.value = safeArea.top;
-});
-
-onLoad((options?: Record<string, any>) => {
-    if (options?.task_id) {
-        taskId.value = options.task_id;
-        getChatList();
-    }
-    init(options);
-    watchFile();
-});
-
-onUnload(() => {
-    uni.$off("chooseFile");
-    chattingRef.value?.hideKeyboard();
-});
-
-onHide(() => {
-    chattingRef.value?.hideKeyboard();
-});
 
 onShow(() => {
-    appStore.getChatConfig();
+    getDeviceCount();
+    getHomeDisplayData();
 });
 </script>
 
-<style lang="scss" scoped>
-.agent-selected-wrap {
-    @apply w-full h-full flex flex-col items-center pt-[160rpx] relative overflow-hidden;
-}
-
-.navbar-center {
-    @apply w-full flex items-center justify-center px-4;
-}
-
-.glass-tabs {
-    @apply flex items-center rounded-full p-[6rpx];
-    background: rgba(255, 255, 255, 0.6);
-    border: 1.5px solid rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(16px);
-    box-shadow: 0 4rpx 20rpx rgba(37, 99, 235, 0.08);
-}
-
-.glass-tab-item {
-    @apply px-[36rpx] py-[12rpx] rounded-full transition-all;
-}
-
-.glass-tab-active {
-    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-    box-shadow: 0 4rpx 16rpx rgba(37, 99, 235, 0.35);
-}
-
-.glass-tab-text {
-    @apply text-[26rpx] font-medium text-[#64748B];
-}
-
-.glass-tab-text-active {
-    @apply text-white font-semibold;
-}
-
-.page-title {
-    @apply flex items-center;
-}
-
-.title-text {
-    @apply text-[34rpx] font-bold text-[#1E3A5F];
-}
-
-.welcome-card {
-    @apply w-[92%] mx-auto mt-6 rounded-[40rpx] relative overflow-hidden;
-}
-
-.welcome-body {
-    @apply pt-[72rpx] pb-[48rpx] px-[48rpx];
-}
-
-.welcome-title {
-    @apply text-[40rpx] font-bold text-[#1E3A5F] leading-snug;
-}
-
-.title-gradient {
-    background: linear-gradient(90deg, #2563eb 0%, #60a5fa 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.welcome-sub {
-    @apply text-[24rpx] text-[#64748B] mt-[14rpx] leading-relaxed;
-}
-
-.model-grid {
-    @apply mt-[36rpx] flex flex-wrap gap-[16rpx];
-}
-
-.model-chip {
-    @apply flex items-center gap-x-[12rpx] rounded-[100rpx] px-[24rpx] py-[18rpx];
-    background: rgba(255, 255, 255, 0.85);
-    border: 1.5px solid rgba(255, 255, 255, 1);
-    backdrop-filter: blur(8px);
-    box-shadow: 0 4rpx 16rpx rgba(37, 99, 235, 0.08);
-    transition: all 0.2s ease;
-    &:active {
-        transform: scale(0.96);
-        box-shadow: 0 2rpx 8rpx rgba(37, 99, 235, 0.15);
-    }
-}
-
-.chip-logo {
-    @apply w-[40rpx] h-[40rpx] rounded-full;
-}
-
-.chip-name {
-    @apply text-[26rpx] font-medium text-[#1E3A5F];
-}
-
-.chip-badge {
-    @apply text-white text-[20rpx] font-medium px-[12rpx] py-[4rpx] rounded-full;
-    background: linear-gradient(90deg, #f59e0b 0%, #ef4444 100%);
-}
-
-.agent-selected {
-    @apply w-full h-full flex flex-col items-center pt-[28vh] relative;
-}
-
-.selected-glow {
-    @apply absolute rounded-full pointer-events-none;
-    width: 500rpx;
-    height: 500rpx;
-    top: 10vh;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.selected-avatar-ring {
-    @apply relative flex items-center justify-center;
-    width: 160rpx;
-    height: 160rpx;
-    border-radius: 50%;
-}
-
-.selected-avatar {
-    @apply w-full h-full rounded-full;
-    border: 4rpx solid white;
-}
-
-.selected-name {
-    @apply text-[34rpx] font-bold text-[#1E3A5F] mt-[24rpx];
-}
-
-.selected-intro {
-    @apply text-[24rpx] text-[#64748B] mt-[12rpx] px-[60rpx] text-center leading-relaxed;
-}
-
-.selected-badge {
-    @apply flex items-center gap-x-[10rpx] mt-[24rpx] px-[28rpx] py-[12rpx] rounded-full;
-    background: rgba(37, 99, 235, 0.08);
-    border: 1px solid rgba(37, 99, 235, 0.2);
-    color: #2563eb;
-    font-size: 24rpx;
-    font-weight: 500;
-}
-
-.model-badge-tag {
-    background: rgba(99, 102, 241, 0.08);
-    border-color: rgba(99, 102, 241, 0.2);
-    color: #6366f1;
-}
-
-.badge-dot {
-    @apply w-[14rpx] h-[14rpx] rounded-full bg-[#2563EB];
-    box-shadow: 0 0 8rpx rgba(37, 99, 235, 0.6);
-    animation: dot-pulse 2s infinite;
-}
-
-.model-dot {
-    @apply bg-[#6366F1];
-    box-shadow: 0 0 8rpx rgba(99, 102, 241, 0.6);
-}
-
-@keyframes dot-pulse {
-    0%,
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.5;
-        transform: scale(0.75);
-    }
-}
-
-.robot-cate {
-    @apply overflow-hidden gap-2 relative;
-    &-active {
-        &.robot-cate-first {
-            .robot-cate-item {
-                @apply relative z-40;
-                .robot-cate-item-wrap {
-                    @apply rounded-br-[36rpx];
-                }
-                &::after {
-                    content: "";
-                    @apply absolute top-0 left-0 w-full h-full bg-[#F5F6F6] z-10;
-                }
-            }
-            .robot-cate-item {
-                @apply rounded-br-[36rpx];
-            }
-        }
-        &.robot-cate-brother {
-            & + .robot-cate {
-                .robot-cate-item-wrap {
-                    @apply rounded-tr-[36rpx];
-                }
-                .robot-cate-item {
-                    &::after {
-                        content: "";
-                        @apply absolute top-0 left-0 w-full h-full bg-[#F5F6F6] z-10;
-                    }
-                }
-            }
-        }
-    }
-}
-
-.robot-cate-item-wrap {
-    @apply relative z-30 px-[24rpx] py-3 bg-white;
-}
-
-.sub-robot-item {
-    @apply w-full h-full flex items-center pl-[24rpx] relative z-10;
-}
-
-.sub-robot {
-    @apply h-[100rpx] relative;
-    &-last {
-        &::after {
-            content: "";
-            @apply absolute top-0 left-0 w-full h-full bg-[#F5F6F6];
-        }
-        .sub-robot-item {
-            @apply rounded-br-[36rpx] bg-white overflow-hidden;
-        }
-        .sub-robot-item-bg {
-            @apply bg-[#F5F6F6];
-        }
-    }
-}
-
-.sub-robot-active {
-    .sub-robot-item {
-        @apply bg-[#F5F6F6] rounded-tl-[36rpx] rounded-bl-[36rpx];
-    }
-
-    & + .sub-robot {
-        &::after {
-            content: "";
-            @apply absolute top-0 left-0 w-full h-full bg-[#F5F6F6];
-        }
-        .sub-robot-item {
-            @apply rounded-tr-[36rpx] bg-white overflow-hidden;
-        }
-        .sub-robot-item-bg {
-            @apply bg-[#F5F6F6];
-        }
-    }
-}
-</style>
+<style scoped lang="scss"></style>

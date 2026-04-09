@@ -35,7 +35,7 @@ export const getTaskDetail = (data: any) => {
     return request.get({ url: "/sv.crawlingTask/detail", data });
 };
 
-// 获取任务线索词
+// 获取任务线索词 
 export const getTaskClue = (data: any) => {
     return request.get({ url: "/sv.crawlingTask/listsRecords", data });
 };

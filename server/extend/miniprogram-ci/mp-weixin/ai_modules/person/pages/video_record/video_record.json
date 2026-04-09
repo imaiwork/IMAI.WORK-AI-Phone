@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "AI生成记录",
+  "usingComponents": {
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-loading": "../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading",
+    "video-preview-v2": "../../../../components/video-preview-v2/video-preview-v2"
+  }
+}

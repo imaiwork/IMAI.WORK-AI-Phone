@@ -119,3 +119,23 @@ export function deleteMontageSoraRole(params: any) {
 export function updateMontageSoraRole(params: any) {
     return request.post({ url: "/sora.SoraAnchor/update", params });
 }
+
+// 分镜混剪记录列表
+export function getMontageStoryboardRecord(params: any) {
+    return request.get({ url: "/storyboard.storyboardVideoSetting/lists", params });
+}
+
+// 删除分镜混剪记录
+export function deleteMontageStoryboardRecord(params: any) {
+    return request.post({ url: "/storyboard.storyboardVideoSetting/delete", params });
+}
+
+// 分镜混剪记录详情列表
+export function getMontageStoryboardRecordDetailList(params: any) {
+    return request.get({ url: "/storyboard.storyboardVideoTask/lists", params });
+}
+
+// 删除分镜混剪记录详情
+export function deleteMontageStoryboardRecordDetail(params: any) {
+    return request.post({ url: "/storyboard.storyboardVideoTask/delete", params });
+}

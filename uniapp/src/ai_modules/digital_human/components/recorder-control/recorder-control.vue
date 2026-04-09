@@ -161,6 +161,12 @@ const upload = async () => {
         const { uri }: any = await uploadFile("audio", {
             filePath: tempFilePath,
         });
+        uni.hideLoading();
+
+        uni.showLoading({
+            mask: true,
+            title: "正在识别中",
+        });
         // message 如果为空，重新获取，直到获取到为止，最多获取 3 次，
         let message;
         for (let i = 0; i < 3; i++) {

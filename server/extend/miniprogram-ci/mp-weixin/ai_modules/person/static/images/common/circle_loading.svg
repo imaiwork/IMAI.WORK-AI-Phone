@@ -1,0 +1,45 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- 外圆环 -->
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#3498db" stroke-width="8"/>
+  
+  <!-- 内部填充圆 -->
+  <circle cx="50" cy="50" r="37" fill="#3498db" opacity="0.1"/>
+  
+  <!-- 旋转的加载圆弧 -->
+  <circle cx="50" cy="50" r="30" fill="none" stroke="#3498db" stroke-width="4" 
+          stroke-linecap="round" stroke-dasharray="60 40" opacity="0.8">
+    <animateTransform
+      attributeName="transform"
+      attributeType="XML"
+      type="rotate"
+      from="0 50 50"
+      to="360 50 50"
+      dur="1.5s"
+      repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- 中心点 -->
+  <circle cx="50" cy="50" r="3" fill="#3498db"/>
+  
+  <!-- 内部小圆点动画 -->
+  <g>
+    <circle cx="50" cy="30" r="2" fill="#3498db" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="1s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="65" cy="42" r="2" fill="#3498db" opacity="0.4">
+      <animate attributeName="opacity" values="0.4;0.8;0.4" dur="1s" begin="0.2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="65" cy="58" r="2" fill="#3498db" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="1s" begin="0.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="50" cy="70" r="2" fill="#3498db" opacity="0.4">
+      <animate attributeName="opacity" values="0.4;0.8;0.4" dur="1s" begin="0.6s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="35" cy="58" r="2" fill="#3498db" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="1s" begin="0.8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="35" cy="42" r="2" fill="#3498db" opacity="0.4">
+      <animate attributeName="opacity" values="0.4;0.8;0.4" dur="1s" begin="1s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+</svg>

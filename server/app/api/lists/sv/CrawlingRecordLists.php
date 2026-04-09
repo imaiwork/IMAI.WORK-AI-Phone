@@ -8,6 +8,7 @@ use app\common\lists\ListsExcelInterface;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvCrawlingRecord;
 use app\common\model\sv\SvAddWechatRecord;
+use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvDevice;
 use app\common\model\wechat\AiWechat;
 use app\common\service\FileService;
@@ -28,17 +29,20 @@ class CrawlingRecordLists extends BaseApiDataLists implements ListsSearchInterfa
     public function setSearch(): array
     {
         return [
-            '='      => ['user_id', 'exec_keyword', 'device_code', 'status'],
+            '='      => ['user_id', 'exec_keyword', 'device_code', 'status', 'task_id'],
             //'%like%' => ['device_code', 'keywords'],
         ];
     }
 
     public function lists(): array
     {
-        $this->searchWhere[] = ['task_id', '=', $this->request->get('task_id', 0)];
+        // $this->searchWhere[] = ['task_id', '=', $this->request->get('task_id', 0)];
         $this->searchWhere[] = ['reg_content', 'not in', ['', null]];
 
-        $this->searchWhere[] = ['task_id', '=', $this->request->get('task_id', 0)];
+        if($this->request->get('export', '') === ''){
+            $this->searchWhere[] = ['user_id', '=', $this->userId];
+        }
+        
         $this->searchWhere[] = ['hash', 'not in', ['', null]];
         // print_r(SvCrawlingRecord::field('*, max(exec_time) as exec_time')->where($this->searchWhere)
         //     ->order('exec_time', 'desc')
@@ -47,7 +51,11 @@ class CrawlingRecordLists extends BaseApiDataLists implements ListsSearchInterfa
         //     ->fetchSql(true)
         //     ->select());die;
         
-        $list = SvCrawlingRecord::field('*, max(exec_time) as exectime')->withoutField('exec_time')->where($this->searchWhere)
+        $list = SvCrawlingRecord::field('*, max(exec_time) as exectime')->withoutField('exec_time')
+            ->where($this->searchWhere)
+             ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
+                $query->whereBetween('create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
+            })
             ->order('exectime', 'desc')
             ->limit($this->limitOffset, $this->limitLength)
             ->group('task_id,reg_content')
@@ -71,6 +79,8 @@ class CrawlingRecordLists extends BaseApiDataLists implements ListsSearchInterfa
                 $item['create_time'] = $item['exectime'];
                 $item['exec_account'] = $exec_account->isEmpty() ? '' : $exec_account->account;
                 $item['exec_account_name'] = $exec_account->isEmpty() ? '' : $exec_account->nickname;
+                $item['task_name'] = SvCrawlingTask::where('id', $item['task_id'])->value('name') ?? '私信接管任务';
+                $item['task_detail_described']  = '在'.$item['task_name'].'中匹配到【'.$item['reg_content'].'】自动录入。';
             })
             ->toArray();
         return $list;
@@ -78,9 +88,17 @@ class CrawlingRecordLists extends BaseApiDataLists implements ListsSearchInterfa
 
     public function count(): int
     {
-        $this->searchWhere[] = ['task_id', '=', $this->request->get('task_id', 0)];
+        // $this->searchWhere[] = ['task_id', '=', $this->request->get('task_id', 0)];
         $this->searchWhere[] = ['reg_content', 'not in', ['', null]];
-        return SvCrawlingRecord::where($this->searchWhere)->group('task_id,reg_content')->count();
+        if($this->request->get('export', '') === ''){
+            $this->searchWhere[] = ['user_id', '=', $this->userId];
+        }
+        $this->searchWhere[] = ['hash', 'not in', ['', null]];
+        return SvCrawlingRecord::where($this->searchWhere)
+             ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
+                $query->whereBetween('create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
+            })
+            ->group('task_id,reg_content')->count();
     }
 
     /**

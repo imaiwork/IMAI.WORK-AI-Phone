@@ -489,7 +489,7 @@ const formData = reactive<{
     music: [],
     clip: [],
     extra: {
-        volume: 1,
+        volume: 0.2,
         soundSwitch: false,
         human: 0,
         music: 0,

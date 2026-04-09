@@ -265,6 +265,33 @@
                                     class="custom-input !w-full">
                                 </ElInput>
                             </div>
+
+                            <!-- 新增：任务执行类型选择 -->
+                            <div class="form-item">
+                                <div class="item-label">
+                                    <Icon name="el-icon-Timer" />
+                                    <span class="ml-2">执行方式</span>
+                                </div>
+                                <div class="bg-[#F4F5F9] rounded-[16px] p-[6px] flex gap-2 mt-3">
+                                    <div
+                                        v-for="(item, index) in taskExecTypeOptions"
+                                        class="flex-1 flex items-center justify-center gap-x-2 h-[60px] rounded-[12px] text-[14px] cursor-pointer transition-all"
+                                        :key="index"
+                                        :class="
+                                            formData.task_exec_type === item.value
+                                                ? 'bg-white text-primary font-medium shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                                                : 'text-[#00000066] hover:text-[#374151]'
+                                        "
+                                        @click="handleTaskExecTypeChange(item.value)">
+                                        <Icon
+                                            :name="item.icon"
+                                            :size="20"
+                                            :color="formData.task_exec_type === item.value ? '#2979ff' : '#00000066'" />
+                                        <span>{{ item.text }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="form-item">
                                 <div class="item-label">
                                     <Icon name="el-icon-Timer" />
@@ -308,14 +335,14 @@
                                         :class="{
                                             'is-active': formData.task_frep == item && currentTaskFrequencyIdx != 5,
                                         }"
-                                        @click="handleTaskFrequency(item)">
+                                        @click="handleTaskFrequency(item, index)">
                                         <span class="text-[14px] font-black">{{ item }}</span>
                                         <span class="text-[10px] opacity-60 ml-0.5">天</span>
                                     </div>
                                     <div
                                         class="freq-card is-custom"
                                         :class="{ 'is-active': currentTaskFrequencyIdx == 5 }"
-                                        @click="currentTaskFrequencyIdx = 5">
+                                        @click="handleCustomDateSelect">
                                         <Icon name="el-icon-Setting" :size="14" />
                                         <span class="text-[13px] font-medium">按日期</span>
                                     </div>
@@ -349,7 +376,7 @@
                                         :class="{
                                             'has-error':
                                                 timeErrorIndex.length > 0 &&
-                                                timeErrorIndex.some((item) => item.configIndex == index),
+                                                timeErrorIndex.some((errorItem) => errorItem.configIndex === index),
                                         }"
                                         v-for="(item, index) in formData.time_config"
                                         :key="index">
@@ -389,27 +416,49 @@
                                                         :class="{
                                                             '!text-red-500':
                                                                 timeErrorIndex.length > 0 &&
-                                                                timeErrorIndex.some((item) =>
-                                                                    item.errorIndexes.includes(timeIndex)
+                                                                timeErrorIndex.some(
+                                                                    (errorItem) =>
+                                                                        errorItem.configIndex === index &&
+                                                                        errorItem.errorIndexes.includes(timeIndex)
                                                                 ),
                                                         }">
                                                         第{{ timeIndex + 1 }}个内容任务发布时间
                                                     </div>
-                                                    <ElTimePicker
-                                                        class="modern-time-picker !w-full"
-                                                        :class="{
-                                                            'has-error':
-                                                                timeErrorIndex.length > 0 &&
-                                                                timeErrorIndex.some((item) =>
-                                                                    item.errorIndexes.includes(timeIndex)
-                                                                ),
-                                                        }"
-                                                        v-model="item.times[timeIndex]"
-                                                        is-range
-                                                        range-separator="至"
-                                                        format="HH:mm"
-                                                        value-format="HH:mm"
-                                                        :show-arrow="false" />
+
+                                                    <!-- 立即执行显示逻辑 -->
+                                                    <template v-if="isImmediateFirstSlot(index, timeIndex)">
+                                                        <div
+                                                            class="flex items-center justify-between h-[40px] bg-[#EEF3FF] border border-[#0065fb]/20 rounded-lg px-4">
+                                                            <span class="text-[#333] font-medium text-[14px]"
+                                                                >今日发布时间</span
+                                                            >
+                                                            <div
+                                                                class="px-3 py-1 rounded-full bg-primary text-white font-medium text-[12px] flex items-center gap-1">
+                                                                <Icon name="el-icon-VideoPlay" :size="12" />
+                                                                <span>立即执行</span>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+
+                                                    <template v-else>
+                                                        <ElTimePicker
+                                                            class="modern-time-picker !w-full"
+                                                            :class="{
+                                                                'has-error':
+                                                                    timeErrorIndex.length > 0 &&
+                                                                    timeErrorIndex.some(
+                                                                        (errorItem) =>
+                                                                            errorItem.configIndex === index &&
+                                                                            errorItem.errorIndexes.includes(timeIndex)
+                                                                    ),
+                                                            }"
+                                                            v-model="item.times[timeIndex]"
+                                                            is-range
+                                                            range-separator="至"
+                                                            format="HH:mm"
+                                                            value-format="HH:mm"
+                                                            :show-arrow="false" />
+                                                    </template>
                                                 </div>
                                             </div>
                                         </ElScrollbar>
@@ -536,12 +585,19 @@
         @close="showMaterialPop = false"
         @confirm="handleChooseMaterial" />
     <preview-video v-if="showPreviewVideo" ref="previewVideoRef" @close="showPreviewVideo = false"></preview-video>
+    <task-conflict-pop
+        v-if="showTaskConflictDialog"
+        ref="taskConflictPopRef"
+        :messages="taskConflictMessages.messages"
+        :errors="taskConflictMessages.errors"
+        @close="showTaskConflictDialog = false"
+        @confirm="handleConfirmCreateTask" />
 </template>
 
 <script setup lang="ts">
 import dayjs from "dayjs";
 import { ElScrollbar } from "element-plus";
-import { getPublishAccountList, addMatrixTask, publishDeviceTask } from "@/api/device";
+import { getPublishAccountList, addMatrixTask, publishDeviceTask, checkTaskPublishTime } from "@/api/device";
 import { uploadImage } from "@/api/app";
 import { PublishTaskTypeEnum, MaterialActionType, MaterialTypeEnum, SidebarTypeEnum } from "../_enums";
 import ContentCopywritingMaterial from "./content-copywriting-material.vue";
@@ -550,6 +606,7 @@ import MaterialPicker from "./material-picker.vue";
 import MaterialPopup from "./material-popup.vue";
 import useMaterial from "../_hooks/useMaterial";
 import { validateSchedule } from "./utils";
+import TaskConflictPop from "@/pages/app/_components/task-conflict-pop.vue";
 
 // =================================================================================================
 // Props & Emits
@@ -591,6 +648,12 @@ const steps = [
     { step: 3, title: "设定时间" },
 ];
 
+// 任务执行类型选项
+const taskExecTypeOptions = [
+    { icon: "el-icon-VideoPlay", text: "即时执行", value: 1 },
+    { icon: "el-icon-Clock", text: "定时执行", value: 0 },
+];
+
 // 视频上传限制
 const videoLimit = 99;
 // 视频上传大小
@@ -624,6 +687,8 @@ const formData = reactive<{
     custom_date: string[];
     task_frep: number;
     location: string;
+    task_exec_type: number; // 新增：任务执行类型
+    task_ids: string[];
 }>({
     name: `${publishTypeMap[type.value]}矩阵任务${dayjs().format("YYYYMMDDHHmm")}`,
     accounts: [],
@@ -633,6 +698,8 @@ const formData = reactive<{
     custom_date: [],
     task_frep: 1,
     location: "",
+    task_exec_type: 1, // 默认即时执行
+    task_ids: [],
 });
 
 // 素材数据
@@ -649,13 +716,13 @@ const materialFormData = reactive({
 const showCopywritingMaterial = ref(false);
 const showMaterialPop = ref(false);
 const showPreviewVideo = ref(false);
-
+const showTaskConflictDialog = ref(false);
+const taskConflictMessages = reactive<{ messages: string[]; errors: any[] }>({ messages: [], errors: [] });
+const taskConflictPopRef = shallowRef<InstanceType<typeof TaskConflictPop>>();
 // Refs
 const copywritingMaterialRef = ref();
 const materialPopRef = shallowRef<InstanceType<typeof MaterialPopup>>();
 const previewVideoRef = ref();
-const timeConfigScrollbarRef = ref<InstanceType<typeof ElScrollbar>>();
-const timeConfigWrapperRef = ref<HTMLDivElement>();
 const currentPublishFrequencyIdx = ref(0);
 const currentTaskFrequencyIdx = ref(0);
 const accountList = ref([]);
@@ -902,6 +969,31 @@ const addTitleAndDesc = (isUpdate = true) => {
 // =================================================================================================
 // Step 3: 时间设置
 // =================================================================================================
+
+// 新增：处理任务执行类型变更
+const handleTaskExecTypeChange = (value: number) => {
+    formData.task_exec_type = value;
+    // 切换执行类型时重新生成时间配置
+    changeTimeConfig();
+};
+
+// 修复：判断是否为即时执行模式下当天第一条
+const isImmediateFirstSlot = (configIndex: number, timeIndex: number): boolean => {
+    if (formData.task_exec_type !== 1 || timeIndex !== 0) {
+        return false;
+    }
+
+    // 获取当前时间配置的日期
+    const currentDate = formData.time_config[configIndex]?.date;
+    if (!currentDate) {
+        return false;
+    }
+
+    // 判断是否为今天
+    const today = dayjs().format("YYYY-MM-DD");
+    return currentDate === today;
+};
+
 // 禁用当前日期之前的日期
 const getDisabledTaskDate = (time: Date) => time.getTime() < dayjs().startOf("day").valueOf();
 
@@ -991,14 +1083,15 @@ const changeTimeConfig = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // 归一化到今天0点
 
-    const generateTimesForDay = () => {
+    const generateTimesForDay = (baseTime: Date) => {
         return Array.from({ length: formData.publish_frep }, (_, i) => {
-            const startMs = today.getTime() + i * TIME_INTERVAL * 60 * 1000;
+            const startMs = baseTime.getTime() + i * TIME_INTERVAL * 60 * 1000;
             const endMs = startMs + TIME_INTERVAL * 60 * 1000;
 
-            // 处理跨天逻辑：如果结束时间跨天，设为当天23:59
             const startDate = new Date(startMs);
             let endDate = new Date(endMs);
+
+            // 跨天处理：结束时间超过当天，截断为 23:59
             if (endDate.getDate() !== startDate.getDate()) {
                 endDate = new Date(startDate);
                 endDate.setHours(23, 59, 59, 999);
@@ -1008,17 +1101,31 @@ const changeTimeConfig = () => {
         });
     };
 
+    const now = new Date();
+
     if (currentTaskFrequencyIdx.value === 5 && formData.custom_date.length > 0) {
-        formData.time_config = formData.custom_date.map((dateStr) => ({
-            date: dateStr,
-            times: generateTimesForDay(),
-        }));
+        const todayStr = dayjs(today).format("YYYY-MM-DD");
+
+        formData.time_config = formData.custom_date.map((dateStr) => {
+            const isToday = dateStr === todayStr;
+            const baseTime = isToday ? new Date(now) : new Date(dateStr.replace(/-/g, "/"));
+            baseTime.setSeconds(0, 0);
+
+            return {
+                date: dateStr,
+                times: generateTimesForDay(baseTime),
+            };
+        });
     } else {
         formData.time_config = Array.from({ length: formData.task_frep }, (_, i) => {
             const dateObj = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
+
+            const baseTime = i === 0 ? new Date(now) : dateObj;
+            baseTime.setSeconds(0, 0);
+
             return {
                 date: dayjs(dateObj).format("YYYY-MM-DD"),
-                times: generateTimesForDay(),
+                times: generateTimesForDay(baseTime),
             };
         });
     }
@@ -1030,16 +1137,40 @@ const validateTimeConfig = () => {
 
     // 循环验证每个时间配置
     for (const [index, item] of formData.time_config.entries()) {
-        const { valid, errorIndexes } = validateSchedule(item.times);
+        // 创建一个包含索引信息的时间数组
+        const timeWithIndex = item.times.map((time: any, timeIndex: number) => ({
+            time,
+            originalIndex: timeIndex,
+            isImmediate: isImmediateFirstSlot(index, timeIndex),
+        }));
+
+        // 过滤掉立即执行的时间段
+        const nonImmediateTimes = timeWithIndex.filter((item) => !item.isImmediate);
+
+        // 如果没有需要验证的时间段，跳过这个配置
+        if (nonImmediateTimes.length === 0) {
+            continue;
+        }
+
+        // 提取时间数据进行验证
+        const timesToValidate = nonImmediateTimes.map((item) => item.time);
+        const { valid, errorIndexes } = validateSchedule(timesToValidate);
 
         if (!valid) {
             isAllValid = false;
+
+            // 将验证结果的索引映射回原始索引
+            const originalErrorIndexes = errorIndexes.map(
+                (filteredIndex) => nonImmediateTimes[filteredIndex].originalIndex
+            );
+
             errors.push({
                 configIndex: index,
-                errorIndexes: errorIndexes,
+                errorIndexes: originalErrorIndexes,
             });
         }
     }
+
     // 返回验证结果和错误信息
     return {
         valid: isAllValid,
@@ -1054,16 +1185,23 @@ const handlePublishFrequency = (item: number) => {
     changeTimeConfig();
 };
 
-const handleTaskFrequency = (item: number) => {
-    if (item == formData.task_frep) return;
+// 修复：任务频率处理函数
+const handleTaskFrequency = (item: number, index: number) => {
+    if (item == formData.task_frep && index === currentTaskFrequencyIdx.value) return;
     formData.task_frep = item;
     formData.custom_date = [];
-    currentTaskFrequencyIdx.value = item;
+    currentTaskFrequencyIdx.value = index; // 使用传入的index而不是item
     changeTimeConfig();
 };
 
-const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
-    if (!(await validatePublishSettings())) return;
+// 修复：自定义日期选择处理
+const handleCustomDateSelect = () => {
+    currentTaskFrequencyIdx.value = 5;
+    formData.custom_date = [];
+    changeTimeConfig();
+};
+
+const executeCreateTask = async () => {
     try {
         const copywriterList = materialFormData.title
             .filter((item) => item.content)
@@ -1094,23 +1232,19 @@ const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
             media_type: type.value,
         });
 
-        const accountIds = accountList.value
-            .filter((item) => formData.accounts.includes(item.account))
-            .map((item) => ({ account: item.account, id: item.id, type: item.type }));
         await publishDeviceTask({
             name: formData.name,
             matrix_media_setting_id: id,
-            time_config: formData.time_config.map((item: any) => ({
-                date: item.date,
-                times: item.times.map((time: any) => `${time[0]}-${time[1]}`),
-            })),
-            accounts: accountIds,
+            time_config: getTimeConfig(),
+            accounts: getAccounts(),
             publish_frep: formData.publish_frep,
             media_type: type.value,
             task_type: 3,
             scene: 2,
             data_type: 0,
             poi: formData.location,
+            task_exec_type: formData.task_exec_type,
+            task_ids: formData.task_ids, // 新增：传递冲突任务ID
         });
         feedback.msgSuccess("发布成功");
         router.push(`/app/matrix?type=${SidebarTypeEnum.ME_PUBLISH}`);
@@ -1121,6 +1255,78 @@ const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
         taskErrorMsg.value = error;
         feedback.msgError(error);
     }
+};
+
+// 新增：确认创建任务（处理冲突后）
+const handleConfirmCreateTask = async () => {
+    showTaskConflictDialog.value = false;
+    await executeCreateTask();
+};
+
+const getTimeConfig = () => {
+    return formData.time_config.map((item: any) => ({
+        date: item.date,
+        times: item.times.map((time: any, timeIndex: number) => {
+            const configIndex = formData.time_config.findIndex((config) => config.date === item.date);
+            return isImmediateFirstSlot(configIndex, timeIndex) ? 1 : `${time[0]}-${time[1]}`;
+        }),
+    }));
+};
+
+const getAccounts = () => {
+    return accountList.value
+        .filter((item) => formData.accounts.includes(item.account))
+        .map((item) => ({ type: item.type, id: item.id, account: item.account }));
+};
+
+// 修改现有的 submitForm 函数
+const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
+    if (!(await validatePublishSettings())) return;
+
+    // 立即执行需要检测冲突
+    if (formData.task_exec_type === 1) {
+        try {
+            // 计算设备代码列表
+            const deviceCodes = accountList.value
+                .filter((item) => formData.accounts.includes(item.account))
+                .map((item) => item.device_code)
+                .filter((code, index, arr) => arr.indexOf(code) === index); // 去重
+
+            // 计算执行时长（分钟）
+            let minutes = 0;
+            if (formData.time_config.length > 0) {
+                // 计算总的时间跨度
+                const totalDays = formData.time_config.length;
+                const dailyDuration = formData.publish_frep * 30; // 每条内容30分钟间隔
+                minutes = totalDays * dailyDuration;
+            }
+            const {
+                messages,
+                task_ids,
+                errors: rawErrors,
+            } = await checkTaskPublishTime({
+                accounts: getAccounts(),
+                time_config: getTimeConfig(),
+                minutes: minutes,
+            });
+
+            if ((messages && messages.length > 0) || (rawErrors && rawErrors.length > 0)) {
+                taskConflictMessages.messages = messages;
+                taskConflictMessages.errors = rawErrors;
+                formData.task_ids = task_ids;
+                showTaskConflictDialog.value = true;
+                await nextTick();
+                taskConflictPopRef.value?.open();
+                return;
+            }
+        } catch (error: any) {
+            taskErrorMsg.value = error;
+            feedback.msgError(error);
+            return;
+        }
+    }
+
+    await executeCreateTask();
 });
 
 const initPublishJsonForStep3 = () => {

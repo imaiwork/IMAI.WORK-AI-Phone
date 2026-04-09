@@ -281,12 +281,11 @@ class HumanController extends BaseApiController
      */
     public function notify(): Json
     {
-
         try {
+            Log::channel('human')->write('蝉镜请求回调地址信息: ' . $this->request->url(true) . PHP_EOL . PHP_EOL .'参数: ' . json_encode($this->request->post(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             $type = $this->request->param('human_type');
             $modelVersion = $this->request->param('model_version');
             $data = $this->request->all();
-            Log::channel('human')->write('接收数字人参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
             if (isset($data['data'])) {
 

@@ -107,3 +107,8 @@ export function getDeviceAccountList(params: any) {
 export function getPublishAccountList(params: any) {
     return $request.get({ url: "/sv.account/alllists", params });
 }
+
+// 任务发布时间校验
+export function checkTaskPublishTime(params: any) {
+    return $request.post({ url: "/device.task/check", params });
+}

@@ -41,7 +41,7 @@
                     <view v-if="currentTab == 0" class="grid grid-cols-2 gap-3">
                         <view class="" v-for="(item, index) in dataLists" :key="index">
                             <view class="h-[388rpx] rounded-lg overflow-hidden relative">
-                                <image :src="item.pic || DefaultBg" class="h-full w-full" mode="aspectFill"></image>
+                                <image :src="item.pic" class="h-full w-full" mode="aspectFill"></image>
                                 <view class="absolute bottom-1 px-2 text-[22rpx] text-white font-medium z-[33]">
                                     {{ item.create_time }}
                                 </view>
@@ -402,7 +402,6 @@ import { retrySoraTask } from "@/api/digital_human";
 import { drawingRecord, drawingDeleteRecord, getPuzzleTaskList } from "@/api/drawing";
 import { saveImageToPhotosAlbum, saveVideoToPhotosAlbum } from "@/utils/file";
 import PuzzleCard from "@/packages/components/puzzle-card/puzzle-card.vue";
-import DefaultBg from "@/packages/static/images/common/default_bg.jpg";
 
 enum VideoType {
     ALL = 0,
@@ -413,6 +412,7 @@ enum VideoType {
     NEWS = 5,
     SENTENCE = 6,
     MONTAGE_STORYBOARD = 7,
+    HOT_WRITE = 8,
 }
 
 enum DrawType {
@@ -439,6 +439,7 @@ const typeList = computed(() => {
             { name: "新闻体", key: VideoType.NEWS },
             { name: "一句话生成", key: VideoType.SENTENCE },
             { name: "分镜混剪", key: VideoType.MONTAGE_STORYBOARD },
+            { name: "爆款仿写", key: VideoType.HOT_WRITE },
         ];
     } else if (currentTab.value == 1) {
         return [
@@ -488,6 +489,14 @@ const getStatus = (item: any) => {
             return status;
         }
         return 3;
+    } else if (type === 8) {
+        if (status == 4) {
+            return 2;
+        }
+        if (status == 3) {
+            return 1;
+        }
+        return 0;
     } else {
         if (status === 0) {
             return 0;

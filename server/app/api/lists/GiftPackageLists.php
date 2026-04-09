@@ -14,6 +14,13 @@ use app\common\model\recharge\GiftPackage;
  */
 class GiftPackageLists extends BaseApiDataLists implements ListsSearchInterface
 {
+    public function queryWhere(): array
+    {
+        return [
+            ['status', '=', 1],
+        ];
+    }
+
     /**
      * @notes 列表
      * @return array
@@ -24,6 +31,7 @@ class GiftPackageLists extends BaseApiDataLists implements ListsSearchInterface
     public function lists(): array
     {
         return GiftPackage::where($this->searchWhere)
+            ->where($this->queryWhere())
             ->json(['package_info'], true)
             ->order(['sort' => 'desc', 'id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
@@ -40,7 +48,7 @@ class GiftPackageLists extends BaseApiDataLists implements ListsSearchInterface
      */
     public function count(): int
     {
-        return GiftPackage::where($this->searchWhere)->count();
+        return GiftPackage::where($this->searchWhere)->where($this->queryWhere())->count();
     }
 
     /**

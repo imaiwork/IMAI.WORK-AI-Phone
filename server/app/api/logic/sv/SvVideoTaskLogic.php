@@ -1375,7 +1375,7 @@ class SvVideoTaskLogic extends SvBaseLogic
                 'device_code' => $model['device_code'],
                 'sv_video_id' => $model['id']
             ];
-            \app\api\logic\auto\PublishLogic::setShanjianPublish($param);
+            //\app\api\logic\auto\PublishLogic::setShanjianPublish($param);
             Log::channel('auto')->write('自动化闪剪视频合成：' . json_encode($param));
         }
         return true;

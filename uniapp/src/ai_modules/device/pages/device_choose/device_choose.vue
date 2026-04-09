@@ -24,7 +24,7 @@
                                             ? 'text-[#F63E2F] bg-[#F7E5E5]'
                                             : 'text-[#00B862] bg-[#E0F1EB]',
                                     ]"
-                                    >{{ item.status === 1 ? "在线" : "离线" }}</view
+                                    >{{ item.status === 0 ? "离线" : "在线" }}</view
                                 >
                             </view>
                             <view class="flex items-center gap-x-1 mt-[12rpx]">

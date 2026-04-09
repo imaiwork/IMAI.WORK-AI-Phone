@@ -16,8 +16,7 @@ use app\common\model\user\User;
 use app\common\logic\AccountLogLogic;
 use app\common\model\sv\SvDevice;
 
-use app\common\model\auto\AutoDeviceCircleLikeReplyConfig;
-use app\common\model\wechat\AiWechatLog;
+use app\common\model\aiPersona\AiPersonaWechatInteractionConfig;
 
 
 
@@ -36,6 +35,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
             $taskId = $content['taskId'] ?? 0;
             $nickname = $content['nickname'] ?? '';
             $message = $content['content'] ?? '';
+            
 
             $task = SvDeviceCircleLikeReplyAccount::where('id', $taskId)->findOrEmpty();
             if (!$task->isEmpty()) {
@@ -59,7 +59,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                 }
                 $autoConfig = null;
                 if ($setting->auto_reply_config_id > 0) {
-                    $autoConfig = AutoDeviceCircleLikeReplyConfig::where('id', $setting->auto_reply_config_id)->findOrEmpty();
+                    $autoConfig = AiPersonaWechatInteractionConfig::where('id', $setting->auto_reply_config_id)->findOrEmpty();
                     if ($autoConfig->isEmpty()) {
                         $this->setLog('自动回复配置不存在', 'like');
                         $this->payload['reply'] = array(
@@ -83,7 +83,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                         ->where('auto_type', 1)
                         ->whereBetween('create_time', [strtotime(date('Y-m-d 00:00:00', time())), strtotime(date('Y-m-d 23:59:59', time()))])
                         ->count();
-                    if($count >= $autoConfig->number){
+                    if ($count >= $autoConfig->number) {
                         $this->setLog('互动次数已达上限', 'like');
                         $this->payload['reply'] = array(
                             'type' => 1,
@@ -185,11 +185,13 @@ class CircleLikeCommentHandler extends BaseMessageHandler
             } else {
                 $this->payload['reply'] = array(
                     'type' => 1,
-                    'content' => [],
+                    'content' => [
+                        'hi'
+                    ],
                     'link' => '',
-                    'isLike' => 0,
-                    'isComment' => 0,
-                    'msg' => '互动失败',
+                    'isLike' => 1,
+                    'isComment' => 1,
+                    'msg' => '演示互动',
                     'targetRecipient' => $content['nickname'] ?? '',
                     'lastMessageContent' => $content['content'] ?? ''
                 );
@@ -210,7 +212,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
         }
     }
 
-    private function getCircleComment(string $circleContent, SvDeviceCircleLikeReplyAccount $task, string $request_id, AutoDeviceCircleLikeReplyConfig $autoConfig = null)
+    private function getCircleComment(string $circleContent, SvDeviceCircleLikeReplyAccount $task, string $request_id, AiPersonaWechatInteractionConfig $autoConfig = null)
     {
         try {
             if (empty($circleContent)) {
@@ -263,7 +265,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
         }
     }
 
-    private function getReplyContentByAuto(AutoDeviceCircleLikeReplyConfig $autoConfig, SvDeviceCircleLikeReplyAccount $task, string $circleContent, string $request_id)
+    private function getReplyContentByAuto(AiPersonaWechatInteractionConfig $autoConfig, SvDeviceCircleLikeReplyAccount $task, string $circleContent, string $request_id)
     {
 
         try {

@@ -103,10 +103,10 @@
                         </view>
                         <view
                             class="mt-[32rpx] border-[0] border-b-[1rpx] border-solid border-[#E5E5E5] pb-[26rpx] flex items-center justify-between"
-                            @click="showChooseRobot = true">
+                            @click="showChooseAgent = true">
                             <view class="text-[30rpx] font-medium">评论智能体</view>
                             <view class="flex items-center gap-x-2">
-                                <text :class="!formData.robot_id ? 'text-[#00000099]' : 'text-[#0065FB] font-medium'">{{
+                                <text :class="!formData.robot_id ? 'text-[#00000099]' : 'text-primary font-medium'">{{
                                     formData.robot_id ? formData.robot_name : "请选择"
                                 }}</text>
                                 <u-icon name="arrow-right" color="#B2B2B2" size="20"></u-icon>
@@ -194,17 +194,7 @@
             </view>
         </view>
     </view>
-    <popup-bottom
-        v-model="showChooseRobot"
-        title="选择评论智能体"
-        custom-class="bg-[#F3F3F3]"
-        :is-disabled-touch="true">
-        <template #content>
-            <view class="h-full">
-                <choose-robot :agent-id="formData.robot_id" @confirm="handleChooseRobotConfirm" />
-            </view>
-        </template>
-    </popup-bottom>
+    <choose-agent ref="chooseAgentRef" v-model="showChooseAgent" @confirm="handleChooseAgentConfirm" />
     <confirm-dialog
         v-model="showCreateTaskSuccessDialog"
         center
@@ -213,16 +203,23 @@
         :show-close="false"
         @close="handleCreateTaskSuccess"
         @confirm="handleCreateTaskSuccess" />
+    <task-conflict-dialog
+        v-if="showTaskMsgPop"
+        v-model="showTaskMsgPop"
+        :messages="taskMsgPopContent"
+        @close="showTaskMsgPop = false"
+        @confirm="handleTaskMsgPopConfirm" />
 </template>
 
 <script setup lang="ts">
 import WechatOA from "@/utils/wechat";
-import { createCircleLikeTask } from "@/api/device";
+import { createCircleLikeTask, checkTaskPublishTime } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
-import ChooseRobot from "@/ai_modules/device/components/choose-robot/choose-robot.vue";
+import TaskConflictDialog from "@/ai_modules/device/components/task-conflict-dialog/task-conflict-dialog.vue";
+import ChooseAgent from "@/ai_modules/device/components/choose-agent/choose-agent.vue";
 
 const { on } = useEventBusManager();
 
@@ -246,6 +243,9 @@ const formData = reactive<{
     robot_id: number | string;
     custom_date: string[];
     robot_name: string;
+    task_exec_type: number;
+    minutes: number;
+    task_ids: string[];
 }>({
     name: `朋友圈互动任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`,
     interaction_action: 1,
@@ -263,11 +263,18 @@ const formData = reactive<{
     custom_date: [],
     robot_id: "",
     robot_name: "",
+    task_exec_type: 1,
+    minutes: 30,
+    task_ids: [],
 });
-const showChooseRobot = ref(false);
+const showChooseAgent = ref(false);
+const chooseAgentRef = shallowRef();
+
 const currentFrequency = ref(0);
 const taskErrorMsg = ref<string>("");
 const showCreateTaskSuccessDialog = ref(false);
+const showTaskMsgPop = ref(false);
+const taskMsgPopContent = ref<string[]>([]);
 
 const canNext = computed(() => canStepProceed(step.value));
 
@@ -321,10 +328,60 @@ const handleStep = (targetStep: number, type?: "next" | "prev") => {
     }
 };
 
-const handleChooseRobotConfirm = (agent: any) => {
+const handleChooseAgentConfirm = (agent: any) => {
     formData.robot_id = agent.id;
     formData.robot_name = agent.name;
-    showChooseRobot.value = false;
+};
+
+const executeCreateTask = async () => {
+    uni.showLoading({
+        title: "创建中...",
+        mask: true,
+    });
+    try {
+        await createCircleLikeTask({
+            task_name: formData.name,
+            accounts: formData.accounts,
+            task_frep: formData.task_frep,
+            time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
+            custom_date: formData.custom_date,
+            action: formData.interaction_action,
+            number: formData.interaction_count,
+            interval: formData.interaction_time,
+            range: formData.interaction_time_type,
+            comment_type: formData.comment_type,
+            comment: formData.comment_content,
+            robot_id: formData.robot_id,
+            task_exec_type: formData.task_exec_type,
+            minutes: formData.minutes,
+            task_ids: formData.task_ids,
+        });
+        uni.hideLoading();
+        showCreateTaskSuccessDialog.value = true;
+        WechatOA.notify();
+    } catch (error: any) {
+        uni.hideLoading();
+        if (error.indexOf("24小时自动执行任务") > -1) {
+            uni.showModal({
+                title: "提示",
+                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
+                success: (res) => {
+                    if (res.confirm) {
+                        uni.$u.route({
+                            url: "/ai_modules/device/pages/index/index",
+                        });
+                    }
+                },
+            });
+        } else {
+            taskErrorMsg.value = error;
+            uni.showToast({
+                title: error,
+                icon: "none",
+                duration: 3000,
+            });
+        }
+    }
 };
 
 const handleCreateTask = async () => {
@@ -348,56 +405,46 @@ const handleCreateTask = async () => {
         uni.$u.toast("请选择任务时间");
         return;
     }
-    uni.showLoading({
-        title: "创建中...",
-        mask: true,
-    });
-    try {
-        await createCircleLikeTask({
-            task_name: formData.name,
-            accounts: formData.accounts,
-            task_frep: formData.task_frep,
-            time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
-            custom_date: formData.custom_date,
-            action: formData.interaction_action,
-            number: formData.interaction_count,
-            interval: formData.interaction_time,
-            range: formData.interaction_time_type,
-            comment_type: formData.comment_type,
-            comment: formData.comment_content,
-            robot_id: formData.robot_id,
-        });
-        uni.hideLoading();
-        showCreateTaskSuccessDialog.value = true;
-        WechatOA.notify();
-    } catch (error: any) {
-        uni.hideLoading();
-        if (error.indexOf("24小时自动执行任务") > -1) {
-            uni.showModal({
-                title: "提示",
-                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
-                success: (res) => {
-                    if (res.confirm) {
-                        uni.$u.route({
-                            url: "/pages/phone/phone",
-                        });
-                    }
-                },
-            });
-        } else {
-            taskErrorMsg.value = error;
-            uni.showToast({
-                title: error,
-                icon: "none",
-                duration: 3000,
-            });
-        }
+    if (formData.task_exec_type == 1) {
+        if (formData.minutes < 1) return uni.$u.toast("执行时间不能小于1分钟");
+        if (formData.minutes > 9999) return uni.$u.toast("执行时间不能超过9999分钟");
     }
+
+    if (formData.task_exec_type === 1) {
+        uni.showLoading({ title: "检测冲突中...", mask: true });
+        try {
+            const { messages, task_ids } = await checkTaskPublishTime({
+                accounts: formData.accounts,
+                minutes: formData.minutes,
+            });
+
+            uni.hideLoading();
+
+            if (messages && messages.length > 0) {
+                taskMsgPopContent.value = messages;
+                formData.task_ids = task_ids;
+                showTaskMsgPop.value = true;
+                return;
+            }
+
+            await executeCreateTask();
+        } catch (error: any) {
+            uni.hideLoading();
+            taskErrorMsg.value = error;
+            uni.$u.toast(error);
+        }
+    } else {
+        await executeCreateTask();
+    }
+};
+
+const handleTaskMsgPopConfirm = async () => {
+    await executeCreateTask();
 };
 
 const handleCreateTaskSuccess = () => {
     uni.$u.route({
-        url: "/pages/phone/phone",
+        url: "/ai_modules/device/pages/index/index",
         type: "reLaunch",
     });
     showCreateTaskSuccessDialog.value = false;

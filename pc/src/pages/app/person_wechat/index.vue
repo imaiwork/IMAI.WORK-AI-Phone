@@ -39,7 +39,7 @@ sidebar.value = [
     { name: "SOP看板", components: markRaw(SopFlowBoard), type: SidebarTypeEnum.SOP_FLOW_BOARD },
     { name: "朋友圈", components: markRaw(Circle), type: SidebarTypeEnum.CIRCLE },
     { name: "任务列表", components: markRaw(CircleTask), type: SidebarTypeEnum.CIRCLE_TASK },
-    // { name: "评赞设置", components: markRaw(CirclePraiseSetting), type: SidebarTypeEnum.CIRCLE_PRAISE_SETTING },
+    { name: "评赞设置", components: markRaw(CirclePraiseSetting), type: SidebarTypeEnum.CIRCLE_PRAISE_SETTING },
     { name: "标签自动化", components: markRaw(TagAuto), type: SidebarTypeEnum.TAG_AUTO },
     { name: "手动标签", components: markRaw(TagManualAuto), type: SidebarTypeEnum.TAG_MANUAL_SETTING },
     { name: "素材库", components: markRaw(MaterialLibrary), type: SidebarTypeEnum.MATERIAL_LIBRARY },

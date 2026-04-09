@@ -47,6 +47,69 @@ class TaskLogic extends ApiLogic
         }
     }
 
+    public static function check(array $params)
+    {
+        $device_codes = !empty($params['accounts']) ? SvAccount::field('device_code')->where('account', 'in', array_column($params['accounts'], 'account'))->column('device_code') : ($params['device_codes'] ?? []);
+        $device_codes = !empty($params['wechat_ids']) ? SvAccount::field('device_code')->where('account', 'in', array_column($params['wechat_ids'], 'account'))->where('type', 1)->column('device_code') :  $device_codes;
+
+        $taskIds = [];
+        if (isset($params['time_config']) && !empty($params['time_config'])) {
+            $dates = array_column($params['time_config'], 'date');
+            if (in_array(date('Y-m-d', time()), $dates)) {
+                list($checkStatus, $checkMessage, $taskIds) = self::checkTaskExecTime($device_codes, time(), time() + (60 * (int)$params['minutes']));
+            }
+        } else {
+            list($checkStatus, $checkMessage, $taskIds) = self::checkTaskExecTime($device_codes, time(), time() + (60 * (int)$params['minutes']));
+        }
+
+
+        $errors = [];
+        if (isset($params['time_config']) && !empty($params['time_config'])) {
+
+            $times = \app\api\logic\device\TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), 0, [], 1);
+            foreach ($params['accounts'] as $account) {
+                $account = SvAccount::where('account', $account['account'])->where('type', $account['type'])->where('user_id', self::$uid)->limit(1)->findOrEmpty();
+                if ($account->isEmpty()) {
+                    throw new \Exception("账号{$account['account']}不存在");
+                }
+                foreach ($times as $time) {
+                    list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping(
+                        $account['device_code'],
+                        DeviceEnum::TASK_TYPE_PUBLISH,
+                        $time['start_time'],
+                        $time['end_time'],
+                        self::$uid,
+                        0,
+                        '',
+                        $taskIds
+                    );
+                    if (!$isOverlap) {
+                        $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                        $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                        $errors[] = $msg;
+                    }
+                }
+            }
+        }
+
+        self::$returnData = [
+            'count' => count($checkMessage ?? []),
+            'messages' => $checkMessage ?? [],
+            'task_ids' => $taskIds,
+            'errors' => $errors,
+        ];
+        return true;
+    }
+    public static function updateTaskStatusByIds(array $taskIds)
+    {
+        if (!empty($taskIds)) {
+            SvDeviceTask::where('id', 'in', $taskIds)->update([
+                'status' => DeviceEnum::TASK_STATUS_FAILED,
+                'remark' => '任务被其他任务覆盖'
+            ]);
+        }
+    }
+
     public static function checkAccounts(array $accounts)
     {
         $result = [];
@@ -121,11 +184,12 @@ class TaskLogic extends ApiLogic
      * @param int|null $excludeTaskId 排除的任务ID（编辑时使用）
      * @return bool 是否存在重叠
      */
-    public static function isTaskTimeOverlapping(string $deviceCode, int $taskType, int $startTime, int $endTime, int $userId, int $taskScene = 10, string $date = ''): array
+    public static function isTaskTimeOverlapping(string $deviceCode, int $taskType, int $startTime, int $endTime, int $userId, int $taskScene = 10, string $date = '', array $taskIds = []): array
     {
         $query = SvDeviceTask::where('device_code', $deviceCode)
             ->where('auto_type', 0)
             //->where('user_id', $userId)
+            ->where('status', 'in', [0, 1])
             ->where('start_time', '<', $endTime)
             ->where('end_time', '>', $startTime);
 
@@ -136,6 +200,10 @@ class TaskLogic extends ApiLogic
         if (!empty($date)) {
             $query->where('day', $date);
         }
+        if (!empty($taskIds)) {
+            $query->where('id', 'not in', $taskIds);
+        }
+        //$query->where('task_type', $taskType);
         $find = $query->fetchSql(false)->findOrEmpty();
         if ($find->isEmpty()) {
             return [true, []];
@@ -143,14 +211,38 @@ class TaskLogic extends ApiLogic
         return [false, $find->toArray()];
     }
 
+
+    public static function checkTaskExecTime(array $deviceCodes, int $startTime, int $endTime)
+    {
+        $rows = SvDeviceTask::where('device_code', 'in', $deviceCodes)
+            ->where('auto_type', 0)
+            //->where('user_id', $userId)
+            ->where('status', 'in', [0, 1])
+            ->where('start_time', '<', $endTime)
+            ->where('end_time', '>', $startTime)
+            ->fetchSql(false)
+            ->select();
+        $messages = [];
+        $taskIds = [];
+        foreach ($rows as $row) {
+            $timeMsg = "【" . date('Y-m-d H:i', $row['start_time']) . "-" . date('Y-m-d H:i', $row['end_time']) . "】";
+            $messages[] = "您有一个{$timeMsg}的【" . $row['task_name'] . "-" . DeviceEnum::getAccountTypeDesc($row['account_type']) . "】(" . DeviceEnum::getTaskStatusDesc($row['status']) . ")与当前所选时间冲突";
+            $taskIds[] = $row['id'];
+        }
+        if (!empty($messages)) {
+            return [false, $messages, $taskIds];
+        }
+        return [true, $messages, $taskIds];
+    }
+
     public static function updateWechatRpaTaskTime(string $deviceCode,  int $endTime)
     {
 
         SvDeviceTask::where('device_code', $deviceCode)
-                ->where('status', 'in', [0, 1, 3])
-                ->where('task_scene', 10)
-                ->where('day', date('Y-m-d', $endTime))
-                ->delete();
+            ->where('status', 'in', [0, 1, 3])
+            ->where('task_scene', 10)
+            ->where('day', date('Y-m-d', $endTime))
+            ->delete();
         return;
 
 
@@ -161,12 +253,12 @@ class TaskLogic extends ApiLogic
                 ->findOrEmpty();
             if (!$find->isEmpty()) {
                 $find->delete();
-                // $find->end_time = $endTime - 180;
+                // $find->end_time = $endTime - 120;
                 // if (($find->end_time - $find->start_time) < 600) {
                 //     $find->delete();
                 // } else {
                 //     $find->time_config = json_encode([
-                //         date('H:i', $find->start_time) . '-' . date('H:i', ($endTime - 180)),
+                //         date('H:i', $find->start_time) . '-' . date('H:i', ($endTime - 120)),
                 //     ], JSON_UNESCAPED_UNICODE);
                 //     $find->update_time = time();
                 //     $find->save();
@@ -184,6 +276,7 @@ class TaskLogic extends ApiLogic
         if (!empty($customDates)) {
             if ($timeType == 0) {
                 foreach ($customDates as $date) {
+                    $date = date('Y-m-d', strtotime($date));
                     foreach ($timeConfigs as $time) {
                         $time = explode('-', $time);
                         $newStartTime = $date . ' ' . $time[0] . ':00';
@@ -241,7 +334,8 @@ class TaskLogic extends ApiLogic
                             throw new \Exception('任务执行时间区间格式错误');
                         }
                         if (strtotime($newStartTime) >= strtotime($newEndTime)) {
-                            throw new \Exception('任务执行时间区间结束时间不能小于开始时间1');
+                            //throw new \Exception('任务执行时间区间结束时间不能小于开始时间1');
+                            $newEndTime = date('Y-m-d H:i:s',  strtotime("{$startDate} +1 day"));
                         }
 
                         if (in_array($newStartTime, $start_times)) {
@@ -254,6 +348,7 @@ class TaskLogic extends ApiLogic
                             'end_time' => strtotime($newEndTime),
                         ];
                     }
+                    //print_r($resTimes);die;
                     //$startDate = date('Y-m-d', strtotime("{$startDate} +1 day"));
                 }
                 array_multisort(array_column($resTimes, 'start_time'), SORT_ASC, $resTimes);
@@ -262,12 +357,15 @@ class TaskLogic extends ApiLogic
                     $date = $config['date'];
                     $times = $config['times'];
                     foreach ($times as $time) {
+                        if ((int)$time === 1 && strpos($time, ':') === false) {
+                            continue;
+                        }
                         $startDate = $date;
 
                         $time = explode('-', $time);
                         $newStartTime = $startDate . ' ' . $time[0] . ':00';
                         if (strtotime($newStartTime) < time()) {
-                            $startDate = date('Y-m-d', strtotime("{$startDate} +1day"));
+                            //$startDate = date('Y-m-d', strtotime("{$startDate} +1day"));
                             $newStartTime = $startDate . ' ' . $time[0] . ':00';
                         }
                         $newEndTime = $time[1] == '00:00' ? date('Y-m-d 00:00:00', strtotime("{$startDate} +1 day")) : $startDate . ' ' . $time[1] . ':00';
@@ -276,7 +374,9 @@ class TaskLogic extends ApiLogic
                             throw new \Exception('任务执行时间区间格式错误');
                         }
                         if (strtotime($newStartTime) >= strtotime($newEndTime)) {
-                            throw new \Exception('任务执行时间区间结束时间不能小于开始时间1');
+
+                            //throw new \Exception('任务执行时间区间结束时间不能小于开始时间1');
+                            $newEndTime = date('Y-m-d H:i:s',  strtotime("{$newEndTime} +1 day"));
                         }
 
                         if (in_array($newStartTime, $start_times)) {
@@ -315,53 +415,35 @@ class TaskLogic extends ApiLogic
         $all = SvDeviceTask::alias('dt')
             ->join('sv_device d', 'd.device_code = dt.device_code', 'left')
             ->where($where)
-            ->where('dt.auto_type', '=', function ($query) use ($device_code) {
-                $query->name('sv_device')->where('device_code', $device_code)->field('auto_type');
-            })
             ->count();
         $where['dt.status'] = 0;
         $waiting = SvDeviceTask::alias('dt')
             ->join('sv_device d', 'd.device_code = dt.device_code', 'left')
             ->where($where)
-            ->where('dt.auto_type', '=', function ($query) use ($device_code) {
-                $query->name('sv_device')->where('device_code', $device_code)->field('auto_type');
-            })
             ->count();
 
         $where['dt.status'] = 1;
         $execution = SvDeviceTask::alias('dt')
             ->join('sv_device d', 'd.device_code = dt.device_code', 'left')
             ->where($where)
-            ->where('dt.auto_type', '=', function ($query) use ($device_code) {
-                $query->name('sv_device')->where('device_code', $device_code)->field('auto_type');
-            })
             ->count();
 
         $where['dt.status'] = 2;
         $completed = SvDeviceTask::alias('dt')
             ->join('sv_device d', 'd.device_code = dt.device_code', 'left')
             ->where($where)
-            ->where('dt.auto_type', '=', function ($query) use ($device_code) {
-                $query->name('sv_device')->where('device_code', $device_code)->field('auto_type');
-            })
             ->count();
 
         $where['dt.status'] = 3;
         $failure = SvDeviceTask::alias('dt')
             ->join('sv_device d', 'd.device_code = dt.device_code', 'left')
             ->where($where)
-            ->where('dt.auto_type', '=', function ($query) use ($device_code) {
-                $query->name('sv_device')->where('device_code', $device_code)->field('auto_type');
-            })
             ->count();
 
         $where['dt.status'] = 4;
         $interrupt = SvDeviceTask::alias('dt')
             ->join('sv_device d', 'd.device_code = dt.device_code', 'left')
             ->where($where)
-            ->where('dt.auto_type', '=', function ($query) use ($device_code) {
-                $query->name('sv_device')->where('device_code', $device_code)->field('auto_type');
-            })
             ->count();
 
 
@@ -435,14 +517,7 @@ class TaskLogic extends ApiLogic
 
                 case DeviceEnum::TASK_SOURCE_FRIENDS:
                     //sv_crawling_manual_task
-                    $taskinfo = SvCrawlingManualTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
-                    if (!$taskinfo) {
-                        throw new \Exception('自动加好友任务不存在');
-                    }
-                    $count = SvDeviceTask::where('sub_task_id', $params['sub_task_id'])->where('task_type', DeviceEnum::TASK_SOURCE_FRIENDS)->where('user_id', self::$uid)->count();
-                    if ($count == 1) {
-                        SvCrawlingManualTask::where('id', $params['sub_task_id'])->select()->delete();
-                    }
+                    SvCrawlingManualTask::where('id', $params['sub_task_id'])->select()->delete();
                     break;
 
                 case DeviceEnum::TASK_SOURCE_CLUES:
@@ -525,7 +600,7 @@ class TaskLogic extends ApiLogic
                     //SvDeviceCircleLikeReply::where('id', $params['sub_task_id'])->select()->delete();
                     SvDeviceCircleLikeReplyAccount::where('id', $task['sub_data_id'])->where('user_id', self::$uid)->select()->delete();
                     $count = SvDeviceCircleLikeReplyAccount::where('circle_like_reply_id', $params['sub_task_id'])->where('user_id', self::$uid)->count();
-                    if($count == 0){
+                    if ($count == 0) {
                         SvDeviceCircleLikeReply::where('id', $params['sub_task_id'])->select()->delete();
                     }
                     break;
@@ -568,7 +643,7 @@ class TaskLogic extends ApiLogic
         try {
 
             $source = $params['source'] ?? 0;
-            $task = SvDeviceTask::field('start_time,end_time,account_type,account,status,device_code,task_name,task_type,auto_type,sub_data_id')
+            $task = SvDeviceTask::field('start_time,end_time,account_type,account,status,device_code,task_name,task_type,auto_type,sub_data_id,source')
                 ->where('id', $params['id'])
                 ->where('user_id', self::$uid)
                 ->findOrEmpty()->toArray();
@@ -696,6 +771,7 @@ class TaskLogic extends ApiLogic
                     if (!$taskinfo) {
                         throw new \Exception('个微rpa任务不存在');
                     }
+                    $taskinfo['account_type'] = 2;
                     $task['detail'] = $taskinfo;
                     break;
                 default:
@@ -711,14 +787,24 @@ class TaskLogic extends ApiLogic
                 'device_code' => $task['device_code'],
                 'account' => $task['account']
             ];
-            $task['account_info'] = SvAccount::where($where)->findOrEmpty()->toArray();
+            $account_info = SvAccount::where($where)->findOrEmpty()->toArray();
+            $account_info['type'] = (int)$source === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $account_info['type'];
+            $task['account_info'] = $account_info;
+            $task['account_type'] = (int)$source === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $task['account_type'];
 
-            $task['task_category'] = !in_array($source, [7, 8]) ? DeviceEnum::getAccountTypeDesc($task['account_type']) . DeviceEnum::getTaskTypeDesc($task['task_type']) : DeviceEnum::getTaskSceneDesc($task['task_type']);
+            $task['task_category'] = !in_array($task['source'], [5, 7, 8]) ? DeviceEnum::getAccountTypeDesc($task['account_type']) . DeviceEnum::getTaskTypeDesc($task['task_type']) : DeviceEnum::getTaskSceneDesc($task['task_type']);
+            if (
+                in_array($task['task_type'], [DeviceEnum::TASK_TYPE_TAKEOVER, DeviceEnum::AUTO_TYPE_TAKE_OVER]) &&
+                $task['source'] == DeviceEnum::TASK_SOURCE_TAKEOVER &&
+                $task['account_type'] == DeviceEnum::ACCOUNT_TYPE_SPH
+            ) {
+                $task['task_category'] = '微信私信接管';
+            }
             $task['start_time'] = date('H:i', $task['start_time']);
             $task['end_time'] = date('H:i', $task['end_time']);
             $task['task_type'] = DeviceEnum::getTaskTypeByAuto($task['task_type']);
             $task['log'] = SvDeviceTaskLog::where('task_id', $params['id'])->order('create_time', 'asc')->select()->toArray();
-            
+
             self::$returnData = $task;
             return true;
         } catch (\Exception $e) {

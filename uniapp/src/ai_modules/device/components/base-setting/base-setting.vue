@@ -66,7 +66,59 @@
         <view class="mt-[32rpx]">
             <view class="text-[30rpx] font-medium"> 时间设置 </view>
             <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx] shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.03)]">
-                <view>
+                <view class="bg-[#F4F5F9] rounded-[16rpx] p-[6rpx] flex mb-[36rpx] gap-2">
+                    <view
+                        v-for="(item, index) in taskExecTypeOptions"
+                        class="flex-1 flex items-center justify-center gap-x-[8rpx] h-[72rpx] rounded-[12rpx] text-[28rpx]"
+                        :key="index"
+                        :class="
+                            formData.task_exec_type === item.value
+                                ? 'bg-white text-primary font-medium shadow-[0_2rpx_8rpx_rgba(0,0,0,0.06)]'
+                                : 'text-[#00000066]'
+                        "
+                        @click="formData.task_exec_type = item.value">
+                        <u-icon
+                            :name="item.icon"
+                            size="32"
+                            :color="formData.task_exec_type === item.value ? '#2979ff' : '#00000066'"></u-icon>
+                        <text>{{ item.text }}</text>
+                    </view>
+                </view>
+
+                <view
+                    class="flex items-center justify-between pb-[36rpx] border-[0] border-b-[1rpx] border-solid border-[#F4F5F9] mb-[36rpx]"
+                    v-if="formData.task_exec_type === 1">
+                    <view>
+                        <view class="font-medium text-[28rpx] text-[#333]">任务执行时间</view>
+                        <view class="text-[#00000066] text-[22rpx] mt-[10rpx] leading-[1.6]">
+                            当内容执行完成后，任务会根据<br />设定时间提前结束
+                        </view>
+                    </view>
+                    <view class="flex items-center gap-x-[16rpx]">
+                        <view
+                            class="w-[60rpx] h-[60rpx] rounded-[12rpx] border border-solid border-[#EDEDED] flex items-center justify-center bg-[#FAFAFA]"
+                            @click="handleExecuteMinuteChange(-1)">
+                            <text class="text-[36rpx] text-[#333] leading-none">-</text>
+                        </view>
+                        <view class="max-w-[130rpx] flex items-center justify-center">
+                            <u-input
+                                class="flex-1 font-bold"
+                                v-model="formData.minutes"
+                                type="digit"
+                                placeholder=""
+                                :custom-style="{ textAlign: 'center' }" />
+
+                            <text class="text-[#00000066] text-[26rpx]"> 分钟</text>
+                        </view>
+                        <view
+                            class="w-[60rpx] h-[60rpx] rounded-[12rpx] border border-solid border-[#EDEDED] flex items-center justify-center bg-[#FAFAFA]"
+                            @click="handleExecuteMinuteChange(1)">
+                            <text class="text-[36rpx] text-[#333] leading-none">+</text>
+                        </view>
+                    </view>
+                </view>
+
+                <view v-if="formData.task_exec_type == 0">
                     <view class="text-[#7C7E80]">任务频率</view>
                     <view class="mt-[22rpx]">
                         <view class="flex flex-wrap gap-x-2 gap-y-3">
@@ -110,11 +162,11 @@
                     </view>
                 </view>
                 <view class="mt-[28rpx]">
-                    <view class="flex items-center justify-between">
+                    <view class="flex items-center justify-between" v-if="formData.task_exec_type === 0">
                         <view>
                             <view class="text-[#7C7E80]">每日执行时间</view>
                             <view class="text-[22rpx] text-[#000000]/50 font-medium mt-1" v-if="isWechatPrivate">
-                                当天无任务时段均为“空闲”
+                                当天无任务时段均为"空闲"
                             </view>
                         </view>
                         <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-[268rpx]" v-if="isWechatPrivate">
@@ -141,45 +193,60 @@
                             </view>
                         </view>
                     </view>
-                    <view class="mt-[12rpx] flex items-center gap-x-4" v-if="showTimeConfig">
-                        <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
-                            <picker
-                                mode="time"
-                                class="w-full"
-                                :value="formData.time_config[0]"
-                                @change="handleStartTimeChange">
-                                <view class="flex items-center justify-between h-[70rpx]">
-                                    <text
-                                        :class="[
-                                            formData.time_config[0] ? 'text-primary font-medium' : 'text-[#00000033]',
-                                        ]"
-                                        >{{ formData.time_config[0] || "开始时间" }}</text
-                                    >
-                                    <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
-                                </view>
-                            </picker>
+                    <template v-if="showTimeConfig">
+                        <view
+                            v-if="formData.task_exec_type == 1"
+                            class="mt-[12rpx] flex items-center justify-between h-[90rpx] border-[0] border-b-[1rpx] border-solid border-[#EDEDED]">
+                            <text class="text-[#333] font-medium text-[28rpx]">今日发布时间</text>
+                            <view
+                                class="px-[24rpx] py-[10rpx] rounded-full bg-[#EEF3FF] text-primary font-medium text-[26rpx]">
+                                立即执行
+                            </view>
                         </view>
-                        <view class="text-[#7C7E80]">至</view>
-                        <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
-                            <picker
-                                mode="time"
-                                class="w-full"
-                                :value="formData.time_config[1]"
-                                :disabled="!formData.time_config[0]"
-                                @click="handleEndTimeClick"
-                                @change="handleEndTimeChange">
-                                <view class="flex items-center justify-between h-[70rpx]">
-                                    <text
-                                        :class="[
-                                            formData.time_config[1] ? 'text-primary font-medium' : 'text-[#00000033]',
-                                        ]"
-                                        >{{ formData.time_config[1] || "结束时间" }}</text
-                                    >
-                                    <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
-                                </view>
-                            </picker>
+                        <view class="mt-[12rpx] flex items-center gap-x-4" v-else>
+                            <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
+                                <picker
+                                    mode="time"
+                                    class="w-full"
+                                    :value="formData.time_config[0]"
+                                    @change="handleStartTimeChange">
+                                    <view class="flex items-center justify-between h-[70rpx]">
+                                        <text
+                                            :class="[
+                                                formData.time_config[0]
+                                                    ? 'text-primary font-medium'
+                                                    : 'text-[#00000033]',
+                                            ]"
+                                            >{{ formData.time_config[0] || "开始时间" }}</text
+                                        >
+                                        <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
+                                    </view>
+                                </picker>
+                            </view>
+                            <view class="text-[#7C7E80]">至</view>
+                            <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
+                                <picker
+                                    mode="time"
+                                    class="w-full"
+                                    :value="formData.time_config[1]"
+                                    :disabled="!formData.time_config[0]"
+                                    @click="handleEndTimeClick"
+                                    @change="handleEndTimeChange">
+                                    <view class="flex items-center justify-between h-[70rpx]">
+                                        <text
+                                            :class="[
+                                                formData.time_config[1]
+                                                    ? 'text-primary font-medium'
+                                                    : 'text-[#00000033]',
+                                            ]"
+                                            >{{ formData.time_config[1] || "结束时间" }}</text
+                                        >
+                                        <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
+                                    </view>
+                                </picker>
+                            </view>
                         </view>
-                    </view>
+                    </template>
                 </view>
             </view>
         </view>
@@ -197,12 +264,13 @@ const props = withDefaults(
             task_frep: number;
             custom_date: string[];
             time_config: string[];
+            task_exec_type?: number;
+            minutes?: number;
         } & any;
         showDevice: boolean;
         showAccounts: boolean;
         platformTypes?: AppTypeEnum[];
         currentFrequency?: number;
-        // 时间间隔
         timeInterval?: number;
         multiple?: 0 | 1;
         isWechatPrivate?: boolean;
@@ -246,6 +314,18 @@ const currentFrequency = computed({
 
 const isExpandDate = ref(false);
 const timeTypeIndex = ref(0);
+
+const taskExecTypeOptions = [
+    { icon: "arrow-upward", text: "即时执行", value: 1 },
+    { icon: "clock", text: "定时执行", value: 0 },
+];
+
+const handleExecuteMinuteChange = (type: number) => {
+    const next = Number(formData.value.minutes) + type;
+    if (next < 1) return;
+    formData.value.minutes = next;
+};
+
 const handleFrequency = (item: number, index: number) => {
     currentFrequency.value = index;
     formData.value.task_frep = item;
@@ -268,7 +348,6 @@ const handleCustomDate = () => {
 
 const handleStartTimeChange = (e: any) => {
     const { value } = e.detail;
-    // 判断时间不能小于当前时间
     const endTime = new Date(`2000/01/01 ${value}`);
     formData.value.time_config[0] = value;
     endTime.setMinutes(endTime.getMinutes() + 30);
@@ -277,7 +356,6 @@ const handleStartTimeChange = (e: any) => {
 
 const handleEndTimeChange = (e: any) => {
     const { value } = e.detail;
-    // 这里需要判断结束时间是否大于开始时间，并且要大于开始
     if (value <= formData.value.time_config[0]) {
         uni.$u.toast("结束时间不能小于开始时间");
         return;

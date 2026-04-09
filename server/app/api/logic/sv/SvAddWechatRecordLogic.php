@@ -8,6 +8,8 @@ use app\common\model\wechat\AiWechat;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvCrawlingTask;
 use think\facade\Cache;
+use think\facade\Log;
+
 /**
  * StrategyLogic
  * @desc 加微策略
@@ -128,5 +130,29 @@ class SvAddWechatRecordLogic extends SvBaseLogic
         $record->delete();
 
         return true;
+    }
+
+    public static function acquiringIntent()
+    {
+         $tasks =SvAddWechatRecord::where('intention_type', '-1')
+                ->limit(5)
+                ->order('id desc')
+                ->select();
+
+        foreach ($tasks as $task) {
+            try {
+                $params = ['task_id' => $task->task_id, 'keywords' => $task->original_message, 'user_id' => $task->user_id];
+                $response = \app\common\service\ToolsService::Coze()->intention($params);
+                // continue;
+                if($response['code'] == 10000 && isset($response['data']['content'])){
+                    $intentionType = (int)$response['data']['content'];
+                    $task->intention_type = $intentionType;
+                    $task->update_time = time();
+                    $task->save();
+                }
+            } catch (\Exception $e) {
+                Log::channel('acquiringIntent')->error('线索词id: ' . $task->id . ', 错误信息: ' . $e->getMessage());
+            }
+        }
     }
 }

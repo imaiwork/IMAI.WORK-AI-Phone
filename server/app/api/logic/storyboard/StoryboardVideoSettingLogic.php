@@ -2,12 +2,12 @@
 
 namespace app\api\logic\storyboard;
 
-use app\api\controller\VideoInfoController;
 use app\api\logic\ApiLogic;
 use app\api\logic\service\TokenLogService;
 use app\api\logic\WechatLogic;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
+use app\common\model\ModelConfig;
 use app\common\model\notice\NoticeRecord;
 use app\common\model\storyboard\StoryboardVideoSetting;
 use app\common\model\storyboard\StoryboardVideoTask;
@@ -16,6 +16,7 @@ use app\common\model\user\UserAuth;
 use app\common\model\user\UserTokensLog;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
+use app\common\service\VideoInfoService;
 use think\Exception;
 use think\facade\Db;
 use think\facade\Log;
@@ -67,7 +68,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
                             'quality' => 2
                         ]
                     ];
-                    $thumbnailResult = (new VideoInfoController())->videoThumbnail($videos);
+                    $thumbnailResult = (new VideoInfoService())->commonVideoThumbnail($videos);
                     if ($thumbnailResult['result']) {
                         $pic       = $thumbnailResult['url'];
                         $picStatus = false;
@@ -204,7 +205,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
                 ];
                 WechatLogic::sendMnpMessage($mnpMessage);
             } else {
-                throw new Exception('生成失败');
+                throw new Exception('系统异常，任务提交失败');
             }
 
             Db::commit();
@@ -244,7 +245,9 @@ class StoryboardVideoSettingLogic extends ApiLogic
             [$tokenScene, $tokenCode] = match ($scene) {
                 self::STORYBOARD_VIDEO_CREATE => ['storyboard_video_create', AccountLogEnum::TOKENS_DEC_STORYBOARD_VIDEO],
             };
-            $unit               = TokenLogService::checkToken($userId, $tokenScene);
+            $duration           = $request['duration'] ?? 1;
+            $num                = ceil($duration / 60);
+            $unit               = TokenLogService::checkToken($userId, $tokenScene, $num);
             $request['task_id'] = $taskId;
             $request['user_id'] = $userId;
             $request['now']     = time();
@@ -432,7 +435,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
             $userId              = $task['user_id'];
             $tokenScene          = 'storyboard_video_create';
             $taskId              = $task['task_id'];
-            $unit                = TokenLogService::checkToken($userId, $tokenScene);
+            $unit                = ModelConfig::where('scene', $tokenScene)->value('score', 0);
             if (!$result) {
                 continue;
             }
@@ -463,11 +466,11 @@ class StoryboardVideoSettingLogic extends ApiLogic
                             $videoTask->video_token      = ceil($job['Duration'] / 60) * $unit;
                             $videoTask->save();
                             $successNum++;
-                        } else if ($job['Status'] == 'Init'){
+                        } else if ($job['Status'] == 'Init' || $job['Status'] == 'Processing' || $job['Status'] == 'Waiting'){
                             continue;
                         }else{
                             $videoTask->status = 2;
-                            $videoTask->remark = '系统繁忙，视频生成失败，请稍后重试';
+                            $videoTask->remark = self::remarkMessage($job['ErrorMessage'] ?? '');
                             $videoTask->save();
                             $errorNum++;
                             $return = true;
@@ -480,7 +483,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
                     foreach ($videoTasks as $videoTask) {
                         //视频生成失败
                         $videoTask->status = 2;
-                        $videoTask->remark = self::remarkMessage($extend['ErrorMessage']);
+                        $videoTask->remark = self::remarkMessage($extend['ErrorMessage'] ?? '');
                         $videoTask->save();
                         $errorNum++;
                     }
@@ -555,11 +558,11 @@ class StoryboardVideoSettingLogic extends ApiLogic
 
     public static function remarkMessage($message)
     {
-        $result = '生成失败';
+        $result = '系统繁忙，视频生成失败，请稍后重试';
         if (str_contains($message, 'The prefix of the specified')) {
             $result = '仅支持阿里云存储的素材';
         }
-        if (str_contains($message, 'reason: AccessDenied')) {
+        if (str_contains($message, 'AccessDenied')) {
             $result = '阿里云oss拒绝访问，请检查oss设置';
         }
         return $result;

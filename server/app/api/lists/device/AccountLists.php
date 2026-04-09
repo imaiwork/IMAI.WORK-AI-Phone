@@ -51,7 +51,7 @@ class AccountLists extends BaseApiDataLists implements ListsSearchInterface
                     $item['robot_id'] = 0;
                 }
 
-                $item['robot_name'] = KbRobot::where('id', $item['robot_id'])->where('user_id', $this->userId)->value('name', '');
+                $item['robot_name'] = KbRobot::where('id', $item['robot_id'])->value('name', '');
 
                 if (!empty($item['extra'])) {
                     $extraArray = json_decode($item['extra'], true);

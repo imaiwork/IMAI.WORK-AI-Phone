@@ -17,7 +17,7 @@ use Channel\Client as ChannelClient;
 class RpaSocketService
 {
     protected $worker;
-    protected $HEARTBEAT_TIME = '3600'; //心跳时间，后端主动关闭客户端
+    protected $HEARTBEAT_TIME = 30; //心跳时间，后端主动关闭客户端
 
     protected $whitelist = array(
         1,
@@ -53,7 +53,7 @@ class RpaSocketService
         // 更新消息时间避免断开
         $connection->lastMessageTime = time();
         //客户端与后端消息链接唯一标识
-        if(strpos($data , '"type":"ping"') === false){
+        if (strpos($data, '"type":"ping"') === false && strpos($data, '"type":0') === false) {
             $this->setLog('新消息:' . $this->replaceImageInfo($data));
         }
 
@@ -70,7 +70,7 @@ class RpaSocketService
             if ($uid) {
                 $handler = match ($type) {
                     'ping' => new \app\common\workerman\rpa\handlers\HeartBeatHandler($this), #心跳
-
+                    WorkerEnum::RPA_DEVICE_HEARTBEAT => new \app\common\workerman\rpa\handlers\DeviceHeartBeatHandler($this), #设备心跳
                     WorkerEnum::RPA_DEVICE_INFO => new \app\common\workerman\rpa\handlers\DeviceHandler($this), #获取设备信息、状态
                     WorkerEnum::RPA_USER_INFO => new \app\common\workerman\rpa\handlers\xhs\UserHandler($this), #小红书用户信息
                     WorkerEnum::RPA_PRIVATE_MESSAGE => new \app\common\workerman\rpa\handlers\xhs\PrivateMessageHandler($this), #私信列表信息
@@ -138,7 +138,7 @@ class RpaSocketService
             $message['reply'] = $e->getMessage();
             $this->sendError($uid, $message);
             return;
-        } finally{
+        } finally {
             unset($message);
         }
     }
@@ -148,11 +148,11 @@ class RpaSocketService
         $payload = json_decode($data, true);
         $content = !is_array($payload['content']) ? json_decode($payload['content'], true) : $payload['content'];
 
-        if(isset($content['image'])){
+        if (isset($content['image'])) {
             $content['image'] = '图片内容';
         }
 
-        if(isset($content['avatar'])){
+        if (isset($content['avatar'])) {
             $content['avatar'] = '头像图片内容';
         }
 
@@ -191,7 +191,7 @@ class RpaSocketService
                 }
             }
 
-            
+
 
             //判断设备初始化是否完成,未完成禁止主动获取设备相关信息
             if (!in_array($type, $this->whitelist)) {
@@ -204,8 +204,8 @@ class RpaSocketService
                 }
 
                 $isOnline = $this->redis->get("xhs:device:{$payload['deviceId']}:status");
-                if($isOnline !== 'online'){
-                    throw new \Exception('设备已离线,请重新连接', WorkerEnum::DEVICE_OFFLINE);
+                if ($isOnline !== 'online') {
+                    throw new \Exception('设备已离线,请重新连接1', WorkerEnum::DEVICE_OFFLINE);
                 }
 
                 // if(!$this->checkDeviceStatus($payload)){
@@ -271,6 +271,7 @@ class RpaSocketService
                     $connection->crontabId = '';
                     $connection->testCrontabId = '';
                     $connection->isMsgRunning = 0;
+                    $connection->lastHeartbeat = time();
                     $this->worker->uidConnections[$connection->uid] = $connection;
                     //$this->redis->set("xhs:connection:" . $connection->uid, $this->worker->id);
                     $this->setLog('新socket链接:' . $connection->uid);
@@ -291,8 +292,8 @@ class RpaSocketService
         try {
             $deviceid = $connection->deviceid ?? '';
             $uid = $connection->uid ?? 'unknown';
-            if($connection->deviceid !== '' && $this->redis->get("xhs:device:{$deviceid}") !== $uid){
-                $this->setLog("msg:设备与uid不匹配, uid: $uid, deviceid: ". ($connection->deviceid ?? '') .", name: ". ($connection->name ?? '') .", clientType: ". ($connection->clientType ?? '') .", lastMessageTime: ". ($connection->lastMessageTime ?? ''), 'error');
+            if ($connection->deviceid !== '' && $this->redis->get("xhs:device:{$deviceid}") !== $uid) {
+                $this->setLog("msg:设备与uid不匹配, uid: $uid, deviceid: " . ($connection->deviceid ?? '') . ", name: " . ($connection->name ?? '') . ", clientType: " . ($connection->clientType ?? '') . ", lastMessageTime: " . ($connection->lastMessageTime ?? ''), 'error');
                 $connection->close();
                 return false;
             }
@@ -313,8 +314,8 @@ class RpaSocketService
             );
             $this->setLog(json_encode($log, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
-            
-            if(!empty($deviceid)){
+
+            if (!empty($deviceid)) {
                 SvDevice::where('device_code', $deviceid)->update(['status' => 0, 'update_time' => time()]);
                 SvAccount::where('device_code', $deviceid)->update(['status' => 0, 'update_time' => time()]);
             }
@@ -327,7 +328,7 @@ class RpaSocketService
             unset($connection->uid, $connection->lastMessageTime, $connection->deviceid, $connection->closeReason);
         } catch (\Exception $e) {
             $this->setLog('处理连接关闭时发生异常: ' . $e->getMessage(), 'error');
-        } finally{
+        } finally {
             unset($connection);
         }
     }
@@ -342,7 +343,7 @@ class RpaSocketService
     {
         try {
             $deviceid = $connection->deviceid ?? '';
-            if(!empty($deviceid)){
+            if (!empty($deviceid)) {
                 SvDevice::where('device_code', $deviceid)->update(['status' => 0, 'update_time' => time()]);
                 SvAccount::where('device_code', $deviceid)->update(['status' => 0, 'update_time' => time()]);
             }
@@ -417,15 +418,32 @@ class RpaSocketService
         $this->_connRedis();
 
         // 添加心跳检测定时器
-        // Timer::add(10, function () use ($worker) {
-        //     foreach ($worker->uidConnections as $uid => $connection) {
-        //         if($connection->deviceid !== '' && $this->redis->get("xhs:device:{$connection->deviceid}") !== $uid){
-        //             $connection->close();
-        //             $worker->close($connection);
-        //             $this->setLog("uid: $uid, deviceid: ". $connection->deviceid .", name: ". $connection->name .", clientType: ". $connection->clientType .", lastMessageTime: ". $connection->lastMessageTime, 'info');
-        //         }
-        //     }
-        // });
+        Timer::add(10, function () use ($worker) {
+            foreach ($worker->uidConnections as $uid => $connection) {
+                if (isset($connection->clientType) && $connection->clientType == 'device' && isset($connection->lastHeartbeat)) {
+                    if ((time() - $connection->lastHeartbeat) > 60) {
+                        SvDevice::where('device_code', $connection->deviceid)->update(['status' => 0, 'update_time' => time()]);
+                        $this->redis->set("xhs:device:" . $connection->deviceid . ":status ", 'offline');
+                        //$this->setLog("uid: $uid, deviceid: " . $connection->deviceid . ", name: " . $connection->name . ", clientType: " . $connection->clientType . ", lastMessageTime: " . $connection->lastMessageTime, 'heart');
+                        //$connection->close();
+                        //$worker->close($connection);
+
+                    } else {
+                        $payload =[
+                            "appType" => 0,
+                            "appVersion" => $connection->appversion,
+                            "content" => null,
+                            "deviceId" => $connection->deviceid,
+                            "messageId" => 0,
+                            "type" => 0
+                        ];
+                        $connection->lastHeartbeat = time();
+                        //$this->setLog('发送心跳:' . json_encode($payload, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT), 'heart');
+                        $connection->send(json_encode($payload, JSON_UNESCAPED_UNICODE));
+                    }
+                }
+            }
+        });
     }
 
     public function onWorkerReload($worker)
@@ -455,7 +473,7 @@ class RpaSocketService
             $this->send($uid, $payload);
         } catch (\Exception $e) {
             $this->setLog('sendSuccess:' . $e, 'error');
-        } finally{
+        } finally {
             unset($payload);
         }
     }
@@ -481,7 +499,7 @@ class RpaSocketService
             $this->send($uid, $payload);
         } catch (\Exception $e) {
             $this->setLog('sendError:' . $e, 'error');
-        }finally{
+        } finally {
             unset($payload);
         }
     }
@@ -512,27 +530,9 @@ class RpaSocketService
                     $this->send($uid,  $message);
                 }
             }
-
-
-            // $uid = $this->redis->get("xhs:user:pc:{$find['user_id']}") ?? $this->redis->get("xhs:user:wmprog:{$find['user_id']}");
-            // if ($uid) {
-            //     $message = array(
-            //         'messageId' => $uid,
-            //         'type' => $content['type'],
-            //         'appType' => $content['appType'] ?? 3,
-            //         'deviceId' => $content['deviceId'],
-            //         'appVersion' => $content['appVersion'] ?? WorkerEnum::APP_VERSION,
-            //         'code' => $content['code'],
-            //         'reply' => json_encode($content, JSON_UNESCAPED_UNICODE)
-            //     );
-            //     $this->setLog($message, 'user');
-            //     $this->send($uid,  $message);
-            // } else {
-            //     $this->setLog('web客户端不存在:' . $find['user_id'], 'user');
-            // }
         } catch (\Exception $e) {
             $this->setLog('sendWeb:' . $e, 'error');
-        } finally{
+        } finally {
             unset($content);
         }
     }
@@ -560,19 +560,13 @@ class RpaSocketService
                 $connection = $this->worker->uidConnections[$uid];
                 $connection->messageCount += 1;
                 $connection->send(json_encode($content, JSON_UNESCAPED_UNICODE));
+                if ($connection->clientType == 'device') {
+                    $this->getRedis()->set("xhs:{$connection->clientType}:{$connection->deviceid}:sendtime", time());
+                }
 
                 $this->setLog("正在向: {$connection->clientType} 端发送消息", 'send');
                 $this->setLog('name ' . $connection->name . ' uid:' . $connection->uid . '  init:' . $connection->initial, 'send');
                 $this->setLog('发送完成', 'send');
-
-                // if(isset($payload['deviceId']) && !empty($payload['deviceId'])){
-                //     $this->getRedis()->set("xhs:device:" . $payload['deviceId'] . ":taskStatus", json_encode([
-                //         'taskStatus' => 'standby',
-                //         'taskType' => 'send',
-                //         'msg' => '发送完成',
-                //         'time' => date('Y-m-d H:i:s', time()),
-                //     ], JSON_UNESCAPED_UNICODE));
-                // }
             } else {
                 $this->setLog('uid 未找到: ' . $uid, 'error');
                 return false;
@@ -581,7 +575,7 @@ class RpaSocketService
             $this->setLog('send:' . $e, 'error');
             $this->setLog($payload, 'error');
             return false;
-        } finally{
+        } finally {
             unset($payload, $content);
         }
         $this->setLog("\n\n---------------------------");
@@ -632,7 +626,7 @@ class RpaSocketService
                 return false;
             }
 
-            if (isset($this->worker->uidConnections[$uid]->deviceid) ) {
+            if (isset($this->worker->uidConnections[$uid]->deviceid)) {
                 $deviceid = $this->worker->uidConnections[$uid]->deviceid;
                 $this->redis->del("xhs:device:{$deviceid}");
                 $this->redis->del("xhs:device:{$deviceid}:status");
@@ -674,6 +668,11 @@ class RpaSocketService
                         Timer::del($this->worker->uidConnections[$uid]->testCrontabId);
                         unset($this->worker->uidConnections[$uid]->testCrontabId);
                     }
+                    \app\api\logic\ApiLogic::sendNotice([
+                        'userId' => $find->user_id,
+                        'content' => $find->device_name,
+                        'status' => '离线'
+                    ], 'device');
                 }
 
                 //通知web端设备已断开

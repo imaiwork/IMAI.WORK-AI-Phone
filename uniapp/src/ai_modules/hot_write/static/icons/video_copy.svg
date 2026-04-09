@@ -1,0 +1,29 @@
+<svg width="54" height="54" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="54" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4DA3FF"/>
+      <stop offset="100%" stop-color="#0055EE"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="6" y1="14" x2="36" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#C8DEFF" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="playGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0066FF"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#0044CC" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect width="54" height="54" rx="14" fill="url(#bgGrad)"/>
+  <rect width="54" height="27" rx="14" fill="white" fill-opacity="0.12"/>
+  <rect x="8" y="16" width="26" height="22" rx="4" fill="url(#cardGrad)" filter="url(#shadow)"/>
+  <rect x="12" y="21" width="14" height="2.5" rx="1.2" fill="#A0BFEF"/>
+  <rect x="12" y="26" width="10" height="2.5" rx="1.2" fill="#C0D8F8"/>
+  <rect x="16" y="20" width="26" height="22" rx="4" fill="white" filter="url(#shadow)"/>
+  <rect x="20" y="25" width="14" height="2.5" rx="1.2" fill="#BFDBFE"/>
+  <rect x="20" y="30" width="10" height="2.5" rx="1.2" fill="#DBEAFE"/>
+  <circle cx="40" cy="38" r="9" fill="url(#playGrad)" filter="url(#shadow)"/>
+  <polygon points="37.5,34.5 37.5,41.5 44,38" fill="white"/>
+</svg>

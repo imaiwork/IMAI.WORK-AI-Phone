@@ -178,7 +178,7 @@
                             type="file"
                             :accept="accept"
                             show-progress
-                            :data="{ ffmpeg: 1 }"
+                            :data="{ ffmpeg: 1, generate_thumbnail: 1, fetch_video_info: 1 }"
                             :max-size="200"
                             :show-file-list="false"
                             @change="handleUploadSuccess">
@@ -440,7 +440,7 @@
 
 <script setup lang="ts">
 import { createReusableTemplate } from "@vueuse/core";
-import { uploadImage, videoTranscode } from "@/api/app";
+import { uploadImage } from "@/api/app";
 import {
     getMaterialLibraryList,
     deleteMaterialLibrary,
@@ -685,7 +685,7 @@ const handleUploadSuccess = async (result: any) => {
             response,
             raw: { type },
         } = result;
-        const { uri } = response.data;
+        const { uri, thumbnail_path, duration } = response.data;
 
         const isVideo = type.includes("video");
         const isImage = type.includes("image");
@@ -696,24 +696,12 @@ const handleUploadSuccess = async (result: any) => {
             size,
             type: AppTypeEnum.XHS,
             sort: 0,
-            pic: "",
+            pic: isImage ? uri : thumbnail_path,
             m_type: isImage ? MaterialTypeEnum.IMAGE : isAudio ? MaterialTypeEnum.MUSIC : MaterialTypeEnum.VIDEO,
             content: uri,
-            duration: 0,
+            duration: duration,
             group_id: queryParams.group_id,
         };
-
-        if (isVideo) {
-            try {
-                const { duration, file } = await getVideoFirstFrame(uri);
-                const res = await uploadImage({ file });
-                params.duration = duration;
-                params.pic = res.uri;
-                videoTranscode({ uri: res.uri });
-            } catch (error) {
-                console.warn("视频处理失败:", error);
-            }
-        }
 
         await addMaterialLibrary(params);
 

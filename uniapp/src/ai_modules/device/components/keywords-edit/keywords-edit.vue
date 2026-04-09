@@ -83,7 +83,6 @@ const close = () => {
 };
 
 const setFormData = (data: any) => {
-    console.log(data);
     editValue.value = data;
 };
 

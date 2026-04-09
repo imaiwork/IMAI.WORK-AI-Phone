@@ -136,7 +136,71 @@
                             </div>
 
                             <div class="space-y-6">
+                                <!-- 执行类型选择 -->
                                 <div>
+                                    <div class="text-sm font-medium text-tx-regular mb-4">执行类型</div>
+                                    <div class="bg-slate-50 rounded-2xl p-1.5 inline-flex w-full">
+                                        <div
+                                            v-for="opt in taskExecTypeOptions"
+                                            :key="opt.value"
+                                            @click="formData.task_exec_type = opt.value"
+                                            :class="[
+                                                'flex-1 py-3 text-center text-sm font-black rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center gap-2',
+                                                formData.task_exec_type === opt.value
+                                                    ? 'bg-white text-primary shadow-sm'
+                                                    : 'text-slate-400 hover:text-slate-600',
+                                            ]">
+                                            <Icon :name="opt.icon" :size="16" />
+                                            <span>{{ opt.label }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 即时执行 - 执行时长设置 -->
+                                <div v-if="formData.task_exec_type === 1" class="space-y-4">
+                                    <div
+                                        class="p-3 rounded-2xl border border-slate-100 bg-gradient-to-r from-[#eff6ff]/50 to-[#e0e7ff]/50">
+                                        <div class="flex justify-between items-center mb-4">
+                                            <div>
+                                                <div class="text-sm font-black text-slate-700 mb-1">任务执行时长</div>
+                                                <div class="text-xs text-slate-400">
+                                                    当内容执行完成后，任务会根据设定时间提前结束
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <button
+                                                    @click="handleExecuteMinuteChange(-1)"
+                                                    class="w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center transition-colors">
+                                                    <Icon name="el-icon-Minus" :size="16" />
+                                                </button>
+                                                <div class="flex items-center gap-1 min-w-[80px] justify-center">
+                                                    <ElInput
+                                                        v-model="formData.minutes"
+                                                        v-number-input="{ min: 1, max: 9999 }"
+                                                        class="!w-16 text-center font-bold" />
+                                                    <span class="text-sm text-slate-500">分钟</span>
+                                                </div>
+                                                <button
+                                                    @click="handleExecuteMinuteChange(1)"
+                                                    class="w-10 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center transition-colors">
+                                                    <Icon name="el-icon-Plus" :size="16" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="bg-blue-50 rounded-xl p-3 border border-blue-100">
+                                            <div class="flex items-center gap-2 text-blue-600">
+                                                <Icon name="el-icon-InfoFilled" :size="14" />
+                                                <span class="text-xs font-medium">立即执行模式</span>
+                                            </div>
+                                            <div class="text-xs text-blue-500 mt-1">
+                                                任务将在确认后立即开始执行，请确保设备在线
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 定时执行 - 执行周期 -->
+                                <div v-if="formData.task_exec_type === 0">
                                     <div class="text-sm font-medium text-tx-regular mb-4">执行周期</div>
                                     <div class="flex flex-wrap gap-2">
                                         <div
@@ -173,19 +237,32 @@
                                     </div>
                                 </div>
 
+                                <!-- 每日执行时段 -->
                                 <div class="pt-4 border-t border-dashed border-br-light">
                                     <div class="text-sm font-medium text-tx-regular mb-4">每日执行时段</div>
-                                    <ElTimePicker
-                                        v-model="formData.time_config"
-                                        type="time"
-                                        is-range
-                                        range-separator="至"
-                                        start-placeholder="开始"
-                                        end-placeholder="结束"
-                                        format="HH:mm"
-                                        value-format="HH:mm"
-                                        class="!w-full custom-time-picker"
-                                        :show-arrow="false" />
+                                    <template v-if="formData.task_exec_type === 1">
+                                        <div
+                                            class="flex items-center justify-between h-16 px-4 bg-green-50 border border-green-200 rounded-xl">
+                                            <span class="text-sm font-medium text-green-700">今日发布时间</span>
+                                            <div
+                                                class="px-4 py-2 rounded-full bg-green-100 text-green-600 font-medium text-sm">
+                                                立即执行
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        <ElTimePicker
+                                            v-model="formData.time_config"
+                                            type="time"
+                                            is-range
+                                            range-separator="至"
+                                            start-placeholder="开始"
+                                            end-placeholder="结束"
+                                            format="HH:mm"
+                                            value-format="HH:mm"
+                                            class="!w-full custom-time-picker"
+                                            :show-arrow="false" />
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -220,6 +297,7 @@
                                 </ElRadioGroup>
                             </div>
                         </div>
+
                         <div class="bg-white p-6 rounded-2xl border border-br-extra-light relative overflow-hidden">
                             <div class="flex justify-between items-center">
                                 <div class="text-base font-black flex items-center gap-2">
@@ -479,6 +557,15 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 任务冲突提示 -->
+                        <div v-if="taskErrorMsg" class="bg-red-50 border border-red-200 rounded-2xl p-6">
+                            <div class="flex items-center gap-2 text-red-600 mb-2">
+                                <Icon name="el-icon-WarningFilled" :size="16" />
+                                <span class="font-medium">任务冲突</span>
+                            </div>
+                            <div class="text-red-700 text-sm">{{ taskErrorMsg }}</div>
+                        </div>
                     </div>
                 </div>
             </ElScrollbar>
@@ -505,10 +592,18 @@
         ref="remarkPopupRef"
         @close="isAddRemarkGen = false"
         @confirm="handleAddRemarkConfirm" />
+    <task-conflict-pop
+        v-if="showTaskConflictDialog"
+        ref="taskConflictPopRef"
+        :messages="taskConflictMessages.messages"
+        :errors="taskConflictMessages.errors"
+        @close="showTaskConflictDialog = false"
+        @confirm="handleConfirmCreateTask" />
 </template>
 
 <script setup lang="ts">
 import { createTask } from "@/api/customer";
+import { checkTaskPublishTime } from "@/api/device";
 import dayjs from "dayjs";
 import { AppTypeEnum, TokensSceneEnum } from "@/enums/appEnums";
 import { useCreateTask } from "@/pages/app/customer/_hooks/useCreateTask";
@@ -518,6 +613,7 @@ import AiAddKeyword from "./ai-add-keyword.vue";
 import AiAddFriend from "./ai-add-friend.vue";
 import AiPrivateChat from "./ai-private-chat.vue";
 import RemarkPop from "@/pages/app/customer/_components/remark-pop.vue";
+import TaskConflictPop from "@/pages/app/_components/task-conflict-pop.vue";
 
 const emit = defineEmits(["back"]);
 
@@ -549,7 +645,11 @@ interface FormData {
     wechat_task_frep: number;
     wechat_time_config: string[];
     wechat_custom_date: string[];
+    task_exec_type: number; // 新增：0-定时执行，1-立即执行
+    minutes: number; // 新增：执行时长（分钟）
+    task_ids: string[]; // 新增：冲突任务ID
 }
+
 enum GreetingContentSettingTypeEnum {
     ADD_FRIEND = "add_friend",
     PRIVATE_CHAT = "private_chat",
@@ -564,6 +664,12 @@ const getOCRCloudToken = computed(() => {
 const getOCRLocalToken = computed(() => {
     return userStore.getTokenByScene(TokensSceneEnum.SPH_LOCAL_OCR)?.score;
 });
+
+// 新增：执行类型选项
+const taskExecTypeOptions = [
+    { icon: "el-icon-VideoPlay", label: "立即执行", value: 1 },
+    { icon: "el-icon-Clock", label: "定时执行", value: 0 },
+];
 
 const formData = reactive<FormData>({
     name: `视频号获客任务${dayjs().format("YYYYMMDDHHmmss")}`,
@@ -593,10 +699,16 @@ const formData = reactive<FormData>({
     wechat_task_frep: 1,
     wechat_time_config: ["", ""],
     wechat_custom_date: [],
+    task_exec_type: 1, // 新增：默认立即执行
+    minutes: 15, // 新增：默认15分钟
+    task_ids: [], // 新增：冲突任务ID
 });
 
 const taskErrorMsg = ref("");
-
+// 新增：任务冲突相关状态
+const showTaskConflictDialog = ref(false);
+const taskConflictMessages = reactive<{ messages: string[]; errors: any[] }>({ messages: [], errors: [] });
+const taskConflictPopRef = shallowRef<InstanceType<typeof TaskConflictPop>>();
 const {
     getWechatRemarks,
     deviceOptions,
@@ -693,6 +805,37 @@ const handleAddPrivateChatSuccess = (content: string) => {
     formData.private_message_prompt = content;
 };
 
+// 新增：执行时长调整函数
+const handleExecuteMinuteChange = (delta: number) => {
+    const newValue = formData.minutes + delta;
+    if (newValue >= 1) {
+        formData.minutes = newValue;
+    }
+};
+
+// 新增：执行创建任务的函数
+const executeCreateTask = async () => {
+    try {
+        await createTask({
+            ...formData,
+            keywords: formData.keywords.filter((item) => item),
+            time_config: formData.task_exec_type === 1 ? [] : [`${formData.time_config[0]}-${formData.time_config[1]}`],
+            type: [AppTypeEnum.SPH],
+        });
+        feedback.msgSuccess("创建成功");
+        emit("back");
+    } catch (error: any) {
+        taskErrorMsg.value = error;
+        feedback.msgError(error);
+    }
+};
+
+// 新增：确认创建任务（处理冲突后）
+const handleConfirmCreateTask = async () => {
+    showTaskConflictDialog.value = false;
+    await executeCreateTask();
+};
+
 const { lockFn, isLock } = useLockFn(async () => {
     if (!formData.name) {
         feedback.msgWarning("请输入任务名称");
@@ -706,11 +849,14 @@ const { lockFn, isLock } = useLockFn(async () => {
     } else if (formData.add_type == "1" && formData.wechat_id.length == 0) {
         feedback.msgWarning("请选择加微微信");
         return;
-    } else if (currentFrequency.value == 5 && formData.custom_date.length == 0) {
-        feedback.msgWarning("请选择自定义日期");
-        return;
-    } else if (!checkTimeConfig()) {
-        return;
+    } else if (formData.task_exec_type === 0) {
+        // 定时执行的验证
+        if (currentFrequency.value == 5 && formData.custom_date.length == 0) {
+            feedback.msgWarning("请选择自定义日期");
+            return;
+        } else if (!checkTimeConfig()) {
+            return;
+        }
     } else if (formData.wechat_time_type == 1 && !checkWechatTimeConfig()) {
         feedback.msgWarning("请选择加微任务执行时段");
         return;
@@ -718,21 +864,39 @@ const { lockFn, isLock } = useLockFn(async () => {
         feedback.msgWarning("请输入加好友备注内容");
         return;
     }
-    try {
-        await createTask({
-            ...formData,
-            keywords: formData.keywords.filter((item) => item),
-            time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
-            type: [AppTypeEnum.SPH],
-        });
-        feedback.msgSuccess("创建成功");
-        emit("back");
-    } catch (error: any) {
-        taskErrorMsg.value = error;
-        feedback.msgError(error);
+
+    // 立即执行需要检测冲突
+    if (formData.task_exec_type === 1) {
+        try {
+            const {
+                messages,
+                task_ids,
+                errors: rawErrors,
+            } = await checkTaskPublishTime({
+                device_codes: formData.device_codes,
+                minutes: formData.minutes,
+            });
+
+            if ((messages && messages.length > 0) || (rawErrors && rawErrors.length > 0)) {
+                taskConflictMessages.messages = messages;
+                taskConflictMessages.errors = rawErrors;
+                formData.task_ids = task_ids;
+                showTaskConflictDialog.value = true;
+                await nextTick();
+                taskConflictPopRef.value?.open();
+                return;
+            }
+        } catch (error: any) {
+            taskErrorMsg.value = error;
+            feedback.msgError(error);
+            return;
+        }
     }
+
+    await executeCreateTask();
 });
 </script>
+
 <style scoped lang="scss">
 :deep(.el-form-item) {
     @apply mb-1;

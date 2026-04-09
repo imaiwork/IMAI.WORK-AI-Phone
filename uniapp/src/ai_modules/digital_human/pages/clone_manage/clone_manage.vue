@@ -10,7 +10,7 @@
             title-bold>
         </u-navbar>
         <view class="flex justify-between h-[100rpx] items-center px-4">
-            <view class="flex-1" v-if="!isDelete">
+            <view class="flex-1" v-show="!isDelete">
                 <u-tabs :list="tabs" :is-scroll="false" :current="currentTab" bg-color="" @change="changeTab"></u-tabs>
             </view>
             <view class="flex items-center justify-between" :class="{ 'flex-1': isDelete }">
@@ -36,6 +36,7 @@
                 </view>
             </view>
         </view>
+
         <view class="px-4 mt-4">
             <view class="text-xs text-[#00000080]">结果：{{ dataCount }}</view>
         </view>
@@ -240,6 +241,7 @@ const queryList = async (page_no: number, page_size: number) => {
         dataCount.value = count;
         pagingRef.value?.complete(lists);
     } catch (error) {
+        dataCount.value = 0;
         pagingRef.value?.complete([]);
     }
 };

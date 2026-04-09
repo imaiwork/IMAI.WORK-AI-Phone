@@ -63,7 +63,6 @@ const handleDeleteDate = (date: string) => {
 };
 
 const handleSave = () => {
-    // 要判断不能选择今天之前的时间，还有不能选择超过30天的时间
     let maxDifference = 30;
     let invalidIndexes = [-1, -1];
 
@@ -81,17 +80,19 @@ const handleSave = () => {
     }
 
     const isError = invalidIndexes[0] !== -1;
-
     dateErrorIndexes.value = invalidIndexes;
 
     if (isError) {
         uni.$u.toast("不能选择时间间隔超过30天的时间");
-
         return;
     }
+
+    // ✅ 按日期升序排序后再 emit
+    const sortedDates = [...date.value].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
     emit("confirm", {
         type: ListenerTypeEnum.CHOOSE_DATE,
-        data: date.value,
+        data: sortedDates,
     });
     uni.navigateBack();
 };

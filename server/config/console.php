@@ -76,6 +76,10 @@ return [
         'kb_cron' => 'app\common\command\KbCron',
         //分镜混剪视频合成
         'storyboard_video_task' => 'app\common\command\StoryboardVideoTaskCron',
+        //自动合成设备视频任务
+        'auto_device_video_synthesis' => 'app\common\command\AutoDeviceVideoSynthesis',
+        // 爆款仿写自动发布
+        'video_imitation_publish' => 'app\common\command\VideoImitationPublishCron',
     ],
 
     

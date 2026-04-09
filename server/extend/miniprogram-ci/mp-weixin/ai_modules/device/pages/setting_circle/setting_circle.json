@@ -1,8 +1,0 @@
-{
-  "navigationBarTitleText": "发布朋友圈配置",
-  "usingComponents": {
-    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "empty": "../../../../components/empty/empty",
-    "video-preview": "../../../../components/video-preview/video-preview"
-  }
-}

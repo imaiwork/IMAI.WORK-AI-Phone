@@ -83,7 +83,7 @@ class TaskRecordSaveHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }
@@ -190,7 +190,7 @@ class TaskRecordSaveHandler extends BaseMessageHandler
             unset($this->payload, $content);
             return $result;
         } catch (\Throwable $e) {
-            if($e->getCode() == 4059){
+            if ($e->getCode() == 4059) {
                 \app\common\model\sv\SvDeviceTask::where('sub_task_id', $content['task_id'])
                     ->where('source', \app\common\enum\DeviceEnum::TASK_SOURCE_CLUES)
                     ->where('device_code', $this->payload['deviceId'])->update([
@@ -210,7 +210,7 @@ class TaskRecordSaveHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        } 
+        }
     }
 
     public function sphBase64ToImage(array $item, string $code)
@@ -256,7 +256,7 @@ class TaskRecordSaveHandler extends BaseMessageHandler
             $pattern = '/(?:[a-zA-Z][a-zA-Z0-9_-]{5,19}|1[3-9]\d{9})/';
             $blacklist = array();
             $addWechat = array();
-            $checkArray = ["加vx", "加VX", "加v", "加V", "加wx", "加WX", "+wx", "+WX", "+vx", "+VX",  "vx:", "VX:", "vx：", "VX：", "vx", "VX", "Vx", "+v", "+V", "V:", "V：", "v:", "v："];
+            $checkArray = ["加vx", "加VX", "加v", "加V", "加wx", "加WX", "+wx", "+WX", "+vx", "+VX",  "vx:", "VX:", "vx：", "VX：", "vx", "VX", "Vx", "+v", "+V", "V:", "V：", "v:", "v：", "+", " ", "-", "❤"];
 
             // if (!$this->containsAnyWithFilter($crawlContent, $checkArray)) {
             //     //指定字符不存在
@@ -294,7 +294,7 @@ class TaskRecordSaveHandler extends BaseMessageHandler
             ];
 
             $this->sendError($this->connection,  $this->payload);
-        } 
+        }
     }
 
 
@@ -331,7 +331,7 @@ class TaskRecordSaveHandler extends BaseMessageHandler
             $blacklist = array();
 
             $isInWechat = false;
-            $checkArray = ["加vx", "加VX", "加v", "加V", "加wx", "加WX", "+wx", "+WX", "+vx", "+VX",  "vx:", "VX:", "vx：", "VX：", "vx", "VX", "Vx", "+v", "+V", "V:", "V：", "v:", "v："];
+            $checkArray = ["加vx", "加VX", "加v", "加V", "加wx", "加WX", "+wx", "+WX", "+vx", "+VX",  "vx:", "VX:", "vx：", "VX：", "vx", "VX", "Vx", "+v", "+V", "V:", "V：", "v:", "v：", "+", " ", "-", "❤"];
 
 
             // if (!$this->containsAnyWithFilter($replyContent, $checkArray)) {
@@ -426,17 +426,17 @@ class TaskRecordSaveHandler extends BaseMessageHandler
                     }
                     $addWechat[] = $userWechatNo;
                     SvAddWechatRecord::create($record);
-                    $autoType = SvDevice::where('device_code',$device_code)->value('auto_type') ?? 0;
-                    if ($autoType == 1){
+                    $autoType = SvDevice::where('device_code', $device_code)->value('auto_type') ?? 0;
+                    if ($autoType == 1) {
                         //扣除算力
                         $requestService = \app\common\service\ToolsService::Automation()->wechatAddFriend($record);
-                        if (isset($requestService['code']) && $requestService['code'] == 10000){
+                        if (isset($requestService['code']) && $requestService['code'] == 10000) {
                             $tokenScene = "automation_wechat_add_friend";
                             $tokenCode = AccountLogEnum::TOKENS_DEC_AUTOMATION_WECHAT_ADD_FRIEND;
                             $unit = TokenLogService::checkToken($userid, $tokenScene);
                             $points = $unit;
                             $extra = ['算力单价' => $unit . '算力/条', '实际消耗算力' => $points];
-                            if ($points > 0){
+                            if ($points > 0) {
                                 User::userTokensChange($userid, $points);
                                 AccountLogLogic::recordUserTokensLog(true, $userid, $tokenCode, $points, $task->id, $extra);
                             }
@@ -465,5 +465,32 @@ class TaskRecordSaveHandler extends BaseMessageHandler
         }
 
         return [false, []];
+    }
+
+    /**
+     * 从文本中提取所有手机号码
+     * @param string $text 输入文本
+     * @return array 返回手机号数组（纯数字）
+     */
+    private function extractPhoneNumbers($text)
+    {
+        // 匹配可能包含分隔符的手机号码模式（允许数字、空格、-、+）
+        // 匹配规则：1开头，后跟10位数字，允许分隔符出现在任意位置
+        $pattern = '/1[3-9]\d[\s\-\+]*\d[\s\-\+]*\d[\s\-\+]*\d[\s\-\+]*\d[\s\-\+]*\d[\s\-\+]*\d[\s\-\+]*\d[\s\-\+]*\d[\s\-\+]*\d/';
+
+        preg_match_all($pattern, $text, $matches);
+
+        $phones = [];
+        foreach ($matches[0] as $match) {
+            // 移除所有非数字字符，只保留数字
+            $clean = preg_replace('/\D/', '', $match);
+            // 验证是否为有效的手机号（11位且以1开头，第二位3-9）
+            if (strlen($clean) === 11 && preg_match('/^1[3-9]\d{9}$/', $clean)) {
+                $phones[] = $clean;
+            }
+        }
+
+        // 去重
+        return array_values(array_unique($phones));
     }
 }

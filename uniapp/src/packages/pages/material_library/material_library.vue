@@ -91,18 +91,6 @@
                                     class="w-full h-full"
                                     mode="aspectFill"></image>
 
-                                <view
-                                    v-if="
-                                        !isHandle &&
-                                        (item.m_type == MaterialTypeEnum.VIDEO || item.m_type == MaterialTypeEnum.MUSIC)
-                                    "
-                                    class="absolute inset-0 flex items-center justify-center bg-black/10">
-                                    <view
-                                        class="w-[60rpx] h-[60rpx] bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                                        <u-icon name="play-fill" color="#3B82F6" size="24" class="ml-[4rpx]"></u-icon>
-                                    </view>
-                                </view>
-
                                 <view v-if="isHandle" class="absolute top-2 right-2 z-20">
                                     <view
                                         class="w-[32rpx] h-[32rpx] rounded-full flex items-center justify-center border-2 border-white shadow-sm transition-all"
@@ -135,7 +123,7 @@
                                         {{ item.create_time ? item.create_time.split(" ")[0] : "" }}
                                     </text>
                                     <view
-                                        class="flex items-center gap-1 bg-[#F8FAFC] px-[8rpx] py-[2rpx] rounded border border-[#F1F5F9]">
+                                        class="flex items-center gap-1 bg-[#F8FAFC] px-[8rpx] py-[2rpx] rounded border border-solid border-[#F1F5F9]">
                                         <u-icon name="file-text" size="16" color="#9CA3AF"></u-icon>
                                         <text class="text-[18rpx] text-[#6B7280] font-medium">
                                             {{ formatFileSize(item.size) }}
@@ -153,7 +141,8 @@
                             class="bg-white rounded-[16rpx] p-3 flex items-center shadow-sm border border-[#F1F5F9]"
                             @click="handleGroupItem(item)">
                             <view
-                                class="flex-shrink-0 flex items-center justify-center w-[120rpx] h-[120rpx] rounded-[12rpx] overflow-hidden bg-[#F8FAFC] bg-gradient-to-br from-[#F1F5F9] to-[#E5E7EB]">
+                                class="flex-shrink-0 flex items-center justify-center w-[120rpx] h-[120rpx] rounded-[12rpx] overflow-hidden bg-[#F8FAFC]"
+                                style="background: linear-gradient(to bottom right, #f1f5f9, #e5e7eb)">
                                 <view class="text-[32rpx] mb-1 opacity-60">📁</view>
                             </view>
 
@@ -195,7 +184,7 @@
 
         <view
             v-if="isAll"
-            class="fixed bottom-0 left-0 right-0 bg-[#ffffff]/80 backdrop-blur-lg border-t border-[#F1F5F9] px-4 pb-4 pt-2 z-[100]">
+            class="fixed bottom-0 left-0 right-0 bg-[#ffffff]/80 border-0 border-t border-solid border-[#F1F5F9] px-4 pb-4 pt-2 z-[100]">
             <view class="flex items-center h-[110rpx]" :class="[isHandle ? 'justify-between' : 'justify-end']">
                 <view v-if="isHandle" class="flex items-center gap-x-6">
                     <view class="text-[28rpx] text-[#64748B] font-medium active:opacity-60" @click="exitHandleMode">
@@ -204,7 +193,7 @@
 
                     <view class="flex items-center gap-x-2" @click="handleSelectAll()">
                         <view
-                            class="w-[36rpx] h-[36rpx] rounded-full border-2 transition-all flex items-center justify-center"
+                            class="w-[36rpx] h-[36rpx] rounded-full border-2 border-solid transition-all flex items-center justify-center"
                             :class="[isAllSelected ? 'bg-primary border-primary' : 'border-[#CBD5E0] bg-white']">
                             <u-icon v-if="isAllSelected" name="checkbox-mark" color="#fff" size="20"></u-icon>
                         </view>
@@ -788,8 +777,9 @@ const handlePlay = (item: any) => {
 const { uploadAndProcessFiles, showUploadProgress, uploadMaterialList } = useUpload({
     imageAccept: ["jpg", "png", "jpeg", "webp"],
     videoAccept: ["mp4"],
-    fileAccept: ["wav", "m4a"],
+    fileAccept: ["wav", "m4a", "mp3"],
     isTranscode: true,
+    isFetchVideoInfo: true,
     onSuccess: async (materials) => {
         const promises = [];
         for (const item of materials) {

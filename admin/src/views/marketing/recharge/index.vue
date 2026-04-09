@@ -9,6 +9,12 @@
                         <div class="form-tips">开启后，小程序IOS端将显示充值入口</div>
                     </div>
                 </el-form-item>
+                <el-form-item label="小程序Android是否显示" prop="is_and_open">
+                    <div>
+                        <el-switch v-model="formData.is_and_open" :active-value="1" :inactive-value="0" />
+                        <div class="form-tips">开启后，小程序Android端将显示充值入口</div>
+                    </div>
+                </el-form-item>
             </el-form>
             <div>
                 <el-button
@@ -80,6 +86,7 @@ import feedback from "@/utils/feedback";
 
 const formData = reactive({
     is_ios_open: 0,
+    is_and_open: 0,
 });
 
 const rules = {};
@@ -87,6 +94,7 @@ const rules = {};
 const getRechargeConfig = async () => {
     const data = await getRechargeSettingConfig();
     formData.is_ios_open = data.is_ios_open;
+    formData.is_and_open = data.is_and_open;
 };
 
 const { isLock, lockFn: lockSubmit } = useLockFn(async () => {

@@ -54,7 +54,7 @@
                                                     mode="aspectFill"></image>
                                                 <image
                                                     v-if="detailData.account_type"
-                                                    :src="platform[detailData.account_type as keyof typeof platform].activeIcon"
+                                                    :src="getPlatformIcon(detailData.account_type)"
                                                     class="w-[32rpx] h-[32rpx] absolute bottom-0 right-0"></image>
                                             </view>
                                             <view class="flex-1 text-[#00000080]"
@@ -113,11 +113,11 @@
                                             </view>
                                         </view>
                                         <view class="flex-1 flex flex-col justify-between">
-                                            <view class="mr-14">
+                                            <view>
                                                 <view class="font-medium text-[#000000e6] line-clamp-2">
                                                     {{ detailData.detail?.material_title }}
                                                 </view>
-                                                <view class="text-[#00000080] mt-1 text-xs line-clamp-2">
+                                                <view class="text-[#00000080] mt-1 text-xs line-clamp-4 break-all">
                                                     {{ detailData.detail?.material_subtitle }}
                                                 </view>
                                             </view>
@@ -182,6 +182,14 @@
                                                             class="w-full h-full"></image>
                                                     </view>
                                                 </view>
+                                            </view>
+                                        </view>
+                                        <view class="flex-1 flex flex-col justify-between">
+                                            <view class="font-medium text-[#000000e6] line-clamp-5">
+                                                {{ detailData.detail?.content }}
+                                            </view>
+                                            <view class="text-[22rpx] text-[#00000080] mt-1">
+                                                发布时间：{{ detailData.detail?.send_time }}
                                             </view>
                                         </view>
                                     </view>
@@ -252,6 +260,7 @@
 import { deleteDeviceTaskCalendar, getDeviceTaskSubtasks } from "@/api/device";
 import { useDevice } from "@/ai_modules/device/hooks/useDevice";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
+import WechatWechatActiveIcon from "@/static/images/common/wechat_s.png";
 
 enum TaskTypeEnum {
     UNKNOWN = 0,
@@ -297,6 +306,12 @@ const getTaskStatusText = (status: number) => {
         default:
             return "-";
     }
+};
+
+const getPlatformIcon = (type: number) => {
+    if (type == 2) return WechatWechatActiveIcon;
+    //@ts-ignore
+    return platform.value[type].activeIcon;
 };
 
 // 获取任务状态样式

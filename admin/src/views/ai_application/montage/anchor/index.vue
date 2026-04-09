@@ -73,7 +73,7 @@
                         <el-tag v-if="row.status == 4" type="warning">
                             {{ "音色合成中" }}
                         </el-tag>
-                        <el-tag v-if="row.status == 2" type="success">
+                        <el-tag v-if="row.status == 2" type="danger">
                             {{ "形象合成失败" }}
                         </el-tag>
                         <el-tag v-if="row.status == 1" type="warning">

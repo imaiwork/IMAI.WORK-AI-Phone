@@ -7,6 +7,7 @@ use app\api\controller\BaseApiController;
 use think\exception\HttpResponseException;
 use app\api\logic\device\TaskLogic;
 use app\api\lists\device\TaskLists;
+use app\api\validate\device\TaskValidate;
 
 /**
  * TaskController
@@ -26,6 +27,20 @@ class TaskController extends BaseApiController
         return $this->dataLists(new TaskLists());
     }
 
+    public function check()
+    {
+        try {
+            $params = (new TaskValidate())->post()->goCheck('check');
+            $result = TaskLogic::check($params);
+            if ($result) {
+                return $this->success(data: TaskLogic::getReturnData());
+            }
+            return $this->fail(TaskLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
     public function cron()
     {
         try {
@@ -33,7 +48,8 @@ class TaskController extends BaseApiController
 
         } catch (\Throwable $th) {
             //throw $th;
-            print_r($th->__toString());die;
+            print_r($th->__toString());
+            die;
         }
     }
 }

@@ -13,6 +13,7 @@
     "video-preview": "../../../../components/video-preview/video-preview",
     "number-pop": "../../components/number-pop/number-pop",
     "choose-history": "../../components/choose-history/choose-history",
-    "keywords-edit": "../../components/keywords-edit/keywords-edit"
+    "keywords-edit": "../../components/keywords-edit/keywords-edit",
+    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog"
   }
 }

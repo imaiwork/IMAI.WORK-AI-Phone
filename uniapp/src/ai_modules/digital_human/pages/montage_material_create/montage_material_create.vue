@@ -700,6 +700,7 @@ const {
     uploadMaterialList: uploadAudioMaterialList,
 } = useUpload({
     count: 1,
+    isFetchVideoInfo: true,
     fileAccept: ["mp3", "wav", "m4a", "MP3", "WAV", "M4A"],
     fileSize: 100,
     onSuccess: async (res: any) => {

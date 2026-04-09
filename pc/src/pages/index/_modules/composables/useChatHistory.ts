@@ -79,7 +79,6 @@ export function useChatHistory() {
      * @param initialMessage - 初始消息内容（可选）
      */
     const createNewSession = (initialMessage?: string) => {
-        if (!taskId.value) return;
         // 清空当前聊天状态
         stopStream();
         chatStore.clearChat();

@@ -61,18 +61,6 @@ if ($step == 4) {
 
 if ($step == 5) {
     $post = $_SESSION['install_data']; // 获取 Session
-
-    $host = $_SERVER['HTTP_HOST'];
-
-    // 幂等控制：防止用户在第5步不断刷新导致重复发送Webhook消息
-    $webhookLockFile = $modelInstall->getAppRoot() . '/install_webhook.lock';
-    if (!file_exists($webhookLockFile)) {
-        // 异步推送企微通知任务派发
-        \app\common\service\ToolsService::Notify()->dispatchWebhookAsync($host, $post['mobile'] ?? '');
-
-        // 生成锁文件，标记Webhook已经成功触发过一次
-        file_put_contents($webhookLockFile, time());
-    }
 }
 
 // 判断是否 HTTPS

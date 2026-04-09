@@ -274,7 +274,7 @@ class DeviceLogic extends ApiLogic
             self::$returnData['auto_setting'] = $setting;
             self::$returnData['task_status'] = $task_status;
             self::$returnData['is_config'] = $is_config;
-            self::$returnData['accounts'] = SvAccount::field('id,account,type')->where('type', '<>', 1)->where('user_id', self::$uid)->where('device_code', $params['device_code'])->select();
+            self::$returnData['accounts'] = SvAccount::field('id,account,type')->where('user_id', self::$uid)->where('device_code', $params['device_code'])->select();
             return true;
         } catch (\Throwable $th) {
             self::setError($th->getMessage());
@@ -806,6 +806,7 @@ class DeviceLogic extends ApiLogic
             ->where('id', $task->sub_data_id)
             ->where('device_code', '=', $task->device_code)
             ->where('wechat_id', $task->account)
+            ->where('send_status', 'in', [0, 1, 2])
             ->order('send_time desc')
             ->limit(1)
             ->findOrEmpty();

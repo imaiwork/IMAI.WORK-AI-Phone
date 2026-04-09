@@ -41,7 +41,7 @@ class DeviceHandler extends BaseMessageHandler
             $this->payload['code'] =  WorkerEnum::DEVICE_ERROR_CODE;
             $this->payload['type'] = 'error';
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }
@@ -292,15 +292,26 @@ class DeviceHandler extends BaseMessageHandler
                 $worker->uidConnections[$uid]->name =  'device:' . $payload['deviceId'];
                 $worker->uidConnections[$uid]->initial = 0;
                 $worker->uidConnections[$uid]->isMsgRunning = 0;
+                $worker->uidConnections[$uid]->lastHeartbeat = time();
 
                 $worker->devices[$payload['deviceId']] = $uid;
                 $worker->appType = $payload['appType'] ?? 3;
                 $this->service->getRedis()->set("xhs:device:" . $payload['deviceId'], $uid);
                 $this->service->getRedis()->set("xhs:device:" . $payload['deviceId'] . ":status", 'online');
+                $this->service->getRedis()->set("xhs:device:" . $payload['deviceId'] . ":onlinetime", date('Y-m-d H:i:s', time()));
                 $this->service->setWorker($worker);
                 $this->registerChannelListener($this->connection, $payload['deviceId']);
                 $this->setLog('设备绑定socket连接, 设备号:' . $payload['deviceId'] . ', uid:' . $uid . ', name:' . $worker->uidConnections[$uid]->name, 'device');
-                
+
+                $find = SvDevice::where('device_code', $payload['deviceId'])->findOrEmpty();
+                if (!$find->isEmpty()) {
+                    \app\api\logic\ApiLogic::sendNotice([
+                        'userId' => $find->user_id,
+                        'content' => $find->device_name,
+                        'status' => '重连'
+                    ], 'device');
+                }
+
 
                 $this->service->getRedis()->set("xhs:device:" . $payload['deviceId'] . ":taskStatus", json_encode([
                     'taskStatus' => 'standby',

@@ -202,7 +202,7 @@
                             </view>
                             <view class="flex flex-wrap gap-2 mt-[24rpx]">
                                 <view
-                                    v-for="(item, index) in formData.comment_filter_list"
+                                    v-for="(item, index) in displayedCommentFilterItems"
                                     :key="index"
                                     class="border border-solid border-[#E5E5E5] rounded-[20rpx] px-2 py-[12rpx] flex items-center gap-x-2 break-all"
                                     @click="handleCommentFilterEdit(index)">
@@ -213,11 +213,31 @@
                                         <u-icon name="close" color="#ffffff" size="16"></u-icon>
                                     </view>
                                 </view>
+
                                 <view
                                     class="border border-solid border-[#0065FB] rounded-[12rpx] px-[28rpx] py-[12rpx] flex items-center justify-center gap-x-1"
                                     @click="openCommentFilterEdit">
                                     <u-icon name="plus" color="#0065FB" size="20"></u-icon>
                                     <text class="text-primary font-medium">编辑</text>
+                                </view>
+                            </view>
+                            <view class="flex justify-center">
+                                <view
+                                    v-if="formData.comment_filter_list.length > commentFilterDefaultShowCount"
+                                    class="flex items-center justify-center py-2 gap-1"
+                                    @click="toggleCommentFilterExpand">
+                                    <text class="text-[26rpx] text-[#9CA3AF]">
+                                        {{
+                                            isCommentFilterExpanded
+                                                ? "收起"
+                                                : `查看全部 ${formData.comment_filter_list.length} 条`
+                                        }}
+                                    </text>
+                                    <u-icon
+                                        :name="isCommentFilterExpanded ? 'arrow-up' : 'arrow-down'"
+                                        color="#9CA3AF"
+                                        size="22">
+                                    </u-icon>
                                 </view>
                             </view>
                         </view>
@@ -259,7 +279,7 @@
 
                             <view class="flex flex-wrap gap-2 mt-[28rpx]">
                                 <view
-                                    v-for="(item, index) in formData.comment_content_list"
+                                    v-for="(item, index) in displayedCommentContentItems"
                                     :key="index"
                                     class="border border-solid border-[#E5E5E5] rounded-[20rpx] px-2 py-[12rpx] flex items-center gap-x-2 break-all"
                                     @click="handleEditCommentContent(index)">
@@ -270,12 +290,31 @@
                                         <u-icon name="close" color="#ffffff" size="16"></u-icon>
                                     </view>
                                 </view>
-                                <view
-                                    class="border border-solid border-[#0065FB] rounded-[12rpx] px-[28rpx] h-[60rpx] flex items-center justify-center"
-                                    @click="handleEditCommentContent(-1)">
-                                    <u-icon name="plus" color="#0065FB" size="20"></u-icon>
-                                    <text class="text-primary font-medium ml-1">添加</text>
+                                <view class="flex justify-center">
+                                    <view
+                                        class="border border-solid border-[#0065FB] rounded-[12rpx] px-[28rpx] h-[60rpx] flex items-center justify-center"
+                                        @click="handleEditCommentContent(-1)">
+                                        <u-icon name="plus" color="#0065FB" size="20"></u-icon>
+                                        <text class="text-primary font-medium ml-1">添加</text>
+                                    </view>
                                 </view>
+                            </view>
+                            <view
+                                v-if="formData.comment_content_list.length > commentContentDefaultShowCount"
+                                class="flex items-center justify-center py-2 gap-1"
+                                @click="toggleCommentContentExpand">
+                                <text class="text-[26rpx] text-[#9CA3AF]">
+                                    {{
+                                        isCommentContentExpanded
+                                            ? "收起"
+                                            : `查看全部 ${formData.comment_content_list.length} 条`
+                                    }}
+                                </text>
+                                <u-icon
+                                    :name="isCommentContentExpanded ? 'arrow-up' : 'arrow-down'"
+                                    color="#9CA3AF"
+                                    size="22">
+                                </u-icon>
                             </view>
                         </view>
                     </view>
@@ -317,7 +356,7 @@
                                         <view class="font-medium mb-[24rpx]">固定话术内容</view>
                                         <view class="flex flex-wrap gap-2">
                                             <view
-                                                v-for="(item, index) in formData.fixed_comment_list"
+                                                v-for="(item, index) in displayedFixedCommentItems"
                                                 :key="index"
                                                 class="border border-solid border-[#E5E5E5] rounded-[20rpx] px-2 py-[12rpx] flex items-center gap-x-2 break-all max-w-full"
                                                 @click="handleFixedCommentEdit(index)">
@@ -334,6 +373,23 @@
                                                 <u-icon name="plus" color="#0065FB" size="20"></u-icon>
                                                 <text class="text-primary font-medium">添加</text>
                                             </view>
+                                        </view>
+                                        <view
+                                            v-if="formData.fixed_comment_list.length > fixedCommentDefaultShowCount"
+                                            class="flex items-center justify-center py-2 gap-1"
+                                            @click="toggleFixedCommentExpand">
+                                            <text class="text-[26rpx] text-[#9CA3AF]">
+                                                {{
+                                                    isFixedCommentExpanded
+                                                        ? "收起"
+                                                        : `查看全部 ${formData.fixed_comment_list.length} 条`
+                                                }}
+                                            </text>
+                                            <u-icon
+                                                :name="isFixedCommentExpanded ? 'arrow-up' : 'arrow-down'"
+                                                color="#9CA3AF"
+                                                size="22">
+                                            </u-icon>
                                         </view>
                                     </view>
                                     <view v-else class="mt-4">
@@ -564,138 +620,148 @@
                 </template>
             </view>
         </view>
-    </view>
 
-    <u-popup v-model="commonPopup.show" mode="center" width="90%" :border-radius="20" @close="commonPopup.show = false">
-        <view class="p-4 bg-white rounded-[20rpx]">
-            <view class="text-[30rpx] font-medium text-center mt-2">{{ commonPopup.title }}</view>
-            <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
-                <u-input
-                    v-model="commonPopup.inputValue"
-                    placeholder="请输入"
-                    type="digit"
-                    placeholder-style="color: #0000004d; font-size: 26rpx;" />
-            </view>
-            <view class="flex items-center gap-x-5 mt-[56rpx]">
-                <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
-                    @click="commonPopup.show = false">
-                    取消
+        <u-popup
+            v-model="commonPopup.show"
+            mode="center"
+            width="90%"
+            :border-radius="20"
+            @close="commonPopup.show = false">
+            <view class="p-4 bg-white rounded-[20rpx]">
+                <view class="text-[30rpx] font-medium text-center mt-2">{{ commonPopup.title }}</view>
+                <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
+                    <u-input
+                        v-model="commonPopup.inputValue"
+                        placeholder="请输入"
+                        type="digit"
+                        placeholder-style="color: #0000004d; font-size: 26rpx;" />
                 </view>
-                <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
-                    @click="handleCommonPopupConfirm"
-                    >确定</view
-                >
+                <view class="flex items-center gap-x-5 mt-[56rpx]">
+                    <view
+                        class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
+                        @click="commonPopup.show = false">
+                        取消
+                    </view>
+                    <view
+                        class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
+                        @click="handleCommonPopupConfirm"
+                        >确定</view
+                    >
+                </view>
             </view>
-        </view>
-    </u-popup>
-    <region-form v-model="showRegionFormPopup" :region="formData.region" @confirm="handleRegionConfirm" />
-    <clue-gen-pop v-model="showClueGenPopup" @confirm="handleClueGenConfirm" />
-    <keywords-edit
-        ref="keywordsEditRef"
-        v-model="showKeywordsEdit"
-        :title="getKeywordsTitle"
-        @confirm="handleKeywordsEditConfirm" />
-    <comment-filter ref="commentFilterRef" v-model="showCommentFilterEdit" @confirm="handleCommentFilterConfirm" />
-    <confirm-dialog
-        v-model="showCreateTaskSuccessDialog"
-        center
-        confirm-text="确定"
-        content="创建成功，回到首页？"
-        :show-close="false"
-        @close="handleCreateTaskSuccess"
-        @confirm="handleCreateTaskSuccess" />
-    <choose-region v-model="showChooseRegionPopup" @confirm="handleChooseRegionConfirm" />
-    <choose-age ref="chooseAgeRef" v-model="showAgePopup" @confirm="handleAgeConfirm" />
-    <choose-comment-time
-        v-model="showCommentTimePopup"
-        :value="commentTimeType === 'content' ? formData.content_time_index : formData.comment_time_index"
-        :list="commentTimeList"
-        @confirm="handleCommentTimeConfirm" />
-    <popup-bottom
-        v-model="showHistoryIndustryPopup"
-        title="获客行业记录"
-        :is-disabled-touch="true"
-        @close="showHistoryIndustryPopup = false">
-        <template #content>
-            <view class="h-full">
-                <z-paging
-                    ref="industryHistoryPagingRef"
-                    v-model="historyIndustry"
-                    :fixed="false"
-                    @query="getIndustryHistory">
-                    <view class="flex flex-wrap gap-[20rpx] p-4">
-                        <view
-                            v-for="(item, index) in historyIndustry"
-                            :key="index"
-                            class="rounded-full px-[24rpx] relative py-[10rpx] shadow-[0_0_0_2rpx_#0000001a]"
-                            @click="handleSelectHistoryIndustry(item.keyword)">
-                            {{ item.keyword }}
+        </u-popup>
+        <region-form v-model="showRegionFormPopup" :region="formData.region" @confirm="handleRegionConfirm" />
+        <clue-gen-pop v-model="showClueGenPopup" @confirm="handleClueGenConfirm" />
+        <keywords-edit
+            ref="keywordsEditRef"
+            v-model="showKeywordsEdit"
+            :title="getKeywordsTitle"
+            @confirm="handleKeywordsEditConfirm" />
+        <comment-filter ref="commentFilterRef" v-model="showCommentFilterEdit" @confirm="handleCommentFilterConfirm" />
+        <confirm-dialog
+            v-model="showCreateTaskSuccessDialog"
+            center
+            confirm-text="确定"
+            content="创建成功，回到首页？"
+            :show-close="false"
+            @close="handleCreateTaskSuccess"
+            @confirm="handleCreateTaskSuccess" />
+        <choose-region v-model="showChooseRegionPopup" @confirm="handleChooseRegionConfirm" />
+        <choose-age ref="chooseAgeRef" v-model="showAgePopup" @confirm="handleAgeConfirm" />
+        <choose-comment-time
+            v-model="showCommentTimePopup"
+            :value="commentTimeType === 'content' ? formData.content_time_index : formData.comment_time_index"
+            :list="commentTimeList"
+            @confirm="handleCommentTimeConfirm" />
+        <popup-bottom
+            v-model="showHistoryIndustryPopup"
+            title="获客行业记录"
+            :is-disabled-touch="true"
+            @close="showHistoryIndustryPopup = false">
+            <template #content>
+                <view class="h-full">
+                    <z-paging
+                        ref="industryHistoryPagingRef"
+                        v-model="historyIndustry"
+                        :fixed="false"
+                        @query="getIndustryHistory">
+                        <view class="flex flex-wrap gap-[20rpx] p-4">
                             <view
-                                class="absolute right-[-10rpx] top-[-10rpx] w-[32rpx] h-[32rpx] flex items-center justify-center rounded-full bg-[#0000004d]"
-                                @click="handleDeleteHistoryIndustry(index)">
-                                <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                v-for="(item, index) in historyIndustry"
+                                :key="index"
+                                class="rounded-full px-[24rpx] relative py-[10rpx] shadow-[0_0_0_2rpx_#0000001a]"
+                                @click="handleSelectHistoryIndustry(item.keyword)">
+                                {{ item.keyword }}
+                                <view
+                                    class="absolute right-[-10rpx] top-[-10rpx] w-[32rpx] h-[32rpx] flex items-center justify-center rounded-full bg-[#0000004d]"
+                                    @click="handleDeleteHistoryIndustry(index)">
+                                    <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                </view>
+                            </view> </view
+                    ></z-paging>
+                </view>
+            </template>
+        </popup-bottom>
+        <popup-bottom v-model="showTemp" title="同城获客需知" custom-class="bg-[#F3F3F3]">
+            <template #content>
+                <scroll-view scroll-y class="h-full">
+                    <view class="p-4">
+                        <view class="text-[30rpx] text-[#000000]/70 font-medium">
+                            为保证某音平台的同城功能顺畅运行，需将【所在城市】放置推荐的左侧
+                        </view>
+                        <view class="bg-white rounded-[20rpx] p-[38rpx] mt-[50rpx]">
+                            <view class="flex items-center gap-x-2">
+                                <view
+                                    class="w-[40rpx] h-[40rpx] flex items-center justify-center rounded-full bg-primary text-white font-medium text-[30rpx]"
+                                    >1</view
+                                >
+                                <view class="text-[30rpx] font-medium text-[#000000]/90"
+                                    >在AI手机中打开某音平台，长按上方频道</view
+                                >
                             </view>
-                        </view> </view
-                ></z-paging>
-            </view>
-        </template>
-    </popup-bottom>
-    <popup-bottom v-model="showTemp" title="同城获客需知" custom-class="bg-[#F3F3F3]">
-        <template #content>
-            <scroll-view scroll-y class="h-full">
-                <view class="p-4">
-                    <view class="text-[30rpx] text-[#000000]/70 font-medium">
-                        为保证某音平台的同城功能顺畅运行，需将【所在城市】放置推荐的左侧
-                    </view>
-                    <view class="bg-white rounded-[20rpx] p-[38rpx] mt-[50rpx]">
-                        <view class="flex items-center gap-x-2">
-                            <view
-                                class="w-[40rpx] h-[40rpx] flex items-center justify-center rounded-full bg-primary text-white font-medium text-[30rpx]"
-                                >1</view
-                            >
-                            <view class="text-[30rpx] font-medium text-[#000000]/90"
-                                >在AI手机中打开某音平台，长按上方频道</view
-                            >
+                            <image
+                                src="@/ai_modules/device/static/images/common/closure_step1.png"
+                                mode="widthFix"
+                                class="w-full mt-[50rpx]"></image>
                         </view>
-                        <image
-                            src="@/ai_modules/device/static/images/common/closure_step1.png"
-                            mode="widthFix"
-                            class="w-full mt-[50rpx]"></image>
-                    </view>
-                    <view class="bg-white rounded-[20rpx] p-[38rpx] mt-[50rpx]">
-                        <view class="flex items-center gap-x-2">
-                            <view
-                                class="w-[40rpx] h-[40rpx] flex items-center justify-center rounded-full bg-primary text-white font-medium text-[30rpx]"
-                                >2</view
-                            >
-                            <view class="text-[30rpx] font-medium text-[#000000]/90"
-                                >将所在城市拖放到置顶（推荐的下方）</view
-                            >
+                        <view class="bg-white rounded-[20rpx] p-[38rpx] mt-[50rpx]">
+                            <view class="flex items-center gap-x-2">
+                                <view
+                                    class="w-[40rpx] h-[40rpx] flex items-center justify-center rounded-full bg-primary text-white font-medium text-[30rpx]"
+                                    >2</view
+                                >
+                                <view class="text-[30rpx] font-medium text-[#000000]/90"
+                                    >将所在城市拖放到置顶（推荐的下方）</view
+                                >
+                            </view>
+                            <image
+                                src="@/ai_modules/device/static/images/common/closure_step2.png"
+                                mode="widthFix"
+                                class="w-full mt-[50rpx]"></image>
                         </view>
-                        <image
-                            src="@/ai_modules/device/static/images/common/closure_step2.png"
-                            mode="widthFix"
-                            class="w-full mt-[50rpx]"></image>
                     </view>
-                </view>
-            </scroll-view>
-        </template>
-    </popup-bottom>
+                </scroll-view>
+            </template>
+        </popup-bottom>
+        <task-conflict-dialog
+            v-if="showTaskMsgPop"
+            v-model="showTaskMsgPop"
+            :messages="taskMsgPopContent"
+            @close="showTaskMsgPop = false"
+            @confirm="handleTaskMsgPopConfirm" />
+    </view>
 </template>
 
 <script setup lang="ts">
 import WechatOA from "@/utils/wechat";
 import {
     createClosureTask,
-    createInteractionTask,
     getClosureIndustryHistory,
     deleteClosureIndustryHistory,
     getTaskClosureIndustryHistory,
+    checkTaskPublishTime,
 } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
-import { useAppStore } from "@/stores/app";
 import { ListenerTypeEnum, CreateTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import ClueGenPop from "@/ai_modules/device/components/clue-gen-pop/clue-gen-pop.vue";
@@ -706,15 +772,17 @@ import ChooseRegion from "@/ai_modules/device/components/choose-region/choose-re
 import ChooseAge from "@/ai_modules/device/components/choose-age/choose-age.vue";
 import ChooseCommentTime from "@/ai_modules/device/components/choose-comment-time/choose-comment-time.vue";
 import RegionForm from "@/ai_modules/device/components/region-form/region-form.vue";
+import TaskConflictDialog from "@/ai_modules/device/components/task-conflict-dialog/task-conflict-dialog.vue";
 
 const { on } = useEventBusManager();
-const appStore = useAppStore();
 
 const createType = ref<CreateTypeEnum>(CreateTypeEnum.COMMENT_MARKETING);
 const step = ref(1);
 const commentIndex = ref(0);
 const currentFrequency = ref(0);
 const taskErrorMsg = ref<string>("");
+const showTaskMsgPop = ref(false);
+const taskMsgPopContent = ref<string[]>([]);
 
 const steps = ref([
     { step: 1, title: "选择行业" },
@@ -750,6 +818,9 @@ const formData = reactive<{
     custom_date: string[];
     time_config: string[];
     comment_type: number;
+    task_exec_type: number;
+    minutes: number;
+    task_ids: string[];
 }>({
     name: "",
     region: "",
@@ -780,6 +851,9 @@ const formData = reactive<{
         uni.$u.timeFormat(new Date(new Date().getTime() + 30 * 60 * 1000), "hh:MM"),
     ],
     comment_type: 1,
+    task_exec_type: 1,
+    minutes: 30,
+    task_ids: [],
 });
 
 const showTemp = ref(false);
@@ -1222,28 +1296,10 @@ const handleEditCommentAccountFeature = () => {
     });
 };
 
-const handleCreateTask = async () => {
-    // 表单验证
-    if (!formData.name) {
-        uni.$u.toast("请输入任务名称");
-        return;
-    }
-    if (!formData.accounts.length) {
-        uni.$u.toast("请选择发布账号");
-        return;
-    }
-    if (currentFrequency.value === 5 && !formData.custom_date.length) {
-        uni.$u.toast("请选择任务日期");
-        return;
-    }
-    if (!formData.time_config[0] || !formData.time_config[1]) {
-        uni.$u.toast("请选择任务时间");
-        return;
-    }
-
+const executeCreateTask = async () => {
     uni.showLoading({ title: "创建中...", mask: true });
-
     try {
+        // 构建提交参数
         const params = {
             name: formData.name,
             accounts: formData.accounts,
@@ -1271,6 +1327,9 @@ const handleCreateTask = async () => {
             comment_publish_day: formData.comment_time,
             ip_address: formData.comment_region,
             marker_method: getTouchTypeList.value.filter((item) => item.checked).map((item) => item.name),
+            task_exec_type: formData.task_exec_type,
+            minutes: formData.minutes,
+            task_ids: formData.task_ids,
         };
 
         await createClosureTask(params);
@@ -1278,16 +1337,14 @@ const handleCreateTask = async () => {
         showCreateTaskSuccessDialog.value = true;
         WechatOA.notify();
     } catch (error: any) {
-        taskErrorMsg.value = error;
         uni.hideLoading();
-
         if (error.indexOf("24小时自动执行任务") > -1) {
             uni.showModal({
                 title: "提示",
                 content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
                 success: (res) => {
                     if (res.confirm) {
-                        uni.$u.route({ url: "/pages/phone/phone" });
+                        uni.$u.route({ url: "/ai_modules/device/pages/index/index" });
                     }
                 },
             });
@@ -1298,9 +1355,54 @@ const handleCreateTask = async () => {
     }
 };
 
+const handleCreateTask = async () => {
+    if (!formData.name) return uni.$u.toast("请输入任务名称");
+    if (formData.accounts.length === 0) return uni.$u.toast("请选择账号");
+    if (formData.task_exec_type === 0) {
+        if (!formData.time_config[0] || !formData.time_config[1]) {
+            return uni.$u.toast("请设置每日执行时间");
+        }
+    }
+    if (formData.task_exec_type == 1) {
+        if (formData.minutes < 1) return uni.$u.toast("执行时间不能小于1分钟");
+        if (formData.minutes > 9999) return uni.$u.toast("执行时间不能超过9999分钟");
+    }
+
+    if (formData.task_exec_type === 1) {
+        uni.showLoading({ title: "检测冲突中...", mask: true });
+        try {
+            const { messages, task_ids } = await checkTaskPublishTime({
+                accounts: formData.accounts,
+                minutes: formData.minutes,
+            });
+
+            uni.hideLoading();
+
+            if (messages && messages.length > 0) {
+                taskMsgPopContent.value = messages;
+                formData.task_ids = task_ids;
+                showTaskMsgPop.value = true;
+                return;
+            }
+
+            await executeCreateTask();
+        } catch (error: any) {
+            uni.hideLoading();
+            taskErrorMsg.value = error;
+            uni.$u.toast(error);
+        }
+    } else {
+        await executeCreateTask();
+    }
+};
+
+const handleTaskMsgPopConfirm = async () => {
+    await executeCreateTask();
+};
+
 const handleCreateTaskSuccess = () => {
     uni.$u.route({
-        url: "/pages/phone/phone",
+        url: "/ai_modules/device/pages/index/index",
         type: "reLaunch",
     });
     showCreateTaskSuccessDialog.value = false;
@@ -1396,6 +1498,42 @@ onLoad((options: any) => {
     getIndustryHistory(1, 10);
     getClosureCommonHistory();
 });
+
+// 新增部分：评论过滤词展开/收起逻辑
+const commentFilterDefaultShowCount = 2;
+const isCommentFilterExpanded = ref(false);
+const displayedCommentFilterItems = computed(() =>
+    isCommentFilterExpanded.value
+        ? formData.comment_filter_list
+        : formData.comment_filter_list.slice(0, commentFilterDefaultShowCount)
+);
+const toggleCommentFilterExpand = () => {
+    isCommentFilterExpanded.value = !isCommentFilterExpanded.value;
+};
+
+// 新增部分：触达方式和话术展开/收起逻辑
+const commentContentDefaultShowCount = 2;
+const isCommentContentExpanded = ref(false);
+const displayedCommentContentItems = computed(() =>
+    isCommentContentExpanded.value
+        ? formData.comment_content_list
+        : formData.comment_content_list.slice(0, commentContentDefaultShowCount)
+);
+const toggleCommentContentExpand = () => {
+    isCommentContentExpanded.value = !isCommentContentExpanded.value;
+};
+
+// 新增部分：固定话术展开/收起逻辑
+const fixedCommentDefaultShowCount = 2;
+const isFixedCommentExpanded = ref(false);
+const displayedFixedCommentItems = computed(() =>
+    isFixedCommentExpanded.value
+        ? formData.fixed_comment_list
+        : formData.fixed_comment_list.slice(0, fixedCommentDefaultShowCount)
+);
+const toggleFixedCommentExpand = () => {
+    isFixedCommentExpanded.value = !isFixedCommentExpanded.value;
+};
 </script>
 <style lang="scss" scoped>
 .tab-slider {

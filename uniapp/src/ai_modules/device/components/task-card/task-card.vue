@@ -1,108 +1,113 @@
 <template>
     <view
-        class="rounded-[20rpx] px-5 py-[26rpx] relative"
-        :class="getCardStyle(item.status).bgColor"
+        class="relative flex items-stretch bg-white rounded-[20rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06)] mb-[20rpx]"
         @click="handleClick">
-        <view
-            class="absolute left-0 top-[50%] h-[52rpx] w-[6rpx] rounded-full"
-            :class="getCardStyle(item.status).lineColor"
-            style="transform: translateY(-50%)"></view>
-        <view class="flex items-center gap-x-2">
-            <view class="flex-1">
-                <view class="flex items-center gap-x-2">
-                    <view class="line-clamp-1 text-[30rpx] font-medium break-all">
-                        {{ item.name }}
-                    </view>
-                    <view class="p-1" @click.stop="handleEditName(item)">
-                        <image src="/static/images/icons/edit_pen.svg" class="w-4 h-4" />
-                    </view>
-                </view>
-                <view class="mt-[12rpx] flex items-center gap-x-1">
-                    <image src="@/ai_modules/device/static/icons/task.svg" class="w-[32rpx] h-[32rpx]"></image>
-                    <text class="text-[#00000066] text-xs"
-                        >{{ item.task_category }}({{ item.auto_type === 0 ? "手动" : "24h任务" }})
-                    </text>
-                </view>
-            </view>
-            <view class="flex-shrink-0 text-right">
-                <view
-                    class="px-[12rpx] py-[6rpx] rounded-[12rpx] text-[22rpx]"
-                    :class="getCardStyle(item.status).textColor"
-                    >{{ getTaskStatusText(item.status) }}</view
-                >
+        <view class="w-[8rpx] flex-shrink-0" :class="cardStyle.bar" />
+
+        <view class="flex items-center justify-center px-[24rpx] py-[28rpx]">
+            <view class="w-[72rpx] h-[72rpx] rounded-full flex items-center justify-center" :class="cardStyle.iconBg">
+                <u-icon
+                    :name="cardStyle.icon"
+                    :color="cardStyle.iconColor"
+                    size="44"
+                    :class="item.status === 1 ? 'animate-spin' : ''" />
             </view>
         </view>
-        <view class="text-[20rpx] text-[#FF2442] break-all mt-2" v-if="[3, 4].includes(item.status)">
-            失败原因：({{ item.remark }})
+
+        <view class="flex-1 min-w-0 py-[24rpx] pr-[24rpx]">
+            <view class="flex items-center justify-between mb-[8rpx]">
+                <text class="text-[24rpx] text-[#9CA3AF]">{{ item.start_time }} - {{ item.end_time }}</text>
+                <view class="rounded-full px-[18rpx] py-[6rpx]" :class="cardStyle.tagBg">
+                    <text class="text-xs font-semibold" :class="cardStyle.tagText">{{ statusText }}</text>
+                </view>
+            </view>
+
+            <view class="flex items-center gap-[10rpx] mb-[8rpx]">
+                <text class="text-[30rpx] font-bold text-[#111827] truncate flex-1">{{ item.name }}</text>
+                <view
+                    class="flex-shrink-0 w-[44rpx] h-[44rpx] flex items-center justify-center"
+                    @click.stop="handleEditName(item)">
+                    <u-icon name="edit-pen" color="#9CA3AF" size="28" />
+                </view>
+            </view>
+
+            <text class="text-[24rpx] text-[#9CA3AF]">{{ item.task_category }}</text>
+
+            <view v-if="[3, 4].includes(item.status)" class="flex items-center gap-[8rpx] mt-[12rpx]">
+                <u-icon name="info-circle" :color="cardStyle.iconColor" size="24" />
+                <text class="text-xs break-all" :class="cardStyle.tagText">
+                    失败原因：{{ item.remark || "任务执行超时" }}
+                </text>
+            </view>
         </view>
     </view>
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
-    item: any;
-}>();
-
+const props = defineProps<{ item: any }>();
 const emit = defineEmits<{
     (e: "click"): void;
     (e: "edit-name", item: any): void;
 }>();
 
-const getTaskStatusText = (status: number) => {
-    switch (status) {
-        case 0:
-            return "等待中";
-        case 1:
-            return "执行中";
-        case 2:
-            return "执行完成";
-        case 3:
-            return "执行失败";
-        case 4:
-            return "中断";
-        default:
-            return "-";
-    }
-};
+const statusText = computed(() => {
+    const map: Record<number, string> = {
+        0: "待开始",
+        1: "执行中",
+        2: "已完成",
+        3: "执行失败",
+        4: "已中断",
+    };
+    return map[props.item.status] ?? "-";
+});
 
-const getCardStyle = (status: number) => {
-    switch (status) {
-        case 0:
-        case 1:
-            return {
-                bgColor: "bg-[rgba(0,101,251,0.04)]",
-                textColor: "text-primary",
-                lineColor: "bg-primary",
-            };
-        case 2:
-            return {
-                bgColor: "bg-[rgba(0,192,142,0.1)]",
-                textColor: "text-[#00C08E]",
-                lineColor: "bg-[#00C08E]",
-            };
-        case 3:
-        case 4:
-            return {
-                bgColor: "bg-[rgba(255,36,36,0.1)]",
-                textColor: "text-[#FF2442]",
-                lineColor: "bg-[#FF2442]",
-            };
-        default:
-            return {
-                bgColor: "bg-[rgba(0,0,0,0.05)]",
-                textColor: "text-[rgba(0,0,0,0.5)]",
-                lineColor: "bg-[rgba(0,0,0,0.05)]",
-            };
-    }
-};
+const cardStyle = computed(() => {
+    const s = props.item.status;
 
-const handleEditName = (item: any) => {
-    emit("edit-name", item);
-};
+    // 执行中
+    if (s === 1)
+        return {
+            bar: "bg-primary",
+            iconBg: "bg-[#EBF2FF]",
+            icon: "reload",
+            iconColor: "#0065fb",
+            tagBg: "bg-[#EBF2FF]",
+            tagText: "text-primary",
+        };
 
-const handleClick = () => {
-    emit("click");
-};
+    // 已完成
+    if (s === 2)
+        return {
+            bar: "bg-[#00C48C]",
+            iconBg: "bg-[#E6FAF5]",
+            icon: "checkmark-circle-fill",
+            iconColor: "#00A376",
+            tagBg: "bg-[#E6FAF5]",
+            tagText: "text-[#00A376]",
+        };
+
+    // 失败 / 中断
+    if (s === 3 || s === 4)
+        return {
+            bar: "bg-[#E8002D]",
+            iconBg: "bg-[#FFF0F2]",
+            icon: "warning",
+            iconColor: "#E8002D",
+            tagBg: "bg-[#FFF0F2]",
+            tagText: "text-[#E8002D]",
+        };
+
+    // 待开始（默认）
+    return {
+        bar: "bg-[#D1D5DB]",
+        iconBg: "bg-[#F3F4F6]",
+        icon: "clock",
+        iconColor: "#9CA3AF",
+        tagBg: "bg-[#F3F4F6]",
+        tagText: "text-[#9CA3AF]",
+    };
+});
+
+const handleEditName = (item: any) => emit("edit-name", item);
+const handleClick = () => emit("click");
 </script>
-
-<style scoped></style>

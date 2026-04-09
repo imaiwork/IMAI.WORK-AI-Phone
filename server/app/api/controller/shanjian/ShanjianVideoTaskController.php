@@ -2,6 +2,7 @@
 
 namespace app\api\controller\shanjian;
 
+use app\adminapi\lists\shanjian\ShanjianVideoTaskLists;
 use app\api\controller\BaseApiController;
 use app\api\logic\shanjian\ShanjianVideoTaskLogic;
 use app\api\validate\shanjian\ShanjianVideoTaskValidate;
@@ -74,10 +75,9 @@ class ShanjianVideoTaskController extends BaseApiController
             if ($lock) {
                 return $this->fail('任务正在处理中，请勿重复请求');
             }
-            cache($lockKey, 1, 300);
-
+            cache($lockKey, 1, 600);
             $result = ShanjianVideoTaskLogic::notify($data);
-            cache($lockKey, null);
+            cache($lockKey, 1, 6);
             
             if (!$result) {
                 return $this->fail(ShanjianVideoTaskLogic::getError());
@@ -85,10 +85,8 @@ class ShanjianVideoTaskController extends BaseApiController
 
             return $this->success('ok');
         } catch (\Exception $e) {
+            cache($lockKey, null);
             Log::channel('shanjiannotice')->write('闪剪回调失败'.$e->getMessage());
-            if (!empty($lockKey)) {
-                cache($lockKey, null);
-            }
             return $this->fail('fail');
         }
     }
@@ -97,6 +95,14 @@ class ShanjianVideoTaskController extends BaseApiController
     public function copywriting(){
         $params = $this->request->post();
         return ShanjianVideoTaskLogic::copywriting($params) ? $this->data(ShanjianVideoTaskLogic::getReturnData()) : $this->fail(ShanjianVideoTaskLogic::getError());
+    }
+
+    /**
+     * 获取视频任务列表
+     */
+     public function lists()
+    {
+        return $this->dataLists(new ShanjianVideoTaskLists());
     }
 
 

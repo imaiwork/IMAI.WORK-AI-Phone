@@ -150,14 +150,9 @@ export const useUpload = (options: Options) => {
             return;
         }
         try {
-            await uploadImageFn(file.thumbTempFilePath);
             await uploadVideo(file.tempFilePath);
-            if (isTranscode && uploadResult.url) {
-                videoTranscoding(uploadResult.url);
-            }
             onSuccess?.(uploadResult);
         } catch (error: any) {
-            console.log(error);
             if (
                 error.errMsg &&
                 error.errMsg === "chooseMedia:fail api scope is not declared in the privacy agreement"
@@ -175,24 +170,25 @@ export const useUpload = (options: Options) => {
     };
 
     const uploadVideo = async (file: string) => {
-        const { uri }: any = await uploadFile(
+        const { uri, thumbnail_path, width, height }: any = await uploadFile(
             "video",
             {
                 filePath: file,
+                formData: {
+                    generate_thumbnail: 1,
+                    fetch_video_info: 1,
+                },
             },
             (e) => {
                 onProgress?.({ type: "video", progress: e });
             }
         );
         uploadResult.url = uri;
+        uploadResult.pic = thumbnail_path;
+        uploadResult.width = width || uploadResult.width;
+        uploadResult.height = height || uploadResult.height;
     };
 
-    const uploadImageFn = async (file: string) => {
-        const { uri }: any = await uploadFile("image", { filePath: file }, (e) => {
-            onProgress?.({ type: "image", progress: e });
-        });
-        uploadResult.pic = uri;
-    };
     return {
         upload,
         uploadResult,

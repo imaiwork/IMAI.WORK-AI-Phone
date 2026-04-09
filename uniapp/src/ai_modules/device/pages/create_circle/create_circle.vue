@@ -152,6 +152,8 @@ const handleSetup = (index?: any) => {
         url: "/ai_modules/device/pages/setting_circle_interact/setting_circle_interact",
         params: {
             data: editIndex.value > -1 ? JSON.stringify(params) : "",
+            index: editIndex.value,
+            circleList: JSON.stringify(circleList.value),
         },
     });
 };
@@ -190,12 +192,10 @@ const getFormattedTimeStr = (timeConfig: any) => {
 // 验证任务是否存在时间冲突
 const validateTaskTimeConflict = () => {
     const compareList = circleList.value.map((item, index) => {
-        // 清除旧错误
         delete item.error;
 
         let startStr = "",
             endStr = "";
-
         if (Array.isArray(item.time_config)) {
             startStr = item.time_config[0];
             endStr = item.time_config[1];
@@ -204,12 +204,13 @@ const validateTaskTimeConflict = () => {
         }
 
         return {
-            index: index,
+            index,
             originalItem: item,
             start: parseTimeMinutes(startStr),
             end: parseTimeMinutes(endStr),
             wechatIds: item.wechat_ids.map((id: any) => (typeof id === "object" ? id.account : id)),
             date: item.date,
+            task_exec_type: item.task_exec_type, // ✅ 新增：带入执行类型
         };
     });
 
@@ -220,6 +221,9 @@ const validateTaskTimeConflict = () => {
             const taskA = compareList[i];
             const taskB = compareList[j];
 
+            // ✅ 任意一方是即时执行，跳过时间冲突检测
+            if (taskA.task_exec_type === 1 || taskB.task_exec_type === 1) continue;
+
             if (taskA.date !== taskB.date) continue;
 
             const hasSharedAccount = taskA.wechatIds.some((id: string) => taskB.wechatIds.includes(id));
@@ -229,15 +233,14 @@ const validateTaskTimeConflict = () => {
                 hasConflict = true;
                 const itemA = circleList.value[taskA.index];
                 const itemB = circleList.value[taskB.index];
-
                 const nameA = getTaskName(itemA, taskA.index);
                 const nameB = getTaskName(itemB, taskB.index);
-
                 if (!itemA.error) itemA.error = `${nameA}与${nameB}存在时间冲突`;
                 if (!itemB.error) itemB.error = `${nameB}与${nameA}存在时间冲突`;
             }
         }
     }
+
     return hasConflict;
 };
 
@@ -250,7 +253,6 @@ const handleCreateTask = async () => {
     uni.showLoading({ title: "检查任务冲突...", mask: true });
 
     const hasConflict = validateTaskTimeConflict();
-
     if (hasConflict) {
         uni.hideLoading();
         circleList.value = [...circleList.value];
@@ -275,7 +277,10 @@ const handleCreateTask = async () => {
                 attachment_content: item.attachment_content.map((att: any) => att.url || att),
                 wechat_ids: wechatIdList,
                 date: item.date,
-                time_config: timeConfigStr, // 提交字符串格式
+                time_config: timeConfigStr,
+                task_exec_type: item.task_exec_type,
+                minutes: item.minutes,
+                task_ids: item.task_ids,
             });
         });
 
@@ -286,8 +291,23 @@ const handleCreateTask = async () => {
         results.forEach((result, index) => {
             if (result.status === "rejected") {
                 const failedItem = circleList.value[index];
-                failedItem.error = result.reason?.message || "创建失败";
+                failedItem.error = result.reason || "创建失败";
+
                 failedTasks.push(failedItem);
+                if (failedItem.error.indexOf("24小时自动执行任务") > -1) {
+                    uni.showModal({
+                        title: "提示",
+                        content:
+                            "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
+                        success: (res) => {
+                            if (res.confirm) {
+                                uni.$u.route({
+                                    url: "/ai_modules/device/pages/index/index",
+                                });
+                            }
+                        },
+                    });
+                }
             }
         });
 
@@ -307,31 +327,18 @@ const handleCreateTask = async () => {
         }
     } catch (error: any) {
         uni.hideLoading();
-        if (error.indexOf("24小时自动执行任务") > -1) {
-            uni.showModal({
-                title: "提示",
-                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
-                success: (res) => {
-                    if (res.confirm) {
-                        uni.$u.route({
-                            url: "/pages/phone/phone",
-                        });
-                    }
-                },
-            });
-        } else {
-            uni.showToast({
-                title: error,
-                icon: "none",
-                duration: 3000,
-            });
-        }
+
+        uni.showToast({
+            title: error,
+            icon: "none",
+            duration: 3000,
+        });
     }
 };
 
 const handleCreateTaskSuccess = () => {
     uni.$u.route({
-        url: "/pages/phone/phone",
+        url: "/ai_modules/device/pages/index/index",
         type: "reLaunch",
     });
     showCreateTaskSuccessDialog.value = false;

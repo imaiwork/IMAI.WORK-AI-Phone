@@ -1,27 +1,48 @@
 <template>
-    <view class="task-calendar-container">
-        <view class="task-calendar">
-            <view class="calendar-header">
-                <view class="header-left">
-                    <view class="month-year">{{ currentYear }}年 {{ currentMonth }}月</view>
-                    <view class="back-to-today" @click="backToToday(true)">今天</view>
-                </view>
-                <view class="arrow-group">
-                    <view class="arrow" @click="prevMonth">
-                        <view class="arrow-icon arrow-left"></view>
-                    </view>
-                    <view class="arrow" @click="nextMonth">
-                        <view class="arrow-icon arrow-right"></view>
-                    </view>
-                </view>
-            </view>
-            <view class="calendar-weekdays">
-                <view class="weekday" v-for="day in weekDays" :key="day">{{ day }}</view>
-            </view>
-            <view>
-                <view class="calendar-week" v-for="(week, weekIndex) in weeks" :key="weekIndex">
+    <view class="w-full">
+        <view class="bg-white px-[30rpx] py-[30rpx] shadow-[0_8rpx_24rpx_rgba(0,0,0,0.05)]">
+            <view class="flex items-center justify-between mb-[24rpx]">
+                <view class="flex items-center gap-[16rpx]">
+                    <view class="text-[32rpx] font-semibold text-[#111827]"
+                        >{{ currentYear }}年 {{ currentMonth }}月</view
+                    >
                     <view
-                        class="grid-item"
+                        class="text-[24rpx] text-[#0065fb] bg-[#ebf2ff] px-[16rpx] py-[4rpx] rounded-full"
+                        @click="backToToday(true)"
+                        >今天</view
+                    >
+                </view>
+                <view class="flex items-center gap-[8rpx]">
+                    <view
+                        class="w-[56rpx] h-[56rpx] rounded-full bg-[#f3f4f6] flex items-center justify-center active:bg-[#e5e7eb]"
+                        @click="prevMonth">
+                        <u-icon name="arrow-left" color="#6b7280" size="20" />
+                    </view>
+                    <view
+                        class="w-[56rpx] h-[56rpx] rounded-full bg-[#f3f4f6] flex items-center justify-center active:bg-[#e5e7eb]"
+                        @click="nextMonth">
+                        <u-icon name="arrow-right" color="#6b7280" size="20" />
+                    </view>
+                </view>
+            </view>
+
+            <view class="flex mb-[8rpx]">
+                <view
+                    class="flex-1 text-center text-[24rpx] text-[#9ca3af] py-[8rpx]"
+                    v-for="day in weekDays"
+                    :key="day"
+                    >{{ day }}</view
+                >
+            </view>
+
+            <view class="overflow-hidden transition-all duration-300 ease-in-out" :style="gridStyle">
+                <view
+                    class="flex"
+                    v-for="(week, weekIndex) in weeks"
+                    :key="weekIndex"
+                    v-show="isExpanded || weekIndex === activeWeekIndex">
+                    <view
+                        class="flex-1 flex items-center justify-center py-[10rpx]"
                         :class="{
                             'not-current-month': !day.isCurrentMonth,
                             selected: selectedDate.includes(day.date),
@@ -33,6 +54,12 @@
                         @click="selectDate(day)">
                         <view class="day-number">{{ day.day }}</view>
                     </view>
+                </view>
+            </view>
+
+            <view class="flex items-center justify-center pt-[16rpx] pb-[4rpx] active:opacity-60" @click="toggleExpand">
+                <view class="transition-transform duration-300" :class="isExpanded ? 'rotate-180' : 'rotate-0'">
+                    <u-icon name="arrow-down" color="#9CA3AF" size="24" />
                 </view>
             </view>
         </view>
@@ -77,6 +104,26 @@ const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
 const selectedDate = ref<string[]>([]);
 
+const isExpanded = ref(false);
+
+const ROW_HEIGHT_PX = 42;
+
+const gridStyle = computed(() => {
+    const visibleRows = isExpanded.value ? weeks.value.length : 1;
+    return { maxHeight: `${visibleRows * ROW_HEIGHT_PX}px` };
+});
+
+const activeWeekIndex = computed(() => {
+    const target =
+        selectedDate.value[0] || toDateStr(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
+    const idx = weeks.value.findIndex((week) => week.some((d) => d.date === target));
+    return idx >= 0 ? idx : 0;
+});
+
+const toggleExpand = () => {
+    isExpanded.value = !isExpanded.value;
+};
+
 const toDateStr = (year: number, month: number, day: number): string => {
     return `${year}-${month}-${day}`;
 };
@@ -98,7 +145,6 @@ watch(
         } else if (typeof newValue === "string" && newValue) {
             newSelected = [normalizeInputDate(newValue)];
         }
-
         if (JSON.stringify(selectedDate.value) !== JSON.stringify(newSelected)) {
             selectedDate.value = newSelected;
         }
@@ -122,7 +168,6 @@ const generateCalendar = (year: number, month: number) => {
 
     const firstDay = new Date(year, month - 1, 1).getDay();
     const daysInMonth = new Date(year, month, 0).getDate();
-
     const calendarDays: Day[] = [];
 
     const prevMonthEndDate = new Date(year, month - 1, 0);
@@ -133,27 +178,24 @@ const generateCalendar = (year: number, month: number) => {
         const day = prevMonthLastDay - i + 1;
         const dateStr = toDateStr(prevMonthYear, prevMonth, day);
         const dateObj = new Date(prevMonthYear, prevMonth - 1, day);
-        const isDisabledByMethod = props.disabledDateMethod(dateObj);
         calendarDays.push({
             date: dateStr,
-            day: day,
+            day,
             isCurrentMonth: false,
             isToday: false,
-            isDisabled: disabledDatesSet.value.has(dateStr) || isDisabledByMethod,
+            isDisabled: disabledDatesSet.value.has(dateStr) || props.disabledDateMethod(dateObj),
         });
     }
 
     for (let i = 1; i <= daysInMonth; i++) {
         const dateStr = toDateStr(year, month, i);
-        const isToday = dateStr === todayDate;
         const dateObj = new Date(year, month - 1, i);
-        const isDisabledByMethod = props.disabledDateMethod(dateObj);
         calendarDays.push({
             date: dateStr,
             day: i,
             isCurrentMonth: true,
-            isToday: isToday,
-            isDisabled: disabledDatesSet.value.has(dateStr) || isDisabledByMethod,
+            isToday: dateStr === todayDate,
+            isDisabled: disabledDatesSet.value.has(dateStr) || props.disabledDateMethod(dateObj),
         });
     }
 
@@ -166,13 +208,12 @@ const generateCalendar = (year: number, month: number) => {
         while (calendarDays.length < gridCells) {
             const dateStr = toDateStr(nextMonthYear, nextMonth, nextDay);
             const dateObj = new Date(nextMonthYear, nextMonth - 1, nextDay);
-            const isDisabledByMethod = props.disabledDateMethod(dateObj);
             calendarDays.push({
                 date: dateStr,
                 day: nextDay,
                 isCurrentMonth: false,
                 isToday: false,
-                isDisabled: disabledDatesSet.value.has(dateStr) || isDisabledByMethod,
+                isDisabled: disabledDatesSet.value.has(dateStr) || props.disabledDateMethod(dateObj),
             });
             nextDay++;
         }
@@ -250,23 +291,16 @@ const backToToday = (doSelect: boolean) => {
 const locateToDate = (date: string) => {
     const normalized = normalizeInputDate(date);
     const parts = normalized.split("-").map(Number);
-    if (parts.length < 3 || parts.some(isNaN)) {
-        return;
-    }
+    if (parts.length < 3 || parts.some(isNaN)) return;
     const [y, m, d] = parts;
     const dateObj = new Date(y, m - 1, d);
-    if (isNaN(dateObj.getTime())) {
-        return;
-    }
+    if (isNaN(dateObj.getTime())) return;
     currentYear.value = y;
     currentMonth.value = m;
     const dateStr = toDateStr(y, m, d);
 
     if (props.multiSelect) {
-        const index = selectedDate.value.indexOf(dateStr);
-        if (index === -1) {
-            selectedDate.value.push(dateStr);
-        }
+        if (!selectedDate.value.includes(dateStr)) selectedDate.value.push(dateStr);
         emit("update:modelValue", selectedDate.value.map(toOutputDate));
     } else {
         selectedDate.value = [dateStr];
@@ -279,17 +313,12 @@ const locateToDate = (date: string) => {
 
 const clearSelectedDates = () => {
     selectedDate.value = [];
-    if (props.multiSelect) {
-        emit("update:modelValue", []);
-    } else {
-        emit("update:modelValue", "");
-    }
-    emit("selectDate", props.multiSelect ? selectedDate.value : "");
+    emit("update:modelValue", props.multiSelect ? [] : "");
+    emit("selectDate", props.multiSelect ? [] : "");
 };
 
 const clearSingleSelectedDate = (dateToClear: string) => {
     if (!props.multiSelect) return;
-
     const normalized = normalizeInputDate(dateToClear);
     const index = selectedDate.value.indexOf(normalized);
     if (index > -1) {
@@ -299,15 +328,10 @@ const clearSingleSelectedDate = (dateToClear: string) => {
     }
 };
 
-defineExpose({
-    locateToDate,
-    clearSelectedDates,
-    clearSingleSelectedDate,
-});
+defineExpose({ locateToDate, clearSelectedDates, clearSingleSelectedDate });
 
 onMounted(() => {
     const today = new Date();
-
     if (selectedDate.value.length > 0) {
         const parts = selectedDate.value[0].split("-").map(Number);
         currentYear.value = parts[0];
@@ -320,11 +344,7 @@ onMounted(() => {
     if (selectedDate.value.length === 0 && props.isToday) {
         const todayStr = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
         selectedDate.value = [todayStr];
-        if (props.multiSelect) {
-            emit("update:modelValue", [toOutputDate(todayStr)]);
-        } else {
-            emit("update:modelValue", toOutputDate(todayStr));
-        }
+        emit("update:modelValue", props.multiSelect ? [toOutputDate(todayStr)] : toOutputDate(todayStr));
     }
 
     generateCalendar(currentYear.value, currentMonth.value);
@@ -332,103 +352,39 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.task-calendar {
-    @apply bg-white p-[30rpx] shadow-[0_8rpx_24rpx_rgba(0,0,0,0.05)];
-}
-
-.calendar-header {
-    @apply flex justify-between items-center mb-[20rpx];
-}
-
-.header-left {
-    @apply flex items-center;
-}
-
-.back-to-today {
-    @apply ml-[20rpx] px-[20rpx] py-[8rpx] bg-[#f0f2f5] text-[#606266] rounded-[30rpx] text-xs  cursor-pointer;
-}
-
-.month-year {
-    @apply text-[40rpx] font-semibold text-[#2c3e50];
-}
-
-.arrow-group {
-    @apply flex items-center;
-}
-
-.arrow {
-    @apply w-[60rpx] h-[60rpx] flex justify-center items-center cursor-pointer rounded-full;
-}
-
 .arrow-icon {
-    @apply w-[16rpx] h-[16rpx] border-solid border-[#2c3e50] border-r-[4rpx] border-b-[4rpx] border-t-0 border-l-0;
-}
+    @apply w-[16rpx] h-[16rpx] border-t-[3rpx] border-solid border-[#6b7280] border-r-[3rpx];
 
-.arrow-left {
-    transform: rotate(135deg);
-}
+    &.arrow-left {
+        transform: rotate(-135deg) translate(3rpx, -3rpx);
+    }
 
-.arrow-right {
-    transform: rotate(-45deg);
-}
-
-.calendar-weekdays {
-    @apply grid grid-cols-7 py-[20rpx] border-[0] border-b border-t border-solid border-[#00000008];
-}
-
-.weekday {
-    @apply text-center text-[18rpx] font-medium text-[#909399];
-}
-
-.calendar-week {
-    @apply grid grid-cols-7 gap-[10rpx] py-[10rpx];
-    border-bottom: 1rpx solid #00000008;
-}
-
-.calendar-week:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-.grid-item {
-    @apply relative flex justify-center items-center h-[80rpx] w-[80rpx] rounded-full;
+    &.arrow-right {
+        transform: rotate(45deg) translate(-3rpx, 3rpx);
+    }
 }
 
 .day-number {
-    @apply text-[30rpx] font-medium text-[#606266];
-}
-
-.not-current-month .day-number {
-    @apply text-[#c0c4cc];
+    @apply w-[64rpx] h-[64rpx] rounded-full flex items-center justify-center text-[28rpx] text-[#171717];
 }
 
 .today .day-number {
-    @apply text-primary font-semibold;
-}
-
-.today:before {
-    transform: translateX(-50%);
-    @apply content-[''] absolute bottom-[10rpx] left-1/2 w-[8rpx] h-[8rpx] rounded-full bg-primary;
-}
-
-.selected {
-    @apply bg-primary text-white;
+    @apply text-primary font-semibold border-[2rpx] border-solid border-primary;
 }
 
 .selected .day-number {
-    @apply text-white;
+    @apply bg-primary text-white font-semibold border-none;
 }
 
-.selected.today:before {
-    @apply bg-white;
+.not-current-month .day-number {
+    @apply text-[#d1d5db];
 }
 
-.grid-item.disabled {
-    @apply cursor-not-allowed bg-[transparent];
+.disabled .day-number {
+    @apply text-[#d1d5db];
 }
 
-.grid-item.disabled .day-number {
-    @apply text-[#c0c4cc] line-through;
+.selected.today .day-number {
+    @apply bg-primary text-white border-[none];
 }
 </style>

@@ -1,7 +1,7 @@
 <template>
-    <view class="flex flex-col items-center justify-center">
+    <view class="w-full flex flex-col items-center justify-center">
         <image src="/static/images/common/empty.png" :style="{ width: size + 'rpx', height: size + 'rpx' }"></image>
-        <text class="text-xs text-[#969EA9]">{{ text }}</text>
+        <text class="text-[22rpx] text-[#969EA9] max-w-[60%] text-center leading-[1.5]">{{ text }}</text>
     </view>
 </template>
 

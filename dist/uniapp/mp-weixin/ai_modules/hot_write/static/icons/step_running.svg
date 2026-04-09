@@ -1,0 +1,47 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="runBg" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#0066FF"/>
+    </linearGradient>
+    <linearGradient id="runBg2" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#93C5FD"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="18" cy="18" r="15" stroke="#BFDBFE" stroke-width="3" fill="none"/>
+
+  <g transform="rotate(-90 18 18)">
+    <circle cx="18" cy="18" r="15"
+      stroke="url(#runBg)" stroke-width="3" fill="none"
+      stroke-dasharray="47 47"
+      stroke-dashoffset="0"
+      stroke-linecap="round">
+      <animateTransform
+        attributeName="transform"
+        type="rotate"
+        from="0 18 18"
+        to="360 18 18"
+        dur="1.4s"
+        repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <circle cx="18" cy="18" r="15" stroke="#60A5FA" stroke-width="1.5" fill="none" opacity="0">
+    <animate attributeName="r" values="15;19;15" dur="1.8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.6;0;0.6" dur="1.8s" repeatCount="indefinite"/>
+    <animate attributeName="stroke-width" values="1.5;0.5;1.5" dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+
+  <circle cx="18" cy="18" r="5" fill="url(#runBg)">
+    <animate attributeName="r" values="5;6.2;5" dur="1.4s" repeatCount="indefinite"/>
+  </circle>
+
+  <circle cx="18" cy="18" r="5" fill="white" fill-opacity="0">
+    <animate attributeName="fill-opacity" values="0.35;0.1;0.35" dur="1.4s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="5;6.2;5" dur="1.4s" repeatCount="indefinite"/>
+  </circle>
+
+  <circle cx="18" cy="18" r="2" fill="white" opacity="0.9"/>
+</svg>

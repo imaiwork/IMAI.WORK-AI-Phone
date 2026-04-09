@@ -391,16 +391,15 @@ const handleUploadChange = async (res: any, type: "anchor" | "auth") => {
     }
     try {
         const { raw, response } = res;
-        const { uri } = response.data;
+        const { uri, thumbnail_path } = response.data;
         const { file, width, height } = await getVideoFirstFrame(uri);
-        const imageRes = await uploadImage({ file });
         if (type === "anchor") {
-            anchorData.pic = imageRes.uri;
+            anchorData.pic = thumbnail_path;
             anchorData.width = width;
             anchorData.height = height;
             anchorData.url = uri;
         } else {
-            authData.pic = imageRes.uri;
+            authData.pic = thumbnail_path;
             authData.width = width;
             authData.height = height;
             authData.url = uri;

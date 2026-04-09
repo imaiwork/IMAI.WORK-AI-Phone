@@ -116,7 +116,7 @@
                             </div>
                         </div>
 
-                        <div v-if="stepKey == StepKey.CONTENT" class="animate-in fade-in duration-500">
+                        <div v-show="stepKey == StepKey.CONTENT" class="animate-in fade-in duration-500">
                             <send-container
                                 ref="sendContainerRef"
                                 :type="PushTypeEnum.TASK"
@@ -194,9 +194,10 @@ const syncFormDataFromDetail = async (data: any) => {
     if (!data) return;
     setFormData(data, taskFormData);
     if (stepKey.value === StepKey.CONTENT) {
+        await nextTick();
         setTimeout(() => {
             sendContainerRef.value?.setFormData(data);
-        }, 100);
+        }, 300);
     }
 };
 
@@ -210,7 +211,7 @@ const fetchDetail = async (id: string | number) => {
             const timeLists = await sopPushContentTimeLists({ push_id: id });
             setTimeout(() => {
                 sendContainerRef.value?.setDateList(timeLists);
-            }, 150);
+            }, 300);
         }
         if (result.flow_id) {
             flowId.value = result.flow_id.map((item: any) => parseInt(item));

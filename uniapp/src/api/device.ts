@@ -17,7 +17,12 @@ export const getDeviceDetail = (data: any) => {
 
 // 更新设备
 export const updateDevice = (data: any) => {
-    return request.post({ url: "/device.device/update", data });
+    return request.post(
+        { url: "/device.device/update", data },
+        {
+            ignoreCancel: true,
+        }
+    );
 };
 
 // 解除设备绑定
@@ -408,4 +413,19 @@ export const updateAutoCircleInteractionTaskConfig = (data: Record<string, any>)
 // 24h朋友圈互动任务配置详情
 export const getAutoCircleInteractionTaskConfigDetail = (data: Record<string, any>) => {
     return request.get({ url: "/auto.likeReply/detail", data });
+};
+
+// 触达跟进
+export const getTaskTouchFollowList = (data: Record<string, any>) => {
+    return request.get({ url: "/sv.addWechat/lists", data });
+};
+
+// 任务发布时间校验
+export const checkTaskPublishTime = (data: Record<string, any>) => {
+    return request.post({ url: "/device.task/check", data });
+};
+
+// 设备移除人设
+export const removeDevicePersona = (data: Record<string, any>) => {
+    return request.post({ url: "/device.device/removePersona", data });
 };

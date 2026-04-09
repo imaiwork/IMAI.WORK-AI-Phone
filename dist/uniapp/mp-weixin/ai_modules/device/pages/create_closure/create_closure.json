@@ -21,6 +21,7 @@
     "choose-region": "../../components/choose-region/choose-region",
     "choose-age": "../../components/choose-age/choose-age",
     "choose-comment-time": "../../components/choose-comment-time/choose-comment-time",
-    "region-form": "../../components/region-form/region-form"
+    "region-form": "../../components/region-form/region-form",
+    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog"
   }
 }

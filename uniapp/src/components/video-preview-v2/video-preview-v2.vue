@@ -3,6 +3,7 @@
         <view class="grow min-h-0">
             <video-player
                 v-if="showPopup"
+                ref="videoPlayerRef"
                 show-close
                 :is-bar="isBar"
                 :border-radius="0"
@@ -53,6 +54,19 @@ const showPopup = computed({
         emit("update:show", val);
     },
 });
+
+const videoPlayerRef = ref<any>(null);
+
+watch(
+    () => props.show,
+    (newVal) => {
+        if (newVal) {
+            nextTick(() => {
+                videoPlayerRef.value.toggleVideo();
+            });
+        }
+    }
+);
 </script>
 
 <style scoped lang="scss">

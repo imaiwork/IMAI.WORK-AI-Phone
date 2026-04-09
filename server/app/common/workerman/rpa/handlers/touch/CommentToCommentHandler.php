@@ -53,7 +53,7 @@ class CommentToCommentHandler extends BaseMessageHandler
     private function recordComment(array $content)
     {
         try {
-            
+
 
             if ((int)$content['task_id'] == 0) {
                 return [
@@ -69,14 +69,14 @@ class CommentToCommentHandler extends BaseMessageHandler
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务不存在: ' . \think\facade\Db::getLastSql());
             }
 
-            TokenLogService::checkToken($task->user_id,'');
+            TokenLogService::checkToken($task->user_id, '');
 
             $setting = SvLeadScrapingSetting::where('id', $task->scraping_id)->findOrEmpty();
             if ($setting->isEmpty()) {
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务配置不存在');
             }
 
-            $hash = hash('sha256', $content['task_id'] . $content['author_name'] . $content['content']);
+            $hash = hash('sha256', $content['author_name'] . $content['content']);
 
             if ((int)$setting->is_execed_clues  === 1) {
                 $find = SvLeadScrapingRecord::where([
@@ -139,7 +139,7 @@ class CommentToCommentHandler extends BaseMessageHandler
                 'isProceed' => 1, //是否处理 1是 0 否
             ];
         } catch (\Exception $e) {
-            if($e->getCode() == 4059){
+            if ($e->getCode() == 4059) {
                 \app\common\model\sv\SvDeviceTask::where('sub_task_id', $content['task_id'])
                     ->where('source', \app\common\enum\DeviceEnum::TASK_SOURCE_TOUCH)
                     ->where('device_code', $this->payload['deviceId'])->update([

@@ -3,6 +3,7 @@
   "usingComponents": {
     "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
-    "base-setting": "../../components/base-setting/base-setting"
+    "base-setting": "../../components/base-setting/base-setting",
+    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog"
   }
 }

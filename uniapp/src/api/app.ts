@@ -31,6 +31,7 @@ export function uploadImage(file: any, data?: any, token?: string, onProgress?: 
         },
         {
             onProgress,
+            ignoreCancel: true,
         }
     );
 }
@@ -43,6 +44,7 @@ export function uploadFile(
     return request.uploadFile(
         { ...options, url: `/upload/${type}`, name: "file" },
         {
+            ignoreCancel: true,
             onProgress,
         }
     );
@@ -122,7 +124,17 @@ export function batchGetVideoInfoByUrl(data: any) {
     return request.post({ url: "/videoInfo/batchGetInfo", data });
 }
 
+// 获取视频缩略图
+export function getVideoThumbnail(data: any) {
+    return request.post({ url: "/videoInfo/thumbnail", data });
+}
+
 // 获取小程序通知模板列表
 export function getMnpNoticeTemplateList(data: any) {
     return request.get({ url: "/notice.notice/settingMnpLists", data });
+}
+
+// 首页统计
+export function getHomeDisplay() {
+    return request.get({ url: "/display/display" });
 }

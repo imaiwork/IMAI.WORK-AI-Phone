@@ -14,6 +14,7 @@ import sphIcon from "@/static/images/common/sph.png";
 import sphActiveIcon from "@/static/images/common/sph_s.png";
 
 interface PlatformInfo {
+    id?: string | number;
     icon: string;
     activeIcon: string;
     type: AppTypeEnum;
@@ -272,6 +273,7 @@ export const useDeviceStore = defineStore("device", {
                 const account = accountMap.get(platformItem.type) as any;
                 if (account) {
                     Object.assign(platformItem, {
+                        id: account.id,
                         active: true,
                         status: 2,
                         account: account.account,
@@ -283,6 +285,7 @@ export const useDeviceStore = defineStore("device", {
                     });
                 } else {
                     Object.assign(platformItem, {
+                        id: undefined,
                         active: false,
                         status: 0,
                         account: undefined,

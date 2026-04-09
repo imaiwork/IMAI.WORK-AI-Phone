@@ -212,6 +212,9 @@ class MessageHandler extends BaseMessageHandler
                 $this->sendErrorResponse($content, $this->payload['reply']);
                 return;
             }
+
+            
+
             //只解析文字消息中的微信号
             list($autoStatus, $autoStrategy) = $this->autoAddWechatOperation($content, $account);
             if ($autoStatus) {
@@ -236,6 +239,12 @@ class MessageHandler extends BaseMessageHandler
             //1 查询私信用户信息是否存在,不存在则创建,并讲私信消息记录
             $friend = $this->getFriendInfo($account, $content);
             $newMsgIds = $this->addMessage($account, $friend, $content);
+
+            //判断当前设备是否设置人设，以及私信次数，
+            if(!$this->checkSendCount($this->payload['deviceId'], $friend)){
+                return;
+            }
+
             //2 检查账号是否开启了ai,未开启则将消息推送到客户端
             if ($account->takeover_mode == 1) {
                 //3 开启了ai回复
@@ -720,6 +729,56 @@ class MessageHandler extends BaseMessageHandler
         }
     }
 
+    private function checkSendCount(string $deviceCode, SvAccountContact $friend)
+    {
+        try {
+            $device = SvDevice::where('device_code', $deviceCode)->where('auto_type', 1)->findOrEmpty();
+            if ($device->isEmpty()) {
+                $this->setLog("设备{$deviceCode}未开启24h，不做校验", 'msg');
+                return false;
+            }
+            if((int)$device->persona_id === 0){
+                $this->setLog("设备{$deviceCode}未设置人设", 'msg');
+                return false;
+            }
+
+            $persona = \app\common\model\aiPersona\AiPersona::where('id', $device->persona_id)->findOrEmpty();
+            if($persona->isEmpty()){
+                $this->setLog("人设{$device->persona_id}不存在,请先设置人设：" . Db::getLastSql(), 'msg');
+                return false;
+            }
+
+            $config = \app\common\model\aiPersona\AiPersonaTrafficConfig::where('persona_id', $device->persona_id)->findOrEmpty();
+            if($config->isEmpty()){
+                $this->setLog("人设{$device->persona_id}未设置获客截流配置,请先设置获客截流配置：" . Db::getLastSql(), 'msg');
+                return false;
+            }
+
+            if((int)$config->reply_number === 0){
+                $this->setLog("人设{$device->persona_id}最大发送次数不限制", 'msg');
+                return true;
+            }
+
+            $msgCount = SvPrivateMessage::where('device_code', $deviceCode)
+                ->where('type', $this->appType)
+                ->where('is_reply', 1)
+                ->where('author_name', $friend->nickname)
+                ->where('friend_id', $friend->friend_id)
+                ->where('reply_time', 'between', [date('Y-m-d 00:00:00', time()), date('Y-m-d 23:59:59', time())])
+                ->count();
+            if($msgCount >= (int)$config->reply_number){
+                $this->setLog("设备{$deviceCode}-人设{$device->persona_id}已发送{$msgCount}条消息,超过最大发送次数{$config->reply_number}", 'msg');
+                return false;
+            }
+            return true;
+
+        } catch (\Throwable $th) {
+            //throw $th;
+            $this->setLog("设备{$deviceCode}-人设{$device->persona_id}校验异常:" . $th->__toString(), 'msg');
+            return false;
+        }
+    }
+
     private function autoAddWechatOperation(array $payload, SvAccount $account)
     {
         try {
@@ -731,9 +790,7 @@ class MessageHandler extends BaseMessageHandler
             //     return;
             // }
 
-            $accountWechat = AiWechat::where('wechat_id', '=', function ($query) use ($account) {
-                $query->name('sv_account')->where('device_code', $account['device_code'])->where('type', 1)->where('user_id', $account['user_id'])->order('id', 'desc')->limit(1)->field('account');
-            })->where('user_id', $account['user_id'])->limit(1)->findOrEmpty();
+            $accountWechat = SvAccount::where('device_code', $account['device_code'])->where('type', 1)->where('user_id', $account['user_id'])->order('id', 'desc')->limit(1)->findOrEmpty();
             if ($accountWechat->isEmpty()) {
                 $this->setLog('账号未绑定微信,请先绑定微信:' . Db::getLastSql(), 'msg');
                 return [false, []];
@@ -757,7 +814,7 @@ class MessageHandler extends BaseMessageHandler
                 "account_type" => $account['type'],
                 "wechat_enable" => 1,
                 "wechat_reg_type" => 0,
-                "wechat_id" => $accountWechat['wechat_id'],
+                "wechat_id" => $accountWechat->account,
                 "remark" => '您好',
                 'after_reply' => '好的.老板稍等,马上加您'
             ];
@@ -821,6 +878,7 @@ class MessageHandler extends BaseMessageHandler
                             $record = [
                                 'user_id' => $account['user_id'],
                                 'device_code' => $account['device_code'],
+                                'channel' => (int)$account['type'] === 1 ? 2 : $account['type'],
                                 'account' => $account['account'],
                                 'account_type'  => $account['type'],
                                 'user_account' => $payload['replyName'],
@@ -1009,7 +1067,7 @@ class MessageHandler extends BaseMessageHandler
     {
         try {
             $nickname = $content['targetRecipient'] ?? $content['replyName'];
-            $friendId = isset($content['friendId']) ? $content['friendId'] : md5($account['user_id'] . $account['account'] . $account['device_code'] . $nickname);
+            $friendId = (isset($content['friendId']) && $content['friendId'] != '') ? $content['friendId'] : md5($account['user_id'] . $account['account'] . $account['device_code'] . $nickname);
             $friend = SvAccountContact::where('account', $account['account'])->where('account_type', $account['type'])->where('friend_id', $friendId)->limit(1)->find();
             if (empty($friend)) {
                 $friend = SvAccountContact::create([
@@ -1706,7 +1764,7 @@ class MessageHandler extends BaseMessageHandler
             $payload['type'] = 6;
             $this->setLog('sendErrorResponse', 'msg');
             $this->setLog($payload, 'msg');
-            $this->sendResponse($this->uid, $payload, $payload['reply']);
+            //$this->sendResponse($this->uid, $payload, $payload['reply']);
         } catch (\Exception $e) {
             $this->setLog('sendErrorResponse' . $e, 'error');
         }

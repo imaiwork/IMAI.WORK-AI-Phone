@@ -170,6 +170,7 @@ import MontageScanIcon from "@/ai_modules/digital_human/static/icons/scan.svg";
 import MaterialLibraryIcon from "@/ai_modules/digital_human/static/icons/material_library.svg";
 import ImageCreateIcon from "@/ai_modules/digital_human/static/icons/image_create.svg";
 import StoryboardIcon from "@/ai_modules/digital_human/static/icons/storyboard.svg";
+import HotWriteIcon from "@/ai_modules/digital_human/static/icons/video3.svg";
 import AnchorVideo from "@/ai_modules/digital_human/components/anchor-video/anchor-video.vue";
 
 enum MenuKey {
@@ -190,6 +191,7 @@ enum MenuKey {
     FRAGMENT_MIX = "fragment_mix",
     SCAN_PUBLISH_WORKS = "scan_publish_works",
     MONTAGE_MIX = "montage_mix",
+    HOT_WRITE = "hot_write",
 }
 
 const worksLists = ref<any[]>([]);
@@ -211,6 +213,7 @@ const utils_2 = [
     // { label: "爆款仿写", key: MenuKey.BOMB_COPY, icon: BombCopyIcon },
     // { label: "文案提取", key: MenuKey.TEXT_EXTRACT, icon: TextExtractIcon },
     { label: "扫码发布", key: MenuKey.SCAN_PUBLISH_WORKS, icon: MontageScanIcon },
+    { label: "爆款复刻", key: MenuKey.HOT_WRITE, icon: HotWriteIcon },
 ];
 
 const pageMap: Record<string, string | (() => void)> = {
@@ -230,6 +233,7 @@ const pageMap: Record<string, string | (() => void)> = {
     [MenuKey.IMAGE_CREATE]: "/ai_modules/drawing/pages/create_task/create_task",
     [MenuKey.SCAN_PUBLISH_WORKS]: "/ai_modules/digital_human/pages/platform_publish_works/platform_publish_works",
     [MenuKey.MONTAGE_MIX]: "/ai_modules/digital_human/pages/montage_create/montage_create",
+    [MenuKey.HOT_WRITE]: "/ai_modules/hot_write/pages/index/index",
 };
 
 // 根据不同的类型获取不同的status值
@@ -241,6 +245,14 @@ const getStatus = (item: any) => {
             return status;
         }
         return 3;
+    } else if (type === 8) {
+        if (status == 4) {
+            return 2;
+        }
+        if (status == 3) {
+            return 1;
+        }
+        return 0;
     } else {
         if (status === 0) {
             return 0;

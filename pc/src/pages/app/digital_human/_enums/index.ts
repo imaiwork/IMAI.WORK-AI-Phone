@@ -77,6 +77,7 @@ export enum CreateVideoTypeEnum {
     NEWS = 5,
     SENTENCE = 6,
     STORYBOARD = 7,
+    HOT_WRITE = 8,
 }
 
 // 混剪发布类型

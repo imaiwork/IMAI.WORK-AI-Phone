@@ -201,6 +201,9 @@
                 <el-tab-pane label="AI面试">
                     <ConfigTable :data="getInterviewConfig" />
                 </el-tab-pane>
+                <el-tab-pane label="爆款仿写">
+                    <ConfigTable :data="getHotWriteConfig" />
+                </el-tab-pane>
                 <el-tab-pane label="知识库">
                     <ConfigTable :data="getKnbConfig" />
                 </el-tab-pane>
@@ -218,6 +221,7 @@
                     <div class="text-[#F29A3B] my-3 font-bold text-lg">到期后暂定按以下标准执行</div>
                     <ConfigTable :data="getPhoneAutoConfig" />
                 </el-tab-pane>
+
                 <el-tab-pane label="其他">
                     <ConfigTable :data="getOtherConfig" />
                 </el-tab-pane>
@@ -411,14 +415,19 @@ const getSphConfig = computed(() => {
     );
 });
 
+const getHotWriteConfig = computed(() => {
+    return workbenchData.tokens_lists.filter((item: any) => ["video_copywriting_imitation"].includes(item.scene));
+});
+
 const getOtherConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) =>
         [
             "video_clip",
             "matrix_copywriting",
-            "automation_account_ip_analysis",
             "coze_copywriting",
             "douyin_js",
+            "ai_persona_analysis",
+            "ai_persona_report",
         ].includes(item.scene)
     );
 });

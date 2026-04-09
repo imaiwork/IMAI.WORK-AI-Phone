@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace app\common\service;
@@ -8,8 +9,14 @@ use think\facade\Cache;
 use think\facade\Log;
 use think\facade\Queue;
 
+/**
+ * 视频信息服务类
+ * 提供视频信息获取、批量处理、缩略图生成等功能
+ */
 class VideoInfoService
 {
+    // ==================== 常量定义 ====================
+
     private const CACHE_PREFIX = 'video_info_';
     private const DEFAULT_TIMEOUT = 60;
     private const CACHE_DURATION = 3600;          // 1小时
@@ -23,23 +30,7 @@ class VideoInfoService
     private const RATE_LIMIT_PER_HOUR = 500;      // 每小时最大请求数
     private const MEMORY_LIMIT_MB = 256;          // 内存限制
 
-    private array $supportedFormats = [
-        'mp4',
-        'avi',
-        'mov',
-        'wmv',
-        'flv',
-        'webm',
-        'mkv',
-        '3gp',
-        'ogv',
-        'ts',
-        'm4v',
-        'mpg',
-        'mpeg',
-        'f4v',
-        'm3u8'
-    ];
+    // ==================== 属性定义 ====================
 
     // FFmpeg可能的命令名称和路径
     private static $ffmpegCommands = [
@@ -64,8 +55,15 @@ class VideoInfoService
         '/snap/bin/ffprobe'
     ];
 
+    // ==================== 核心方法 ====================
+
     /**
      * 获取视频信息（主入口）- 添加限流
+     *
+     * @param string $videoUrl 视频URL
+     * @param int $timeout 超时时间
+     * @return array|null
+     * @throws Exception
      */
     public function getInfo(string $videoUrl, int $timeout = self::DEFAULT_TIMEOUT): ?array
     {
@@ -84,6 +82,7 @@ class VideoInfoService
             if ($cachedInfo) {
                 return $cachedInfo;
             }
+
             // 5. 检查是否正在处理中
             if ($this->isProcessing($videoUrl)) {
                 throw new Exception('视频正在处理中，请稍后再试');
@@ -91,6 +90,7 @@ class VideoInfoService
 
             // 6. 标记为处理中
             $this->markAsProcessing($videoUrl);
+
             try {
                 // 7. 预检查URL可访问性
                 if (!$this->isUrlAccessible($videoUrl)) {
@@ -104,16 +104,16 @@ class VideoInfoService
                 if ($videoInfo) {
                     $this->cacheVideoInfo($videoUrl, $videoInfo);
                 }
+
                 return $videoInfo;
             } finally {
                 // 10. 清除处理标记
                 $this->clearProcessingMark($videoUrl);
             }
-
         } catch (Exception $e) {
             Log::error('获取视频信息失败', [
-                'url'          => $videoUrl,
-                'error'        => $e->getMessage(),
+                'url' => $videoUrl,
+                'error' => $e->getMessage(),
                 'memory_usage' => memory_get_usage(true)
             ]);
             throw $e;
@@ -122,6 +122,12 @@ class VideoInfoService
 
     /**
      * 批量获取视频信息（优化版）- 支持队列和分页
+     *
+     * @param array $videoUrls 视频URL数组
+     * @param int $timeout 超时时间
+     * @param bool $useQueue 是否使用队列
+     * @return array
+     * @throws Exception
      */
     public function batchGetInfo(array $videoUrls, int $timeout = self::DEFAULT_TIMEOUT, bool $useQueue = true): array
     {
@@ -130,7 +136,9 @@ class VideoInfoService
             $this->checkBatchLimit(count($videoUrls));
 
             // 2. 验证输入
-            $validUrls = array_filter($videoUrls, 'filter_var', FILTER_VALIDATE_URL);
+            $validUrls = array_filter($videoUrls, function ($url) {
+                return filter_var($url, FILTER_VALIDATE_URL) !== false;
+            });
 
             if (count($validUrls) !== count($videoUrls)) {
                 Log::warning('批量处理中发现无效URL', [
@@ -140,22 +148,16 @@ class VideoInfoService
             }
 
             // 3. 分批处理
-            $batches    = array_chunk($validUrls, self::MAX_BATCH_SIZE);
+            $batches = array_chunk($validUrls, self::MAX_BATCH_SIZE);
             $allResults = [];
 
             foreach ($batches as $batchIndex => $batch) {
                 Log::info("处理批次 " . ($batchIndex + 1) . "/" . count($batches), [
-                    'batch_size'   => count($batch),
+                    'batch_size' => count($batch),
                     'memory_usage' => memory_get_usage(true)
                 ]);
 
-                if ($useQueue && count($batch) > 3) {
-                    // 使用队列处理大批量
-                    $batchResults = $this->processBatchWithQueue($batch, $timeout);
-                } else {
-                    // 直接处理小批量
-                    $batchResults = $this->processBatchDirect($batch, $timeout);
-                }
+                $batchResults = $this->processBatchDirect($batch, $timeout);
 
                 $allResults = array_merge($allResults, $batchResults);
 
@@ -166,20 +168,1009 @@ class VideoInfoService
             }
 
             return $allResults;
-
         } catch (Exception $e) {
             Log::error('批量获取视频信息失败', [
                 'total_urls' => count($videoUrls),
-                'error'      => $e->getMessage()
+                'error' => $e->getMessage()
             ]);
             throw $e;
         }
     }
 
     /**
-     * 使用队列处理批量任务
+     * 生成视频缩略图（增强版 - 支持OSS和本地存储）
+     *
+     * @param string $videoUrl 视频URL（支持本地路径或远程URL）
+     * @param float $time 截取时间点（秒）
+     * @param array $options 选项配置
+     *   - width: 宽度（默认：null，保持原始比例）
+     *   - height: 高度（默认：null，保持原始比例）
+     *   - quality: 质量（1-31，数字越小质量越高，默认：2）
+     *   - format: 输出格式（jpg/png，默认：jpg）
+     *   - force: 是否强制重新生成（默认：false）
+     * @return array|null 返回缩略图信息
+     * @throws Exception
      */
-    private function processBatchWithQueue(array $videoUrls, int $timeout): array
+    public function generateThumbnail(string $videoUrl, float $time = 1.0, array $options = []): ?array
+    {
+        $tempFilePath = null;
+        $thumbnailPath = null;
+
+        try {
+            // 1. 检查 FFmpeg
+            if (!$this->isFFmpegAvailable()) {
+                throw new Exception('FFmpeg 不可用，无法生成缩略图');
+            }
+
+            // 2. 获取存储配置
+            $storageDefault = ConfigService::get('storage', 'default', 'local');
+            $isOSS = ($storageDefault !== 'local');
+
+            // 3. 解析和验证参数
+            $params = $this->parseThumbnailOptions($options);
+
+            // 4. 生成缩略图路径
+            $thumbnailInfo = $this->prepareThumbnailPath($videoUrl, $time, $params);
+
+            // 5. 检查缓存（仅本地存储时检查本地缓存）
+            if (!$params['force'] && !$isOSS && file_exists($thumbnailInfo['path'])) {
+                Log::info('使用缓存的缩略图', [
+                    'video_url' => $videoUrl,
+                    'thumbnail' => $thumbnailInfo['url']
+                ]);
+
+                return [
+                    'url' => $thumbnailInfo['url'],
+                    'full_url' => FileService::getFileUrl($thumbnailInfo['url']),
+                    'path' => $thumbnailInfo['path'],
+                    'size' => filesize($thumbnailInfo['path']),
+                    'cached' => true,
+                    'storage' => 'local'
+                ];
+            }
+
+            // 6. 解析视频路径
+            $inputPath = $this->resolveVideoPath($videoUrl);
+
+            // 标记临时文件（如果是远程下载的）
+            if (strpos($inputPath, 'runtime/temp/') !== false) {
+                $tempFilePath = $inputPath;
+            }
+
+            // 7. 验证视频文件
+            $this->validateVideoFile($inputPath);
+
+            // 8. 获取视频元数据并调整时间点
+            $metadata = $this->getVideoMetadata($inputPath);
+            $time = $this->adjustTimePoint($time, $metadata);
+
+            // 9. 生成缩略图到本地临时目录
+            $this->executeThumbnailGeneration(
+                $inputPath,
+                $thumbnailInfo['path'],
+                $time,
+                $params
+            );
+
+            // 10. 验证输出
+            $this->validateThumbnailOutput($thumbnailInfo['path']);
+
+            // 11. 如果是OSS存储，上传到OSS
+            $finalUrl = $thumbnailInfo['url'];
+            $finalFullUrl = FileService::getFileUrl($thumbnailInfo['url']);
+            $storageType = 'local';
+
+            if ($isOSS) {
+                try {
+                    // 上传到OSS
+                    $ossResult = $this->uploadThumbnailToOSS(
+                        $thumbnailInfo['path'],
+                        $thumbnailInfo['url']
+                    );
+
+                    if ($ossResult['success']) {
+                        $finalUrl = $ossResult['url'];
+                        $finalFullUrl = $ossResult['full_url'];
+                        $storageType = $storageDefault;
+
+
+                        // 删除本地临时文件
+                        if (file_exists($thumbnailInfo['path'])) {
+                            @unlink($thumbnailInfo['path']);
+                        }
+                    }
+                } catch (Exception $e) {
+
+                    // OSS上传失败，继续使用本地存储
+                }
+            }
+
+            // 12. 清理视频临时文件
+            if ($tempFilePath && file_exists($tempFilePath)) {
+                @unlink($tempFilePath);
+            }
+
+
+
+            return [
+                'url' => $finalUrl,
+                'full_url' => $finalFullUrl,
+                'path' => $thumbnailInfo['path'],
+                'size' => file_exists($thumbnailInfo['path']) ? filesize($thumbnailInfo['path']) : 0,
+                'cached' => false,
+                'storage' => $storageType
+            ];
+        } catch (Exception $e) {
+            // 清理临时文件
+            if ($tempFilePath && file_exists($tempFilePath)) {
+                @unlink($tempFilePath);
+            }
+            if (isset($thumbnailInfo['path']) && file_exists($thumbnailInfo['path'])) {
+                @unlink($thumbnailInfo['path']);
+            }
+            throw $e;
+        }
+    }
+    /**
+     * 本地存储：直接返回本地路径
+     */
+    private function handleLocalThumbnail(array $thumbnailInfo): array
+    {
+        return [
+            'url'      => $thumbnailInfo['url'],
+            'full_url' => FileService::getFileUrl($thumbnailInfo['url']),
+            'path'     => $thumbnailInfo['path'],
+            'size'     => filesize($thumbnailInfo['path']),
+            'cached'   => false,
+            'storage'  => 'local'
+        ];
+    }
+
+    /**
+     * OSS存储：上传到OSS后删除本地，返回OSS路径
+     */
+    private function handleOSSThumbnail(array $thumbnailInfo, string $storageDefault): array
+    {
+        $localPath = $thumbnailInfo['path'];
+        $ossDir    = dirname($thumbnailInfo['url']); // uploads/thumbnails/20260407
+
+        try {
+            // 获取存储配置
+            $config = [
+                'default' => $storageDefault,
+                'engine'  => ConfigService::get('storage') ?? [],
+            ];
+
+            $storageDriver = new \app\common\service\storage\Driver($config);
+            $storageDriver->setUploadFileByReal($localPath);
+
+            if (!$storageDriver->upload($ossDir)) {
+                throw new Exception('OSS上传失败: ' . $storageDriver->getError());
+            }
+
+            // ✅ 拼接真实 OSS 路径（保持原文件名，不用 getFileName()）
+            $ossRelativePath = $ossDir . '/' . basename($localPath);
+            $ossFullUrl      = FileService::getFileUrl($ossRelativePath);
+
+            Log::info('缩略图已上传OSS', [
+                'local_path' => $localPath,
+                'oss_path'   => $ossRelativePath,
+                'full_url'   => $ossFullUrl,
+            ]);
+
+            // ✅ 上传成功后删除本地临时文件
+            @unlink($localPath);
+
+            return [
+                'url'      => $ossRelativePath,
+                'full_url' => $ossFullUrl,
+                'path'     => $ossRelativePath, // OSS 场景下 path 存相对路径
+                'size'     => 0,                // OSS 文件不在本地，size 无意义
+                'cached'   => false,
+                'storage'  => $storageDefault
+            ];
+        } catch (Exception $e) {
+            Log::error('缩略图上传OSS失败，降级使用本地', [
+                'local_path' => $localPath,
+                'error'      => $e->getMessage()
+            ]);
+
+            // ✅ OSS 失败降级：保留本地文件，返回本地路径
+            return [
+                'url'      => $thumbnailInfo['url'],
+                'full_url' => FileService::getFileUrl($thumbnailInfo['url']),
+                'path'     => $localPath,
+                'size'     => file_exists($localPath) ? filesize($localPath) : 0,
+                'cached'   => false,
+                'storage'  => 'local'
+            ];
+        }
+    }
+
+    /**
+     * 上传缩略图到OSS
+     *
+     * @param string $localPath 本地文件路径
+     * @param string $ossPath OSS路径
+     * @return array
+     */
+    private function uploadThumbnailToOSS(string $localPath, string $ossPath): array
+    {
+        try {
+            // 获取存储配置
+            $config = [
+                'default' => ConfigService::get('storage', 'default', 'local'),
+                'engine'  => ConfigService::get('storage') ?? ['local' => []],
+            ];
+
+            // 使用 StorageDriver 上传
+            $storageDriver = new \app\common\service\storage\Driver($config);
+
+            // 设置要上传的本地文件
+            $storageDriver->setUploadFileByReal($localPath);
+
+            // 获取文件信息
+            $fileInfo = $storageDriver->getFileInfo();
+
+            // 解析OSS路径（去除文件名，只保留目录）
+            $pathParts = pathinfo($ossPath);
+            $saveDir = $pathParts['dirname'];
+
+            // 上传到OSS
+            if (!$storageDriver->upload($saveDir)) {
+                return [
+                    'success' => false,
+                    'error' => $storageDriver->getError()
+                ];
+            }
+
+            // 获取上传后的文件名
+            $fileName = $storageDriver->getFileName();
+            $ossFullPath = $saveDir . '/' . str_replace("\\", "/", $fileName);
+
+            return [
+                'success' => true,
+                'url' => $ossFullPath,
+                'full_url' => FileService::getFileUrl($ossFullPath)
+            ];
+        } catch (Exception $e) {
+            Log::error('上传缩略图到OSS失败', [
+                'local_path' => $localPath,
+                'oss_path' => $ossPath,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+
+    // ==================== 缩略图相关私有方法 ====================
+
+    /**
+     * 解析缩略图选项参数
+     *
+     * @param array $options
+     * @return array
+     */
+    private function parseThumbnailOptions(array $options): array
+    {
+        return [
+            'width' => isset($options['width']) ? max(1, intval($options['width'])) : null,
+            'height' => isset($options['height']) ? max(1, intval($options['height'])) : null,
+            'quality' => max(1, min(31, intval($options['quality'] ?? 2))),
+            'format' => in_array($options['format'] ?? 'jpg', ['jpg', 'png']) ? ($options['format'] ?? 'jpg') : 'jpg',
+            'force' => (bool)($options['force'] ?? false),
+        ];
+    }
+
+    /**
+     * 准备缩略图保存路径
+     *
+     * @param string $videoUrl
+     * @param float $time
+     * @param array $params
+     * @return array
+     * @throws Exception
+     */
+    private function prepareThumbnailPath(string $videoUrl, float $time, array $params): array
+    {
+        $date = date('Ymd');
+        $thumbnailDir = root_path() . 'public/uploads/thumbnails/' . $date . '/';
+
+        if (!is_dir($thumbnailDir) && !mkdir($thumbnailDir, 0755, true)) {
+            throw new Exception('无法创建缩略图目录: ' . $thumbnailDir);
+        }
+
+        $thumbnailName = 'thumb_' . md5($videoUrl . $time . serialize($params)) . '.' . $params['format'];
+        $thumbnailPath = $thumbnailDir . $thumbnailName;
+        $thumbnailUrl = 'uploads/thumbnails/' . $date . '/' . $thumbnailName;
+
+        return [
+            'path' => $thumbnailPath,
+            'url' => $thumbnailUrl,
+            'name' => $thumbnailName
+        ];
+    }
+
+    /**
+     * 解析视频路径（处理本地路径和远程URL）
+     *
+     * @param string $videoUrl
+     * @return string 本地文件路径
+     * @throws Exception
+     */
+    private function resolveVideoPath(string $videoUrl): string
+    {
+        // 1. 远程 URL → 下载到临时文件
+        if (preg_match('/^https?:\/\//i', $videoUrl)) {
+            return $this->downloadVideoForThumbnail($videoUrl);
+        }
+
+        // 2. ✅ 绝对路径 → 直接验证返回，不做任何拼接
+        if (strpos($videoUrl, '/') === 0) {
+            clearstatcache(true, $videoUrl);
+            if (file_exists($videoUrl) && is_file($videoUrl)) {
+                Log::info('视频路径解析成功（绝对路径）', [
+                    'resolved_path' => $videoUrl,
+                    'file_size'     => filesize($videoUrl)
+                ]);
+                return $videoUrl;
+            }
+            throw new Exception('视频文件不存在: ' . $videoUrl);
+        }
+
+        // 3. 相对路径 → 尝试多种拼接方式
+        $cleanUrl = ltrim($videoUrl, '/\\');
+
+        $possiblePaths = [
+            root_path() . 'public/' . $cleanUrl,
+            root_path() . 'public/' . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $cleanUrl),
+            public_path() . $cleanUrl,
+            public_path() . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $cleanUrl),
+            $cleanUrl,
+        ];
+
+        foreach ($possiblePaths as $path) {
+            clearstatcache(true, $path);
+            if (file_exists($path) && is_file($path)) {
+                Log::info('视频路径解析成功（相对路径）', [
+                    'original_url'  => $videoUrl,
+                    'resolved_path' => $path,
+                    'file_size'     => filesize($path)
+                ]);
+                return $path;
+            }
+        }
+
+        Log::error('视频文件未找到', [
+            'original_url' => $videoUrl,
+            'tried_paths'  => $possiblePaths
+        ]);
+
+        throw new Exception('视频文件不存在: ' . $videoUrl);
+    }
+
+
+    /**
+     * 验证视频文件
+     *
+     * @param string $filePath
+     * @throws Exception
+     */
+    private function validateVideoFile(string $filePath): void
+    {
+        if (!file_exists($filePath)) {
+            throw new Exception('视频文件不存在: ' . $filePath);
+        }
+
+        if (!is_readable($filePath)) {
+            throw new Exception('视频文件不可读: ' . $filePath);
+        }
+
+        $fileSize = filesize($filePath);
+        if ($fileSize === 0 || $fileSize === false) {
+            throw new Exception('视频文件大小为0或无法读取');
+        }
+    }
+
+    /**
+     * 调整时间点（不超过视频时长）
+     *
+     * @param float $time
+     * @param array $metadata
+     * @return float
+     */
+    private function adjustTimePoint(float $time, array $metadata): float
+    {
+        $duration = $metadata['duration'] ?? 0;
+
+        if ($duration > 0 && $time > $duration) {
+            Log::warning('截取时间超过视频时长，调整为中点', [
+                'requested_time' => $time,
+                'duration' => $duration
+            ]);
+            return $duration / 2;
+        }
+
+        return max(0, $time);
+    }
+
+    /**
+     * 执行缩略图生成
+     *
+     * @param string $inputPath
+     * @param string $outputPath
+     * @param float $time
+     * @param array $params
+     * @throws Exception
+     */
+    private function executeThumbnailGeneration(
+        string $inputPath,
+        string $outputPath,
+        float $time,
+        array $params
+    ): void {
+        $ffmpegCmd = $this->buildThumbnailCommand(
+            $inputPath,
+            $outputPath,
+            $time,
+            $params['width'],
+            $params['height'],
+            $params['quality'],
+            $params['format']
+        );
+
+        Log::info('执行FFmpeg命令', [
+            'command' => $ffmpegCmd,
+            'input' => $inputPath,
+            'output' => $outputPath
+        ]);
+
+        $output = [];
+        $returnCode = 0;
+        exec($ffmpegCmd . ' 2>&1', $output, $returnCode);
+
+        if ($returnCode !== 0) {
+            $errorMsg = implode("\n", $output);
+            Log::error('FFmpeg执行失败', [
+                'command' => $ffmpegCmd,
+                'return_code' => $returnCode,
+                'output' => $errorMsg
+            ]);
+            throw new Exception('生成缩略图失败: ' . $errorMsg);
+        }
+    }
+
+    /**
+     * 验证缩略图输出
+     *
+     * @param string $thumbnailPath
+     * @throws Exception
+     */
+    private function validateThumbnailOutput(string $thumbnailPath): void
+    {
+        if (!file_exists($thumbnailPath)) {
+            throw new Exception('缩略图文件未生成');
+        }
+
+        $size = filesize($thumbnailPath);
+        if ($size < 100) {
+            @unlink($thumbnailPath);
+            throw new Exception('生成的缩略图文件过小（' . $size . ' bytes），可能损坏');
+        }
+    }
+
+    /**
+     * 下载远程视频用于生成缩略图（仅下载部分内容）
+     *
+     * @param string $remoteUrl
+     * @return string 本地临时文件路径
+     * @throws Exception
+     */
+    private function downloadVideoForThumbnail(string $remoteUrl): string
+    {
+        try {
+            // 1. 生成临时文件路径
+            $tempDir = root_path() . 'runtime/temp/';
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+
+            $extension = pathinfo(parse_url($remoteUrl, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'mp4';
+            $tempFile = $tempDir . 'video_' . uniqid() . '.' . $extension;
+
+            // 2. 下载文件（仅下载前10MB，足够生成缩略图）
+            $ch = curl_init($remoteUrl);
+            $fp = fopen($tempFile, 'w+');
+
+            if (!$fp) {
+                throw new Exception('无法创建临时文件: ' . $tempFile);
+            }
+
+            curl_setopt_array($ch, [
+                CURLOPT_FILE => $fp,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT => 60,
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; ThumbnailGenerator/1.0)',
+                CURLOPT_RANGE => '0-10485760', // 仅下载前10MB
+                CURLOPT_SSL_VERIFYPEER => false,
+            ]);
+
+            $success = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+
+            curl_close($ch);
+            fclose($fp);
+
+            // 3. 检查下载结果
+            if (!$success || ($httpCode !== 200 && $httpCode !== 206)) {
+                @unlink($tempFile);
+                throw new Exception("下载视频失败: HTTP {$httpCode} - {$error}");
+            }
+
+            if (!file_exists($tempFile) || filesize($tempFile) === 0) {
+                @unlink($tempFile);
+                throw new Exception('下载的视频文件无效');
+            }
+
+            Log::info('远程视频下载成功（部分）', [
+                'remote_url' => $remoteUrl,
+                'temp_file' => $tempFile,
+                'size' => filesize($tempFile)
+            ]);
+
+            return $tempFile;
+        } catch (Exception $e) {
+            if (isset($tempFile) && file_exists($tempFile)) {
+                @unlink($tempFile);
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * 构建生成缩略图的 FFmpeg 命令
+     *
+     * @param string $inputPath
+     * @param string $outputPath
+     * @param float $time
+     * @param int|null $width
+     * @param int|null $height
+     * @param int $quality
+     * @param string $format
+     * @return string
+     */
+    private function buildThumbnailCommand(
+        string $inputPath,
+        string $outputPath,
+        float $time,
+        ?int $width,
+        ?int $height,
+        int $quality,
+        string $format
+    ): string {
+        $ffmpegBin = $this->findFFmpegBinary();
+
+        $parts = [
+            $ffmpegBin,
+            '-ss ' . $time,      // 跳转到指定时间
+            '-i ' . escapeshellarg($inputPath),
+            '-vframes 1',        // 只提取一帧
+        ];
+
+        // 构建缩放参数
+        if ($width && $height) {
+            // 指定了宽高
+            $parts[] = "-vf scale={$width}:{$height}";
+        } elseif ($width) {
+            // 只指定宽度，高度自动计算（-2确保是偶数）
+            $parts[] = "-vf scale={$width}:-2";
+        } elseif ($height) {
+            // 只指定高度，宽度自动计算
+            $parts[] = "-vf scale=-2:{$height}";
+        }
+
+        // 设置质量
+        if ($format === 'jpg') {
+            $parts[] = '-q:v ' . $quality;
+        } else {
+            $parts[] = '-compression_level ' . min(9, $quality);
+        }
+
+        $parts[] = '-y'; // 覆盖已存在的文件
+        $parts[] = escapeshellarg($outputPath);
+
+        return implode(' ', $parts);
+    }
+
+    /**
+     * 获取视频元数据（时长等）
+     *
+     * @param string $filePath
+     * @return array
+     */
+    private function getVideoMetadata(string $filePath): array
+    {
+        try {
+            $ffprobeBin = $this->findFFprobeBinary();
+            $command = sprintf(
+                '%s -v quiet -print_format json -show_format -show_streams %s',
+                $ffprobeBin,
+                escapeshellarg($filePath)
+            );
+
+            $output = shell_exec($command);
+            if (!$output) {
+                return [];
+            }
+
+            $data = json_decode($output, true);
+            if (!$data) {
+                return [];
+            }
+
+            return [
+                'duration' => floatval($data['format']['duration'] ?? 0),
+                'size' => intval($data['format']['size'] ?? 0),
+                'bit_rate' => intval($data['format']['bit_rate'] ?? 0),
+                'format_name' => $data['format']['format_name'] ?? '',
+            ];
+        } catch (Exception $e) {
+            Log::warning('获取视频元数据失败', [
+                'file' => $filePath,
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+
+    // ==================== FFmpeg 工具方法 ====================
+
+    /**
+     * 检查 FFmpeg 是否可用
+     *
+     * @return bool
+     */
+    private function isFFmpegAvailable(): bool
+    {
+        try {
+            $this->findFFmpegBinary();
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 查找 FFmpeg 可执行文件
+     *
+     * @return string
+     * @throws Exception
+     */
+    private function findFFmpegBinary(): string
+    {
+        foreach (self::$ffmpegCommands as $cmd) {
+            if ($this->commandExists($cmd)) {
+                return $cmd;
+            }
+        }
+        throw new Exception('未找到 FFmpeg 可执行文件');
+    }
+
+    /**
+     * 查找 FFprobe 可执行文件
+     *
+     * @return string
+     * @throws Exception
+     */
+    private function findFFprobeBinary(): string
+    {
+        foreach (self::$ffprobeCommands as $cmd) {
+            if ($this->commandExists($cmd)) {
+                return $cmd;
+            }
+        }
+        throw new Exception('未找到 FFprobe 可执行文件');
+    }
+
+    /**
+     * 检查命令是否存在
+     *
+     * @param string $command
+     * @return bool
+     */
+    private function commandExists(string $command): bool
+    {
+        $checkCmd = stripos(PHP_OS, 'WIN') === 0
+            ? "where {$command} 2>nul"
+            : "command -v {$command} 2>/dev/null";
+
+        $output = shell_exec($checkCmd);
+        return !empty($output);
+    }
+
+    // ==================== 原有方法（保持不变）====================
+
+    /**
+     * 限流检查
+     *
+     * @throws Exception
+     */
+    private function checkRateLimit(): void
+    {
+        $minuteKey = self::RATE_LIMIT_KEY . 'minute_' . date('YmdHi');
+        $hourKey = self::RATE_LIMIT_KEY . 'hour_' . date('YmdH');
+
+        $minuteCount = Cache::get($minuteKey, 0);
+        $hourCount = Cache::get($hourKey, 0);
+
+        if ($minuteCount >= self::RATE_LIMIT_PER_MINUTE) {
+            throw new Exception('请求过于频繁，请稍后再试（每分钟限制' . self::RATE_LIMIT_PER_MINUTE . '次）');
+        }
+
+        if ($hourCount >= self::RATE_LIMIT_PER_HOUR) {
+            throw new Exception('请求过于频繁，请稍后再试（每小时限制' . self::RATE_LIMIT_PER_HOUR . '次）');
+        }
+
+        Cache::inc($minuteKey);
+        Cache::inc($hourKey);
+        Cache::expire($minuteKey, 60);
+        Cache::expire($hourKey, 3600);
+    }
+
+    /**
+     * 检查内存使用
+     *
+     * @throws Exception
+     */
+    private function checkMemoryUsage(): void
+    {
+        $memoryUsage = memory_get_usage(true) / 1024 / 1024;
+
+        if ($memoryUsage > self::MEMORY_LIMIT_MB) {
+            throw new Exception('系统内存不足，请稍后再试');
+        }
+    }
+
+    /**
+     * 验证输入
+     *
+     * @param string $videoUrl
+     * @param int $timeout
+     * @throws Exception
+     */
+    private function validateInput(string $videoUrl, int $timeout): void
+    {
+        if (empty($videoUrl)) {
+            throw new Exception('视频URL不能为空');
+        }
+
+        if ($timeout < 1 || $timeout > 300) {
+            throw new Exception('超时时间必须在1-300秒之间');
+        }
+    }
+
+    /**
+     * 获取缓存的视频信息
+     *
+     * @param string $videoUrl
+     * @return array|null
+     */
+    private function getCachedVideoInfo(string $videoUrl): ?array
+    {
+        $cacheKey = self::CACHE_PREFIX . md5($videoUrl);
+        $cached = Cache::get($cacheKey);
+
+        if ($cached) {
+            Log::info('使用缓存的视频信息', ['url' => $videoUrl]);
+            return $cached;
+        }
+
+        return null;
+    }
+
+    /**
+     * 缓存视频信息
+     *
+     * @param string $videoUrl
+     * @param array $videoInfo
+     */
+    public function cacheVideoInfo(string $videoUrl, array $videoInfo): void
+    {
+        $cacheKey = self::CACHE_PREFIX . md5($videoUrl);
+        Cache::set($cacheKey, $videoInfo, self::CACHE_DURATION);
+    }
+
+    /**
+     * 检查是否正在处理
+     *
+     * @param string $videoUrl
+     * @return bool
+     */
+    private function isProcessing(string $videoUrl): bool
+    {
+        $lockKey = 'video_processing_' . md5($videoUrl);
+        return Cache::has($lockKey);
+    }
+
+    /**
+     * 标记为处理中
+     *
+     * @param string $videoUrl
+     */
+    private function markAsProcessing(string $videoUrl): void
+    {
+        $lockKey = 'video_processing_' . md5($videoUrl);
+        Cache::set($lockKey, true, 300); // 5分钟锁
+    }
+
+    /**
+     * 清除处理标记
+     *
+     * @param string $videoUrl
+     */
+    private function clearProcessingMark(string $videoUrl): void
+    {
+        $lockKey = 'video_processing_' . md5($videoUrl);
+        Cache::delete($lockKey);
+    }
+
+    /**
+     * 检查URL是否可访问
+     *
+     * @param string $url
+     * @return bool
+     */
+    private function isUrlAccessible(string $url): bool
+    {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_NOBODY => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+
+        curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return $httpCode >= 200 && $httpCode < 400;
+    }
+
+    /**
+     * 提取视频信息
+     *
+     * @param string $videoUrl
+     * @param int $timeout
+     * @return array|null
+     * @throws Exception
+     */
+    public function extractVideoInfo(string $videoUrl, int $timeout): ?array
+    {
+        $ffprobeBin = $this->findFFprobeBinary();
+
+        $command = sprintf(
+            '%s -v quiet -print_format json -show_format -show_streams -timeout %d %s',
+            $ffprobeBin,
+            $timeout * 1000000, // 转换为微秒
+            escapeshellarg($videoUrl)
+        );
+
+        $output = shell_exec($command);
+
+        if (!$output) {
+            throw new Exception('无法获取视频信息');
+        }
+
+        $data = json_decode($output, true);
+
+        if (!$data || !isset($data['format'])) {
+            throw new Exception('视频信息解析失败');
+        }
+
+        return $this->formatVideoInfo($data);
+    }
+
+    /**
+     * 格式化视频信息
+     *
+     * @param array $data
+     * @return array
+     */
+    private function formatVideoInfo(array $data): array
+    {
+        $format = $data['format'] ?? [];
+        $streams = $data['streams'] ?? [];
+
+        $videoStream = null;
+        $audioStream = null;
+
+        foreach ($streams as $stream) {
+            if ($stream['codec_type'] === 'video' && !$videoStream) {
+                $videoStream = $stream;
+            }
+            if ($stream['codec_type'] === 'audio' && !$audioStream) {
+                $audioStream = $stream;
+            }
+        }
+
+        return [
+            'duration' => floatval($format['duration'] ?? 0),
+            'size' => intval($format['size'] ?? 0),
+            'bit_rate' => intval($format['bit_rate'] ?? 0),
+            'format_name' => $format['format_name'] ?? '',
+            'video' => $videoStream ? [
+                'codec' => $videoStream['codec_name'] ?? '',
+                'width' => intval($videoStream['width'] ?? 0),
+                'height' => intval($videoStream['height'] ?? 0),
+                'fps' => $this->calculateFps($videoStream),
+            ] : null,
+            'audio' => $audioStream ? [
+                'codec' => $audioStream['codec_name'] ?? '',
+                'sample_rate' => intval($audioStream['sample_rate'] ?? 0),
+                'channels' => intval($audioStream['channels'] ?? 0),
+            ] : null,
+        ];
+    }
+
+    /**
+     * 计算帧率
+     *
+     * @param array $stream
+     * @return float
+     */
+    private function calculateFps(array $stream): float
+    {
+        if (isset($stream['r_frame_rate'])) {
+            $parts = explode('/', $stream['r_frame_rate']);
+            if (count($parts) === 2 && $parts[1] > 0) {
+                return round($parts[0] / $parts[1], 2);
+            }
+        }
+        return 0.0;
+    }
+
+    /**
+     * 检查批量限制
+     *
+     * @param int $count
+     * @throws Exception
+     */
+    private function checkBatchLimit(int $count): void
+    {
+        if ($count > self::MAX_BATCH_SIZE * 2) { // 允许最多5个批次
+            throw new Exception('单次批量处理数量过多，最大允许' . (self::MAX_BATCH_SIZE * 2) . '个');
+        }
+    }
+    /**
+     * 直接提取视频信息（跳过限流等检查）
+     */
+    private function extractVideoInfoDirect(string $videoUrl, int $timeout): ?array
+    {
+        // 检查缓存
+        $cachedInfo = $this->getCachedVideoInfo($videoUrl);
+        if ($cachedInfo) {
+            return $cachedInfo;
+        }
+
+        // 直接提取
+        return $this->extractVideoInfo($videoUrl, $timeout);
+    }
+
+    /**
+     * 使用队列处理批量
+     *
+     * @param array $urls
+     * @param int $timeout
+     * @return array
+     */
+    private function processBatchWithQueue(array $urls, int $timeout): array
     {
         $batchId = uniqid('batch_');
         $results = [];
@@ -190,7 +1181,7 @@ class VideoInfoService
 
         // 5分钟过期
         // 将任务推送到队列
-        foreach ($videoUrls as $index => $url) {
+        foreach ($urls as $index => $url) {
             $jobData = [
                 'batch_id' => $batchId,
                 'index' => $index,
@@ -208,7 +1199,7 @@ class VideoInfoService
                     'error' => $e->getMessage()
                 ]);
                 // 队列失败时直接处理
-                return $this->processBatchDirect($videoUrls, $timeout);
+                return $this->processBatchDirect($urls, $timeout);
             }
         }
 
@@ -220,7 +1211,7 @@ class VideoInfoService
         while ($waitTime < $maxWaitTime) {
             $batchResults = Cache::get($batchCacheKey, []);
 
-            if (count($batchResults) >= count($videoUrls)) {
+            if (count($batchResults) >= count($urls)) {
                 // 所有任务完成
                 break;
             }
@@ -233,7 +1224,7 @@ class VideoInfoService
         $batchResults = Cache::get($batchCacheKey, []);
 
         // 对于未完成的任务，标记为超时
-        foreach ($videoUrls as $index => $url) {
+        foreach ($urls as $index => $url) {
             if (!isset($batchResults[$index])) {
                 $batchResults[$index] = [
                     'index'        => $index,
@@ -252,14 +1243,18 @@ class VideoInfoService
     }
 
     /**
-     * 直接处理批量任务（小批量）
+     * 直接处理批量
+     *
+     * @param array $urls
+     * @param int $timeout
+     * @return array
      */
-    private function processBatchDirect(array $videoUrls, int $timeout): array
+    private function processBatchDirect(array $urls, int $timeout): array
     {
         $results           = [];
         $currentConcurrent = 0;
 
-        foreach ($videoUrls as $index => $url) {
+        foreach ($urls as $index => $url) {
             // 控制并发数
             if ($currentConcurrent >= self::MAX_CONCURRENT_JOBS) {
                 usleep(100000); // 等待100ms
@@ -311,907 +1306,100 @@ class VideoInfoService
         return $results;
     }
 
-    /**
-     * 直接提取视频信息（跳过限流等检查）
-     */
-    private function extractVideoInfoDirect(string $videoUrl, int $timeout): ?array
-    {
-        // 检查缓存
-        $cachedInfo = $this->getCachedVideoInfo($videoUrl);
-        if ($cachedInfo) {
-            return $cachedInfo;
-        }
-
-        // 直接提取
-        return $this->extractVideoInfo($videoUrl, $timeout);
-    }
 
     /**
-     * 异步获取视频信息（返回任务ID）
+     * 生成视频缩略图（请勿修改）
+     * 参数: video_url, time(可选), options(可选)
      */
-    public function getVideoInfoAsync(string $videoUrl, int $timeout = self::DEFAULT_TIMEOUT): string
+    public function commonVideoThumbnail($params): array
     {
-        $taskId = uniqid('task_');
-
-        $jobData = [
-            'task_id'    => $taskId,
-            'url'        => $videoUrl,
-            'timeout'    => $timeout,
-            'created_at' => time()
-        ];
-
-        // 推送到队列
         try {
-            Queue::push('app\common\Jobs\VideoInfoJob', $jobData, 'video_processing');
-        } catch (Exception $e) {
-            Log::error('异步任务创建失败', [
-                'task_id' => $taskId,
-                'url'     => $videoUrl,
-                'error'   => $e->getMessage()
-            ]);
-            throw new Exception('异步任务创建失败: ' . $e->getMessage());
-        }
+            $videoUrl = $params['video_url'];
+            $time     = $params['time'] ? (float)$params['time'] : 1.0;
+            $options  = $params['options'] ?? [];
 
-        // 缓存任务状态
-        Cache::set('task_' . $taskId, [
-            'status'     => 'pending',
-            'url'        => $videoUrl,
-            'created_at' => date('Y-m-d H:i:s')
-        ],         1800); // 30分钟过期
-
-        return $taskId;
-    }
-
-    /**
-     * 获取异步任务结果
-     */
-    public function getAsyncResult(string $taskId): ?array
-    {
-        return Cache::get('task_' . $taskId);
-    }
-
-    /**
-     * 限流检查
-     */
-    private function checkRateLimit(): void
-    {
-        $ip        = request()->ip();
-        $minuteKey = self::RATE_LIMIT_KEY . 'minute_' . $ip . '_' . date('YmdHi');
-        $hourKey   = self::RATE_LIMIT_KEY . 'hour_' . $ip . '_' . date('YmdH');
-
-        $minuteCount = (int)Cache::get($minuteKey, 0);
-        $hourCount   = (int)Cache::get($hourKey, 0);
-
-        if ($minuteCount >= self::RATE_LIMIT_PER_MINUTE) {
-            throw new Exception('请求过于频繁，请稍后再试（每分钟限制' . self::RATE_LIMIT_PER_MINUTE . '次）');
-        }
-
-        if ($hourCount >= self::RATE_LIMIT_PER_HOUR) {
-            throw new Exception('请求过于频繁，请稍后再试（每小时限制' . self::RATE_LIMIT_PER_HOUR . '次）');
-        }
-
-        // 增加计数
-        Cache::set($minuteKey, $minuteCount + 1, 60);
-        Cache::set($hourKey, $hourCount + 1, 3600);
-    }
-
-    /**
-     * 批量限制检查
-     */
-    private function checkBatchLimit(int $count): void
-    {
-        if ($count > self::MAX_BATCH_SIZE * 2) { // 允许最多5个批次
-            throw new Exception('单次批量处理数量过多，最大允许' . (self::MAX_BATCH_SIZE * 2) . '个');
-        }
-
-        // $ip         = request()->ip();
-        // $batchKey   = self::BATCH_LIMIT_KEY . $ip . '_' . date('YmdH');
-        // $batchCount = (int)Cache::get($batchKey, 0);
-
-        // if ($batchCount >= 10) { // 每小时最多10次批量请求
-        //     throw new Exception('批量请求过于频繁，请稍后再试');
-        // }
-
-        // Cache::set($batchKey, $batchCount + 1, 3600);
-    }
-
-    /**
-     * 内存使用检查
-     */
-    private function checkMemoryUsage(): void
-    {
-        $memoryUsage = memory_get_usage(true);
-        $memoryLimit = self::MEMORY_LIMIT_MB * 1024 * 1024;
-
-        if ($memoryUsage > $memoryLimit) {
-            gc_collect_cycles(); // 强制垃圾回收
-
-            $memoryUsage = memory_get_usage(true);
-            if ($memoryUsage > $memoryLimit) {
-                throw new Exception('系统内存不足，请稍后再试');
+            if (empty($videoUrl)) {
+                return ['result' => false, 'url' => '', 'msg' => '视频URL不能为空'];
             }
-        }
-    }
 
-    /**
-     * 检查是否正在处理中
-     */
-    private function isProcessing(string $videoUrl): bool
-    {
-        $processingKey = 'processing_' . md5($videoUrl);
-        return Cache::has($processingKey);
-    }
-
-    /**
-     * 标记为处理中
-     */
-    private function markAsProcessing(string $videoUrl): void
-    {
-        $processingKey = 'processing_' . md5($videoUrl);
-        Cache::set($processingKey, time(), 300); // 5分钟过期
-    }
-
-    /**
-     * 清除处理标记
-     */
-    private function clearProcessingMark(string $videoUrl): void
-    {
-        $processingKey = 'processing_' . md5($videoUrl);
-        Cache::delete($processingKey);
-    }
-
-    /**
-     * 输入验证
-     */
-    private function validateInput(string $videoUrl, int $timeout): void
-    {
-        if (empty($videoUrl) || !filter_var($videoUrl, FILTER_VALIDATE_URL)) {
-            throw new Exception('无效的视频URL');
-        }
-
-        if ($timeout < 10 || $timeout > 300) {
-            throw new Exception('超时时间必须在10-300秒之间');
-        }
-
-        if (!$this->isVideoUrl($videoUrl)) {
-            throw new Exception('URL不是支持的视频格式');
-        }
-    }
-
-    /**
-     * 获取缓存的视频信息
-     */
-    private function getCachedVideoInfo(string $videoUrl): ?array
-    {
-        try {
-            $cacheKey = $this->getCacheKey($videoUrl);
-            $cached   = Cache::get($cacheKey);
-
-            if ($cached && is_array($cached)) {
-                $cached['from_cache'] = true;
-                return $cached;
+            // 验证时间参数
+            if ($time < 0) {
+                return ['result' => false, 'url' => '', 'msg' => '时间参数不能为负数'];
             }
-        } catch (Exception $e) {
-            Log::warning('缓存读取失败', ['error' => $e->getMessage()]);
-        }
 
-        return null;
-    }
+            // 验证选项参数
+            if (!empty($options) && !is_array($options)) {
+                return ['result' => false, 'url' => '', 'msg' => '选项参数必须是数组'];
+            }
 
-    /**
-     * 缓存视频信息
-     */
-    public function cacheVideoInfo(string $videoUrl, array $videoInfo): void
-    {
-        try {
-            $cacheKey               = $this->getCacheKey($videoUrl);
-            $videoInfo['cached_at'] = date('Y-m-d H:i:s');
-            Cache::set($cacheKey, $videoInfo, self::CACHE_DURATION);
-        } catch (Exception $e) {
-            Log::warning('缓存写入失败', ['error' => $e->getMessage()]);
-        }
-    }
+            $targetWidth = $options['width'] ?? 960;
+            $targetHeight = $options['height'] ?? 0;
 
-    /**
-     * 生成缓存键
-     */
-    private function getCacheKey(string $videoUrl): string
-    {
-        return self::CACHE_PREFIX . md5($videoUrl);
-    }
-
-    /**
-     * 使用FFmpeg提取视频信息（核心逻辑）- 修复文件路径问题
-     */
-    public function extractVideoInfo(string $videoUrl, int $timeout): ?array
-    {
-        if (!$this->isFFmpegAvailable()) {
-            $debugInfo = $this->getFFmpegDebugInfo();
-            throw new Exception('FFmpeg 不可用，请确保已正确安装。调试信息: ' . json_encode($debugInfo));
-        }
-
-        $tempFilePath = null;
-        $inputPath    = null;
-
-        try {
-            // 处理文件路径
-            $host         = config('app.app_host', '');
-            $processedUrl = $this->getFileUrl($videoUrl);
-            $is_local     = !empty($host) && strpos($processedUrl, $host) === 0;
-
-            Log::info('文件路径处理', [
-                'original_url'  => $videoUrl,
-                'processed_url' => $processedUrl,
-                'is_local'      => $is_local,
-                'host'          => $host
-            ]);
-
-            if (!$is_local) {
-                // 下载远程文件到本地临时目录
-                $tempFilePath = $this->downloadRemoteFile($processedUrl);
-                $inputPath    = $tempFilePath;
-
-                Log::info('下载远程文件', [
-                    'temp_path'   => $tempFilePath,
-                    'file_exists' => file_exists($tempFilePath),
-                    'file_size'   => file_exists($tempFilePath) ? filesize($tempFilePath) : 0
-                ]);
+            // ========== 方式1：用FFmpeg命令行解析（无需扩展，兼容性好） ==========
+            $ffmpegCmd = "ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 " . escapeshellarg($videoUrl);
+            exec($ffmpegCmd, $output, $returnVar);
+            if ($returnVar !== 0 || empty($output[0])) {
+                $finalWidth = 320;
+                $finalHeight = 240;
             } else {
-                // 本地文件，需要转换为实际文件路径
-                $inputPath = $this->getLocalFilePath($videoUrl);
+                list($originWidth, $originHeight) = explode('x', $output[0]);
+                $originWidth = (int)$originWidth;
+                $originHeight = (int)$originHeight;
 
-                Log::info('本地文件路径', [
-                    'original_url' => $videoUrl,
-                    'input_path'   => $inputPath,
-                    'file_exists'  => file_exists($inputPath),
-                    'is_readable'  => is_readable($inputPath)
-                ]);
+                // 3. 关键计算：按原比例缩放，适配目标宽/高（只传宽/只传高/都传的情况）
+                $scaleRatio = min(
+                    $targetWidth > 0 ? $targetWidth / $originWidth : 1,
+                    $targetHeight > 0 ? $targetHeight / $originHeight : 1
+                );
+                // 最终等比例尺寸（取整，避免小数）
+                $finalWidth = (int)round($originWidth * $scaleRatio);
+                $finalHeight = (int)round($originHeight * $scaleRatio);
             }
 
-            // 验证文件是否存在
-            if (!file_exists($inputPath)) {
-                // 如果文件不存在，尝试几种可能的路径
-                $alternativePaths = $this->getAlternativePaths($videoUrl);
-                $foundPath        = null;
+            // 设置默认选项
+            $defaultOptions = [
+                'width'   => $finalWidth,
+                'height'  => $finalHeight,
+                'quality' => 2
+            ];
+            $options        = array_merge($defaultOptions, $options);
 
-                foreach ($alternativePaths as $altPath) {
-                    if (file_exists($altPath)) {
-                        $foundPath = $altPath;
-                        break;
-                    }
-                }
-
-                if ($foundPath) {
-                    $inputPath = $foundPath;
-                    Log::info('使用替代路径', [
-                        'original_path' => $inputPath,
-                        'found_path'    => $foundPath
-                    ]);
-                } else {
-                    Log::error('文件不存在，尝试的路径', [
-                        'primary_path'      => $inputPath,
-                        'alternative_paths' => $alternativePaths,
-                        'all_failed'        => true
-                    ]);
-                    throw new Exception('文件不存在: ' . $inputPath);
-                }
+            // 验证尺寸限制
+            if ($options['width'] > 2000 || $options['height'] > 2000) {
+                return ['result' => false, 'url' => '', 'msg' => '缩略图宽高不能超过1920'];
             }
 
-            // 检查文件大小
-            $fileSize = filesize($inputPath);
-            if ($fileSize === 0) {
-                throw new Exception('文件大小为0: ' . $inputPath);
+            $thumbnailUrl = $this->commonGenerateThumbnail($videoUrl, $time, $options);
+            if (!$thumbnailUrl) {
+                return ['result' => false, 'url' => '', 'msg' => '缩略图生成失败'];
             }
 
-            Log::info('文件验证通过', [
-                'path'     => $inputPath,
-                'size'     => $fileSize,
-                'readable' => is_readable($inputPath)
-            ]);
-
-            // 构建FFprobe命令
-            $command = $this->buildFFprobeCommand($inputPath, $timeout);
-
-            Log::info('执行FFprobe命令', ['command' => $command]);
-
-            // 执行命令
-            $output = $this->executeCommand($command);
-
-            if (empty($output)) {
-                throw new Exception('FFprobe 没有返回数据');
-            }
-
-            Log::info('FFprobe原始输出', ['output' => substr($output, 0, 1000) . '...']);
-
-            // 解析JSON输出
-            $data = json_decode($output, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new Exception('FFprobe 输出解析失败: ' . json_last_error_msg() . ', 原始输出: ' . substr($output, 0, 500));
-            }
-            // 检查是否有错误
-            if (isset($data['error'])) {
-                throw new Exception('FFprobe错误: ' . ($data['error']['string'] ?? '未知错误'));
-            }
-            if (!isset($data['streams']) || empty($data['streams'])) {
-                // 尝试备用命令
-                $fallbackCommand = $this->buildFallbackFFprobeCommand($inputPath, $timeout);
-                Log::info('尝试备用FFprobe命令', ['command' => $fallbackCommand]);
-
-                $fallbackOutput = $this->executeCommand($fallbackCommand);
-                if ($fallbackOutput) {
-                    $fallbackData = json_decode($fallbackOutput, true);
-                    if ($fallbackData && isset($fallbackData['streams']) && !empty($fallbackData['streams'])) {
-                        $data = $fallbackData;
-                    } else {
-                        throw new Exception('未找到有效的媒体流。原始输出: ' . substr($output, 0, 200) . ', 备用输出: ' . substr($fallbackOutput, 0, 200));
-                    }
-                } else {
-                    throw new Exception('未找到有效的媒体流。原始输出: ' . substr($output, 0, 200));
+            $localPath    = public_path() . $thumbnailUrl;
+            $thumbnailUrl = FileService::getFileUrl($thumbnailUrl);
+            $default      = ConfigService::get('storage', 'default', 'local');
+            if ($default != 'local') {
+                if (preg_match('/uploads\/(.+?)\/\d{8}/', $thumbnailUrl, $matches)) {
+                    $ossPath = $matches[0];
+                    $url     = UploadService::uploadToOSS($localPath, $ossPath);
                 }
             }
-            // 解析视频数据
-            $videoInfo                   = $this->parseFFprobeData($data);
-            $videoInfo['source_url']     = $videoUrl;
-            $videoInfo['processed_at']   = date('Y-m-d H:i:s');
-            $videoInfo['ffmpeg_version'] = $this->getFFmpegVersion();
-            $videoInfo['input_path']     = $inputPath;
-            $videoInfo['is_local']       = $is_local;
-            return $videoInfo;
 
+            return [
+                'result'  => true,
+                'msg'     => '缩略图生成成功',
+                'url'     => isset($url) ? FileService::getFileUrl($url) : $thumbnailUrl,
+                'time'    => $time,
+                'options' => $options
+            ];
         } catch (Exception $e) {
-            Log::error('提取视频信息失败', [
-                'url'        => $videoUrl,
-                'input_path' => $inputPath,
-                'is_local'   => $is_local ?? false,
-                'temp_file'  => $tempFilePath,
-                'error'      => $e->getMessage()
-            ]);
-            throw $e;
-        } finally {
-            // 清理临时文件
-            if ($tempFilePath && file_exists($tempFilePath)) {
-                unlink($tempFilePath);
-                Log::info('清理临时文件', ['path' => $tempFilePath]);
-            }
+            return ['result' => false, 'url' => '', 'msg' => $e->getMessage()];
         }
     }
 
     /**
-     * 获取可能的替代路径
+     * 生成视频缩略图(请勿修改)
      */
-    private function getAlternativePaths(string $videoUrl): array
-    {
-        $paths      = [];
-        $publicPath = public_path();
-
-        // 方式1: 直接拼接
-        if (strpos($videoUrl, 'http') === 0) {
-            $parsedUrl = parse_url($videoUrl);
-            $path      = ltrim($parsedUrl['path'] ?? '', '/');
-        } else {
-            $path = ltrim($videoUrl, '/');
-        }
-
-        // 尝试不同的路径组合
-        $paths[] = $publicPath . '/' . $path;
-        $paths[] = $publicPath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $path);
-        $paths[] = rtrim($publicPath, '/') . '/' . $path;
-        $paths[] = rtrim($publicPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $path);
-
-        // 如果路径包含uploads，尝试不同的组合
-        if (strpos($path, 'uploads') !== false) {
-            $paths[] = $publicPath . '/' . $path;
-            $paths[] = dirname($publicPath) . '/' . $path; // 上级目录
-        }
-
-        // 去重
-        return array_unique($paths);
-    }
-
-    /**
-     * 获取文件URL（简化版FileService::getFileUrl）
-     */
-    private function getFileUrl(string $url): string
-    {
-        // 如果已经是完整URL，直接返回
-        if (strpos($url, 'http') === 0) {
-            return $url;
-        }
-
-        // 如果是相对路径，拼接域名
-        $host = config('app.app_host', '');
-        if (!empty($host)) {
-            return rtrim($host, '/') . '/' . ltrim($url, '/');
-        }
-
-        return $url;
-    }
-
-    /**
-     * 下载远程文件（简化版UploadService::downloadRemoteFile）
-     */
-    private function downloadRemoteFile(string $url): string
-    {
-        $tempDir  = sys_get_temp_dir();
-        $tempFile = $tempDir . '/video_' . uniqid() . '.tmp';
-
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT        => 60,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
-            CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; VideoInfoBot/1.0)',
-        ]);
-
-        $data     = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error    = curl_error($ch);
-        curl_close($ch);
-
-        if ($error || $httpCode >= 400 || $data === false) {
-            throw new Exception('下载文件失败: ' . ($error ?: 'HTTP ' . $httpCode));
-        }
-
-        if (file_put_contents($tempFile, $data) === false) {
-            throw new Exception('写入临时文件失败');
-        }
-
-        return $tempFile;
-    }
-
-    /**
-     * 获取本地文件的实际路径
-     */
-    private function getLocalFilePath(string $videoUrl): string
-    {
-        $path = '';
-
-        // 如果是完整URL，提取路径部分
-        if (strpos($videoUrl, 'http') === 0) {
-            $parsedUrl = parse_url($videoUrl);
-            $path      = $parsedUrl['path'] ?? '';
-            // 去掉开头的斜杠
-            $path = ltrim($path, '/');
-        } else {
-            // 直接使用相对路径，去掉开头的斜杠
-            $path = ltrim($videoUrl, '/');
-        }
-
-        // 构建完整路径，注意不要在末尾添加斜杠
-        $fullPath = public_path() . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $path);
-
-        // 规范化路径，移除多余的斜杠和点
-        $fullPath = realpath($fullPath) ?: $fullPath;
-
-        Log::info('路径处理详情', [
-            'original_url'   => $videoUrl,
-            'extracted_path' => $path,
-            'public_path'    => public_path(),
-            'full_path'      => $fullPath,
-            'file_exists'    => file_exists($fullPath)
-        ]);
-
-        return $fullPath;
-    }
-
-
-    /**
-     * 构建FFprobe命令 - 修改版，更好的路径处理
-     */
-    private function buildFFprobeCommand(string $inputPath, int $timeout): string
-    {
-        $ffprobeCmd = $this->getFFprobeCommand();
-
-        // 确保路径正确转义
-        $escapedPath = escapeshellarg($inputPath);
-
-        return sprintf(
-            'timeout %d %s -v quiet -print_format json -show_format -show_streams -show_error %s 2>&1',
-            $timeout,
-            $ffprobeCmd,
-            $escapedPath
-        );
-    }
-
-    /**
-     * 构建备用FFprobe命令
-     */
-    private function buildFallbackFFprobeCommand(string $inputPath, int $timeout): string
-    {
-        $ffprobeCmd = $this->getFFprobeCommand();
-
-        $escapedPath = escapeshellarg($inputPath);
-
-        return sprintf(
-            'timeout %d %s -v error -select_streams v:0 -show_entries stream=width,height,duration,codec_name,bit_rate -of json %s 2>&1',
-            $timeout,
-            $ffprobeCmd,
-            $escapedPath
-        );
-    }
-
-    /**
-     * 执行系统命令
-     */
-    private function executeCommand(string $command): ?string
-    {
-        $output = shell_exec($command);
-
-        if ($output === null || $output === false) {
-            throw new Exception('命令执行失败');
-        }
-
-        return trim($output);
-    }
-
-    /**
-     * 解析FFprobe数据（重构优化）
-     */
-    private function parseFFprobeData(array $data): array
-    {
-        $videoInfo = $this->initializeVideoInfo();
-        // 解析格式信息
-        if (isset($data['format'])) {
-            $this->parseFormatInfo($data['format'], $videoInfo);
-        }
-        // 解析流信息
-        $this->parseStreamInfo($data['streams'], $videoInfo);
-        // 计算额外信息
-        $this->calculateAdditionalInfo($videoInfo);
-
-        return $videoInfo;
-    }
-
-    /**
-     * 初始化视频信息结构
-     */
-    private function initializeVideoInfo(): array
-    {
-        return [
-            'duration'            => null,
-            'duration_formatted'  => null,
-            'width'               => null,
-            'height'              => null,
-            'resolution'          => null,
-            'fps'                 => null,
-            'bitrate'             => null,
-            'video_codec'         => null,
-            'audio_codec'         => null,
-            'format'              => null,
-            'file_size'           => null,
-            'file_size_formatted' => null,
-            'aspect_ratio'        => null,
-            'has_video'           => false,
-            'has_audio'           => false,
-            'stream_count'        => 0,
-        ];
-    }
-
-    /**
-     * 解析格式信息
-     */
-    private function parseFormatInfo(array $format, array &$videoInfo): void
-    {
-        if (isset($format['duration'])) {
-            $videoInfo['duration']           = (float)$format['duration'];
-            $videoInfo['duration_formatted'] = $this->formatDuration($videoInfo['duration']);
-        }
-
-        if (isset($format['bit_rate'])) {
-            $videoInfo['bitrate'] = (int)$format['bit_rate'];
-        }
-
-        if (isset($format['format_name'])) {
-            $videoInfo['format'] = $format['format_name'];
-        }
-
-        if (isset($format['size'])) {
-            $videoInfo['file_size']           = (int)$format['size'];
-            $videoInfo['file_size_formatted'] = $this->formatFileSize($videoInfo['file_size']);
-        }
-    }
-
-    /**
-     * 解析流信息
-     */
-    private function parseStreamInfo(array $streams, array &$videoInfo): void
-    {
-        $videoInfo['stream_count'] = count($streams);
-
-        foreach ($streams as $stream) {
-            $codecType = $stream['codec_type'] ?? '';
-
-            switch ($codecType) {
-                case 'video':
-                    $this->parseVideoStream($stream, $videoInfo);
-                    $videoInfo['has_video'] = true;
-                    break;
-
-                case 'audio':
-                    $this->parseAudioStream($stream, $videoInfo);
-                    $videoInfo['has_audio'] = true;
-                    break;
-            }
-        }
-    }
-
-    /**
-     * 解析视频流
-     */
-    private function parseVideoStream(array $stream, array &$videoInfo): void
-    {
-        if (isset($stream['width'], $stream['height'])) {
-            $videoInfo['width']      = (int)$stream['width'];
-            $videoInfo['height']     = (int)$stream['height'];
-            $videoInfo['resolution'] = $videoInfo['width'] . 'x' . $videoInfo['height'];
-        }
-
-        if (isset($stream['r_frame_rate'])) {
-            $videoInfo['fps'] = $this->parseFrameRate($stream['r_frame_rate']);
-        }
-
-        if (isset($stream['codec_name'])) {
-            $videoInfo['video_codec'] = $stream['codec_name'];
-        }
-    }
-
-    /**
-     * 解析音频流
-     */
-    private function parseAudioStream(array $stream, array &$videoInfo): void
-    {
-        if (isset($stream['codec_name'])) {
-            $videoInfo['audio_codec'] = $stream['codec_name'];
-        }
-    }
-
-    /**
-     * 计算额外信息
-     */
-    private function calculateAdditionalInfo(array &$videoInfo): void
-    {
-        // 计算宽高比
-        if ($videoInfo['width'] && $videoInfo['height']) {
-            $gcd                       = $this->gcd($videoInfo['width'], $videoInfo['height']);
-            $videoInfo['aspect_ratio'] = ($videoInfo['width'] / $gcd) . ':' . ($videoInfo['height'] / $gcd);
-        }
-    }
-
-    /**
-     * 解析帧率
-     */
-    private function parseFrameRate(string $frameRate): float
-    {
-        if (strpos($frameRate, '/') !== false) {
-            [$numerator, $denominator] = explode('/', $frameRate);
-            return $denominator > 0 ? round((float)$numerator / (float)$denominator, 2) : 0;
-        }
-
-        return (float)$frameRate;
-    }
-
-    /**
-     * 检查是否为视频URL
-     */
-    private function isVideoUrl(string $url): bool
-    {
-        $parsedUrl = parse_url($url);
-        $path      = $parsedUrl['path'] ?? '';
-        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-
-        return in_array($extension, $this->supportedFormats) ||
-               strpos($url, '.m3u8') !== false || // HLS流
-               strpos($url, 'rtmp://') === 0;     // RTMP流
-    }
-
-    /**
-     * 检查URL可访问性（优化版）
-     */
-    private function isUrlAccessible(string $url): bool
-    {
-        // 对于流媒体URL，跳过可访问性检查
-        if (strpos($url, 'rtmp://') === 0 || strpos($url, '.m3u8') !== false) {
-            return true;
-        }
-
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => $url,
-            CURLOPT_NOBODY         => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT        => 10,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
-            CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; VideoInfoBot/1.0)',
-            CURLOPT_RETURNTRANSFER => true,
-        ]);
-
-        $result   = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error    = curl_error($ch);
-        curl_close($ch);
-
-        if ($error) {
-            Log::debug('URL访问检查失败', ['url' => $url, 'error' => $error]);
-            return false;
-        }
-
-        return $result !== false && $httpCode >= 200 && $httpCode < 400;
-    }
-
-    /**
-     * 格式化时长
-     */
-    private function formatDuration($seconds): string
-    {
-        $roundedSeconds = round($seconds, 2);
-        $totalSeconds = (int) $roundedSeconds; // 先整体转整数，避免后续浮点运算
-
-        $hours = intdiv($totalSeconds, 3600);
-        $minutes = intdiv($totalSeconds % 3600, 60);
-        $secs = $totalSeconds % 60;
-
-        // 处理小数部分（保留两位小数）
-        $micro = (int) round(($roundedSeconds - $totalSeconds) * 100);
-
-        if ($hours > 0) {
-            return $micro > 0
-                ? sprintf('%02d:%02d:%02d.%02d', $hours, $minutes, $secs, $micro)
-                : sprintf('%02d:%02d:%02d', $hours, $minutes, $secs);
-        }
-
-        return $micro > 0
-            ? sprintf('%02d:%02d.%02d', $minutes, $secs, $micro)
-            : sprintf('%02d:%02d', $minutes, $secs);
-    }
-
-    /**
-     * 格式化文件大小
-     */
-    private function formatFileSize(int $bytes): string
-    {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $bytes = max($bytes, 0);
-        $pow   = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow   = min($pow, count($units) - 1);
-
-        $bytes /= (1 << (10 * $pow));
-
-        return round($bytes, 2) . ' ' . $units[$pow];
-    }
-
-    /**
-     * 检查FFmpeg可用性 - 修改版，支持多种命令
-     */
-    private function isFFmpegAvailable(): bool
-    {
-        static $available = null;
-
-        if ($available === null) {
-            $available = false;
-
-            foreach (self::$ffmpegCommands as $cmd) {
-                $output = shell_exec($cmd . ' -version 2>&1');
-                if ($output && (strpos($output, 'ffmpeg version') !== false || strpos($output, 'ffmpeg6 version') !== false)) {
-                    $available = true;
-                    break;
-                }
-            }
-        }
-
-        return $available;
-    }
-
-    /**
-     * 获取可用的FFmpeg命令
-     */
-    private function getFFmpegCommand(): ?string
-    {
-        static $command = null;
-
-        if ($command === null) {
-            foreach (self::$ffmpegCommands as $cmd) {
-                $output = shell_exec($cmd . ' -version 2>&1');
-                if ($output && (strpos($output, 'ffmpeg version') !== false || strpos($output, 'ffmpeg6 version') !== false)) {
-                    $command = $cmd;
-                    break;
-                }
-            }
-        }
-
-        return $command;
-    }
-
-    /**
-     * 获取可用的FFprobe命令
-     */
-    private function getFFprobeCommand(): ?string
-    {
-        static $command = null;
-
-        if ($command === null) {
-            foreach (self::$ffprobeCommands as $cmd) {
-                $output = shell_exec($cmd . ' -version 2>&1');
-                if ($output && (strpos($output, 'ffprobe version') !== false || strpos($output, 'ffprobe6 version') !== false)) {
-                    $command = $cmd;
-                    break;
-                }
-            }
-        }
-
-        return $command;
-    }
-
-    /**
-     * 获取FFmpeg版本 - 修改版
-     */
-    private function getFFmpegVersion(): ?string
-    {
-        $cmd = $this->getFFmpegCommand();
-        if (!$cmd) {
-            return null;
-        }
-
-        $output = shell_exec($cmd . ' -version 2>&1');
-        if ($output && preg_match('/ffmpeg\d* version ([^\s]+)/', $output, $matches)) {
-            return $matches[1];
-        }
-
-        return null;
-    }
-
-    /**
-     * 获取FFmpeg调试信息 - 新增方法
-     */
-    public function getFFmpegDebugInfo(): array
-    {
-        $debugInfo = [
-            'shell_exec_enabled'     => function_exists('shell_exec'),
-            'php_version'            => PHP_VERSION,
-            'system_info'            => php_uname(),
-            'path_env'               => $_ENV['PATH'] ?? getenv('PATH') ?: 'Not set',
-            'ffmpeg_commands_check'  => [],
-            'ffprobe_commands_check' => []
-        ];
-
-        // 检查所有可能的FFmpeg命令
-        foreach (self::$ffmpegCommands as $cmd) {
-            $output                                   = shell_exec($cmd . ' -version 2>&1');
-            $debugInfo['ffmpeg_commands_check'][$cmd] = [
-                'command_output' => $output ?: 'No output',
-                'available'      => ($output && (strpos($output, 'ffmpeg version') !== false || strpos($output, 'ffmpeg6 version') !== false))
-            ];
-        }
-
-        // 检查所有可能的FFprobe命令
-        foreach (self::$ffprobeCommands as $cmd) {
-            $output                                    = shell_exec($cmd . ' -version 2>&1');
-            $debugInfo['ffprobe_commands_check'][$cmd] = [
-                'command_output' => $output ?: 'No output',
-                'available'      => ($output && (strpos($output, 'ffprobe version') !== false || strpos($output, 'ffprobe6 version') !== false))
-            ];
-        }
-
-        return $debugInfo;
-    }
-
-    /**
-     * 计算最大公约数
-     */
-    private function gcd(int $a, int $b): int
-    {
-        return $b === 0 ? $a : $this->gcd($b, $a % $b);
-    }
-
-    /**
-     * 生成视频缩略图（优化版）- 修改版
-     */
-    public function generateThumbnail(string $videoUrl, float $time = 1.0, array $options = []): ?string
+    public function commonGenerateThumbnail(string $videoUrl, float $time = 1.0, array $options = []): ?string
     {
         $tempFilePath = null;
 
@@ -1236,7 +1424,7 @@ class VideoInfoService
 
             // 处理输入文件路径（与extractVideoInfo相同的逻辑）
             $host         = config('app.app_host', '');
-            $processedUrl = $this->getFileUrl($videoUrl);
+            $processedUrl = $this->commonGetFileUrl($videoUrl);
             $is_local     = !empty($host) && strpos($processedUrl, $host) === 0;
 
             if (!$is_local) {
@@ -1281,7 +1469,6 @@ class VideoInfoService
             }
 
             return 'uploads/thumbnails/' . date('Ymd') . '/' . $thumbnailName;
-
         } catch (Exception $e) {
             Log::error('生成缩略图异常', [
                 'url'   => $videoUrl,
@@ -1297,188 +1484,114 @@ class VideoInfoService
     }
 
     /**
-     * 获取支持的格式列表
+     * 获取文件URL(请勿修改)
      */
-    public function getSupportedFormats(): array
+    private function commonGetFileUrl(string $url): string
     {
-        return $this->supportedFormats;
-    }
-
-    /**
-     * 清理缓存
-     */
-    public function clearCache(string $videoUrl = null): bool
-    {
-        try {
-            if ($videoUrl) {
-                $cacheKey = $this->getCacheKey($videoUrl);
-                return Cache::delete($cacheKey);
-            }
-
-            // 清理所有视频信息缓存
-            return Cache::clear();
-        } catch (Exception $e) {
-            Log::error('清理缓存失败', ['error' => $e->getMessage()]);
-            return false;
-        }
-    }
-
-    /**
-     * 获取系统状态 - 修改版
-     */
-    public function getSystemStatus(): array
-    {
-        return [
-            'ffmpeg_available'        => $this->isFFmpegAvailable(),
-            'ffmpeg_command'          => $this->getFFmpegCommand(),
-            'ffprobe_command'         => $this->getFFprobeCommand(),
-            'ffmpeg_version'          => $this->getFFmpegVersion(),
-            'supported_formats_count' => count($this->supportedFormats),
-            'php_version'             => PHP_VERSION,
-            'system_time'             => date('Y-m-d H:i:s'),
-            'debug_info'              => $this->getFFmpegDebugInfo()
-        ];
-    }
-
-    /**
-     * 获取系统负载状态
-     */
-    public function getSystemLoad(): array
-    {
-        $load = [
-            'memory_usage'     => memory_get_usage(true),
-            'memory_peak'      => memory_get_peak_usage(true),
-            'memory_limit'     => ini_get('memory_limit'),
-            'processing_count' => $this->getProcessingCount(),
-            'cache_stats'      => $this->getCacheStats()
-        ];
-
-        if (function_exists('sys_getloadavg')) {
-            $load['system_load'] = sys_getloadavg();
+        // 如果已经是完整URL，直接返回
+        if (strpos($url, 'http') === 0) {
+            return $url;
         }
 
-        return $load;
+        // 如果是相对路径，拼接域名
+        $host = config('app.app_host', '');
+        if (!empty($host)) {
+            return rtrim($host, '/') . '/' . ltrim($url, '/');
+        }
+
+        return $url;
+    }
+
+
+    /**
+     * 下载远程文件（请勿修改）
+     */
+    private function downloadRemoteFile(string $url): string
+    {
+        $tempDir  = sys_get_temp_dir();
+        $tempFile = $tempDir . '/video_' . uniqid() . '.tmp';
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL            => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT        => 60,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; VideoInfoBot/1.0)',
+        ]);
+
+        $data     = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error    = curl_error($ch);
+        curl_close($ch);
+
+        if ($error || $httpCode >= 400 || $data === false) {
+            throw new Exception('下载文件失败: ' . ($error ?: 'HTTP ' . $httpCode));
+        }
+
+        if (file_put_contents($tempFile, $data) === false) {
+            throw new Exception('写入临时文件失败');
+        }
+
+        return $tempFile;
+    }
+
+
+    /**
+     * 获取本地文件的实际路径（请勿修改）
+     */
+    private function getLocalFilePath(string $videoUrl): string
+    {
+        $path = '';
+
+        // 如果是完整URL，提取路径部分
+        if (strpos($videoUrl, 'http') === 0) {
+            $parsedUrl = parse_url($videoUrl);
+            $path      = $parsedUrl['path'] ?? '';
+            // 去掉开头的斜杠
+            $path = ltrim($path, '/');
+        } else {
+            // 直接使用相对路径，去掉开头的斜杠
+            $path = ltrim($videoUrl, '/');
+        }
+
+        // 构建完整路径，注意不要在末尾添加斜杠
+        $fullPath = public_path() . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $path);
+
+        // 规范化路径，移除多余的斜杠和点
+        $fullPath = realpath($fullPath) ?: $fullPath;
+
+        Log::info('路径处理详情', [
+            'original_url'   => $videoUrl,
+            'extracted_path' => $path,
+            'public_path'    => public_path(),
+            'full_path'      => $fullPath,
+            'file_exists'    => file_exists($fullPath)
+        ]);
+
+        return $fullPath;
     }
 
     /**
-     * 获取正在处理的任务数量
+     * 获取可用的FFmpeg命令
      */
-    private function getProcessingCount(): int
+    private function getFFmpegCommand(): ?string
     {
-        // 这里需要根据您的缓存实现来统计processing_*键的数量
-        // 简化实现，实际可能需要更复杂的逻辑
-        return 0;
-    }
+        static $command = null;
 
-    /**
-     * 获取缓存统计
-     */
-    private function getCacheStats(): array
-    {
-        return [
-            'video_info_cache_count' => 0, // 需要实现具体统计逻辑
-            'cache_hit_rate'         => 0.0
-        ];
-    }
-
-    /**
-     * 测试媒体文件 - 增强版调试方法
-     */
-    public function testMediaFile(string $videoUrl): array
-    {
-        $debugInfo    = [];
-        $tempFilePath = null;
-
-        try {
-            $debugInfo['original_url']     = $videoUrl;
-            $debugInfo['is_valid_url']     = filter_var($videoUrl, FILTER_VALIDATE_URL) !== false;
-            $debugInfo['is_video_url']     = $this->isVideoUrl($videoUrl);
-            $debugInfo['is_accessible']    = $this->isUrlAccessible($videoUrl);
-            $debugInfo['ffmpeg_available'] = $this->isFFmpegAvailable();
-            $debugInfo['ffmpeg_command']   = $this->getFFmpegCommand();
-            $debugInfo['ffprobe_command']  = $this->getFFprobeCommand();
-
-            // 文件路径处理测试
-            $host         = config('app.app_host', '');
-            $processedUrl = $this->getFileUrl($videoUrl);
-            $is_local     = !empty($host) && strpos($processedUrl, $host) === 0;
-
-            $debugInfo['file_processing'] = [
-                'host'          => $host,
-                'processed_url' => $processedUrl,
-                'is_local'      => $is_local,
-                'public_path'   => public_path()
-            ];
-
-            if (!$is_local) {
-                try {
-                    $tempFilePath = $this->downloadRemoteFile($processedUrl);
-                    $inputPath    = $tempFilePath;
-
-                    $debugInfo['file_processing']['temp_file']        = $tempFilePath;
-                    $debugInfo['file_processing']['temp_file_exists'] = file_exists($tempFilePath);
-                    $debugInfo['file_processing']['temp_file_size']   = file_exists($tempFilePath) ? filesize($tempFilePath) : 0;
-                } catch (Exception $e) {
-                    $debugInfo['file_processing']['download_error'] = $e->getMessage();
-                    return $debugInfo;
+        if ($command === null) {
+            foreach (self::$ffmpegCommands as $cmd) {
+                $output = shell_exec($cmd . ' -version 2>&1');
+                if ($output && (strpos($output, 'ffmpeg version') !== false || strpos($output, 'ffmpeg6 version') !== false)) {
+                    $command = $cmd;
+                    break;
                 }
-            } else {
-                $inputPath        = $this->getLocalFilePath($videoUrl);
-                $alternativePaths = $this->getAlternativePaths($videoUrl);
-
-                $debugInfo['file_processing']['local_path']        = $inputPath;
-                $debugInfo['file_processing']['local_file_exists'] = file_exists($inputPath);
-                $debugInfo['file_processing']['local_file_size']   = file_exists($inputPath) ? filesize($inputPath) : 0;
-                $debugInfo['file_processing']['alternative_paths'] = $alternativePaths;
-
-                // 检查所有可能的路径
-                $debugInfo['file_processing']['path_check'] = [];
-                foreach ($alternativePaths as $altPath) {
-                    $debugInfo['file_processing']['path_check'][$altPath] = [
-                        'exists'   => file_exists($altPath),
-                        'readable' => is_readable($altPath),
-                        'size'     => file_exists($altPath) ? filesize($altPath) : 0
-                    ];
-                }
-
-                // 找到存在的文件路径
-                foreach ($alternativePaths as $altPath) {
-                    if (file_exists($altPath)) {
-                        $inputPath                                  = $altPath;
-                        $debugInfo['file_processing']['found_path'] = $altPath;
-                        break;
-                    }
-                }
-            }
-
-            if ($this->isFFmpegAvailable() && file_exists($inputPath)) {
-                // 测试基础命令
-                $basicCommand               = $this->buildFFprobeCommand($inputPath, 30);
-                $debugInfo['basic_command'] = $basicCommand;
-
-                $output                        = shell_exec($basicCommand);
-                $debugInfo['basic_output']     = substr($output ?: '', 0, 1000);
-                $debugInfo['basic_json_valid'] = json_decode($output ?: '', true) !== null;
-
-                // 测试备用命令
-                $fallbackCommand               = $this->buildFallbackFFprobeCommand($inputPath, 30);
-                $debugInfo['fallback_command'] = $fallbackCommand;
-
-                $fallbackOutput                   = shell_exec($fallbackCommand);
-                $debugInfo['fallback_output']     = substr($fallbackOutput ?: '', 0, 1000);
-                $debugInfo['fallback_json_valid'] = json_decode($fallbackOutput ?: '', true) !== null;
-            }
-
-            return $debugInfo;
-
-        } catch (Exception $e) {
-            $debugInfo['error'] = $e->getMessage();
-            return $debugInfo;
-        } finally {
-            // 清理临时文件
-            if ($tempFilePath && file_exists($tempFilePath)) {
-                unlink($tempFilePath);
             }
         }
+
+        return $command;
     }
 }

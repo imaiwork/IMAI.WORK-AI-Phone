@@ -20,12 +20,25 @@ use think\facade\Db;
 class LikeReplyLogic extends ApiLogic
 {
     public static function add($params)
-    {   
+    {
         // 开启事务
         Db::startTrans();
         try {
             self::checkAutoDevice($params);
             TaskLogic::checkAccounts($params['accounts']);
+
+            $is_overlap = $params['task_exec_type'] ?? 0;
+            if ((int)$is_overlap === 1) {   
+                \app\api\logic\device\TaskLogic::updateTaskStatusByIds($params['task_ids']);
+                $params['time_config'] = [
+                    date('H:i', time()) . '-' . date('H:i', (time() + (60 * (int)$params['minutes']))),
+                ];
+                $params['custom_date'] = [
+                    date('Y-m-d', time())
+                ];
+                unset($params['task_ids']);
+            }
+
             $times = TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
             $params['user_id'] = self::$uid;
             $params['task_name'] =  $params['task_name'] ??  '朋友圈点赞评论任务' . date('mdHis', time());
@@ -38,14 +51,17 @@ class LikeReplyLogic extends ApiLogic
                 $account = array_merge($account, $find);
 
                 foreach ($times as $time) {
-                    list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_WECHAT_CIRCLE_THUMB_COMMENT, $time['start_time'], $time['end_time'], self::$uid);
-                    if (!$isOverlap) {
-                        $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                        $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
-                        throw new \Exception($msg);
+                    if ((int)$is_overlap === 0) {
+                        list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_WECHAT_CIRCLE_THUMB_COMMENT, $time['start_time'], $time['end_time'], self::$uid);
+                        if (!$isOverlap) {
+                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                            throw new \Exception($msg);
+                        }
                     }
 
-                    $time['end_time'] = $time['end_time'] - 180;
+
+                    $time['end_time'] = $time['end_time'] - 120;
 
                     $row = SvDeviceCircleLikeReplyAccount::create([
                         'circle_like_reply_id' => $task->id,
@@ -74,13 +90,13 @@ class LikeReplyLogic extends ApiLogic
                         'avatar' => $account['avatar'],
                         'task_name' => '朋友圈点赞评论任务',
                         'status' => 0,
-                        'day' => date('Y-m-d',$time['start_time']),
+                        'day' => date('Y-m-d', $time['start_time']),
                         'time_config' => json_encode($params['time_config'], JSON_UNESCAPED_UNICODE),
                         'start_time' => $time['start_time'],
                         'end_time' => $time['end_time'],
                         'sub_task_id' => $task->id,
                         'sub_data_id' => $row->id,
-                        'source' => DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT,//sv_device_take_over_task_account
+                        'source' => DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT, //sv_device_take_over_task_account
                         'create_time' => time(),
                     ]);
                     \app\api\logic\device\TaskLogic::updateWechatRpaTaskTime($account['device_code'], $time['start_time']);

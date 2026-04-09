@@ -90,6 +90,9 @@ class DeviceEnum
     const TASK_TOKEN_NOTIFY = 1000; // 算力不足通知
     const TASK_TOKEN_ERROR = 4059; // 用户算力不足
 
+    const TASK_PERSONA_RESET = 999; // 重置人设
+    const TASK_PERSONA_ERROR = 4060; // 人设错误
+
 
 
     //自动模式
@@ -200,6 +203,7 @@ class DeviceEnum
         $desc = [
             0 => '未知',
             1 => '视频号',
+            2 => '微信',
             3 => '小红书',
             4 => '抖音',
             5 => '快手',
@@ -217,11 +221,12 @@ class DeviceEnum
             2 => '评论区私信',
             3 => '留痕获客',
             4 => '视频号获客',
-            5 => '内容发布',
+            5 => '加好友',
             6 => '私信接管',
             7 => '朋友圈发布',
             8 => '朋友圈点赞评论',
             9 => '视频号获客加微任务',
+            25 => '微信加v',
         ];
         if ($flag) {
             return $desc;

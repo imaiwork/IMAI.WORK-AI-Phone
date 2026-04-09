@@ -25,6 +25,9 @@
             <el-tab-pane label="AI面试">
                 <ConfigTable :data="getInterviewConfig" />
             </el-tab-pane>
+            <el-tab-pane label="爆款仿写">
+                <ConfigTable :data="getHotWriteConfig" />
+            </el-tab-pane>
             <el-tab-pane label="知识库">
                 <ConfigTable :data="getKnbConfig" />
             </el-tab-pane>
@@ -37,6 +40,7 @@
             <el-tab-pane label="AI手机">
                 <ConfigTable :data="getPhoneAutoConfig" />
             </el-tab-pane>
+
             <el-tab-pane label="其他">
                 <ConfigTable :data="getOtherConfig" />
             </el-tab-pane>
@@ -192,12 +196,17 @@ const getPhoneAutoConfig = computed(() => {
     );
 });
 
+const getHotWriteConfig = computed(() => {
+    return tableData.value.filter((item) => ["video_copywriting_imitation"].includes(item.scene));
+});
+
 const getOtherConfig = computed(() => {
     return tableData.value.filter((item) =>
         [
             "video_clip",
             "matrix_copywriting",
-            "automation_account_ip_analysis",
+            "ai_persona_analysis",
+            "ai_persona_report",
             "coze_copywriting",
             "douyin_js",
         ].includes(item.scene)

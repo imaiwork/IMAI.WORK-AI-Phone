@@ -32,7 +32,7 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
     public function setSearch(): array
     {
         return [
-            '=' => ['task_type', 'dt.device_code', 'day'],
+            '=' => ['task_type', 'dt.device_code', 'day', 'dt.status'],
             '%like%' => ['task_name']
         ];
     }
@@ -47,13 +47,21 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
         return SvDeviceTask::alias('dt')
             ->field('dt.*')
             ->where($this->searchWhere)
-            ->order('id', 'asc')
+            ->order('start_time', 'asc')
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
             ->each(function ($item) {
                 $item['start_time'] = date('H:i', $item['start_time']);
                 $item['end_time'] = date('H:i', $item['end_time']);
-                $item['task_category'] = !in_array($item['source'], [7, 8])? DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskTypeDesc($item['task_type']) : DeviceEnum::getTaskSceneDesc($item['task_type']);
+                $item['account_type'] = $item['source'] === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $item['account_type'];
+                $item['task_category'] = !in_array($item['source'], [5, 7, 8]) ? DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskTypeDesc($item['task_type']) : DeviceEnum::getTaskSceneDesc($item['task_type']);
+                if (
+                    in_array($item['task_type'], [DeviceEnum::TASK_TYPE_TAKEOVER, DeviceEnum::AUTO_TYPE_TAKE_OVER]) &&
+                    $item['source'] == DeviceEnum::TASK_SOURCE_TAKEOVER &&
+                    $item['account_type'] == DeviceEnum::ACCOUNT_TYPE_SPH
+                ) {
+                    $item['task_category'] = '微信私信接管';
+                }
                 $item['name'] = '';
                 switch ($item['source']) {
 
@@ -101,7 +109,7 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                         $taskinfo = SvLeadScrapingSettingAccount::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
                         $item['name'] = $taskinfo['name'] ?? '';
                         break;
-                     case DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_PUBLISH:
+                    case DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_PUBLISH:
                         //sv_lead_scraping_setting_account
                         $taskinfo = AiWechatCircleTaskConfig::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
                         $item['name'] = $taskinfo['task_name'] ?? $item['task_name'];
@@ -129,7 +137,6 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                 return $item;
             })
             ->toArray();
-
     }
 
 
@@ -144,4 +151,3 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
             ->count();
     }
 }
-

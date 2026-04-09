@@ -334,12 +334,14 @@ class AutoDeviceSettingLogic extends ApiLogic
             }
             $allResults = [];
             $currentTime = time();
+            $execution_day = date('Y-m-d', strtotime('+2 days'));
+            
             // 遍历处理每个任务
             foreach ($tasks as $task) {
                 $videoTheme = $task->video_theme;
                 $textTheme = $task->text_theme;
-                $execution_day = date('Y-m-d', strtotime($task->execution_day) + 2 * 86400);
                 $task->execution_day = $execution_day;
+                $task->save();
                 if (trim($videoTheme) == '') {
                     $task->remark = '视频主题为空';
                     $task->status = 3;
@@ -1196,6 +1198,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                 throw new \Exception('生成失败');
             }
         } catch (\Exception $e) {
+            \think\facade\Log::channel('automedia')->info('copywriting失败' . $e->__toString());
             throw new \Exception($e->getMessage());
         }
     }

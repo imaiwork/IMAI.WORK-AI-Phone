@@ -35,7 +35,7 @@
                         <ElOption
                             v-for="item in optionsData.cardLists"
                             :key="item.id"
-                            :label="item.name"
+                            :label="`${item.name} · ${item.tokens}点`"
                             :value="item.id" />
                     </ElSelect>
                 </div>

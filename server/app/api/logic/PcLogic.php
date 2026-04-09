@@ -272,6 +272,7 @@ class PcLogic extends BaseLogic
             ],
             'recharge'                 => [
                 'is_ios_open'   => ConfigService::get('recharge','is_ios_open',0),
+                'is_and_open'   => ConfigService::get('recharge','is_and_open',0),
             ],
             'draw' => [
                 'channel' => $hdmodel['channel'] ?? [],

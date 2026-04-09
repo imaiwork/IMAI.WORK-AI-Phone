@@ -112,57 +112,15 @@
                 </view>
             </view>
             <view class="h-full flex flex-col" v-show="step == 3">
-                <view class="px-4">
-                    <view class="text-[30rpx] font-medium">参考素材</view>
-                    <view class="mt-1 text-xs text-[#0000004d]">
-                        总量限制：全部素材总时长不得超过{{ montageConfig.materialTotalDuration }}分钟 (图片按{{
-                            montageConfig.imageDuration
-                        }}秒/张，视频按实际时长/个)</view
-                    >
-                </view>
+                <material-duration-bar :material-list="formData.materialList" />
                 <view class="grow min-h-0">
                     <scroll-view scroll-y class="h-full">
-                        <view class="grid grid-cols-3 gap-[26rpx] p-4">
-                            <view v-for="(item, index) in formData.materialList" :key="index" class="relative">
-                                <view
-                                    class="h-[220rpx] rounded-[12rpx] relative overflow-hidden"
-                                    @click="previewMaterial(item)">
-                                    <image
-                                        :src="item.pic"
-                                        class="w-full h-full rounded-[12rpx]"
-                                        mode="aspectFill"></image>
-                                    <view
-                                        class="absolute bottom-0 h-[40rpx] w-full bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[88]">
-                                        <image
-                                            v-if="item.type === 'image'"
-                                            src="@/ai_modules/digital_human/static/icons/pic.svg"
-                                            class="w-[24rpx] h-[24rpx]"></image>
-                                        <image
-                                            v-else
-                                            src="@/ai_modules/digital_human/static/icons/video.svg"
-                                            class="w-[24rpx] h-[24rpx]"></image>
-                                    </view>
-                                </view>
-                                <view
-                                    class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
-                                    @click="handleDeleteMaterial(index)">
-                                    <u-icon name="close" color="#ffffff" size="16"></u-icon>
-                                </view>
-                                <div class="absolute bottom-4 w-full z-[89] flex justify-center">
-                                    <view class="dh-version-name" @click.stop="handleReplaceMaterial(index, 1)">
-                                        替换
-                                    </view>
-                                </div>
-                            </view>
-                            <view
-                                class="bg-white rounded-[12rpx] flex flex-col items-center justify-center h-[220rpx]"
-                                @click="chooseUploadType(1)">
-                                <image
-                                    src="@/ai_modules/digital_human/static/icons/add.svg"
-                                    class="w-[40rpx] h-[40rpx]"></image>
-                                <text class="text-xs text-[#4E5158] mt-[24rpx]">添加素材</text>
-                            </view>
-                        </view>
+                        <material-container
+                            :material-list="formData.materialList"
+                            @preview="previewMaterial"
+                            @replace="handleReplaceMaterial($event, 1)"
+                            @delete="handleDeleteMaterial"
+                            @upload="chooseUploadType(1)" />
                     </scroll-view>
                 </view>
             </view>
@@ -441,6 +399,8 @@ import ChooseHistory from "@/ai_modules/digital_human/components/choose-history/
 import ChooseCharacter from "@/ai_modules/digital_human/components/choose-character/choose-character.vue";
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
+import MaterialDurationBar from "@/ai_modules/digital_human/components/material-duration-bar/material-duration-bar.vue";
+import MaterialContainer from "@/ai_modules/digital_human/components/material-container/material-container.vue";
 
 const { on } = useEventBusManager();
 
@@ -592,6 +552,7 @@ const { processAndAppend } = useMaterial(toRef(formData, "materialList"));
 const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
     isTranscode: true,
     videoDuration: [1, 59],
+    isFetchVideoInfo: true,
     onSuccess: (materials: any[]) => {
         const targetList = uploadSource.value === 0 ? "anchorLists" : "materialList";
         const index = replaceMaterialIndex.value;

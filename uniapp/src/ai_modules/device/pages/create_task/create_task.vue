@@ -291,6 +291,27 @@
                             <view class="text-[30rpx] font-medium"> 时间设置 </view>
                             <view
                                 class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx] shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.03)]">
+                                <view class="bg-[#F4F5F9] rounded-[16rpx] p-[6rpx] flex mb-[36rpx] gap-2">
+                                    <view
+                                        v-for="(item, index) in taskExecTypeOptions"
+                                        class="flex-1 flex items-center justify-center gap-x-[8rpx] h-[72rpx] rounded-[12rpx] text-[28rpx]"
+                                        :key="index"
+                                        :class="
+                                            formData.task_exec_type === item.value
+                                                ? 'bg-white text-primary font-medium shadow-[0_2rpx_8rpx_rgba(0,0,0,0.06)]'
+                                                : 'text-[#00000066]'
+                                        "
+                                        @click="formData.task_exec_type = item.value">
+                                        <u-icon
+                                            :name="item.icon"
+                                            size="32"
+                                            :color="
+                                                formData.task_exec_type === item.value ? '#2979ff' : '#00000066'
+                                            "></u-icon>
+                                        <text>{{ item.text }}</text>
+                                    </view>
+                                </view>
+
                                 <view>
                                     <view class="text-[#7C7E80]">任务频率</view>
                                     <view class="mt-[22rpx]">
@@ -318,6 +339,7 @@
                                         </view>
                                     </view>
                                 </view>
+
                                 <view
                                     class="mt-[28rpx]"
                                     v-if="formData.custom_date.length && currentDayFrequencyIdx == 5">
@@ -343,11 +365,6 @@
                                                 :key="index"
                                                 class="date-item">
                                                 {{ formatDate(item) }}
-                                                <!-- <view
-                                                    class="w-[24rpx] h-[24rpx] flex items-center justify-center rounded-full bg-[#FF2442]"
-                                                    @click="handleDeleteCustomDate(index)">
-                                                    <u-icon name="close" size="12" color="#FFFFFF"></u-icon>
-                                                </view> -->
                                             </view>
                                         </view>
                                     </view>
@@ -364,61 +381,91 @@
                             </view>
                             <view
                                 class="mt-4 rounded-[16rpx] px-4 py-[28rpx] bg-white"
-                                v-for="(item, index) in formData.time_config"
-                                :key="index">
+                                v-for="(item, configIndex) in formData.time_config"
+                                :key="configIndex">
                                 <view class="text-primary font-medium text-[30rpx]">{{ formatDate(item.date) }}</view>
                                 <view class="flex flex-col gap-y-[28rpx] mt-[30rpx]">
                                     <view v-for="(time, timeIndex) in item.times" :key="timeIndex">
                                         <view class="text-[#7C7E80]">第{{ timeIndex + 1 }}个内容任务发布时间</view>
-                                        <view class="mt-[12rpx] flex items-center gap-x-4">
+
+                                        <template v-if="isImmediateFirstSlot(configIndex, timeIndex)">
                                             <view
-                                                class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
-                                                <picker
-                                                    mode="time"
-                                                    class="w-full"
-                                                    :value="time.start_time"
-                                                    @change="handleStartTimeChange($event, index, timeIndex)">
-                                                    <view class="flex items-center justify-between h-[70rpx]">
-                                                        <text
-                                                            :class="[
-                                                                timeErrors[timeIndex]?.start_time
-                                                                    ? 'text-[#FF3C26] font-medium'
-                                                                    : time.start_time
-                                                                    ? 'font-medium'
-                                                                    : 'text-[#00000033]',
-                                                            ]">
-                                                            {{ time.start_time || "开始时间" }}
-                                                        </text>
-                                                        <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
-                                                    </view>
-                                                </picker>
+                                                class="mt-[12rpx] flex items-center justify-between h-[90rpx] border-[0] border-b-[1rpx] border-solid border-[#EDEDED]">
+                                                <text class="text-[#333] font-medium text-[28rpx]">今日发布时间</text>
+                                                <view
+                                                    class="px-[24rpx] py-[10rpx] rounded-full bg-[#EEF3FF] text-primary font-medium text-[26rpx]">
+                                                    立即执行
+                                                </view>
                                             </view>
-                                            <view class="text-[#7C7E80]">至</view>
-                                            <view
-                                                class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
-                                                <picker
-                                                    mode="time"
-                                                    class="w-full"
-                                                    :value="time.end_time"
-                                                    :disabled="!time.start_time"
-                                                    @click="handleEndTimeClick(time.start_time)"
-                                                    @change="handleEndTimeChange($event, index, timeIndex)">
-                                                    <view class="flex items-center justify-between h-[70rpx]">
-                                                        <text
-                                                            :class="[
-                                                                timeErrors[timeIndex]?.end_time
-                                                                    ? 'text-[#FF3C26] font-medium'
-                                                                    : time.end_time
-                                                                    ? 'font-medium'
-                                                                    : 'text-[#00000033]',
-                                                            ]">
-                                                            {{ time.end_time || "结束时间" }}
-                                                        </text>
-                                                        <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
-                                                    </view>
-                                                </picker>
+                                        </template>
+
+                                        <template v-else>
+                                            <view class="mt-[12rpx] flex items-center gap-x-4">
+                                                <view
+                                                    class="border-[0] border-b-[1rpx] border-solid py-1 flex-1"
+                                                    :class="[
+                                                        timeErrors[timeIndex]?.start_time
+                                                            ? 'border-[#FF3C26]'
+                                                            : 'border-[#EDEDED]',
+                                                    ]">
+                                                    <picker
+                                                        mode="time"
+                                                        class="w-full"
+                                                        :value="time.start_time"
+                                                        @change="handleStartTimeChange($event, configIndex, timeIndex)">
+                                                        <view class="flex items-center justify-between h-[70rpx]">
+                                                            <text
+                                                                :class="[
+                                                                    timeErrors[timeIndex]?.start_time
+                                                                        ? 'text-[#FF3C26] font-medium'
+                                                                        : time.start_time
+                                                                        ? 'font-medium'
+                                                                        : 'text-[#00000033]',
+                                                                ]">
+                                                                {{ time.start_time || "开始时间" }}
+                                                            </text>
+                                                            <u-icon
+                                                                name="arrow-right"
+                                                                size="24"
+                                                                color="#00000033"></u-icon>
+                                                        </view>
+                                                    </picker>
+                                                </view>
+                                                <view class="text-[#7C7E80]">至</view>
+                                                <view
+                                                    class="border-[0] border-b-[1rpx] border-solid py-1 flex-1"
+                                                    :class="[
+                                                        timeErrors[timeIndex]?.end_time
+                                                            ? 'border-[#FF3C26]'
+                                                            : 'border-[#EDEDED]',
+                                                    ]">
+                                                    <picker
+                                                        mode="time"
+                                                        class="w-full"
+                                                        :value="time.end_time"
+                                                        :disabled="!time.start_time"
+                                                        @click="handleEndTimeClick(time.start_time)"
+                                                        @change="handleEndTimeChange($event, configIndex, timeIndex)">
+                                                        <view class="flex items-center justify-between h-[70rpx]">
+                                                            <text
+                                                                :class="[
+                                                                    timeErrors[timeIndex]?.end_time
+                                                                        ? 'text-[#FF3C26] font-medium'
+                                                                        : time.end_time
+                                                                        ? 'font-medium'
+                                                                        : 'text-[#00000033]',
+                                                                ]">
+                                                                {{ time.end_time || "结束时间" }}
+                                                            </text>
+                                                            <u-icon
+                                                                name="arrow-right"
+                                                                size="24"
+                                                                color="#00000033"></u-icon>
+                                                        </view>
+                                                    </picker>
+                                                </view>
                                             </view>
-                                        </view>
+                                        </template>
                                     </view>
                                 </view>
                                 <view v-if="Object.keys(timeErrors).length > 0" class="mt-2 text-[#FF3C26]">
@@ -528,12 +575,19 @@
         v-model="showKeywordsEdit"
         title="标记地点"
         @confirm="handleKeywordsEditConfirm" />
+    <task-conflict-dialog
+        v-if="showTaskMsgPop"
+        v-model="showTaskMsgPop"
+        :messages="taskMsgPopContent.messages"
+        :errors="taskMsgPopContent.errors"
+        @close="showTaskMsgPop = false"
+        @confirm="handleTaskMsgPopConfirm" />
 </template>
 
 <script setup lang="ts">
 import WechatOA from "@/utils/wechat";
 import { getVideoCreationRecord } from "@/api/app";
-import { createMatrixTask, publishDeviceTask } from "@/api/device";
+import { createMatrixTask, publishDeviceTask, checkTaskPublishTime } from "@/api/device";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { getPuzzleTaskResultList } from "@/api/drawing";
@@ -542,7 +596,7 @@ import VideoPreview from "@/components/video-preview/video-preview.vue";
 import NumberPop from "@/ai_modules/device/components/number-pop/number-pop.vue";
 import ChooseHistory from "@/ai_modules/device/components/choose-history/choose-history.vue";
 import KeywordsEdit from "@/ai_modules/device/components/keywords-edit/keywords-edit.vue";
-
+import TaskConflictDialog from "@/ai_modules/device/components/task-conflict-dialog/task-conflict-dialog.vue";
 const { on } = useEventBusManager();
 
 // --- 类型定义 ---
@@ -577,6 +631,7 @@ interface FormData {
     custom_date: string[];
     task_frep: number;
     location: string;
+    task_exec_type: number;
 }
 
 // --- 常量配置 ---
@@ -611,7 +666,13 @@ const formData = reactive<FormData>({
     custom_date: [],
     task_frep: 1,
     location: "",
+    task_exec_type: 1,
 });
+
+const taskExecTypeOptions = [
+    { icon: "arrow-upward", text: "即时执行", value: 1 },
+    { icon: "clock", text: "定时执行", value: 0 },
+];
 
 // UI 控制状态
 const deleteImgIndex = ref<number>(-1);
@@ -639,6 +700,10 @@ const currentDayFrequencyIdx = ref(0);
 // 校验状态
 const timeErrors = ref<Record<number, { start_time?: boolean; end_time?: boolean }>>({});
 const taskErrorMsg = ref<string>("");
+const showTaskMsgPop = ref(false);
+const taskMsgPopContent = ref<Record<string, any>>({});
+
+const pendingTaskIds = ref<string[]>([]);
 
 // --- 计算属性 ---
 const navTitle = computed(() => (taskType.value == TaskType.IMAGE ? "发布图文" : "发布视频"));
@@ -902,14 +967,15 @@ const changeTimeConfig = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // 归一化到今天0点
 
-    const generateTimesForDay = () => {
+    const generateTimesForDay = (baseTime: Date) => {
         return Array.from({ length: formData.publish_frep }, (_, i) => {
-            const startMs = today.getTime() + i * TIME_INTERVAL * 60 * 1000;
+            const startMs = baseTime.getTime() + i * TIME_INTERVAL * 60 * 1000;
             const endMs = startMs + TIME_INTERVAL * 60 * 1000;
 
-            // 处理跨天逻辑：如果结束时间跨天，设为当天23:59
             const startDate = new Date(startMs);
             let endDate = new Date(endMs);
+
+            // 跨天处理：结束时间超过当天，截断为 23:59
             if (endDate.getDate() !== startDate.getDate()) {
                 endDate = new Date(startDate);
                 endDate.setHours(23, 59, 59, 999);
@@ -922,23 +988,37 @@ const changeTimeConfig = () => {
         });
     };
 
-    // 如果是自定义日期模式
+    const now = new Date();
+    const todayStr = uni.$u.timeFormat(today, "yyyy-mm-dd"); // 确保格式一致
+
     if (currentDayFrequencyIdx.value === 5 && formData.custom_date.length > 0) {
-        formData.time_config = formData.custom_date.map((dateStr) => ({
-            date: dateStr,
-            times: generateTimesForDay(),
-        }));
+        formData.time_config = formData.custom_date.map((dateStr) => {
+            const isToday = dateStr === todayStr;
+            const baseTime = isToday ? new Date(now) : new Date(dateStr.replace(/-/g, "/"));
+            baseTime.setSeconds(0, 0);
+
+            return {
+                date: uni.$u.timeFormat(new Date(dateStr.replace(/-/g, "/")), "yyyy-mm-dd"),
+                times: generateTimesForDay(baseTime),
+            };
+        });
     } else {
-        // 普通模式
         formData.time_config = Array.from({ length: formData.task_frep }, (_, i) => {
             const dateObj = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
+            const dateStr = uni.$u.timeFormat(dateObj, "yyyy-mm-dd");
+
+            // 第一天（今天）使用当前时间，其他天使用该天的开始时间
+            const baseTime = i === 0 ? new Date(now) : dateObj;
+            baseTime.setSeconds(0, 0);
+
             return {
-                date: uni.$u.timeFormat(dateObj, "yyyy-mm-dd"),
-                times: generateTimesForDay(),
+                date: dateStr,
+                times: generateTimesForDay(baseTime),
             };
         });
     }
 
+    // 重置错误状态
     timeErrors.value = {};
 };
 
@@ -947,11 +1027,12 @@ const handleEndTimeClick = (startTime?: string) => {
 };
 
 const handleStartTimeChange = (e: any, configIndex: number, timeIndex: number) => {
+    if (isImmediateFirstSlot(configIndex, timeIndex)) return;
+
     const value = e.detail.value;
     const timeItem = formData.time_config[configIndex].times[timeIndex];
     timeItem.start_time = value;
 
-    // 自动推算结束时间 (+30min)
     const [h, m] = value.split(":").map(Number);
     const date = new Date();
     date.setHours(h, m + TIME_INTERVAL, 0, 0);
@@ -961,19 +1042,20 @@ const handleStartTimeChange = (e: any, configIndex: number, timeIndex: number) =
 };
 
 const handleEndTimeChange = (e: any, configIndex: number, timeIndex: number) => {
+    // 如果是立即执行的时间段，不允许修改
+    if (isImmediateFirstSlot(configIndex, timeIndex)) return;
+
     const value = e.detail.value;
     const timeItem = formData.time_config[configIndex].times[timeIndex];
 
     if (!timeItem.start_time) return;
 
-    // 构造日期对象进行比较，确保跨零点等逻辑正确（假设都在同一天或次日）
-    const d = new Date().toDateString(); // "Mon Jan 01 2000"
+    const d = new Date().toDateString();
     const start = new Date(`${d} ${timeItem.start_time}`);
     const end = new Date(`${d} ${value}`);
 
     if (end <= start) {
         uni.$u.toast("结束时间必须晚于开始时间");
-        // 重置回原来的有效值或清空? 这里选择暂不修改，等待用户再次选择，或者恢复自动计算值
         return;
     }
 
@@ -987,66 +1069,183 @@ const handleEndTimeChange = (e: any, configIndex: number, timeIndex: number) => 
 };
 
 // 校验特定某天的时间安排
-const validateAndSetErrors = (configIndex: number) => {
-    const times = formData.time_config[configIndex].times;
-    const toMin = (t: string) => {
-        const [h, m] = t.split(":").map(Number);
-        return h * 60 + m;
-    };
+const validateAllTimeConfigs = () => {
+    let hasAnyError = false;
+    const allErrors: Record<number, { start_time?: boolean; end_time?: boolean }> = {};
 
-    const errors: Record<number, { start_time: boolean; end_time: boolean }> = {};
-    let hasError = false;
+    for (let configIndex = 0; configIndex < formData.time_config.length; configIndex++) {
+        const times = formData.time_config[configIndex].times;
+        const toMin = (t: string) => {
+            const [h, m] = t.split(":").map(Number);
+            return h * 60 + m;
+        };
 
-    // 检查每一项的完整性与顺序
-    for (let i = 0; i < times.length; i++) {
-        const cur = times[i];
-        if (!cur.start_time || !cur.end_time) continue;
+        // 创建一个包含索引信息的时间数组，过滤掉立即执行的时间段
+        const timeWithIndex = times.map((time, timeIndex) => ({
+            time,
+            originalIndex: timeIndex,
+            isImmediate: isImmediateFirstSlot(configIndex, timeIndex),
+        }));
 
-        const s = toMin(cur.start_time);
-        const e = toMin(cur.end_time);
+        // 过滤掉立即执行的时间段
+        const nonImmediateTimes = timeWithIndex.filter((item) => !item.isImmediate);
 
-        // 自身开始结束检查
-        if (s >= e) {
-            errors[i] = { start_time: true, end_time: true };
-            hasError = true;
-        }
+        // 如果没有需要验证的时间段，跳过
+        if (nonImmediateTimes.length === 0) continue;
 
-        // 与上一项重叠检查
-        if (i > 0) {
-            const prev = times[i - 1];
-            if (prev.end_time) {
-                const prevE = toMin(prev.end_time);
-                if (s < prevE) {
-                    errors[i] = { ...errors[i], start_time: true };
-                    errors[i - 1] = { ...errors[i - 1], end_time: true };
-                    hasError = true;
+        // 检查每一项的完整性与顺序
+        for (let i = 0; i < nonImmediateTimes.length; i++) {
+            const currentItem = nonImmediateTimes[i];
+            const cur = currentItem.time;
+            const originalIndex = currentItem.originalIndex;
+
+            if (!cur.start_time || !cur.end_time) continue;
+
+            const s = toMin(cur.start_time);
+            const e = toMin(cur.end_time);
+
+            // 自身开始结束检查
+            if (s >= e) {
+                allErrors[originalIndex] = { start_time: true, end_time: true };
+                hasAnyError = true;
+            }
+
+            // 与上一项重叠检查
+            if (i > 0) {
+                const prevItem = nonImmediateTimes[i - 1];
+                const prev = prevItem.time;
+                const prevOriginalIndex = prevItem.originalIndex;
+
+                if (prev.end_time) {
+                    const prevE = toMin(prev.end_time);
+                    if (s < prevE) {
+                        allErrors[originalIndex] = { ...allErrors[originalIndex], start_time: true };
+                        allErrors[prevOriginalIndex] = { ...allErrors[prevOriginalIndex], end_time: true };
+                        hasAnyError = true;
+                    }
                 }
             }
         }
     }
 
+    return { hasError: hasAnyError, errors: allErrors };
+};
+
+// 修改原来的 validateAndSetErrors 函数，保持单个配置验证的功能
+const validateAndSetErrors = (configIndex: number) => {
+    // 使用全局验证函数，但只更新当前配置的错误状态
+    const { hasError, errors } = validateAllTimeConfigs();
     timeErrors.value = errors;
-    return !hasError;
+
+    // 检查当前配置是否有错误
+    const currentConfigHasError = Object.keys(errors).some((key) => {
+        const timeIndex = Number(key);
+        return formData.time_config[configIndex].times[timeIndex] !== undefined;
+    });
+
+    return !currentConfigHasError;
+};
+// 判断是否为即时执行模式下当天第一条（用于模板中）
+const isImmediateFirstSlot = (configIndex: number, timeIndex: number): boolean => {
+    if (formData.task_exec_type !== 1) {
+        return false;
+    }
+
+    if (timeIndex !== 0) {
+        return false;
+    }
+
+    const currentDate = formData.time_config[configIndex]?.date;
+    if (!currentDate) {
+        return false;
+    }
+
+    const today = new Date();
+    const todayStr = uni.$u.timeFormat(today, "yyyy-mm-dd");
+
+    return currentDate === todayStr;
+};
+
+const getTimeConfig = () => {
+    const todayStr = uni.$u.timeFormat(new Date(), "yyyy-mm-dd");
+
+    return formData.time_config.map((item: any) => ({
+        date: item.date,
+        times: item.times.map((time: any, timeIndex: number) => {
+            const isToday = item.date === todayStr;
+            const isImmediate = formData.task_exec_type === 1 && isToday && timeIndex === 0;
+            return isImmediate ? 1 : `${time.start_time}-${time.end_time}`;
+        }),
+    }));
 };
 
 // 创建任务提交
+const executeCreateTask = async (task_ids: string[]) => {
+    uni.showLoading({ title: "创建中...", mask: true });
+    try {
+        const { id } = await createMatrixTask({
+            name: formData.name,
+            media_type: taskType.value,
+            media_url: formData.materialList,
+            copywriting: formData.copywriterList,
+        });
+
+        await publishDeviceTask({
+            name: formData.name,
+            matrix_media_setting_id: id,
+            time_config: getTimeConfig(),
+            accounts: formData.accounts,
+            publish_frep: formData.publish_frep,
+            media_type: taskType.value,
+            task_type: 3,
+            scene: 2,
+            data_type: 0,
+            poi: formData.location,
+            task_exec_type: formData.task_exec_type,
+            task_ids,
+        });
+
+        uni.hideLoading();
+        showCreateTaskSuccessDialog.value = true;
+        WechatOA.notify();
+    } catch (error: any) {
+        uni.hideLoading();
+        if (error.indexOf("24小时自动执行任务") > -1) {
+            uni.showModal({
+                title: "提示",
+                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
+                success: (res) => {
+                    if (res.confirm) {
+                        uni.$u.route({ url: "/ai_modules/device/pages/index/index" });
+                    }
+                },
+            });
+        } else {
+            taskErrorMsg.value = error;
+            uni.showToast({ title: error, icon: "none", duration: 3000 });
+        }
+    }
+};
+
 const handleCreateTask = async () => {
-    // 基础校验
-    if (Object.keys(timeErrors.value).length > 0) return uni.$u.toast("时间配置存在冲突");
+    const { hasError, errors } = validateAllTimeConfigs();
+
+    if (hasError) {
+        timeErrors.value = errors;
+        return uni.$u.toast("时间配置存在冲突");
+    }
     if (!formData.name) return uni.$u.toast("请输入任务名称");
     if (formData.accounts.length === 0) {
         uni.$u.toast("请选择发布账号");
         uni.$u.route({ url: "/ai_modules/device/pages/account_choose/account_choose" });
         return;
     }
-    // 判断如果materialList中只有一条的时候，需要判断account账号是不是有多个相同的平台的账号，如果有需要提示用户
 
     if (formData.materialList.length === 1) {
         const typeCountMap = formData.accounts.reduce<Record<string, number>>((acc, account) => {
             acc[account.type] = (acc[account.type] || 0) + 1;
             return acc;
         }, {});
-
         const duplicateTypes = Object.entries(typeCountMap)
             .filter(([, count]) => count > 1)
             .map(([type]) => type);
@@ -1064,61 +1263,48 @@ const handleCreateTask = async () => {
         }
     }
 
-    uni.showLoading({ title: "创建中...", mask: true });
+    uni.showLoading({ title: "检测中...", mask: true });
 
     try {
-        const { id } = await createMatrixTask({
-            name: formData.name,
-            media_type: taskType.value,
-            media_url: formData.materialList,
-            copywriting: formData.copywriterList,
-        });
+        if (formData.task_exec_type === 1) {
+            const {
+                messages,
+                task_ids,
+                errors: rawErrors,
+            } = await checkTaskPublishTime({
+                accounts: formData.accounts,
+                time_config: getTimeConfig(),
+                minutes: 30,
+            });
 
-        await publishDeviceTask({
-            name: formData.name,
-            matrix_media_setting_id: id,
-            time_config: formData.time_config.map((item: any) => ({
-                date: item.date,
-                times: item.times.map((time: any) => `${time.start_time}-${time.end_time}`),
-            })),
-            accounts: formData.accounts,
-            publish_frep: formData.publish_frep,
-            media_type: taskType.value,
-            task_type: 3,
-            scene: 2,
-            data_type: 0,
-            poi: formData.location,
-        });
-        uni.hideLoading();
-        showCreateTaskSuccessDialog.value = true;
-        WechatOA.notify();
+            uni.hideLoading();
+
+            if (messages && messages.length > 0) {
+                pendingTaskIds.value = task_ids;
+                taskMsgPopContent.value = { messages, errors: rawErrors };
+                showTaskMsgPop.value = true;
+                return;
+            }
+            await executeCreateTask(task_ids);
+        } else {
+            await executeCreateTask([]);
+        }
+
+        // 无冲突，直接创建
     } catch (error: any) {
         uni.hideLoading();
-        if (error.indexOf("24小时自动执行任务") > -1) {
-            uni.showModal({
-                title: "提示",
-                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
-                success: (res) => {
-                    if (res.confirm) {
-                        uni.$u.route({
-                            url: "/pages/phone/phone",
-                        });
-                    }
-                },
-            });
-        } else {
-            taskErrorMsg.value = error;
-            uni.showToast({
-                title: error,
-                icon: "none",
-                duration: 3000,
-            });
-        }
+        uni.showToast({ title: error, icon: "none", duration: 3000 });
     }
 };
 
+const handleTaskMsgPopConfirm = async () => {
+    showTaskMsgPop.value = false;
+    await executeCreateTask(pendingTaskIds.value);
+    pendingTaskIds.value = []; // 清空
+};
+
 const handleCreateTaskSuccess = () => {
-    uni.$u.route({ url: "/pages/phone/phone", type: "reLaunch" });
+    uni.$u.route({ url: "/ai_modules/device/pages/index/index", type: "reLaunch" });
     showCreateTaskSuccessDialog.value = false;
 };
 
@@ -1173,6 +1359,17 @@ onLoad(async (options: any) => {
             const allImages = lists.flatMap((curr: any) => curr.puzzle_url);
             formData.materialList = createRandomImageGroups(allImages, Number(count));
         }
+    } else if (options.source === "hot_write") {
+        const data = JSON.parse(options.data);
+        formData.materialList.push({
+            url: [data.pic, data.url],
+        });
+
+        formData.copywriterList.push({
+            title: data.title,
+            content: data.content,
+            topic: data.topic,
+        });
     }
 
     // 事件监听

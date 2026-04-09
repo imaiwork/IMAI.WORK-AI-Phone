@@ -10,6 +10,7 @@
     "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
     "clue-card": "../../components/clue-card/clue-card",
-    "base-setting": "../../components/base-setting/base-setting"
+    "base-setting": "../../components/base-setting/base-setting",
+    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog"
   }
 }

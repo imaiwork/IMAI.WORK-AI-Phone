@@ -80,7 +80,7 @@
             </div>
         </el-card>
     </div>
-    <el-dialog v-model="showVideo" width="740px" title="视频预览">
+    <el-dialog v-if="showVideo" v-model="showVideo" width="740px" title="视频预览">
         <video-player ref="playerRef" :src="videoUrl" width="100%" height="450px" />
     </el-dialog>
 </template>

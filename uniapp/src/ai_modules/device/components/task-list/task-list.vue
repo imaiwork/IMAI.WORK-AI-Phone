@@ -1,13 +1,7 @@
 <template>
     <view class="flex flex-col gap-y-2">
-        <view v-for="item in taskGroupByDate" :key="item.status" class="task-list-item">
-            <view class="flex-shrink-0 text-[#00000066] font-medium"> {{ item.title }} </view>
-            <view class="flex flex-col gap-y-2 flex-1">
-                <view v-for="(val, key) in item.list" :key="key">
-                    <view class="text-xs mb-2 mt-[4rpx] font-medium">{{ val.time }}</view>
-                    <task-card :item="val" @click="emit('handle-detail', val)" @edit-name="emit('update-name', val)" />
-                </view>
-            </view>
+        <view v-for="(val, key) in list" :key="key">
+            <task-card :item="val" @click="emit('handle-detail', val)" @edit-name="emit('update-name', val)" />
         </view>
     </view>
 </template>

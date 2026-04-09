@@ -32,9 +32,7 @@
             </view>
         </view>
         <view class="grow min-h-0 relative" v-if="contentList.length == 0">
-            <scroll-view class="h-full w-full" scroll-y>
-                <slot name="content"></slot>
-            </scroll-view>
+            <slot name="content"></slot>
             <view
                 v-if="!isCoze && !isStaff"
                 class="absolute bottom-[-40rpx] left-0 right-0 h-20 z-10 pointer-events-none"
@@ -42,11 +40,11 @@
             </view>
         </view>
         <view
-            class="px-[20rpx] pt-1 mb-[20rpx] relative flex-shrink-0"
+            class="px-[20rpx] pt-1 relative z-[33] flex-shrink-0"
             :class="[isCoze || isStaff ? 'mb-[40rpx]' : 'mb-[20rpx]']">
             <view class="relative z-[79] chat-bottom-box">
                 <view class="flex flex-col">
-                    <scroll-view v-if="!isCoze && !isStaff" scroll-x class="mb-1">
+                    <scroll-view v-if="!isCoze && !isStaff && spacerHeight == 0" scroll-x class="mb-1">
                         <view class="flex items-center gap-x-2 whitespace-nowrap pt-1">
                             <view
                                 v-if="currModel.id && !currAgent.id"
@@ -141,8 +139,10 @@
                                     <FileItem :item="item" :index="index" @on-delete="deleteFile" />
                                 </view>
                             </view>
-                            <view class="flex">
-                                <view v-if="!isCoze && !isStaff" class="ml-3 mb-2 mt-2 flex flex-col justify-center">
+                            <view class="flex pl-3">
+                                <view
+                                    v-if="!isCoze && !isStaff && !currAgent.id"
+                                    class="mb-2 mt-2 flex flex-col justify-center">
                                     <view
                                         class="flex-shrink-0 w-[44rpx] h-[44rpx] flex items-center justify-center"
                                         @click="handleFileUpload">
@@ -201,7 +201,13 @@
                 height: spacerHeight + 'rpx',
             }"></view>
     </view>
-    <popup-bottom v-model="showHumanize" title="参数设置" height="85%" custom-class="bg-white" is-disabled-touch>
+    <popup-bottom
+        v-if="showHumanize"
+        v-model="showHumanize"
+        title="参数设置"
+        height="85%"
+        custom-class="bg-white"
+        is-disabled-touch>
         <template #content>
             <view class="h-[85%] p-4 flex flex-col gap-y-4">
                 <view class="grow min-h-0">
@@ -361,7 +367,7 @@
             </view>
         </template>
     </popup-bottom>
-    <popup-bottom v-model="showModel" title="选择模型" height="55%">
+    <popup-bottom v-if="showModel" v-model="showModel" title="选择模型" height="55%">
         <template #content>
             <scroll-view scroll-y class="h-full">
                 <view class="pb-[150rpx]">
@@ -385,7 +391,7 @@
             </scroll-view>
         </template>
     </popup-bottom>
-    <popup-bottom v-model="showAgent" title="选择智能体" height="85%" is-disabled-touch>
+    <popup-bottom v-if="showAgent" v-model="showAgent" title="选择智能体" height="85%" is-disabled-touch>
         <template #content>
             <view class="h-full">
                 <z-paging
@@ -628,13 +634,9 @@ const userInput = ref("");
 const scrollTop = ref<number>(0);
 
 // ===== 滚动控制相关变量 =====
-// 是否禁用自动滚动到底部（用户手动向上滑动时禁用）
 const disabledScroll = ref(false);
-// 记录上一次的滚动位置，用于判断滚动方向
 const previousScrollTop = ref(0);
-// 标记当前是否是由代码触发的滚动，避免误判用户行为
 const isProgrammaticScroll = ref(false);
-// scrolltolower 防抖定时器
 let scrollToLowerTimer: ReturnType<typeof setTimeout> | null = null;
 
 const { dynamicHeight, hideKeyboard } = useKeyboardHeight();
@@ -662,17 +664,10 @@ const handleInput = (e: any) => {
     }
 };
 
-/**
- * scroll 事件处理
- * - 代码触发的滚动（isProgrammaticScroll=true）：只更新 previousScrollTop，不改变 disabledScroll
- * - 用户手动向上滑动超过 50px：禁用自动滚动
- * - 注意：不在此处做"接近底部恢复"的判断，避免用户手动滑到接近底部时被误触发滚底
- */
 const handleScroll = (e: any) => {
     const currentScrollTop = e.detail.scrollTop;
 
     if (isProgrammaticScroll.value) {
-        // ✅ 代码滚动期间完全忽略，不更新任何状态
         return;
     }
 
@@ -691,7 +686,6 @@ const handleScrollToLower = () => {
     if (scrollToLowerTimer) clearTimeout(scrollToLowerTimer);
     scrollToLowerTimer = setTimeout(() => {
         disabledScroll.value = false;
-        // ✅ 不在这里赋 previousScrollTop，由 handleScroll 自己维护
     }, 100);
 };
 
@@ -735,12 +729,6 @@ const checkLogin = () => {
 
 const { proxy }: any = getCurrentInstance();
 
-/**
- * scrollToBottom
- * 1. disabledScroll 为 true 时直接跳过
- * 2. 标记 isProgrammaticScroll，避免代码滚动被误判为用户手动向上滑动
- * 3. 解决 scrollTop 值相同时 scroll-view 不响应的问题：先赋 height-1，再赋 height
- */
 const scrollToBottom = async () => {
     if (disabledScroll.value) return;
 
@@ -748,7 +736,6 @@ const scrollToBottom = async () => {
     getRect(".content-box", false, proxy).then((res: any) => {
         const targetTop = res.height;
 
-        // ✅ 先同步设置标记，再修改 scrollTop，避免时序问题
         isProgrammaticScroll.value = true;
 
         if (scrollTop.value === targetTop) {
@@ -760,10 +747,8 @@ const scrollToBottom = async () => {
             scrollTop.value = targetTop;
         }
 
-        // ✅ 用固定延迟重置，覆盖滚动动画时间
         setTimeout(() => {
             isProgrammaticScroll.value = false;
-            // 同步一次实际位置，给下次方向判断用
             previousScrollTop.value = targetTop;
         }, 300);
     });
@@ -826,7 +811,6 @@ watch(
 watch(
     () => props.contentList,
     (newVal) => {
-        // 列表清空时，重置所有滚动状态
         if (newVal.length === 0) {
             disabledScroll.value = false;
             previousScrollTop.value = 0;
@@ -840,7 +824,6 @@ watch(
 onUnmounted(() => {
     chatClose();
     hideKeyboard();
-    // 清理防抖定时器，避免内存泄漏
     if (scrollToLowerTimer) clearTimeout(scrollToLowerTimer);
 });
 

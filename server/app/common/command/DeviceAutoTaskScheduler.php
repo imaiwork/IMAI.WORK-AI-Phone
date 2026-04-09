@@ -118,6 +118,7 @@ class DeviceAutoTaskScheduler extends Command
             ->where('t.auto_type', '=', 1) // 只处理自动任务
             ->where('t.start_time', '<=', $currentTime)
             ->where('t.end_time', '>', $currentTime)
+            ->where('t.persona_id', '>', 0)
             ->order('t.start_time', 'asc')
             ->limit(10)
             ->select();

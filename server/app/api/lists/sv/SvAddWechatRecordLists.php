@@ -8,6 +8,7 @@ use app\common\lists\ListsSearchInterface;
 use app\common\lists\ListsExcelInterface;
 use app\common\model\sv\SvAddWechatRecord;
 use app\common\model\sv\SvAccount;
+use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvDevice;
 
 /**
@@ -26,7 +27,7 @@ class SvAddWechatRecordLists extends BaseApiDataLists implements ListsSearchInte
     public function setSearch(): array
     {
         return [
-            '=' => ['account', 'wechat_no', 'action', 'device_code', 'channel', 'exec_type'],
+            '=' => ['account', 'wechat_no', 'action', 'device_code', 'channel', 'exec_type', 'intention_type'],
         ];
     }
 
@@ -47,10 +48,18 @@ class SvAddWechatRecordLists extends BaseApiDataLists implements ListsSearchInte
         }
         return SvAddWechatRecord::field('*')
             ->where($this->searchWhere)
+             ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
+                $query->whereBetween('create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
+            })
             ->order(['id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
             ->each(function ($item) {
+                if((time() - strtotime($item->create_time)) > (7 * 86400) && $item->status == 2){
+                    $item->status = 0;
+                    $item->result = '加微执行失败';
+                    $item->save();
+                }
                 $item['account_detail'] = SvAccount::where('account', $item['account'])
                     ->where('user_id', $item['user_id'])
                     ->where('device_code', $item['device_code'])
@@ -59,6 +68,19 @@ class SvAddWechatRecordLists extends BaseApiDataLists implements ListsSearchInte
                 $item['device_model'] = SvDevice::where('device_code', $item['device_code'])->value('device_model');
                 $item['channel_name'] = $this->channel[$item['channel']] ?? '/';
                 $item['device_name'] = SvDevice::where('device_code', $item['device_code'])->value('device_name');
+                $item['task_name'] = SvCrawlingTask::where('id', $item['crawling_task_id'])->value('name') ?? '私信接管任务';
+                $intentionTypeMap = [
+                    -1 => '待处理',
+                    0 => '其他',
+                    1 => '成交意愿',
+                    2 => '询价意愿',
+                    3 => '想要加微信',
+                    4 => '一般意愿',
+                    5 => '明确拒绝'
+                ];
+                $intentionType = $item['intention_type'] ?? -1;
+                $intentionTypeText = $intentionTypeMap[$intentionType] ?? '未知';
+                $item['task_detail_described']  = '在'.$item['task_name'].'中匹配到【'.$item['original_message'].'】触发【'. $intentionTypeText  .'】';
 
             })
             ->toArray();
@@ -82,6 +104,9 @@ class SvAddWechatRecordLists extends BaseApiDataLists implements ListsSearchInte
         }
         return SvAddWechatRecord::field('id')
             ->where($this->searchWhere)
+             ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
+                $query->whereBetween('create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
+            })
             ->count();
     }
 

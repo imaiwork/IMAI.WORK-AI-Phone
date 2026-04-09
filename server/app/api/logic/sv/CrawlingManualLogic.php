@@ -29,21 +29,36 @@ class CrawlingManualLogic extends SvBaseLogic
         try {
             self::checkAutoDevice($params);
             Db::startTrans();
+
+            $is_overlap = $params['task_exec_type'] ?? 0;
+            if ((int)$is_overlap === 1) {
+                \app\api\logic\device\TaskLogic::updateTaskStatusByIds($params['task_ids']);
+                $params['time_config'] = [
+                    date('H:i', time()) . '-' . date('H:i', (time() + (60 * (int)$params['minutes']))),
+                ];
+                $params['custom_date'] = [
+                    date('Y-m-d', time())
+                ];
+                unset($params['task_ids']);
+            }
             $devices = SvDevice::where('device_code', 'in', $params['device_codes'])->select()->toArray();
             //$wechats = AiWechat::where('wechat_id', 'in', $params['wechat_id'])->select()->toArray();
             $times = \app\api\logic\device\TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
-            foreach($devices as $device){
-                foreach($times as $time){
-                    list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device['device_code'], DeviceEnum::TASK_TYPE_FRIENDS, $time['start_time'], $time['end_time'], self::$uid);
-                    if (!$isOverlap) {
-                        $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                        $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
-                        throw new \Exception($msg);
+            if ((int)$is_overlap === 0) {
+                foreach ($devices as $device) {
+                    foreach ($times as $time) {
+                        list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($device['device_code'], DeviceEnum::TASK_TYPE_FRIENDS, $time['start_time'], $time['end_time'], self::$uid);
+                        if (!$isOverlap) {
+                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                            throw new \Exception($msg);
+                        }
                     }
                 }
             }
 
-            $params['name'] =  $params['name'] ??  '批量新增线索任务' . date('mdHis', time()) ;
+
+            $params['name'] =  $params['name'] ??  '批量新增线索任务' . date('mdHis', time());
             $params['crawling_task_ids'] = json_encode($params['crawling_task_ids'], JSON_UNESCAPED_UNICODE);
             $params['remarks'] = json_encode($params['remarks'], JSON_UNESCAPED_UNICODE);
             $params['wechat_id'] = implode(',', $params['wechat_id']);
@@ -51,6 +66,9 @@ class CrawlingManualLogic extends SvBaseLogic
             $params['user_id'] = self::$uid;
             $params['time_config'] = json_encode($params['time_config'], JSON_UNESCAPED_UNICODE);
             $params['custom_date'] = json_encode($params['custom_date'], JSON_UNESCAPED_UNICODE);
+            $params['start_time'] = min(array_column($times, 'start_time'));
+            $params['end_time'] = max(array_column($times, 'end_time'));
+
             $task = SvCrawlingManualTask::create($params);
             $recordData = array();
             if ($params['source'] == 1) {
@@ -64,22 +82,25 @@ class CrawlingManualLogic extends SvBaseLogic
                 $task->save();
             }
             $allTaskInstall = array();
-            foreach($devices as $device){
-                foreach($times as $time){
+            foreach ($devices as $device) {
+                $account = SvAccount::where('device_code', $device['device_code'])->where('user_id', self::$uid)->where('type', 1)->find();
+                foreach ($times as $time) {
                     array_push($allTaskInstall, [
                         'user_id' => self::$uid,
                         'device_code' => $device['device_code'],
                         'task_type' => DeviceEnum::TASK_TYPE_FRIENDS,
-                        'account' => SvAccount::where('device_code', $device['device_code'])->where('user_id', self::$uid)->where('type', 1)->value('account') ?? '',
+                        'account' => $account->account ?? '',
                         'account_type' => 1,
+                        'nickname' => $account->nickname ?? '',
+                        'avatar' => $account->avatar ?? '', 
                         'task_name' => '设备自动加微任务',
                         'status' => 0,
-                        'day' => date('Y-m-d',$time['start_time']),
+                        'day' => date('Y-m-d', $time['start_time']),
                         'start_time' => $time['start_time'],
                         'end_time' => $time['end_time'],
                         'time_config' => $params['time_config'],
                         'sub_task_id' => $task->id,
-                        'source' => DeviceEnum::TASK_SOURCE_FRIENDS,//sv_crawling_manual_task
+                        'source' => DeviceEnum::TASK_SOURCE_FRIENDS, //sv_crawling_manual_task
                         'create_time' => time(),
                     ]);
                     \app\api\logic\device\TaskLogic::updateWechatRpaTaskTime($device['device_code'], $time['start_time']);
@@ -98,7 +119,7 @@ class CrawlingManualLogic extends SvBaseLogic
 
     private static function getWechatAccount(string $device_code)
     {
-        if($device_code == ''){
+        if ($device_code == '') {
             return '';
         }
         $wechat = AiWechat::where('device_code', $device_code)->findOrEmpty();
@@ -134,7 +155,7 @@ class CrawlingManualLogic extends SvBaseLogic
                     //     continue;
                     // }
 
-                    if(array_key_exists($tmp, $recordData)){
+                    if (array_key_exists($tmp, $recordData)) {
                         continue;
                     }
                     $recordData[$tmp] = [
@@ -201,7 +222,7 @@ class CrawlingManualLogic extends SvBaseLogic
             // if (!$find->isEmpty()) {
             //     continue;
             // }
-            if(array_key_exists($item['reg_wechat'], $recordData)){
+            if (array_key_exists($item['reg_wechat'], $recordData)) {
                 continue;
             }
             $recordData[$item['reg_wechat']] = [
@@ -324,8 +345,8 @@ class CrawlingManualLogic extends SvBaseLogic
                     $task->update_time = time();
                     $task->save();
                     continue;
-                }else{
-                    if(is_null($task->start_time)){
+                } else {
+                    if (is_null($task->start_time)) {
                         $task->start_time = time();
                     }
                     $task->status = 1;
@@ -338,7 +359,7 @@ class CrawlingManualLogic extends SvBaseLogic
                     $response = \app\common\service\ToolsService::Sv()->queryResult([
                         "string" => $record['clue_wechat'],
                     ]);
-                    if(isset($response['code']) && (int)$response['code'] === 10005){
+                    if (isset($response['code']) && (int)$response['code'] === 10005) {
                         continue;
                     }
                     if (isset($response['code']) && (int)$response['code'] === 10000) {
@@ -539,8 +560,8 @@ class CrawlingManualLogic extends SvBaseLogic
                 self::setError('加好友任务不存在');
                 return false;
             }
-            $info= $task;
-            $record= SvCrawlingManualTaskRecord::where('task_id', $params['id'])->select()->toArray();
+            $info = $task;
+            $record = SvCrawlingManualTaskRecord::where('task_id', $params['id'])->select()->toArray();
             if (!$record) {
                 self::setError('子任务不存在');
                 return false;
@@ -552,8 +573,8 @@ class CrawlingManualLogic extends SvBaseLogic
             $info['task_name'] = $params['task_name'];
             $info['task_category'] = $params['task_category'];
             //$bind['keywords'] = json_decode($bind['keywords'], JSON_UNESCAPED_UNICODE);
-            $info['start_time'] = date('H:i',$info['start_time']);
-            $info['end_time'] = date('H:i',$info['end_time']);
+            $info['start_time'] = date('H:i', $info['start_time']);
+            $info['end_time'] = date('H:i', $info['end_time']);
             //$info['info'] = $bind;
             self::$returnData = $info;
             return true;
@@ -562,5 +583,4 @@ class CrawlingManualLogic extends SvBaseLogic
             return false;
         }
     }
-
 }

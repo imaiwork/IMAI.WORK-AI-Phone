@@ -81,7 +81,7 @@ class CommentToTouchPostHandler extends BaseMessageHandler
                 throw new \Exception($this->platform[$this->appType] . '截流获客评论区评论任务配置不存在');
             }
 
-            $hash = hash('sha256', $content['task_id'] . $content['nickName'] . ($content['commentStr'] ?? ''));
+            $hash = hash('sha256', $content['nickName'] . ($content['commentStr'] ?? ''));
 
             $insert = [
                 'user_id'             => $task->user_id,

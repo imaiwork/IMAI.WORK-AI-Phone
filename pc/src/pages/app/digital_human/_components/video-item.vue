@@ -305,6 +305,14 @@ const getStatus = (item: any) => {
             return status;
         }
         return 3;
+    } else if (type === 8) {
+        if (status == 4) {
+            return 2;
+        }
+        if (status == 3) {
+            return 1;
+        }
+        return 0;
     } else {
         if (status === 0) {
             return 0;

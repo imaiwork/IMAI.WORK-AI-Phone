@@ -87,7 +87,7 @@ class CardCodeLogic
      */
     public function del(int $id)
     {
-        CardCode::where(['id'=>$id])->delete();
+        CardCode::destroy($id);
     }
 
 

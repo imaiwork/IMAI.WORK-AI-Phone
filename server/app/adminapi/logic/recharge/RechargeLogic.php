@@ -36,6 +36,7 @@ class RechargeLogic extends BaseLogic
         $config = [
             'status' => ConfigService::get('recharge', 'status', 0),
             'is_ios_open' => ConfigService::get('recharge', 'is_ios_open', 0),
+            'is_and_open' => ConfigService::get('recharge', 'is_and_open', 0),
             'min_amount' => ConfigService::get('recharge', 'min_amount', 0)
         ];
 
@@ -61,6 +62,9 @@ class RechargeLogic extends BaseLogic
             }
             if (isset($params['is_ios_open'])) {
                 ConfigService::set('recharge', 'is_ios_open', $params['is_ios_open']);
+            }
+            if (isset($params['is_and_open'])) {
+                ConfigService::set('recharge', 'is_and_open', $params['is_and_open']);
             }
             return true;
         } catch (\Exception $e) {

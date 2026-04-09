@@ -87,7 +87,6 @@ import { dayjs } from "element-plus";
 import { getWeChatLists } from "@/api/person_wechat";
 import { MaterialTypeEnum } from "@/pages/app/person_wechat/_enums";
 import CircleLists from "./circle-lists.vue";
-import CircleSend from "../../_components/circle-send.vue";
 import SidebarPanel from "../../../chat/_components/sidebar-panel.vue";
 import useWeChatWs from "../../../_hooks/useWeChatWs";
 import useHandle from "../../../_hooks/useHandle";

@@ -10,6 +10,7 @@
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
     "base-setting": "../../components/base-setting/base-setting",
-    "keywords-edit": "../../components/keywords-edit/keywords-edit"
+    "keywords-edit": "../../components/keywords-edit/keywords-edit",
+    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog"
   }
 }

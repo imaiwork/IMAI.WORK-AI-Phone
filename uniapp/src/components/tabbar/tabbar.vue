@@ -25,11 +25,19 @@ const navigationBarTitleStore = useNavigationBarTitleStore();
 const tabbarList = computed(() => {
     const lists = [
         {
+            iconPath: PhoneIcon,
+            selectedIconPath: PhoneSelectedIcon,
+            text: "AI手机",
+            link: {
+                path: "/pages/index/index",
+            },
+        },
+        {
             iconPath: ChatIcon,
             selectedIconPath: ChatSelectedIcon,
             text: "AI助手",
             link: {
-                path: "/pages/index/index",
+                path: "/pages/chat/chat",
             },
         },
         {
@@ -38,14 +46,6 @@ const tabbarList = computed(() => {
             text: "AI创作",
             link: {
                 path: "/ai_modules/digital_human/pages/index/index",
-            },
-        },
-        {
-            iconPath: PhoneIcon,
-            selectedIconPath: PhoneSelectedIcon,
-            text: "AI手机",
-            link: {
-                path: "/pages/phone/phone",
             },
         },
         {

@@ -1,0 +1,1 @@
+"use strict";const o=require("../../../../../common/vendor.js");if(!Array){o.resolveComponent("u-icon")()}Math;const n=o.defineComponent({__name:"config-card",props:{title:null,desc:null,iconName:null,iconColor:null,iconBg:null},setup:n=>(e,c)=>({a:o.p({name:n.iconName,color:n.iconColor,size:"36"}),b:n.iconBg,c:o.t(n.title),d:o.t(n.desc)})});wx.createComponent(n);

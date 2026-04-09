@@ -15,7 +15,7 @@
         center
         cancel-text="稍后配置"
         confirm-text="前往配置"
-        content="检测到您有一台新的手机，是否马上设置24H任务"
+        content="您已添加新的设备，是否立即为该设备配置“IP人设”？"
         @close="handleClose"
         @confirm="handleTaskConfirm" />
 </template>
@@ -61,18 +61,17 @@ const getRpaQrcodeData = async () => {
 
 const handleClose = () => {
     uni.$u.route({
-        url: "/pages/phone/phone",
+        url: "/ai_modules/device/pages/index/index",
         type: "reLaunch",
     });
 };
 
 const handleTaskConfirm = () => {
     uni.$u.route({
-        url: "/ai_modules/device/pages/create_auto_task/create_auto_task",
+        url: "/ai_modules/device/pages/setting_person/setting_person",
         type: "reLaunch",
         params: {
             device_code: deviceCode.value,
-            is_auto: 1,
         },
     });
 };

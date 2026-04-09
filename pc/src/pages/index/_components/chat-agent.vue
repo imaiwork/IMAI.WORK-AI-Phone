@@ -1,6 +1,5 @@
 <template>
     <div class="flex flex-col">
-        <!-- 搜索栏 -->
         <div class="flex items-center gap-x-2 mb-3 mt-3 px-3">
             <div class="relative flex-1">
                 <ElInput

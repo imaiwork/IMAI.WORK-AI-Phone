@@ -28,6 +28,7 @@ class VideoLogic extends ApiLogic
         $humanWhere      = [];
         $soraWhere       = [];
         $storyboardWhere = [];
+        $imitationWhere  = [];
         if (in_array($type, [2, 3, 4, 5])) {
             switch ($type) {
                 case 2:
@@ -61,6 +62,9 @@ class VideoLogic extends ApiLogic
                 ['status', '=', 3],
             ];
             $storyboardWhere = [
+                ['status', '=', 3]
+            ];
+            $imitationWhere = [
                 ['status', '=', 3]
             ];
         }
@@ -156,8 +160,30 @@ class VideoLogic extends ApiLogic
                     ->where($storyboardWhere)
                     ->buildSql();
 
+        $query5 = Db::name('video_imitation_task')
+                    ->field([
+                                'id',
+                                'title as name',
+                                'shanjian_task_id as task_id',
+                                "'11' as model_version",
+                                'status',
+                                "thumbnail as pic",
+                                'video_url as video_result_url',
+                                "'0' as automatic_clip",
+                                "'1' as clip_status",
+                                'video_url as clip_result_url',
+                                'create_time',
+                                'update_time',
+                                'remarks as remark',
+                                "'8' as type",
+                                'duration'
+                            ])
+                    ->where($where)
+                    ->where($imitationWhere)
+                    ->buildSql();
+
         // 合并子查询sql
-        $unionSql = "({$query1} UNION ALL {$query2} UNION ALL {$query3} UNION ALL {$query4}) AS t";
+        $unionSql = "({$query1} UNION ALL {$query2} UNION ALL {$query3} UNION ALL {$query4} UNION ALL {$query5}) AS t";
         if ($type == 1) {
             $unionSql = "({$query1}) AS t";
         } else if (in_array($type, [2, 3, 4, 5])) {
@@ -166,6 +192,8 @@ class VideoLogic extends ApiLogic
             $unionSql = "({$query3}) AS t";
         } else if ($type == 7) {
             $unionSql = "({$query4}) AS t";
+        } else if ($type == 8) {
+            $unionSql = "({$query5}) AS t";
         }
 
         $lists = Db::table($unionSql)
@@ -195,7 +223,7 @@ class VideoLogic extends ApiLogic
             ];
         }
 
-        $total = self::getTotalCount($where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $type, $success);
+        $total = self::getTotalCount($where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $imitationWhere, $type, $success);
 
         return [
             'count'      => $total,
@@ -207,9 +235,9 @@ class VideoLogic extends ApiLogic
     }
 
     /**
-     * 计算4个表的总记录数
+     * 计算5个表的总记录数
      */
-    private static function getTotalCount(array $where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $type, $success): int
+    private static function getTotalCount(array $where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $imitationWhere, $type, $success): int
     {
         if ($type === 0) {
             if ($success) {
@@ -217,13 +245,15 @@ class VideoLogic extends ApiLogic
                 $count2 = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)->count();
                 $count3 = Db::name('sora_video_task')->where($where)->where($soraWhere)->count();
                 $count4 = Db::name('storyboard_video_task')->where($where)->where($storyboardWhere)->count();
+                $count5 = Db::name('video_imitation_task')->where($where)->where($imitationWhere)->count();
             } else {
                 $count1 = Db::name('human_video_task')->where($where)->count();
                 $count2 = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)->count();
                 $count3 = Db::name('sora_video_task')->where($where)->count();
                 $count4 = Db::name('storyboard_video_task')->where($where)->count();
+                $count5 = Db::name('video_imitation_task')->where($where)->count();
             }
-            return $count1 + $count2 + $count3 + $count4;
+            return $count1 + $count2 + $count3 + $count4 + $count5;
         }
         if ($type == 1) {
             if ($success) {
@@ -252,6 +282,14 @@ class VideoLogic extends ApiLogic
                 $count4 = Db::name('storyboard_video_task')->where($where)->count();
             }
             return $count4;
+        }
+        if ($type == 8) {
+            if ($success) {
+                $count5 = Db::name('video_imitation_task')->where($where)->where($imitationWhere)->count();
+            } else {
+                $count5 = Db::name('video_imitation_task')->where($where)->count();
+            }
+            return $count5;
         }
         return 0;
     }
@@ -303,6 +341,16 @@ class VideoLogic extends ApiLogic
             if ($type == 7) {
                 $task = StoryboardVideoTask::where('id', $id)
                                            ->where('task_id', $task_id)
+                                           ->where('user_id', self::$uid)
+                                           ->find();
+                if (!$task) {
+                    throw new \Exception('视频任务不存在');
+                }
+                $task->delete();
+            }
+            if ($type == 8) {
+                $task = \app\common\model\videoImitation\VideoImitationTask::where('id', $id)
+                                           ->where('shanjian_task_id', $task_id)
                                            ->where('user_id', self::$uid)
                                            ->find();
                 if (!$task) {
@@ -369,6 +417,17 @@ class VideoLogic extends ApiLogic
                     throw new \Exception('视频任务不存在');
                 }
                 $task->name = $name;
+                $task->save();
+            }
+            if ($type == 8) {
+                $task = \app\common\model\videoImitation\VideoImitationTask::where('id', $id)
+                                           ->where('shanjian_task_id', $task_id)
+                                           ->where('user_id', self::$uid)
+                                           ->find();
+                if (!$task) {
+                    throw new \Exception('视频任务不存在');
+                }
+                $task->title = $name;
                 $task->save();
             }
             return true;

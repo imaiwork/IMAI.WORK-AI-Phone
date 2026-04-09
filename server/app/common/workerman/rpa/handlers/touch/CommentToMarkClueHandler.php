@@ -9,6 +9,9 @@ use app\common\model\sv\SvLeadScrapingSetting;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvLeadScrapingRecord;
 use app\api\logic\service\TokenLogService;
+
+use app\common\model\sv\SvDevice;
+
 class CommentToMarkClueHandler extends BaseMessageHandler
 {
     protected $appType = 0;
@@ -36,7 +39,7 @@ class CommentToMarkClueHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }
@@ -44,7 +47,7 @@ class CommentToMarkClueHandler extends BaseMessageHandler
     private function recordMarkClue(array $content)
     {
         try {
-            if((int)$content['task_id'] == 0){
+            if ((int)$content['task_id'] == 0) {
                 return [
                     'isProceed' => 1, //是否处理 1是 0 否
                 ];
@@ -54,19 +57,43 @@ class CommentToMarkClueHandler extends BaseMessageHandler
                 ->where('task_type', 3)
                 ->where('account_type', $this->appType)
                 ->findOrEmpty();
-            if($task->isEmpty()){
+            if ($task->isEmpty()) {
                 throw new \Exception($this->platform[$this->appType] . '截流获客留痕获客任务不存在: ' . \think\facade\Db::getLastSql());
             }
 
-            TokenLogService::checkToken($task->user_id,'');
-            
+            TokenLogService::checkToken($task->user_id, '');
+
 
             $setting = SvLeadScrapingSetting::where('id', $task->scraping_id)->findOrEmpty();
             if ($setting->isEmpty()) {
                 throw new \Exception($this->platform[$this->appType] . '截流获客留痕获客任务配置不存在');
             }
-            $hash = hash('sha256', $content['task_id'] . $content['author_name'] . $content['content']);
-            
+            $hash = hash('sha256', $content['author_name'] . $content['content']);
+
+            if ($setting->industry_type == 1) {
+                $device = SvDevice::where('device_code', $this->payload['deviceId'])->findOrEmpty();
+                //校验是否超过ip人设中互动限制
+                if ($device->auto_type == 1 && $device->persona_id > 0) {
+                    $config = \app\common\model\aiPersona\AiPersonaTrafficConfig::where('user_id', $device->user_id)->where('persona_id', $device->persona_id)->findOrEmpty();
+                    if ($config->isEmpty()) {
+                        throw new \Exception($this->platform[$this->appType] . '截流获客ip人设配置不存在');
+                    }
+
+                    $recordCount = SvLeadScrapingRecord::where([
+                        ['device_code', '=', $this->payload['deviceId']],
+                        ['task_type', '=', 3],
+                        ['account_type', '=', $this->appType]
+                    ])->where('create_time', 'between', [strtotime(date('Y-m-d 00:00:00')), strtotime(date('Y-m-d 23:59:59'))])
+                        ->count();
+                    if ($recordCount >= $config->comment_number) {
+                        $this->setLog('异常信息' . $config->comment_number . '条互动限制已超过', 'task_complete');
+                        return [
+                            'isProceed' => 0, //是否处理 1是 0 否
+                        ];
+                    }
+                }
+            }
+
             if ((int)$setting->is_execed_clues  === 1) {
                 $find = SvLeadScrapingRecord::where([
                     ['user_id', '=', $task->user_id],
@@ -122,10 +149,10 @@ class CommentToMarkClueHandler extends BaseMessageHandler
             ];
             //SvLeadScrapingRecord::create($insert);
             return [
-                'isProceed' => 1,//是否处理 1是 0 否
+                'isProceed' => 1, //是否处理 1是 0 否
             ];
         } catch (\Exception $e) {
-            if($e->getCode() == 4059){
+            if ($e->getCode() == 4059) {
                 \app\common\model\sv\SvDeviceTask::where('sub_task_id', $content['task_id'])
                     ->where('source', \app\common\enum\DeviceEnum::TASK_SOURCE_TOUCH)
                     ->where('device_code', $this->payload['deviceId'])->update([
@@ -144,7 +171,7 @@ class CommentToMarkClueHandler extends BaseMessageHandler
                 'deviceId' => $this->payload['deviceId']
             ];
             $this->sendError($this->connection,  $this->payload);
-        } finally{
+        } finally {
             unset($content);
         }
     }

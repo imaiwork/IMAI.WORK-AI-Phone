@@ -161,13 +161,24 @@ class FfmpegFileLogic extends ApiLogic
                             ]),
                         ];
                     } else {
-                        $updateData = [
-                            'status' => 0,
-                            'tries' => $task['tries'] + 1,
-                            'remark' => '失败 - ' . json_encode([
-                                'processed_at' => date('Y-m-d H:i:s')
-                            ]),
-                        ];
+                        $newTries = $task['tries'] + 1;
+                        if ($task['tries'] >= 5) {
+                            $updateData = [
+                                'status' => 3, // 失败
+                                'tries' => $newTries,
+                                'remark' => '失败 - ' . json_encode([
+                                    'processed_at' => date('Y-m-d H:i:s')
+                                ]),
+                            ];
+                        } else {
+                            $updateData = [
+                                'status' => 0,
+                                'tries' => $newTries,
+                                'remark' => '失败 - ' . json_encode([
+                                    'processed_at' => date('Y-m-d H:i:s')
+                                ]),
+                            ];
+                        }
                     }
 
 

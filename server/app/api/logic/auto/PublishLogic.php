@@ -69,7 +69,7 @@ class PublishLogic extends ApiLogic
             usleep(100000);
             $handler = \think\facade\Cache::store('redis')->handler();
             $handler->select(env('redis.WS_SELECT', 8));
-            $PUBLISH_QUEUE_KEY = 'auto_publish_create_'.$params['device_code'];
+            $PUBLISH_QUEUE_KEY = 'auto_publish_create_' . $params['device_code'];
 
             // 将任务添加到队列
             $handler->lpush($PUBLISH_QUEUE_KEY, json_encode($params, JSON_UNESCAPED_UNICODE));
@@ -79,7 +79,7 @@ class PublishLogic extends ApiLogic
                 return false;
             }
 
-            $RUNNING_KEY = 'auto_publish_create_running_'.$params['device_code'];
+            $RUNNING_KEY = 'auto_publish_create_running_' . $params['device_code'];
             $maxRetries = 3; // 最大重试次数
 
             $svRunNum = 0;
@@ -115,7 +115,7 @@ class PublishLogic extends ApiLogic
                     continue;
                 }
 
-                if(isset($params['sv_video_id'])){
+                if (isset($params['sv_video_id'])) {
                     //检查sj中是否还有待生成的视频，如果有sv任务，就移到队列尾，等待sj任务处理完成
                     $sjMedias = ShanjianVideoTask::where('device_code', $params['device_code'])
                         ->field('id, video_setting_id,pic, msg, video_result_url, "sj" as task_type')
@@ -123,7 +123,7 @@ class PublishLogic extends ApiLogic
                         ->where('status', 1)
                         ->where('is_publish', 0)
                         ->findOrEmpty();
-                    if(!$sjMedias->isEmpty()){
+                    if (!$sjMedias->isEmpty()) {
                         $handler->lpush($PUBLISH_QUEUE_KEY, $task);
                         //\think\facade\Log::channel('auto')->write('sv视频发布任务移到到队列尾' . json_encode($params, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'publish');
                         $svRunNum++;
@@ -172,7 +172,7 @@ class PublishLogic extends ApiLogic
         } catch (\Throwable $th) {
             if ($handler) {
                 try {
-                    $RUNNING_KEY = 'auto_publish_create_running_'.$params['device_code'];
+                    $RUNNING_KEY = 'auto_publish_create_running_' . $params['device_code'];
                     $handler->del($RUNNING_KEY);
                 } catch (\Exception $e) {
                     // 忽略删除操作的异常
@@ -183,7 +183,57 @@ class PublishLogic extends ApiLogic
         }
     }
 
-    private static function runCreateShanjianPublish($params, $handler, $RUNNING_KEY)
+    public static function shanjianAutoPublishCron()
+    {
+        try {
+            $devices = SvDevice::field('device_code,auto_type,status,user_id')->where('auto_type', 1)->select();
+            //print_r($devices->toArray());die;
+            foreach ($devices as $device) {
+                $query1 = ShanjianVideoTask::field('id,device_code, video_setting_id,pic, msg, video_result_url, "sj" as task_type')
+                    ->where('auto_type', 1)
+                    ->where('wechat_type', 0)
+                    ->where('status', 3)
+                    ->where('device_code', $device->device_code)
+                    ->where('user_id', $device->user_id)
+                    ->where('is_publish', 0)
+                    ->limit(1)
+                    ->findOrEmpty();
+                if (!$query1->isEmpty()) {
+                    $param = [
+                        'device_code' => $query1->device_code,
+                        'sj_video_id' => $query1->id
+                    ];
+                    self::runCreateShanjianPublish($param);
+                } else {
+                    $query2 = SvVideoTask::field('id,device_code, video_setting_id,pic, msg, video_result_url, clip_result_url, automatic_clip, "sv" as task_type')
+                        ->where('auto_type', 1)
+                        ->where('automatic_clip', 1)
+                        ->where('clip_status', 3)
+                        ->where('device_code', $device->device_code)
+                        ->where('user_id', $device->user_id)
+                        ->where('status', 6)
+                        ->where('is_publish', 0)
+                        ->limit(1)
+                        ->findOrEmpty();
+                    if (!$query2->isEmpty()) {
+                        $param = [
+                            'device_code' => $query2->device_code,
+                            'sv_video_id' => $query2->id
+                        ];
+                        self::runCreateShanjianPublish($param);
+                    }
+                }
+            }
+
+            return true;
+        } catch (\Throwable $th) {
+            //throw $th;
+            \think\facade\Log::channel('auto')->write('任务处理异常: ' . $th->__toString(), 'publish');
+            return false;
+        }
+    }
+
+    private static function runCreateShanjianPublish($params)
     {
 
         Db::startTrans();
@@ -267,12 +317,12 @@ class PublishLogic extends ApiLogic
                     ->limit(1)
                     ->fetchSql(false)
                     ->value('day');
-                if(!is_null($maxDay)){
-                    if(strtotime($maxDay) < time()){
+                if (!is_null($maxDay)) {
+                    if (strtotime($maxDay) < time()) {
                         $maxDay = date('Y-m-d', time());
                     }
                 }
-                
+
                 $lastPublishTime =  \app\common\model\sv\SvPublishSettingDetail::where('device_code', $device->device_code)
                     ->where('user_id', $device->user_id)
                     ->where('auto_type', 1)
@@ -408,7 +458,7 @@ class PublishLogic extends ApiLogic
                             'task_name' => '自动化视频发布任务',
                             'time_config' => json_encode([$time], JSON_UNESCAPED_UNICODE),
                             'start_time' => strtotime(date('Y-m-d ' . $tmpTime[0] . ':00', $publishTime)),
-                            'end_time' => strtotime(date('Y-m-d ' . $tmpTime[1] . ':00', $publishTime)) - 180,
+                            'end_time' => strtotime(date('Y-m-d ' . $tmpTime[1] . ':00', $publishTime)) - 120,
                             'day' => date('Y-m-d', $publishTime),
                             'status' => 0,
                             'sub_task_id' => $paccount->id,
@@ -451,11 +501,11 @@ class PublishLogic extends ApiLogic
                 }
             }
             Db::commit();
-            $handler->del($RUNNING_KEY);
+            //$handler->del($RUNNING_KEY);
             return true;
         } catch (\Throwable $th) {
             Db::rollback();
-            $handler->del($RUNNING_KEY);
+            //$handler->del($RUNNING_KEY);
             \think\facade\Log::channel('auto')->write('24小时视频发布任务异常：' . $th->__toString(), 'publish');
             return false;
         }
@@ -656,7 +706,7 @@ class PublishLogic extends ApiLogic
                             'task_name' => '自动化拼图发布任务',
                             'time_config' => json_encode([$_time], JSON_UNESCAPED_UNICODE),
                             'start_time' => strtotime(date('Y-m-d ' . $tmpTime[0] . ':00', $publishTime)),
-                            'end_time' => strtotime(date('Y-m-d ' . $tmpTime[1] . ':00', $publishTime)) - 180,
+                            'end_time' => strtotime(date('Y-m-d ' . $tmpTime[1] . ':00', $publishTime)) - 120,
                             'day' => date('Y-m-d', $publishTime),
                             'status' => 0,
                             'sub_task_id' => $paccount->id,

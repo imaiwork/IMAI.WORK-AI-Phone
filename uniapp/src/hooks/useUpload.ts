@@ -1,223 +1,268 @@
 import { chooseFile } from "@/components/file-upload/choose-file";
-import { uploadFile, videoTranscoding } from "@/api/app";
+import { uploadFile } from "@/api/app";
+import { isImageUrl } from "@/utils/util";
 
-const defaultOptions = {
-    count: 9,
-    imageAccept: ["jpg", "png", "jpeg"],
-    imageSize: 20,
-    imageResolution: [2000, 2000],
-    videoAccept: ["mp4", "mov"],
-    videoSize: 200,
-    videoDuration: [1, 600],
-    fileAccept: ["jpg", "png", "jpeg", "mp4", "mov"],
-    fileSize: 200,
-    sizeType: ["original", "compressed"],
-    sourceType: ["album"],
-};
-export default function useUpload(options: {
+type FileCategory = "image" | "video" | "file" | "all";
+
+export interface UseUploadOptions {
     isTranscode?: boolean;
-    clip?: [
-        {
-            video: {
-                duration: number;
-            };
-        }
-    ];
+    isFetchVideoInfo?: boolean;
+    clip?: Array<{ video: { duration: number } }>;
     count?: number;
     imageAccept?: string[];
     imageSize?: number;
-    imageResolution?: number[];
+    imageResolution?: [number, number];
     videoAccept?: string[];
     videoSize?: number;
-    videoDuration?: number[];
+    videoDuration?: [number, number];
     fileAccept?: string[];
     fileSize?: number;
-    sizeType?: ("original" | "compressed")[];
-    sourceType?: ("album" | "camera")[];
-    onSuccess?: (materials: any[]) => void;
-}) {
+    sizeType?: Array<"original" | "compressed">;
+    sourceType?: Array<"album" | "camera">;
+    onSuccess?: (materials: UploadedMaterial[]) => void;
+}
+
+export interface UploadedMaterial {
+    name: string;
+    url: string;
+    size: number;
+    type: string;
+    pic: string;
+    duration: number;
+    width: number;
+    height: number;
+    m_type: number;
+}
+
+interface UploadItem {
+    tempFilePath: string;
+    name: string;
+    size: number;
+    duration?: number;
+    width?: number;
+    height?: number;
+    progress: number;
+}
+
+const DEFAULT_OPTIONS = {
+    count: 9,
+    imageAccept: ["jpg", "png", "jpeg"] as string[],
+    imageSize: 20,
+    imageResolution: [2000, 2000] as [number, number],
+    videoAccept: ["mp4", "mov"] as string[],
+    videoSize: 200,
+    videoDuration: [1, 600] as [number, number],
+    fileAccept: ["jpg", "png", "jpeg", "mp4", "mov"] as string[],
+    fileSize: 200,
+    sizeType: ["original", "compressed"] as Array<"original" | "compressed">,
+    sourceType: ["album"] as Array<"album" | "camera">,
+};
+
+const getExtension = (filename: string): string => filename.split(".").pop()?.toLowerCase() ?? "";
+
+const getFileTypeByUrl = (url: string): string => {
+    const ext = getExtension(url);
+    if (["jpg", "png", "jpeg", "webp"].includes(ext)) return "image";
+    if (["mp4", "mov", "avi", "mkv"].includes(ext)) return "video";
+    if (["mp3", "wav", "m4a", "aac"].includes(ext)) return "audio";
+    return "file";
+};
+
+export default function useUpload(options: UseUploadOptions = {}) {
     const {
         isTranscode = false,
-        clip = [
-            {
-                video: {
-                    duration: 0,
-                },
-            },
-        ],
-        count = defaultOptions.count,
-        imageAccept = defaultOptions.imageAccept,
-        imageSize = defaultOptions.imageSize,
-        imageResolution = defaultOptions.imageResolution,
-        videoAccept = defaultOptions.videoAccept,
-        videoSize = defaultOptions.videoSize,
-        videoDuration = defaultOptions.videoDuration,
-        fileAccept = defaultOptions.fileAccept,
-        fileSize = defaultOptions.fileSize,
-        sizeType = defaultOptions.sizeType,
-        sourceType = defaultOptions.sourceType,
+        isFetchVideoInfo = false,
+        clip = [{ video: { duration: 0 } }],
+        count = DEFAULT_OPTIONS.count,
+        imageAccept = DEFAULT_OPTIONS.imageAccept,
+        imageSize = DEFAULT_OPTIONS.imageSize,
+        imageResolution = DEFAULT_OPTIONS.imageResolution,
+        videoAccept = DEFAULT_OPTIONS.videoAccept,
+        videoSize = DEFAULT_OPTIONS.videoSize,
+        videoDuration = DEFAULT_OPTIONS.videoDuration,
+        fileAccept = DEFAULT_OPTIONS.fileAccept,
+        fileSize = DEFAULT_OPTIONS.fileSize,
+        sizeType = DEFAULT_OPTIONS.sizeType,
+        sourceType = DEFAULT_OPTIONS.sourceType,
         onSuccess,
     } = options;
-    const uploadMaterialList = ref<any[]>([]);
-    const showUploadProgress = ref(false);
 
-    const uploadAndProcessFiles = async (fileType: "image" | "video" | "file" | "all") => {
-        uploadMaterialList.value = [];
+    const uploadMaterialList = ref<UploadItem[]>([]);
+    const showUploadProgress = ref<boolean>(false);
+
+    const progressCallback = (progress: number, tempFilePath: string): void => {
+        const index = uploadMaterialList.value.findIndex((item) => item.tempFilePath === tempFilePath);
+        if (index !== -1) {
+            uploadMaterialList.value[index].progress = progress;
+        }
+    };
+
+    const validateImage = async (file: any): Promise<boolean> => {
+        const ext = getExtension(file.name);
+        if (imageAccept.length > 0 && !imageAccept.includes(ext)) {
+            uni.$u.toast(`图片格式必须是 ${imageAccept.join("、")}`);
+            return false;
+        }
+        if (isTranscode) return true;
+
+        if (file.size > imageSize * 1024 * 1024) {
+            uni.$u.toast(`图片大小不能超过 ${imageSize}M`);
+            return false;
+        }
         try {
-            const isImage = fileType === "image";
-            const isVideo = fileType === "video";
-            const isFile = fileType === "file";
-            const isAll = fileType === "all";
+            const { width, height } = await uni.getImageInfo({ src: file.tempFilePath });
+            if (width > imageResolution[0] || height > imageResolution[1]) {
+                uni.$u.toast(`图片分辨率不能超过 ${imageResolution[0]}×${imageResolution[1]}`);
+                return false;
+            }
+        } catch {
+            return false;
+        }
+        return true;
+    };
+
+    const validateVideo = (file: any): boolean => {
+        const ext = getExtension(file.name);
+        if (videoAccept.length > 0 && !videoAccept.includes(ext)) {
+            uni.$u.toast(`视频格式必须是 ${videoAccept.join("、")}`);
+            return false;
+        }
+        if (file.size > videoSize * 1024 * 1024) {
+            uni.$u.toast(`视频大小不能超过 ${videoSize}M`);
+            return false;
+        }
+        if (videoDuration.length > 0) {
+            const durationOk = file.duration >= videoDuration[0] && file.duration <= videoDuration[1];
+            if (!durationOk) {
+                uni.$u.toast(`视频时长须在 ${videoDuration[0]}~${videoDuration[1]} 秒之间`);
+                return false;
+            }
+        }
+        return true;
+    };
+
+    const validateFile = (file: any): boolean => {
+        const ext = getExtension(file.name);
+        if (fileAccept.length > 0 && !fileAccept.includes(ext)) {
+            uni.$u.toast(`文件格式必须是 ${fileAccept.join("、")}`);
+            return false;
+        }
+        // 转码模式下由服务端处理大小限制
+        if (!isTranscode && file.size > fileSize * 1024 * 1024) {
+            uni.$u.toast(`文件大小不能超过 ${fileSize}M`);
+            return false;
+        }
+        return true;
+    };
+
+    const filterFiles = async (tempFiles: any[], fileCategory: FileCategory): Promise<any[]> => {
+        const result: any[] = [];
+        for (const file of tempFiles) {
+            let valid = false;
+            if (fileCategory === "image") {
+                valid = await validateImage(file);
+            } else if (fileCategory === "video") {
+                valid = validateVideo(file);
+            } else {
+                valid = validateFile(file);
+            }
+            if (valid) result.push(file);
+        }
+        return result;
+    };
+
+    const uploadSingleFile = async (item: UploadItem, fileCategory: FileCategory): Promise<UploadedMaterial> => {
+        const needTranscode = isTranscode;
+        const fileRes: any = await uploadFile(
+            fileCategory === "all" ? "file" : fileCategory,
+            {
+                filePath: item.tempFilePath,
+                formData: {
+                    ffmpeg: needTranscode ? 1 : 0,
+                    generate_thumbnail: 1,
+                    fetch_video_info: isFetchVideoInfo ? 1 : 0,
+                    "clip[video][duration]": clip[0].video.duration,
+                },
+            },
+            (progress: number) => progressCallback(progress, item.tempFilePath)
+        );
+
+        const resolvedType = ["file", "all"].includes(fileCategory) ? getFileTypeByUrl(fileRes.uri) : fileCategory;
+        const mType = resolvedType === "video" ? 1 : 2;
+
+        return {
+            name: item.name,
+            url: fileRes.uri,
+            size: item.size,
+            type: resolvedType,
+            pic: isImageUrl(fileRes.uri) ? fileRes.uri : fileRes.thumbnail_path ?? "",
+            duration: fileRes.duration ?? item.duration ?? 0,
+            width: fileRes.width ?? item.width ?? 0,
+            height: fileRes.height ?? item.height ?? 0,
+            m_type: mType,
+        };
+    };
+
+    const uploadAndProcessFiles = async (fileCategory: FileCategory): Promise<void> => {
+        uploadMaterialList.value = [];
+
+        try {
+            const extension: string[] =
+                fileCategory === "image"
+                    ? [...imageAccept]
+                    : fileCategory === "video"
+                    ? [...videoAccept]
+                    : [...fileAccept];
 
             const { tempFiles } = await chooseFile({
-                type: fileType,
+                type: fileCategory,
                 count,
-                sourceType,
-                extension: isImage ? imageAccept : isVideo ? videoAccept : fileAccept,
-                sizeType,
+                sourceType: [...sourceType],
+                extension,
+                sizeType: [...sizeType],
             });
 
-            // 先过滤图片
-            const fileList = [];
-            for (const file of tempFiles) {
-                if (isImage) {
-                    try {
-                        // 1. 获取图片宽高
-                        const { width, height } = await uni.getImageInfo({
-                            src: file.tempFilePath,
-                        });
-                        if (imageAccept.length > 0 && !imageAccept.includes(file.name.split(".").pop())) {
-                            uni.$u.toast(`图片格式必须是${imageAccept.join("、")}`);
-                            continue;
-                        }
-                        if (!isTranscode) {
-                            if (width > imageResolution[0] || height > imageResolution[1]) {
-                                uni.$u.toast(`图片分辨率不能超过${imageResolution[0]}*${imageResolution[1]}`);
-                                continue;
-                            }
-                            if (file.size > imageSize * 1024 * 1024) {
-                                uni.$u.toast(`图片大小不能超过${imageSize}M`);
-                                continue;
-                            }
-                        }
+            const validFiles = await filterFiles(tempFiles, fileCategory);
+            if (validFiles.length === 0) return;
 
-                        fileList.push(file);
-                    } catch (error) {
-                        continue;
-                    }
-                }
-                if (isVideo) {
-                    const durationOk = file.duration >= videoDuration[0] && file.duration <= videoDuration[1];
-                    if (!durationOk && videoDuration.length > 0) {
-                        uni.$u.toast(`视频时长不能小于${videoDuration[0]}秒，不能超过${videoDuration[1]}秒`);
-                        continue;
-                    }
-                    if (file.size > videoSize * 1024 * 1024) {
-                        uni.$u.toast(`视频大小不能超过${videoSize}M`);
-                        continue;
-                    }
-                    if (videoAccept.length > 0 && !videoAccept.includes(file.name.split(".").pop())) {
-                        uni.$u.toast(`视频格式必须是${videoAccept.join("、")}`);
-                        continue;
-                    }
-                    fileList.push(file);
-                }
-                if (isFile || isAll) {
-                    if (fileAccept.length > 0 && !fileAccept.includes(file.name.split(".").pop())) {
-                        uni.$u.toast(`文件格式必须是${fileAccept.join("、")}`);
-                        continue;
-                    }
-                    if (!isTranscode && file.size > fileSize * 1024 * 1024) {
-                        uni.$u.toast(`文件大小不能超过${fileSize}M`);
-                        continue;
-                    }
-                    fileList.push(file);
-                }
-            }
-            if (fileList.length === 0) {
-                return;
-            }
+            // 初始化上传列表
+            uploadMaterialList.value = validFiles.map((file: any) => ({
+                tempFilePath: file.tempFilePath,
+                name: file.name,
+                size: file.size,
+                duration: file.duration,
+                width: file.width,
+                height: file.height,
+                progress: 0,
+            }));
 
-            uploadMaterialList.value = fileList.map((file: any) => ({ ...file, progress: 0 }));
             showUploadProgress.value = true;
-            const uploadedFilesData = [];
-            for (const item of uploadMaterialList.value) {
-                const coverRes: any = isVideo
-                    ? await uploadFile("image", {
-                          filePath: item.thumbTempFilePath,
-                          formData: { ffmpeg: isTranscode ? 1 : 0 },
-                      })
-                    : {};
-                if (isTranscode && (isVideo || isImage)) {
-                    uni.showLoading({
-                        title: "素材处理中",
-                        mask: true,
-                    });
-                }
-                const fileRes: any = await uploadFile(
-                    isAll ? "file" : fileType,
-                    {
-                        filePath: item.tempFilePath,
-                        formData: {
-                            ffmpeg: isTranscode && (isVideo || isImage) ? 1 : 0,
-                            "clip[video][duration]": clip[0].video.duration,
-                        },
-                    },
-                    (progress) => progressCallback(progress, item)
-                );
-                // if (isTranscode && fileRes.uri) {
-                //     const isVideoUrl =
-                //         fileRes.uri.includes(".mp4") || fileRes.uri.includes(".mov") || fileRes.uri.includes(".m4a");
-                //     if (isVideo || isVideoUrl) {
-                //         videoTranscoding(fileRes.uri);
-                //     }
-                // }
-                uploadedFilesData.push({
-                    name: item.name,
-                    url: fileRes.uri,
-                    size: item.size,
-                    type: fileType,
-                    pic: isImage ? fileRes.uri : coverRes.uri,
-                    duration: item.duration || 0,
-                    width: item.width || 0,
-                    height: item.height || 0,
-                });
+
+            const needTranscode = isTranscode && (fileCategory === "video" || fileCategory === "image");
+            if (needTranscode) {
+                uni.showLoading({ title: "素材处理中", mask: true });
             }
-            if (uploadMaterialList.value.every((item) => item.progress === 100)) {
-                showUploadProgress.value = false;
-                onSuccess?.(uploadedFilesData);
-                uni.hideLoading();
-            }
-        } catch (error: any) {
+
+            const results = await Promise.all(
+                uploadMaterialList.value.map((item) => uploadSingleFile(item, fileCategory))
+            );
             uni.hideLoading();
-            if (!error?.errMsg?.includes("cancel")) {
+
+            onSuccess?.(results);
+        } catch (error: unknown) {
+            const err = error as any;
+            uni.hideLoading();
+
+            if (!err?.errMsg?.includes("cancel")) {
                 uni.showToast({
-                    title: error?.errMsg || error,
+                    title: err?.errMsg ?? String(err) ?? "上传失败",
                     icon: "none",
                     duration: 3000,
                 });
             }
-            uploadMaterialList.value = [];
+        } finally {
             showUploadProgress.value = false;
-        }
-    };
-
-    /**
-     * 上传进度回调函数
-     * @param progress - 进度值 (0-100)
-     * @param options - 上传选项，包含 filePath
-     */
-    const progressCallback = (progress: number, options: { tempFilePath: string }) => {
-        const targetIndex = uploadMaterialList.value.findIndex(
-            (material) => material.tempFilePath === options.tempFilePath
-        );
-        if (targetIndex !== -1) {
-            const newList = [...uploadMaterialList.value];
-            newList[targetIndex] = {
-                ...newList[targetIndex],
-                progress: progress,
-            };
-            uploadMaterialList.value = newList;
+            // uploadMaterialList.value = [];
         }
     };
 

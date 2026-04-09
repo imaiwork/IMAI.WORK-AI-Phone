@@ -346,6 +346,7 @@ watch(
     (newVal) => {
         if (!newVal || newVal == "0") {
             chatAgentRef.value.clearSelectedAgent();
+            setAgent(null);
             return;
         }
 

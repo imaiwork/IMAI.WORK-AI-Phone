@@ -272,16 +272,23 @@
         :show-close="false"
         @close="handleCreateTaskSuccess"
         @confirm="handleCreateTaskSuccess" />
+    <task-conflict-dialog
+        v-if="showTaskMsgPop"
+        v-model="showTaskMsgPop"
+        :messages="taskMsgPopContent"
+        @close="showTaskMsgPop = false"
+        @confirm="handleTaskMsgPopConfirm" />
 </template>
 
 <script setup lang="ts">
 import WechatOA from "@/utils/wechat";
-import { createWechatPrivateTask } from "@/api/device";
+import { createWechatPrivateTask, checkTaskPublishTime } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
 import KeywordsEdit from "@/ai_modules/device/components/keywords-edit/keywords-edit.vue";
+import TaskConflictDialog from "@/ai_modules/device/components/task-conflict-dialog/task-conflict-dialog.vue";
 
 const { on } = useEventBusManager();
 
@@ -309,6 +316,9 @@ const formData = reactive<{
     time_type: 0 | 1;
     time_config: string[];
     custom_date: string[];
+    task_exec_type: number;
+    minutes: number;
+    task_ids: string[];
 }>({
     name: `个微接管任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`,
     interaction_action_switch: 1,
@@ -327,6 +337,9 @@ const formData = reactive<{
     time_type: 0,
     time_config: ["09:00", "09:30"],
     custom_date: [],
+    task_exec_type: 1,
+    minutes: 30,
+    task_ids: [],
 });
 
 const editSensitiveWordIndex = ref(-1);
@@ -335,6 +348,8 @@ const keywordsEditRef = ref<InstanceType<typeof KeywordsEdit>>();
 const currentFrequency = ref(0);
 const taskErrorMsg = ref<string>("");
 const showCreateTaskSuccessDialog = ref(false);
+const showTaskMsgPop = ref(false);
+const taskMsgPopContent = ref<string[]>([]);
 
 const canNext = computed(() => canStepProceed(step.value));
 
@@ -418,30 +433,11 @@ const handleKeywordsConfirm = (data: string) => {
     showKeywordsEdit.value = false;
     editSensitiveWordIndex.value = -1;
 };
-
-const handleCreateTask = async () => {
-    if (!formData.name) {
-        uni.$u.toast("请输入任务名称");
-        return;
-    }
-    if (!formData.accounts.length) {
-        uni.$u.toast("请选择发布账号");
-        return;
-    }
-    if (currentFrequency.value === 5 && !formData.custom_date.length) {
-        uni.$u.toast("请选择任务日期");
-        return;
-    }
-    if (!formData.time_config[0] || !formData.time_config[1]) {
-        uni.$u.toast("请选择任务时间");
-        return;
-    }
-
+const executeCreateTask = async () => {
     uni.showLoading({
         title: "创建中...",
         mask: true,
     });
-
     try {
         await createWechatPrivateTask({
             task_name: formData.name,
@@ -461,6 +457,9 @@ const handleCreateTask = async () => {
             stop_enable: formData.sensitive_word_switch,
             stop_keywords: formData.sensitive_word,
             is_free_time: formData.time_type,
+            task_exec_type: formData.task_exec_type,
+            minutes: formData.minutes,
+            task_ids: formData.task_ids,
         });
         uni.hideLoading();
         showCreateTaskSuccessDialog.value = true;
@@ -474,7 +473,7 @@ const handleCreateTask = async () => {
                 success: (res) => {
                     if (res.confirm) {
                         uni.$u.route({
-                            url: "/pages/phone/phone",
+                            url: "/ai_modules/device/pages/index/index",
                         });
                     }
                 },
@@ -490,9 +489,64 @@ const handleCreateTask = async () => {
     }
 };
 
+const handleCreateTask = async () => {
+    // --- 基础校验逻辑 ---
+    if (!formData.name) {
+        uni.$u.toast("请输入任务名称");
+        return;
+    }
+    if (!formData.accounts.length) {
+        uni.$u.toast("请选择发布账号");
+        return;
+    }
+    if (currentFrequency.value === 5 && !formData.custom_date.length) {
+        uni.$u.toast("请选择任务日期");
+        return;
+    }
+    if (!formData.time_config[0] || !formData.time_config[1]) {
+        uni.$u.toast("请选择任务时间");
+        return;
+    }
+    if (formData.task_exec_type == 1) {
+        if (formData.minutes < 1) return uni.$u.toast("执行时间不能小于1分钟");
+        if (formData.minutes > 9999) return uni.$u.toast("执行时间不能超过9999分钟");
+    }
+
+    if (formData.task_exec_type === 1) {
+        uni.showLoading({ title: "检测冲突中...", mask: true });
+        try {
+            const { messages, task_ids } = await checkTaskPublishTime({
+                accounts: formData.accounts,
+                minutes: formData.minutes,
+            });
+
+            uni.hideLoading();
+
+            if (messages && messages.length > 0) {
+                taskMsgPopContent.value = messages;
+                formData.task_ids = task_ids;
+                showTaskMsgPop.value = true;
+                return;
+            }
+
+            await executeCreateTask();
+        } catch (error: any) {
+            uni.hideLoading();
+            taskErrorMsg.value = error;
+            uni.$u.toast(error);
+        }
+    } else {
+        await executeCreateTask();
+    }
+};
+
+const handleTaskMsgPopConfirm = async () => {
+    await executeCreateTask();
+};
+
 const handleCreateTaskSuccess = () => {
     uni.$u.route({
-        url: "/pages/phone/phone",
+        url: "/ai_modules/device/pages/index/index",
         type: "reLaunch",
     });
     showCreateTaskSuccessDialog.value = false;

@@ -218,6 +218,7 @@ class AccountLogEnum
     const TOKENS_INC_SHANJIAN_TYPE2 = 9151;
     const TOKENS_INC_SHANJIAN_TYPE3 = 9152;
     const TOKENS_INC_SHANJIAN_TYPE4 = 9153;
+    const TOKENS_INC_VIDEO_IMITATION_REFUND = 9154;
 
     /**
      * 短视频
@@ -274,6 +275,8 @@ class AccountLogEnum
 
     // 账号Ip人设分析报告
     const TOKENS_DEC_AUTOMATION_ACCOUNT_IP_ANALYSIS = 10313;   // 账号Ip人设分析报告
+    const TOKENS_DEC_AI_PERSONA_ANALYSIS = 10314;   // Ip人设分析
+    const TOKENS_DEC_AI_PERSONA_REPORT = 10315;   // Ip人设报告
 
 
     const TOKENS_DEC_NEWS_MIXCUT_TITLE = 10200;
@@ -284,6 +287,8 @@ class AccountLogEnum
 
     const TOKENS_DEC_COZE_COPYWRITING = 10203;
     const TOKENS_DEC_DOUYIN_JS = 10204;
+    const TOKENS_DEC_VIDEO_IMITATION = 10205;
+    const TOKENS_DEC_VIDEO_IMITATION_ADD = 10206;
 
     //分镜混剪
     const TOKENS_DEC_STORYBOARD_VIDEO = 10300;
@@ -411,10 +416,16 @@ class AccountLogEnum
         self::TOKENS_DEC_AUTOMATION_OCR_LOCAL,
         self::TOKENS_DEC_AUTOMATION_OCR_IMG,
         self::TOKENS_DEC_AUTOMATION_ACCOUNT_IP_ANALYSIS,
+        self::TOKENS_DEC_AI_PERSONA_ANALYSIS,
+        self::TOKENS_DEC_AI_PERSONA_REPORT,
 
             // 分销代理
         self::TOKENS_DEC_DISTRIBUTION_TRANSFER,
         self::TOKENS_DEC_DISTRIBUTION_CARD,
+
+            // 视频复刻
+        self::TOKENS_DEC_VIDEO_IMITATION,
+        self::TOKENS_DEC_VIDEO_IMITATION_ADD,
     ];
 
 
@@ -432,6 +443,7 @@ class AccountLogEnum
         self::TOKENS_INC_CARDCODE_GIVE,
         self::TOKENS_INC_DISTRIBUTION_TRANSFER,
         self::TOKENS_INC_DISTRIBUTION_CARD_REFUND,
+        self::TOKENS_INC_VIDEO_IMITATION_REFUND,
     ];
 
 
@@ -479,6 +491,7 @@ class AccountLogEnum
             self::TOKENS_INC_SHANJIAN_TYPE2 => '真人口播混剪视预扣费超额扣费退费',
             self::TOKENS_INC_SHANJIAN_TYPE3 => '素材混剪视频预扣费超额扣费退费',
             self::TOKENS_INC_SHANJIAN_TYPE4 => '新闻体混剪视频预扣费超额扣费退费',
+            self::TOKENS_INC_VIDEO_IMITATION_REFUND => '爆款视频复刻预扣费超额扣费退费',
             self::TOKENS_INC_ADMIN => '平台增加算力',
             self::TOKENS_INC_RECHARGE => '购买算力加油包',
             self::TOKENS_DEC_ADMIN => '平台减少算力',
@@ -593,6 +606,8 @@ class AccountLogEnum
             self::TOKENS_DEC_COZE_COPYWRITING => 'Coze智能体文案生成减少算力',
             self::TOKENS_DEC_STORYBOARD_VIDEO => '分镜生成视频任务减少算力',
             self::TOKENS_DEC_DOUYIN_JS => '【抖音】扫码发布减少算力',
+            self::TOKENS_DEC_VIDEO_IMITATION => '视频仿写文案生成减少算力',
+            self::TOKENS_DEC_VIDEO_IMITATION_ADD => '爆款视频复刻预扣费补足费用补扣',
             self::TOKENS_DEC_SORA_VIDEO => '一句话生成视频减少算力',
             self::TOKENS_DEC_SORA_PRO_VIDEO => '一句话生成视频(pro)减少算力',
             self::TOKENS_DEC_SORA_COPYWRITING => '一句话生成视频AI优化文案减少算力',
@@ -613,6 +628,8 @@ class AccountLogEnum
             self::TOKENS_DEC_AUTOMATION_OCR_LOCAL => '自动化获客视频号OCR减少算力',
             self::TOKENS_DEC_AUTOMATION_OCR_IMG => '自动化获客本地OCR减少算力',
             self::TOKENS_DEC_AUTOMATION_ACCOUNT_IP_ANALYSIS => '自动化获客账号Ip人设分析报告减少算力',
+            self::TOKENS_DEC_AI_PERSONA_ANALYSIS => 'IP人设分析减少算力',
+            self::TOKENS_DEC_AI_PERSONA_REPORT => 'IP人设报告减少算力',
 
                 // 分销代理
             self::TOKENS_DEC_DISTRIBUTION_TRANSFER => '分销代理转赠下级减少算力',

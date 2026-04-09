@@ -215,7 +215,7 @@ class TouchLogic extends ApiLogic
                     $times = explode('-', $execTime);
 
                     $startTime = strtotime($date . ' ' . $times[0] . ':00') > time() ? strtotime($date . ' ' . $times[0] . ':00') : strtotime(date('Y-m-d ' . $times[0] . ':00', strtotime('+1 day')));
-                    $endTime =  strtotime(date('Y-m-d', $startTime) . ' ' . $times[1] . ':00') - 180;
+                    $endTime =  strtotime(date('Y-m-d', $startTime) . ' ' . $times[1] . ':00') - 120;
 
                     //截流任务
                     $params = [

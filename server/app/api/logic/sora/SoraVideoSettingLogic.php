@@ -327,7 +327,8 @@ class SoraVideoSettingLogic extends ApiLogic
                 self::SORA_VIDEO_CREATE       => ['sora_video_create', AccountLogEnum::TOKENS_DEC_SORA_VIDEO],
                 self::SORA_PRO_VIDEO_CREATE   => ['sora_pro_video_create', AccountLogEnum::TOKENS_DEC_SORA_PRO_VIDEO],
             };
-            $unit               = TokenLogService::checkToken($userId, $tokenScene);
+            $duration           = $request['duration'] ?? 4;
+            $unit               = TokenLogService::checkToken($userId, $tokenScene, $duration);
             $request['task_id'] = $taskId;
             $request['user_id'] = $userId;
             $request['now']     = time();

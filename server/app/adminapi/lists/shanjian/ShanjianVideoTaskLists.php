@@ -13,7 +13,7 @@ class ShanjianVideoTaskLists extends BaseAdminDataLists implements ListsSearchIn
     public function setSearch(): array
     {
         return [
-            '=' => ['sj.video_setting_id', 'sj.shanjian_type'],
+            '=' => ['sj.video_setting_id', 'sj.shanjian_type','sj.persona_id'],
             'in' => ['sj.status'],
             '%like%' => ['sj.name', 'u.nickname', 'sa.authorized_url', 'sa.anchor_url', 'sj.video_result_url', 'sj.card_introduced', 'sj.card_name']
         ];
@@ -25,31 +25,29 @@ class ShanjianVideoTaskLists extends BaseAdminDataLists implements ListsSearchIn
         $shanjian_type = $this->request->get('shanjian_type', 1);
         $list = ShanjianVideoTask::alias('sj')
             ->field('sj.*,u.nickname')
-            ->join('user u', 'u.id = sj.user_id');
-        switch ($shanjian_type) {
-            case 1:
-                $list = $list->field('sa.authorized_url,sa.anchor_url')->join('shanjian_anchor sa', 'sa.anchor_id = sj.anchor_id');
-                break;
-            case 2:
-            case 3:
-            case 4:
-                break;
-            default:
-                break;
-        }
-
-        $list = $list->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
+            ->leftJoin('user u', 'u.id = sj.user_id')
+            ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
             $query->whereBetween('sj.create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
         })
             ->where($this->searchWhere)
             ->order(['sj.id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
-            ->select()->each(function ($item) {
+            ->select()
+            ->each(function ($item) {
                if ($item->status == 2){
                    $item->video_token = 0;
                }
+                $item->authorized_url = '';
+                $item->anchor_url = '';
+               if ($item->shanjian_type == 1){
+                   $shanjian_anchor = ShanjianAnchor::where('anchor_id', $item->anchor_id)->find();
+                   $item->authorized_url = $shanjian_anchor->authorized_url ?? '';
+                   $item->anchor_url = $shanjian_anchor->anchor_url ?? '';
+               }
+               
 
-            })->toArray();
+            })
+            ->toArray();
         return $list;
     }
 
@@ -59,18 +57,6 @@ class ShanjianVideoTaskLists extends BaseAdminDataLists implements ListsSearchIn
         $shanjian_type = $this->request->get('shanjian_type', 1);
         $count = ShanjianVideoTask::alias('sj')
             ->join('user u', 'u.id = sj.user_id');
-        switch ($shanjian_type) {
-            case 1:
-                $count = $count->join('shanjian_anchor sa', 'sa.anchor_id = sj.anchor_id');
-                break;
-            case 2:
-            case 3:
-            case 4:
-                break;
-            default:
-                break;
-        }
-
         return $count->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
             $query->whereBetween('sj.create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
         })->where($this->searchWhere)->count();

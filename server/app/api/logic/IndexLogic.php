@@ -256,6 +256,7 @@ class IndexLogic extends BaseLogic
             ],
             'recharge'                 => [
                 'is_ios_open'   => ConfigService::get('recharge','is_ios_open',0),
+                'is_and_open'   => ConfigService::get('recharge','is_and_open',0),
             ],
             'app_config' => ConfigService::get('app_config', 'redbook', []),
             'ai_live' =>  ConfigService::get('ai_live', 'config', []),

@@ -22,6 +22,15 @@ class CircleLogic extends WechatBaseLogic
     {
         try {
             self::checkAutoDevice($params);
+
+            $is_overlap = $params['task_exec_type'] ?? 0;
+            if ((int)$is_overlap === 1) {
+                \app\api\logic\device\TaskLogic::updateTaskStatusByIds($params['task_ids']);
+                $params['time_config'] = date('H:i', time()) . '-' . date('H:i', (time() + (60 * (int)$params['minutes'])));
+                $params['date'] = date('Y-m-d', time());
+                unset($params['task_ids']);
+            }
+
             $wechatIds = array_unique($params['wechat_ids'] ?? []);
             $times = \app\api\logic\device\TaskLogic::getTimes([$params['time_config']], $params['date'], 1);
             foreach ($wechatIds as $wechatId) {
@@ -30,11 +39,13 @@ class CircleLogic extends WechatBaseLogic
                     throw new \Exception("{$wechatId} 该微信账号信息未找到");
                 }
                 foreach ($times as $time) {
-                    list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($account->device_code, DeviceEnum::TASK_TYPE_WECHAT_CIRCLE, $time['start_time'], $time['end_time'], self::$uid);
-                    if (!$isOverlap) {
-                        $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                        $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
-                        throw new \Exception($msg);
+                    if ((int)$is_overlap === 0) {
+                        list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($account->device_code, DeviceEnum::TASK_TYPE_WECHAT_CIRCLE, $time['start_time'], $time['end_time'], self::$uid);
+                        if (!$isOverlap) {
+                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                            throw new \Exception($msg);
+                        }
                     }
                 }
             }
@@ -55,11 +66,20 @@ class CircleLogic extends WechatBaseLogic
         Db::startTrans();
         try {
             self::checkAutoDevice($params);
+
+            $is_overlap = $params['task_exec_type'] ?? 0;
+            if ((int)$is_overlap === 1) {
+                \app\api\logic\device\TaskLogic::updateTaskStatusByIds($params['task_ids']);
+                $params['time_config'] = date('H:i', time()) . '-' . date('H:i', (time() + (60 * (int)$params['minutes'])));
+                $params['date'] = date('Y-m-d', time());
+                unset($params['task_ids']);
+            }
+
             $params['status'] = (empty($params['wechat_ids']) || empty($params['time_config'])) ? 0 : 1;
             $params['user_id'] = self::$uid;
             $params['task_name'] = $params['task_name'] ?? '朋友圈发布任务' . date('YmdHis');
-
-            if(empty($params['attachment_content'])){
+            //print_r($params);die;
+            if (empty($params['attachment_content'])) {
                 self::setError('请选择媒体素材');
                 return false;
             }
@@ -150,8 +170,10 @@ class CircleLogic extends WechatBaseLogic
     private static function createCircleTask(array $params, AiWechatCircleTaskConfig $taskConfig)
     {
         try {
+            $is_overlap = $params['task_exec_type'] ?? 0;
             if ($params['status'] === 1) {
-                $times = \app\api\logic\device\TaskLogic::getTimes([$params['time_config']], $params['date'], 1);
+                $times = \app\api\logic\device\TaskLogic::getTimes([$params['time_config']], $params['date'], 1, [$params['date']]);
+                //print_r($times);die;
                 $wechatIds = array_unique($params['wechat_ids'] ?? []);
                 $insertData = [];
                 $allTaskInstall = [];
@@ -162,12 +184,15 @@ class CircleLogic extends WechatBaseLogic
                     }
 
                     foreach ($times as $time) {
-                        list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($account->device_code, DeviceEnum::TASK_TYPE_WECHAT_CIRCLE, $time['start_time'], $time['end_time'], self::$uid);
-                        if (!$isOverlap) {
-                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
-                            throw new \Exception($msg);
+                        if ((int)$is_overlap === 0) {
+                            list($isOverlap, $lap) = \app\api\logic\device\TaskLogic::isTaskTimeOverlapping($account->device_code, DeviceEnum::TASK_TYPE_WECHAT_CIRCLE, $time['start_time'], $time['end_time'], self::$uid);
+                            if (!$isOverlap) {
+                                $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                                $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                                throw new \Exception($msg);
+                            }
                         }
+
                         // $params['attachment_content'] = json_encode($params['attachment_content'] ?: [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                         // $params['comment'] = json_encode($params['comment'] ?: [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
@@ -193,12 +218,14 @@ class CircleLogic extends WechatBaseLogic
                             'task_type' => DeviceEnum::TASK_TYPE_WECHAT_CIRCLE,
                             'account' => $account->account,
                             'account_type' => $account->type,
+                            'nickname' => $account->nickname,
+                            'avatar' => $account->avatar,
                             'task_name' => '设备朋友圈发布任务',
                             'status' => 0,
                             'day' => date('Y-m-d', $time['start_time']),
                             'time_config' => json_encode([$params['time_config']], JSON_UNESCAPED_UNICODE),
                             'start_time' => $time['start_time'],
-                            'end_time' => $time['end_time'] - 180,
+                            'end_time' => $time['end_time'] - 120,
                             'sub_task_id' => $taskConfig->id,
                             'sub_data_id' => $task->id,
                             'source' => DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_PUBLISH, //sv_device_active_account
@@ -231,13 +258,13 @@ class CircleLogic extends WechatBaseLogic
                 self::setError('任务不存在');
                 return false;
             }
-            
+
             AiWechatCircleTask::where('task_config_id', $task->id)->select()->delete();
             \app\common\model\sv\SvDeviceTask::where('user_id', $task->user_id)->where('sub_data_id', $task->id)->where('source', 7)->where('task_type', 7)->select()->delete();
             $task->delete();
 
             $count = AiWechatCircleTask::where('task_config_id', $task->task_config_id)->where('user_id', self::$uid)->count();
-            if($count === 0){
+            if ($count === 0) {
                 AiWechatCircleTaskConfig::where('id', $task->task_config_id)->where('user_id', self::$uid)->select()->delete();
             }
             return true;

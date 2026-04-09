@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "私域与运营设置",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "u-slider": "../../../../uni_modules/vk-uview-ui/components/u-slider/u-slider",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "keywords-edit": "../../components/keywords-edit/keywords-edit"
+  }
+}

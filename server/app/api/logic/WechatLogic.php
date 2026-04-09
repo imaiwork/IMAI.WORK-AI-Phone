@@ -174,7 +174,7 @@ class WechatLogic extends BaseLogic
             }
 
             $result = $wechatMnpService->sendTemplateMessage($openid, $template_id, $page, $data);
-            \think\facade\Log::channel('notice')->write('任务:'.$params['name'].'推送结果:'.$result);
+            //\think\facade\Log::channel('notice')->write('任务:'.$params['name'].'推送结果:'.$result);
             $result = json_decode($result, true);
             if ($result['errcode'] === 0) {
                 $insert = [

@@ -15,6 +15,7 @@
     "u-line": "../../../../uni_modules/vk-uview-ui/components/u-line/u-line",
     "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
-    "clue-edit": "../../components/clue-edit/clue-edit"
+    "clue-edit": "../../components/clue-edit/clue-edit",
+    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog"
   }
 }

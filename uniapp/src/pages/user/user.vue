@@ -165,6 +165,18 @@
                                     </view>
                                 </router-navigate>
                                 <router-navigate
+                                    to="/packages/pages/course/course"
+                                    hover-class="none"
+                                    class="h-[110rpx] flex justify-between items-center border-[0] border-b-[1rpx] border-solid border-[#F6F6F6]">
+                                    <view class="leading-[0] flex items-center gap-x-2">
+                                        <image src="/static/images/icons/book.svg" class="w-[32rpx] h-[32rpx]"></image>
+                                        <text class="text-[26rpx]">使用教程</text>
+                                    </view>
+                                    <view class>
+                                        <u-icon name="arrow-right" size="20" color="#00000050"></u-icon>
+                                    </view>
+                                </router-navigate>
+                                <router-navigate
                                     to="/packages/pages/user_balance/user_balance?type=order"
                                     hover-class="none"
                                     class="h-[110rpx] flex justify-between items-center border-[0] border-b-[1rpx] border-solid border-[#F6F6F6]">
@@ -300,7 +312,7 @@ import { getAgentUserParentQrcode } from "@/api/user";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
 import { updateUser } from "@/api/account";
-import { isIOS } from "@/utils/client";
+import { isIOS, isAndroid } from "@/utils/client";
 import UpdateUserInfo from "@/pages/login/components/update-user-info.vue";
 import { useCopy } from "@/hooks/useCopy";
 
@@ -350,9 +362,16 @@ const handleUtils = (type: string) => {
     let pathUrl;
     switch (type) {
         case "recharge":
-            pathUrl = "/packages/pages/recharge/recharge";
-            if (isIOS() && rechargeConfig.value.is_ios_open == 1 && cardCodeConfig.value.is_open == 1) {
-                pathUrl = "/packages/pages/redeem/redeem";
+            pathUrl = "/packages/pages/redeem/redeem";
+            if (cardCodeConfig.value.is_open == 1) {
+                if (
+                    (isIOS() && rechargeConfig.value.is_ios_open == 1) ||
+                    (isAndroid() && rechargeConfig.value.is_and_open == 1)
+                ) {
+                    pathUrl = "/packages/pages/recharge/recharge";
+                } 
+            } else {
+                pathUrl = "/packages/pages/recharge/recharge";
             }
 
             break;

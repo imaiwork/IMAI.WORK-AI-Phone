@@ -5,6 +5,17 @@
 			"style": {
 				"navigationBarTitleText": "",
 				"enablePullDownRefresh": false,
+				"navigationStyle": "custom"
+			},
+			"meta": {
+				"share": true
+			}
+		},
+		{
+			"path": "pages/chat/chat",
+			"style": {
+				"navigationBarTitleText": "",
+				"enablePullDownRefresh": false,
 				"navigationStyle": "custom",
 				"disableScroll": true
 			},
@@ -47,12 +58,6 @@
 			},
 			"meta": {
 				"share": true
-			}
-		},
-		{
-			"path": "pages/phone/phone",
-			"style": {
-				"navigationBarBackgroundColor": "#F9FAFB"
 			}
 		},
 		{
@@ -221,6 +226,28 @@
 					"path": "pages/agent_invite_poster/agent_invite_poster",
 					"style": {
 						"navigationBarTitleText": "邀请好友海报"
+					}
+				},
+				{
+					"path": "pages/operate_case/operate_case",
+					"style": {
+						"navigationBarTitleText": "运营案例",
+						"navigationStyle": "custom",
+						"disableScroll": true
+					}
+				},
+				{
+					"path": "pages/operate_case_detail/operate_case_detail",
+					"style": {
+						"navigationBarTitleText": "运营案例详情",
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "pages/course/course",
+					"style": {
+						"navigationBarTitleText": "使用教程",
+						"navigationStyle": "custom"
 					}
 				}
 			]
@@ -906,6 +933,34 @@
 			"root": "ai_modules/device",
 			"pages": [
 				{
+					"path": "pages/index/index",
+					"style": {
+						"navigationBarTitleText": "设备管理",
+						"navigationStyle": "custom",
+						"enablePullDownRefresh": false,
+						"disableScroll": true
+					}
+				},
+				{
+					"path": "pages/setting/setting",
+					"style": {
+						"navigationBarTitleText": "设备设置"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/setting_person/setting_person",
+					"style": {
+						"navigationBarTitleText": "配置人设",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
 					"path": "pages/task_calendar/task_calendar",
 					"style": {
 						"navigationBarTitleText": "任务日历",
@@ -926,6 +981,18 @@
 					"style": {
 						"navigationBarTitleText": "设备详情",
 						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/task_progress/task_progress",
+					"style": {
+						"navigationBarTitleText": "任务进度"
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -934,6 +1001,9 @@
 						"navigationBarTitleText": "平台详情",
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -1040,113 +1110,9 @@
 					}
 				},
 				{
-					"path": "pages/auto_task/auto_task",
-					"style": {
-						"navigationBarTitleText": "24h自动任务配置",
-						"navigationStyle": "custom",
-						"disableScroll": true
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/create_auto_task/create_auto_task",
-					"style": {
-						"navigationBarTitleText": "AI运营顾问"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/anchor_material/anchor_material",
-					"style": {
-						"navigationBarTitleText": "选择数字人形象"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/video_material/video_material",
-					"style": {
-						"navigationBarTitleText": "上传视频素材"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/image_material/image_material",
-					"style": {
-						"navigationBarTitleText": "上传图片素材"
-					}
-				},
-				{
-					"path": "pages/setting_clue/setting_clue",
-					"style": {
-						"navigationBarTitleText": "线索词获客配置"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
 					"path": "pages/clue_edit/clue_edit",
 					"style": {
 						"navigationBarTitleText": "编辑线索词组"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/setting_publish/setting_publish",
-					"style": {
-						"navigationBarTitleText": "社媒平台发布配置"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/marketing_material/marketing_material",
-					"style": {
-						"navigationBarTitleText": "营销主题"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/setting_circle/setting_circle",
-					"style": {
-						"navigationBarTitleText": "发布朋友圈配置"
-					}
-				},
-				{
-					"path": "pages/setting_add_wechat/setting_add_wechat",
-					"style": {
-						"navigationBarTitleText": "自动加微配置"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/setting_ca/setting_ca",
-					"style": {
-						"navigationBarTitleText": "评论区获客配置"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/setting_private_take/setting_private_take",
-					"style": {
-						"navigationBarTitleText": "私信接管配置"
 					},
 					"meta": {
 						"auth": true
@@ -1214,31 +1180,12 @@
 					}
 				},
 				{
-					"path": "pages/setting_circle_interact_auto/setting_circle_interact_auto",
-					"style": {
-						"navigationBarTitleText": "朋友圈互动配置"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
 					"path": "pages/rpa_code/rpa_code",
 					"style": {
 						"navigationBarTitleText": "设备绑定码"
 					},
 					"meta": {
 						"auth": true
-					}
-				},
-				{
-					"path": "pages/task_tutorial/task_tutorial",
-					"style": {
-						"navigationBarTitleText": "任务操作教程",
-						"navigationBarBackgroundColor": "#F8FAFD"
-					},
-					"meta": {
-						"share": true
 					}
 				},
 				{
@@ -1252,9 +1199,21 @@
 					}
 				},
 				{
-					"path": "pages/setting_prompt/setting_prompt",
+					"path": "pages/task_client_assets/task_client_assets",
 					"style": {
-						"navigationBarTitleText": "提示词设置"
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/task_tutorial/task_tutorial",
+					"style": {
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
 					}
 				}
 			]
@@ -1308,6 +1267,156 @@
 						"navigationBarTitleText": "输入文案",
 						"navigationStyle": "custom",
 						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				}
+			]
+		},
+		{
+			"root": "ai_modules/person",
+			"pages": [
+				{
+					"path": "pages/index/index",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "pages/create/create",
+					"style": {
+						"navigationBarTitleText": "新建人设",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/analysis/analysis",
+					"style": {
+						"navigationBarTitleText": "IP人设分析",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/detail/detail",
+					"style": {
+						"navigationBarTitleText": "人设详情",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/traffic_config/traffic_config",
+					"style": {
+						"navigationBarTitleText": "获客与截流配置",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/interaction_config/interaction_config",
+					"style": {
+						"navigationBarTitleText": "私域与运营设置",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/prompt_set/prompt_set",
+					"style": {
+						"navigationBarTitleText": "提示词设置"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/agent_config/agent_config",
+					"style": {
+						"navigationBarTitleText": "关联智能体",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/video_record/video_record",
+					"style": {
+						"navigationBarTitleText": "AI生成记录"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/material_library/material_library",
+					"style": {
+						"navigationBarTitleText": "素材库",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/material_detail/material_detail",
+					"style": {
+						"navigationBarTitleText": "素材详情",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/digital_human_config/digital_human_config",
+					"style": {
+						"navigationBarTitleText": "数字人配置",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/knowledge_config/knowledge_config",
+					"style": {
+						"navigationBarTitleText": "关联知识库",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				}
+			]
+		},
+		{
+			"root": "ai_modules/hot_write",
+			"pages": [
+				{
+					"path": "pages/index/index",
+					"style": {
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "pages/detail/detail",
+					"style": {
+						"navigationBarTitleText": "创作详情",
+						"navigationStyle": "custom"
 					},
 					"meta": {
 						"auth": true

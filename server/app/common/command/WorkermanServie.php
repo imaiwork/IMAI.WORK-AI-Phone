@@ -74,7 +74,7 @@ class WorkermanServie extends Command
 
             // //设备socket
             $tcpWorker = new Worker('tcp://0.0.0.0:'.env('WORKERMAN.DEVICE_PORT', 6489));
-            $tcpWorker->count = swoole_cpu_num() * 2;
+            $tcpWorker->count = 4;
             $tcpWorker->transport = 'tcp';
             $tcpWorker->reusePort = true;
             $tcpWorker->name = 'AiDeviceService';

@@ -106,6 +106,7 @@ const transfer = (codeBlockData) => {
 .markdown-card {
     box-sizing: border-box;
     max-width: 100%;
+    background: transparent;
     p {
         margin-top: 0;
         margin-bottom: 16px !important;

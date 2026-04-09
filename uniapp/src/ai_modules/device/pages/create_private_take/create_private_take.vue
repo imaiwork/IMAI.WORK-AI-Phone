@@ -30,15 +30,22 @@
         :show-close="false"
         @close="handleCreateTaskSuccess"
         @confirm="handleCreateTaskSuccess" />
+    <task-conflict-dialog
+        v-if="showTaskMsgPop"
+        v-model="showTaskMsgPop"
+        :messages="taskMsgPopContent"
+        @close="showTaskMsgPop = false"
+        @confirm="handleTaskMsgPopConfirm" />
 </template>
 
 <script setup lang="ts">
 import WechatOA from "@/utils/wechat";
-import { createPrivateChatTask } from "@/api/device";
+import { createPrivateChatTask, checkTaskPublishTime } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
+import TaskConflictDialog from "@/ai_modules/device/components/task-conflict-dialog/task-conflict-dialog.vue";
 
 const { on } = useEventBusManager();
 
@@ -47,6 +54,9 @@ const formData = reactive<{
     accounts: string[];
     task_frep: number;
     time_config: string[];
+    task_exec_type: number;
+    minutes: number;
+    task_ids: string[];
     custom_date: string[];
 }>({
     name: `私聊接管任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`,
@@ -57,20 +67,62 @@ const formData = reactive<{
         uni.$u.timeFormat(new Date(new Date().getTime() + 30 * 60 * 1000), "hh:MM"),
     ],
     custom_date: [],
+    task_exec_type: 1,
+    minutes: 30,
+    task_ids: [],
 });
 
 // 当前任务频率
 const currentFrequency = ref(0);
 const taskErrorMsg = ref("");
 const showCreateTaskSuccessDialog = ref(false);
+const showTaskMsgPop = ref(false);
+const taskMsgPopContent = ref<string[]>([]);
 
-const handleCreateTaskSuccess = () => {
-    uni.$u.route({
-        url: "/pages/phone/phone",
-        type: "reLaunch",
+const executeCreateTask = async () => {
+    uni.showLoading({
+        title: "创建中...",
+        mask: true,
     });
-    showCreateTaskSuccessDialog.value = false;
+    try {
+        await createPrivateChatTask({
+            task_name: formData.name,
+            accounts: formData.accounts,
+            task_frep: formData.task_frep,
+            time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
+            custom_date: formData.custom_date,
+            task_exec_type: formData.task_exec_type,
+            minutes: formData.minutes,
+            task_ids: formData.task_ids,
+        });
+        uni.hideLoading();
+        showCreateTaskSuccessDialog.value = true;
+        WechatOA.notify();
+    } catch (error: any) {
+        uni.hideLoading();
+        if (error.indexOf("24小时自动执行任务") > -1) {
+            uni.showModal({
+                title: "提示",
+                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
+                success: (res) => {
+                    if (res.confirm) {
+                        uni.$u.route({
+                            url: "/ai_modules/device/pages/index/index",
+                        });
+                    }
+                },
+            });
+        } else {
+            taskErrorMsg.value = error;
+            uni.showToast({
+                title: error,
+                icon: "none",
+                duration: 3000,
+            });
+        }
+    }
 };
+
 const handleSubmit = async () => {
     if (!formData.name) {
         uni.$u.toast("请输入任务名称");
@@ -89,44 +141,44 @@ const handleSubmit = async () => {
         return;
     }
 
-    uni.showLoading({
-        title: "创建中...",
-        mask: true,
-    });
-    try {
-        await createPrivateChatTask({
-            task_name: formData.name,
-            accounts: formData.accounts,
-            task_frep: formData.task_frep,
-            time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
-            custom_date: formData.custom_date,
-        });
-        uni.hideLoading();
-        showCreateTaskSuccessDialog.value = true;
-        WechatOA.notify();
-    } catch (error: any) {
-        uni.hideLoading();
-        if (error.indexOf("24小时自动执行任务") > -1) {
-            uni.showModal({
-                title: "提示",
-                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
-                success: (res) => {
-                    if (res.confirm) {
-                        uni.$u.route({
-                            url: "/pages/phone/phone",
-                        });
-                    }
-                },
+    if (formData.task_exec_type === 1) {
+        uni.showLoading({ title: "检测冲突中...", mask: true });
+        try {
+            const { messages, task_ids } = await checkTaskPublishTime({
+                accounts: formData.accounts,
+                minutes: formData.minutes,
             });
-        } else {
+
+            uni.hideLoading();
+
+            if (messages && messages.length > 0) {
+                taskMsgPopContent.value = messages;
+                formData.task_ids = task_ids;
+                showTaskMsgPop.value = true;
+                return;
+            }
+
+            await executeCreateTask();
+        } catch (error: any) {
+            uni.hideLoading();
             taskErrorMsg.value = error;
-            uni.showToast({
-                title: error,
-                icon: "none",
-                duration: 3000,
-            });
+            uni.$u.toast(error);
         }
+    } else {
+        await executeCreateTask();
     }
+};
+
+const handleTaskMsgPopConfirm = async () => {
+    await executeCreateTask();
+};
+
+const handleCreateTaskSuccess = () => {
+    uni.$u.route({
+        url: "/ai_modules/device/pages/index/index",
+        type: "reLaunch",
+    });
+    showCreateTaskSuccessDialog.value = false;
 };
 onLoad(() => {
     on("confirm", (e: any) => {

@@ -72,10 +72,10 @@ class AutoDeviceWechatCircleConfigLogic extends ApiLogic
                 return false;
             }
 
-            if ($config->status === DeviceEnum::AUTO_CONFIG_STATUS_RUNNING) {
-                self::setError('当前任务正在执行中，请稍后再试');
-                return false;
-            }
+            // if ($config->status === DeviceEnum::AUTO_CONFIG_STATUS_RUNNING) {
+            //     self::setError('当前任务正在执行中，请稍后再试');
+            //     return false;
+            // }
 
             $updateData = [
                 'update_time' => time(),
@@ -178,13 +178,20 @@ class AutoDeviceWechatCircleConfigLogic extends ApiLogic
                     $result['example'] = [];
                 }
             } else {
-                $find = AutoDeviceConfig::where('user_id', self::$uid)->where('device_code', $params['device_code'])->findOrEmpty();
 
-                if ($find->isEmpty()) {
-                    self::setError('设备自动化配置不存在');
-                    return false;
+                $report = AutoNeedsAnalysis::where('device_code', $params['device_code'])->where('user_id', self::$uid)->where('step', 2)->order('id', 'desc')->limit(1)->findOrEmpty();
+                if ($report->isEmpty()) {
+                    throw new \Exception('当前设备分析报告不存在，请稍后再试');
                 }
-                $analysis = json_decode($find->analysis, true);
+
+                $reportJson = json_decode($report->result, true);
+                if (
+                    isset($reportJson['Operations']['industryType']) && !empty($reportJson['Operations']['industryType'])
+                ) {
+                    $analysis['industryType'] = $reportJson['Operations']['industryType'];
+                } else {
+                    throw new \Exception('当前设备分析报告数据异常，请稍后再试');
+                }
                 $params['industry_type'] = $analysis['industryType'];
                 $params['device_config_id'] = $find->id ?? 0;
                 $params['video_material'] = $find->clip_material ?? [];

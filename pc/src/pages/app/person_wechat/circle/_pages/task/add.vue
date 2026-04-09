@@ -1,5 +1,5 @@
 <template>
-    <ElDrawer v-model="show" title="" size="470px" :with-header="false" class="task-add-drawer relative" @close="close">
+    <ElDrawer v-model="show" title="" size="500px" :with-header="false" class="task-add-drawer relative" @close="close">
         <CircleSend
             v-model="formData"
             :show-close-btn="true"
@@ -33,6 +33,9 @@ const formData = reactive<any>({
     date: dayjs().format("YYYY-MM-DD"),
     time_config: ["00:00", "00:30"],
     wechat_ids: [],
+    task_exec_type: 1,
+    minutes: 30,
+    task_ids: [],
 });
 
 const circleSendRef = ref<any>(null);

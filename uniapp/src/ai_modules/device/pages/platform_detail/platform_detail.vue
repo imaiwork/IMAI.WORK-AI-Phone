@@ -1,5 +1,5 @@
 <template>
-    <view class="h-screen flex flex-col device-bg">
+    <view class="h-screen flex flex-col bg-[#F6F7F9]">
         <u-navbar
             title="平台详情"
             title-bold
@@ -9,162 +9,228 @@
                 background: 'transparent',
             }">
         </u-navbar>
-        <view class="rounded-[20rpx] mx-[26rpx] mt-[12rpx] bg-white">
-            <view class="grid grid-cols-4 bg-[#00000012] rounded-tl-[20rpx] rounded-tr-[20rpx]">
+
+        <view class="rounded-[24rpx] mx-[30rpx] mt-[20rpx] bg-white shadow-[0_4rpx_16rpx_rgba(0,0,0,0.05)]">
+            <view class="grid grid-cols-4 bg-[#F8F9FB] rounded-t-[24rpx] p-[16rpx]">
                 <view
                     v-for="(item, index) in getSortedPlatform"
-                    class="platform-item"
+                    class="platform-item flex items-center justify-center h-[80rpx] rounded-[16rpx] transition-all duration-200"
                     :key="index"
                     :class="{ active: currentPlatform == item.type }"
                     @click="handlePlatformClick(item.type)">
                     <image :src="getPlatformLogo(item.type)" class="w-[48rpx] h-[48rpx]"></image>
                 </view>
             </view>
-            <view class="px-[36rpx] pt-5">
-                <view class="flex justify-between items-center gap-x-2">
-                    <view class="font-medium"> {{ currentPlatformItem?.name }}账号 </view>
-                    <view
-                        v-if="currentPlatformAccount.account"
-                        class="flex items-center gap-x-1"
-                        @click="handleUpdateAccount(DeviceEventAction.UPDATE_ACCOUNT)">
-                        <u-icon name="reload" color="#0065FB"></u-icon>
-                        <text class="text-primary">更新</text>
+
+            <view v-if="accountLoading" class="px-[30rpx] pt-[30rpx] pb-[24rpx] animate-pulse">
+                <view class="flex items-center justify-between mb-[24rpx]">
+                    <view class="w-[200rpx] h-[30rpx] bg-[#E5E7EB] rounded"></view>
+                    <view class="w-[80rpx] h-[24rpx] bg-[#E5E7EB] rounded"></view>
+                </view>
+                <view class="flex items-start gap-[24rpx] mb-[32rpx]">
+                    <view class="w-[120rpx] h-[120rpx] rounded-full bg-[#E5E7EB]"></view>
+                    <view class="flex-1">
+                        <view class="w-[180rpx] h-[28rpx] bg-[#E5E7EB] rounded mb-[8rpx]"></view>
+                        <view class="w-[120rpx] h-[22rpx] bg-[#E5E7EB] rounded"></view>
+                        <view class="flex items-center justify-between mt-[20rpx] gap-[20rpx]">
+                            <view class="flex-1 h-[80rpx] bg-[#E5E7EB] rounded-[12rpx]"></view>
+                            <view class="flex-1 h-[80rpx] bg-[#E5E7EB] rounded-[12rpx]"></view>
+                            <view class="flex-1 h-[80rpx] bg-[#E5E7EB] rounded-[12rpx]"></view>
+                        </view>
                     </view>
                 </view>
+                <view class="flex items-center justify-between h-[96rpx] border-t border-[#F0F0F0] pt-[20rpx]">
+                    <view class="w-[100rpx] h-[26rpx] bg-[#E5E7EB] rounded"></view>
+                    <view class="w-[60rpx] h-[32rpx] bg-[#E5E7EB] rounded-full"></view>
+                </view>
+                <view class="flex items-center justify-between h-[96rpx] border-t border-[#F0F0F0] pt-[20rpx]">
+                    <view class="w-[120rpx] h-[26rpx] bg-[#E5E7EB] rounded"></view>
+                    <view class="w-[160rpx] h-[24rpx] bg-[#E5E7EB] rounded"></view>
+                </view>
+                <view class="flex items-center justify-between mt-[24rpx]">
+                    <view class="w-[200rpx] h-[22rpx] bg-[#E5E7EB] rounded"></view>
+                    <view class="w-[100rpx] h-[22rpx] bg-[#E5E7EB] rounded"></view>
+                </view>
+            </view>
+
+            <view v-else class="px-[30rpx] pt-[30rpx] pb-[24rpx]">
+                <view class="flex items-center justify-between mb-[24rpx]">
+                    <text class="text-[30rpx] font-semibold text-[#1A1A1A]">{{ currentPlatformItem?.name }}账号</text>
+                    <view
+                        v-if="currentPlatformAccount.account"
+                        class="flex items-center gap-[8rpx] text-primary text-[24rpx] font-medium active:opacity-70"
+                        @click="handleUpdateAccount(DeviceEventAction.UPDATE_ACCOUNT)">
+                        <u-icon name="reload" color="#0065FB" size="22"></u-icon>
+                        <text>更新</text>
+                    </view>
+                </view>
+
                 <template v-if="currentPlatformAccount.account">
-                    <view class="py-5 flex gap-x-6">
+                    <view class="flex items-start gap-[24rpx] mb-[32rpx]">
                         <image
                             :src="currentPlatformAccount.avatar"
-                            class="w-[140rpx] h-[140rpx] rounded-full flex-shrink-0"></image>
+                            class="w-[120rpx] h-[120rpx] rounded-full flex-shrink-0 shadow-[0_4rpx_12rpx_rgba(0,0,0,0.08)]"></image>
                         <view class="flex-1">
-                            <view class="font-medium text-[30rpx]">{{ currentPlatformAccount.nickname }}</view>
-                            <view class="text-xs text-[#0000004d] mt-[4rpx]"
-                                >({{ currentPlatformAccount.account }})</view
+                            <text class="text-[28rpx] font-semibold text-[#1A1A1A]">{{
+                                currentPlatformAccount.nickname
+                            }}</text>
+                            <text class="text-[22rpx] text-[#9CA3AF] block mt-[4rpx]"
+                                >({{ currentPlatformAccount.account }})</text
                             >
-                            <view class="flex items-center justify-between mt-[28rpx] w-[70%]">
-                                <view class="flex flex-col text-center">
-                                    <view class="text-[32rpx] font-medium">{{
+                            <view class="flex items-center justify-between mt-[20rpx] gap-[20rpx]">
+                                <view class="flex-1 text-center bg-[#F8F9FB] rounded-[12rpx] py-[12rpx]">
+                                    <text class="text-[26rpx] font-semibold text-[#1A1A1A] block">{{
                                         formatNumberToWanOrYi(currentPlatformAccount.followers || 0)
-                                    }}</view>
-                                    <view class="text-xs text-[#0000004d] mt-1">关注</view>
+                                    }}</text>
+                                    <text class="text-[20rpx] text-[#9CA3AF] mt-[4rpx] block">关注</text>
                                 </view>
-                                <view class="flex flex-col text-center">
-                                    <view class="text-[32rpx] font-medium">{{
+                                <view class="flex-1 text-center bg-[#F8F9FB] rounded-[12rpx] py-[12rpx]">
+                                    <text class="text-[26rpx] font-semibold text-[#1A1A1A] block">{{
                                         formatNumberToWanOrYi(currentPlatformAccount.fans || 0)
-                                    }}</view>
-                                    <view class="text-xs text-[#0000004d] mt-1">粉丝</view>
+                                    }}</text>
+                                    <text class="text-[20rpx] text-[#9CA3AF] mt-[4rpx] block">粉丝</text>
                                 </view>
-                                <view class="flex flex-col text-center">
-                                    <view class="text-[32rpx] font-medium">{{
+                                <view class="flex-1 text-center bg-[#F8F9FB] rounded-[12rpx] py-[12rpx]">
+                                    <text class="text-[26rpx] font-semibold text-[#1A1A1A] block">{{
                                         formatNumberToWanOrYi(currentPlatformAccount.thumbup_collect || 0)
-                                    }}</view>
-                                    <view class="text-xs text-[#0000004d] mt-1">点赞</view>
+                                    }}</text>
+                                    <text class="text-[20rpx] text-[#9CA3AF] mt-[4rpx] block">点赞</text>
                                 </view>
                             </view>
                         </view>
                     </view>
+
+                    <view class="flex items-center justify-between h-[96rpx] border-t border-[#F0F0F0] pt-[20rpx]">
+                        <text class="text-[26rpx] font-medium text-[#1A1A1A]">私信开关</text>
+                        <u-switch
+                            v-model="currentPlatformAccount.open_ai"
+                            :active-value="1"
+                            :inactive-value="0"
+                            :size="32"
+                            @change="handleOpenAiChange"></u-switch>
+                    </view>
+
                     <view
-                        class="flex items-center justify-between gap-2 h-[80rpx] border-[0] border-b border-t border-solid border-[#00000008]">
-                        <view class="font-medium flex-shrink-0">私信开关</view>
-                        <view class="">
-                            <u-switch
-                                v-model="currentPlatformAccount.open_ai"
-                                :active-value="1"
-                                :inactive-value="0"
-                                :size="32"
-                                @change="handleOpenAiChange"></u-switch>
+                        v-if="currentPlatformAccount.open_ai == 1"
+                        class="flex items-center justify-between h-[96rpx] border-t border-[#F0F0F0] pt-[20rpx]"
+                        @click="handleSelectAgent">
+                        <text class="text-[26rpx] font-medium text-[#1A1A1A]">私信智能体</text>
+                        <view class="flex items-center gap-[8rpx]">
+                            <text
+                                class="text-[24rpx] text-[#666666] max-w-[240rpx] truncate"
+                                :class="{ 'text-[#9CA3AF]': !currentPlatformAccount.robot_name }">
+                                {{ currentPlatformAccount.robot_name || "未配置" }}
+                            </text>
+                            <u-icon name="arrow-right" color="#B2B2B2" size="22"></u-icon>
                         </view>
                     </view>
-                    <template v-if="currentPlatformAccount.open_ai == 1">
-                        <view class="flex items-center justify-between gap-2 h-[80rpx]">
-                            <view class="font-medium flex-shrink-0">私信智能体</view>
-                            <view class="flex-1 flex items-center justify-end gap-x-2" @click="showRobotPopup = true">
-                                <view
-                                    class="line-clamp-1 break-all"
-                                    :class="{ 'text-[#00000080]': currentPlatformAccount.robot_name }"
-                                    >{{ currentPlatformAccount.robot_name || "未配置" }}</view
-                                >
-                                <u-icon name="arrow-right" color="#B2B2B2"></u-icon>
-                            </view>
-                        </view>
-                    </template>
-                    <view
-                        class="flex items-center justify-between gap-x-2 py-[22rpx] border-[0] border-t border-solid border-[#00000008]">
-                        <text class="text-xs text-[#0000004d]">
-                            最后一次更新：{{ currentPlatformAccount.update_time }}</text
-                        >
-                        <view class="flex items-center gap-x-1" @click="showRemovePopup = true">
-                            <image src="/static/images/icons/delete.svg" class="w-[24rpx] h-[24rpx]"></image>
-                            <text class="text-xs">账号移除</text>
+
+                    <view class="flex items-center justify-between mt-[24rpx] text-[22rpx] text-[#9CA3AF]">
+                        <text>最后一次更新：{{ currentPlatformAccount.update_time }}</text>
+                        <view
+                            class="flex items-center gap-[8rpx] text-[#EF4444] active:opacity-70"
+                            @click="showRemovePopup = true">
+                            <u-icon name="trash" color="#EF4444" size="22"></u-icon>
+                            <text>账号移除</text>
                         </view>
                     </view>
                 </template>
-                <view class="py-5" v-else>
-                    <view class="text-center text-[#0000004d]">您还未获取平台账号</view>
+
+                <view v-else class="flex flex-col items-center py-[40rpx] gap-[24rpx]">
+                    <view class="w-[120rpx] h-[120rpx] rounded-full bg-[#F0F0F0] flex items-center justify-center">
+                        <u-icon name="account" color="#D1D5DB" size="56"></u-icon>
+                    </view>
+                    <text class="text-[24rpx] text-[#9CA3AF]">您还未获取平台账号</text>
                     <view
-                        class="mx-auto w-[220rpx] h-[80rpx] flex items-center justify-center text-white bg-primary font-medium rounded-[20rpx] text-[30rpx] mt-[30rpx]"
+                        class="w-[240rpx] h-[80rpx] flex items-center justify-center text-white bg-primary font-medium rounded-[40rpx] text-[26rpx] active:scale-95 transition-transform"
                         @click="handleUpdateAccount(DeviceEventAction.ADD_ACCOUNT)">
                         立即获取
                     </view>
                 </view>
             </view>
         </view>
-        <view class="px-10 mt-5">
+
+        <view class="px-[30rpx] mt-[30rpx]">
             <u-tabs
                 bg-color="transparent"
                 :current="currentTab"
                 :list="getTabList"
                 :is-scroll="false"
+                active-color="#0065FB"
+                inactive-color="#666666"
+                bar-width="40"
+                bar-height="4"
+                :bar-style="{ background: '#0065FB' }"
                 @change="handleTabChange"></u-tabs>
         </view>
-        <view class="grow min-h-0">
+
+        <view class="grow min-h-0 mt-[20rpx]">
             <z-paging
                 ref="pagingRef"
                 v-model="dataList"
                 :fixed="false"
                 :safe-area-inset-bottom="true"
                 @query="queryList">
-                <view class="flex flex-col gap-y-2 py-[30rpx] mx-[26rpx]">
-                    <template v-if="currentTab === 0">
-                        <view v-for="(item, index) in dataList" :key="index" class="publish-item">
-                            <view class="flex gap-x-[30rpx]">
-                                <view class="absolute right-2 top-2">
-                                    <view
-                                        v-if="getPublishStatusText(item.status)"
-                                        class="px-[20rpx] py-[6rpx] rounded-[12rpx] font-medium text-[22rpx]"
-                                        :class="getPublishStatusStyle(item.status)">
-                                        {{ getPublishStatusText(item.status) }}
+                <view class="flex flex-col gap-y-[20rpx] px-[30rpx] py-[20rpx]">
+                    <template v-if="listLoading">
+                        <view v-for="n in 3" :key="n" class="bg-white rounded-[20rpx] p-[24rpx] animate-pulse">
+                            <view class="flex gap-[24rpx]">
+                                <view class="w-[160rpx] h-[213rpx] rounded-[16rpx] bg-[#E5E7EB]"></view>
+                                <view class="flex-1 flex flex-col justify-between">
+                                    <view>
+                                        <view class="w-[80%] h-[26rpx] bg-[#E5E7EB] rounded mb-[8rpx]"></view>
+                                        <view class="w-[60%] h-[26rpx] bg-[#E5E7EB] rounded"></view>
+                                        <view class="w-[90%] h-[22rpx] bg-[#E5E7EB] rounded mt-[8rpx]"></view>
+                                        <view class="w-[70%] h-[22rpx] bg-[#E5E7EB] rounded mt-[4rpx]"></view>
+                                    </view>
+                                    <view class="mt-[16rpx]">
+                                        <view class="flex gap-[8rpx] mb-[8rpx]">
+                                            <view class="w-[80rpx] h-[24rpx] bg-[#E5E7EB] rounded-full"></view>
+                                            <view class="w-[100rpx] h-[24rpx] bg-[#E5E7EB] rounded-full"></view>
+                                        </view>
+                                        <view class="w-[160rpx] h-[20rpx] bg-[#E5E7EB] rounded"></view>
                                     </view>
                                 </view>
+                            </view>
+                        </view>
+                    </template>
+                    <template v-else-if="currentTab === 0">
+                        <view
+                            v-for="(item, index) in dataList"
+                            :key="index"
+                            class="publish-item relative bg-white rounded-[20rpx] p-[24rpx] shadow-[0_4rpx_16rpx_rgba(0,0,0,0.04)]">
+                            <view class="flex gap-[24rpx]">
                                 <view
-                                    class="flex-shrink-0 relative w-[180rpx] h-[240rpx] rounded-[20rpx] overflow-hidden">
+                                    class="flex-shrink-0 relative w-[160rpx] h-[213rpx] rounded-[16rpx] overflow-hidden">
                                     <image
                                         :src="item.pic || item.material_url"
-                                        class="w-full h-full"
+                                        class="w-full h-full object-cover"
                                         mode="aspectFill"
                                         @click="handlePreviewImage(item)"></image>
                                     <view
-                                        class="w-full h-full flex items-center justify-center absolute top-0 left-0"
-                                        v-if="item.material_type == 1">
+                                        v-if="item.material_type == 1"
+                                        class="absolute inset-0 flex items-center justify-center"
+                                        @click="handlePlayVideo(item)">
                                         <view
-                                            class="rounded-full bg-[#ffffff33] w-[68rpx] h-[68rpx]"
-                                            style="backdrop-filter: blur(5px)"
-                                            @click="handlePlayVideo(item)">
-                                            <image src="/static/images/icons/play.svg" class="w-full h-full"></image>
+                                            class="w-[64rpx] h-[64rpx] rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center pl-[4rpx] border border-white/40 active:scale-90 transition-transform">
+                                            <u-icon name="play-right-fill" color="#ffffff" size="28"></u-icon>
                                         </view>
                                     </view>
                                 </view>
+
                                 <view class="flex-1 flex flex-col justify-between">
-                                    <view class="mr-14">
-                                        <view class="font-medium text-[#000000e6] line-clamp-2">
-                                            {{ item.material_title }}
-                                        </view>
-                                        <view class="text-[#00000080] mt-1 text-xs line-clamp-2">{{
+                                    <view>
+                                        <text class="text-[26rpx] font-semibold text-[#1A1A1A] line-clamp-2">{{
+                                            item.material_title
+                                        }}</text>
+                                        <text class="text-[22rpx] text-[#666666] mt-[8rpx] line-clamp-2">{{
                                             item.material_subtitle
-                                        }}</view>
+                                        }}</text>
                                     </view>
                                     <view>
-                                        <view class="flex flex-wrap items-center gap-2" v-if="item.material_tag">
+                                        <view
+                                            class="flex flex-wrap items-center gap-x-2 gap-y-1"
+                                            v-if="item.material_tag">
                                             <view
                                                 class="text-[22rpx] text-[#0000004d]"
                                                 v-for="(topic, index) in item.material_tag"
@@ -183,36 +249,52 @@
                             </view>
                         </view>
                     </template>
-                    <template v-if="currentTab === 1">
-                        <view v-for="(item, index) in getPrivateChatRecordList" :key="index" class="private-item">
-                            <view class="text-xs text-[#00000080] font-medium"> {{ item.date_text }} </view>
-                            <view class="mt-[34rpx] flex flex-col gap-y-[36rpx]">
-                                <view v-for="(val, key) in item.list" :key="key" class="private-item-content">
-                                    <view class="mt-1 flex-shrink-0 relative">
-                                        <view class="w-[14rpx] h-[14rpx] rounded-full bg-[#00C08E]"></view>
+
+                    <template v-else-if="currentTab === 1">
+                        <view
+                            v-for="(group, index) in getPrivateChatRecordList"
+                            :key="index"
+                            class="private-group bg-white rounded-[20rpx] p-[24rpx] shadow-[0_4rpx_16rpx_rgba(0,0,0,0.04)]">
+                            <text class="text-[24rpx] text-[#9CA3AF] font-medium">{{ group.date_text }}</text>
+                            <view class="mt-[24rpx] flex flex-col gap-[32rpx]">
+                                <view v-for="(item, idx) in group.list" :key="idx" class="flex gap-[20rpx]">
+                                    <view class="flex-shrink-0 relative mt-[4rpx]">
+                                        <view class="w-[16rpx] h-[16rpx] rounded-full bg-[#10B981]"></view>
                                         <view
-                                            class="absolute top-[38rpx] left-[6rpx] w-[2rpx] h-[90%] bg-[#0000000d]"></view>
+                                            v-if="idx < group.list.length - 1"
+                                            class="absolute top-[16rpx] left-[8rpx] w-[2rpx] h-[calc(100%+32rpx)] bg-[#F0F0F0]"></view>
                                     </view>
-                                    <view>
-                                        <view class="text-[30rpx] text-[#00000080] font-medium">
-                                            {{ val.author_name }}
-                                        </view>
-                                        <view class="flex gap-x-1 text-xs mt-3">
-                                            <view class="flex-shrink-0 text-[#00C08E] font-medium">客户：</view>
-                                            <view>
-                                                <view class="break-all">{{ val.message_content || "-" }}</view>
-                                                <view class="text-[22rpx] text-[#00000033] mt-[4rpx]">{{
-                                                    val.message_time || "-"
-                                                }}</view>
+
+                                    <view class="flex-1">
+                                        <text class="text-[26rpx] font-semibold text-[#1A1A1A]">{{
+                                            item.author_name
+                                        }}</text>
+                                        <view class="mt-[12rpx] bg-[#F8F9FB] rounded-[12rpx] p-[16rpx]">
+                                            <view class="flex gap-[8rpx]">
+                                                <text class="flex-shrink-0 text-[22rpx] text-[#10B981] font-medium"
+                                                    >客户：</text
+                                                >
+                                                <view>
+                                                    <text class="text-[22rpx] text-[#333333]">{{
+                                                        item.message_content || "-"
+                                                    }}</text>
+                                                    <text class="text-[20rpx] text-[#9CA3AF] block mt-[4rpx]">{{
+                                                        item.message_time || "-"
+                                                    }}</text>
+                                                </view>
                                             </view>
-                                        </view>
-                                        <view class="flex gap-x-1 text-xs mt-3">
-                                            <view class="flex-shrink-0 text-[#00000033] font-medium">回复：</view>
-                                            <view>
-                                                <view class="break-all">{{ val.reply_content || "-" }}</view>
-                                                <view class="text-[22rpx] text-[#00000033] mt-[4rpx]">{{
-                                                    val.reply_time || "-"
-                                                }}</view>
+                                            <view class="flex gap-[8rpx] mt-[12rpx]">
+                                                <text class="flex-shrink-0 text-[22rpx] text-[#9CA3AF] font-medium"
+                                                    >回复：</text
+                                                >
+                                                <view>
+                                                    <text class="text-[22rpx] text-[#333333]">{{
+                                                        item.reply_content || "-"
+                                                    }}</text>
+                                                    <text class="text-[20rpx] text-[#9CA3AF] block mt-[4rpx]">{{
+                                                        item.reply_time || "-"
+                                                    }}</text>
+                                                </view>
                                             </view>
                                         </view>
                                     </view>
@@ -227,156 +309,160 @@
             </z-paging>
         </view>
     </view>
-    <u-popup v-model="showUpdate" mode="center" border-radius="20" width="80%" @close="showUpdate = false">
-        <view class="rounded-[20rpx] bg-white p-5">
-            <view class="text-[30rpx] font-medium text-center">提示</view>
-            <view class="text-xs text-[#00000080] mt-[32rpx] text-center">
+
+    <u-popup v-model="showUpdate" mode="center" border-radius="24" width="80%" @close="showUpdate = false">
+        <view class="rounded-[24rpx] bg-white p-[40rpx]">
+            <text class="text-[30rpx] font-semibold text-[#1A1A1A] block text-center">提示</text>
+            <text class="text-[24rpx] text-[#666666] mt-[24rpx] text-center block">
                 当前如果有任务执行中，该任务会中断并且不再执行，手机将等待下一时间段任务再开始执行，确认是否还要继续？
-            </view>
-            <view class="flex items-center gap-x-5 mt-[56rpx]">
+            </text>
+            <view class="flex items-center gap-[20rpx] mt-[40rpx]">
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium"
+                    class="flex-1 h-[80rpx] flex items-center justify-center rounded-[40rpx] bg-[#F0F0F0] text-[26rpx] font-medium text-[#333333] active:bg-[#E5E5E5]"
                     @click="showUpdate = false">
                     取消
                 </view>
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
-                    @click="handleAccountConfirm"
-                    >确定</view
-                >
+                    class="flex-1 h-[80rpx] flex items-center justify-center rounded-[40rpx] bg-primary text-[26rpx] font-medium text-white active:scale-95 transition-transform"
+                    @click="handleAccountConfirm">
+                    确定
+                </view>
             </view>
         </view>
     </u-popup>
+
     <u-popup
         v-model="showUpdateProgress"
         mode="center"
-        border-radius="20"
-        width="80%"
+        border-radius="32"
+        width="86%"
         :mask-close-able="false"
         @close="showUpdateProgress = false">
-        <view class="rounded-[20rpx] bg-white px-5 py-[78rpx]">
-            <view class="flex flex-col gap-y-3 w-[70%] mx-auto">
-                <view v-for="(item, index) in updateAccountSteps" :key="index" class="step-item">
-                    <view class="flex-shrink-0 mt-[4rpx] relative">
-                        <view class="w-[28rpx] h-[28rpx]">
-                            <view
-                                v-if="item.status == 0"
-                                class="w-full h-full rounded-full border border-solid border-[#0000001a]">
-                            </view>
-                            <view
-                                v-if="item.status == 1"
-                                class="w-full h-full rounded-full border border-solid border-primary-light-8 flex items-center justify-center">
-                                <view class="w-[12rpx] h-[12rpx] rounded-full bg-primary"></view>
-                            </view>
-                            <view
-                                v-if="item.status == 2"
-                                class="w-full h-full rounded-full flex items-center justify-center border border-solid border-primary">
-                                <u-icon name="checkmark" color="#0065FB" size="16"></u-icon>
-                            </view>
-                        </view>
+        <view class="rounded-[32rpx] bg-white overflow-hidden">
+            <view class="px-[48rpx] pt-[48rpx] pb-[32rpx] flex flex-col items-center gap-[12rpx]">
+                <view
+                    class="w-[96rpx] h-[96rpx] rounded-full flex items-center justify-center mb-[8rpx]"
+                    :class="isExecuteComplete ? 'bg-[#ECFDF5]' : hasError ? 'bg-[#FEF2F2]' : 'bg-[#EEF4FF]'">
+                    <u-icon v-if="isExecuteComplete" name="checkmark-circle" color="#10B981" size="52" />
+                    <u-icon v-else-if="hasError" name="close-circle" color="#EF4444" size="52" />
+                    <u-icon v-else name="reload" color="#0065FB" size="48" />
+                </view>
+                <text class="text-[32rpx] font-extrabold text-[#1A1A1A]">
+                    {{ isExecuteComplete ? "更新完成" : hasError ? "更新失败" : "正在更新中..." }}
+                </text>
+                <text class="text-[24rpx] text-[#9CA3AF]">
+                    {{
+                        isExecuteComplete
+                            ? "账号信息已成功获取"
+                            : hasError
+                            ? "部分步骤执行失败，请重试"
+                            : "请保持手机屏幕常亮"
+                    }}
+                </text>
+            </view>
+
+            <view class="mx-[48rpx] h-[1rpx] bg-[#F3F4F6]"></view>
+
+            <view class="px-[48rpx] py-[36rpx] flex flex-col gap-y-0">
+                <view v-for="(item, index) in updateAccountSteps" :key="index" class="flex gap-[20rpx]">
+                    <view class="flex flex-col items-center">
                         <view
-                            class="absolute top-[60%] left-[14rpx] w-[2rpx] h-[60%]"
-                            :class="[item.status == 2 ? 'bg-primary' : 'bg-[#0000001a]']"
-                            v-if="index !== updateAccountSteps.length - 1"></view>
-                    </view>
-                    <view class="h-[80rpx]">
-                        <view
-                            class="font-medium"
+                            class="w-[40rpx] h-[40rpx] rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300"
                             :class="{
-                                'text-[#0000004d]': item.status == 0,
+                                'bg-[#F3F4F6] border-[2rpx] border-[#E5E7EB]': item.status === 0,
+                                'bg-[#EEF4FF] border-[2rpx] border-primary': item.status === 1,
+                                'bg-primary': item.status === 2,
+                                'bg-[#FEF2F2] border-[2rpx] border-[#EF4444]': item.status === 3,
+                            }">
+                            <view
+                                v-if="item.status === 1"
+                                class="w-[16rpx] h-[16rpx] rounded-full bg-primary animate-pulse">
+                            </view>
+                            <u-icon v-else-if="item.status === 2" name="checkmark" color="#ffffff" size="20" />
+                            <u-icon v-else-if="item.status === 3" name="close" color="#EF4444" size="20" />
+                        </view>
+
+                        <view
+                            v-if="index !== updateAccountSteps.length - 1"
+                            class="w-[2rpx] flex-1 min-h-[32rpx] my-[4rpx] rounded-full transition-all duration-500"
+                            :class="item.status === 2 ? 'bg-primary' : 'bg-[#E5E7EB]'">
+                        </view>
+                    </view>
+
+                    <view
+                        class="flex flex-col justify-center pb-[32rpx]"
+                        :class="{ 'pb-0': index === updateAccountSteps.length - 1 }">
+                        <text
+                            class="text-[26rpx] font-semibold leading-[1.4] transition-all duration-300"
+                            :class="{
+                                'text-[#C4C9D4]': item.status === 0,
+                                'text-primary': item.status === 1,
+                                'text-[#1A1A1A]': item.status === 2,
+                                'text-[#EF4444]': item.status === 3,
                             }">
                             {{ item.title }}
+                        </text>
+                        <view v-if="item.status === 1" class="flex items-center gap-[8rpx] mt-[6rpx]">
+                            <view class="flex gap-[4rpx]">
+                                <view
+                                    class="w-[8rpx] h-[8rpx] rounded-full bg-primary animate-bounce"
+                                    style="animation-delay: 0ms"></view>
+                                <view
+                                    class="w-[8rpx] h-[8rpx] rounded-full bg-primary animate-bounce"
+                                    style="animation-delay: 150ms"></view>
+                                <view
+                                    class="w-[8rpx] h-[8rpx] rounded-full bg-primary animate-bounce"
+                                    style="animation-delay: 300ms"></view>
+                            </view>
+                            <text class="text-[20rpx] text-primary">执行中</text>
                         </view>
-                        <view class="mt-1">
-                            <text class="text-primary font-medium text-xs" v-if="item.status == 1">获取中...</text>
-                            <text class="text-[#FF2442] font-medium text-xs" v-if="item.status == 3">获取失败</text>
-                        </view>
+                        <text v-if="item.status === 3" class="text-[20rpx] text-[#EF4444] mt-[6rpx]">
+                            ⚠ 获取失败，请重试
+                        </text>
                     </view>
                 </view>
             </view>
-            <view class="mt-2 flex flex-col gap-y-2">
+
+            <view class="px-[48rpx] pb-[48rpx] flex flex-col gap-[16rpx]">
                 <u-button
                     v-if="isExecuteComplete"
                     type="primary"
-                    :custom-style="{ height: '90rpx', width: '100%', fontWeight: 'bold', borderRadius: '20rpx' }"
-                    @click="showUpdateProgress = false"
-                    >确认</u-button
-                >
+                    :custom-style="{
+                        height: '88rpx',
+                        width: '100%',
+                        fontWeight: '700',
+                        fontSize: '28rpx',
+                        borderRadius: '44rpx',
+                        boxShadow: '0 8rpx 24rpx rgba(0,101,251,0.25)',
+                    }"
+                    @click="showUpdateProgress = false">
+                    完成
+                </u-button>
                 <u-button
-                    :custom-style="{ height: '90rpx', fontWeight: 'bold', borderRadius: '20rpx' }"
-                    @click="showUpdateProgress = false"
-                    >取消</u-button
-                >
+                    :custom-style="{
+                        height: '88rpx',
+                        fontWeight: '600',
+                        fontSize: '28rpx',
+                        borderRadius: '44rpx',
+                        background: '#F3F4F6',
+                        color: '#666666',
+                        border: 'none',
+                    }"
+                    @click="showUpdateProgress = false">
+                    {{ isExecuteComplete ? "关闭" : "取消更新" }}
+                </u-button>
             </view>
         </view>
     </u-popup>
-    <popup-bottom
-        v-model="showRobotPopup"
-        title="选择智能体"
-        custom-class="bg-[#F9FAFB]"
-        :is-disabled-touch="true"
-        @close="showRobotPopup = false">
-        <template #content>
-            <view class="h-full flex flex-col">
-                <view class="grow min-h-0">
-                    <z-paging
-                        ref="robotPagingRef"
-                        v-model="robotList"
-                        :fixed="false"
-                        :safe-area-inset-bottom="true"
-                        @query="queryRobotList">
-                        <view class="flex flex-col gap-y-2 py-[30rpx] mx-[26rpx]">
-                            <view
-                                v-for="item in robotList"
-                                :key="item.id"
-                                class="robot-item"
-                                :class="{ active: selectedRobotId == item.id }"
-                                @click="handleSelectRobot(item)">
-                                <view class="flex items-center gap-x-2">
-                                    <image :src="item.image" class="w-[96rpx] h-[96rpx] rounded-full"></image>
-                                </view>
-                                <view class="flex-1">
-                                    <view class="font-medium text-[#000000e6] text-[30rpx]">
-                                        {{ item.name }}
-                                    </view>
-                                    <view class="text-xs text-[#00000080] mt-1">
-                                        {{ item.intro }}
-                                    </view>
-                                </view>
-                                <view
-                                    class="w-5 h-5 rounded-full"
-                                    :class="[
-                                        selectedRobotId == item.id
-                                            ? 'bg-primary flex items-center justify-center'
-                                            : 'border border-solid border-[#00000033]',
-                                    ]">
-                                    <u-icon
-                                        name="checkmark"
-                                        color="#ffffff"
-                                        size="20"
-                                        v-if="selectedRobotId == item.id"></u-icon>
-                                </view>
-                            </view>
-                        </view>
-                    </z-paging>
-                </view>
-                <view class="px-4 pt-2 pb-5">
-                    <u-button
-                        type="primary"
-                        :custom-style="{ height: '90rpx', fontWeight: 'bold', borderRadius: '20rpx' }"
-                        :disabled="!selectedRobotId"
-                        @click="handleBindRobotConfirm"
-                        >确定绑定</u-button
-                    >
-                </view>
-            </view>
-        </template>
-    </popup-bottom>
+
+    <choose-agent ref="chooseAgentRef" v-model="showAgentPopup" @confirm="handleBindAgentConfirm" />
+
     <video-preview
         v-model="showVideoPreview"
         title="视频预览"
         :poster="previewVideo.pic"
         :video-url="previewVideo.url" />
+
     <confirm-dialog
         v-model="showRemovePopup"
         content="确定要删除账号吗？"
@@ -397,30 +483,27 @@ import {
 import { getAgentList } from "@/api/agent";
 import { AppTypeEnum, DeviceCmdEnum, DeviceCmdCodeEnum } from "@/enums/appEnums";
 import { formatNumberToWanOrYi } from "@/utils/util";
-import { useDevice } from "@/ai_modules/device/hooks/useDevice";
 import useDeviceWs from "@/ai_modules/device/hooks/useDeviceWs";
 import { useDeviceStore } from "@/ai_modules/device/stores/device";
 import { DeviceEventAction } from "@/ai_modules/device/enums";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
+import ChooseAgent from "@/ai_modules/device/components/choose-agent/choose-agent.vue";
 
 const { send, onEvent, close } = useDeviceWs();
 const deviceStore = useDeviceStore();
 const { getSortedPlatform } = storeToRefs(deviceStore);
 const deviceCode = ref<string>("");
 const eventAction = ref<DeviceEventAction | null>();
-
+const selectedAgent = ref<{ id: string; name: string }>({ id: "", name: "" });
 const currentPlatform = ref<AppTypeEnum>(AppTypeEnum.WECHAT);
 const currentPlatformAccount = ref<any>({});
 const currentPlatformItem = computed(() => {
     return getSortedPlatform.value.find((item) => item.type == currentPlatform.value);
 });
 
-const showRobotPopup = ref<boolean>(false);
-const robotPagingRef = shallowRef();
-const robotList = ref<any[]>([]);
-const selectedRobotId = ref<string>("");
+const showAgentPopup = ref<boolean>(false);
 const showRemovePopup = ref<boolean>(false);
-
+const chooseAgentRef = shallowRef();
 const getTabList = computed(() => {
     const commonTabs = {
         name: "发布详情",
@@ -494,9 +577,14 @@ const previewVideo = reactive({
     pic: "",
 });
 
+const accountLoading = ref(true);
+const listLoading = ref(true);
+
 const isExecuteComplete = computed(() => {
     return updateAccountSteps.value.every((item) => item.status === 2);
 });
+
+const hasError = computed(() => updateAccountSteps.value.some((item) => item.status === 3));
 
 const getPrivateChatRecordList = computed(() => {
     const groupList: any = [];
@@ -597,23 +685,6 @@ onEvent("error", (error: any) => {
     }
 });
 
-const queryRobotList = async (pageNo: number, pageSize: number) => {
-    try {
-        const { lists } = await getAgentList({
-            page_no: pageNo,
-            page_size: pageSize,
-            source: 1,
-        });
-        robotPagingRef.value?.complete(lists);
-    } catch (error) {
-        robotPagingRef.value?.complete([]);
-    }
-};
-
-const handleSelectRobot = (item: any) => {
-    selectedRobotId.value = selectedRobotId.value === item.id ? "" : item.id;
-};
-
 const getPlatformLogo = (type: AppTypeEnum) => {
     const data = getSortedPlatform.value.find((item) => item.type == type) || ({} as any);
     return currentPlatform.value == type ? data.activeIcon : data.icon;
@@ -623,6 +694,8 @@ const handlePlatformClick = async (type: AppTypeEnum) => {
     if (currentPlatform.value === type) return;
     currentPlatform.value = type;
     currentTab.value = 0;
+    accountLoading.value = true;
+    listLoading.value = true;
     await getDeviceAccount();
     pagingRef.value?.reload();
 };
@@ -630,6 +703,7 @@ const handlePlatformClick = async (type: AppTypeEnum) => {
 const handleTabChange = (index: number) => {
     if (currentTab.value === index) return;
     currentTab.value = index;
+    listLoading.value = true;
     pagingRef.value?.reload();
 };
 
@@ -722,7 +796,12 @@ const handleOpenAiChange = async (value: boolean) => {
     }
 };
 
-const handleBindRobotConfirm = async () => {
+const handleSelectAgent = () => {
+    showAgentPopup.value = true;
+    chooseAgentRef.value?.setChooseLists([{ id: selectedAgent.value.id, name: selectedAgent.value.name }]);
+};
+
+const handleBindAgentConfirm = async (row: any) => {
     uni.showLoading({
         title: "绑定中...",
         mask: true,
@@ -730,7 +809,7 @@ const handleBindRobotConfirm = async () => {
     try {
         await changeAccountStatus({
             account: currentPlatformAccount.value.account,
-            robot_id: selectedRobotId.value,
+            robot_id: row.id,
             takeover_mode: 1, // 接管模式
             open_ai: currentPlatformAccount.value.open_ai,
             account_type: currentPlatform.value,
@@ -742,11 +821,11 @@ const handleBindRobotConfirm = async () => {
             duration: 3000,
         });
         getDeviceAccount();
-        showRobotPopup.value = false;
-    } catch (error) {
+        showAgentPopup.value = false;
+    } catch (error: any) {
         uni.hideLoading();
         uni.showToast({
-            title: "绑定失败",
+            title: error || "绑定失败",
             icon: "none",
             duration: 3000,
         });
@@ -754,19 +833,27 @@ const handleBindRobotConfirm = async () => {
 };
 
 const getDeviceAccount = async () => {
-    const { lists } = await getDeviceAccountList({
-        device_code: deviceCode.value,
-        type: currentPlatform.value,
-    });
-    if (lists && lists.length > 0) {
-        currentPlatformAccount.value = lists[0];
-        selectedRobotId.value = lists[0].robot_id;
-    } else {
-        currentPlatformAccount.value = {};
+    try {
+        accountLoading.value = true;
+        const { lists } = await getDeviceAccountList({
+            device_code: deviceCode.value,
+            type: currentPlatform.value,
+        });
+        if (lists && lists.length > 0) {
+            currentPlatformAccount.value = lists[0];
+            selectedAgent.value = { id: lists[0].robot_id, name: lists[0].robot_name };
+        } else {
+            currentPlatformAccount.value = {};
+        }
+    } catch (error) {
+        console.error(error);
+    } finally {
+        accountLoading.value = false;
     }
 };
 
-const queryList = async (pageNo: number, pageSize: number) => {
+const queryList = async (page_no: number, page_size: number) => {
+    listLoading.value = true;
     try {
         let lists: any[] = [];
         if (currentTab.value === 0) {
@@ -775,8 +862,8 @@ const queryList = async (pageNo: number, pageSize: number) => {
                 device_code: deviceCode.value,
                 account_type: currentPlatform.value,
                 account: currentPlatformAccount.value.account,
-                page: pageNo,
-                page_size: pageSize,
+                page_no,
+                page_size,
                 task_type: 3,
             });
             lists = publishLists || [];
@@ -784,8 +871,8 @@ const queryList = async (pageNo: number, pageSize: number) => {
             // 查询私信记录
             const { lists: privateChatLists } = await getDevicePrivateChatRecordList({
                 device_code: deviceCode.value,
-                page: pageNo,
-                page_size: pageSize,
+                page_no,
+                page_size,
                 type: currentPlatform.value,
             });
             lists = privateChatLists || [];
@@ -793,19 +880,21 @@ const queryList = async (pageNo: number, pageSize: number) => {
         pagingRef.value?.complete(lists);
     } catch (error) {
         pagingRef.value?.complete([]);
+    } finally {
+        listLoading.value = false;
     }
 };
 
 const getPublishStatusStyle = (status: number) => {
     switch (status) {
         case 0:
-            return "text-primary bg-primary-light-9"; // 未发布
+            return "text-[#0065FB] bg-[#EBF2FF]"; // 未发布
         case 1:
-            return "text-[#00C08E] bg-[rgba(0,192,142,0.1)]"; // 已发布
+            return "text-[#10B981] bg-[#E7F9F2]"; // 已发布
         case 2:
-            return "text-[#FF2442] bg-[rgba(255,36,66,0.1)]"; // 发布失败
+            return "text-[#EF4444] bg-[#FFF5F5]"; // 发布失败
         default:
-            return "text-primary bg-primary-light-9";
+            return "text-[#0065FB] bg-[#EBF2FF]";
     }
 };
 
@@ -816,7 +905,22 @@ const getPublishStatusText = (status: number) => {
         2: "发布失败",
         3: "发布中",
     };
-    return statusMap[status] || "未知状态"; // 添加默认值处理未知状态
+    return statusMap[status] || "待处理"; // 添加默认值处理未知状态
+};
+
+const getStepIconClass = (status: number) => {
+    switch (status) {
+        case 0:
+            return "border-[2rpx] border-[#E5E7EB]";
+        case 1:
+            return "border-[2rpx] border-primary flex items-center justify-center";
+        case 2:
+            return "bg-primary";
+        case 3:
+            return "border-[2rpx] border-[#EF4444]";
+        default:
+            return "";
+    }
 };
 
 const handlePlayVideo = (item: any) => {
@@ -849,28 +953,20 @@ onUnload(() => {
 
 <style scoped lang="scss">
 .platform-item {
-    @apply h-[90rpx] flex items-center justify-center;
     &.active {
-        @apply bg-white rounded-tl-[20rpx] rounded-tr-[20rpx];
+        background: white;
+        box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
     }
 }
 
-.publish-item {
-    @apply bg-white rounded-[20rpx] px-4 py-[30rpx] relative;
-}
-.private-item {
-    @apply bg-white rounded-[20rpx] px-4 py-[30rpx];
-}
-.private-item-content {
-    @apply flex gap-x-3;
-}
-.step-item {
-    @apply flex  gap-x-[28rpx];
-}
+.publish-item,
+.private-group,
 .robot-item {
-    @apply bg-white rounded-[20rpx] px-4 py-[30rpx]  gap-x-[30rpx] relative flex items-center;
-    &.active {
-        @apply shadow-[0_0_0_1rpx_var(--color-primary)];
-    }
+    transition: all 0.2s ease-in-out;
+}
+
+.robot-item.active {
+    border: 2rpx solid var(--color-primary);
+    box-shadow: 0 4rpx 12rpx rgba(0, 101, 251, 0.1);
 }
 </style>

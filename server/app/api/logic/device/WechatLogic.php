@@ -22,6 +22,19 @@ class WechatLogic extends ApiLogic
     {
         Db::startTrans();
         try {
+
+            $is_overlap = $params['task_exec_type'] ?? 0;
+            if ((int)$is_overlap === 1) {
+                \app\api\logic\device\TaskLogic::updateTaskStatusByIds($params['task_ids']);
+                $params['time_config'] = [
+                    date('H:i', time()) . '-' . date('H:i', (time() + (60 * (int)$params['minutes']))),
+                ];
+                $params['custom_date'] = [
+                    date('Y-m-d', time())
+                ];
+                unset($params['task_ids']);
+            }
+
             self::checkAutoDevice($params);
             if (empty($params['time_config']) && $params['is_free_time'] == 0) {
                 self::setError('请选择时间配置');
@@ -70,12 +83,15 @@ class WechatLogic extends ApiLogic
                 if ((int)$params['is_free_time'] === 0) {
                     $times = TaskLogic::getTimes($params['time_config'], date('Y-m-d', time()), $params['task_frep'], $params['custom_date']);
                     foreach ($times as $time) {
-                        list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_WECHAT_RPA, $time['start_time'], $time['end_time'], self::$uid);
-                        if (!$isOverlap) {
-                            $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
-                            $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
-                            throw new \Exception($msg);
+                        if ((int)$is_overlap === 0) {
+                            list($isOverlap, $lap) = TaskLogic::isTaskTimeOverlapping($account['device_code'], DeviceEnum::TASK_TYPE_WECHAT_RPA, $time['start_time'], $time['end_time'], self::$uid);
+                            if (!$isOverlap) {
+                                $timeMsg = "【" . date('Y-m-d H:i', $lap['start_time']) . "-" . date('Y-m-d H:i', $lap['end_time']) . "】";
+                                $msg = "您在{$timeMsg}的【" . DeviceEnum::getAccountTypeDesc($lap['account_type']) . DeviceEnum::getTaskTypeDesc($lap['task_type'])  . "】与当前所选时间冲突";
+                                throw new \Exception($msg);
+                            }
                         }
+
 
                         array_push($allTaskInstall, [
                             'user_id' => self::$uid,
@@ -83,6 +99,8 @@ class WechatLogic extends ApiLogic
                             'task_type' => DeviceEnum::TASK_TYPE_WECHAT_RPA,
                             'account' => $account['account'],
                             'account_type' => $account['type'],
+                            'nickname' => $params['nickname'],
+                            'avatar' => $params['avatar'],
                             'task_name' => '个微rpa任务',
                             'status' => 0,
                             'day' => date('Y-m-d', $time['start_time']),
@@ -264,7 +282,7 @@ class WechatLogic extends ApiLogic
                                         'status' => 0,
                                         'day' => date('Y-m-d', $time[0]),
                                         'start_time' => $time[0],
-                                        'end_time' => $time[1] - 180,
+                                        'end_time' => $time[1] - 120,
                                         'time_config' => json_encode($timeConfig, JSON_UNESCAPED_UNICODE),
                                         'sub_task_id' => $strategy->id,
                                         'source' => DeviceEnum::TASK_SOURCE_WECHAT_RPA,

@@ -74,6 +74,20 @@ class DeviceController extends BaseApiController
         }
     }
 
+    public function removePersona()
+    {
+        try {
+            $params = $this->request->post();
+            $result = DeviceLogic::removePersona($params);
+            if ($result) {
+                return $this->data(DeviceLogic::getReturnData());
+            }
+            return $this->fail(DeviceLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
     public function bind()
     {
         try {

@@ -2,7 +2,6 @@
 
 namespace app\api\logic\sora;
 
-use app\api\controller\VideoInfoController;
 use app\api\logic\ApiLogic;
 use app\api\logic\service\TokenLogService;
 use app\api\logic\WechatLogic;
@@ -15,6 +14,7 @@ use app\common\model\user\User;
 use app\common\model\user\UserAuth;
 use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
+use app\common\service\VideoInfoService;
 use think\facade\Db;
 use think\facade\Log;
 
@@ -82,7 +82,8 @@ class SoraVideoTaskLogic extends ApiLogic
                     $SoraVideoSetting->success_num += 1;
                     $SoraVideoSetting->save();
                     $unit = ModelConfig::where('scene', $scene)->value('score', 0);
-                    $points = $unit;
+                    $duration = $task->duration;
+                    $points = !empty($duration) ? $unit * $duration : $unit;
                     $task->video_token = $points;
                     //生成缩略图
                     if ($task->width == '16') {
@@ -101,7 +102,7 @@ class SoraVideoTaskLogic extends ApiLogic
                             'quality' => 2
                         ]
                     ];
-                    $thumbnailResult = (new VideoInfoController())->videoThumbnail($videos);
+                    $thumbnailResult = (new VideoInfoService())->commonVideoThumbnail($videos);
                     if ($thumbnailResult['result']) {
                         $task->pic = $thumbnailResult['url'];
                     }
