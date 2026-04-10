@@ -142,7 +142,7 @@ class DeviceLogic extends ApiLogic
         }
     }
 
-    
+
 
     public static function remove($params)
     {
@@ -534,6 +534,7 @@ class DeviceLogic extends ApiLogic
                     'create_type' => 'batch'
                 ];
                 try {
+                    $anchorId = '';
                     if ($shanjianType == 1) {
                         $avatarInfoList = AiPersonaDigitalAvatar::where('user_id', $userId)
                             ->where('persona_id', $persona->id)
@@ -626,7 +627,7 @@ class DeviceLogic extends ApiLogic
                     Log::channel('ipVideoSynthesis')->write($msg);
                     continue;
                 }
-             
+
                 $selectedMaterials = self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode);
 
                 if (empty($selectedMaterials)) {
@@ -656,7 +657,7 @@ class DeviceLogic extends ApiLogic
                     }
                     $rediskey = 'material_' . $item['id'] . '_device_' . $deviceCode;
                     if (Cache::store('redis')->get($rediskey) < 3) {
-                         Cache::store('redis')->inc($rediskey);
+                        Cache::store('redis')->inc($rediskey);
                     }
                     $material_use_log[] = [
                         'material_id' => $item['id'],
@@ -772,7 +773,7 @@ class DeviceLogic extends ApiLogic
         }
         $newVideos = [];
         foreach ($videos as $key => $video) {
-            $rediskey = 'material_' . $video['id'] . '_device_' . $deviceCode;      
+            $rediskey = 'material_' . $video['id'] . '_device_' . $deviceCode;
             $device_bind_num = Cache::store('redis')->get($rediskey);
             // Log::channel('ipVideoSynthesis')->write('设备号: ' . $deviceCode . '，视频' . $video['id'] . '绑定次数: ' . $device_bind_num);
             if ($device_bind_num > 2) {
@@ -783,7 +784,7 @@ class DeviceLogic extends ApiLogic
         $videos = $newVideos;
         $newImages = [];
         foreach ($images as $key => $image) {
-            $rediskey = 'material_' . $image['id'] . '_device_' . $deviceCode;      
+            $rediskey = 'material_' . $image['id'] . '_device_' . $deviceCode;
             $device_bind_num = Cache::store('redis')->get($rediskey);
             // Log::channel('ipVideoSynthesis')->write('设备号: ' . $deviceCode . '，图片' . $image['id'] . '绑定次数: ' . $device_bind_num);
             if ($device_bind_num > 2) {
@@ -791,7 +792,7 @@ class DeviceLogic extends ApiLogic
             }
             $newImages[] = $image;
         }
-        $images = $newImages;   
+        $images = $newImages;
         // Log::channel('ipVideoSynthesis')->write('设备号: ' . $deviceCode . '，图片ids' . json_encode($images, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
 

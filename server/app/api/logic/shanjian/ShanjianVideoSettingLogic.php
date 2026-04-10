@@ -88,7 +88,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 return false;
             }
             $video_count = $extra['video_count'] ?? 0;
-            if($video_count <= 0){
+            if ($video_count <= 0) {
                 self::setError("视频数量必须大于0，当前值为：$video_count");
                 return false;
             }
@@ -266,8 +266,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
         try {
             if (is_string($id)) {
                 ShanjianVideoSetting::destroy(['id' => $id]);
+                // 删除关联的视频任务
+                ShanjianVideoTask::where('video_setting_id', $id)->select()->delete();
             } else {
                 ShanjianVideoSetting::whereIn('id', $id)->select()->delete();
+                // 删除关联的视频任务
+                ShanjianVideoTask::whereIn('video_setting_id', $id)->select()->delete();
             }
             return true;
         } catch (\Exception $e) {
@@ -337,7 +341,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $musicMode = $controlParams['music'] ?? 1; // music控制music_url
         $clipMode = $controlParams['clip'] ?? 1; // clip控制clip_id
         $materialMode = $controlParams['material'] ?? 1; // material控制material选择
-        $aimusicMode = $controlParams['ai_music'] ?? false; 
+        $aimusicMode = $controlParams['ai_music'] ?? false;
 
         $copywritingDatanum = count($copywritingData) * 0.5;
         $materialDatanum = count($materialData);
@@ -386,7 +390,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 // 音乐选择：1=顺序，0=随机
                 if (count($musicData) == 0) {
                     if ($aimusicMode) {
-                         $music_url = $music;
+                        $music_url = $music;
                     } else {
                         $music_url = '';
                     }
@@ -477,7 +481,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     // 文案数据
                     $copywritingItem = $copywritingData[$dataIndex % count($copywritingData)] ?? null;
                     if ($copywritingItem) {
-                        $taskContent['title'] = $copywritingItem['title'] ??  '数字人口播混剪'.date('YmdHis');
+                        $taskContent['title'] = $copywritingItem['title'] ??  '数字人口播混剪' . date('YmdHis');
                         $taskContent['content'] = $copywritingItem['content'] ?? '';
                         if ($audioType != 2) {
                             $taskContent['audio_url'] = ''; // 文案模式下不设置audio_url
@@ -492,10 +496,10 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     'video_index_in_source' => $videoIndex
                 ];
                 $mergedArray = array_merge($extra, $extraData);
-//                $taskname = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($globalTaskIndex + 1);
+                //                $taskname = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($globalTaskIndex + 1);
                 $taskContent['title'] = $taskContent['title'] ?? '';
                 $taskname = !empty($taskContent['title']) ? $taskContent['title'] : "数字人口播混剪" . date('YmdHis');
-                $taskname = mb_substr( $taskname, 0, 120, 'UTF-8');
+                $taskname = mb_substr($taskname, 0, 120, 'UTF-8');
                 $taskItem = [
                     'name' => $taskname,
                     'pic' => $selectedAnchor['pic'] ?? '',
@@ -770,8 +774,8 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     }
                 } else {
                     // 没有music数据时，每个视频使用不同的随机音乐
-                     if ($aimusicMode) {
-                         $music_url = $defaultMusic;
+                    if ($aimusicMode) {
+                        $music_url = $defaultMusic;
                     } else {
                         $music_url = '';
                     }
@@ -837,9 +841,9 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     ]
                 ];
                 $mergedArray = array_merge($extra, $extraData);
-               // $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_形象' . ($anchorIndex + 1) . '_视频' . ($videoIndex + 1);
+                // $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_形象' . ($anchorIndex + 1) . '_视频' . ($videoIndex + 1);
                 // 生成视频名称时包含素材和视频信息
-                $videoName = '真人口播混剪'.date('YmdHis');
+                $videoName = '真人口播混剪' . date('YmdHis');
                 $modeSuffix = '';
                 if ($humanMode == 0) $modeSuffix .= 'H';
                 if ($musicMode == 0) $modeSuffix .= 'M';
@@ -848,7 +852,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 if (!empty($modeSuffix)) {
                     $videoName .= '_' . $modeSuffix;
                 }
-                $videoName = mb_substr( $videoName, 0, 120, 'UTF-8');
+                $videoName = mb_substr($videoName, 0, 120, 'UTF-8');
                 $taskItem = [
                     'name' => $videoName,
                     'pic' => $currentAnchor['pic'] ?? '',
@@ -996,7 +1000,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
 
 
-        $voice=  $params['voice']??'';
+        $voice =  $params['voice'] ?? '';
         if (empty($voice)) {
             throw new \Exception("语音不能为空");
         }
@@ -1216,12 +1220,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     $taskItem['extra'] = json_encode($mergedExtra, JSON_UNESCAPED_UNICODE);
                 }
                 // 生成视频名称
-             //   $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_素材' . ($materialIndex + 1) . '_视频' . ($videoIndex + 1);
-//                $modeSuffix = $contentMode == 1 ? 'S' : 'R'; // S=顺序，R=随机
-//                $videoName .= '_' . $modeSuffix;
+                //   $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_素材' . ($materialIndex + 1) . '_视频' . ($videoIndex + 1);
+                //                $modeSuffix = $contentMode == 1 ? 'S' : 'R'; // S=顺序，R=随机
+                //                $videoName .= '_' . $modeSuffix;
                 $taskItem['title'] = $taskItem['title'] ?? '';
                 $taskItem['name'] = !empty($taskItem['title']) ? $taskItem['title'] : "素材混剪" . date('YmdHis');
-                $taskItem['name'] = mb_substr( $taskItem['name'], 0, 120, 'UTF-8');
+                $taskItem['name'] = mb_substr($taskItem['name'], 0, 120, 'UTF-8');
                 $taskData[] = $taskItem;
             } // 内层循环结束
         } // 外层循环结束
@@ -1926,7 +1930,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 if (!array_key_exists('title', $data) || count($data['title']) == 0) {
                     throw new \Exception("标题不能为空");
                 }
-                if (isset($data['title']) && is_array($data['title']) ) {
+                if (isset($data['title']) && is_array($data['title'])) {
                     $data['title'] = implode('\n', $data['title']);
                 }
             }
@@ -2019,13 +2023,13 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     }
                     $musicStrategy = 'default_random';
                 }
-            
+
                 // ===== 内容选择逻辑（文案或音频）=====
                 $taskItem = [];
                 // 使用文案
                 $copywritingItem = null;
 
-                    // 顺序选择文案
+                // 顺序选择文案
                 $copywritingIndex = $globalIndex % $copywritingCount;
                 $copywritingItem = $copywritingData[$copywritingIndex];
                 $contentStrategy = 'sequential_copywriting';
@@ -2084,12 +2088,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 }
 
                 // 生成视频名称
-//                $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_素材' . ($materialIndex + 1) . '_视频' . ($videoIndex + 1);
-//                $modeSuffix = $contentMode == 1 ? 'S' : 'R'; // S=顺序，R=随机
-//                $videoName .= '_' . $modeSuffix;
+                //                $videoName = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_素材' . ($materialIndex + 1) . '_视频' . ($videoIndex + 1);
+                //                $modeSuffix = $contentMode == 1 ? 'S' : 'R'; // S=顺序，R=随机
+                //                $videoName .= '_' . $modeSuffix;
                 $taskItem['title'] = $taskItem['title'] ?? '';
                 $taskItem['name'] = !empty($taskItem['title']) ? $taskItem['title'] : "新闻体混剪" . date('YmdHis');
-                $taskItem['name'] = mb_substr( $taskItem['name'], 0, 120, 'UTF-8');
+                $taskItem['name'] = mb_substr($taskItem['name'], 0, 120, 'UTF-8');
                 $taskData[] = $taskItem;
             } // 内层循环结束
         } // 外层循环结束
