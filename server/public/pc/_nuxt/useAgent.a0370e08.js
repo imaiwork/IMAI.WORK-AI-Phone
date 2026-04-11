@@ -1,1 +1,0 @@
-import{V as a}from"./agent.70f40751.js";import{y as s}from"./entry.a8505879.js";function r(){const e=s([]);return{agentList:e,getAgentList:async()=>{const{lists:n}=await a({page_size:1500,page_no:1});e.value=n.map(t=>({name:t.name,id:t.id,image:t.image}))}}}export{r as useAgent};

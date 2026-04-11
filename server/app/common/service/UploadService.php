@@ -504,7 +504,7 @@ class UploadService
                 $result['thumbnail_url']  = $thumbnailResult['url'];
             }
 
-            if (self::isVideoFile($fileInfo['ext'], true)) {
+            if ($params['fetchVideoInfo'] && self::isVideoFile($fileInfo['ext'], true)) {
                 try {
                     $videoInfoService = new \app\common\service\VideoInfoService();
                     $fileUrl = FileService::getFileUrl($file['uri']);

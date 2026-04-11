@@ -24,7 +24,7 @@ class UploadController extends BaseAdminController
     public function image()
     {
         try {
-            $cid = $this->request->post('cid', 0);
+            $cid = (int)$this->request->post('cid', 0);
             $result = UploadService::image($cid);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
@@ -41,7 +41,7 @@ class UploadController extends BaseAdminController
     public function video()
     {
         try {
-            $cid = $this->request->post('cid', 0);
+            $cid = (int)$this->request->post('cid', 0);
             $result = UploadService::video($cid);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
@@ -57,7 +57,7 @@ class UploadController extends BaseAdminController
     public function audio()
     {
         try {
-            $cid = $this->request->post('cid', 0);
+            $cid = (int)$this->request->post('cid', 0);
             $result = UploadService::audio($cid);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
@@ -73,7 +73,7 @@ class UploadController extends BaseAdminController
     public function file()
     {
         try {
-            $cid = $this->request->post('cid', 0);
+            $cid = (int)$this->request->post('cid', 0);
             $result = UploadService::file($cid);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
@@ -92,13 +92,13 @@ class UploadController extends BaseAdminController
     public function zipfile(): Json
     {
         try {
-            $cid = $this->request->post('cid', 0);
+            $cid = (int)$this->request->post('cid', 0);
             $result = UploadService::zipfile($cid);
             //解压
-            if (isset($result['url'])){
+            if (isset($result['url'])) {
                 $zip = new ZipArchive();
                 $extractDir = '../extend/miniprogram-ci/';
-                if ($zip->open($result['url'])===true) {
+                if ($zip->open($result['url']) === true) {
                     // 检查解压目录权限
                     if (!is_writable($extractDir)) {
                         $result['message'] = '目标目录不可写，无法解压文件。';
@@ -144,7 +144,7 @@ class UploadController extends BaseAdminController
                         $result['success'] = true;
                         $result['message'] = '文件已成功上传并解压。';
                     }
-//                    $result['extractedFiles'] = $extractedFiles;
+                    //                    $result['extractedFiles'] = $extractedFiles;
                 }
             } else {
                 $result['message'] = '无法打开ZIP文件。';

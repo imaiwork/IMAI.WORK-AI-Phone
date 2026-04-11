@@ -820,6 +820,10 @@ const executeCreateTask = async () => {
             ...formData,
             keywords: formData.keywords.filter((item) => item),
             time_config: formData.task_exec_type === 1 ? [] : [`${formData.time_config[0]}-${formData.time_config[1]}`],
+            wechat_time_config:
+                formData.wechat_time_type == 1
+                    ? `${formData.wechat_time_config[0]}-${formData.wechat_time_config[1]}`
+                    : [],
             type: [AppTypeEnum.SPH],
         });
         feedback.msgSuccess("创建成功");
