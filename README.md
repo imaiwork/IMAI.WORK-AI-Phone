@@ -9,6 +9,11 @@
 
 
 
+可以查看中央广播电视台《赢在AI》关于此项目的路演介绍
+
+
+![1](https://update.imai.work/uploads/images/20260328/20260328111131a12d38971.png)
+
 <p align="center">
   <a href="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png" target="_blank">加入官方交流群</a>&nbsp;|&nbsp;
   <a href="https://imai.work/github.html" target="_blank">在线演示</a>&nbsp;|&nbsp;
