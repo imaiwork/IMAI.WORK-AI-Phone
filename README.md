@@ -4,34 +4,20 @@
 
 如果您觉得项目有价值，欢迎给我们 Star ⭐ ，给与Star后凭截图获取项目所有宣传PPT源文件、PSD、sketch源文件:
 
-<p align="center">
-  <img src="[https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png](https://update.imai.work/uploads/images/20260502/202605021438138c7183810.png)"  alt="打赏码">
-</p>
 
 
 
-<p align="center">
-  <a href="https://imai.work" target="_blank"><img src="https://update.imai.work/uploads/images/20251205/202512051358425fb334225.png" width="100%" alt="IMAI.WORK Logo" /></a>
-</p>
 
 
 <p align="center">
-  <a href="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png" target="_blank">免费加入官方交流群</a>&nbsp;|&nbsp;
-  <a href="https://yijianshi.feishu.cn/space/preview/docx/WN4Fd4Yk3o6WEKxGKAWcvlVtnlf" target="_blank">在线演示</a>&nbsp;|&nbsp;
-  <a href="https://imai.work" target="_blank">官方网站</a>&nbsp;|&nbsp;
+  <a href="https://update.imai.work/uploads/images/20251205/202512051347209ad369588.png" target="_blank">加入官方交流群</a>&nbsp;|&nbsp;
+  <a href="https://imai.work/github.html" target="_blank">在线演示</a>&nbsp;|&nbsp;
+  <a href="https://imai.work/github.html" target="_blank">官方网站</a>&nbsp;|&nbsp;
   <a href="./README-EN.md" target="_blank">English</a>
 </p>
 
 
 
-
-
-
-<p align="center">
-<a href="https://yijianshi.feishu.cn/space/preview/docx/WN4Fd4Yk3o6WEKxGKAWcvlVtnlf" target="_blank">在线演示</a>｜
-<a href="https://imai.work">官方网站</a>｜
-<a href="./README-EN.md">English</a>
-</p>
 
 <p align="center">
   <a href="https://vuejs.org/"><img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D" alt="Vue.js" /></a>
