@@ -60,7 +60,7 @@
                     <Icon v-if="!copyLoading" name="el-icon-DocumentCopy" :size="16" />
                     <div
                         v-else
-                        class="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                        class="w-4 h-4 border-2 border-slate-400 border-t-[transparent] rounded-full animate-spin"></div>
                     {{ copyLoading ? "复制中..." : "复制图片" }}
                 </button>
                 <button
@@ -75,6 +75,8 @@
 </template>
 
 <script setup lang="ts">
+import feedback from "@/utils/feedback";
+
 const popupRef = shallowRef();
 const shareImage = ref<string>("");
 const imageRef = ref<HTMLImageElement | null>(null);
@@ -182,7 +184,7 @@ const copyImageUrlFallback = async (): Promise<boolean> => {
 // 通用复制图片方法
 const copyImage = async () => {
     if (!shareImage.value || !imageRef.value) {
-        ElMessage.warning("图片还未加载完成");
+        feedback.msgWarning("图片还未加载完成");
         return;
     }
 
@@ -198,7 +200,7 @@ const copyImage = async () => {
                 success = await copyImageWithModernAPI();
                 method = "现代API";
                 if (success) {
-                    ElMessage.success("图片已复制到剪贴板");
+                    feedback.msgSuccess("图片已复制到剪贴板");
                     return;
                 }
             } catch (error) {
@@ -212,7 +214,7 @@ const copyImage = async () => {
                 success = copyImageWithLegacyMethod();
                 method = "传统方法";
                 if (success) {
-                    ElMessage.success("图片已复制到剪贴板");
+                    feedback.msgSuccess("图片已复制到剪贴板");
                     return;
                 }
             } catch (error) {
@@ -225,7 +227,7 @@ const copyImage = async () => {
             success = await copyImageUrlFallback();
             method = "URL复制";
             if (success) {
-                ElMessage.warning("已复制图片链接（浏览器不支持直接复制图片）");
+                feedback.msgWarning("已复制图片链接（浏览器不支持直接复制图片）");
                 return;
             }
         } catch (error) {
@@ -233,7 +235,7 @@ const copyImage = async () => {
         }
 
         // 所有方法都失败
-        ElMessage.error("复制失败，请尝试右键复制图片或保存到本地");
+        feedback.msgError("复制失败，请尝试右键复制图片或保存到本地");
     } finally {
         copyLoading.value = false;
     }

@@ -41,7 +41,7 @@
                     </view>
                 </view>
                 <view class="flex justify-end mt-2">
-                    <view class="text-[#B2B2B2] text-[26rpx]"> {{ inputValue.length }}/{{ textLimit }} </view>
+                    <view class="text-[#B2B2B2]"> {{ inputValue.length }}/{{ textLimit }} </view>
                 </view>
             </view>
         </view>

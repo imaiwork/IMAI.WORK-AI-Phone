@@ -17,7 +17,9 @@ use app\common\model\sv\SvPublishSetting;
 use app\common\model\sv\SvPublishSettingDetail;
 use app\common\model\sv\SvPublishSettingAccount;
 use app\common\service\FileService;
+use app\common\workerman\wechat\handlers\client\TalkToFriendTaskHandler;
 use Workerman\Connection\TcpConnection;
+use Workerman\Timer;
 
 /**
  * 微信相关操作
@@ -120,114 +122,194 @@ trait OperationTrait
             throw new \Exception("未开启打招呼配置", 400);
         }
 
-        
+        $wechatId = (string)$wechat->wechat_id;
+        $deviceCode = (string)$wechat->device_code;
+        $friendId = (string)$friend->friend_id;
+        $friendRemark = (string)($friend->remark ?? '');
+        $contents = array_values((array)$greet->greet_content);
+        $intervalSeconds = max(0, (int)$greet->interval_time) * 60;
+        $lastDelaySeconds = 0;
 
         // 给好友发消息
-        foreach ($greet->greet_content as $key => $content) {
-            $seconds = (int)$greet->interval_time * 60;
-            sleep($seconds);
+        foreach ($contents as $index => $content) {
+            $delaySeconds = $index * $intervalSeconds;
+            $lastDelaySeconds = max($lastDelaySeconds, $delaySeconds);
 
-            $message = [
-                'wechat_id' => $wechat->wechat_id,
-                'friend_id' => $friend->friend_id,
-                'device_code' => $wechat->device_code,
-                'opt_type' => 'greet'
-            ];
+            $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('greetMessage Schedule')->withContext([
+                'wechat_id' => $wechatId,
+                'device_code' => $deviceCode,
+                'friend_id' => $friendId,
+                'index' => $index,
+                'delay_seconds' => $delaySeconds,
+                'content_type' => $content['type'] ?? null,
+            ])->log();
 
-            switch ($content['type']) {
-
-                case 0: //文本
-                    // 推送消息
-                    $message['message'] = str_replace('${remark}', $friend->remark, $content['content']);
-                    $message['message_type'] = 1;
-                    break;
-                case 1: //图片
-                    // 推送消息
-                    $message['message'] = FileService::getFileUrl($content['content']);
-                    $message['message_type'] = 2;
-                    break;
-                case 2: //视频
-                    // 推送消息
-                    $message['message'] =  FileService::getFileUrl($content['content']);
-                    $message['message_type'] = 4;
-                    break;
-                case 3: //链接
-                    // 推送消息
-                    $message['message'] = json_encode([
-                        'title' => $content['content']['name'] ?? '',
-                        'desc' => $content['content']['desc'] ?? '',
-                        'url' => $content['content']['link'] ?? '',
-                        'thumb' => FileService::getFileUrl($content['content']['img'] ?? ''),
-                    ], JSON_UNESCAPED_UNICODE);
-                    $message['message_type'] = 6;
-                    break;
-                case 4: //小程序
-                    // 推送消息
-                    $message['message'] = json_encode([
-                        "Title" => $content['content']['name'] ?? '',
-                        "Url" => "https://mp.weixin.qq.com/mp/waerrpage?appid={$content['content']['appid']}&type=upgrade&upgradetype=3#wechat_redirect",
-                        "PagePath" => $content['content']['link'] ?? 'pages/index/index.html',
-                        "Source" => $content['content']['Source'] ?? '',
-                        "SourceName" => $content['content']['SourceName'] ?? '',
-                        "Thumb" => FileService::getFileUrl($content['content']['pic'] ?? ''),
-                        "AppId" => $content['content']['appid'] ?? '',
-                        "Icon" =>  FileService::getFileUrl($content['content']['pic'] ?? ''),
-                        // "Des" => '',
-                        // "Type" => 33,
-                        // "TypeStr" => ['小程序'],
-                        // 'disForward' => 0,
-                        //'version' => 48,
-                    ], JSON_UNESCAPED_UNICODE);
-                    $message['message_type'] = 13;
-                    break;
-                case 5: //文件
-                    // 推送消息
-                    $message['message'] = json_encode($content['content'], JSON_UNESCAPED_UNICODE);
-                    $message['message_type'] = 8;
-                    break;
-
-                default:
+            if ($delaySeconds === 0) {
+                $this->sendSingleGreetMessage($wechatId, $deviceCode, $friendId, $friendRemark, $content, $index, $delaySeconds);
+                continue;
             }
 
-            $payload = [
-                'WeChatId' => $wechat->wechat_id,
-                'FriendId' => $friend->friend_id,
-                'Content' => $message['message'],
-                'ContentType' => $message['message_type'] ?? 1,
-                'Remark' => $message['remark'] ??  '',
-                'MsgId' => time(),
-                'Immediate' => false,
-                //'OptType' => $message['opt_type']
-            ];
-
-            $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('greetMessage')->withContext($payload)->log();
-
-            $content = \app\common\workerman\wechat\handlers\client\TalkToFriendTaskHandler::handle($payload);
-            // 4. 构建protobuf消息
-            $message = new \Jubo\JuLiao\IM\Wx\Proto\TransportMessage();
-            $message->setMsgType($content['MsgType']);
-            $any = new \Google\Protobuf\Any();
-            $any->pack($content['Content']);
-            $message->setContent($any);
-            $data = $message->serializeToString();
-            // 5. 发送到设备端
-            $channel = "socket.{$wechat->device_code}.message";
-            \Channel\Client::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
-            \Channel\Client::publish($channel, [
-                'data' => $data
-            ]);
+            Timer::add($delaySeconds, function () use ($wechatId, $deviceCode, $friendId, $friendRemark, $content, $index, $delaySeconds) {
+                $this->sendSingleGreetMessage($wechatId, $deviceCode, $friendId, $friendRemark, $content, $index, $delaySeconds);
+            }, [], false);
         }
 
-        if ($greet->greet_after_ai_enable == 1) {
-            $friend->takeover_mode = 1;
-            $friend->open_ai = 1;
-            $friend->update_time = time();
-            $friend->save();
-        }else{
-            $friend->takeover_mode = 0;
-            $friend->open_ai = 0;
-            $friend->update_time = time();
-            $friend->save();
+        $greetAfterAiEnable = (int)$greet->greet_after_ai_enable;
+        if ($lastDelaySeconds > 0) {
+            Timer::add($lastDelaySeconds + 1, function () use ($wechatId, $friendId, $greetAfterAiEnable) {
+                $this->applyGreetAfterAiSetting($wechatId, $friendId, $greetAfterAiEnable);
+            }, [], false);
+            return;
+        }
+
+        $this->applyGreetAfterAiSetting($wechatId, $friendId, $greetAfterAiEnable);
+    }
+
+    private function sendSingleGreetMessage(string $wechatId, string $deviceCode, string $friendId, string $friendRemark, array $content, int $index, int $delaySeconds): void
+    {
+        try {
+            $payload = $this->buildGreetMessagePayload($wechatId, $deviceCode, $friendId, $friendRemark, $content);
+            if ($payload === null) {
+                return;
+            }
+
+            $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('greetMessage Send')->withContext([
+                'wechat_id' => $wechatId,
+                'device_code' => $deviceCode,
+                'friend_id' => $friendId,
+                'index' => $index,
+                'delay_seconds' => $delaySeconds,
+                'content_type' => $payload['ContentType'],
+                'MsgId' => $payload['MsgId'],
+                'Immediate' => $payload['Immediate'],
+            ])->log();
+
+            $task = TalkToFriendTaskHandler::handle($payload);
+            $this->sendChannelMessage(SocketType::SOCKET, $deviceCode, $task);
+        } catch (\Throwable $e) {
+            $this->withChannel('wechat_socket')->withLevel('error')->withTitle('greetMessage Send Error')->withContext([
+                'wechat_id' => $wechatId,
+                'device_code' => $deviceCode,
+                'friend_id' => $friendId,
+                'index' => $index,
+                'delay_seconds' => $delaySeconds,
+                'content_type' => $content['type'] ?? null,
+                'e' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ])->log();
+        }
+    }
+
+    private function buildGreetMessagePayload(string $wechatId, string $deviceCode, string $friendId, string $friendRemark, array $content): ?array
+    {
+        $message = [
+            'message' => '',
+            'message_type' => 1,
+        ];
+
+        switch ((int)($content['type'] ?? -1)) {
+            case 0: //文本
+                $message['message'] = str_replace('${remark}', $friendRemark, (string)($content['content'] ?? ''));
+                $message['message_type'] = 1;
+                break;
+            case 1: //图片
+                $message['message'] = FileService::getFileUrl((string)($content['content'] ?? ''));
+                $message['message_type'] = 2;
+                break;
+            case 2: //视频
+                $message['message'] = FileService::getFileUrl((string)($content['content'] ?? ''));
+                $message['message_type'] = 4;
+                break;
+            case 3: //链接
+                $contentData = is_array($content['content'] ?? null) ? $content['content'] : [];
+                $message['message'] = json_encode([
+                    'title' => $contentData['name'] ?? '',
+                    'desc' => $contentData['desc'] ?? '',
+                    'url' => $contentData['link'] ?? '',
+                    'thumb' => FileService::getFileUrl($contentData['img'] ?? ''),
+                ], JSON_UNESCAPED_UNICODE);
+                $message['message_type'] = 6;
+                break;
+            case 4: //小程序
+                $contentData = is_array($content['content'] ?? null) ? $content['content'] : [];
+                $appId = $contentData['appid'] ?? '';
+                $message['message'] = json_encode([
+                    "Title" => $contentData['name'] ?? '',
+                    "Url" => "https://mp.weixin.qq.com/mp/waerrpage?appid={$appId}&type=upgrade&upgradetype=3#wechat_redirect",
+                    "PagePath" => $contentData['link'] ?? 'pages/index/index.html',
+                    "Source" => $contentData['Source'] ?? '',
+                    "SourceName" => $contentData['SourceName'] ?? '',
+                    "Thumb" => FileService::getFileUrl($contentData['pic'] ?? ''),
+                    "AppId" => $appId,
+                    "Icon" => FileService::getFileUrl($contentData['pic'] ?? ''),
+                ], JSON_UNESCAPED_UNICODE);
+                $message['message_type'] = 13;
+                break;
+            case 5: //文件
+                $message['message'] = json_encode($content['content'] ?? [], JSON_UNESCAPED_UNICODE);
+                $message['message_type'] = 8;
+                break;
+            default:
+                $this->withChannel('wechat_socket')->withLevel('error')->withTitle('greetMessage Unsupported Content')->withContext([
+                    'wechat_id' => $wechatId,
+                    'device_code' => $deviceCode,
+                    'friend_id' => $friendId,
+                    'content_type' => $content['type'] ?? null,
+                ])->log();
+                return null;
+        }
+
+        return [
+            'DeviceId' => $deviceCode,
+            'WeChatId' => $wechatId,
+            'FriendId' => $friendId,
+            'Content' => $message['message'],
+            'ContentType' => $message['message_type'],
+            'Remark' => '',
+            'MsgId' => $this->generateGreetMsgId(),
+            'Immediate' => false,
+        ];
+    }
+
+    private function generateGreetMsgId(): int
+    {
+        static $sequence = 0;
+
+        $sequence = ($sequence + 1) % 1000;
+        $pid = getmypid() % 1000;
+
+        return ((int)floor(microtime(true) * 1000) * 1000000) + ($pid * 1000) + $sequence;
+    }
+
+    private function applyGreetAfterAiSetting(string $wechatId, string $friendId, int $greetAfterAiEnable): void
+    {
+        try {
+            $status = $greetAfterAiEnable === 1 ? 1 : 0;
+            AiWechatContact::where('wechat_id', $wechatId)
+                ->where('friend_id', $friendId)
+                ->update([
+                    'takeover_mode' => $status,
+                    'open_ai' => $status,
+                    'update_time' => time(),
+                ]);
+
+            $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('greetMessage Apply Ai Setting')->withContext([
+                'wechat_id' => $wechatId,
+                'friend_id' => $friendId,
+                'takeover_mode' => $status,
+                'open_ai' => $status,
+            ])->log();
+        } catch (\Throwable $e) {
+            $this->withChannel('wechat_socket')->withLevel('error')->withTitle('greetMessage Apply Ai Setting Error')->withContext([
+                'wechat_id' => $wechatId,
+                'friend_id' => $friendId,
+                'e' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ])->log();
         }
     }
 
@@ -268,7 +350,7 @@ trait OperationTrait
                             'messageId' => 0,
                             'type' => 61,
                             'deviceId' => $task->device_code,
-                            'appVersion' => '2.4.0',
+                            'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                             'content' => json_encode([
                                 'deviceId' => $task->device_code,
                                 'taskId' => $task->id,

@@ -1,10 +1,8 @@
 export enum SidebarTypeEnum {
-    // 快速开始
-    QUICK_START = 1,
     // 去发布
-    CREATE = 2,
+    CREATE = 1,
     // 我的发布
-    ME_PUBLISH = 3,
+    ME_PUBLISH = 2,
     // 发布图文任务
     PUBLISH_IMAGE_TASK = 3,
     // 发布混剪任务
@@ -20,7 +18,7 @@ export enum SidebarTypeEnum {
     // 视频作品
     VIDEO_WORKS = 9,
     // 文案库
-    COPYWRITING_LIBRARY = 10,
+    COPYWRITING_LIBRARY = 9,
 }
 
 export enum PublishTaskTypeEnum {

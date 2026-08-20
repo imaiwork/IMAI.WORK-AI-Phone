@@ -1,0 +1,93 @@
+// ElDialog teleport 到 body，必须是全局选择器，作用域限定 .geo-dialog
+.el-dialog.geo-dialog {
+    border-radius: 20px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.28);
+}
+.geo-dialog .el-dialog__header {
+    display: none;
+}
+.geo-dialog .el-dialog__body {
+    padding: 24px;
+    position: relative;
+}
+.geo-dialog .el-dialog__footer {
+    display: none;
+}
+.geo-dialog__close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 1;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: #94a3b8;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.geo-dialog__close:hover {
+    background: rgba(15, 23, 42, 0.06);
+    color: #475569;
+}
+.geo-dialog__icon {
+    width: 64px;
+    height: 64px;
+    aspect-ratio: 1;
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin: 0 auto;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+}
+.geo-dialog__icon--sm {
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    border-radius: 12px;
+}
+.geo-dialog__icon.is-info,
+.geo-dialog__icon.is-primary {
+    background: linear-gradient(135deg, #0065fb, #4f9dff);
+    box-shadow: 0 10px 24px -6px rgba(0, 101, 251, 0.45);
+}
+.geo-dialog__icon.is-warning {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    box-shadow: 0 10px 24px -6px rgba(245, 158, 11, 0.5);
+}
+.geo-dialog__icon.is-danger {
+    background: linear-gradient(135deg, #ef4444, #f87171);
+    box-shadow: 0 10px 24px -6px rgba(239, 68, 68, 0.5);
+}
+.geo-dialog__btn {
+    height: 44px !important;
+    border-radius: 12px !important;
+    font-size: 15px !important;
+}
+.geo-dialog__facts {
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.geo-dialog__facts.is-info,
+.geo-dialog__facts.is-primary {
+    background: #f5f7ff;
+    border: 1px solid #e8eeff;
+}
+.geo-dialog__facts.is-warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+}
+.geo-dialog__facts.is-danger {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+.geo-dialog__body:not(:has(*)) {
+    display: none;
+    margin: 0;
+}

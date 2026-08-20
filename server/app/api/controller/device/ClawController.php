@@ -15,7 +15,7 @@ use think\exception\HttpResponseException;
 class ClawController extends BaseApiController
 {
 
-    public array $notNeedLogin = ['getInfo', 'getTask'];
+    public array $notNeedLogin = ['getInfo', 'getTask', 'setAccount', 'unbindReport'];
 
     public function getInfo()
     {
@@ -37,6 +37,38 @@ class ClawController extends BaseApiController
         try {
             $params = $this->request->get();
             $result = ClawLogic::getTask($params);
+            if ($result) {
+                return $this->data(ClawLogic::getReturnData());
+            }
+            return $this->fail(ClawLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+
+    public function setAccount()
+    {
+        try {
+            $params = $this->request->post();
+            $result = ClawLogic::setAccount($params);
+            if ($result) {
+                return $this->data(ClawLogic::getReturnData());
+            }
+            return $this->fail(ClawLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    /**
+     * 手机收到 1212 清本地码后的解绑上报（替代原 WS 1213）
+     */
+    public function unbindReport()
+    {
+        try {
+            $params = $this->request->post();
+            $result = ClawLogic::unbindReport($params);
             if ($result) {
                 return $this->data(ClawLogic::getReturnData());
             }

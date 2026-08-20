@@ -5,7 +5,7 @@
         :is-stop="isStopChat"
         :is-disabled-humanize="true"
         :content-list="chatContentList"
-        :send-disabled="isReceiving"
+        :send-disabled="isReceiving || unavailable"
         :is-upload-file="false"
         :is-network="false"
         @content-post="onContentPost"
@@ -20,15 +20,20 @@
 import { useChatManager } from "@/pages/index/_modules/composables/useChatManager";
 import { useChatStore } from "@/pages/index/_modules/stores/chat";
 import { useUserStore } from "@/stores/user";
+import { AGENT_UNAVAILABLE_TIP } from "@/utils/agentPermission";
 /**
  * @description 标准智能体聊天组件
  */
-const props = defineProps<{
-    agentId: string;
-    agentName?: string;
-    taskId: string | null;
-    detail: any;
-}>();
+const props = withDefaults(
+    defineProps<{
+        agentId: string;
+        agentName?: string;
+        taskId: string | null;
+        detail: any;
+        unavailable?: boolean;
+    }>(),
+    { unavailable: false },
+);
 
 const emit = defineEmits(["new-conversation", "update:isReceiving"]);
 
@@ -44,6 +49,10 @@ watch(isReceiving, (val) => emit("update:isReceiving", val));
 
 // 发送消息
 const onContentPost = async (content: string) => {
+    if (props.unavailable) {
+        feedback.msgWarning(AGENT_UNAVAILABLE_TIP);
+        return;
+    }
     if (userTokens.value <= 0) {
         feedback.msgPowerInsufficient();
         return;
@@ -77,7 +86,7 @@ watch(
         }, 500);
 
         if (newId) {
-            chatStore.setTaskId(newId || "");
+            chatStore.replaceTaskId(newId);
 
             await fetchChatHistory();
             chattingRef.value?.resetScroll();
@@ -102,6 +111,7 @@ watch(
 );
 
 onUnmounted(() => {
+    stopStream();
     chatStore.clearChat();
 });
 </script>

@@ -9,7 +9,7 @@
         custom-class="modern-import-popup">
         <div class="px-2 mb-6">
             <div class="flex items-center gap-x-3">
-                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <div class="w-10 h-10 rounded-xl bg-[#0065fb]/10 flex items-center justify-center text-primary">
                     <Icon name="el-icon-Upload" :size="20" />
                 </div>
                 <div>
@@ -33,7 +33,7 @@
             <div class="space-y-8 px-2">
                 <div class="relative pl-8">
                     <div
-                        class="absolute left-0 top-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center">
+                        class="absolute left-0 top-0 w-6 h-6 rounded-full bg-[#0065fb]/10 text-primary text-xs font-black flex items-center justify-center">
                         1
                     </div>
                     <div class="flex flex-col gap-y-1">
@@ -41,7 +41,7 @@
                         <p class="text-[13px] text-tx-regular">请下载标准模板并按格式填入数据</p>
                         <div class="mt-3">
                             <div
-                                class="inline-flex items-center gap-x-2 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/10 text-primary cursor-pointer hover:bg-primary/10 transition-all group"
+                                class="inline-flex items-center gap-x-2 px-4 py-2.5 rounded-xl bg-[#0065fb]/5 border border-[#0065fb]/10 text-primary cursor-pointer hover:bg-[#0065fb]/10 transition-all group"
                                 @click="handleDownloadTemplate">
                                 <Icon name="el-icon-Document" :size="16" />
                                 <span class="text-[13px] font-medium">下载《数据导入模板》</span>
@@ -55,7 +55,7 @@
 
                 <div class="relative pl-8 pb-4">
                     <div
-                        class="absolute left-0 top-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center">
+                        class="absolute left-0 top-0 w-6 h-6 rounded-full bg-[#0065fb]/10 text-primary text-xs font-black flex items-center justify-center">
                         2
                     </div>
                     <div class="flex flex-col gap-y-1">
@@ -68,7 +68,7 @@
                         <div class="mt-4">
                             <upload type="file" accept=".csv" list-type="text" :limit="1" @success="getFile">
                                 <div
-                                    class="w-full border-2 border-dashed border-slate-200 rounded-[20px] p-8 flex flex-col items-center justify-center hover:border-primary/50 hover:bg-[#0065fb]/[0.02] transition-all cursor-pointer group">
+                                    class="w-full border-2 border-dashed border-slate-200 rounded-[20px] p-8 flex flex-col items-center justify-center hover:border-[#0065fb]/50 hover:bg-[#0065fb]/[0.02] transition-all cursor-pointer group">
                                     <div
                                         class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 group-hover:bg-[#0065fb]/10 group-hover:text-primary flex items-center justify-center transition-all mb-3">
                                         <Icon

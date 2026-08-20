@@ -5,11 +5,13 @@ namespace app\api\controller;
 
 use app\api\logic\HumanLogic;
 use app\common\service\human\HumanService;
+use app\common\service\MemberService;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
 use think\facade\Log;
 use think\response\Json;
+use think\facade\Db;
 /**
  * HumanController
  * @desc 数字人
@@ -84,6 +86,11 @@ class HumanController extends BaseApiController
      */
     public function createAnchor()
     {
+        $existing = MemberService::countQuotaDigitalHumans($this->userId);
+        $reason = '';
+        if (!MemberService::canCreate($this->userId, 'digital_human', $existing, $reason)) {
+            return $this->fail($reason . ',请升级会员');
+        }
         $data = $this->request->post();
         $result = HumanLogic::createAnchor($data);
         if ($result) {
@@ -144,6 +151,11 @@ class HumanController extends BaseApiController
      */
     public function createVoice()
     {
+        $existing = MemberService::countQuotaVoices($this->userId);
+        $reason = '';
+        if (!MemberService::canCreate($this->userId, 'voice', $existing, $reason)) {
+            return $this->fail($reason . ',请升级会员');
+        }
         $data = $this->request->post();
         $result = HumanLogic::createVoice($data);
         if ($result) {
@@ -199,7 +211,7 @@ class HumanController extends BaseApiController
      */
     public function voiceDelete()
     {
-        $params = $this->request->post();
+        $params = $this->request->param();
         return HumanLogic::voiceDelete($params) ? $this->success() : $this->fail(HumanLogic::getError());
     }
 
@@ -282,7 +294,7 @@ class HumanController extends BaseApiController
     public function notify(): Json
     {
         try {
-            Log::channel('human')->write('蝉镜请求回调地址信息: ' . $this->request->url(true) . PHP_EOL . PHP_EOL .'参数: ' . json_encode($this->request->post(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('human')->write('数字人请求回调地址信息: ' . $this->request->url(true) . PHP_EOL . PHP_EOL .'参数: ' . json_encode($this->request->post(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             $type = $this->request->param('human_type');
             $modelVersion = $this->request->param('model_version');
             $data = $this->request->all();

@@ -53,6 +53,9 @@ class MnpSettingsController extends BaseAdminController
         if (false === $result) {
             return $this->fail(MnpSettingsLogic::getError());
         }
+        if (isset($result['code']) && 0 === $result['code']) {
+            return $this->fail($result['msg'] ?? '上传失败');
+        }
         return $this->success('操作成功', $result);
     }
 

@@ -419,7 +419,7 @@
                                                                 timeErrorIndex.some(
                                                                     (errorItem) =>
                                                                         errorItem.configIndex === index &&
-                                                                        errorItem.errorIndexes.includes(timeIndex)
+                                                                        errorItem.errorIndexes.includes(timeIndex),
                                                                 ),
                                                         }">
                                                         第{{ timeIndex + 1 }}个内容任务发布时间
@@ -449,7 +449,7 @@
                                                                     timeErrorIndex.some(
                                                                         (errorItem) =>
                                                                             errorItem.configIndex === index &&
-                                                                            errorItem.errorIndexes.includes(timeIndex)
+                                                                            errorItem.errorIndexes.includes(timeIndex),
                                                                     ),
                                                             }"
                                                             v-model="item.times[timeIndex]"
@@ -708,7 +708,7 @@ const materialFormData = reactive({
     name: formData.name,
     media_type: type.value,
     media_url: [],
-    title: [] as Array<{ content: string }>,
+    title: [] as Array<{ content: string; is_title_show: 0 | 1 }>,
     subtitle: [] as Array<{ content: string; topic: string[] }>,
 });
 
@@ -802,7 +802,7 @@ const submitStep1 = async () => {
         // 检查每一个图片组是否都有效
         if (
             materialFormData.media_url.some(
-                (item) => !Array.isArray(item.url) || item.url.length === 0 || item.url.some((url) => !url)
+                (item) => !Array.isArray(item.url) || item.url.length === 0 || item.url.some((url) => !url),
             )
         ) {
             feedback.msgWarning("请为每个图片组添加有效的图片，或删除空的图片组");
@@ -818,11 +818,11 @@ const submitStep1 = async () => {
 // =================================================================================================
 
 const submitStep2 = async () => {
-    if (materialFormData.title.length === 0 || materialFormData.title.every((item) => !item.content)) {
+    const visibleTitles = materialFormData.title.filter((item) => item.is_title_show === 1);
+    if (visibleTitles.length > 0 && visibleTitles.every((item) => !item.content)) {
         feedback.msgWarning("请填写标题");
         return false;
     }
-
     if (materialFormData.subtitle.length === 0 || materialFormData.subtitle.every((item) => !item.content)) {
         feedback.msgWarning("请填写描述");
         return false;
@@ -886,6 +886,7 @@ const handleChooseMaterial = async (lists: any[]) => {
             group.url[currMaterialIndex.value] = lists[0];
         }
     }
+
     updateCopywritingMaterial(materialFormData);
 };
 
@@ -960,8 +961,7 @@ const handleChooseCopywriting = (data: { titleList: any[]; contentList: any[] })
 
 // --- 标题与描述 ---
 const addTitleAndDesc = (isUpdate = true) => {
-    materialFormData.title.push({ content: "" });
-    // 使用setTimeout确保在不同更新周期中执行，避免冲突
+    materialFormData.title.push({ content: "", is_title_show: 1 });
     setTimeout(() => materialFormData.subtitle.push({ content: "", topic: [] }), 100);
     if (isUpdate) updateCopywritingMaterial(materialFormData);
 };
@@ -1019,23 +1019,24 @@ const validatePublishSettings = async () => {
 
     // 判断如果素材只有1条的时候，需要判断账号是不是有多个相同的平台的账号，如果有需要提示用户
     if (materialFormData.media_url.length === 1) {
-        const typeCountMap = accountList.value.reduce<Record<string, number>>((acc, account) => {
+        // 只取用户已选中的账号
+        const selectedAccounts = accountList.value.filter((item) => formData.accounts.includes(item.account));
+
+        const typeCountMap = selectedAccounts.reduce<Record<string, number>>((acc, account) => {
             acc[account.type] = (acc[account.type] || 0) + 1;
             return acc;
         }, {});
+
         const duplicateTypes = Object.entries(typeCountMap)
             .filter(([, count]) => count > 1)
             .map(([type]) => type);
+
         if (duplicateTypes.length > 0) {
             const confirmed = await new Promise<boolean>((resolve) => {
                 useNuxtApp().$confirm({
                     message: `当前素材只有1条，但您选择了多个相同平台的账号，将只选择一个账号发布内容，是否继续？`,
-                    onConfirm: () => {
-                        resolve(true);
-                    },
-                    onCancel: () => {
-                        resolve(false);
-                    },
+                    onConfirm: () => resolve(true),
+                    onCancel: () => resolve(false),
                 });
             });
             if (!confirmed) return false;
@@ -1161,7 +1162,7 @@ const validateTimeConfig = () => {
 
             // 将验证结果的索引映射回原始索引
             const originalErrorIndexes = errorIndexes.map(
-                (filteredIndex) => nonImmediateTimes[filteredIndex].originalIndex
+                (filteredIndex) => nonImmediateTimes[filteredIndex].originalIndex,
             );
 
             errors.push({
@@ -1204,16 +1205,13 @@ const handleCustomDateSelect = () => {
 const executeCreateTask = async () => {
     try {
         const copywriterList = materialFormData.title
-            .filter((item) => item.content)
-            .map((item, index) => {
-                const content = materialFormData.subtitle[index]?.content;
-                const topic = materialFormData.subtitle[index]?.topic;
-                return {
-                    title: item.content,
-                    content: content,
-                    topic: topic,
-                };
-            });
+            .filter((_, index) => materialFormData.subtitle[index]?.content)
+            .map((item, index) => ({
+                title: item.is_title_show === 0 ? "" : item.content, // ← 隐藏时清空
+                content: materialFormData.subtitle[index]?.content,
+                topic: materialFormData.subtitle[index]?.topic,
+                is_title_show: item.is_title_show,
+            }));
         let media_url = [];
         if (type.value === PublishTaskTypeEnum.VIDEO) {
             media_url = materialFormData.media_url.map((item) => ({
@@ -1286,12 +1284,6 @@ const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
     // 立即执行需要检测冲突
     if (formData.task_exec_type === 1) {
         try {
-            // 计算设备代码列表
-            const deviceCodes = accountList.value
-                .filter((item) => formData.accounts.includes(item.account))
-                .map((item) => item.device_code)
-                .filter((code, index, arr) => arr.indexOf(code) === index); // 去重
-
             // 计算执行时长（分钟）
             let minutes = 0;
             if (formData.time_config.length > 0) {

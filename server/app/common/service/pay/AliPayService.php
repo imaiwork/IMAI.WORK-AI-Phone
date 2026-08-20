@@ -2,13 +2,15 @@
 
 namespace app\common\service\pay;
 
-use Alipay\EasySDK\Kernel\Factory;
 use Alipay\EasySDK\Kernel\Config;
+use Alipay\EasySDK\Kernel\Factory;
 use app\common\enum\PayEnum;
 use app\common\enum\user\UserTerminalEnum;
 use app\common\logic\PayNotifyLogic;
+use app\common\model\deviceauth\DeviceAuthOrder;
 use app\common\model\member\MemberOrder;
 use app\common\model\pay\PayConfig;
+use app\common\model\recharge\GiftPackageOrder;
 use app\common\model\recharge\RechargeOrder;
 use think\facade\Log;
 
@@ -170,6 +172,20 @@ class AliPayService extends BasePayService
                         return true;
                     }
                     PayNotifyLogic::handle('recharge', $data['out_trade_no'], $extra);
+                    break;
+                case 'tokens':
+                    $order = GiftPackageOrder::where(['sn' => $data['out_trade_no']])->findOrEmpty();
+                    if ($order->isEmpty() || $order->pay_status == PayEnum::ISPAID) {
+                        return true;
+                    }
+                    PayNotifyLogic::handle('tokens', $data['out_trade_no'], $extra);
+                    break;
+                case 'device_auth':
+                    $order = DeviceAuthOrder::where(['sn' => $data['out_trade_no']])->findOrEmpty();
+                    if ($order->isEmpty() || $order->pay_status == PayEnum::ISPAID) {
+                        return true;
+                    }
+                    PayNotifyLogic::handle('deviceAuth', $data['out_trade_no'], $extra);
                     break;
             }
 

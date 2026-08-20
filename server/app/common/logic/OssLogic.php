@@ -98,7 +98,7 @@ class OssLogic extends BaseLogic
             $iterator->setMaxDepth(3); // 设置最大递归深度为3层
 
             // 需要跳过的目录列表
-            $skipDirs = ['images/xhs', 'images/sph'];
+            $skipDirs = [];
             
             $totalFiles = 0;
             foreach ($iterator as $file) {

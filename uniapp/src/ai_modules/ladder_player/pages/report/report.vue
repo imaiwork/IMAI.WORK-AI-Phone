@@ -165,7 +165,7 @@ const handleClick = (item: any) => {
 };
 
 const handleMore = (id: string) => {
-    let itemList = ["删除"];
+    const itemList = ["删除"];
     uni.showActionSheet({
         itemList,
         success: (res) => {

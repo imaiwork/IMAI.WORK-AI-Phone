@@ -22,7 +22,7 @@
             </div>
         </div>
 
-        <div class="grow min-h-0 bg-gray-50/50">
+        <div class="grow min-h-0 bg-[#f9f9f9]/50">
             <ElScrollbar>
                 <div class="w-[640px] mx-auto py-10 pb-24">
                     <div class="mb-8">
@@ -609,7 +609,7 @@ watch(
     (val) => {
         formData.remarks = [...(val || [])];
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 const taskList = ref<any[]>([]);

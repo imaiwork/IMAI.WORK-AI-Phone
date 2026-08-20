@@ -342,6 +342,10 @@ watch(
     },
     { deep: true }
 );
+
+onUnmounted(() => {
+    stopChat();
+});
 </script>
 <style lang="scss" scoped>
 :deep(.upload) {

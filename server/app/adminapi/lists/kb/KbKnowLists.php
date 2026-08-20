@@ -25,13 +25,6 @@ class KbKnowLists extends BaseAdminDataLists implements ListsSearchInterface
     {
         $model = new KbKnow();
 
-        // 临时代码,同步创建者
-        if (empty($this->params['page_no']) || $this->params['page_no'] == 1) {
-            $model->where(['create_uid'=>0])->update([
-                'create_uid' => app('db')->raw('user_id')
-            ]);
-        }
-
         if (!empty($this->params['start_time']) && !empty($this->params['end_time'])) {
             $this->searchWhere[] = ['create_time','between',[strtotime($this->params['start_time']),strtotime($this->params['end_time'])]];
         }
@@ -39,7 +32,7 @@ class KbKnowLists extends BaseAdminDataLists implements ListsSearchInterface
         $lists = $model
             ->alias('kk')
             ->field([
-                'kk.id,kk.image,kk.name,kk.is_enable,kk.update_time,kk.create_time',
+                'kk.id,kk.image,kk.name,kk.intro,kk.is_enable,kk.update_time,kk.create_time',
                 'kk.user_id,u.sn,u.nickname,u.avatar,u.mobile,uc.nickname as create_user',
                 'uc.avatar as create_avatar'
             ])
@@ -61,10 +54,10 @@ class KbKnowLists extends BaseAdminDataLists implements ListsSearchInterface
                 'sn'       => $item['sn'],
                 'nickname' => $item['nickname'],
                 'mobile'   => $item['mobile'],
-                'avatar'   => FileService::getFileUrl($item['avatar'])
+                'avatar'   => FileService::getFileUrl($item['avatar']??'')
             ];
 
-            $item['create_avatar'] = FileService::getFileUrl($item['create_avatar']);
+            $item['create_avatar'] = FileService::getFileUrl($item['create_avatar']??'');
             unset($item['user_id']);
             unset($item['sn']);
             unset($item['nickname']);
@@ -87,6 +80,7 @@ class KbKnowLists extends BaseAdminDataLists implements ListsSearchInterface
         return $model
             ->alias('kk')
             ->leftJoin('user u', 'u.id = kk.user_id')
+            ->leftJoin('user uc', 'uc.id = kk.create_uid')
             ->where($this->where())
             ->where($this->searchWhere)
             ->count();
@@ -103,8 +97,19 @@ class KbKnowLists extends BaseAdminDataLists implements ListsSearchInterface
     public function where(): array
     {
         $where = [];
+        $where[] = ['kk.name', '<>', '模型大管家'];
+        // 用户信息查询: 同时匹配所属用户与创建人(昵称/编号/手机号)
         if (isset($this->params['user']) && $this->params['user']) {
-            $where[] = ['u.nickname|u.sn|u.mobile', 'like', '%'.$this->params['user'].'%'];
+            $where[] = ['u.nickname|u.sn|u.mobile|uc.nickname|uc.sn|uc.mobile', 'like', '%'.$this->params['user'].'%'];
+        }
+
+        // 后台创建筛选: is_bind=1 仅后台创建(user_id=0), is_bind=0 仅用户创建
+        if (isset($this->params['is_bind']) && $this->params['is_bind'] !== '') {
+            if (intval($this->params['is_bind']) === 1) {
+                $where[] = ['kk.user_id', '=', 0];
+            } else {
+                $where[] = ['kk.user_id', '<>', 0];
+            }
         }
         return $where;
     }

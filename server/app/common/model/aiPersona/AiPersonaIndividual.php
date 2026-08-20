@@ -1,7 +1,9 @@
 <?php
+
 namespace app\common\model\aiPersona;
 
 use app\common\model\BaseModel;
+use app\common\service\aiPersona\AiPersonaTextService;
 use think\model\concern\SoftDelete;
 
 class AiPersonaIndividual extends BaseModel
@@ -12,21 +14,44 @@ class AiPersonaIndividual extends BaseModel
     protected $pk = 'id';
     protected $autoWriteTimestamp = false;
 
-    public function getClueContent()
+    public function getClueContent($persona)
     {
-        $personality_tags = implode(',', $this->personality_tags);
-        $monetize_paths = implode(',', $this->monetize_paths);
-        $identity = implode(',', $this->identity);
-        $this->clue_content = "\"我的昵称/网名是{$this->nickname}，真实身份/职业是{$identity}，希望以{$personality_tags}的性格标签语气生成内容。
+        $personality_tags = AiPersonaTextService::join($this->personality_tags);
+        $monetize_paths = AiPersonaTextService::join($this->monetize_paths);
+        $identity = AiPersonaTextService::join($this->identity);
+        $this->clue_content = "我的IP名称是{$persona->devicpersona_namee_code}。
 
-        我能提供的核心价值如下：
-        {$this->core_value}
+                    IP介绍如下：
+                    {$persona->persona_desc}
 
-        想吸引的粉丝是{$this->target_audience}，主要变现路径：{$monetize_paths}。
+                    账号类型是{$persona->persona_type}。
 
-        个人高光/逆袭故事：{$this->highlight_story}。\"
+                    我的职业/业务是：
+                    {$identity}
 
-        我的产品内容：{$this->main_business}";
+                    我主要分享的内容是：
+                    {$persona->core_value}
+
+                    这个账号整体想呈现的感觉是：
+                    {$personality_tags}
+
+                    我所在的城市/地点是：
+                    {$persona->store_position}
+
+                    我希望用户看完内容之后的行为是：
+                    {$monetize_paths}
+
+                    我正在销售的产品/服务是：
+                    {$persona->main_business}
+
+                    我想卖给的人群是：
+                    {$persona->target_pain_points}
+
+                    相比同行，我的优势是：
+                    {$persona->conversion_hook}
+
+                    以下是我的产品内容：
+                    {$this->core_value}";
         return $this->clue_content;
     }
 
@@ -67,11 +92,23 @@ class AiPersonaIndividual extends BaseModel
     }
 
     // 获取器：获客截流线索词JSON
+    public function getClueKeywordsAttr($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    // 修改器：获客截流线索词JSON
+    public function setClueKeywordsAttr($value)
+    {
+        return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
+    }
+
+    // 获取器：获客截流线索词JSON
     public function getClueAcquireKeywordsAttr($value)
     {
         return $value ? json_decode($value, true) : [];
     }
-    
+
     // 修改器：获客截流线索词JSON
     public function setClueAcquireKeywordsAttr($value)
     {
@@ -84,7 +121,7 @@ class AiPersonaIndividual extends BaseModel
     {
         return $value ? json_decode($value, true) : [];
     }
-    
+
     // 修改器：获客截流匹配词JSON
     public function setClueInterceptKeywordsAttr($value)
     {
@@ -96,7 +133,7 @@ class AiPersonaIndividual extends BaseModel
     {
         return $value ? json_decode($value, true) : [];
     }
-    
+
     // 修改器：获客截流评论词JSON
     public function setClueCommentScriptsAttr($value)
     {
@@ -108,7 +145,7 @@ class AiPersonaIndividual extends BaseModel
     {
         return $value ? json_decode($value, true) : [];
     }
-    
+
     // 修改器：获客截流私信话术JSON
     public function setClueDmScriptsAttr($value)
     {
@@ -120,7 +157,7 @@ class AiPersonaIndividual extends BaseModel
     {
         return $value ? json_decode($value, true) : [];
     }
-    
+
     // 修改器：好友申请备注JSON
     public function setWechatAddFriendScriptAttr($value)
     {
@@ -132,9 +169,33 @@ class AiPersonaIndividual extends BaseModel
     {
         return $value ? json_decode($value, true) : [];
     }
-    
+
     // 修改器：朋友圈评论话术JSON
     public function setWechatCommentSpeechAttr($value)
+    {
+        return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
+    }
+
+    // 获取器：爆款关键词JSON
+    public function getHotWordsAttr($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    // 修改器：爆款关键词JSON
+    public function setHotWordsAttr($value)
+    {
+        return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
+    }
+
+    // 获取器：全局选项JSON
+    public function getGlobalOptionAttr($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    // 修改器：全局选项JSON
+    public function setGlobalOptionAttr($value)
     {
         return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
     }

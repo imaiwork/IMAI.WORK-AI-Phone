@@ -7,6 +7,7 @@ namespace app\common\logic;
 use app\common\enum\PayEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\enum\YesNoEnum;
+use app\common\model\deviceauth\DeviceAuthOrder;
 use app\common\model\pay\PayWay;
 use app\common\model\recharge\GiftPackage;
 use app\common\model\recharge\GiftPackageOrder;
@@ -126,6 +127,19 @@ class PaymentLogic extends BaseLogic
                         'pay_time'     => $payTime,
                     ];
                     break;
+                case 'device_auth':
+                    $order     = DeviceAuthOrder::where(['user_id' => $params['user_id'], 'id' => $params['order_id']])
+                        ->findOrEmpty();
+                    $payTime   = empty($order['pay_time']) ? '' : date('Y-m-d H:i:s', $order['pay_time']);
+                    $orderInfo = [
+                        'order_id'     => $order['id'],
+                        'order_sn'     => $order['sn'],
+                        'order_amount' => $order['order_amount'],
+                        'pay_way'      => PayEnum::getPayDesc($order['pay_way']),
+                        'pay_status'   => PayEnum::getPayStatusDesc($order['pay_status']),
+                        'pay_time'     => $payTime,
+                    ];
+                    break;
             }
 
             if (empty($order)) {
@@ -167,6 +181,12 @@ class PaymentLogic extends BaseLogic
                         throw new \Exception('充值订单不存在');
                     }
                     break;
+                case 'device_auth':
+                    $order = DeviceAuthOrder::findOrEmpty($params['order_id']);
+                    if ($order->isEmpty()) {
+                        throw new \Exception('设备授权订单不存在');
+                    }
+                    break;
             }
 
             if ($order['pay_status'] == PayEnum::ISPAID) {
@@ -205,6 +225,9 @@ class PaymentLogic extends BaseLogic
                 break;
             case 'tokens':
                 GiftPackageOrder::update(['pay_way' => $payWay, 'pay_sn' => $paySn], ['id' => $order['id']]);
+                break;
+            case 'device_auth':
+                DeviceAuthOrder::update(['pay_way' => $payWay, 'pay_sn' => $paySn], ['id' => $order['id']]);
                 break;
         }
 

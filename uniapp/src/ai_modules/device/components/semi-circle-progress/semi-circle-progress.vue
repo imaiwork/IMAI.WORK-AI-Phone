@@ -103,7 +103,7 @@ const drawCanvas = (generateImage = false) => {
                     }
                 },
             },
-            proxy
+            proxy,
         );
     });
 };
@@ -152,7 +152,7 @@ watch(
     () => props.progress,
     (newProgress, oldProgress) => {
         animateProgress(oldProgress || 0, newProgress);
-    }
+    },
 );
 </script>
 

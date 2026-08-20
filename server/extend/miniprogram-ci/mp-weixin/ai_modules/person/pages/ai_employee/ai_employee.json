@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "AI员工",
+  "usingComponents": {
+    "ai-employee-step": "../employee_setting/components/ai-employee-step"
+  }
+}

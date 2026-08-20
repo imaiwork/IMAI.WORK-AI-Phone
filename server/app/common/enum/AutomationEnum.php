@@ -20,8 +20,14 @@ class AutomationEnum
     const WECHAT_ADD_FRIEND = 'automation_wechat_add_friend';                // 自动加微
     const SOCIAL_MEDIA_OBTAIN = 'automation_social_media_obtain';             // 社媒平台私信接管
     const SOCIAL_MEDIA_NURSING = 'automation_social_media_nursing';           // 社媒平台自动养号
-    const OCR_LOCAL = 'automation_orc_local';                                 // 获客视频号OCR
-    const OCR_IMG = 'automation_orc_img';                                    // 获客本地OCR
+    const OCR_LOCAL = 'automation_ocr_local';                                 // 获客视频号OCR(与 la_model_config.scene 一致)
+    const OCR_IMG = 'automation_ocr_img';                                    // 获客本地OCR(与 la_model_config.scene 一致)
+
+    const GROUP_BUY = 'automation_group_buy';             // 团购任务
+    const CITY_EXPOSURE = 'automation_city_exposure';             // 同城曝光任务
+    const CITY_TOUCH = 'automation_city_touch';             // 同城截流获客任务
+    const PRECISE_CLUES = 'automation_precise_clues';             // 精准线索任务
+
 
     /**
      * 获取所有自动化功能场景
@@ -42,6 +48,10 @@ class AutomationEnum
             self::SOCIAL_MEDIA_NURSING => '社媒平台自动养号',
             self::OCR_LOCAL => '获客视频号OCR',
             self::OCR_IMG => '获客本地OCR',
+            self::GROUP_BUY => '团购任务',
+            self::CITY_EXPOSURE => '同城曝光',
+            self::CITY_TOUCH => '同城截流',
+            self::PRECISE_CLUES => '精准获客',
         ];
     }
 

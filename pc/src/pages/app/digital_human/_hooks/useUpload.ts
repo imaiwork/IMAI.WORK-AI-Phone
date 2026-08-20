@@ -1,5 +1,22 @@
 import { uploadImage, uploadFile } from "@/api/app";
+import { RequestCodeEnum } from "@/enums/requestEnums";
 import { DigitalHumanModelVersionEnum } from "@/pages/app/digital_human/_enums/index";
+
+/** 仅在业务成功且返回了可用文件地址时取出上传 data */
+export function getValidUploadFileData(file: any): Record<string, any> | null {
+    const response = file?.response;
+    if (!response || Number(response.code) !== RequestCodeEnum.SUCCESS) {
+        return null;
+    }
+    const data = response.data;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+        return null;
+    }
+    if (!data.uri && !data.url) {
+        return null;
+    }
+    return data;
+}
 
 interface Options {
     size?: number; // 单位M

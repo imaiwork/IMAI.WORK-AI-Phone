@@ -331,7 +331,6 @@ trait TaskNoticeTrait
         $pushMessage = $message->serializeToString();
 
         $channel = "socket.{$wechat['device_code']}.message";
-        $this->setLog('channel: ' . $channel, 'msg');
 
         \Channel\Client::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
         \Channel\Client::publish($channel, [

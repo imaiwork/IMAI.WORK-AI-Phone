@@ -52,7 +52,9 @@ class SvAccountLogic extends SvBaseLogic
             SvSetting::where('account', $params['account'])->select()->delete();
 
             $params['user_id'] = self::$uid;
-
+            $extra = json_decode($params['extra'], true);
+            $params['is_verified'] = $extra['is_verified'] ?? 0;
+            $params['extra'] = json_encode($extra, JSON_UNESCAPED_UNICODE);
             // 添加
             $account = SvAccount::create($params);
 
@@ -125,7 +127,9 @@ class SvAccountLogic extends SvBaseLogic
             // 获取信息
             unset($params['id']);
             $params['user_id'] = self::$uid;
-
+            $extra = json_decode($params['extra'], true);
+            $params['is_verified'] = $extra['is_verified'] ?? 0;
+            $params['extra'] = json_encode($extra, JSON_UNESCAPED_UNICODE);
             // 添加
             $account = SvAccount::create($params);
             $data = $account->toArray();

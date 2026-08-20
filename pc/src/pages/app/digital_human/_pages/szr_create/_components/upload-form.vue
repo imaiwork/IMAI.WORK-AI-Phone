@@ -102,10 +102,7 @@
                         :max-size="uploadLimit[formData.model_version].size"
                         :min-duration="uploadLimit[formData.model_version].videoMinDuration"
                         :max-duration="uploadLimit[formData.model_version].videoMaxDuration"
-                        :video-min-width="uploadLimit[formData.model_version].minResolution"
-                        :video-max-width="uploadLimit[formData.model_version].maxResolution"
-                        :video-min-height="uploadLimit[formData.model_version].minResolution"
-                        :video-max-height="uploadLimit[formData.model_version].maxResolution"
+                        :video-resolution="uploadLimit[formData.model_version].videoResolution"
                         :accept="uploadVideoFormat"
                         @success="getVideo">
                         <div class="w-full rounded-lg h-[256px] bg-app-bg-1">
@@ -214,7 +211,7 @@ const modelChannel = computed(() => {
         return channel.filter(
             (item) =>
                 item.status == 1 &&
-                (DigitalHumanModelVersionEnum.CHANJING == item.id || DigitalHumanModelVersionEnum.STANDARD == item.id)
+                (DigitalHumanModelVersionEnum.CHANJING == item.id || DigitalHumanModelVersionEnum.STANDARD == item.id),
         );
     }
     return [];
@@ -250,7 +247,7 @@ const getModelName = computed(() => {
 const uploadVideoFormat = `.mp4,.mov`;
 
 const commonUploadRequirements = {
-    resolution: `${commonUploadLimit.minResolution}P-${commonUploadLimit.maxResolution}P`,
+    resolution: `${commonUploadLimit.minResolution[0]}P-${commonUploadLimit.maxResolution[0]}P`,
     fileSize: commonUploadLimit.size,
     videoMinDuration: commonUploadLimit.videoMinDuration,
     videoMaxDuration: commonUploadLimit.videoMaxDuration,
@@ -323,9 +320,8 @@ const isAvailable = computed(() => {
 });
 
 const getVideo = (result: any) => {
-    const {
-        data: { uri },
-    } = result;
+    const uri = result?.data?.uri;
+    if (!uri) return;
     formData.url = uri;
     parseVideo(uri);
 };
@@ -422,7 +418,7 @@ watch(
     {
         deep: true,
         immediate: true,
-    }
+    },
 );
 
 defineExpose({

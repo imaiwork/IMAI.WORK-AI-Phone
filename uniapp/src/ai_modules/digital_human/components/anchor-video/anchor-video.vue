@@ -1,56 +1,46 @@
 <template>
     <view class="w-full h-full relative flex flex-col">
-        <view class="grow min-h-0 relative overflow-hidden rounded-lg bg-black">
-            <view class="h-full w-full flex items-center justify-center flex-col">
-                <view class="flex justify-center items-center h-full w-full relative z-10">
-                    <image :src="item.pic" class="w-full mx-auto h-full rounded-lg" mode="aspectFill"></image>
-                </view>
+        <view class="grow min-h-0 relative overflow-hidden rounded-[24rpx] bg-black">
+            <image :src="item.pic" class="w-full h-full rounded-[24rpx]" mode="aspectFill" />
+
+            <view
+                v-if="showMore"
+                class="absolute top-[12rpx] right-[12rpx] z-[8888] w-[56rpx] h-[56rpx] rounded-full bg-[#000000]/30 flex items-center justify-center active:opacity-70"
+                @click="handleMore">
+                <u-icon name="more-dot-fill" color="#fff" size="22" />
             </view>
-            <view class="absolute top-1 right-1 z-[8888]" v-if="showMore">
-                <view class="p-2" style="transform: rotate(90deg)" @click="handleMore">
-                    <u-icon name="more-dot-fill" color="#fff"></u-icon>
-                </view>
-            </view>
+
             <view class="absolute top-0 left-0 z-50 w-full h-full">
                 <template v-if="getStatus(item) == 1">
-                    <view class="w-full h-full flex items-center justify-center gap-1 text-center px-2 text-white">
-                        <view
-                            class="rounded-full bg-[#ffffff33] w-[68rpx] h-[68rpx]"
-                            @click="handlePlay(item.result_url)">
-                            <image src="/static/images/icons/play.svg" class="w-full h-full"></image>
-                        </view>
+                    <view class="w-full h-full flex items-center justify-center" @click="handlePlay(item.result_url)">
+                        <image src="/static/images/icons/play.svg" class="w-[64rpx] h-[64rpx]" />
                     </view>
                 </template>
+
                 <template v-else>
-                    <view class="bg-[#0000005E] w-full h-full flex flex-col items-center justify-center pt-4">
-                        <template class="" v-if="getStatus(item) == 2">
-                            <view class="w-6 h-6 flex items-center justify-center rounded-full bg-error mb-2">
-                                <image
-                                    src="@/ai_modules/digital_human/static/icons/video2.svg"
-                                    class="w-[28rpx] h-[28rpx]"></image>
+                    <view class="w-full h-full bg-[#000000]/50 flex flex-col items-center justify-center px-[16rpx]">
+                        <template v-if="getStatus(item) == 2">
+                            <view class="bg-[#EF4444] px-[16rpx] py-[6rpx] rounded-full mb-[10rpx]">
+                                <text class="text-[22rpx] text-white font-medium">生成失败</text>
                             </view>
-                            <view class="text-center text-white text-[22rpx] h-[68rpx]">
-                                {{ item.remark || "生成失败" }}
-                            </view>
-                            <view class="text-[#ffffff80] text-center text-[22rpx] h-[68rpx]">
-                                （请检查训练的视频文件）
-                            </view>
+                            <text
+                                class="text-[20rpx] text-[#ffffff]/70 text-center leading-relaxed line-clamp-2 whitespace-pre-line">
+                                {{ item.remark || "请检查训练的视频文件" }}
+                            </text>
                         </template>
+
                         <template v-else>
-                            <view class="w-6 h-6 flex items-center justify-center rounded-full bg-primary mb-2">
-                                <image
-                                    src="@/ai_modules/digital_human/static/icons/pic2.svg"
-                                    class="w-[28rpx] h-[28rpx]"></image>
-                            </view>
-                            <view class="text-xs text-white h-[68rpx]">正在生成中</view>
-                            <view class="text-[22rpx] text-white h-[68rpx]">几分钟即可生成形象</view>
+                            <text class="rotation mb-[8rpx]"></text>
+                            <text class="text-[24rpx] text-white font-medium mb-[6rpx]">正在生成中</text>
+                            <text class="text-[20rpx] text-[#ffffff]/60">几分钟即可生成形象</text>
                         </template>
                     </view>
                 </template>
             </view>
         </view>
-        <view class="px-2 mt-2" v-if="showName">
-            <text class="line-clamp-1 text-center text-sm">
+
+        <view class="px-[8rpx] mt-[12rpx]" v-if="showName">
+            <text class="text-[24rpx] font-medium text-gray-700 text-center line-clamp-1 block">
                 {{ item.name }}
             </text>
         </view>
@@ -77,7 +67,7 @@ const props = withDefaults(
         }),
         showName: true,
         showMore: true,
-    }
+    },
 );
 
 const emit = defineEmits(["play", "delete", "download"]);
@@ -131,3 +121,5 @@ const handleMore = () => {
     });
 };
 </script>
+
+<style scoped lang="scss"></style>

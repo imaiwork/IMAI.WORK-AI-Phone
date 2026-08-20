@@ -10,6 +10,36 @@
                         clearable
                         @keyup.enter="resetPage" />
                 </el-form-item>
+                <el-form-item label="类型">
+                    <el-select
+                        class="!w-[120px]"
+                        v-model="queryParams.media_type"
+                        placeholder="请选择类型"
+                        clearable
+                        :empty-values="[null, undefined]"
+                        @change="resetPage">
+                        <el-option
+                            v-for="opt in HOT_WRITE_MEDIA_TYPE_OPTIONS"
+                            :key="`media-${opt.value}`"
+                            :label="opt.label"
+                            :value="opt.value" />
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="平台">
+                    <el-select
+                        class="!w-[120px]"
+                        v-model="queryParams.platform_type"
+                        placeholder="请选择平台"
+                        clearable
+                        :empty-values="[null, undefined]"
+                        @change="resetPage">
+                        <el-option
+                            v-for="opt in HOT_WRITE_PLATFORM_OPTIONS"
+                            :key="`platform-${opt.value}`"
+                            :label="opt.label"
+                            :value="opt.value" />
+                    </el-select>
+                </el-form-item>
                 <el-form-item label="状态">
                     <el-select
                         class="!w-[120px]"
@@ -55,9 +85,25 @@
                 @selection-change="handleSelectionChange">
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
                 <el-table-column label="ID" prop="id" min-width="80" />
-                <el-table-column prop="nickname" label="用户" min-width="140" show-overflow-tooltip></el-table-column>
-                <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip></el-table-column>
-                <el-table-column label="复制链接" prop="prompt" min-width="220" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="nickname" label="用户" min-width="140" show-overflow-tooltip />
+                <el-table-column label="类型" width="90">
+                    <template #default="{ row }">
+                        <el-tag :type="isImageTextRecord(row) ? 'warning' : 'primary'" size="small">
+                            {{ row.media_type_text || (isImageTextRecord(row) ? '图文' : '视频') }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="平台" width="90">
+                    <template #default="{ row }">
+                        {{
+                            row.platform_type_text ||
+                            HOT_WRITE_PLATFORM_LABEL[Number(row.platform_type)] ||
+                            '—'
+                        }}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="title" label="标题" min-width="160" show-overflow-tooltip />
+                <el-table-column label="复制链接" prop="prompt" min-width="220" show-overflow-tooltip />
                 <el-table-column label="消耗算力" prop="total_tokens_cost" width="120">
                     <template #default="{ row }"> {{ row.total_tokens_cost }}算力 </template>
                 </el-table-column>
@@ -69,15 +115,24 @@
                     </template>
                 </el-table-column>
                 <el-table-column
-                    label="发布时间"
+                    label="备注"
+                    prop="remarks"
+                    min-width="180"
+                    show-overflow-tooltip />
+                <el-table-column
+                    label="创建时间"
                     prop="create_time"
                     width="200"
-                    show-overflow-tooltip></el-table-column>
+                    show-overflow-tooltip />
 
-                <el-table-column label="操作" width="160" fixed="right">
+                <el-table-column label="操作" width="180" fixed="right">
                     <template #default="{ row }">
-                        <el-button type="primary" link :disabled="!row.video_url" @click="handlePreviewVideo(row)">
-                            查看
+                        <el-button
+                            type="primary"
+                            link
+                            :disabled="!canPreview(row)"
+                            @click="handlePreview(row)">
+                            查看结果
                         </el-button>
                         <el-button type="primary" link @click="handleDetail(row)">详情</el-button>
                         <el-button
@@ -94,73 +149,127 @@
                 <pagination v-model="pager" @change="getLists" />
             </div>
         </el-card>
+
         <el-dialog v-if="showPreviewVideo" v-model="showPreviewVideo" width="740px" title="视频预览">
             <video-player ref="playerRef" :src="videoUrl" width="100%" height="450px" />
         </el-dialog>
+
+        <el-dialog v-model="showPreviewImages" width="920px" title="图文结果预览" align-center>
+            <div v-if="previewImages.length" class="max-h-[72vh] overflow-y-auto">
+                <!-- 1 张：大图居中；多张：两列大图 -->
+                <div
+                    class="gap-4"
+                    :class="previewImages.length === 1 ? 'flex justify-center' : 'grid grid-cols-2'">
+                    <el-image
+                        v-for="(url, index) in previewImages"
+                        :key="`${url}-${index}`"
+                        :src="url"
+                        :preview-src-list="previewImages"
+                        :initial-index="index"
+                        fit="contain"
+                        class="rounded-lg bg-[#f3f4f6] overflow-hidden"
+                        :class="
+                            previewImages.length === 1
+                                ? 'w-full max-w-[560px] h-[62vh]'
+                                : 'w-full h-[42vh]'
+                        " />
+                </div>
+                <div class="mt-3 text-center text-xs text-[#9ca3af]">点击图片可放大预览 · 共 {{ previewImages.length }} 张</div>
+            </div>
+            <el-empty v-else description="暂无可预览图片" />
+        </el-dialog>
+
         <detail-pop v-if="showDetailPop" ref="detailPopRef" @close="showDetailPop = false" />
     </div>
 </template>
-<script lang="ts" setup>
-import { getHotWriteRecord, deleteHotWriteRecord } from "@/api/ai_application/hot_write/record";
-import { usePaging } from "@/hooks/usePaging";
-import feedback from "@/utils/feedback";
-import { ElTable } from "element-plus";
-import DetailPop from "./detail.vue";
-import { isArray } from "lodash-es";
-const queryParams = reactive({
-    keyword: "",
-    status: "",
-    job_name: "",
-    start_time: "",
-    end_time: "",
-});
 
-const tableRef = ref<InstanceType<typeof ElTable>>();
-const showPreviewVideo = ref(false);
-const videoUrl = ref("");
-const showDetailPop = ref(false);
-const detailPopRef = ref<InstanceType<typeof DetailPop>>();
+<script lang="ts" setup>
+import { getHotWriteRecord, deleteHotWriteRecord } from '@/api/ai_application/hot_write/record'
+import { usePaging } from '@/hooks/usePaging'
+import feedback from '@/utils/feedback'
+import { ElTable } from 'element-plus'
+import { isArray } from 'lodash-es'
+import DetailPop from './detail.vue'
+import {
+    HOT_WRITE_MEDIA_TYPE_OPTIONS,
+    HOT_WRITE_PLATFORM_LABEL,
+    HOT_WRITE_PLATFORM_OPTIONS,
+    getRecordPreviewImages,
+    isImageTextRecord
+} from './enums'
+
+const queryParams = reactive({
+    keyword: '',
+    media_type: '',
+    platform_type: '',
+    status: '',
+    job_name: '',
+    start_time: '',
+    end_time: ''
+})
+
+const tableRef = ref<InstanceType<typeof ElTable>>()
+const showPreviewVideo = ref(false)
+const videoUrl = ref('')
+const showPreviewImages = ref(false)
+const previewImages = ref<string[]>([])
+const showDetailPop = ref(false)
+const detailPopRef = ref<InstanceType<typeof DetailPop>>()
 const { pager, getLists, resetPage, resetParams } = usePaging({
     fetchFun: getHotWriteRecord,
-    params: queryParams,
-});
+    params: queryParams
+})
 
-const multipleSelection = ref<any[]>([]);
+const multipleSelection = ref<any[]>([])
 
 const handleSelectionChange = (val: any[]) => {
-    multipleSelection.value = val;
-};
+    multipleSelection.value = val
+}
 
 const handleDelete = async (id: number | number[]) => {
-    await feedback.confirm("确定要删除吗？");
-    await deleteHotWriteRecord({ ids: isArray(id) ? id : [id] });
-    getLists();
-    multipleSelection.value = [];
-    tableRef.value?.clearSelection();
-};
+    await feedback.confirm('确定要删除吗？')
+    await deleteHotWriteRecord({ ids: isArray(id) ? id : [id] })
+    getLists()
+    multipleSelection.value = []
+    tableRef.value?.clearSelection()
+}
 
 const getStatusType = (status: number) => {
-    if (status == 3) return "success";
-    if (status == 4) return "error";
-    return "primary";
-};
+    if (status == 3) return 'success'
+    if (status == 4) return 'error'
+    return 'primary'
+}
 
 const getStatusText = (status: number) => {
-    if (status == 3) return "成功";
-    if (status == 4) return "失败";
-    return "生成中";
-};
+    if (status == 3) return '成功'
+    if (status == 4) return '失败'
+    return '生成中'
+}
 
-const handlePreviewVideo = (row: any) => {
-    videoUrl.value = row.video_url;
-    showPreviewVideo.value = true;
-};
+const canPreview = (row: any) => {
+    // 仅成功任务可查看结果；失败/生成中即使有中间资源也不可预览
+    if (Number(row?.status) !== 3) return false
+    if (isImageTextRecord(row)) {
+        return getRecordPreviewImages(row).length > 0
+    }
+    return !!row.video_url
+}
+
+const handlePreview = (row: any) => {
+    if (isImageTextRecord(row)) {
+        previewImages.value = getRecordPreviewImages(row)
+        showPreviewImages.value = true
+        return
+    }
+    videoUrl.value = row.video_url
+    showPreviewVideo.value = true
+}
 
 const handleDetail = async (row: any) => {
-    showDetailPop.value = true;
-    await nextTick();
-    detailPopRef.value?.open(row);
-};
+    showDetailPop.value = true
+    await nextTick()
+    detailPopRef.value?.open(row)
+}
 
-getLists();
+getLists()
 </script>

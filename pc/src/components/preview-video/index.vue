@@ -60,7 +60,7 @@
                     <div v-if="!videoLoaded" class="absolute inset-0 flex items-center justify-center bg-slate-900">
                         <div class="flex flex-col items-center">
                             <div class="loading-dot"></div>
-                            <span class="text-white/40 text-xs mt-4 font-medium tracking-widest uppercase"
+                            <span class="text-[#ffffff]/40 text-xs mt-4 font-medium tracking-widest uppercase"
                                 >Buffering</span
                             >
                         </div>

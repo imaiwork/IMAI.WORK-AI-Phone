@@ -5,6 +5,7 @@ namespace app\adminapi\logic;
 
 
 use app\common\logic\BaseLogic;
+use app\common\model\deviceauth\DeviceAuthOrder;
 use app\common\model\ModelConfig;
 use app\common\model\recharge\GiftPackageOrder;
 use app\common\model\user\User;
@@ -148,6 +149,9 @@ class WorkbenchLogic extends BaseLogic
             }
 
             $data[$key]['unit']         = $info['unit'];
+            if (in_array($value['api_id'],[168,169])){
+                $data[$key]['cast_price'] = (string) round($data[$key]['cast_price'] / 100,2);
+            }
             $data[$key]['price']        = $info['score'];
             $data[$key]['name']         = $info['name'];
             $data[$key]['code']         = $info['code'];
@@ -229,17 +233,31 @@ class WorkbenchLogic extends BaseLogic
      */
     public static function finance(): array
     {
-        //今日收入
-        $today_income  = GiftPackageOrder::where('pay_status', 1)->where('create_time', '>=', strtotime(date('Y-m-d 00:00:00')))->sum('order_amount');
+        $todayStart = strtotime(date('Y-m-d 00:00:00'));
 
-        //今日订单数
-        $today_orders = GiftPackageOrder::where('pay_status', 1)->where('create_time', '>=', strtotime(date('Y-m-d 00:00:00')))->count();
+        $giftTodayIncome = GiftPackageOrder::where('pay_status', 1)
+            ->where('create_time', '>=', $todayStart)->sum('order_amount');
+        $authTodayIncome = DeviceAuthOrder::where('pay_status', 1)
+            ->where('pay_type', 1)
+            ->where('create_time', '>=', $todayStart)->sum('order_amount');
+        $today_income = $giftTodayIncome + $authTodayIncome;
 
-        //总收入
-        $total_income  = GiftPackageOrder::where('pay_status', 1)->sum('order_amount');
+        $giftTodayOrders = GiftPackageOrder::where('pay_status', 1)
+            ->where('create_time', '>=', $todayStart)->count();
+        $authTodayOrders = DeviceAuthOrder::where('pay_status', 1)
+            ->where('pay_type', 1)
+            ->where('create_time', '>=', $todayStart)->count();
+        $today_orders = $giftTodayOrders + $authTodayOrders;
 
-        //总订单数
-        $total_orders  = GiftPackageOrder::where('pay_status', 1)->count();
+        $giftTotalIncome = GiftPackageOrder::where('pay_status', 1)->sum('order_amount');
+        $authIncome = DeviceAuthOrder::where('pay_status', 1)
+            ->where('pay_type', 1)->sum('order_amount');
+        $total_income = $giftTotalIncome + $authIncome;
+
+        $giftTotalOrders = GiftPackageOrder::where('pay_status', 1)->count();
+        $authTotalOrders = DeviceAuthOrder::where('pay_status', 1)
+            ->where('pay_type', 1)->count();
+        $total_orders = $giftTotalOrders + $authTotalOrders;
 
         return [
             'today_income' => $today_income,

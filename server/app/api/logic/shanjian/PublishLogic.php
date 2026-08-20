@@ -284,7 +284,7 @@ class PublishLogic extends SvBaseLogic
                         'task_type' => DeviceEnum::TASK_TYPE_PUBLISH,
                         'account' => $account['account'],
                         'account_type' => $account['type'],
-                        'task_name' => '设备闪剪发布任务',
+                        'task_name' => '设备壹传媒发布任务',
                         'status' => 0,
                         'day' => date('Y-m-d', $time['start_time']),
                         'start_time' => $time['start_time'],
@@ -1229,7 +1229,7 @@ class PublishLogic extends SvBaseLogic
                         'messageId' => 0,
                         'type' => 5,
                         'deviceId' => $publish['device_code'],
-                        'appVersion' => '2.1.2',
+                        'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                         'code' => 200,
                         'action' => 'send',
                         'content' => json_encode(array(
@@ -1279,7 +1279,7 @@ class PublishLogic extends SvBaseLogic
                     'task_id' => $app->id
                 ], JSON_UNESCAPED_UNICODE),
                 "deviceId" => $deviceid,
-                "appVersion" => "2.1.2"
+                "appVersion" => \app\common\enum\DeviceEnum::APP_VERSION,
             ];
 
             $channel = "device.{$deviceid}.message";

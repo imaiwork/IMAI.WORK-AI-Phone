@@ -14,13 +14,13 @@ use app\common\model\interview\InterviewJob;
 use app\common\model\interview\InterviewRecord;
 use app\common\model\ModelConfig;
 use app\common\model\user\User;
+use app\common\service\FileService;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use PhpOffice\PhpWord\IOFactory;
 use think\Exception;
 use think\facade\Db;
 use think\facade\Log;
-use think\facade\Queue;
 
 class InterviewLogic extends BaseLogic
 {
@@ -84,16 +84,40 @@ class InterviewLogic extends BaseLogic
         }
 
         // Db::startTrans();
+        $tmpPath = null;
         try {
 
             //计费
             //$unit = TokenLogService::checkToken($user_id, 'interview_cv');
             $unit = 0;
             $url = $params['word'];
-//            $urlData = parse_url($url);
-//            $path = public_path() . $urlData['path'];
-            $path = $url;
-            $file = new \CURLFile($path);
+            // CURLFile 只能读本地文件；OSS/远程地址需先下载到临时文件
+            if (preg_match('/^https?:\/\//i', (string)$url)) {
+                $pathName = parse_url($url, PHP_URL_PATH) ?: '';
+                $ext = strtolower(pathinfo($pathName, PATHINFO_EXTENSION) ?: 'docx');
+                $tmpPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
+                    . DIRECTORY_SEPARATOR
+                    . 'cv_' . md5($url . microtime(true)) . '.' . $ext;
+                if (!FileService::streamDownloadToFile($url, $tmpPath)) {
+                    throw new Exception('简历文件下载失败!');
+                }
+                $path = $tmpPath;
+            } else {
+                $urlData = parse_url($url);
+                $path = public_path() . ($urlData['path'] ?? $url);
+                if (!is_file($path)) {
+                    throw new Exception('简历文件不存在!');
+                }
+            }
+
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'pdf' => 'application/pdf',
+                'doc' => 'application/msword',
+                'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                default => 'application/octet-stream',
+            };
+            $file = new \CURLFile($path, $mime, basename($path));
             $response = \app\common\service\ToolsService::Interview()->cv([
                 'file'  => $file,
                 'action' => 'upload'
@@ -220,6 +244,10 @@ class InterviewLogic extends BaseLogic
             Log::error('简历上传失败' . $e->getMessage());
             // Db::rollback();
             throw new Exception($e->getMessage());
+        } finally {
+            if ($tmpPath && is_file($tmpPath)) {
+                @unlink($tmpPath);
+            }
         }
     }
 
@@ -373,6 +401,7 @@ class InterviewLogic extends BaseLogic
                     AccountLogLogic::recordUserTokensLog(true, $job['user_id'], AccountLogEnum::TOKENS_DEC_AI_INTERVIEW_CHAT, $unit, $interviewRecord['id'], $extra);
 
                 }
+                \app\common\service\ToolsService::Interview()->chat(['action' => 'start']);
             }
 
             $interview = Interview::where(['user_id' => $params['user_id'], 'job_id' => $params['job_id']])->order('id', 'desc')->findOrEmpty()->toArray();
@@ -519,10 +548,7 @@ class InterviewLogic extends BaseLogic
 
         if ($chatTypeEnd == 0)
         {
-            log::error('面试分析');
-            // 访问通义获取评分和面试评价
-            $res = Queue::push('app\common\Jobs\EndInterviewJob@handle',  $interview->id);
-            log::error('面试分析'.$res);
+            Log::error('面试分析');
 
             $interview->end_time = time();
             $interview->status = Interview::STATUS_ANALYZE;
@@ -1022,7 +1048,8 @@ HR关注点：应急处理能力
         //     return true;
         // }
         $use_token   = ModelConfig::where('scene', 'interview_chat')->value('score', 0);
-        if ($userInfo['tokens'] < $use_token) {
+        // 企业空间成员看企业钱包，勿用个人 tokens 预检
+        if (\app\common\service\TeamBillingService::spendableTokens((int)$job['user_id']) < $use_token) {
             $data['type'] = 9;
             $data['msg'] = '当前岗位可用算力不足，请联系面试官！';
             self::$returnData = $data;
@@ -1161,5 +1188,239 @@ HR关注点：应急处理能力
             return true;
         }
         return false;
+    }
+
+    /**
+     * AI面试分析定时任务（由 lianlian_analysis_cron 调用）
+     * @param int $interviewId 指定面试ID时只处理该条；0 则批量拉取分析中记录
+     */
+    public static function analysisCron(int $interviewId = 0): bool
+    {
+        ini_set('memory_limit', '-1');
+        ini_set('max_execution_time', 0);
+        try {
+            if ($interviewId === 0) {
+                Interview::where('status', Interview::STATUS_ANALYZE)
+                    ->where('end_time', '>', 0)
+                    ->where('end_time', '<=', strtotime('-12 hours'))
+                    ->select()
+                    ->each(function ($item) {
+                        self::markAnalysisFailed((int)$item->id, '执行超时');
+                    });
+            }
+
+            $query = Interview::where('status', Interview::STATUS_ANALYZE)
+                ->order('id', 'asc')
+                ->limit(3);
+            if ($interviewId > 0) {
+                $query->where('id', $interviewId);
+            }
+
+            $query->select()->each(function ($item) {
+                try {
+                    self::runAnalysis((int)$item->id);
+                } catch (\Throwable $e) {
+                    Log::error("面试结束任务处理失败，面试ID: {$item->id}，错误信息: {$e->getMessage()}");
+                    self::markAnalysisFailed((int)$item->id, $e->getMessage());
+                }
+                return true;
+            });
+        } catch (\Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 执行单条面试分析（供定时任务 / 残留队列任务调用）
+     * @throws \Throwable
+     */
+    public static function runAnalysis(int $interviewId): void
+    {
+        Db::startTrans();
+        try {
+            $interview = Interview::where(['id' => $interviewId, 'status' => Interview::STATUS_ANALYZE])->findOrEmpty();
+            Log::error('面试结束任务开始处理');
+            if ($interview->isEmpty()) {
+                Log::error('没有分析中的面试');
+                throw new \Exception('没有分析中的面试');
+            }
+
+            $company_id = InterviewCv::where([
+                'interview_job_id' => $interview->job_id,
+                'user_id' => $interview->user_id,
+            ])->value('company_id');
+            if (empty($company_id)) {
+                throw new \Exception('没有公司ID');
+            }
+
+            $unit = 0;
+            $interviewRecord = InterviewRecord::where([
+                'id' => $interview->interview_record_id,
+                'status' => InterviewRecord::STATUS_ANALYZE,
+            ])->findOrEmpty();
+            if ($interviewRecord->isEmpty()) {
+                throw new \Exception('没有分析中的面试记录');
+            }
+
+            $dialogs = InterviewDialog::where('interview_id', $interviewId)
+                ->field(['question', 'answer'])
+                ->select()
+                ->toArray();
+            $interviewResponse = self::analysisQwen($dialogs);
+
+            $interview->end_time = time();
+            $interview->score = $interviewResponse['score'];
+            $interview->comment = $interviewResponse['result'];
+            $interview->analyze = $interviewResponse['evaluation'];
+            $interview->inspection_point = $interviewResponse['appraisal'];
+            $interview->status = Interview::STATUS_COMPLETED;
+            $interview->save();
+
+            $duration = $interview->end_time - $interviewRecord->first_start_time;
+            $interviewRecord->best_score = $interviewResponse['score'];
+            $interviewRecord->duration = $duration;
+            $interviewRecord->end_time = $interview->end_time;
+            $interviewRecord->status = InterviewRecord::STATUS_COMPLETED;
+            $interviewRecord->last_interview_id = $interview->id;
+            $interviewRecord->save();
+
+            if ($unit > 0) {
+                User::userTokensChange($company_id, $unit);
+                $extra = [
+                    '面试评分次数' => 1,
+                    '算力单价' => $unit,
+                    '实际消耗算力' => $unit,
+                ];
+                AccountLogLogic::recordUserTokensLog(
+                    true,
+                    $company_id,
+                    AccountLogEnum::TOKENS_DEC_AI_MARK,
+                    $unit,
+                    $interview->id,
+                    $extra
+                );
+            }
+
+            Db::commit();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            throw $e;
+        }
+    }
+
+    /**
+     * 分析失败落库（含 AI 评分失败区分）
+     */
+    public static function markAnalysisFailed(int $interviewId, string $errorMessage): void
+    {
+        if (stripos($errorMessage, 'AI评分失败') !== false) {
+            $status = Interview::STATUS_AI_ERROR;
+            $msg = 'AI评分失败';
+        } else {
+            $status = Interview::STATUS_ERROR;
+            $msg = $errorMessage;
+        }
+
+        Db::startTrans();
+        try {
+            $interview = Interview::where(['id' => $interviewId, 'status' => Interview::STATUS_ANALYZE])->findOrEmpty();
+            if ($interview->isEmpty()) {
+                Db::rollback();
+                return;
+            }
+            $interviewRecord = InterviewRecord::where([
+                'id' => $interview->interview_record_id,
+                'status' => InterviewRecord::STATUS_ANALYZE,
+            ])->findOrEmpty();
+            if ($interviewRecord->isEmpty()) {
+                throw new \Exception('数据有误2');
+            }
+
+            $interview->end_time = time();
+            $interview->status = $status;
+            $interview->reason = $msg;
+            $interview->save();
+
+            $duration = $interview->end_time - $interviewRecord->first_start_time;
+            $interviewRecord->duration = $duration;
+            $interviewRecord->end_time = $interview->end_time;
+            $interviewRecord->status = $status;
+            $interviewRecord->last_interview_id = $interview->id;
+            $interviewRecord->save();
+            Db::commit();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            Log::error('面试结束任务，状态变更失败{ ' . $e->getMessage() . '}');
+        }
+    }
+
+    /**
+     * 面试结束评分（通义），返回 score / appraisal / evaluation / result
+     */
+    public static function analysisQwen($dialogs)
+    {
+        $qwenData = [];
+        foreach ($dialogs as $item) {
+            $qwenData[] = [
+                'question' => $item['question'],
+                'answer' => $item['answer'],
+            ];
+        }
+
+        $messages = [
+            [
+                'role' => 'system',
+                'content' => '{
+                        "role": “面试评估助手",
+                        "description": "你是一位专业的面试评估助手，专注于分析面试对话历史，并给出一个综合评分（1-100分）和侧重考察点评价与总体评价。评价需基于对话内容的具体分析，保持公正客观且详细具体。",
+                        "interaction": {
+                            "instruction": "请根据提供的面试对话文本，综合分析以下方面后给出一个综合评分（1-100分）和总体评价：
+                            专业知识与技能
+                            沟通表达能力
+                            应变与问题解决能力
+                            职业素养与态度
+                            团队协作与价值观匹配度
+                            【HR关注点1】
+                            【HR关注点2】
+                            【HR关注点…】
+
+                            评价需整合以上维度，具体指出优缺点及改进建议，并仅返回JSON格式的结果。",
+
+                            "scene_name": "【面试场景名称】",
+                            "resume": “【面试者简历信息】”,
+                            "dialogue_text": "【面试对话内容】",
+                            "Points_text": “【侧重考察点】”,
+                            "response_format": "JSON",
+                            "response_format_example": {
+                            "score": 0,
+                            "appraisal": "【侧重考察点评价】（需包含：1. 总体表现优缺点分析 2. 具体对话内容中的表现举例 3. 针对性改进建议） ",
+                            "evaluation": "【综合评价】（需包含：1. 总体表现优缺点分析 2. 具体对话内容中的表现举例 3. 针对性改进建议）",
+                            "result": “【录用推荐】（是否建议录用或进行二面）”
+                            }
+                        }
+                    }'
+            ],
+            [
+                'role' => 'user',
+                'content' => '对话记录:' . json_encode($qwenData, JSON_UNESCAPED_UNICODE)
+            ]
+        ];
+
+        $response = \app\common\service\ToolsService::Interview()->chat([
+            'action' => 'qwen',
+            'messages' => $messages
+        ]);
+        if (empty($response['data']['message'])) {
+            Log::error('AI评分失败' . json_encode($response));
+            throw new \Exception('AI评分失败' . json_encode($response));
+        }
+        $result = format_json($response['data']['message']);
+        if (empty($result['score']) || empty($result['evaluation'])) {
+            Log::error('AI评分失败');
+            throw new \Exception('AI评分失败~');
+        }
+        return $result;
     }
 }

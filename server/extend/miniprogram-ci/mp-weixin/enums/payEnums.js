@@ -1,0 +1,1 @@
+"use strict";var r=(r=>(r[r.WECHAT=1]="WECHAT",r[r.VIRTUAL=2]="VIRTUAL",r))(r||{}),t=(r=>(r.ANDROID="android",r.IOS="ios",r))(t||{});exports.GIFT_PACKAGE_PAY_FROM="tokens",exports.MnpPayType=r,exports.MnpVirtualPlatform=t;

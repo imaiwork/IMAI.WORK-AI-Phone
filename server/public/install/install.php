@@ -1,5 +1,7 @@
 <?php
 // error_reporting(0);
+@set_time_limit(0);
+@ini_set('max_execution_time', '0');
 include "model.php";
 include "YxEnv.php";
 include "../../app/common/service/ToolsService.php";
@@ -68,9 +70,14 @@ $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERV
 
 // 获取主机名
 $host = $_SERVER['HTTP_HOST'];
+$domain = $host;
+if (isset($_SERVER['SERVER_NAME'])) {
+    $domain = $_SERVER['SERVER_NAME'];
+}
+$installDomain = $domain;
 $address = [
     'admin' => $protocol . $host . '/admin',
-    'ai' => 'https://imai.club/user/login'
+    'ai' => 'https://newapi.imai.work'
 ];
 
 $message = '';
@@ -78,8 +85,10 @@ $message = '';
 if ($post['type'] == 'send') {
     $response = \app\common\service\ToolsService::DataCenter()->tokensKey([
         'type' => $post['type'],
-        'ym' => $host,
+        'ym' => $installDomain,
+        'domain' => $installDomain,
         'mobile' => $post['mobile'],
+        'phone' => $post['mobile'],
     ]);
 
     echo json_encode($response);
@@ -114,8 +123,10 @@ if ($step == 4) {
             $response = \app\common\service\ToolsService::DataCenter()->tokensKey([
                 'type' => 'register',
                 'mobile' => $post['mobile'],
+                'phone' => $post['mobile'],
                 'code' => $post['code'],
-                'ym' => $host,
+                'ym' => $installDomain,
+                'domain' => $installDomain,
                 'password' => $post['ai_password']
             ]);
 
@@ -156,7 +167,7 @@ if ($step == 4) {
         if ($canNext) {
             if (!$modelInstall->importAIModelData()) {
                 $canNext = false;
-                $message = '更新基础数据错误';
+                $message = $modelInstall->getLastError() ?: '更新基础数据错误';
             }
         }
 

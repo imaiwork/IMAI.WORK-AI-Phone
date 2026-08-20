@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "popup-bottom": "../../../../../components/popup-bottom/popup-bottom",
+    "action-row": "../action-row",
+    "popup-header": "../popup-header"
+  }
+}

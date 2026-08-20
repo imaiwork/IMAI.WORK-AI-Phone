@@ -273,7 +273,7 @@
                 <div class="relative h-full">
                     <ElScrollbar :distance="20" @end-reached="load" v-if="pager.lists.length > 0 || pager.loading">
                         <div class="p-6">
-                            <div class="grid grid-cols-3 gap-4">
+                            <div class="grid grid-cols-3 2xl:grid-cols-4 gap-4">
                                 <ReuseMaterialCard v-for="item in pager.lists" :key="item.id" :item="item" />
                             </div>
                             <load-text :is-load="pager.isLoad" />
@@ -686,6 +686,7 @@ const handleUploadSuccess = async (result: any) => {
             raw: { type },
         } = result;
         const { uri, thumbnail_path, duration } = response.data;
+        if (!uri) return;
 
         const isVideo = type.includes("video");
         const isImage = type.includes("image");

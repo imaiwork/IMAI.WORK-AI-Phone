@@ -6,13 +6,16 @@
   "usingComponents": {
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "empty": "../../../../components/empty/empty",
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
     "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
+    "steps": "../../components/steps/steps",
     "choose-character": "../../components/choose-character/choose-character",
     "choose-agent": "../../components/choose-agent/choose-agent",
     "create-success-pop": "../../components/create-success-pop/create-success-pop",
     "video-preview": "../../../../components/video-preview/video-preview",
-    "tokens-cost": "../../components/tokens-cost/tokens-cost"
+    "tokens-cost": "../../components/tokens-cost/tokens-cost",
+    "copywriter-empty": "../../components/copywriter-empty/copywriter-empty",
+    "video-cover-upload": "../../components/video-cover-upload/video-cover-upload"
   }
 }

@@ -27,6 +27,7 @@
                                         class="custom-textarea mt-4"
                                         placeholder="你好！我是你的 AI 助理，你可以试着问我：&#10;#帮我写一则关于夏天的文案#"
                                         resize="none"
+                                        show-word-limit
                                         :maxlength="500"
                                         :rows="5" />
                                 </ElFormItem>
@@ -35,8 +36,10 @@
                                     <ElInput
                                         v-model="formData.copyright"
                                         placeholder="例如：由 XXX 提供技术支持"
+                                        show-word-limit
                                         :maxlength="100"
                                         class="custom-input" />
+                                    <span class="text-xs text-[#94A3B8]">提示：只适用于发布后的机器人</span>
                                 </ElFormItem>
                             </div>
                         </section>
@@ -87,6 +90,7 @@
                                     </template>
                                 </ElTable>
                             </div>
+                            <span class="text-xs text-[#94A3B8] mt-2">提示：只适用于发布后的机器人</span>
                         </section>
                     </ElForm>
                 </div>
@@ -108,7 +112,7 @@ const props = withDefaults(
     {
         modelValue: () => ({} as Agent),
         agentId: "",
-    }
+    },
 );
 
 // 使用 defineModel 实现与父组件的双向绑定

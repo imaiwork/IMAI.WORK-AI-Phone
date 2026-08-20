@@ -39,7 +39,7 @@
                             <div
                                 class="absolute inset-0 bg-[#0065fb]/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-t-[24px]">
                                 <div
-                                    class="px-4 py-1.5 bg-white/90 backdrop-blur rounded-full text-primary text-[11px] font-black">
+                                    class="px-4 py-1.5 bg-[#ffffff]/90 backdrop-blur rounded-full text-primary text-[11px] font-black">
                                     继续编辑
                                 </div>
                             </div>
@@ -95,15 +95,12 @@
             <svg ref="exportSvg" class="w-[1200px] h-[800px]"></svg>
         </div>
     </div>
-
-    <KnbBind ref="knbBindRef" v-if="showKnbBind" @close="showKnbBind = false" />
 </template>
 
 <script setup lang="ts">
 import { Transformer } from "markmap-lib";
 import { Markmap } from "markmap-view";
 import { mindMapLists, mindMapDelete } from "@/api/mind_map";
-import KnbBind from "@/components/knb-bind/index.vue";
 
 const nuxtApp = useNuxtApp();
 const queryParams = reactive({ page_no: 1, page_size: 15 });
@@ -113,20 +110,6 @@ const { getLists, pager } = usePaging({
     params: queryParams,
     isScroll: true,
 });
-
-// 知识库绑定相关
-const knbBindRef = ref<InstanceType<typeof KnbBind>>(null);
-const showKnbBind = ref(false);
-const handleKnbBind = async (item: any) => {
-    showKnbBind.value = true;
-    await nextTick();
-    knbBindRef.value?.open();
-    knbBindRef.value?.setFormData({
-        type: "txt",
-        fileName: item.ask,
-        content: item.reply,
-    });
-};
 
 // 删除逻辑
 const handleDelete = async (id: number | string, index: number) => {
@@ -158,11 +141,30 @@ const createMindMap = async (dom: SVGSVGElement, value?: string) => {
     return markmap;
 };
 
+function stripMarkdownFence(text: string) {
+    const trimmed = text.trim();
+
+    // 情况1：整体被围栏包裹（``` 在末尾）
+    let match = trimmed.match(/^```[\w-]*\s*\n([\s\S]*?)\n?```\s*$/);
+    if (match) return match[1].trim();
+
+    // 情况2：围栏后还有附加内容 → 提取块内内容 + 保留后续文字
+    match = trimmed.match(/^```[\w-]*\s*\n([\s\S]*?)\n```\s*\n?([\s\S]*)$/);
+    if (match) {
+        const inner = match[1].trim();
+        const rest = match[2].trim();
+        return rest ? inner + "\n\n" + rest : inner;
+    }
+
+    // 情况3：没有围栏，原样返回
+    return trimmed;
+}
+
 const initMindMap = async () => {
     await nextTick();
     pager.lists.forEach((item, index) => {
         if (mindMapContainer.value[index]) {
-            createMindMap(mindMapContainer.value[index], item.reply);
+            createMindMap(mindMapContainer.value[index], stripMarkdownFence(item.reply));
         }
     });
 };
@@ -171,7 +173,7 @@ const handleExport = async (index: number) => {
     showExport.value = true;
     feedback.loading("正在导出高清图片...");
     await nextTick();
-    const mm = await createMindMap(exportSvg.value, pager.lists[index].reply);
+    const mm = await createMindMap(exportSvg.value, stripMarkdownFence(pager.lists[index].reply));
     mm.fit();
     setTimeout(() => {
         createCanvasPng(exportContainerRef.value);

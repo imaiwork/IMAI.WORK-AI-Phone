@@ -1,4 +1,5 @@
 import { getChatRecord, deleteChatRecord } from "@/api/chat";
+import { useUserStore } from "@/stores/user";
 import { useChatStore } from "../stores/chat";
 import { useChatManager } from "./useChatManager";
 import { useChatEventBus } from "./useChatEventBus";
@@ -22,34 +23,45 @@ export interface ChatHistoryItem {
  * - 删除会话记录
  * - 切换会话
  */
+const { onHistoryRefresh, triggerEnterChatSession } = useChatEventBus();
+// --- State ---
+/**
+ * @description 分页参数
+ */
+const pagination = reactive({ page_no: 1, page_size: 40 });
+/**
+ * @description 是否正在刷新中
+ */
+const isRefreshing = ref<boolean>(true);
+/**
+ * @description 是否正在加载中
+ */
+const isLoading = ref<boolean>(false);
+
+/**
+ * @description 是否加载完
+ */
+const isFinished = ref<boolean>(false);
+
+/**
+ * @description 聊天历史记录列表
+ */
+const chatHistory = ref<ChatHistoryItem[]>([]);
+let historyRefreshRegistered = false;
+
+const mergeUniqueByTaskId = (base: ChatHistoryItem[], incoming: ChatHistoryItem[]) => {
+    const taskIds = new Set<string>();
+    return [...base, ...incoming].filter((item) => {
+        if (!item.task_id || taskIds.has(item.task_id)) return false;
+        taskIds.add(item.task_id);
+        return true;
+    });
+};
+
 export function useChatHistory() {
     const chatStore = useChatStore();
+    const userStore = useUserStore();
     const { taskId, fetchChatHistory: loadChatHistory, resetScroll, stopStream, chatScrollToBottom } = useChatManager();
-    const { onHistoryRefresh } = useChatEventBus();
-
-    // --- State ---
-    /**
-     * @description 分页参数
-     */
-    const pagination = reactive({ page_no: 1, page_size: 40 });
-    /**
-     * @description 是否正在刷新中
-     */
-    const isRefreshing = ref<boolean>(true);
-    /**
-     * @description 是否正在加载中
-     */
-    const isLoading = ref<boolean>(false);
-
-    /**
-     * @description 是否加载完
-     */
-    const isFinished = ref<boolean>(false);
-
-    /**
-     * @description 聊天历史记录列表
-     */
-    const chatHistory = ref<ChatHistoryItem[]>([]);
 
     /**
      * @description 当前选中的会话ID
@@ -62,12 +74,21 @@ export function useChatHistory() {
      * @description 获取聊天历史记录列表
      */
     const fetchChatRecord = async () => {
+        // 未登录时不请求历史记录，直接结束骨架屏并展示空状态
+        if (!userStore.isLogin) {
+            chatHistory.value = [];
+            isFinished.value = true;
+            isLoading.value = false;
+            isRefreshing.value = false;
+            return;
+        }
         isLoading.value = true;
         try {
             // 这里应该调用实际的API获取历史记录
-            const { lists, count } = await getChatRecord(pagination);
+            const { lists = [], count } = await getChatRecord(pagination);
             isFinished.value = !(lists.length < (pagination.page_size || count));
-            chatHistory.value = chatHistory.value.concat(lists);
+            chatHistory.value =
+                pagination.page_no === 1 ? mergeUniqueByTaskId([], lists) : mergeUniqueByTaskId(chatHistory.value, lists);
         } finally {
             isLoading.value = false;
             isRefreshing.value = false;
@@ -92,15 +113,20 @@ export function useChatHistory() {
     const switchToSession = async (sessionId: string) => {
         if (currentSessionId.value === sessionId) return;
         await stopStream();
-        chatStore.clearChat();
-
-        // 设置当前会话ID
-        chatStore.setTaskId(sessionId);
+        // 先进入「会话加载」上下文，避免 clear 后空消息触发欢迎页闪烁
+        triggerEnterChatSession();
+        chatStore.isLoading = true;
+        chatStore.replaceTaskId(sessionId);
+        chatStore.clearChatMessages();
 
         // 加载该会话的详细聊天记录
-        await loadChatHistory();
-        resetScroll();
-        chatScrollToBottom();
+        try {
+            await loadChatHistory();
+            resetScroll();
+            chatScrollToBottom();
+        } finally {
+            chatStore.isLoading = false;
+        }
     };
 
     /**
@@ -170,14 +196,23 @@ export function useChatHistory() {
         isLoading.value = false;
     };
 
-    onHistoryRefresh((payload: any) => {
-        chatHistory.value.unshift({
-            message: payload.message,
-            create_time: payload.createTime,
-            task_id: payload.taskId,
-            update_time: payload.createTime,
+    if (!historyRefreshRegistered) {
+        historyRefreshRegistered = true;
+        onHistoryRefresh((payload: any) => {
+            if (!payload?.taskId) return;
+            const refreshedSession = {
+                message: payload.message,
+                create_time: payload.createTime,
+                task_id: payload.taskId,
+                update_time: payload.createTime,
+            };
+            const existingIndex = chatHistory.value.findIndex((item) => item.task_id === payload.taskId);
+            if (existingIndex >= 0) {
+                chatHistory.value.splice(existingIndex, 1);
+            }
+            chatHistory.value.unshift(refreshedSession);
         });
-    });
+    }
 
     return {
         // State

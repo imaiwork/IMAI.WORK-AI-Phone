@@ -2,8 +2,10 @@
   "navigationStyle": "custom",
   "usingComponents": {
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
-    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
     "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog"
   }

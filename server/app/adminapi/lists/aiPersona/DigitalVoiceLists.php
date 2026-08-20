@@ -5,6 +5,7 @@ namespace app\adminapi\lists\aiPersona;
 use app\adminapi\lists\BaseAdminDataLists;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\aiPersona\AiPersonaDigitalVoice;
+use app\common\service\aiPersona\DigitalAssetUsageService;
 use app\common\service\FileService;
 use think\db\exception\DbException;
 
@@ -42,7 +43,7 @@ class DigitalVoiceLists extends BaseAdminDataLists implements ListsSearchInterfa
      */
     public function lists(): array
     {
-        return AiPersonaDigitalVoice::alias('ad')
+        $list = AiPersonaDigitalVoice::availableQuery()
                                      ->with([
                                                 // 关联人设主表
                                                 'persona'     => function ($query) {
@@ -75,10 +76,22 @@ class DigitalVoiceLists extends BaseAdminDataLists implements ListsSearchInterfa
                                              $item['persona']['avatar_url'] = FileService::getFileUrl($item['persona']['avatar_url'] ?? '');
                                          }
                                          if (!empty($item['humanVoice'])) {
-                                             $item['humanVoice']['voice_urls'] = FileService::getFileUrl($item['humanAnchor']['voice_urls'] ?? '');
+                                             $item['humanVoice']['voice_urls'] = FileService::getFileUrl($item['humanVoice']['voice_urls'] ?? '');
                                          }
                                      })
                                      ->toArray();
+
+        $useCountMap = DigitalAssetUsageService::getVoiceUseCountMap($list);
+        foreach ($list as &$item) {
+            $item['use_count'] = DigitalAssetUsageService::getUseCount(
+                $useCountMap,
+                $item['persona_id'] ?? 0,
+                $item['third_voice_id'] ?? ''
+            );
+        }
+        unset($item);
+
+        return $list;
     }
 
     /**
@@ -88,7 +101,7 @@ class DigitalVoiceLists extends BaseAdminDataLists implements ListsSearchInterfa
      */
     public function count(): int
     {
-        return AiPersonaDigitalVoice::alias('ad')
+        return AiPersonaDigitalVoice::availableQuery()
                                      ->where($this->where())
                                      ->where($this->searchWhere)
                                      ->count('ad.id');

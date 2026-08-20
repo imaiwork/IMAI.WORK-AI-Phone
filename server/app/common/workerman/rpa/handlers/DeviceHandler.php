@@ -2,18 +2,19 @@
 
 namespace app\common\workerman\rpa\handlers;
 
-use app\common\workerman\rpa\BaseMessageHandler;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceRpa;
+use app\common\service\device\RpaDeviceDispatchService;
+use app\common\workerman\rpa\BaseMessageHandler;
+use app\common\workerman\rpa\Support\DeviceAuthClient;
 use app\common\workerman\rpa\WorkerEnum;
 use Workerman\Connection\TcpConnection;
 use Workerman\Timer;
 
 class DeviceHandler extends BaseMessageHandler
 {
-    protected $deviceList;
-    protected $deviceInfo;
-    protected $content;
+    protected array $deviceInfo = [];
+    protected array $content = [];
     public function handle(TcpConnection $connection, string $uid, array $payload): void
     {
         $content = !is_array($payload['content']) ? json_decode($payload['content'], true) : $payload['content'];
@@ -54,22 +55,41 @@ class DeviceHandler extends BaseMessageHandler
                 'code' => $this->content['code'] ?? '',
             );
 
-            $response = \app\common\service\ToolsService::Auth()->checkSvDevice($payload);
+            $response = DeviceAuthClient::checkSvDevice($payload);
             $this->setLog($response, 'device');
             if ((int)$response['code'] === 10000) {
                 $this->deviceInfo = $response['data'] ?? [];
-            } else {
-                $this->payload['reply'] = "设备未找到";
-                $this->payload['code'] = WorkerEnum::DEVICE_NOT_FOUND;
-                //$this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
-                $this->sendError($this->connection,  $this->payload);
+                return;
             }
+
+            if (DeviceAuthClient::isTimeoutResponse($response)) {
+                $this->setLog([
+                    'msg' => '设备鉴权超时',
+                    'deviceId' => $this->payload['deviceId'] ?? '',
+                    'response' => $response,
+                ], 'error');
+                $this->payload['reply'] = '设备鉴权超时，请稍后重试';
+                $this->payload['code'] = WorkerEnum::DEVICE_ERROR_CODE;
+                $this->sendError($this->connection, $this->payload);
+                return;
+            }
+
+            $this->payload['reply'] = "设备未找到";
+            $this->payload['code'] = WorkerEnum::DEVICE_NOT_FOUND;
+            $this->sendError($this->connection, $this->payload);
         } catch (\Exception $e) {
-            $this->setLog('_checkDevice' . $e, 'error');
+            $this->setLog([
+                'msg' => '设备鉴权失败',
+                'deviceId' => $this->payload['deviceId'] ?? '',
+                'error' => $e->getMessage(),
+            ], 'error');
+            $this->payload['reply'] = '设备鉴权失败，请稍后重试';
+            $this->payload['code'] = WorkerEnum::DEVICE_ERROR_CODE;
+            $this->sendError($this->connection, $this->payload);
         }
     }
 
-    private function _getDeviceInfo($content)
+    private function _getDeviceInfo(array $content)
     {
         try {
             $device = $this->deviceInfo;
@@ -139,25 +159,61 @@ class DeviceHandler extends BaseMessageHandler
         }
     }
 
-    private function _updateDeviceInfo($content)
+    private function _updateDeviceInfo(array $content)
     {
         try {
-            $device = $this->deviceInfo;
-            $find = SvDevice::where('device_code', $content['deviceId'])->limit(1)->find();
-            if (!empty($find)) {
-                $find->status = $content['serverStatus'] ? 1 : 0;
-                if ($find->save()) {
-                    $this->payload['reply'] = '设备信息更新成功';
-                    $this->payload['code'] = WorkerEnum::SUCCESS_CODE;
-                } else {
-                    $this->payload['reply'] = '设备信息更新异常';
-                    $this->payload['code'] = WorkerEnum::ERROR_CODE;
-                }
-            } else {
-
-                $this->payload['reply'] = '新增设备';
-                $this->payload['code'] = WorkerEnum::SUCCESS_CODE;
+            $deviceId = trim((string)($content['deviceId'] ?? $this->payload['deviceId'] ?? ''));
+            if ($deviceId === '') {
+                throw new \InvalidArgumentException('设备ID不能为空');
             }
+
+            $this->payload['deviceId'] = $deviceId;
+
+            if (RpaDeviceDispatchService::shouldForceUnbind($deviceId)) {
+                $traceId = RpaDeviceDispatchService::getTraceId($deviceId);
+                if ($traceId === '') {
+                    $traceId = RpaDeviceDispatchService::newTraceId();
+                }
+                $unbindPayload = RpaDeviceDispatchService::buildPayload(
+                    $deviceId,
+                    WorkerEnum::TO_RPA_DEVICE_UNBIND,
+                    [
+                        'reason' => 'reconnect_force',
+                        'user_id' => 0,
+                        'ts' => time(),
+                    ]
+                );
+                $this->service->send($this->uid, $unbindPayload);
+                RpaDeviceDispatchService::markPendingUnbind($deviceId, [
+                    'reason' => 'reconnect_force',
+                    'user_id' => 0,
+                    'ts' => time(),
+                    'trace_id' => $traceId,
+                ]);
+                $workerId = (int)($this->service->getWorker()->id ?? 0);
+                RpaDeviceDispatchService::scheduleForceClose(
+                    $deviceId,
+                    RpaDeviceDispatchService::FORCE_CLOSE_DELAY_SEC,
+                    '设备已解绑超时未断开',
+                    $this->uid,
+                    $workerId,
+                    ['trace_id' => $traceId]
+                );
+                RpaDeviceDispatchService::logUnbind('unbind_reconnect_force', [
+                    'trace_id' => $traceId,
+                    'device_code' => $deviceId,
+                    'uid' => $this->uid,
+                    'worker_id' => $workerId,
+                    'delay_sec' => RpaDeviceDispatchService::FORCE_CLOSE_DELAY_SEC,
+                    'reason' => 'reconnect_force',
+                    'msg' => '重连命中强制解绑，已下发 1212 并调度延迟踢线',
+                    'result' => 'ok',
+                ]);
+                return;
+            }
+
+            $this->payload['reply'] = '设备信息更新成功';
+            $this->payload['code'] = WorkerEnum::SUCCESS_CODE;
 
             $this->bind($this->uid, $this->payload);
 
@@ -171,106 +227,54 @@ class DeviceHandler extends BaseMessageHandler
                 //$this->sendCurrentApp($this->uid, $this->payload);
 
             }
+
+            $device = $this->syncDeviceOnlineStatus($deviceId, !empty($content['serverStatus']));
             $this->payload['code'] = WorkerEnum::SUCCESS_CODE;
-            $this->_sendWeb([
-                'type' => WorkerEnum::WEB_DEVICE_ONLINE_TEXT,
-                'deviceId' => $content['deviceId'],
-                'code' => WorkerEnum::DEVICE_ONLINE,
-                'msg' => '设备已连接'
-            ]);
+            if (!empty($device['user_id'])) {
+                $this->_sendWeb((int)$device['user_id'], [
+                    'type' => WorkerEnum::WEB_DEVICE_ONLINE_TEXT,
+                    'deviceId' => $deviceId,
+                    'code' => WorkerEnum::DEVICE_ONLINE,
+                    'msg' => '设备已连接'
+                ]);
+            }
             $this->setLog($this->payload, 'device');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->setLog('_updateDeviceInfo' . $e, 'error');
         }
     }
 
-    private function sendCurrentApp($uid, $payload)
+    private function syncDeviceOnlineStatus(string $deviceId, bool $online): ?array
     {
         try {
-            $command = array();
-            $app = SvDeviceRpa::where('device_code', $payload['deviceId'])->where('status', 1)->findOrEmpty();
-            if (!$app->isEmpty()) {
-                $end_time = strtotime($app->start_time) + ((int)$app->exec_duration * 60);
-                if (time() < $end_time) {
-                    $command = [
-                        "messageId" => $app->id,
-                        "type" => 90, //执行那个app指令
-                        'appType' => $app->app_type,
-                        'content' => [],
-                        'deviceId' => $app->device_code,
-                        'appVersion' => WorkerEnum::APP_VERSION,
-                        'reply' =>  [
-                            'deviceId' => $app->device_code,
-                            'appType' => $app->app_type,
-                            'msg' => $app->app_name,
-                            'task_id' => $app->id
-                        ],
-                        'code' => WorkerEnum::SUCCESS_CODE,
-                    ];
-                } else {
-                    $command = $this->getNextExecApp($app, true);
-                }
-            } else {
-                $running = SvDeviceRpa::where('device_code', $payload['deviceId'])
-                    ->where('status', '=', 0)
-                    ->where('is_enable', 1)
-                    ->order('start_time asc, weight asc')
-                    ->findOrEmpty();
-                if ($running->isEmpty()) {
-                    $this->payload['reply'] = '没有正在执行的app';
-                    $this->payload['code'] = WorkerEnum::ERROR_CODE;
-                    $this->sendResponse($uid, $payload, $this->payload['reply']);
-                    return;
-                }
-                $command = $this->getNextExecApp($running);
+            $find = SvDevice::where('device_code', $deviceId)->limit(1)->findOrEmpty();
+            if ($find->isEmpty()) {
+                return null;
             }
-            //$this->sendResponse($uid, $command, $command['reply']);
-        } catch (\Exception $e) {
-            $this->setLog('sendCurrentApp' . $e, 'error');
+
+            $find->status = $online ? 1 : 0;
+            $find->update_time = time();
+            if (!$find->save()) {
+                $this->setLog([
+                    'msg' => '设备在线状态保存失败',
+                    'deviceId' => $deviceId,
+                    'online' => $online,
+                ], 'error');
+            }
+
+            return $find->toArray();
+        } catch (\Throwable $e) {
+            $this->setLog([
+                'msg' => '设备在线状态同步失败',
+                'deviceId' => $deviceId,
+                'online' => $online,
+                'error' => $e->getMessage(),
+            ], 'error');
+            return null;
         }
     }
 
-    private function getNextExecApp(SvDeviceRpa $running, bool $isNext = false)
-    {
-        if ($isNext) {
-            $appinfo = SvDeviceRpa::where('device_code', $running->device_code)
-                ->where('is_enable', 1)
-                ->where('id', '<>', $running->id)
-                ->where('status', 0)
-                ->order('start_time asc, weight asc')
-                ->findOrEmpty();
-        } else {
-            $appinfo = $running;
-        }
-
-        if ($appinfo->isEmpty()) {
-            $this->payload['reply'] = '没有正在执行的app';
-            $this->payload['code'] = WorkerEnum::ERROR_CODE;
-            $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
-            return;
-        }
-        $command = [
-            "messageId" => $appinfo->id,
-            "type" => 90, //执行那个app指令
-            'appType' => $appinfo->app_type,
-            'content' => [],
-            'deviceId' => $appinfo->device_code,
-            'appVersion' => WorkerEnum::APP_VERSION,
-            'reply' => [
-                'deviceId' => $appinfo->device_code,
-                'appType' => $appinfo->app_type,
-                'msg' => $appinfo->app_name,
-                'task_id' => $appinfo->id
-            ],
-            'code' => WorkerEnum::SUCCESS_CODE,
-        ];
-        return $command;
-    }
-
-
-
-
-    private function bind($uid, $payload)
+    private function bind(string $uid, array $payload)
     {
         try {
             $worker = $this->service->getWorker();;
@@ -284,34 +288,35 @@ class DeviceHandler extends BaseMessageHandler
                 //     }
                 // }
 
-                $worker->uidConnections[$uid]->deviceid = $payload['deviceId'] ?? '';
+                $deviceId = trim((string)($payload['deviceId'] ?? ''));
+                $appVersion = $payload['appVersion'] ?? WorkerEnum::APP_VERSION;
+                $payload['deviceId'] = $deviceId;
+                if ($deviceId !== '') {
+                    $oldUid = $this->service->getRepository()->getDeviceUid($deviceId);
+                    if ($oldUid !== null && $oldUid !== '' && $oldUid !== $uid) {
+                        $this->service->closeConnection($oldUid, 'device socket replaced');
+                    }
+                }
+
+                $worker->uidConnections[$uid]->deviceid = $deviceId;
                 $worker->uidConnections[$uid]->apptype = $payload['appType'] ?? 3;
                 $worker->uidConnections[$uid]->messageid = $payload['messageId'] ?? '';
-                $worker->uidConnections[$uid]->appversion = $payload['appVersion'] ?? WorkerEnum::APP_VERSION;
+                $worker->uidConnections[$uid]->appversion = $appVersion;
                 $worker->uidConnections[$uid]->clientType = 'device';
-                $worker->uidConnections[$uid]->name =  'device:' . $payload['deviceId'];
+                $worker->uidConnections[$uid]->name =  'device:' . $deviceId;
                 $worker->uidConnections[$uid]->initial = 0;
                 $worker->uidConnections[$uid]->isMsgRunning = 0;
                 $worker->uidConnections[$uid]->lastHeartbeat = time();
 
-                $worker->devices[$payload['deviceId']] = $uid;
+                $worker->devices[$deviceId] = $uid;
                 $worker->appType = $payload['appType'] ?? 3;
-                $this->service->getRedis()->set("xhs:device:" . $payload['deviceId'], $uid);
-                $this->service->getRedis()->set("xhs:device:" . $payload['deviceId'] . ":status", 'online');
-                $this->service->getRedis()->set("xhs:device:" . $payload['deviceId'] . ":onlinetime", date('Y-m-d H:i:s', time()));
+
+                $this->service->getRepository()->markDeviceOnline($deviceId, $uid, (int)$worker->id, $appVersion);
+
                 $this->service->setWorker($worker);
-                $this->registerChannelListener($this->connection, $payload['deviceId']);
-                $this->setLog('设备绑定socket连接, 设备号:' . $payload['deviceId'] . ', uid:' . $uid . ', name:' . $worker->uidConnections[$uid]->name, 'device');
-
-                $find = SvDevice::where('device_code', $payload['deviceId'])->findOrEmpty();
-                if (!$find->isEmpty()) {
-                    \app\api\logic\ApiLogic::sendNotice([
-                        'userId' => $find->user_id,
-                        'content' => $find->device_name,
-                        'status' => '重连'
-                    ], 'device');
-                }
-
+                $this->registerChannelListener($this->connection, $deviceId);
+                $this->setLog('设备绑定socket连接, workerId:' . $worker->id . ', 设备号:' . $payload['deviceId'] . ', uid:' . $uid . ', name:' . $worker->uidConnections[$uid]->name, 'device');
+                $this->setLog('设备绑定socket连接, workerId:' . $worker->id . ', 设备号:' . $payload['deviceId'] . ', uid:' . $uid . ', name:' . $worker->uidConnections[$uid]->name, 'heart');
 
                 $this->service->getRedis()->set("xhs:device:" . $payload['deviceId'] . ":taskStatus", json_encode([
                     'taskStatus' => 'standby',
@@ -320,18 +325,35 @@ class DeviceHandler extends BaseMessageHandler
                     'time' => date('Y-m-d H:i:s', time()),
                     'scene' => 'xhs',
                 ], JSON_UNESCAPED_UNICODE));
+
+                $this->sendReconnectNotification($deviceId);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->setLog('bind' . $e, 'error');
         }
     }
 
-    private function _sendWeb($content)
+    private function sendReconnectNotification(string $deviceId): void
+    {
+        try {
+            $find = SvDevice::where('device_code', $deviceId)->findOrEmpty();
+            if (!$find->isEmpty()) {
+                $this->toolUtil->sendNotification((int)$find->user_id, $find->device_name, '重连');
+            }
+        } catch (\Throwable $e) {
+            $this->setLog([
+                'msg' => '设备重连通知发送失败',
+                'deviceId' => $deviceId,
+                'error' => $e->getMessage(),
+            ], 'error');
+        }
+    }
+
+    private function _sendWeb(int $userId, array $content)
     {
 
         try {
 
-            $userId = SvDevice::where('device_code', $this->payload['deviceId'])->value('user_id');
             if ($userId) {
                 $sources = WorkerEnum::WS_SOURCES;
                 foreach ($sources as $source) {
@@ -343,7 +365,7 @@ class DeviceHandler extends BaseMessageHandler
                             'appType' => 3,
                             'deviceId' => $this->payload['deviceId'],
                             'appVersion' => $this->payload['appVersion'] ?? WorkerEnum::APP_VERSION,
-                            'code' => $this->payload['code'],
+                            'code' => $this->payload['code'] ?? WorkerEnum::SUCCESS_CODE,
                             'reply' => json_encode($content, JSON_UNESCAPED_UNICODE)
                         );
                         $this->sendResponse($uid,  $message,  $message['reply']);
@@ -365,7 +387,7 @@ class DeviceHandler extends BaseMessageHandler
                 //     $this->setLog('web客户端不存在:' .  $userId, 'error');
                 // }
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->setLog('_sendWeb' . $e, 'error');
         }
     }

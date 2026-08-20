@@ -28,8 +28,33 @@ class DecorateTabbarLogic extends BaseLogic
     public static function detail(): array
     {
         $list = DecorateTabbar::getTabbarLists();
+        // 数据库无数据时返回默认底部导航
+        if (empty($list)) {
+            $list = self::getDefaultTabbar();
+        }
         $style = ConfigService::get('tabbar', 'style', config('project.decorate.tabbar_style'));
         return ['style' => $style, 'list' => $list];
+    }
+
+
+    /**
+     * @notes 获取默认底部导航数据
+     * @return array
+     * @author chatgpt
+     * @date 2024/06/24
+     */
+    public static function getDefaultTabbar(): array
+    {
+        $default = config('project.decorate.tabbar_default') ?: [];
+        foreach ($default as &$item) {
+            if (!empty($item['selected'])) {
+                $item['selected'] = FileService::getFileUrl($item['selected']);
+            }
+            if (!empty($item['unselected'])) {
+                $item['unselected'] = FileService::getFileUrl($item['unselected']);
+            }
+        }
+        return $default;
     }
 
 

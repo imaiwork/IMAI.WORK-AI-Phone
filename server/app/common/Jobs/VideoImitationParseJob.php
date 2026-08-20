@@ -35,7 +35,7 @@ class VideoImitationParseJob
             $persona = AiPersona::where('id', $personaId)->find();
             if ($persona) {
                 $personaName = $persona['persona_name'] ?? '';
-                $quickDesc = $persona['quick_desc'] ?? '';
+                $quickDesc = $persona['persona_desc'] ?? '';
             }
 
             // 封装发给大模型的提示词

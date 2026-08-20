@@ -111,7 +111,7 @@ class VideoInfoService
                 $this->clearProcessingMark($videoUrl);
             }
         } catch (Exception $e) {
-            Log::error('获取视频信息失败', [
+            $this->sliceLog('error', '获取视频信息失败', [
                 'url' => $videoUrl,
                 'error' => $e->getMessage(),
                 'memory_usage' => memory_get_usage(true)
@@ -141,7 +141,7 @@ class VideoInfoService
             });
 
             if (count($validUrls) !== count($videoUrls)) {
-                Log::warning('批量处理中发现无效URL', [
+                $this->sliceLog('warning', '批量处理中发现无效URL', [
                     'total' => count($videoUrls),
                     'valid' => count($validUrls)
                 ]);
@@ -152,7 +152,7 @@ class VideoInfoService
             $allResults = [];
 
             foreach ($batches as $batchIndex => $batch) {
-                Log::info("处理批次 " . ($batchIndex + 1) . "/" . count($batches), [
+                $this->sliceLog('info', "处理批次 " . ($batchIndex + 1) . "/" . count($batches), [
                     'batch_size' => count($batch),
                     'memory_usage' => memory_get_usage(true)
                 ]);
@@ -169,7 +169,7 @@ class VideoInfoService
 
             return $allResults;
         } catch (Exception $e) {
-            Log::error('批量获取视频信息失败', [
+            $this->sliceLog('error', '批量获取视频信息失败', [
                 'total_urls' => count($videoUrls),
                 'error' => $e->getMessage()
             ]);
@@ -214,7 +214,7 @@ class VideoInfoService
 
             // 5. 检查缓存（仅本地存储时检查本地缓存）
             if (!$params['force'] && !$isOSS && file_exists($thumbnailInfo['path'])) {
-                Log::info('使用缓存的缩略图', [
+                $this->sliceLog('info', '使用缓存的缩略图', [
                     'video_url' => $videoUrl,
                     'thumbnail' => $thumbnailInfo['url']
                 ]);
@@ -352,7 +352,7 @@ class VideoInfoService
             $ossRelativePath = $ossDir . '/' . basename($localPath);
             $ossFullUrl      = FileService::getFileUrl($ossRelativePath);
 
-            Log::info('缩略图已上传OSS', [
+            $this->sliceLog('info', '缩略图已上传OSS', [
                 'local_path' => $localPath,
                 'oss_path'   => $ossRelativePath,
                 'full_url'   => $ossFullUrl,
@@ -370,7 +370,7 @@ class VideoInfoService
                 'storage'  => $storageDefault
             ];
         } catch (Exception $e) {
-            Log::error('缩略图上传OSS失败，降级使用本地', [
+            $this->sliceLog('error', '缩略图上传OSS失败，降级使用本地', [
                 'local_path' => $localPath,
                 'error'      => $e->getMessage()
             ]);
@@ -434,7 +434,7 @@ class VideoInfoService
                 'full_url' => FileService::getFileUrl($ossFullPath)
             ];
         } catch (Exception $e) {
-            Log::error('上传缩略图到OSS失败', [
+            $this->sliceLog('error', '上传缩略图到OSS失败', [
                 'local_path' => $localPath,
                 'oss_path' => $ossPath,
                 'error' => $e->getMessage()
@@ -514,7 +514,7 @@ class VideoInfoService
         if (strpos($videoUrl, '/') === 0) {
             clearstatcache(true, $videoUrl);
             if (file_exists($videoUrl) && is_file($videoUrl)) {
-                Log::info('视频路径解析成功（绝对路径）', [
+                $this->sliceLog('info', '视频路径解析成功（绝对路径）', [
                     'resolved_path' => $videoUrl,
                     'file_size'     => filesize($videoUrl)
                 ]);
@@ -537,7 +537,7 @@ class VideoInfoService
         foreach ($possiblePaths as $path) {
             clearstatcache(true, $path);
             if (file_exists($path) && is_file($path)) {
-                Log::info('视频路径解析成功（相对路径）', [
+                $this->sliceLog('info', '视频路径解析成功（相对路径）', [
                     'original_url'  => $videoUrl,
                     'resolved_path' => $path,
                     'file_size'     => filesize($path)
@@ -546,7 +546,17 @@ class VideoInfoService
             }
         }
 
-        Log::error('视频文件未找到', [
+        // 本地不存在：按云存储拼完整 URL 再下载（OSS-MPS 常见）
+        $remote = FileService::getFileUrl($cleanUrl, '', true);
+        if (preg_match('/^https?:\/\//i', $remote)) {
+            $this->sliceLog('info', '相对路径转远程URL后下载截帧', [
+                'original_url' => $videoUrl,
+                'remote_url' => $remote,
+            ]);
+            return $this->downloadVideoForThumbnail($remote);
+        }
+
+        $this->sliceLog('error', '视频文件未找到', [
             'original_url' => $videoUrl,
             'tried_paths'  => $possiblePaths
         ]);
@@ -589,7 +599,7 @@ class VideoInfoService
         $duration = $metadata['duration'] ?? 0;
 
         if ($duration > 0 && $time > $duration) {
-            Log::warning('截取时间超过视频时长，调整为中点', [
+            $this->sliceLog('warning', '截取时间超过视频时长，调整为中点', [
                 'requested_time' => $time,
                 'duration' => $duration
             ]);
@@ -624,7 +634,7 @@ class VideoInfoService
             $params['format']
         );
 
-        Log::info('执行FFmpeg命令', [
+        $this->sliceLog('info', '执行FFmpeg命令', [
             'command' => $ffmpegCmd,
             'input' => $inputPath,
             'output' => $outputPath
@@ -636,13 +646,19 @@ class VideoInfoService
 
         if ($returnCode !== 0) {
             $errorMsg = implode("\n", $output);
-            Log::error('FFmpeg执行失败', [
+            $this->sliceLog('error', 'FFmpeg执行失败', [
                 'command' => $ffmpegCmd,
                 'return_code' => $returnCode,
                 'output' => $errorMsg
             ]);
             throw new Exception('生成缩略图失败: ' . $errorMsg);
         }
+
+        $this->sliceLog('info', 'FFmpeg执行成功', [
+            'input' => $inputPath,
+            'output' => $outputPath,
+            'output_size' => is_file($outputPath) ? (int)filesize($outputPath) : 0,
+        ]);
     }
 
     /**
@@ -694,9 +710,9 @@ class VideoInfoService
             curl_setopt_array($ch, [
                 CURLOPT_FILE => $fp,
                 CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_TIMEOUT => 60,
+                CURLOPT_TIMEOUT => 120,
                 CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; ThumbnailGenerator/1.0)',
-                CURLOPT_RANGE => '0-10485760', // 仅下载前10MB
+                // 整文件下载：部分下载常缺 moov，短视频截帧会失败
                 CURLOPT_SSL_VERIFYPEER => false,
             ]);
 
@@ -718,7 +734,7 @@ class VideoInfoService
                 throw new Exception('下载的视频文件无效');
             }
 
-            Log::info('远程视频下载成功（部分）', [
+            $this->sliceLog('info', '远程视频下载成功（部分）', [
                 'remote_url' => $remoteUrl,
                 'temp_file' => $tempFile,
                 'size' => filesize($tempFile)
@@ -763,16 +779,19 @@ class VideoInfoService
             '-vframes 1',        // 只提取一帧
         ];
 
-        // 构建缩放参数
+        // 先把非方形像素(anamorphic, 如 SAR 19:60)归一化为方形像素的真实显示尺寸，
+        // 再做用户指定的缩放，避免编码尺寸≠显示尺寸时封面被拉伸变形。
+        // 方形像素视频 SAR=1，该步为无操作。（与 UploadService 中 scale=iw*sar:ih 同一思路）
+        $normalize = 'scale=iw*sar:ih,setsar=1';
         if ($width && $height) {
             // 指定了宽高
-            $parts[] = "-vf scale={$width}:{$height}";
+            $parts[] = "-vf {$normalize},scale={$width}:{$height}";
         } elseif ($width) {
             // 只指定宽度，高度自动计算（-2确保是偶数）
-            $parts[] = "-vf scale={$width}:-2";
+            $parts[] = "-vf {$normalize},scale={$width}:-2";
         } elseif ($height) {
             // 只指定高度，宽度自动计算
-            $parts[] = "-vf scale=-2:{$height}";
+            $parts[] = "-vf {$normalize},scale=-2:{$height}";
         }
 
         // 设置质量
@@ -821,7 +840,7 @@ class VideoInfoService
                 'format_name' => $data['format']['format_name'] ?? '',
             ];
         } catch (Exception $e) {
-            Log::warning('获取视频元数据失败', [
+            $this->sliceLog('warning', '获取视频元数据失败', [
                 'file' => $filePath,
                 'error' => $e->getMessage()
             ]);
@@ -879,6 +898,43 @@ class VideoInfoService
     }
 
     /**
+     * 探测视频旋转角度（兼容新版 side_data 的 Display Matrix 与旧版 stream_tags=rotate）
+     *
+     * @param string $ffprobeBin
+     * @param string $videoUrl
+     * @return int 归一化后的角度（0 / 90 / 180 / 270）
+     */
+    private function probeVideoRotation(string $ffprobeBin, string $videoUrl): int
+    {
+        $queries = [
+            // 新版：Display Matrix 旋转（可能为负，如 -90）
+            ' -v error -select_streams v:0 -show_entries side_data=rotation -of default=noprint_wrappers=1:nokey=1 ',
+            // 旧版：流标签 rotate
+            ' -v error -select_streams v:0 -show_entries stream_tags=rotate -of default=noprint_wrappers=1:nokey=1 ',
+        ];
+
+        foreach ($queries as $q) {
+            $out = [];
+            $ret = 0;
+            exec($ffprobeBin . $q . escapeshellarg($videoUrl), $out, $ret);
+            if ($ret !== 0) {
+                continue;
+            }
+            foreach ($out as $line) {
+                $line = trim($line);
+                if ($line !== '' && is_numeric($line)) {
+                    $deg = (((int)round((float)$line) % 360) + 360) % 360;
+                    if ($deg !== 0) {
+                        return $deg;
+                    }
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    /**
      * 检查命令是否存在
      *
      * @param string $command
@@ -919,8 +975,13 @@ class VideoInfoService
 
         Cache::inc($minuteKey);
         Cache::inc($hourKey);
-        Cache::expire($minuteKey, 60);
-        Cache::expire($hourKey, 3600);
+        // expire 仅 redis 等驱动支持；file 驱动无此方法会抛异常。
+        // 键名本身按分钟/小时轮换，限流正确性不依赖 TTL，失败仅是少了过期清理。
+        try {
+            Cache::expire($minuteKey, 60);
+            Cache::expire($hourKey, 3600);
+        } catch (\Throwable $e) {
+        }
     }
 
     /**
@@ -967,7 +1028,7 @@ class VideoInfoService
         $cached = Cache::get($cacheKey);
 
         if ($cached) {
-            Log::info('使用缓存的视频信息', ['url' => $videoUrl]);
+            $this->sliceLog('info', '使用缓存的视频信息', ['url' => $videoUrl]);
             return $cached;
         }
 
@@ -1053,24 +1114,155 @@ class VideoInfoService
      */
     public function extractVideoInfo(string $videoUrl, int $timeout): ?array
     {
-        $ffprobeBin = $this->findFFprobeBinary();
+        $isRemote = (bool)preg_match('#^https?://#i', $videoUrl);
+        if (!$isRemote) {
+            return $this->probeWithFfprobe($videoUrl, $timeout);
+        }
 
-        $command = sprintf(
-            '%s -v quiet -print_format json -show_format -show_streams -timeout %d %s',
-            $ffprobeBin,
-            $timeout * 1000000, // 转换为微秒
-            escapeshellarg($videoUrl)
-        );
+        try {
+            return $this->probeWithFfprobe($videoUrl, $timeout);
+        } catch (Exception $e) {
+            // 2026-08-04：部分 ffprobe 构建（如静态编译版）探测 https 源时会直接段错误且无输出，
+            // 表现为"无法获取视频信息"。此处兜底：下载到本地临时文件后再探测。
+            $this->sliceLog('warning', '远程探测失败，回退为下载后本地探测', [
+                'url' => $videoUrl,
+                'error' => $e->getMessage(),
+            ]);
+            return $this->extractRemoteViaDownload($videoUrl, $timeout);
+        }
+    }
+
+    /**
+     * 远程探测失败时的兜底：下载到临时文件后本地探测
+     *
+     * @param string $videoUrl
+     * @param int $timeout
+     * @return array|null
+     * @throws Exception
+     */
+    private function extractRemoteViaDownload(string $videoUrl, int $timeout): ?array
+    {
+        // 同一 URL 短期内重复走兜底（如报价、确认两步各探测一次）时直接用缓存，避免重复下载
+        $cachedInfo = $this->getCachedVideoInfo($videoUrl);
+        if ($cachedInfo) {
+            return $cachedInfo;
+        }
+
+        $tempPath = $this->downloadRemoteForProbe($videoUrl);
+        try {
+            $info = $this->probeWithFfprobe($tempPath, $timeout);
+            if ($info) {
+                $this->cacheVideoInfo($videoUrl, $info);
+            }
+            return $info;
+        } finally {
+            @unlink($tempPath);
+        }
+    }
+
+    /**
+     * 下载远程视频到本地临时文件（仅用于探测兜底）
+     *
+     * @param string $videoUrl
+     * @return string 本地临时文件路径
+     * @throws Exception
+     */
+    private function downloadRemoteForProbe(string $videoUrl): string
+    {
+        $tempPath = tempnam(sys_get_temp_dir(), 'ffprobe_dl_');
+        if ($tempPath === false) {
+            throw new Exception('无法创建探测用临时文件');
+        }
+
+        $fp = fopen($tempPath, 'w+');
+        if (!$fp) {
+            @unlink($tempPath);
+            throw new Exception('无法打开探测用临时文件：' . $tempPath);
+        }
+
+        $ch = curl_init($videoUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_FILE => $fp,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT => 600,
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_USERAGENT => 'VideoInfoProbe/1.0',
+        ]);
+        $success = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = (string)curl_error($ch);
+        curl_close($ch);
+        fclose($fp);
+
+        if (!$success || $httpCode < 200 || $httpCode >= 300 || !is_file($tempPath) || filesize($tempPath) < 100) {
+            @unlink($tempPath);
+            $this->sliceLog('error', '探测用远程视频下载失败', [
+                'url' => $videoUrl,
+                'http_code' => $httpCode,
+                'curl_error' => $error,
+            ]);
+            throw new Exception("探测用远程视频下载失败：HTTP {$httpCode} {$error}");
+        }
+
+        return $tempPath;
+    }
+
+    /**
+     * 执行 ffprobe 探测并解析输出
+     *
+     * @param string $videoUrl 本地路径或远程 URL
+     * @param int $timeout
+     * @return array|null
+     * @throws Exception
+     */
+    private function probeWithFfprobe(string $videoUrl, int $timeout): ?array
+    {
+        $ffprobeBin = $this->findFFprobeBinary();
+        $isRemote = (bool)preg_match('#^https?://#i', $videoUrl);
+
+        // 本地文件不要带 timeout 类参数；部分 ffprobe 会因此吐出非 JSON →「视频信息解析失败」
+        if ($isRemote) {
+            $command = sprintf(
+                '%s -v error -print_format json -show_format -show_streams -rw_timeout %d -i %s 2>&1',
+                escapeshellcmd($ffprobeBin),
+                max(1, $timeout) * 1000000,
+                escapeshellarg($videoUrl)
+            );
+        } else {
+            $command = sprintf(
+                '%s -v error -print_format json -show_format -show_streams -i %s 2>&1',
+                escapeshellcmd($ffprobeBin),
+                escapeshellarg($videoUrl)
+            );
+        }
 
         $output = shell_exec($command);
+        $output = is_string($output) ? trim($output) : '';
 
-        if (!$output) {
+        if ($output === '') {
+            $this->sliceLog('error', '无法获取视频信息 url=' . $videoUrl . ' cmd=' . $command);
             throw new Exception('无法获取视频信息');
         }
 
-        $data = json_decode($output, true);
+        // stderr 可能混在 stdout，截取 JSON
+        $jsonText = $output;
+        if ($jsonText[0] !== '{') {
+            $start = strpos($output, '{');
+            $end = strrpos($output, '}');
+            if ($start !== false && $end !== false && $end > $start) {
+                $jsonText = substr($output, $start, $end - $start + 1);
+            }
+        }
+
+        $data = json_decode($jsonText, true);
 
         if (!$data || !isset($data['format'])) {
+            $preview = mb_substr(preg_replace('/\s+/', ' ', $output) ?? $output, 0, 300);
+            $this->sliceLog(
+                'error',
+                '视频信息解析失败 url=' . $videoUrl . ' preview=' . $preview
+            );
             throw new Exception('视频信息解析失败');
         }
 
@@ -1194,7 +1386,7 @@ class VideoInfoService
             try {
                 Queue::push('app\common\Jobs\VideoInfoJob', $jobData, 'video_processing');
             } catch (Exception $e) {
-                Log::warning('队列推送失败，改为直接处理', [
+                $this->sliceLog('warning', '队列推送失败，改为直接处理', [
                     'url' => $url,
                     'error' => $e->getMessage()
                 ]);
@@ -1295,7 +1487,7 @@ class VideoInfoService
 
             // 检查内存使用情况
             if (memory_get_usage(true) > self::MEMORY_LIMIT_MB * 1024 * 1024) {
-                Log::warning('内存使用过高，强制垃圾回收', [
+                $this->sliceLog('warning', '内存使用过高，强制垃圾回收', [
                     'memory_usage'    => memory_get_usage(true),
                     'processed_count' => count($results)
                 ]);
@@ -1336,16 +1528,49 @@ class VideoInfoService
             $targetHeight = $options['height'] ?? 0;
 
             // ========== 方式1：用FFmpeg命令行解析（无需扩展，兼容性好） ==========
-            $ffmpegCmd = "ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 " . escapeshellarg($videoUrl);
+            // 使用可用的 ffprobe 二进制（生产环境可能为 ffprobe6 或自定义路径，不能写死 ffprobe）
+            try {
+                $ffprobeBin = $this->findFFprobeBinary();
+            } catch (Exception $e) {
+                $ffprobeBin = 'ffprobe';
+            }
+            // 同时读取 sample_aspect_ratio(SAR)：部分视频为非方形像素(anamorphic)，
+            // 编码尺寸(如1920x1080)并非实际显示尺寸(如608x1080)，必须用 SAR 换算，否则封面会被拉伸变形
+            $ffmpegCmd = $ffprobeBin . " -v error -select_streams v:0 -show_entries stream=width,height,sample_aspect_ratio -of csv=s=x:p=0 " . escapeshellarg($videoUrl);
+            $output = [];
             exec($ffmpegCmd, $output, $returnVar);
-            if ($returnVar !== 0 || empty($output[0])) {
-                $finalWidth = 320;
-                $finalHeight = 240;
-            } else {
-                list($originWidth, $originHeight) = explode('x', $output[0]);
-                $originWidth = (int)$originWidth;
-                $originHeight = (int)$originHeight;
 
+            $originWidth = $originHeight = 0;
+            if ($returnVar === 0 && !empty($output[0])) {
+                $fields = array_pad(explode('x', trim($output[0])), 3, '');
+                $codedWidth = (int)$fields[0];
+                $codedHeight = (int)$fields[1];
+                $sar = $fields[2]; // 形如 "19:60"，也可能为 "" / "N/A" / "0:1" / "1:1"
+
+                // 解析 SAR，换算出真实显示宽度（显示高度等于编码高度）
+                $sarNum = $sarDen = 1;
+                if (strpos($sar, ':') !== false) {
+                    list($n, $d) = explode(':', $sar);
+                    if ((int)$n > 0 && (int)$d > 0) {
+                        $sarNum = (int)$n;
+                        $sarDen = (int)$d;
+                    }
+                }
+                $originWidth = (int)round($codedWidth * $sarNum / $sarDen);
+                $originHeight = $codedHeight;
+
+                // 处理旋转：竖屏视频常以横向编码(1920x1080)+旋转90/270标记存储，
+                // ffprobe 的 width/height 是旋转前的；而 ffmpeg 抽帧默认自动旋转，
+                // 必须按旋转角交换宽高，否则竖屏画面会被压成横版（变形）
+                $rotation = $this->probeVideoRotation($ffprobeBin, $videoUrl);
+                if ($rotation === 90 || $rotation === 270) {
+                    $tmp = $originWidth;
+                    $originWidth = $originHeight;
+                    $originHeight = $tmp;
+                }
+            }
+
+            if ($originWidth > 0 && $originHeight > 0) {
                 // 3. 关键计算：按原比例缩放，适配目标宽/高（只传宽/只传高/都传的情况）
                 $scaleRatio = min(
                     $targetWidth > 0 ? $targetWidth / $originWidth : 1,
@@ -1354,15 +1579,18 @@ class VideoInfoService
                 // 最终等比例尺寸（取整，避免小数）
                 $finalWidth = (int)round($originWidth * $scaleRatio);
                 $finalHeight = (int)round($originHeight * $scaleRatio);
+            } else {
+                // 探测失败：无法得知原始比例，只按宽度缩放、高度用 -2 让 ffmpeg 按比例自适应，避免强制横版导致变形
+                $finalWidth = $targetWidth > 0 ? (int)$targetWidth : 640;
+                $finalHeight = -2;
             }
 
-            // 设置默认选项
-            $defaultOptions = [
+            // 使用按原比例计算出的等比尺寸（覆盖调用方传入的原始宽高，避免强制拉伸导致变形）
+            $options = array_merge($options, [
                 'width'   => $finalWidth,
                 'height'  => $finalHeight,
-                'quality' => 2
-            ];
-            $options        = array_merge($defaultOptions, $options);
+                'quality' => $options['quality'] ?? 2,
+            ]);
 
             // 验证尺寸限制
             if ($options['width'] > 2000 || $options['height'] > 2000) {
@@ -1459,7 +1687,7 @@ class VideoInfoService
             $output = shell_exec($command);
 
             if (!file_exists($thumbnailPath)) {
-                Log::error('缩略图生成失败', [
+                $this->sliceLog('error', '缩略图生成失败', [
                     'url'        => $videoUrl,
                     'input_path' => $inputPath,
                     'command'    => $command,
@@ -1470,7 +1698,7 @@ class VideoInfoService
 
             return 'uploads/thumbnails/' . date('Ymd') . '/' . $thumbnailName;
         } catch (Exception $e) {
-            Log::error('生成缩略图异常', [
+            $this->sliceLog('error', '生成缩略图异常', [
                 'url'   => $videoUrl,
                 'error' => $e->getMessage()
             ]);
@@ -1564,7 +1792,7 @@ class VideoInfoService
         // 规范化路径，移除多余的斜杠和点
         $fullPath = realpath($fullPath) ?: $fullPath;
 
-        Log::info('路径处理详情', [
+        $this->sliceLog('info', '路径处理详情', [
             'original_url'   => $videoUrl,
             'extracted_path' => $path,
             'public_path'    => public_path(),
@@ -1573,6 +1801,61 @@ class VideoInfoService
         ]);
 
         return $fullPath;
+    }
+
+    /**
+     * 视频信息/截帧日志统一写入 video_slice。
+     * ThinkPHP File 驱动 format 只输出 message、且底层走 error_log；
+     * context 不会进文件，换行还会把一行日志拆乱。这里强制单行并直写文件。
+     */
+    private function sliceLog(string $level, string $message, array $context = []): void
+    {
+        try {
+            $flat = [];
+            foreach ($context as $key => $value) {
+                if (is_bool($value)) {
+                    $text = $value ? 'true' : 'false';
+                } elseif (is_scalar($value) || $value === null) {
+                    $text = (string)$value;
+                } else {
+                    $text = (string)json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
+                }
+                $flat[] = $key . '=' . preg_replace('/\s+/u', ' ', $text);
+            }
+            if ($flat !== []) {
+                $message .= ' | ' . implode(' | ', $flat);
+            }
+            $message = preg_replace('/\s+/u', ' ', trim($message)) ?? trim($message);
+            $line = '[' . date('c') . '][' . $level . '] ' . $message;
+
+            // 直写，保证 command/input/output 一定进文件
+            $dir = rtrim((string)root_path(), DIRECTORY_SEPARATOR)
+                . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'log'
+                . DIRECTORY_SEPARATOR . 'video_slice' . DIRECTORY_SEPARATOR . date('Ym');
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0755, true);
+            }
+            @file_put_contents(
+                $dir . DIRECTORY_SEPARATOR . date('d') . '.log',
+                $line . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+
+            // 同步走通道（失败忽略）
+            try {
+                $logger = Log::channel('video_slice');
+                match ($level) {
+                    'error' => $logger->error($message),
+                    'warning' => $logger->warning($message),
+                    'debug' => $logger->debug($message),
+                    default => $logger->info($message),
+                };
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
     }
 
     /**

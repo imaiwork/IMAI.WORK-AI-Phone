@@ -347,7 +347,7 @@ CREATE TABLE  IF NOT EXISTS `la_sv_socket_command` (
 `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
 `platform` varchar(32) DEFAULT '小红书' COMMENT '平台来源',
 `type` int(11) DEFAULT NULL COMMENT '命令类型',
-`msg` longtext COMMENT '命令内容',
+`msg` text COMMENT '命令内容',
 `create_time` datetime DEFAULT NULL COMMENT '创建时间',
 `device_code` varchar(255) DEFAULT NULL COMMENT '设备id',
 `action` varchar(32) DEFAULT NULL COMMENT '动作',

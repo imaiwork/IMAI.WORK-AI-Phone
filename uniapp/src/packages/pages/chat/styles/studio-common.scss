@@ -1,0 +1,178 @@
+/* 图像 / 视频 / PPT / 地图工作室面板公共样式 */
+
+.studio-empty {
+    @apply pt-[48rpx] px-[40rpx] flex flex-col items-center;
+}
+.studio-empty__title {
+    @apply text-[36rpx] font-semibold text-[#111827] mb-[12rpx];
+}
+.studio-empty__desc {
+    @apply text-[26rpx] text-[#9CA3AF] text-center leading-relaxed;
+}
+
+.user-bubble {
+    @apply max-w-[80%] bg-primary text-white rounded-tl-[32rpx] rounded-bl-[32rpx] rounded-br-[32rpx] px-[24rpx] py-[20rpx];
+}
+.user-bubble__refs {
+    @apply flex flex-wrap gap-[8rpx] mb-[12rpx];
+}
+.user-bubble__ref-img {
+    @apply w-[120rpx] h-[120rpx] rounded-[12rpx] overflow-hidden border border-solid border-[#ffffff40];
+}
+.user-bubble__text {
+    @apply text-[28rpx] leading-relaxed break-all;
+}
+.user-bubble__ref {
+    @apply block mt-[8rpx] text-[22rpx] opacity-75;
+}
+
+.ai-wrap {
+    @apply w-full max-w-full;
+}
+
+.opt-thinking {
+    @apply inline-flex items-center gap-x-[16rpx] bg-white rounded-[28rpx] rounded-bl-[8rpx] px-[28rpx] py-[24rpx];
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+.opt-thinking__text {
+    @apply text-[26rpx] text-[#6B7280];
+}
+.thinking-dots {
+    @apply flex items-center gap-x-[8rpx];
+}
+.thinking-dot {
+    @apply w-[12rpx] h-[12rpx] rounded-full bg-[#94A3B8];
+    animation: studio-bouncedot 1.2s infinite ease-in-out;
+}
+.thinking-dot:nth-child(2) {
+    animation-delay: 0.15s;
+}
+.thinking-dot:nth-child(3) {
+    animation-delay: 0.3s;
+}
+@keyframes studio-bouncedot {
+    0%,
+    80%,
+    100% {
+        transform: scale(0.6);
+        opacity: 0.4;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.err-bubble {
+    @apply bg-white rounded-[28rpx] rounded-bl-[8rpx] px-[28rpx] py-[24rpx];
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+.err-bubble__text {
+    @apply text-[26rpx] text-[#EF4444] leading-relaxed;
+}
+
+.studio-bottom {
+    @apply flex-shrink-0 pt-[12rpx] bg-white relative;
+    padding-bottom: calc(12rpx + env(safe-area-inset-bottom));
+    box-shadow: 0 -2rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+.studio-bottom--tabbar {
+    padding-bottom: 12rpx;
+}
+.studio-gutter {
+    @apply px-[24rpx] w-full box-border;
+}
+/* 键盘期折叠工具栏：不卸载，避免丢横向滚动 / 底栏跳动 */
+.toolbar-collapsed {
+    @apply h-0 opacity-0 overflow-hidden pointer-events-none;
+}
+
+.tb-row {
+    @apply inline-flex items-center gap-x-[12rpx] py-[8rpx] pr-[24rpx];
+}
+.tb-pill {
+    @apply inline-flex items-center gap-x-[8rpx] h-[60rpx] px-[20rpx] rounded-[16rpx] bg-[#F7F8FA] text-[24rpx] text-[#374151] flex-shrink-0;
+}
+.tb-pill--active {
+    @apply bg-[#EFF6FF] text-primary;
+}
+.tb-pill--dashed {
+    border: 2rpx dashed #d1d5db;
+    background: #fff;
+}
+.tb-avatar {
+    @apply w-[32rpx] h-[32rpx] rounded-full bg-[#111111] flex items-center justify-center flex-shrink-0;
+}
+.tb-chip {
+    @apply h-[60rpx] px-[20rpx] rounded-[16rpx] bg-[#F7F8FA] text-[24rpx] text-[#6B7280] flex items-center flex-shrink-0;
+}
+.tb-chip--on {
+    @apply bg-[#EFF6FF] text-primary font-semibold;
+}
+.tb-switch {
+    @apply w-[48rpx] h-[28rpx] rounded-full bg-[#D1D5DB] relative flex-shrink-0;
+}
+.tb-switch--on {
+    @apply bg-primary;
+}
+.tb-knob {
+    @apply absolute top-[4rpx] left-[4rpx] w-[20rpx] h-[20rpx] rounded-full bg-white;
+    transition: transform 0.18s ease;
+}
+.tb-switch--on .tb-knob {
+    transform: translateX(20rpx);
+}
+
+.ref-strip {
+    @apply flex items-center gap-x-[12rpx] py-[12rpx] overflow-x-auto;
+}
+.ref-thumb {
+    @apply relative w-[96rpx] h-[96rpx] rounded-[16rpx] overflow-hidden flex-shrink-0 bg-[#F3F4F6];
+}
+.ref-thumb__img {
+    @apply w-full h-full;
+}
+.ref-thumb__rm {
+    @apply absolute right-[4rpx] top-[4rpx] w-[32rpx] h-[32rpx] rounded-full flex items-center justify-center;
+    background: rgba(0, 0, 0, 0.55);
+}
+.ref-thumb--add {
+    @apply flex items-center justify-center;
+    border: 2rpx dashed #cbd5e1;
+    background: #fafafa;
+}
+
+/* 对齐 chat-scroll-view：外层灰底圆角，内层放竖向 padding，避免 textarea auto-height 真机跳动 */
+.studio-input {
+    @apply w-full box-border bg-[#F7F8FA] rounded-[32rpx] border border-solid border-[#ECECEE] overflow-hidden relative mt-[8rpx];
+}
+.studio-ta {
+    /* flex 行内用 w-0 + flex-1，避免 !w-full 首帧宽度不准导致 auto-height 先高后矮 */
+    width: 0;
+    min-height: 40rpx;
+    line-height: 40rpx;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 8rpx;
+    box-sizing: border-box;
+}
+.send-btn {
+    @apply w-[60rpx] h-[60rpx] rounded-full flex items-center justify-center flex-shrink-0;
+}
+.send-btn--on {
+    @apply bg-primary-light-9;
+}
+.send-btn--off {
+    @apply bg-[#F2F2F2];
+}
+
+.studio-disclaimer {
+    @apply flex justify-center mt-[20rpx];
+}
+.studio-disclaimer__pill {
+    @apply flex items-center rounded-full gap-x-1.5 p-[6rpx];
+    background: rgba(0, 0, 0, 0.03);
+}
+.studio-disclaimer__text {
+    @apply text-[rgba(0,0,0,0.3)] text-xs;
+}

@@ -99,7 +99,7 @@ class DisplayLogic extends ApiLogic
             return false;
         }
     }
-    
+
 
     public static function touchDetail($params)
     {
@@ -118,8 +118,8 @@ class DisplayLogic extends ApiLogic
                 ->where('device_code', $task->device_code)
                 ->select()->each(function ($item) {
 
-                   $account_info = SvLeadScrapingSettingAccount::where('scraping_id', $item->scraping_id)
-                    ->where('id', $item->scraping_account_id)->findOrEmpty()->toArray();
+                    $account_info = SvLeadScrapingSettingAccount::where('scraping_id', $item->scraping_id)
+                        ->where('id', $item->scraping_account_id)->findOrEmpty()->toArray();
                     $item->execute_name = $account_info['nickname'] ?? '';
                     $item->execute_avatar  = $account_info['avatar'] ?? 0;
                     $item->execute_account = $account_info['account'] ?? '';
@@ -129,9 +129,8 @@ class DisplayLogic extends ApiLogic
             if (!$list->isEmpty()) {
                 $scraping_id = $list->first()->scraping_id;
                 $setting_info = SvLeadScrapingSetting::where('id', $scraping_id)->field('id,industry_type,is_like,is_follow,marker_method')->findOrEmpty()->toArray();
-               
             }
-     
+
             self::$returnData = [
                 'task_info' => $task->toArray(),
                 'setting_info' => $setting_info,
@@ -153,12 +152,12 @@ class DisplayLogic extends ApiLogic
                 throw new \Exception('任务ID不能为空');
             }
             $type = $params['type'] ?? 0;
-    
+
             $task = SvDeviceTask::where('id', $id)->where('user_id', self::$uid)->findOrEmpty();
             if ($task->isEmpty()) {
                 throw new \Exception('任务不存在');
             }
-            $list = SvDeviceCircleLikeReplyRecord::getStatisticType( $task->sub_data_id,$type);
+            $list = SvDeviceCircleLikeReplyRecord::getStatisticType($task->sub_data_id, $type);
 
             self::$returnData = [
                 'task_info' => $task->toArray(),
@@ -188,48 +187,75 @@ class DisplayLogic extends ApiLogic
             if ($task->source == 9) {
                 $info = SvCrawlingWechatTask::where('id', $task->sub_task_id)->findOrEmpty()->toArray();
                 $addWechatlist = SvAddWechatRecord::where('device_code', $task->device_code)
-                 ->field([
-                    'id',
-                    'user_id',
-                    'task_id',
-                    'device_code',
-                    'reg_wechat',      // 重命名
-                    'wechat_no as execute_account',
-                    'wechat_name as execute_name',
-                    'wechat_avatar as execute_avatar',
-                    'original_message',     // 重命名
-                    'remark',
-                    'action',
-                    'user_account',
-                    'account',
-                    'account_type',
-                    'status',
-                    'result',
-                    'image',
-                    'create_time',
-                    'update_time'
-                ])  
-                ->where('crawling_task_id', 'in', $info['craw_task_ids'] ?? [])
-                ->select();
-            }else{
-                $addWechatlist = SvCrawlingManualTaskRecord::where('task_id', $task->sub_task_id)
-                ->field([
-                    'id',
-                    'user_id',
-                    'task_id',
-                    'clue_wechat as reg_wechat',      // 重命名
-                    'wechat_no as execute_account',
-                    'wechat_name as execute_name',
-                    'wechat_avatar as execute_avatar',
-                    'remark',     // 重命名
-                    'exec_task_id',
-                    'exec_time',
-                    'status',
-                    'result',
-                    'create_time',
-                    'update_time'
-                ])  
-               ->select();
+                    ->field([
+                        'id',
+                        'user_id',
+                        'task_id',
+                        'device_code',
+                        'reg_wechat',      // 重命名
+                        'wechat_no as execute_account',
+                        'wechat_name as execute_name',
+                        'wechat_avatar as execute_avatar',
+                        'original_message',     // 重命名
+                        'remark',
+                        'action',
+                        'user_account',
+                        'account',
+                        'account_type',
+                        'status',
+                        'result',
+                        'image',
+                        'create_time',
+                        'update_time'
+                    ])
+                    ->where('crawling_task_id', 'in', $info['craw_task_ids'] ?? [])
+                    ->select();
+            } else {
+                if ($task->auto_type == 0) {
+                    $addWechatlist = SvCrawlingManualTaskRecord::where('task_id', $task->sub_task_id)
+                        ->field([
+                            'id',
+                            'user_id',
+                            'task_id',
+                            'clue_wechat as reg_wechat',      // 重命名
+                            'wechat_no as execute_account',
+                            'wechat_name as execute_name',
+                            'wechat_avatar as execute_avatar',
+                            'remark',     // 重命名
+                            'exec_task_id',
+                            'exec_time',
+                            'status',
+                            'result',
+                            'create_time',
+                            'update_time'
+                        ])
+                        ->select();
+                }else{
+                    $addWechatlist = SvAddWechatRecord::where('device_code', $task->device_code)
+                    ->field([
+                        'id',
+                        'user_id',
+                        'task_id',
+                        'device_code',
+                        'reg_wechat',      // 重命名
+                        'wechat_no as execute_account',
+                        'wechat_name as execute_name',
+                        'wechat_avatar as execute_avatar',
+                        'original_message',     // 重命名
+                        'remark',
+                        'action',
+                        'user_account',
+                        'account',
+                        'account_type',
+                        'status',
+                        'result',
+                        'image',
+                        'create_time',
+                        'update_time'
+                    ])
+                    ->where('exec_task_id', $task->id)
+                    ->select();
+                }
             }
             self::$returnData = [
                 'task_info' => $task->toArray(),
@@ -242,5 +268,4 @@ class DisplayLogic extends ApiLogic
             return false;
         }
     }
-
 }

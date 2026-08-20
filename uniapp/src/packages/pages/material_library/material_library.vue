@@ -11,7 +11,7 @@
                         <view
                             v-for="(item, index) in ['全部展示', '分组展示']"
                             :key="index"
-                            class="px-[20rpx] py-[8rpx] rounded-[8rpx] text-[24rpx] font-medium transition-all"
+                            class="px-[20rpx] py-[8rpx] rounded-[8rpx] text-xs font-medium transition-all"
                             :class="currShowType === index ? 'bg-white text-[#374151] shadow-sm' : 'text-[#6B7280]'"
                             @click="handleShowType(index)">
                             {{ item }}
@@ -27,7 +27,7 @@
                         :name="currShowType === ShowType.ALL ? 'plus' : 'folder-add'"
                         color="#fff"
                         size="20"></u-icon>
-                    <text class="text-[24rpx]">{{ currShowType === ShowType.ALL ? "上传素材" : "新建分组" }}</text>
+                    <text class="text-xs">{{ currShowType === ShowType.ALL ? "上传素材" : "新建分组" }}</text>
                 </view>
             </view>
 
@@ -108,8 +108,7 @@
 
                             <view class="p-3">
                                 <view class="flex items-start justify-between mb-2">
-                                    <text
-                                        class="text-[24rpx] font-medium text-[#1F2937] truncate flex-1 mr-2 leading-[1.3]">
+                                    <text class="text-xs font-medium text-[#1F2937] truncate flex-1 mr-2 leading-[1.3]">
                                         {{ item.name || "未命名素材" }}
                                     </text>
                                     <view
@@ -208,14 +207,14 @@
                 <view class="flex items-center gap-x-3">
                     <template v-if="isHandle">
                         <view
-                            class="h-[76rpx] px-5 bg-[#F1F5F9] text-[#1E293B] rounded-full flex items-center justify-center text-[26rpx] font-medium active:scale-95 transition-all"
+                            class="h-[76rpx] px-5 bg-[#F1F5F9] text-[#1E293B] rounded-full flex items-center justify-center font-medium active:scale-95 transition-all"
                             @click="openMoveGroupPopup">
                             <u-icon name="folder-open" size="28" class="mr-1"></u-icon>
                             移动至
                         </view>
 
                         <view
-                            class="min-w-[180rpx] h-[76rpx] px-4 rounded-full flex items-center justify-center text-white text-[26rpx] font-medium transition-all active:scale-95"
+                            class="min-w-[180rpx] h-[76rpx] px-4 rounded-full flex items-center justify-center text-white font-medium transition-all active:scale-95"
                             :class="[
                                 handleList.length > 0
                                     ? 'bg-[#FF2442] shadow-lg shadow-[#FF2442]/20'
@@ -223,13 +222,14 @@
                             ]"
                             @click="handleDelete(handleList)">
                             <u-icon name="trash" color="#fff" size="28" class="mr-1"></u-icon>
-                            删除 <text v-if="handleList.length > 0" class="ml-1">({{ handleList.length }})</text>
+                            删除
+                            <text v-if="handleList.length > 0" class="ml-1">({{ handleList.length }})</text>
                         </view>
                     </template>
 
                     <view
                         v-else
-                        class="h-[76rpx] px-6 bg-[#1E293B] text-white flex items-center justify-center rounded-full text-[26rpx] font-medium shadow-lg shadow-gray-300 active:scale-95 transition-all"
+                        class="h-[76rpx] px-6 bg-[#1E293B] text-white flex items-center justify-center rounded-full font-medium shadow-lg shadow-gray-300 active:scale-95 transition-all"
                         @click="isHandle = true">
                         <u-icon name="setting" color="#fff" size="28" class="mr-1"></u-icon>
                         批量管理
@@ -624,7 +624,7 @@ const handleManageGroup = (index: number) => {
                                 title: "删除中...",
                             });
                             try {
-                                await deleteMaterialLibrary({
+                                await deleteMaterialLibraryGroup({
                                     id: dataLists.value[index].id,
                                 });
 
@@ -799,7 +799,7 @@ const { uploadAndProcessFiles, showUploadProgress, uploadMaterialList } = useUpl
                             ? MaterialTypeEnum.VIDEO
                             : MaterialTypeEnum.MUSIC,
                     group_id: currentGroupItem.id,
-                })
+                }),
             );
         }
         uni.showLoading({

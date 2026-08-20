@@ -5,6 +5,7 @@
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
     "choose-agent": "../../components/choose-agent/choose-agent"
   }
 }

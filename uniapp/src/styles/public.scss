@@ -15,7 +15,6 @@ uni-modal {
 button::after {
     border: none !important;
 }
-
 .safe-area {
     padding-bottom: calc(constant(safe-area-inset-bottom));
     padding-bottom: calc(env(safe-area-inset-bottom));
@@ -141,32 +140,6 @@ button::after {
     }
 }
 
-.digital-human-tag {
-    @apply rounded-full px-[28rpx] py-[8rpx] text-white  shadow-[0px_6px_12px_0px_rgba(0,0,0,0.24)] text-xs;
-    backdrop-filter: blur(6px);
-    &-1 {
-        background: linear-gradient(180deg, #1af7cf50 0%, #0065fb50 100%);
-    }
-    &-2 {
-        background: linear-gradient(180deg, #caffb150 0%, #3bb84050 100%);
-    }
-    &-4 {
-        background: linear-gradient(180deg, #fffcaa80 0%, #ff62d880 100%);
-    }
-    &-6 {
-        background: linear-gradient(180deg, #4df6ff80 0%, #881abbc0 100%);
-    }
-    &-7 {
-        background: linear-gradient(180deg, #fc624780 0%, #fc6247cc 100%);
-    }
-}
-.dh-version-name {
-    @apply px-3 py-1 text-white text-xs rounded-full;
-    border: 1px solid #ffffff33;
-    background: #ffffff1a;
-    backdrop-filter: blur(6px);
-}
-
 .device-bg,
 .dh-bg {
     background: linear-gradient(180deg, rgba(220, 234, 252, 1) 0%, rgba(243, 244, 251, 1) 100%);
@@ -185,10 +158,6 @@ button::after {
         box-shadow: 0px 0px 0px 2px #fb000033;
         background: #fb000008;
     }
-}
-
-.font-digital-number {
-    font-family: "digital-number";
 }
 
 .progress-loader {
@@ -239,13 +208,11 @@ button::after {
 }
 
 .rotation {
-    @apply w-5 h-5 border-[10rpx] border-dotted border-white rounded-full inline-block mb-2;
-    animation: rotation 3s linear infinite;
+    @apply inline-block w-[40rpx] h-[40rpx] border border-solid border-[#ffffff]/30 border-t-white rounded-full;
+    animation: spin 0.8s linear infinite;
 }
-@keyframes rotation {
-    from {
-        transform: rotate(0deg);
-    }
+
+@keyframes spin {
     to {
         transform: rotate(360deg);
     }
@@ -281,4 +248,27 @@ button::after {
 
 .card-gradient {
     background: linear-gradient(43deg, #4158d0 0%, #c850c0 46%, #ffcc70 100%);
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.4s ease infinite;
+}
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/**
+ * 小程序端隐藏节点但保留在渲染树里（等价 v-show，用于规避 uni-app 事件回调编号错乱）。
+ * v-show 编译成 hidden 属性，会被 flex / inline-flex 类覆盖，且 WXSS 不支持属性选择器无法兜底，
+ * 所以带 display 类的节点必须改用这个 class。
+ */
+.is-hidden {
+    display: none !important;
 }

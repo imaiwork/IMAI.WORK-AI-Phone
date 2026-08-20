@@ -1,1 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="28" height="28" viewBox="0 0 28 28" fill="none"><path fill-rule="evenodd"  fill="url(#linear_border_xUTNv1hsw4mPF06KeNnct_0)"  d="M22 0L6 0C2.68629 0 0 2.68629 0 6L0 22C0 25.3137 2.68629 28 6 28L22 28C25.3137 28 28 25.3137 28 22L28 6C28 2.68629 25.3137 0 22 0ZM2 6C2 3.79086 3.79086 2 6 2L22 2C24.2091 2 26 3.79086 26 6L26 22C26 24.2091 24.2091 26 22 26L6 26C3.79086 26 2 24.2091 2 22L2 6Z"></path><path   fill="url(#linear_border_6xVYBo2GWyju6cgupESG2_0)"  d="M9 13L19 13L19 15L9 15L9 13Z"></path><path   fill="url(#linear_border_CA2ILS77IDxDuAW3FE8op_0)"  d="M15 9L15 19L13 19L13 9L15 9Z"></path><defs><linearGradient id="linear_border_xUTNv1hsw4mPF06KeNnct_0" x1="14.921479999999999" y1="9.364600000000001" x2="24.36952" y2="28" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#47D59F"  /><stop offset="1" stop-color="#37CCED"  /></linearGradient><linearGradient id="linear_border_6xVYBo2GWyju6cgupESG2_0" x1="14.3291015625" y1="14" x2="17.703369140625" y2="14" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#47D59F"  /><stop offset="1" stop-color="#37CCED"  /></linearGradient><linearGradient id="linear_border_CA2ILS77IDxDuAW3FE8op_0" x1="14" y1="14.3291015625" x2="14" y2="17.703399658203125" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#47D59F"  /><stop offset="1" stop-color="#37CCED"  /></linearGradient></defs></svg>
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0065FB"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <radialGradient id="glowGrad" cx="50%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="iconGrad" x1="48" y1="28" x2="48" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.75"/>
+    </linearGradient>
+    <linearGradient id="strokeGrad" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0065FB" flood-opacity="0.35"/>
+    </filter>
+    <filter id="innerGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  <circle cx="48" cy="48" r="46" stroke="url(#strokeGrad)" stroke-width="1.5" fill="none"/>
+  <circle cx="48" cy="48" r="42" fill="url(#bgGrad)" filter="url(#shadow)"/>
+  <circle cx="48" cy="48" r="42" fill="url(#glowGrad)"/>
+  <line x1="48" y1="58" x2="48" y2="34" stroke="url(#iconGrad)" stroke-width="4.5" stroke-linecap="round"/>
+  <line x1="48" y1="34" x2="38" y2="44" stroke="url(#iconGrad)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="48" y1="34" x2="58" y2="44" stroke="url(#iconGrad)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="34" y1="63" x2="62" y2="63" stroke="url(#iconGrad)" stroke-width="4.5" stroke-linecap="round"/>
+  <circle cx="34" cy="30" r="3" fill="#ffffff" fill-opacity="0.2"/>
+  <circle cx="28" cy="38" r="1.5" fill="#ffffff" fill-opacity="0.15"/>
+</svg>

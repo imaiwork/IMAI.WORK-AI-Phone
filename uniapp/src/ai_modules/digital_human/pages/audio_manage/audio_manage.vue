@@ -328,7 +328,7 @@ const openTone = () => {
 
 const handleSubmit = async () => {
     if (userTokens.value < tokensValue.value) {
-        uni.$u.toast("算力不足，请充值！");
+        powerInsufficientTip();
         return;
     }
     formRef.value?.validate(async (valid: boolean) => {

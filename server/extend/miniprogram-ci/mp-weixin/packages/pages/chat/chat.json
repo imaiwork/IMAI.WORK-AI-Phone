@@ -1,0 +1,29 @@
+{
+  "navigationBarTitleText": "",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "empty": "../../../components/empty/empty",
+    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
+    "u-search": "../../../uni_modules/vk-uview-ui/components/u-search/u-search",
+    "tabbar": "../../../components/tabbar/tabbar",
+    "recharge-popup": "../../../components/recharge-popup/recharge-popup",
+    "empty-content": "./components/empty-content",
+    "history-popup": "./components/history-popup",
+    "knowledge-list": "./components/knowledge-list",
+    "workbench-chat-scroll": "./components/workbench-chat-scroll",
+    "image-studio-panel": "./components/image-studio/image-studio-panel",
+    "map-studio-panel": "./components/map-studio/map-studio-panel",
+    "ppt-studio-panel": "./components/ppt-studio/ppt-studio-panel",
+    "video-studio-panel": "./components/video-studio/video-studio-panel",
+    "image-model-popup": "./components/popups/image-model-popup",
+    "image-size-popup": "./components/popups/image-size-popup",
+    "image-case-popup": "./components/popups/image-case-popup",
+    "video-size-popup": "./components/popups/video-size-popup",
+    "ppt-pages-popup": "./components/popups/ppt-pages-popup",
+    "ppt-scene-popup": "./components/popups/ppt-scene-popup"
+  }
+}

@@ -1,19 +1,10 @@
 <template>
-    <view
-        v-if="showDropdown"
-        class="dropdown-mask"
-        @click="showDropdown = !showDropdown"
-    ></view>
+    <view v-if="showDropdown" class="dropdown-mask" @click="showDropdown = !showDropdown"></view>
     <view class="dropdown">
         <view class="flex items-center" @click="showDropdown = !showDropdown">
             <slot :show="showDropdown"></slot>
         </view>
-        <view
-            class="dropdown-menu"
-            v-show="showDropdown"
-            :class="menuClass"
-            @click="showDropdown = !showDropdown"
-        >
+        <view class="dropdown-menu" v-show="showDropdown" :class="menuClass" @click="showDropdown = !showDropdown">
             <!-- 下拉菜单的内容 -->
             <slot name="menu"></slot>
         </view>
@@ -21,25 +12,25 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, ref } from "vue";
 
 const props = defineProps({
     mode: {
         type: String,
-        default: 'down'
-    } // 默认向下展开
-})
+        default: "down",
+    }, // 默认向下展开
+});
 
-const showDropdown = ref<boolean>(false)
+const showDropdown = ref<boolean>(false);
 
 const menuClass = computed(() => {
     return {
-        'dropdown-menu-up': props.mode === 'up',
-        'dropdown-menu-right': props.mode === 'right',
-        'dropdown-menu-down': props.mode === 'down',
-        'dropdown-menu-left': props.mode === 'left'
-    }
-})
+        "dropdown-menu-up": props.mode === "up",
+        "dropdown-menu-right": props.mode === "right",
+        "dropdown-menu-down": props.mode === "down",
+        "dropdown-menu-left": props.mode === "left",
+    };
+});
 </script>
 
 <style lang="scss">

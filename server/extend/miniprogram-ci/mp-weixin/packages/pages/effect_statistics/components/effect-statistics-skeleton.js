@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../common/vendor.js"),c={};const n=e._export_sfc(c,[["render",function(c,n){return{a:e.f(3,((e,c,n)=>({a:e}))),b:e.f(2,((e,c,n)=>({a:e}))),c:e.f(4,((e,c,n)=>({a:e}))),d:e.f(2,((e,c,n)=>({a:e})))}}],["__scopeId","data-v-34a00e9c"]]);wx.createComponent(n);

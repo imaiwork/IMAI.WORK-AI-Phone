@@ -10,8 +10,8 @@
     "empty": "../../../../components/empty/empty",
     "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
     "u-popup": "../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
-    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "account-update-progress": "../../components/account-update-progress/account-update-progress",
     "video-preview": "../../../../components/video-preview/video-preview",
     "choose-agent": "../../components/choose-agent/choose-agent"
   }

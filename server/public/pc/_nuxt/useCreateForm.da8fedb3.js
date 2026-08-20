@@ -1,1 +1,0 @@
-import{y as a}from"./entry.82b512ca.js";const o=a({}),s=(e,t)=>{const n=r.get(e);n&&n(t)},r=new Map,c=(e,t)=>{r.set(e,t)};function m(){return{formData:o,setFormData:t=>{o.value=t,s("update:formData",t)},onEvent:c}}export{m as default};

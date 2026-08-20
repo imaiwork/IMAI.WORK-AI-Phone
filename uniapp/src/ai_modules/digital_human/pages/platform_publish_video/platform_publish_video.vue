@@ -20,7 +20,7 @@
                     <view class="flex-1">
                         <text class="text-[#b4b4b4] text-xs block">投放平台：DOU音</text>
                         <view class="flex items-baseline gap-1">
-                            <text class="text-[#0065fb] font-medium text-xl">{{ videoList.length || 6 }}</text>
+                            <text class="text-primary font-medium text-xl">{{ videoList.length || 6 }}</text>
                             <text class="text-[#9b9b9b] text-xs font-medium">个视频已就绪</text>
                         </view>
                     </view>
@@ -207,7 +207,11 @@ const handleAction = (item: any, index: number) => {
                             if (modalRes.confirm) {
                                 try {
                                     await deleteManualPublishTask({ id: item.id });
-                                    uni.showToast({ title: "删除成功", icon: "none", duration: 3000 });
+                                    uni.showToast({
+                                        title: "删除成功",
+                                        icon: "none",
+                                        duration: 3000,
+                                    });
                                     videoList.value = videoList.value.filter((v) => v.id !== item.id);
                                 } catch (error: any) {
                                     uni.hideLoading();

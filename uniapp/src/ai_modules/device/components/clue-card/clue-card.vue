@@ -57,7 +57,7 @@ const props = withDefaults(
             added: 0,
         }),
         type: 1,
-    }
+    },
 );
 </script>
 

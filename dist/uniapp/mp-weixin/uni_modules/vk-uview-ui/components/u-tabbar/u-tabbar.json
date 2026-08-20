@@ -1,7 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "u-icon": "../u-icon/u-icon",
-    "u-badge": "../u-badge/u-badge"
-  }
-}

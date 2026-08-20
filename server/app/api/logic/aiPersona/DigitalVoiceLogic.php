@@ -43,7 +43,7 @@ class DigitalVoiceLogic extends ApiLogic
                     continue;
                 }
                 //音色库
-                $humanVoice = HumanVoice::where(['id' => $voiceId, 'user_id' => $userId])->findOrEmpty();
+                $humanVoice = HumanVoice::where(['id' => $voiceId, 'user_id' => $userId])->where('status', 1)->findOrEmpty();
                 if ($humanVoice->isEmpty()) {
                     continue;
                 }
@@ -53,7 +53,7 @@ class DigitalVoiceLogic extends ApiLogic
                     'persona_id'        => $params['persona_id'],
                     'voice_id'          => $voiceId,
                     'voice_name'        => $humanVoice['name'] ?? '',
-                    'provider'          => 'shanjian',
+                    'provider'          => AiPersonaDigitalVoice::resolveProviderFromHumanVoice($humanVoice),
                     'preview_audio_url' => $humanVoice['voice_urls'],
                     'third_voice_id'    => $humanVoice['voice_id'],
                     'create_time'       => time(),

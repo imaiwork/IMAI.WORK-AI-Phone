@@ -43,6 +43,8 @@ class TokenLogService
         if (empty($userInfo)) {
             throw new \Exception('用户查询失败');
         }
+        // 团队被停用 / 成员到期 → 拦截(消费前校验)
+        \app\common\service\TeamMemberService::assertActive($uid);
         // AI聊天 - 1算力
         // AI美工 
         // - 文生图、图生图  - 40算力
@@ -74,8 +76,10 @@ class TokenLogService
         } else if (in_array($scene, ['human_avatar', 'human_audio', 'human_voice'])) {
 
             $need_token = 20;
-        } else if (in_array($scene, ['human_video_shanjian','combined_picture'])) {
+        } else if (in_array($scene, ['human_video_shanjian', 'shanjian_realman_broadcast', 'shanjian_broadcast_mixcut', 'shanjian_news_mixcut', 'combined_picture'])) {
             $need_token = $use_token * $num;
+        } else if (in_array($scene, ['human_voice_chanjing'])) {
+            $need_token = $use_token;
         }else if (in_array($scene, ['human_video'])) {
             $need_token = 50;
         } else if(in_array($scene, ['knowledge_create','create_vector_knowledge'])) {
@@ -92,18 +96,28 @@ class TokenLogService
             $need_token = 100;
         }else if(in_array($scene, ['volc_img_to_img_v2','volc_txt_to_img_v2', 'volc_txt_to_posterimg_v2'])) {
             $need_token = 30;
-        }else if(in_array($scene, ['sora_video_create'])) {
+        }else if(in_array($scene, ['sora_video_create','seedance2_480p_image2video_create','seedance2_480p_video2video_create','seedance2_720p_image2video_create','seedance2_720p_video2video_create'])) {
             $need_token = $use_token * $num;
-        }else if(in_array($scene, ['storyboard_video_create'])) {
+        }else if(in_array($scene, ['storyboard_video_create','human_audio_minimax_hd','human_audio_minimax_turbo'])) {
             $need_token = $use_token * $num;
-        }else if(in_array($scene, ['ai_persona_analysis'])) {
-            $need_token = $use_token;
-        }else if(in_array($scene, ['ai_persona_report'])) {
+        }else if(in_array($scene, ['ai_persona_analysis','ai_persona_report','human_voice_minimax_hd','human_voice_minimax_turbo', 'images_explosion_rewrite', 'human_avatar_shanjian_pro'])) {
             $need_token = $use_token;
         }
-        if ($userInfo['tokens'] < $need_token) {
-            self::sendNotify($userInfo['id'], '用户算力不足');
-            throw new \Exception('用户算力不足', 4059);
+        // 配置了单价的场景:预检至少按单价,避免「有1点算力就放行、执行后再按单价扣失败」
+        // 自动化等大量场景此前落在默认 need_token=1,与真实扣费脱节
+        if ($use_token > 0) {
+            $need_token = max((float)$need_token, (float)$use_token);
+        }
+        if ($num > 0 && $use_token > 0) {
+            $need_token = max((float)$need_token, (float)$use_token * (float)$num);
+        }
+        // 企业空间内成员可用算力=企业钱包;团队主/个人=个人算力
+        $spendable = \app\common\service\TeamBillingService::spendableTokens((int)$userInfo['id']);
+        if ($spendable < $need_token) {
+            self::sendNotify($userInfo['id'], '用户算力不足;当前算力:' . $spendable . ';需要算力:' . $need_token . ';任务场景:' . $scene);
+            $msg = \app\common\service\TeamBillingService::resolveSpender((int)$userInfo['id']) !== null
+                ? '当前团队算力不足，请联系团队主' : '用户算力不足';
+            throw new \Exception($msg, 4059);
         }
         //
         //        AccountLogLogic::add(
@@ -131,7 +145,7 @@ class TokenLogService
                     'msg' => $msg
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $device->device_code,
-                'appVersion' => '2.1.1',
+                'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                 'messageId' => 0,
             );
 

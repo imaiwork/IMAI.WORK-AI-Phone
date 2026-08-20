@@ -42,6 +42,11 @@ class LoginMiddleware
 
         //token临近过期，自动续期
         if ($userInfo) {
+            if (!empty($userInfo['is_disable'] ?? 0)) {
+                UserTokenService::expireToken($token);
+                return JsonService::fail('账号已被禁用', [], -1, 0);
+            }
+
             //获取临近过期自动续期时长
             $beExpireDuration = Config::get('project.user_token.be_expire_duration');
             //token续期

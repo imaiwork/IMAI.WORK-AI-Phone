@@ -259,7 +259,7 @@ const { userTokens } = toRefs(userStore);
 
 // 获取消耗的算力
 const getToken = computed(() => {
-    const getScore = (scene: TokensSceneEnum, key: string = "score") => {
+    const getScore = (scene: TokensSceneEnum, key = "score") => {
         return parseFloat(userStore.getTokenByScene(scene)?.[key] || "0");
     };
     const token =

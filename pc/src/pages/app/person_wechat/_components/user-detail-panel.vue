@@ -4,7 +4,7 @@
             <div class="flex-shrink-0 flex justify-center w-16 pt-6">
                 <button
                     @click="close"
-                    class="w-12 h-12 rounded-2xl bg-[#ffffff]/20 backdrop-blur-md text-white hover:bg-[#ffffff]/40 transition-all flex items-center justify-center shadow-xl border border-white/20">
+                    class="w-12 h-12 rounded-2xl bg-[#ffffff]/20 backdrop-blur-md text-white hover:bg-[#ffffff]/40 transition-all flex items-center justify-center shadow-xl border border-[#ffffff]/20">
                     <Icon name="local-icon-close" :size="28"></Icon>
                 </button>
             </div>

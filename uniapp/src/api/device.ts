@@ -1,13 +1,18 @@
 import request, { RequestEventStreamConfig } from "@/utils/request";
 
-// 获取设备统计
-export const getDeviceStatistics = () => {
-    return request.get({ url: "/device.display/display" });
-};
-
 // 获取设备列表
 export const getDeviceList = (data: any) => {
     return request.get({ url: "/device.device/lists", data });
+};
+
+// 获取指定设备二维码
+export const getDeviceQrcode = (data: { device_code: string }) => {
+    return request.get({ url: "/device.device/qrcode", data });
+};
+
+// 兑换手机激活码
+export const redeemDeviceCode = (data: { cdk_code: string; device_code: string }) => {
+    return request.post({ url: "/device.device/redeem", data });
 };
 
 // 获取设备详情
@@ -21,13 +26,28 @@ export const updateDevice = (data: any) => {
         { url: "/device.device/update", data },
         {
             ignoreCancel: true,
-        }
+        },
     );
 };
 
 // 解除设备绑定
 export const unbindDevice = (data: any) => {
     return request.post({ url: "/device.device/remove", data });
+};
+
+// 使用/重置设备
+export const updateDeviceUsed = (data: { device_code: string; is_used: 0 | 1 }) => {
+    return request.post({ url: "/device.device/used", data });
+};
+
+// 扫码绑定设备二维码
+export const scanOldDeviceQrcode = (data: { device_code: string; activation_code: string }) => {
+    return request.post({ url: "/device.device/scanOldQrcode", data });
+};
+
+/** 触发 RPA 拉取平台账号（异步落库） */
+export const fetchDeviceAccount = (data: { device_code: string; type: number }) => {
+    return request.post({ url: "/device.account/fetch", data });
 };
 
 /// 添加设备账号
@@ -158,6 +178,21 @@ export const getPrivateChatTaskDetail = (data: any) => {
 // 私聊接管删除
 export const deletePrivateChatTask = (data: any) => {
     return request.post({ url: "/device.takeOver/delete", data });
+};
+
+// 私聊接管任务固定话术历史记录
+export const getPrivateChatTaskFixedHistory = (data: any) => {
+    return request.get({ url: "/device.takeOver/speechHistory", data });
+};
+
+// 私聊接管任务固定话术删除
+export const deletePrivateChatTaskFixedHistory = (data: any) => {
+    return request.post({ url: "/device.takeOver/speechDelete", data });
+};
+
+// 获取拉群关键词
+export const getGroupTriggerKeywords = () => {
+    return request.get({ url: "/device.takeOver/groupTriggerKeywords" });
 };
 
 // 养号任务新增
@@ -295,36 +330,6 @@ export const createDemoTask = (data: any) => {
     return request.post({ url: "/auto.device/opt", data });
 };
 
-// 24h任务营销对话聊天
-export const marketingChat = (data: any, config: RequestEventStreamConfig) => {
-    return request.eventStream({ url: "/auto.needsAnalysis/chat", data, method: "POST" }, config);
-};
-
-// 24h任务营销分析
-export const marketingAnalysis = (data: any) => {
-    return request.post({ url: "/auto.needsAnalysis/analysis", data });
-};
-
-// 24h任务营销数据添加
-export const addMarketingAnalysisData = (data: any) => {
-    return request.post({ url: "/auto.needsAnalysis/add", data });
-};
-
-// 24h任务营销数据更新
-export const updateMarketingAnalysisData = (data: any) => {
-    return request.post({ url: "/auto.needsAnalysis/update", data });
-};
-
-// 24h任务营销分析详情
-export const marketingAnalysisDetail = (data: any) => {
-    return request.get({ url: "/auto.needsAnalysis/detail", data });
-};
-
-// 24h任务营销分析报告
-export const marketingAnalysisReport = (data: Record<string, any>) => {
-    return request.post({ url: "/auto.needsAnalysis/report", data });
-};
-
 // 手动发布列表
 export const getManualPublishList = (data: Record<string, any>) => {
     return request.get({ url: "/sv.mediaManualSetting/lists", data });
@@ -428,4 +433,44 @@ export const checkTaskPublishTime = (data: Record<string, any>) => {
 // 设备移除人设
 export const removeDevicePersona = (data: Record<string, any>) => {
     return request.post({ url: "/device.device/removePersona", data });
+};
+
+// 24h任务执行计划表
+export const getAutoTaskExecutionPlan = (data: Record<string, any>) => {
+    return request.get({ url: "/device.schedule/lists", data });
+};
+
+// 修改24h任务执行计划表
+export const updateAutoTaskExecutionPlan = (data: Record<string, any>) => {
+    return request.post({ url: "/device.schedule/update", data });
+};
+
+// 同城曝光任务新增
+export const createSameCityTask = (data: Record<string, any>) => {
+    return request.post({ url: "/sv.cityExposure/add", data });
+};
+
+// 团购评论任务新增
+export const createGroupPurchaseTask = (data: Record<string, any>) => {
+    return request.post({ url: "/sv.groupBuy/add", data });
+};
+
+// 团购评论关键词历史记录
+export const getGroupPurchaseKeywordHistory = (data?: Record<string, any>) => {
+    return request.get({ url: "/sv.groupBuy/getFilterHistory", data });
+};
+
+// 同城视频截流任务新增
+export const createSameCityInterceptTask = (data: Record<string, any>) => {
+    return request.post({ url: "/sv.cityTouch/add", data });
+};
+
+// 同城视频截流关键词历史记录
+export const getSameCityInterceptKeywordHistory = (data?: Record<string, any>) => {
+    return request.get({ url: "/sv.cityTouch/getFilterHistory", data });
+};
+
+// 设备运行日志列表
+export const getDeviceRunningLogList = (data?: Record<string, any>) => {
+    return request.get({ url: "/device.log/lists", data });
 };

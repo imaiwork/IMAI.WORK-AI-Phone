@@ -1,0 +1,226 @@
+// 团队控制台共享样式(扁平类)。
+// 按项目约定,在各子组件的 <style lang="scss" scoped> 中通过
+// @import "@/pages/team/_styles/console.scss"; 引入(随组件 data-v 作用域化)。
+
+.empty-state {
+    @apply text-slate-400 text-center mt-24;
+}
+
+.entry-card {
+    @apply bg-white rounded-[20px] border border-br p-8 transition-all;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
+    &:hover {
+        box-shadow: 0 10px 34px rgba(0, 101, 251, 0.1);
+        transform: translateY(-2px);
+    }
+}
+.entry-ic {
+    @apply w-12 h-12 rounded-2xl grid place-items-center;
+}
+
+.plan-card {
+    @apply relative rounded-2xl px-6 py-5 flex flex-col justify-center overflow-hidden;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 60%, #1e3a5f 100%);
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.25);
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+@media (max-width: 1100px) {
+    .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.metric-tile {
+    @apply relative flex flex-col items-start rounded-2xl px-4 py-4 text-left transition-colors min-w-0 w-full;
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+}
+button.metric-tile {
+    appearance: none;
+    font: inherit;
+    color: inherit;
+}
+.metric-tile--cost {
+    @apply cursor-pointer;
+    background: linear-gradient(180deg, #fffbeb 0%, #fff7ed 100%);
+    border-color: #fde68a;
+}
+.metric-tile--cost:hover {
+    border-color: #fbbf24;
+    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.12);
+}
+.metric-ic {
+    @apply w-8 h-8 rounded-xl grid place-items-center mb-3 shrink-0;
+}
+.metric-ic--amber {
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+}
+.metric-label {
+    @apply text-[12px] text-slate-400 font-medium mb-1.5 whitespace-nowrap;
+}
+.metric-value {
+    @apply text-[22px] font-[1000] text-slate-900 leading-none tracking-tight tabular-nums;
+    white-space: nowrap;
+}
+.metric-value.is-cost {
+    color: #d97706;
+}
+.metric-tip {
+    @apply mt-1.5 text-[11px] font-medium leading-snug;
+    color: rgba(217, 119, 6, 0.72);
+}
+.metric-unit {
+    @apply text-[13px] text-slate-400 font-bold ml-1;
+}
+.metric-bar {
+    @apply h-1.5 rounded-full bg-slate-200/80 mt-3 overflow-hidden w-full;
+}
+.metric-bar-fill {
+    @apply h-full rounded-full bg-primary transition-all;
+}
+.metric-link {
+    @apply mt-3 inline-flex items-center gap-0.5 text-[12px] font-bold whitespace-nowrap;
+    color: rgba(217, 119, 6, 0.8);
+}
+.plan-badge {
+    @apply inline-flex items-center self-start text-[11px] font-bold px-2 py-0.5 rounded-full mb-3;
+    background: rgba(52, 211, 153, 0.15);
+    color: #6ee7b7;
+}
+.plan-name {
+    @apply text-white text-xl font-[1000];
+}
+.plan-sub {
+    @apply text-slate-400 text-xs mt-2;
+}
+
+/* 成员角色标识 */
+.role-chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 h-[26px] rounded-full text-[13px] font-medium whitespace-nowrap;
+    transition: background-color 0.15s;
+}
+.role-dot {
+    @apply w-1.5 h-1.5 rounded-full opacity-70;
+    background: currentColor;
+}
+.role-chip.is-owner {
+    color: var(--el-color-primary);
+    background: rgba(0, 101, 251, 0.1);
+}
+.role-chip.is-admin {
+    @apply text-amber-600;
+    background: #fffbeb;
+}
+.role-chip.is-member {
+    @apply text-slate-500;
+    background: #f1f5f9;
+}
+.role-chip.is-member:hover,
+.role-chip.is-admin:hover {
+    filter: brightness(0.97);
+}
+
+/* 品牌管理二级页签 */
+.brand-tabs {
+    @apply inline-flex gap-1 bg-white rounded-2xl border border-br p-1.5;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
+}
+.brand-tab {
+    @apply px-5 py-2 rounded-xl text-sm font-bold text-slate-500 transition-colors;
+}
+.brand-tab:hover {
+    @apply text-slate-800;
+}
+.brand-tab.active {
+    @apply bg-primary text-white;
+}
+
+.nav-card {
+    @apply bg-white rounded-[20px] border border-br p-2;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
+}
+.nav-item {
+    @apply w-full flex items-center gap-3 px-4 h-[46px] rounded-xl text-[14px] font-bold text-slate-500 transition-all;
+    &:hover {
+        @apply bg-slate-50 text-primary;
+    }
+    &.active {
+        @apply text-primary;
+        background: rgba(0, 101, 251, 0.08);
+    }
+}
+
+.panel {
+    @apply bg-white rounded-[20px] border border-br p-7;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
+}
+
+.section-title {
+    @apply flex items-center gap-2.5 text-[17px] font-[1000] text-slate-900 mb-5;
+}
+.section-title .bar {
+    @apply w-1.5 h-5 rounded-full bg-primary inline-block;
+}
+
+.tag-soft {
+    @apply text-[12px] px-2.5 py-0.5 rounded-full font-bold text-primary;
+    background: rgba(0, 101, 251, 0.1);
+}
+.copy {
+    @apply text-[12px] text-primary font-normal cursor-pointer;
+}
+
+.stat {
+    @apply bg-white rounded-2xl border border-br p-5;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
+}
+.stat-ic {
+    @apply w-10 h-10 rounded-xl grid place-items-center mb-3;
+}
+.stat-num {
+    @apply text-[26px] font-[1000] text-slate-900 leading-none;
+}
+.stat-sub {
+    @apply text-base text-slate-400 font-bold ml-1;
+}
+.stat-label {
+    @apply text-xs text-slate-400 mt-2;
+}
+
+.notice-danger {
+    @apply bg-red-50 border border-red-100 rounded-xl px-5 py-4 text-red-500 font-bold;
+}
+.notice-ok {
+    @apply bg-emerald-50 border border-emerald-100 rounded-xl px-5 py-4 text-emerald-600;
+}
+
+.steps {
+    @apply flex items-center gap-2 text-xs text-slate-400;
+}
+.step {
+    @apply flex items-center gap-1.5 font-bold;
+}
+.step i {
+    @apply w-5 h-5 rounded-full text-primary grid place-items-center not-italic text-[11px];
+    background: rgba(0, 101, 251, 0.1);
+}
+.step-line {
+    @apply w-8 h-[1px] bg-slate-200;
+}
+
+.lbl {
+    @apply text-xs text-slate-400 mb-1.5;
+}
+.tint-primary {
+    background: rgba(0, 101, 251, 0.1);
+    color: #0065fb;
+}
+.app-chip {
+    @apply text-[13px] px-3.5 py-1.5 rounded-lg font-bold text-slate-600 bg-slate-50 border border-br;
+}

@@ -33,7 +33,7 @@
                                         </span>
                                     </div>
 
-                                    <div v-if="sceneType == DrawType.VIDEO" class="w-full h-full">
+                                    <div v-if="isVideoRecord(item)" class="w-full h-full">
                                         <video :src="item.video_url" class="w-full h-full object-cover" muted></video>
                                         <div
                                             class="absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-[#000000]/20 backdrop-blur-md">
@@ -97,7 +97,7 @@
                                                 </div>
                                                 <div
                                                     class="table-action-item hover:!text-danger hover:bg-[#FDE6E8]"
-                                                    @click="handleDelete(item.id, index)">
+                                                    @click="handleDelete(item, index)">
                                                     <Icon name="el-icon-Delete" :size="14"></Icon>
                                                     <span>永久删除</span>
                                                 </div>
@@ -170,6 +170,8 @@ const getTypeName = (type: string) => {
     return "绘画";
 };
 
+const isVideoRecord = (item: any) => Number(item?.draw_type) === DrawType.VIDEO;
+
 const queryParams = reactive<any>({
     page_no: 1,
     type: sceneType.value,
@@ -194,7 +196,7 @@ const previewImages = ref<any[]>([]);
 const previewVideoRef = shallowRef();
 
 const previewImage = async (item: any) => {
-    const isVideo = sceneType.value === DrawType.VIDEO;
+    const isVideo = isVideoRecord(item);
     if (isVideo) {
         showPreviewVideo.value = true;
         await nextTick();
@@ -211,7 +213,7 @@ const visibleChange = (flag: boolean, id: number) => {
 };
 
 const handleDownLoad = (item: any) => {
-    const isVideo = sceneType.value === DrawType.VIDEO;
+    const isVideo = isVideoRecord(item);
     const link = isVideo ? item.video_url : item.image;
     downloadFile(link);
 };
@@ -225,16 +227,16 @@ const handleSceneType = (type: number) => {
     resetPage();
 };
 
-const handleDelete = async (id: number, index: number) => {
+const handleDelete = async (item: any, index: number) => {
     useNuxtApp().$confirm({
         message: "确定永久删除此记录吗？",
         onConfirm: async () => {
             try {
-                const isVideo = sceneType.value === DrawType.VIDEO;
+                const isVideo = isVideoRecord(item);
                 if (isVideo) {
-                    await drawingVideoDelete({ id });
+                    await drawingVideoDelete({ id: item.id });
                 } else {
-                    await drawingDelete({ log_id: id });
+                    await drawingDelete({ log_id: item.id });
                 }
                 feedback.msgSuccess("删除成功");
                 pager.lists.splice(index, 1);

@@ -1,86 +1,95 @@
-import HttpRequest from "./http";
-import { merge } from "lodash-es";
+import HttpRequest from './http'
+import { merge } from 'lodash-es'
 import {
     HttpRequestOptions,
     RequestHooks,
     RequestConfig,
     RequestEventStreamConfig,
     RequestOptions,
-    UploadFileOption,
-} from "./type";
-import { getToken } from "../auth";
-import { RequestCodeEnum, RequestMethodsEnum } from "@/enums/requestEnums";
-import { useUserStore } from "@/stores/user";
-import router from "@/router";
-import appConfig from "@/config";
+    UploadFileOption
+} from './type'
+import { getToken } from '../auth'
+import { RequestCodeEnum, RequestMethodsEnum } from '@/enums/requestEnums'
+import { useUserStore } from '@/stores/user'
+import router from '@/router'
+import appConfig from '@/config'
 
-export type { RequestConfig, RequestEventStreamConfig, RequestOptions, UploadFileOption };
+export type { RequestConfig, RequestEventStreamConfig, RequestOptions, UploadFileOption }
 
 const requestHooks: RequestHooks = {
     requestInterceptorsHook(options, config) {
-        const { urlPrefix, baseUrl, withToken } = config;
-        options.header = options.header || {};
+        const { urlPrefix, baseUrl, withToken } = config
+        options.header = options.header || {}
         if (urlPrefix) {
-            options.url = `${urlPrefix}${options.url}`;
+            options.url = `${urlPrefix}${options.url}`
         }
         if (baseUrl) {
-            options.url = `${baseUrl}${options.url}`;
+            options.url = `${baseUrl}${options.url}`
         }
-        //#ifndef APP-PLUS
-        const token = useUserStore().token || null;
-        //#endif
-        //#ifdef APP-PLUS
-        const token = useUserStore().token || "null";
-        //#endif
+        const token = useUserStore().token || null
         // 添加token
         if (withToken && !options.header.token) {
-            options.header.token = token;
+            options.header.token = token
         }
-        options.header.version = appConfig.version;
-        return options;
+        options.header.version = appConfig.version
+        options.header.terminal = 1
+        // 微信小程序带上 appid，供后端按 OEM 小程序解析团队站点(备案号/品牌等)
+        // #ifdef MP-WEIXIN
+        try {
+            if (!options.header.appid) {
+                const { miniProgram } = uni.getAccountInfoSync()
+                if (miniProgram?.appId) {
+                    options.header.appid = miniProgram.appId
+                }
+            }
+        } catch {
+            // ignore
+        }
+        // #endif
+        return options
     },
     async responseInterceptorsHook(response, config, options) {
-        const { isTransformResponse, isReturnDefaultResponse, isAuth } = config;
+        const { isTransformResponse, isReturnDefaultResponse, isAuth } = config
 
         //返回默认响应，当需要获取响应头及其他数据时可使用
         if (isReturnDefaultResponse) {
-            return response;
+            return response
         }
         // 是否需要对数据进行处理
         if (!isTransformResponse) {
-            return response.data;
+            return response.data
         }
-        const { logout } = useUserStore();
-        const { code, data, msg, show } = response.data as any;
+        const { logout } = useUserStore()
+        const { code, data, msg, show } = response.data as any
         switch (code) {
             case RequestCodeEnum.SUCCESS:
-                msg && show && uni.$u.toast(msg);
-                return data;
+                msg && show && uni.$u.toast(msg)
+                return data
             case RequestCodeEnum.FAILED:
-                msg && show && uni.$u.toast(msg);
-                return Promise.reject(msg);
+                msg && show && uni.$u.toast(msg)
+                return Promise.reject(msg)
             case RequestCodeEnum.TOKEN_INVALID:
-                logout();
+                logout()
                 if (isAuth && !getToken()) {
-                    router.navigateTo({ path: "/pages/login/login" });
+                    router.navigateTo({ path: '/packages/pages/login/login' })
                 }
-                return Promise.reject(msg);
+                return Promise.reject(msg)
 
             default:
-                return data;
+                return data
         }
     },
     async responseInterceptorsCatchHook(options, error) {
         if (options.method?.toUpperCase() == RequestMethodsEnum.POST) {
-            uni.$u.toast("请求失败，请重试");
+            uni.$u.toast('请求失败，请重试')
         }
-        return error.errMsg || error;
-    },
-};
+        return error.errMsg || error
+    }
+}
 
 const defaultOptions: HttpRequestOptions = {
     requestOptions: {
-        timeout: appConfig.timeout,
+        timeout: appConfig.timeout
     },
     baseUrl: appConfig.baseUrl,
 
@@ -97,14 +106,14 @@ const defaultOptions: HttpRequestOptions = {
     isAuth: false,
     retryCount: 2,
     retryTimeout: 1000,
-    requestHooks: requestHooks,
-};
+    requestHooks: requestHooks
+}
 
 function createRequest(opt?: HttpRequestOptions) {
     return new HttpRequest(
         // 深度合并
         merge(defaultOptions, opt || {})
-    );
+    )
 }
-const request = createRequest();
-export default request;
+const request = createRequest()
+export default request

@@ -1,1 +1,0 @@
-.platform-item.active.data-v-48994d97{background:white;box-shadow:0 4rpx 12rpx rgba(0,0,0,.08)}.publish-item.data-v-48994d97,.private-group.data-v-48994d97,.robot-item.data-v-48994d97{transition:all .2s ease-in-out}.robot-item.active.data-v-48994d97{border:2rpx solid var(--color-primary);box-shadow:0 4rpx 12rpx rgba(0,101,251,.1)}

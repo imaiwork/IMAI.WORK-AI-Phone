@@ -1,0 +1,1 @@
+"use strict";var t=(t=>(t.HOT="hot",t.CREATE="create",t.PUBLISH="publish",t.RIVAL_INTERNET="rival-internet",t.RIVAL_LOCAL="rival-local",t.STORE_TARGET="store-target",t.WX_VIDEO_LEAD="wxvideo-lead",t.CHAT_SOCIAL="chat-social",t.CHAT_COMMENT="chat-comment",t.CHAT_WECHAT="chat-wechat",t.CHAT_MOMENTS="chat-moments",t))(t||{});exports.HomeModalType=t;

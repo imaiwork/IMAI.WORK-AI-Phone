@@ -21,9 +21,7 @@
                                 class="h-[16rpx] w-[122rpx] absolute right-[-62rpx] bottom-0 z-[-1]"></image>
                         </view>
                     </view>
-                    <view class="text-[#0000004d] text-[26rpx] mt-[20rpx]">
-                        请确认卡密编号，兑换后立即生效，卡密不可再次使用
-                    </view>
+                    <view class="text-[#0000004d] mt-[20rpx]"> 请确认卡密编号，兑换后立即生效，卡密不可再次使用 </view>
                     <view class="mt-4">
                         <view
                             class="form-ipt !border-[#EDEDED]"
@@ -61,33 +59,61 @@
                             >
                         </view>
                     </view>
+
+                    <!-- 温馨提示 -->
                     <view class="mt-[48rpx] flex flex-col items-center justify-center px-[48rpx]">
                         <view class="flex items-center gap-x-2 w-full">
                             <view class="flex-1"><u-line /></view>
-                            <view class="text-[#0000004d] text-[26rpx] flex-shrink-0">温馨提示</view>
+                            <view class="text-[#0000004d] flex-shrink-0">温馨提示</view>
                             <view class="flex-1"><u-line /></view>
                         </view>
                         <view class="flex flex-col gap-y-4 mt-[52rpx]">
-                            <view class="flex items-center gap-x-2 text-[#0000004d] text-[26rpx]">
+                            <view class="flex items-center gap-x-2 text-[#0000004d]">
                                 <text
                                     class="flex items-center justify-center border border-solid border-[#EDEDEE] bg-[#EDEDEE] w-[36rpx] h-[36rpx] rounded-full"
                                     >1</text
                                 >
                                 <text>充值获得的算力只能在本平台使用</text>
                             </view>
-                            <view class="flex items-center gap-x-2 text-[#0000004d] text-[26rpx]">
+                            <view class="flex items-center gap-x-2 text-[#0000004d]">
                                 <text
                                     class="flex items-center justify-center border border-solid border-[#EDEDEE] bg-[#EDEDEE] w-[36rpx] h-[36rpx] rounded-full"
                                     >2</text
                                 >
                                 <text>若充值未到账，请联系客服</text>
                             </view>
-                            <view class="flex items-center gap-x-2 text-[#0000004d] text-[26rpx]">
+                            <view class="flex items-center gap-x-2 text-[#0000004d]">
                                 <text
                                     class="flex items-center justify-center border border-solid border-[#EDEDEE] bg-[#EDEDEE] w-[36rpx] h-[36rpx] rounded-full"
                                     >3</text
                                 >
                                 <text>充值获得的为虚拟算力，一般不可退换</text>
+                            </view>
+                        </view>
+                    </view>
+
+                    <view v-if="getServiceQrcode" class="mt-[48rpx] mb-[64rpx]">
+                        <view class="flex items-center gap-x-2 px-[48rpx] mb-[40rpx]">
+                            <view class="flex-1"><u-line /></view>
+                            <view class="text-[#0000004d] flex-shrink-0">联系客服</view>
+                            <view class="flex-1"><u-line /></view>
+                        </view>
+                        <view
+                            class="bg-[#EDEDEE] flex items-center justify-between px-[40rpx] py-[40rpx] rounded-[24rpx]">
+                            <view class="flex flex-col gap-y-[16rpx]">
+                                <text class="text-[28rpx] font-medium text-[#333333]">长按图片添加客服经理</text>
+                                <view class="flex items-center gap-x-[8rpx]">
+                                    <view class="w-[12rpx] h-[12rpx] rounded-full bg-[#4CAF7D]"></view>
+                                    <text class="text-xs text-[#4CAF7D]">充值享更多优惠</text>
+                                </view>
+                            </view>
+                            <view class="border border-solid border-[#EDEDEE] rounded-[16rpx] p-[8rpx] bg-white">
+                                <image
+                                    :src="getServiceQrcode"
+                                    show-menu-by-longpress
+                                    class="w-[148rpx] h-[148rpx] rounded-[8rpx]"
+                                    mode="aspectFill">
+                                </image>
                             </view>
                         </view>
                     </view>
@@ -120,7 +146,38 @@
 
 <script lang="ts" setup>
 import { checkRedeemCode, useRedeemCode } from "@/api/recharge";
+import { getAgentUserParentQrcode } from "@/api/user";
+import { useUserStore } from "@/stores/user";
+import { useAppStore } from "@/stores/app";
 import { useLockFn } from "@/hooks/useLockFn";
+
+const userStore = useUserStore();
+const { isLogin } = toRefs(userStore);
+
+const appStore = useAppStore();
+const websiteConfig = computed(() => appStore.getWebsiteConfig);
+
+const getCustomerService = computed(() => {
+    if (websiteConfig.value.customer_service) {
+        const { wx_image, title, time, phone } = websiteConfig.value.customer_service;
+        return { wx_image, title, time, phone };
+    }
+    return {};
+});
+
+const agentUserParentQrcode = ref("");
+const getAgentParentQrcode = async () => {
+    if (!isLogin.value) return;
+    try {
+        const res = await getAgentUserParentQrcode();
+        agentUserParentQrcode.value = res.qr_code;
+    } catch (e) {}
+};
+
+const getServiceQrcode = computed(() => {
+    return agentUserParentQrcode.value || getCustomerService.value.wx_image;
+});
+
 const codeValue = ref<string>("");
 const checkVisible = ref<boolean>(false);
 const checkResult = ref<any>({});
@@ -143,6 +200,7 @@ const { lockFn: lockFnQueryRedeem, isLock: isLockQueryRedeem } = useLockFn(async
         uni.$u.toast(error);
     }
 });
+
 const { lockFn: lockFnRedeem, isLock: isLockRedeem } = useLockFn(async () => {
     try {
         await useRedeemCode({ sn: codeValue.value });
@@ -154,6 +212,8 @@ const { lockFn: lockFnRedeem, isLock: isLockRedeem } = useLockFn(async () => {
         uni.$u.toast(error);
     }
 });
-</script>
 
-<style lang="scss" scoped></style>
+onMounted(() => {
+    getAgentParentQrcode();
+});
+</script>

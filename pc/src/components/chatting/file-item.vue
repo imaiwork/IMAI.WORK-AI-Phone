@@ -4,7 +4,7 @@
             <div class="flex flex-row items-center gap-2">
                 <div class="relative h-10 w-10 shrink-0 overflow-hidden rounded-md">
                     <div
-                        class="absolute inset-0 flex items-center justify-center bg-black/5 text-white"
+                        class="absolute inset-0 flex items-center justify-center bg-[#000000]/5 text-white"
                         v-if="item.loading">
                         <Icon name="local-icon-loading" :size="24" color="#ffffff"></Icon>
                     </div>
@@ -60,7 +60,7 @@ const props = withDefaults(
         }),
         index: 0,
         showClose: true,
-    }
+    },
 );
 
 const emit = defineEmits<{

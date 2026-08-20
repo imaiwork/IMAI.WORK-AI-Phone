@@ -3,12 +3,6 @@
   "navigationStyle": "custom",
   "usingComponents": {
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
-    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "u-slider": "../../../../uni_modules/vk-uview-ui/components/u-slider/u-slider",
-    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
-    "keywords-edit": "../../components/keywords-edit/keywords-edit",
-    "config-card": "./components/config-card",
-    "tag-list": "./components/tag-list",
-    "script-list": "./components/script-list"
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon"
   }
 }

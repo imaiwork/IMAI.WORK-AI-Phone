@@ -3,6 +3,7 @@
 namespace app\common\model\coze;
 
 use app\common\model\BaseModel;
+use app\common\service\AgentPermissionService;
 use app\common\service\FileService;
 
 /**
@@ -22,6 +23,7 @@ class CozeAgent extends BaseModel
 
     // 权限类型常量
     const PERMISSIONS_UNLIMITED = 0; // 没有限制
+    const PERMISSIONS_MEMBER = 1; // 仅会员等级可用
 
     // 输出类型常量
     const STREAM_DIRECT = 0; // 直接输出
@@ -60,10 +62,7 @@ class CozeAgent extends BaseModel
      */
     public static function getPermissionsText(int $permissions): string
     {
-        $map = [
-            self::PERMISSIONS_UNLIMITED => '没有限制',
-        ];
-        return $map[$permissions] ?? '未知权限';
+        return AgentPermissionService::getPermissionsText($permissions);
     }
 
     /**

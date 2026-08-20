@@ -1,9 +1,11 @@
 <?php
 namespace app\api\logic\distributionAgent;
 
+use app\adminapi\logic\setting\DistributionAgentConfigLogic;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\logic\BaseLogic;
+use app\common\logic\RechargeStatsLogic;
 use app\common\model\distribution\DistributionAgent;
 use app\common\model\user\User;
 use app\common\service\ConfigService;
@@ -16,24 +18,15 @@ class DistributionAgentLogic extends BaseLogic
     public static function info(int $userId)
     {
         $agent = DistributionAgent::where('user_id', $userId)->findOrEmpty();
-        $user = User::field('tokens')->findOrEmpty($userId);
+        $user = User::field('tokens, recharge_stats_reset_time')->findOrEmpty($userId);
 
-        $levelNames = ConfigService::get('distribution_agent', 'distribution_agent_level_names', [
-            ['level' => 1, 'name' => '高级代理'],
-            ['level' => 2, 'name' => '中级代理'],
-            ['level' => 3, 'name' => '初级代理'],
-        ]);
-        if (is_string($levelNames)) {
-            $levelNames = json_decode($levelNames, true);
-        }
-
-        $currentLevelName = '';
-        foreach ($levelNames as $level) {
-            if ($level['level'] == $agent->level) {
-                $currentLevelName = $level['name'];
-                break;
-            }
-        }
+        // 团队充值业绩：所有层级下线的已支付充值订单合计，按自己的业绩清零水位线过滤，
+        // 与后台用户详情的「下级累计充值金额」同口径
+        $descendantIds = DistributionAgent::getDescendantIds($userId);
+        $teamRecharge = RechargeStatsLogic::getTotal(
+            $descendantIds,
+            (int)($user->recharge_stats_reset_time ?? 0)
+        );
 
         return [
             'level' => $agent->level ?? 0,
@@ -41,8 +34,70 @@ class DistributionAgentLogic extends BaseLogic
             'become_time' => $agent->become_time ?? 0,
             'tokens' => $user->tokens ?? 0,
             'qr_code' => $agent->qr_code ? \app\common\service\FileService::getFileUrl($agent->qr_code) : '',
-            'level_name' => $currentLevelName
+            'level_name' => DistributionAgentConfigLogic::getLevelName((int)($agent->level ?? 0)),
+            'team_user_count' => count($descendantIds),
+            'team_recharge_amount' => $teamRecharge['amount'],
+            'team_recharge_count' => $teamRecharge['order_count'],
         ];
+    }
+
+    /**
+     * @notes 某个下级的概要：基本信息 + 充值业绩，用于充值流水明细页头部
+     * @param int $userId 下级用户
+     * @param int $viewerUserId 查看者（上级），业绩按其清零水位线统计
+     * @return array
+     */
+    public static function subSummary(int $userId, int $viewerUserId): array
+    {
+        $user = User::field('id, nickname, avatar, mobile, tokens')->findOrEmpty($userId);
+        $agent = DistributionAgent::where('user_id', $userId)->findOrEmpty();
+        $selfRecharge = RechargeStatsLogic::getTotal(
+            [$userId],
+            RechargeStatsLogic::getSubStatsSinceTime($viewerUserId, $userId)
+        );
+
+        return [
+            'user_id' => $userId,
+            'nickname' => $user['nickname'] ?? '',
+            'avatar' => FileService::getFileUrl($user['avatar'] ?? ''),
+            'mobile' => $user['mobile'] ?? '',
+            'tokens' => $user['tokens'] ?? 0,
+            'level' => (int)($agent->level ?? 0),
+            'level_name' => DistributionAgentConfigLogic::getLevelName((int)($agent->level ?? 0)),
+            'self_recharge_amount' => $selfRecharge['amount'],
+            'self_recharge_count' => $selfRecharge['order_count'],
+        ];
+    }
+
+    /**
+     * @notes 校验当前用户能否查看目标用户的数据，返回实际要查询的用户 ID
+     *   代理端最多看到「下级的下级」两层，所以沿 parent_id 上溯 $maxDepth 层能追到自己才放行。
+     *   展开下级列表只允许传直属下级（$maxDepth = 1），保证最深只能展开到孙级。
+     * @param int $currentUserId
+     * @param int $targetUserId 0 或等于自己表示看自己
+     * @param int $maxDepth 允许的最大层级差
+     * @return int
+     * @throws \Exception
+     */
+    public static function checkViewableUserId(int $currentUserId, int $targetUserId, int $maxDepth = 2): int
+    {
+        if ($targetUserId <= 0 || $targetUserId === $currentUserId) {
+            return $currentUserId;
+        }
+
+        $cursor = $targetUserId;
+        for ($depth = 0; $depth < $maxDepth; $depth++) {
+            $parentId = (int)DistributionAgent::where('user_id', $cursor)->value('parent_id');
+            if ($parentId <= 0) {
+                break;
+            }
+            if ($parentId === $currentUserId) {
+                return $targetUserId;
+            }
+            $cursor = $parentId;
+        }
+
+        throw new \Exception('该用户不在您的下级中，无法查看');
     }
 
     public static function setLevel(int $parentId, array $params)
@@ -213,15 +268,6 @@ class DistributionAgentLogic extends BaseLogic
 
     public static function getAgentConfig()
     {
-        $levelNames = ConfigService::get('distribution_agent', 'distribution_agent_level_names', [
-            ['level' => 1, 'name' => '高级代理'],
-            ['level' => 2, 'name' => '中级代理'],
-            ['level' => 3, 'name' => '初级代理'],
-        ]);
-        if (is_string($levelNames)) {
-            $levelNames = json_decode($levelNames, true);
-        }
-
-        return $levelNames;
+        return DistributionAgentConfigLogic::getConfig();
     }
 }

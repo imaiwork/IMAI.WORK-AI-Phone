@@ -19,6 +19,9 @@ class ShanjianVideoSettingValidate extends BaseValidate
         'task_id' => 'max:50',
         'status' => 'in:0,1,2,3,4,5',
         'video_count' => 'number|between:1,100',
+        'shanjian_type' => 'in:1,2,3,4,5',
+        'ai_clip_enabled' => 'in:0,1,true,false',
+        'engine_type' => 'in:1,2',
     ];
 
     protected $message = [
@@ -31,6 +34,9 @@ class ShanjianVideoSettingValidate extends BaseValidate
         'status.in' => '状态值不正确',
         'video_count.number' => '视频数量必须是数字',
         'video_count.between' => '视频数量必须在1-100之间',
+        'shanjian_type.in' => '闪剪类型值不正确',
+        'ai_clip_enabled.in' => 'AI智剪开关值不正确',
+        'engine_type.in' => '引擎类型不正确，1=闪剪 2=蝉镜',
     ];
 
     /**

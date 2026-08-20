@@ -4,6 +4,7 @@ namespace app\adminapi\logic\aiPersona;
 
 use app\common\logic\BaseLogic;
 use app\common\model\aiPersona\Material;
+use app\common\model\aiPersona\MaterialUseLog;
 use Exception;
 use think\facade\Db;
 
@@ -47,9 +48,37 @@ class MaterialLogic extends BaseLogic
             }
 
             Material::destroy($id);
+            self::deleteUseLogs([$id]);
 
             Db::commit();
             self::$returnData = ['id' => $id];
+            return true;
+        } catch (Exception $e) {
+            Db::rollback();
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    public static function batchDelete(array $ids): bool
+    {
+        Db::startTrans();
+        try {
+            $ids = self::normalizeIds($ids);
+            if (empty($ids)) {
+                throw new Exception('请选择要删除的素材');
+            }
+
+            $delIds = Material::whereIn('id', $ids)->column('id');
+            if (empty($delIds)) {
+                throw new Exception('素材不存在');
+            }
+
+            Material::destroy($delIds);
+            self::deleteUseLogs($delIds);
+
+            Db::commit();
+            self::$returnData = ['id' => $delIds];
             return true;
         } catch (Exception $e) {
             Db::rollback();
@@ -71,6 +100,24 @@ class MaterialLogic extends BaseLogic
         } catch (Exception $e) {
             self::setError($e->getMessage());
             return false;
+        }
+    }
+
+    private static function normalizeIds(array $ids): array
+    {
+        $ids = array_map('intval', $ids);
+        $ids = array_filter($ids, function ($id) {
+            return $id > 0;
+        });
+
+        return array_values(array_unique($ids));
+    }
+
+    private static function deleteUseLogs(array $materialIds): void
+    {
+        $logIds = MaterialUseLog::whereIn('material_id', $materialIds)->column('id');
+        if (!empty($logIds)) {
+            MaterialUseLog::destroy($logIds);
         }
     }
 }

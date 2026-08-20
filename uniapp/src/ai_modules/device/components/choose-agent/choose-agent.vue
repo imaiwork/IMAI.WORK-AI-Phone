@@ -3,9 +3,11 @@
         <template #content>
             <view class="h-full flex flex-col">
                 <view class="flex items-center justify-between px-[30rpx] mt-3 mb-1" v-if="limit > 1">
-                    <text class="text-[26rpx] text-[#666666] font-medium">{{ title }}</text>
-                    <view class="text-[24rpx] text-[#999999]">
-                        已选 <text class="text-primary font-bold mx-0.5">{{ chooseLists.length }}</text> / {{ limit }}
+                    <text class="text-[#666666] font-medium">{{ title }}</text>
+                    <view class="text-xs text-[#999999]">
+                        已选
+                        <text class="text-primary font-bold mx-0.5">{{ chooseLists.length }}</text>
+                        / {{ limit }}
                     </view>
                 </view>
 
@@ -35,13 +37,21 @@
                                 </view>
 
                                 <view class="flex-1 min-w-0 flex flex-col justify-center">
+                                    <view class="agent-title-row">
+                                        <text
+                                            class="agent-title-text"
+                                            :class="isDisabled(item) ? 'text-[#BBBBBB]' : 'text-[#1A1A1A]'">
+                                            {{ item.name }}
+                                        </text>
+                                        <text
+                                            v-if="shouldShowAgentAccessTag(item)"
+                                            class="agent-access-tag"
+                                            :class="getAgentAccessTagClass(item)">
+                                            {{ getAgentAccessTagText(item) }}
+                                        </text>
+                                    </view>
                                     <text
-                                        class="font-extrabold text-[30rpx] truncate mb-1"
-                                        :class="isDisabled(item) ? 'text-[#BBBBBB]' : 'text-[#1A1A1A]'">
-                                        {{ item.name }}
-                                    </text>
-                                    <text
-                                        class="text-[24rpx] truncate mb-1.5"
+                                        class="text-xs truncate mb-1.5"
                                         :class="isDisabled(item) ? 'text-[#CCCCCC]' : 'text-[#999999]'">
                                         {{ item.intro || "暂无简介" }}
                                     </text>
@@ -55,7 +65,7 @@
                                                 :class="isDisabled(item) ? 'text-[#CCCCCC]' : 'text-[#666666]'">
                                                 {{
                                                     isDisabled(item)
-                                                        ? "已使用"
+                                                        ? getDisabledText(item)
                                                         : `创建人：${item.source_text || "系统"}`
                                                 }}
                                             </text>
@@ -125,8 +135,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, toRefs } from "vue";
 import { getAgentList } from "@/api/agent";
+import { useUserStore } from "@/stores/user";
+import {
+    AGENT_UNAVAILABLE_TIP,
+    canUseAgent,
+    getAgentAccessStatus,
+    getAgentAccessTagText as getAgentPermissionTagText,
+    shouldShowAgentAccessTag,
+} from "@/utils/agentPermission";
 
 const props = withDefaults(
     defineProps<{
@@ -138,7 +156,7 @@ const props = withDefaults(
         modelValue: false,
         title: "选择评论智能体",
         limit: 1,
-    }
+    },
 );
 
 const emit = defineEmits<{
@@ -159,22 +177,37 @@ const robotList = ref<any[]>([]);
 const pagingRef = ref<any>(null);
 const chooseLists = ref<any[]>([]);
 const disabledLists = ref<any[]>([]);
+const userStore = useUserStore();
+const { userInfo } = toRefs(userStore);
 
-const isDisabled = (item: any) => disabledLists.value.some((d) => d.id === item.id);
+const isUsedAgent = (item: any) => disabledLists.value.some((d) => d.id === item.id);
+const isAgentUnavailable = (item: any) => !canUseAgent(item, userInfo.value);
+const isDisabled = (item: any) => isUsedAgent(item) || isAgentUnavailable(item);
 const isChoose = (item: any) => chooseLists.value.some((c) => c.id === item.id);
+
+const getDisabledText = (item: any) => (isUsedAgent(item) ? "已使用" : "仅会员可用");
+
+const getAgentAccessTagText = (item: any) => getAgentPermissionTagText(item, userInfo.value);
+
+const getAgentAccessTagClass = (item: any) =>
+    getAgentAccessStatus(item, userInfo.value) === "free" ? "agent-access-tag--free" : "agent-access-tag--member";
 
 // 全选仅针对可选项
 const selectableLists = computed(() => robotList.value.filter((item) => !isDisabled(item)));
 const isAllSelected = computed(
-    () => selectableLists.value.length > 0 && chooseLists.value.length === selectableLists.value.length
+    () => selectableLists.value.length > 0 && chooseLists.value.length === selectableLists.value.length,
 );
 
 const handleSelect = (item: any) => {
-    if (isDisabled(item)) {
+    if (isUsedAgent(item)) {
         uni.$u.toast("该智能体已被使用，无法选择");
         return;
     }
-    const index = chooseLists.value.findIndex((c) => c.id === item.id);
+    if (isAgentUnavailable(item)) {
+        uni.$u.toast(AGENT_UNAVAILABLE_TIP);
+        return;
+    }
+    const index = chooseLists.value.findIndex((c) => c.id == item.id);
     if (index > -1) {
         chooseLists.value.splice(index, 1);
     } else {
@@ -218,8 +251,23 @@ const confirm = () => {
         uni.$u.toast("请选择评论智能体");
         return;
     }
+    const completedList = chooseLists.value.map((chosen) => {
+        const fullItem = robotList.value.find((r) => r.id == chosen.id);
+        return fullItem ?? chosen;
+    });
+
+    const hasIncomplete = completedList.some((item) => !item.name);
+    if (hasIncomplete) {
+        uni.$u.toast("数据加载中，请稍后再试");
+        return;
+    }
+    if (completedList.some((item) => isAgentUnavailable(item))) {
+        uni.$u.toast(AGENT_UNAVAILABLE_TIP);
+        return;
+    }
+
     show.value = false;
-    emit("confirm", props.limit === 1 ? chooseLists.value[0] : chooseLists.value);
+    emit("confirm", props.limit === 1 ? completedList[0] : completedList);
 };
 
 defineExpose({
@@ -231,3 +279,25 @@ defineExpose({
     },
 });
 </script>
+
+<style lang="scss" scoped>
+.agent-title-row {
+    @apply mb-1 flex min-w-0 items-center gap-x-[8rpx];
+}
+
+.agent-title-text {
+    @apply min-w-0 flex-1 truncate text-[30rpx] font-extrabold;
+}
+
+.agent-access-tag {
+    @apply shrink-0 rounded-full border border-solid px-[12rpx] py-[4rpx] text-[20rpx] font-semibold leading-none;
+}
+
+.agent-access-tag--free {
+    @apply border-[#BBF7D0] bg-[#F0FDF4] text-[#16A34A];
+}
+
+.agent-access-tag--member {
+    @apply border-[#DDD6FE] bg-[#F5F3FF] text-[#8B5CF6];
+}
+</style>

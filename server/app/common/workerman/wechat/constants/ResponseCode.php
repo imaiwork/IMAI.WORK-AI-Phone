@@ -45,12 +45,12 @@ class ResponseCode
     public const HANDLER_NOT_FOUND = 1021;      // 处理器未找到
     public const HANDLER_METHOD_NOT_FOUND = 1022; // 处理器方法未找到
     public const DEVICE_UNAUTHORIZED = 1023; //设备未授权
-    public const DEVICE_NOT_AUTHORIZED = 1024; //无效授权码
+    public const DEVICE_NOT_AUTHORIZED = 1024; //无效设备CDK
     public const DEVICE_ALREADY_AUTHORIZED = 1025; //设备已授权
-    public const CODE_ALREADY_USED = 1026; //授权码已被使用
+    public const CODE_ALREADY_USED = 1026; //设备CDK已被使用
     public const CODE_ALREADY_AUTHORIZED_BY_DEVICE = 1027; //授权已被设备授权
     public const INVALID_PLATFORM = 1028; //平台参数无效
-    public const DEVICE_CODE_ERROR = 1029; //设备授权码错误
+    public const DEVICE_CODE_ERROR = 1029; //设备CDK错误
     public const DOMAINE_NOT_FOUND = 1030;//未找到授权域名
     /**
      * 设备授权类错误 (2000-2999)
@@ -182,12 +182,12 @@ class ResponseCode
         self::FILE_DOWNLOAD_ERROR => '文件下载错误',
         self::FILE_DELETE_ERROR => '文件删除错误',
         self::DEVICE_UNAUTHORIZED => '设备未授权',
-        self::DEVICE_NOT_AUTHORIZED => '无效授权码',
+        self::DEVICE_NOT_AUTHORIZED => '无效设备CDK',
         self::DEVICE_ALREADY_AUTHORIZED => '设备已授权',
-        self::CODE_ALREADY_USED => '授权码已被使用',
-        self::CODE_ALREADY_AUTHORIZED_BY_DEVICE => '授权码已被设备授权',
+        self::CODE_ALREADY_USED => '设备CDK已被使用',
+        self::CODE_ALREADY_AUTHORIZED_BY_DEVICE => '设备CDK已被设备授权',
         self::INVALID_PLATFORM => '平台参数无效',
-        self::DEVICE_CODE_ERROR => '设备授权码错误',
+        self::DEVICE_CODE_ERROR => '设备CDK错误',
         self::DOMAINE_NOT_FOUND => '未找到授权域名'
     ];
 

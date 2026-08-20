@@ -28,6 +28,10 @@ class SoraVideoTaskLogic extends ApiLogic
     const SORA_PRO_VIDEO_CREATE = 'sora_pro_video_create';
     const COPYWRITING_CREATE = 'copywriting_create';
     const SORA_VIDEO_STATUS = 'sora_video_status';
+    const SEEDANCE2_480P_IMAGE2VIDEO_CREATE = 'seedance2_480p_image2video_create';
+    const SEEDANCE2_480P_VIDEO2VIDEO_CREATE = 'seedance2_480p_video2video_create';
+    const SEEDANCE2_720P_IMAGE2VIDEO_CREATE = 'seedance2_720p_image2video_create';
+    const SEEDANCE2_720P_VIDEO2VIDEO_CREATE = 'seedance2_720p_video2video_create';
 
     public static function notifyNew(array $data)
     {
@@ -103,7 +107,7 @@ class SoraVideoTaskLogic extends ApiLogic
                         ]
                     ];
                     $thumbnailResult = (new VideoInfoService())->commonVideoThumbnail($videos);
-                    if ($thumbnailResult['result']) {
+                    if (isset($thumbnailResult['result']) && $thumbnailResult['result']) {
                         $task->pic = $thumbnailResult['url'];
                     }
                 } else if ($data['status'] === 'pending') {
@@ -252,8 +256,8 @@ class SoraVideoTaskLogic extends ApiLogic
                                 'quality' => 2
                             ]
                         ];
-                        $thumbnailResult = (new VideoInfoController())->videoThumbnail($videos);
-                        if ($thumbnailResult['result']) {
+                        $thumbnailResult = (new VideoInfoService())->commonVideoThumbnail($videos);
+                        if (isset($thumbnailResult['result']) && $thumbnailResult['result']) {
                             $task->pic = $thumbnailResult['url'];
                         }
                         break;
@@ -277,6 +281,152 @@ class SoraVideoTaskLogic extends ApiLogic
         } catch (\Exception $e) {
             Db::rollback();
             Log::channel('sora')->error('Notify 处理失败, task_id: ' . $data['task_id'] . ', Error: ' . $e->getMessage());
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    public static function seedanceNotify(array $data)
+    {
+        if (empty($data['task_id'])) {
+            self::setError('缺少任务ID');
+            return false;
+        }
+        // 先初步查找任务，减少不必要的事务锁定
+        $task = SoraVideoTask::where('task_id', $data['task_id'])->where('status', 'in', [0, 1, 4])->find();
+        if (!$task) {
+            // 任务不存在
+            Log::channel('seedance')->info('Notify: 任务不存在，task_id: ' . $data['task_id']);
+            return true;
+        }
+        Db::startTrans();
+        try {
+            if (isset($data['status'])) {
+                $SoraVideoSetting = SoraVideoSetting::where('id', $task->video_setting_id)->findOrEmpty();
+                if ($SoraVideoSetting->isEmpty()) {
+                    throw new \Exception('关联的视频设置不存在');
+                }
+                $num = $SoraVideoSetting->video_count - $SoraVideoSetting->success_num - $SoraVideoSetting->error_num;
+
+                switch ($task['model_version']){
+                    case 3:
+                        $typeID = AccountLogEnum::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_480P;
+                        $scene = self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE;
+                        break;
+                    case 4:
+                        $typeID = AccountLogEnum::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_480P;
+                        $scene = self::SEEDANCE2_480P_VIDEO2VIDEO_CREATE;
+                        break;
+                    case 5:
+                        $typeID = AccountLogEnum::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_720P;
+                        $scene = self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE;
+                        break;
+                    case 6:
+                        $typeID = AccountLogEnum::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_720P;
+                        $scene = self::SEEDANCE2_720P_VIDEO2VIDEO_CREATE;
+                        break;
+                }
+
+                switch ($data['status']) {
+                    case 'error':
+                        $status = '生成失败';
+                        if ($num == 1 && $SoraVideoSetting->error_num > 0) {
+                            $SoraVideoSetting->status = 4;
+                        }
+                        $task->status = 2;
+                        $task->remark = $data['message'] ?? '处理失败';
+
+                        $SoraVideoSetting->error_num += 1;
+                        $SoraVideoSetting->save();
+                        $userId = $task->user_id;
+                        $taskId = $task->task_id;
+                        $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
+                        //查询是否已返还
+                        if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
+                            $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
+                            AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
+                        }
+                        break;
+                    case 'succeeded':
+                        $status = '生成成功';
+                        $task->status = 3;
+                        if (isset($data['content'])) {
+                            $video_result_url = FileService::downloadFileBySource($data['content']['video_url'], 'video');
+                            $old = '没有';
+                            $urldata = [
+                                'old' => $old,
+                                'new' => $video_result_url
+                            ];
+                            Log::channel('seedance')->write('获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                            $task->video_result_url = $video_result_url;
+                        }
+                        if ($num == 1 && $SoraVideoSetting->error_num > 0) {
+                            $SoraVideoSetting->status = 4;
+                        }
+                        if ($num == 1 && $SoraVideoSetting->error_num < 1) {
+                            $SoraVideoSetting->status = 3;
+                        }
+                        $SoraVideoSetting->success_num += 1;
+                        $SoraVideoSetting->save();
+                        $unit = ModelConfig::where('scene', $scene)->value('score', 0);
+                        $duration = $task->duration ?? 0;
+                        $points = $unit * $duration;
+                        $task->video_token = $points;
+                        //生成缩略图
+                        if ($task->width == '16') {
+                            $width = 864;
+                            $height = 496;
+                        }else if ($task->width == '9'){
+                            $width = 496;
+                            $height = 864;
+                        }else if ($task->width == '4'){
+                            $width = 752;
+                            $height = 560;
+                        }else if ($task->width == '3'){
+                            $width = 560;
+                            $height = 752;
+                        }else{
+                            $width = 640;
+                            $height = 640;
+                        }
+                        $videos = [
+                            'video_url' => FileService::getFileUrl($video_result_url),
+                            'time' => 1.0,
+                            'options' => [
+                                'width' => $width,
+                                'height' => $height,
+                                'quality' => 2
+                            ]
+                        ];
+                        $thumbnailResult = (new VideoInfoService())->commonVideoThumbnail($videos);
+                        if (isset($thumbnailResult['result']) && $thumbnailResult['result']) {
+                            $task->pic = $thumbnailResult['url'];
+                        }
+                        break;
+                }
+
+                if (isset($status) && ($status == '生成成功' || $status == '生成失败')){
+                    $mnpMessage = [
+                        'openid' => UserAuth::where('user_id', $task->user_id)->order('id', 'desc')->value('openid'),
+                        'scene_id' => 402,
+                        'name' => $task->name,
+                        'time' => date('Y-m-d H:i:s', time()),
+                        'status' => $status
+                    ];
+                    WechatLogic::sendMnpMessage($mnpMessage);
+                }else{
+                    return true;
+                }
+            }
+
+            $task->update_time = time();
+            $task->save();
+
+            Db::commit();
+            return true;
+        } catch (\Exception $e) {
+            Db::rollback();
+            Log::channel('seedance')->error('Notify 处理失败, task_id: ' . $data['task_id'] . ', Error: ' . $e->getMessage());
             self::setError($e->getMessage());
             return false;
         }
@@ -352,7 +502,7 @@ class SoraVideoTaskLogic extends ApiLogic
         if (empty($tasks)){
             return true;
         }
-        Log::channel('sora')->write('超过40分钟无回调的任务' . json_encode($tasks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        Log::channel('seedance')->write('超过40分钟无回调的任务' . json_encode($tasks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $result = [];
         $response = \app\common\service\ToolsService::sora();
         foreach ($tasks as $task) {
@@ -360,11 +510,16 @@ class SoraVideoTaskLogic extends ApiLogic
             cache($key,1,20);
             if (!empty($task['extra']['video_id'])) {
                 //请求上游查询状态
-                $result = $response->status(['task_id' => $task['extra']['video_id'],'sora_test' => 1]);
+                if (in_array($task['model_version'],[1,2])){
+                    $result = $response->status(['task_id' => $task['extra']['video_id'],'sora_test' => 1]);
+                }else{
+                    $result = $response->seedanceStatus(['task_id' => $task['extra']['video_id']]);
+                }
+
             }
-            Log::channel('sora')->write('超过40分钟无回调的任务处理' . json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-            // 超过40分钟无回调的任务处理
-            if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
+            Log::channel('seedance')->write('超过40分钟无回调的任务处理' . json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            // 超过40分钟无回调的任务处理 sora
+            if (!empty($result) && isset($result['code']) && $result['code'] == 10000 && in_array($task['model_version'],[1,2])) {
                 if (isset($result['data']['results'])) {
                     $result['data']['results'][0] = str_replace('\/', '/', $result['data']['results'][0]);
                     $video_result_url = FileService::downloadFileBySource($result['data']['results'][0], 'video');
@@ -372,7 +527,7 @@ class SoraVideoTaskLogic extends ApiLogic
                         'old' => '没有',
                         'new' => $video_result_url
                     ];
-                    Log::channel('sora')->write('定时任务查询获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                    Log::channel('seedance')->write('定时任务查询获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                     $scene = $task['model_version'] == 2 ? self::SORA_PRO_VIDEO_CREATE : self::SORA_VIDEO_CREATE;
                     $unit = ModelConfig::where('scene', '=', $scene)->value('score', 0);
                     $update = [
@@ -394,7 +549,66 @@ class SoraVideoTaskLogic extends ApiLogic
                         'update_time' => time()
                     ];
                 }
-            } else {
+            }
+            // // 超过40分钟无回调的任务处理 seedance
+            else if(!empty($result) && isset($result['code']) && $result['code'] == 10000 && in_array($task['model_version'],[3,4,5,6])){
+                if (isset($result['data']['status']) && $result['data']['status'] == 'succeeded'){
+                    $result['data']['content']['video_url'] = str_replace('\/', '/', $result['data']['content']['video_url']);
+                    $video_result_url = FileService::downloadFileBySource($result['data']['content']['video_url'], 'video');
+                    $urldata = [
+                        'old' => '没有',
+                        'new' => $video_result_url
+                    ];
+                    Log::channel('seedance')->write('定时任务查询获取视频链接' . json_encode($urldata, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                    $scene = $task['model_version'] == 2 ? self::SORA_PRO_VIDEO_CREATE : self::SORA_VIDEO_CREATE;
+                    switch ($task['model_version']){
+                        case 3:
+                            $scene = self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE;
+                            break;
+                        case 4:
+                            $scene = self::SEEDANCE2_480P_VIDEO2VIDEO_CREATE;
+                            break;
+                        case 5:
+                            $scene = self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE;
+                            break;
+                        case 6:
+                            $scene = self::SEEDANCE2_720P_VIDEO2VIDEO_CREATE;
+                            break;
+                    }
+                    $unit = ModelConfig::where('scene', '=', $scene)->value('score', 0);
+                    $update = [
+                        'video_result_url' => $video_result_url,
+                        'video_token' => (int) $unit * $task['duration'],
+                        'status' => 3,
+                        'update_time' => time()
+                    ];
+                    SoraVideoTask::where('id', $task['id'])->update($update);
+                    $setting = SoraVideoSetting::where('id', $task['video_setting_id'])->findOrEmpty();
+                    if (!$setting->isEmpty()) {
+                        $setting->inc('success_num')->save();
+                    }
+                    continue;
+                }else if(isset($result['data']['status']) && $result['data']['status'] == 'running'){
+                    continue;
+                }else if (isset($result['data']['status']) && $result['data']['status'] == 'queued'){
+                    continue;
+                }else if(isset($result['data']['error'])){
+                    if ($result['data']['error']['code'] == 'OutputVideoSensitiveContentDetected.PolicyViolation'){
+                        $errorMsg = '请求失败，输出视频可能涉及版权限制';
+                    }
+                    $errorUpdate = [
+                        'status' => 2,
+                        'remark' => $errorMsg ?? '输出视频内容违规',
+                        'update_time' => time()
+                    ];
+                } else {
+                    $errorUpdate = [
+                        'status' => 2,
+                        'remark' => $result['data']['message'] ?? '请求超时',
+                        'update_time' => time()
+                    ];
+                }
+            }else{
                 $errorUpdate = [
                     'status' => 2,
                     'remark' => '请求超时',
@@ -407,8 +621,16 @@ class SoraVideoTaskLogic extends ApiLogic
             $taskId = $task['task_id'];
             if ($task['model_version'] == 2) {
                 $typeID = AccountLogEnum::TOKENS_DEC_SORA_PRO_VIDEO;
-            } else {
+            } else if ($task['model_version'] == 1){
                 $typeID = AccountLogEnum::TOKENS_DEC_SORA_VIDEO;
+            } else if ($task['model_version'] == 4){
+                $typeID = AccountLogEnum::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_480P;
+            } else if ($task['model_version'] == 5){
+                $typeID = AccountLogEnum::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_720P;
+            } else if ($task['model_version'] == 6){
+                $typeID = AccountLogEnum::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_720P;
+            } else{
+                $typeID = AccountLogEnum::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_480P;
             }
             $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
             //查询是否已返还

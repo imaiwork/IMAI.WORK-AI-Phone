@@ -25,6 +25,11 @@ class WebWorkerHandler extends BaseMessageHandler
                 return;
             }
             $worker = $this->service->getWorker();
+            $source = (string)($content['sourceType'] ?? WorkerEnum::WS_SOURCE_PC_TYPE);
+            if (!in_array($source, WorkerEnum::WS_SOURCES, true)) {
+                $source = WorkerEnum::WS_SOURCE_PC_TYPE;
+            }
+            $oldUid = $this->service->getRepository()->getWebUserUid($source, (int)$this->userId);
             if (isset($worker->uidConnections[$uid])) {
 
                 // foreach ($worker->uidConnections as $connection) {
@@ -36,12 +41,16 @@ class WebWorkerHandler extends BaseMessageHandler
 
                 $worker->uidConnections[$uid]->apptype = WorkerEnum::WS_WEB_TYPE;
                 $worker->uidConnections[$uid]->userid = $content['userId'] ?? 0;
-                $worker->uidConnections[$uid]->clientType = 'webUser';
-                $worker->uidConnections[$uid]->sourceType = $content['sourceType'] ?? WorkerEnum::WS_SOURCE_PC_TYPE;
+                $worker->uidConnections[$uid]->clientType = WorkerEnum::WS_CLIENT_TYPE;
+                $worker->uidConnections[$uid]->sourceType = $source;
                 $worker->uidConnections[$uid]->name = 'web_' . $content['userId'];
 
-                $source = $worker->uidConnections[$uid]->sourceType;
-                $this->service->getRedis()->set("xhs:user:{$source}:{$content['userId']}", $uid);
+                $this->service->getRepository()->bindWebUser($source, (int)$this->userId, $uid, (int)$worker->id);
+                $this->service->setWorker($worker);
+                $this->service->closeWebUserConnections((int)$this->userId, $source, $uid, 'WebSocket连接被替换');
+                if ($oldUid !== null && $oldUid !== '' && $oldUid !== $uid) {
+                    $this->service->closeConnection($oldUid, 'WebSocket连接被替换');
+                }
             }
 
             $message = array(
@@ -71,4 +80,5 @@ class WebWorkerHandler extends BaseMessageHandler
             unset($content);
         }
     }
+
 }

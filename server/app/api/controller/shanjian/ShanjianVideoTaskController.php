@@ -6,7 +6,7 @@ use app\adminapi\lists\shanjian\ShanjianVideoTaskLists;
 use app\api\controller\BaseApiController;
 use app\api\logic\shanjian\ShanjianVideoTaskLogic;
 use app\api\validate\shanjian\ShanjianVideoTaskValidate;
-use app\common\service\FileService;
+use app\common\model\shanjian\ShanjianVideoTask;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\response\Json;
@@ -17,7 +17,7 @@ use think\response\Json;
  */
 class ShanjianVideoTaskController extends BaseApiController
 {
-    public array $notNeedLogin = ['notify','composite'];
+    public array $notNeedLogin = ['notify','composite','covernotify'];
 
 
     /**
@@ -54,6 +54,23 @@ class ShanjianVideoTaskController extends BaseApiController
         }
     }
 
+    /**
+     * 手动下载/转存成片（原链接 -> 本地/站点存储）
+     */
+    public function download()
+    {
+        try {
+            $params = (new ShanjianVideoTaskValidate())->post()->goCheck('download');
+            $result = ShanjianVideoTaskLogic::downloadResult((int)$params['id']);
+            if ($result) {
+                return $this->data(ShanjianVideoTaskLogic::getReturnData());
+            }
+            return $this->fail(ShanjianVideoTaskLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
 
     /**
      * 异步接收闪剪回调
@@ -61,31 +78,44 @@ class ShanjianVideoTaskController extends BaseApiController
     public function notify(): Json
     {
         $lockKey = '';
+        $gotLock = false;
         try {
             $data = $this->request->all();
             Log::channel('shanjiannotice')->write('接收闪剪参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-            
+
             $taskId = $data['task_id'] ?? '';
             if (empty($taskId)) {
                 return $this->fail('缺少任务ID');
             }
 
-            $lockKey = 'shanjian_video_task_notify_' . $taskId;
-            $lock = cache($lockKey);
-            if ($lock) {
-                return $this->fail('任务正在处理中，请勿重复请求');
+            // 已终态：幂等返回成功，避免闪剪重试再次撞锁
+            $existStatus = ShanjianVideoTask::where('task_id', $taskId)->value('status');
+            if ($existStatus !== null && in_array((int)$existStatus, [
+                ShanjianVideoTask::STATUS_FAILED,
+                ShanjianVideoTask::STATUS_SUCCESS,
+            ], true)) {
+                return $this->success('ok1');
             }
-            cache($lockKey, 1, 600);
+
+            $lockKey = 'shanjian_video_task_notify_' . $taskId;
+            $gotLock = ShanjianVideoTaskLogic::acquireRedisLock($lockKey, 180);
+            if (!$gotLock) {
+                // 正在处理中：先 ack，避免闪剪密集重推
+                return $this->success('ok2');
+            }
+
             $result = ShanjianVideoTaskLogic::notify($data);
-            cache($lockKey, 1, 6);
-            
             if (!$result) {
+                ShanjianVideoTaskLogic::releaseRedisLock($lockKey);
                 return $this->fail(ShanjianVideoTaskLogic::getError());
             }
 
-            return $this->success('ok');
+            ShanjianVideoTaskLogic::keepRedisLock($lockKey, 20);
+            return $this->success('ok3');
         } catch (\Exception $e) {
-            cache($lockKey, null);
+            if ($gotLock && $lockKey !== '') {
+                ShanjianVideoTaskLogic::releaseRedisLock($lockKey);
+            }
             Log::channel('shanjiannotice')->write('闪剪回调失败'.$e->getMessage());
             return $this->fail('fail');
         }
@@ -106,4 +136,47 @@ class ShanjianVideoTaskController extends BaseApiController
     }
 
 
+    /**
+     * 异步接收闪剪封面回调
+     */
+    public function covernotify(): Json
+    {
+        $lockKey = '';
+        $gotLock = false;
+        try {
+            $data = $this->request->all();
+            Log::channel('shanjiannotice')->write('接收闪剪封面参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+            $taskId = $data['task_id'] ?? '';
+            if (empty($taskId)) {
+                return $this->fail('缺少任务ID');
+            }
+
+            $thumbStatus = ShanjianVideoTask::where('task_id', $taskId)->value('thumb_status');
+            if ($thumbStatus !== null && in_array((int)$thumbStatus, [2, 3], true)) {
+                return $this->success('ok');
+            }
+
+            $lockKey = 'shanjian_video_task_cover_notify_' . $taskId;
+            $gotLock = ShanjianVideoTaskLogic::acquireRedisLock($lockKey, 180);
+            if (!$gotLock) {
+                return $this->success('ok');
+            }
+
+            $result = ShanjianVideoTaskLogic::covernotify($data);
+            if (!$result) {
+                ShanjianVideoTaskLogic::releaseRedisLock($lockKey);
+                return $this->fail(ShanjianVideoTaskLogic::getError());
+            }
+
+            ShanjianVideoTaskLogic::keepRedisLock($lockKey, 20);
+            return $this->success('ok');
+        } catch (\Exception $e) {
+            if ($gotLock && $lockKey !== '') {
+                ShanjianVideoTaskLogic::releaseRedisLock($lockKey);
+            }
+            Log::channel('shanjiannotice')->write('闪剪封面回调失败'.$e->getMessage());
+            return $this->fail('fail');
+        }
+    }
 }

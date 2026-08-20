@@ -187,7 +187,7 @@ class ImitationPublishLogic extends ApiLogic
                     'account_type' => $account['type'],
                     'device_code' => $account['device_code'],
                     'material_id' => 0,
-                    'material_type' => 1,
+                    'material_type' => ((int)($params['media_type'] ?? 1) === 2) ? 2 : 1,
                     'material_url' => '',
                     'material_title' => '',
                     'material_tag' => '',
@@ -210,7 +210,9 @@ class ImitationPublishLogic extends ApiLogic
                     'task_type' => DeviceEnum::TASK_TYPE_PUBLISH,
                     'account' => $account['account'],
                     'account_type' => $account['type'],
-                    'task_name' => '设备视频复刻发布任务',
+                    'task_name' => ((int)($params['media_type'] ?? 1) === 2)
+                        ? '设备图文复刻发布任务'
+                        : '设备视频复刻发布任务',
                     'status' => 0,
                     'day' => date('Y-m-d', $time['start_time']),
                     'start_time' => $time['start_time'],
@@ -334,6 +336,17 @@ class ImitationPublishLogic extends ApiLogic
                         $q->where('publish_confirm', 1)
                           ->whereOr('update_time', '<', time() - 1800);
                     });
+
+                $accountMediaType = (int)($account['media_type'] ?? 1);
+                if ($accountMediaType === VideoImitationTask::MEDIA_TYPE_IMAGE_TEXT) {
+                    $query->where('media_type', VideoImitationTask::MEDIA_TYPE_IMAGE_TEXT);
+                } else {
+                    // 兼容旧数据未写 media_type
+                    $query->where(function ($q) {
+                        $q->whereNull('media_type')
+                            ->whereOr('media_type', 'in', [0, VideoImitationTask::MEDIA_TYPE_VIDEO]);
+                    });
+                }
                 
                 if (!empty($typeUsedList)) {
                     $query->where('id', 'not in', $typeUsedList);
@@ -350,16 +363,58 @@ class ImitationPublishLogic extends ApiLogic
                 foreach ($availableVideos as $key => $media) {
                     if (!isset($placeholders[$key])) break;
                     $ph = $placeholders[$key];
+
+                    $isImageText = (int)($media['media_type'] ?? 1) === VideoImitationTask::MEDIA_TYPE_IMAGE_TEXT
+                        || (int)($account['media_type'] ?? 1) === 2;
+
+                    if ($isImageText) {
+                        $rewritten = $media['rewritten_images'] ?? [];
+                        if (is_string($rewritten)) {
+                            $rewritten = json_decode($rewritten, true) ?: [];
+                        }
+                        if (!is_array($rewritten) || empty($rewritten)) {
+                            continue;
+                        }
+                        $urls = [];
+                        foreach ($rewritten as $img) {
+                            if (is_array($img)) {
+                                $img = $img['url'] ?? '';
+                            }
+                            $img = trim((string)$img);
+                            if ($img !== '') {
+                                $urls[] = FileService::getFileUrl($img);
+                            }
+                        }
+                        if (empty($urls)) {
+                            continue;
+                        }
+                        $materialUrl = json_encode($urls, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                        $pic = $urls[0];
+                        $materialType = 2;
+                    } else {
+                        if (empty($media['video_url'])) {
+                            continue;
+                        }
+                        $materialUrl = FileService::getFileUrl($media['video_url']);
+                        $pic = $media['thumbnail'] ?? '';
+                        $materialType = 1;
+                    }
+
+                    $topic = $media['publish_topic'] ?? '';
+                    if (is_string($topic) && $topic !== '' && ($topic[0] ?? '') === '[') {
+                        $topic = implode(',', json_decode($topic, true) ?? []);
+                    }
                     
                     // 回填成片数据
                     SvPublishSettingDetail::where('id', $ph['id'])->update([
                         'video_task_id' => $media['id'],
                         'material_id' => $media['id'],
-                        'material_url' => FileService::getFileUrl($media['video_url']),
-                        'material_title' => $media['publish_title'] ?: '默认短标题',
-                        'material_tag' => implode(',', json_decode($media['publish_topic'], true) ?? []),
-                        'pic' => $media['thumbnail'],
-                        'material_subtitle' => $media['publish_text'],
+                        'material_url' => $materialUrl,
+                        'material_type' => $materialType,
+                        'material_title' => $media['publish_title'] ?: ($media['title'] ?: '默认短标题'),
+                        'material_tag' => is_string($topic) ? $topic : '',
+                        'pic' => $pic,
+                        'material_subtitle' => $media['publish_text'] ?: ($media['rewritten_text'] ?? ''),
                         'status' => 0, // 修改为待发布 (机器调度将读取 status=0 的单子)
                         'update_time' => time(),
                     ]);

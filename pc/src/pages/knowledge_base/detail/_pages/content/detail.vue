@@ -13,7 +13,7 @@
                     </div>
                 </div>
 
-                <ElButton v-if="!isRag" type="primary" class="add-chunk-btn" @click="handleAdd">
+                <ElButton v-if="!isRag && kbCanManage" type="primary" class="add-chunk-btn" @click="handleAdd">
                     <Icon name="local-icon-add_circle" :size="16"></Icon>
                     <span class="ml-2">新建分段</span>
                 </ElButton>
@@ -50,13 +50,13 @@
                             class="chunk-card group"
                             :class="{ 'is-selected': isChoose(item.uuid) }"
                             @click="handleChoose(item.uuid)">
-                            <div v-if="!isRag" class="absolute left-4 top-1/2 -translate-y-1/2">
+                            <div v-if="!isRag && kbCanManage" class="absolute left-4 top-1/2 -translate-y-1/2">
                                 <div class="checkbox-box" :class="{ 'is-checked': isChoose(item.uuid) }">
                                     <Icon v-if="isChoose(item.uuid)" name="el-icon-Check" :size="12" color="white" />
                                 </div>
                             </div>
 
-                            <div class="flex-1" :class="[!isRag ? 'pl-10' : '']">
+                            <div class="flex-1" :class="[!isRag && kbCanManage ? 'pl-10' : '']">
                                 <div class="flex justify-between items-start mb-3">
                                     <div class="flex items-center gap-2">
                                         <span class="chunk-index">#{{ index + 1 }}</span>
@@ -65,7 +65,7 @@
                                         }}</span>
                                     </div>
                                     <div
-                                        v-if="!isRag"
+                                        v-if="!isRag && kbCanManage"
                                         class="action-edit-btn opacity-0 group-hover:opacity-100"
                                         @click.stop="handleEdit(item)">
                                         <Icon name="local-icon-edit3" :size="14"></Icon>
@@ -91,7 +91,7 @@
                 </div>
 
                 <Transition name="slide-up">
-                    <div v-if="chooseList.length > 0 && !isRag" class="floating-batch-bar">
+                    <div v-if="chooseList.length > 0 && !isRag && kbCanManage" class="floating-batch-bar">
                         <div class="flex items-center gap-4">
                             <span class="text-[13px] font-medium"
                                 >已选择 <b class="text-primary mx-1">{{ chooseList.length }}</b> 项分段</span
@@ -128,6 +128,7 @@ const emit = defineEmits<{ (e: "back"): void }>();
 
 const route = useRoute();
 const nuxtApp = useNuxtApp();
+const kbCanManage = inject<Ref<boolean>>("kbCanManage", ref(true));
 
 const showEdit = ref(false);
 const subsectionEditRef = ref<InstanceType<typeof SubsectionEdit>>();
@@ -155,6 +156,7 @@ const { pager, getLists } = usePaging({
     params: queryParams,
 });
 const handleAdd = async () => {
+    if (!kbCanManage.value) return;
     showEdit.value = true;
     await nextTick();
     subsectionEditRef.value?.open();
@@ -165,6 +167,7 @@ const handleAdd = async () => {
 };
 
 const handleEdit = async (item: any) => {
+    if (!kbCanManage.value) return;
     showEdit.value = true;
     await nextTick();
     subsectionEditRef.value?.open("edit");
@@ -174,6 +177,7 @@ const handleEdit = async (item: any) => {
 const isChoose = (uuid: string) => chooseList.value.includes(uuid);
 
 const handleChoose = (uuid: string) => {
+    if (!kbCanManage.value) return;
     const index = chooseList.value.indexOf(uuid);
     if (index > -1) {
         chooseList.value.splice(index, 1);
@@ -183,6 +187,7 @@ const handleChoose = (uuid: string) => {
 };
 
 const handleDelete = () => {
+    if (!kbCanManage.value) return;
     nuxtApp.$confirm({
         message: "确定删除所选分段吗？",
         onConfirm: async () => {

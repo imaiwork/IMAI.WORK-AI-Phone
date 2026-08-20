@@ -1,6 +1,5 @@
 <template>
     <div class="h-full space-y-3">
-        <!-- 全网扫描对象 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6]">
             <div class="flex justify-between items-center mb-4 pb-4 border-0 border-b border-solid border-[#F9FAFB]">
                 <div>
@@ -8,7 +7,7 @@
                     <div
                         class="text-lg font-black"
                         style="
-                            background: linear-gradient(90deg, #f97316 0%, #dc2626 100%);
+                            background: linear-gradient(90deg, #3b82f6 0%, #7c3aed 100%);
                             -webkit-background-clip: text;
                             -webkit-text-fill-color: transparent;
                         ">
@@ -39,55 +38,53 @@
                     </div>
                 </div>
                 <div
-                    class="text-xs font-bold text-[#EA580C] bg-[#FFF7ED]/80 p-3 rounded-xl border border-solid border-[#FED7AA] leading-relaxed flex items-start">
+                    class="text-xs font-bold text-[#3B82F6] bg-[#EFF6FF]/80 p-3 rounded-xl border border-solid border-[#DBEAFE] leading-relaxed flex items-start">
                     <span class="mr-2 text-base">👉</span>{{ reportData.diagnosisConclusion }}
                 </div>
             </div>
         </div>
 
-        <!-- 目标受众 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6]">
             <div class="flex items-center mb-4">
-                <div class="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center mr-3">
-                    <span class="text-[#EA580C]">🎯</span>
+                <div class="w-7 h-7 rounded-lg bg-[#EFF6FF] flex items-center justify-center mr-3">
+                    <span class="text-[#3B82F6]">🎯</span>
                 </div>
                 <span class="text-sm font-bold text-[#1F2937]">{{ reportData.audienceTitle }}</span>
             </div>
             <div class="flex mb-4 bg-[#F9FAFB] p-3 rounded-xl border border-solid border-[#F3F4F6]">
                 <span class="text-[#9CA3AF] mr-2">📍</span>
                 <span class="text-xs font-bold text-[#374151] shrink-0">截流范围：</span>
-                <span class="ml-2 text-xs font-black text-[#EA580C]">{{ reportData.audienceRadius }}</span>
+                <span class="ml-2 text-xs font-black text-[#3B82F6]">{{ reportData.audienceRadius }}</span>
             </div>
             <div class="flex flex-wrap gap-2 mb-4">
                 <span
-                    class="text-[12px] font-bold px-2.5 py-1 rounded-full bg-[#FED7AA] text-[#C2410C] border border-solid border-[#FED7AA]"
+                    class="text-[12px] font-bold px-2.5 py-1 rounded-full bg-[#DBEAFE] text-[#1E40AF] border border-solid border-[#DBEAFE]"
                     ># {{ reportData.audienceTag1 }}</span
                 >
                 <span
-                    class="text-[12px] font-bold px-2.5 py-1 rounded-full bg-[#FED7AA] text-[#C2410C] border border-solid border-[#FED7AA]"
+                    class="text-[12px] font-bold px-2.5 py-1 rounded-full bg-[#DBEAFE] text-[#1E40AF] border border-solid border-[#DBEAFE]"
                     ># {{ reportData.audienceTag2 }}</span
                 >
                 <span
-                    class="text-[12px] font-bold px-2.5 py-1 rounded-full bg-[#FED7AA] text-[#C2410C] border border-solid border-[#FED7AA]"
+                    class="text-[12px] font-bold px-2.5 py-1 rounded-full bg-[#DBEAFE] text-[#1E40AF] border border-solid border-[#DBEAFE]"
                     ># {{ reportData.audienceTag3 }}</span
                 >
                 <span
-                    class="text-[12px] font-bold px-2.5 py-1 rounded-full bg-[#FED7AA] text-[#C2410C] border border-solid border-[#FED7AA]"
+                    class="text-[12px] font-bold px-2.5 py-1 rounded-full bg-[#DBEAFE] text-[#1E40AF] border border-solid border-[#DBEAFE]"
                     ># {{ reportData.audienceTag4 }}</span
                 >
             </div>
             <div
-                class="text-[13px] text-[#6B7280] bg-[#F9FAFB] p-3 rounded-lg border-0 border-l-2 border-solid border-[#F97316]">
+                class="text-[13px] text-[#6B7280] bg-[#F9FAFB] p-3 rounded-lg border-0 border-l-2 border-solid border-[#3B82F6]">
                 {{ reportData.audienceStrategy }}
             </div>
         </div>
 
-        <!-- 全域获客漏斗模型 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6]">
             <div class="flex items-center justify-between mb-5">
                 <div class="flex items-center">
-                    <div class="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center mr-3">
-                        <span class="text-[#EA580C]">🔄</span>
+                    <div class="w-7 h-7 rounded-lg bg-[#EFF6FF] flex items-center justify-center mr-3">
+                        <span class="text-[#3B82F6]">🔄</span>
                     </div>
                     <span class="text-sm font-bold text-[#1F2937]">全域获客漏斗模型</span>
                 </div>
@@ -103,7 +100,7 @@
                     <div class="pt-1">
                         <div class="flex items-baseline">
                             <span class="text-sm font-bold text-[#1F2937] mr-2">{{ reportData.funnelStep1 }}</span>
-                            <span class="text-sm font-black text-[#EA580C]">{{ reportData.funnelMetric1 }}</span>
+                            <span class="text-sm font-black text-[#3B82F6]">{{ reportData.funnelMetric1 }}</span>
                         </div>
                         <span class="text-[12px] text-[#6B7280] mt-1 block">{{ reportData.funnelDesc1 }}</span>
                     </div>
@@ -117,7 +114,7 @@
                     <div class="pt-1">
                         <div class="flex items-baseline">
                             <span class="text-sm font-bold text-[#1F2937] mr-2">{{ reportData.funnelStep2 }}</span>
-                            <span class="text-sm font-black text-[#EA580C]">{{ reportData.funnelMetric2 }}</span>
+                            <span class="text-sm font-black text-[#3B82F6]">{{ reportData.funnelMetric2 }}</span>
                         </div>
                         <span class="text-[12px] text-[#6B7280] mt-1 block">{{ reportData.funnelDesc2 }}</span>
                     </div>
@@ -131,7 +128,7 @@
                     <div class="pt-1">
                         <div class="flex items-baseline">
                             <span class="text-sm font-bold text-[#1F2937] mr-2">{{ reportData.funnelStep3 }}</span>
-                            <span class="text-sm font-black text-[#EA580C]">{{ reportData.funnelMetric3 }}</span>
+                            <span class="text-sm font-black text-[#3B82F6]">{{ reportData.funnelMetric3 }}</span>
                         </div>
                         <span class="text-[12px] text-[#6B7280] mt-1 block">{{ reportData.funnelDesc3 }}</span>
                     </div>
@@ -139,13 +136,13 @@
 
                 <div class="relative z-10 flex items-start pb-4">
                     <div
-                        class="w-12 h-12 rounded-2xl bg-white border-2 border-solid border-[#FED7AA] shadow-sm flex items-center justify-center shrink-0 mr-4">
-                        <span class="text-[#EA580C]">📈</span>
+                        class="w-12 h-12 rounded-2xl bg-white border-2 border-solid border-[#DBEAFE] shadow-sm flex items-center justify-center shrink-0 mr-4">
+                        <span class="text-[#3B82F6]">📈</span>
                     </div>
                     <div class="pt-1">
                         <div class="flex items-baseline">
                             <span class="text-sm font-bold text-[#1F2937] mr-2">{{ reportData.funnelStep4 }}</span>
-                            <span class="text-sm font-black text-[#EA580C]">{{ reportData.funnelMetric4 }}</span>
+                            <span class="text-sm font-black text-[#3B82F6]">{{ reportData.funnelMetric4 }}</span>
                         </div>
                         <span class="text-[12px] text-[#6B7280] mt-1 block">{{ reportData.funnelDesc4 }}</span>
                     </div>
@@ -153,12 +150,11 @@
             </div>
         </div>
 
-        <!-- AI 24小时任务日历 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6]">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center">
-                    <div class="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center mr-3">
-                        <span class="text-[#EA580C]">⏰</span>
+                    <div class="w-7 h-7 rounded-lg bg-[#EFF6FF] flex items-center justify-center mr-3">
+                        <span class="text-[#3B82F6]">⏰</span>
                     </div>
                     <span class="text-sm font-bold text-[#1F2937]">AI 24小时任务日历</span>
                 </div>
@@ -173,7 +169,6 @@
                 <span class="font-bold text-[#374151]">效果预期</span>。
             </div>
 
-            <!-- 任务类型切换 Tab -->
             <div class="flex overflow-x-auto pb-2 mb-4 gap-2">
                 <div
                     v-for="taskType in taskTypes"
@@ -187,14 +182,13 @@
                     ]"
                     :style="
                         currentTaskType === taskType.key
-                            ? 'background: linear-gradient(90deg, #f97316 0%, #dc2626 100%)'
+                            ? 'background: linear-gradient(90deg, #3b82f6 0%, #7c3aed 100%)'
                             : ''
                     ">
                     {{ taskType.name }}
                 </div>
             </div>
 
-            <!-- 任务列表 -->
             <div class="space-y-4">
                 <div
                     v-for="(task, index) in currentTasks"
@@ -202,7 +196,7 @@
                     class="bg-[#F9FAFB] rounded-xl border border-solid border-[#F3F4F6] overflow-hidden">
                     <div
                         class="px-4 py-2.5 flex justify-between items-center"
-                        style="background: linear-gradient(to right, #f97316 0%, #dc2626 100%)">
+                        style="background: linear-gradient(to right, #3b82f6 0%, #7c3aed 100%)">
                         <span class="text-white font-bold text-xs">{{ task.time }}</span>
                         <span class="bg-white/20 text-white text-[12px] font-bold px-2 py-0.5 rounded">{{
                             task.platform
@@ -211,7 +205,7 @@
                     <div class="p-4">
                         <div class="flex items-center mb-3">
                             <div class="w-6 h-6 rounded-full bg-white flex items-center justify-center mr-2 shadow-sm">
-                                <span class="text-[#EA580C]">{{ getTaskIcon(task.title) }}</span>
+                                <span class="text-[#3B82F6]">{{ getTaskIcon(task.title) }}</span>
                             </div>
                             <span class="text-sm font-bold text-[#1F2937]">{{ task.title }}</span>
                         </div>
@@ -251,7 +245,6 @@
             </div>
         </div>
 
-        <!-- 预期商业回报对比 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6]">
             <span class="text-sm font-bold text-[#1F2937] mb-4 text-center block">预期商业回报对比</span>
             <div class="grid grid-cols-2 gap-3">
@@ -261,26 +254,25 @@
                     <div class="text-[12px] text-[#6B7280]">{{ reportData.roiTraditionalEffect }}</div>
                 </div>
                 <div
-                    class="bg-[#FFF7ED] rounded-xl p-3 border border-solid border-[#FED7AA] text-center relative overflow-hidden">
+                    class="bg-[#EFF6FF] rounded-xl p-3 border border-solid border-[#DBEAFE] text-center relative overflow-hidden">
                     <div
                         class="absolute top-0 right-0 w-10 h-10 opacity-10 rounded-bl-full"
-                        style="background: linear-gradient(to bottom right, #f97316 0%, #dc2626 100%)"></div>
-                    <div class="text-[12px] text-[#EA580C] font-bold mb-1">部署AI系统</div>
+                        style="background: linear-gradient(to bottom right, #3b82f6 0%, #7c3aed 100%)"></div>
+                    <div class="text-[12px] text-[#3B82F6] font-bold mb-1">部署AI系统</div>
                     <div
                         class="text-sm font-black mb-2"
                         style="
-                            background: linear-gradient(90deg, #f97316 0%, #dc2626 100%);
+                            background: linear-gradient(90deg, #3b82f6 0%, #7c3aed 100%);
                             -webkit-background-clip: text;
                             -webkit-text-fill-color: transparent;
                         ">
                         {{ reportData.roiAiCost }}
                     </div>
-                    <div class="text-[12px] text-[#EA580C] font-medium">{{ reportData.roiAiEffect }}</div>
+                    <div class="text-[12px] text-[#3B82F6] font-medium">{{ reportData.roiAiEffect }}</div>
                 </div>
             </div>
         </div>
 
-        <!-- 系统每日执行量 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6] text-center">
             <span class="text-xs font-bold text-[#9CA3AF] mb-4 uppercase tracking-widest block">系统每日执行量</span>
             <div class="grid grid-cols-3 gap-2 mb-4">
@@ -301,7 +293,7 @@
                 <div
                     class="text-2xl font-black mb-1.5"
                     style="
-                        background: linear-gradient(90deg, #f97316 0%, #dc2626 100%);
+                        background: linear-gradient(90deg, #3b82f6 0%, #7c3aed 100%);
                         -webkit-background-clip: text;
                         -webkit-text-fill-color: transparent;
                     ">
@@ -314,10 +306,9 @@
             </div>
         </div>
 
-        <!-- 底部 Banner -->
         <div
             class="rounded-2xl p-6 shadow-lg text-white relative overflow-hidden"
-            style="background: linear-gradient(90deg, #f97316 0%, #dc2626 100%)">
+            style="background: linear-gradient(90deg, #3b82f6 0%, #7c3aed 100%)">
             <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
             <div
                 class="flex justify-between items-center mb-6 relative z-10 bg-black/20 p-3 rounded-xl backdrop-blur-sm">

@@ -4,20 +4,16 @@ declare(strict_types=1);
 
 namespace app\common\traits;
 
-use Channel\Client as ChannelClient;
-use app\common\workerman\wechat\handlers\client\TalkToFriendTaskHandler;
+use app\api\logic\wechat\sop\StageLogic;
+use app\common\service\FileService;
+use app\common\workerman\wechat\constants\ResponseCode;
 use app\common\workerman\wechat\handlers\client\AcceptFriendAddRequestTaskHandler;
 use app\common\workerman\wechat\handlers\client\PostSNSNewsTaskHandler;
-use app\common\workerman\wechat\constants\ResponseCode;
-use app\common\workerman\wechat\traits\{DeviceTrait, CacheTrait};
-use Jubo\JuLiao\IM\Wx\Proto\TransportMessage;
+use app\common\workerman\wechat\traits\{CacheTrait, DeviceTrait};
+use Channel\Client as ChannelClient;
 use Google\Protobuf\Any;
-use think\facade\Log;
-
-use app\common\service\FileService;
-use Predis\Client as redisClient;
+use Jubo\JuLiao\IM\Wx\Proto\TransportMessage;
 use think\cache\driver\Redis;
-use GuzzleHttp\Client as httpClient;
 
 /**
  * 微信操作能力
@@ -78,6 +74,14 @@ trait WechatTrait
             \Channel\Client::publish($channel, [
                 'data' => $data
             ]);
+
+            //AI回复：固定话术回复、sop推送，判断用户的流程阶段
+            StageLogic::sopStagetrigger([
+                                            'wechat_id' => $params['wechat_id'],
+                                            'friend_id' => $params['friend_id'],
+                                            'content' => $params['message'],
+                                            'chat_object' => 1
+                                        ]);
 
             return [
                 'code' => 10000,

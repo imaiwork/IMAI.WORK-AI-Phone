@@ -137,7 +137,7 @@ class CommentToMsgHandler extends BaseMessageHandler
                 'content'             => $content['content'],
                 'exec_time'           => time(),
                 'hash'                => $hash,
-                'image'               => $this->saveBase64ToImage($content['image'] ?? '', $hash, 'touch'),
+                'image'               => $this->toolUtil->saveBase64ToImage($content['image'] ?? '', $hash, 'touch'),
                 'address'             => $content['address'] ?? '',
                 'pusher_timer'        => $content['pusherTimer'] ?? 0,
                 'account'             => $content['account'] ?? '',

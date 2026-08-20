@@ -7,9 +7,10 @@
     "empty": "../../../components/empty/empty",
     "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
     "video-preview-v2": "../../../components/video-preview-v2/video-preview-v2",
-    "u-input": "../../../uni_modules/vk-uview-ui/components/u-input/u-input",
-    "u-popup": "../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
-    "popup-bottom": "../../../components/popup-bottom/popup-bottom",
-    "puzzle-card": "../../components/puzzle-card/puzzle-card"
+    "puzzle-card": "../../components/puzzle-card/puzzle-card",
+    "edit-name-popup": "./components/popups/edit-name-popup",
+    "download-popup": "./components/popups/download-popup",
+    "play-selection-modal": "./components/popups/play-selection-modal",
+    "publish-type-popup": "./components/popups/publish-type-popup"
   }
 }

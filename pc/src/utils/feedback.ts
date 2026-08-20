@@ -1,5 +1,7 @@
 import { ElMessage, ElMessageBox, ElNotification, ElLoading, type ElMessageBoxOptions } from "element-plus";
 import type { LoadingInstance } from "element-plus/es/components/loading/src/loading";
+import { useAppStore } from "@/stores/app";
+import { useUserStore } from "@/stores/user";
 
 export class Feedback {
     private loadingInstance: LoadingInstance | null = null;
@@ -56,11 +58,12 @@ export class Feedback {
         ElNotification.warning(msg);
     }
     // 确认窗体
-    confirm(msg: string) {
-        return ElMessageBox.confirm(msg, "温馨提示", {
+    confirm(msg: string, title = "温馨提示", options?: ElMessageBoxOptions) {
+        return ElMessageBox.confirm(msg, title, {
             confirmButtonText: "确定",
             cancelButtonText: "取消",
             type: "warning",
+            ...options,
         });
     }
     // 提交内容
@@ -84,9 +87,25 @@ export class Feedback {
     closeLoading() {
         this.loadingInstance?.close();
     }
-    // 算力不足
+    // 算力不足文案(团队感知):企业空间内成员/管理员消耗团队算力,不足提示联系团队主
+    powerInsufficientText(): string {
+        const info = (useUserStore().userInfo || {}) as any;
+        const inTeam = Number(info.team_id) > 0 && [1, 3].includes(Number(info.team_role));
+        return inTeam ? "当前团队算力不足，请联系团队主" : "算力不足，请充值！";
+    }
+    // 算力不足提示
     msgPowerInsufficient() {
-        feedback.msgWarning("算力不足，请充值！");
+        const info = (useUserStore().userInfo || {}) as any;
+        const inTeam = Number(info.team_id) > 0 && [1, 3].includes(Number(info.team_role));
+        const appStore = useAppStore();
+        // OEM 站点：统一弹联系管理员 + 兑换码
+        if (Number(appStore.getOemConfig?.is_oem) === 1) {
+            appStore.openRecharge();
+        } else if (!inTeam) {
+            // 成员不能给团队充值,不弹充值面板;个人/团队主/散客弹充值
+            appStore.openRecharge();
+        }
+        feedback.msgWarning(this.powerInsufficientText());
     }
 }
 

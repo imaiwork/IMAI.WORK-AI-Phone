@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "修改人设",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
+    "basic-info-step": "../create/components/basic-info-step",
+    "business-desc-step": "../create/components/business-desc-step"
+  }
+}

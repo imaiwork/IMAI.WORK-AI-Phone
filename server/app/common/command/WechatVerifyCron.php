@@ -23,8 +23,11 @@ class WechatVerifyCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
-        print_r("\n验证微信用户任务1...'\n");
+        $output->writeln('验证微信用户任务开始...');
+        $start = microtime(true);
         CrawlingTaskLogic::verifyWeChatCron();
+        $elapsed = round(microtime(true) - $start, 2);
+        $output->writeln('验证微信用户任务结束，耗时' . $elapsed . '秒');
         return true;
     }
 }

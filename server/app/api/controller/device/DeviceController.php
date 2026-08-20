@@ -60,6 +60,67 @@ class DeviceController extends BaseApiController
         }
     }
 
+    public function qrcode()
+    {
+        try {
+            $params = $this->request->param();
+            $result = DeviceLogic::qrcode($params);
+            if ($result) {
+                return $this->data(DeviceLogic::getReturnData());
+            }
+            return $this->fail(DeviceLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    public function scanOldQrcode()
+    {
+        try {
+            $params = (new DeviceValidate())->post()->goCheck('scanOldQrcode');
+            $result = DeviceLogic::scanOldQrcode($params);
+            if ($result) {
+                return $this->success('添加成功', DeviceLogic::getReturnData());
+            }
+            return $this->fail(DeviceLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    public function used()
+    {
+        try {
+            $params = $this->request->post();
+            $result = DeviceLogic::used($params);
+            if ($result) {
+                return $this->success('操作成功', DeviceLogic::getReturnData());
+            }
+            return $this->fail(DeviceLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    public function redeem()
+    {
+        try {
+            $params = (new DeviceValidate())->post()->goCheck('redeem');
+            $result = DeviceLogic::redeemCdk($params);
+            if ($result) {
+                return $this->success('兑换成功', DeviceLogic::getReturnData());
+            }
+            return $this->fail(DeviceLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    public function active()
+    {
+        return $this->redeem();
+    }
+
     public function remove()
     {
         try {

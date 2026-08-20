@@ -40,12 +40,12 @@ class DigitalAvatarLogic extends BaseLogic
                 if (!$personaDigital->isEmpty()) {
                     continue;
                 }
-                $avatar = DigitalHumanAnchor::where(['id' => $dhId, 'user_id' => $userId])->findOrEmpty();
+                $avatar = DigitalHumanAnchor::where(['id' => $dhId, 'user_id' => $userId])->where('status', 2)->findOrEmpty();
                 if ($avatar->isEmpty()) {
                     continue;
                 }
 
-                $shanjian = ShanjianAnchor::where('dh_id', $avatar['id'])->findOrEmpty();
+                $shanjian = ShanjianAnchor::where('dh_id', $avatar['id'])->where('status', 6)->findOrEmpty();
                 if ($shanjian->isEmpty()) {
                     continue;
                 }
@@ -142,7 +142,13 @@ class DigitalAvatarLogic extends BaseLogic
             }
             $userId = $personaAvatar['user_id'];
             if ($params['is_original_voice'] == 0 && $params['voice_id'] > 0){
-                $humanVoice = HumanVoice::where(['id' => $params['voice_id'], 'user_id' => $userId, 'model_version' => 8, 'status' => 1])->findOrEmpty();
+                // 闪剪(model_version=8) + MiniMax(10=hd / 11=turbo)
+                $allowedVersions = array_merge([8], AiPersonaDigitalVoice::MINIMAX_MODEL_VERSIONS);
+                $humanVoice = HumanVoice::where([
+                    'id'      => $params['voice_id'],
+                    'user_id' => $userId,
+                    'status'  => 1,
+                ])->whereIn('model_version', $allowedVersions)->findOrEmpty();
                 if ($humanVoice->isEmpty()) {
                     throw new Exception('音色状态异常');
                 }
@@ -153,7 +159,7 @@ class DigitalAvatarLogic extends BaseLogic
             }else{
                 $shanjian = ShanjianAnchor::where('dh_id', $personaAvatar->dh_id)->where('status',6)->findOrEmpty();
                 if ($shanjian->isEmpty()){
-                    throw new Exception('闪剪形象状态异常');
+                    throw new Exception('壹传媒形象状态异常');
                 }
                 $personaAvatar->third_voice_id = $shanjian['voice_id'];
                 $personaAvatar->is_original_voice = 1;

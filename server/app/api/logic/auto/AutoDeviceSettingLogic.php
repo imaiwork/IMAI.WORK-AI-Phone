@@ -7,6 +7,8 @@ use app\api\logic\service\TokenLogService;
 use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
+use app\common\model\aiPersona\AiPersonaSynthesisConfig;
+use app\common\model\aiPersona\AiPersonaSynthesisCopywriting;
 use app\common\model\auto\AutoDeviceSetting;
 use app\common\model\auto\AutoDeviceConfig;
 use app\common\model\auto\AutoNeedsAnalysis;
@@ -15,9 +17,13 @@ use app\common\model\hd\HdPuzzleSetting;
 use app\common\model\shanjian\ShanjianClipTemplate;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
+use app\common\model\sv\SvDevice;
+use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvVideoSetting;
 use app\common\model\sv\SvVideoTask;
 use app\common\model\user\User;
+use app\common\service\UserDisplaySanitizer;
 use Exception;
 use think\facade\Db;
 
@@ -32,6 +38,11 @@ class AutoDeviceSettingLogic extends ApiLogic
     const NEWS_MIXCUT_TITLE = 'newsMixcutTitle'; //新闻标题
     const COMBINED_PICTURE_TITLE = 'combinedPictureTitle'; //组合图片标题
     const COZE_COPYWRITING = 'cozeCopywriting'; //文案创作
+    const COZE_COPYWRITING_SENIOR = 'cozeCopywritingSenior'; //文案创作-高级
+    const TASK_STATUS_WAIT = 1; // 待执行
+    const TASK_STATUS_RUNNING = 2; // 执行中
+    const TASK_STATUS_FINISHED = 3; // 已完成
+
     /**
      * 新增自动设备设置
      * @param array $params 请求参数
@@ -53,6 +64,7 @@ class AutoDeviceSettingLogic extends ApiLogic
             if (empty($config->text_theme)) {
                 throw new \Exception('当前设备自动任务文案主题不能为空');
             }
+            $params['human_image'] = UserDisplaySanitizer::normalizeHumanImageForStorage($params['human_image'] ?? []);
 
             $find = AutoDeviceSetting::where('user_id', self::$uid)->where('device_code', $params['device_code'])->findOrEmpty();
             if (!$find->isEmpty()) {
@@ -71,7 +83,9 @@ class AutoDeviceSettingLogic extends ApiLogic
                 $find->update_time = time();
                 $find->save();
 
-                self::$returnData = $find->toArray();
+                $result = $find->toArray();
+                $result['human_image'] = UserDisplaySanitizer::normalizeHumanImageForUser($result['human_image'] ?? []);
+                self::$returnData = $result;
             } else {
                 $params['video_theme'] = $config->video_theme;
                 $params['text_theme'] = $config->text_theme;
@@ -79,7 +93,9 @@ class AutoDeviceSettingLogic extends ApiLogic
                 $params['update_time'] = time();
                 $params['execution_day'] = date('Y-m-d', time());
                 $result = AutoDeviceSetting::create($params);
-                self::$returnData = $result->toArray();
+                $result = $result->toArray();
+                $result['human_image'] = UserDisplaySanitizer::normalizeHumanImageForUser($result['human_image'] ?? []);
+                self::$returnData = $result;
             }
             return true;
         } catch (\Throwable $th) {
@@ -121,7 +137,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                 $updateData['device_code'] = $params['device_code'];
             }
             if (isset($params['human_image'])) {
-                $updateData['human_image'] = $params['human_image'];
+                $updateData['human_image'] = UserDisplaySanitizer::normalizeHumanImageForStorage($params['human_image']);
             }
             if (isset($params['clip_material'])) {
                 $updateData['clip_material'] = $params['clip_material'];
@@ -151,7 +167,9 @@ class AutoDeviceSettingLogic extends ApiLogic
             }
 
             $setting->save($updateData);
-            self::$returnData = $setting->refresh()->toArray();
+            $result = $setting->refresh()->toArray();
+            $result['human_image'] = UserDisplaySanitizer::normalizeHumanImageForUser($result['human_image'] ?? []);
+            self::$returnData = $result;
             return true;
         } catch (Exception $e) {
             self::setError('更新自动设备设置异常：' . $e->getMessage());
@@ -190,15 +208,16 @@ class AutoDeviceSettingLogic extends ApiLogic
 
     /**
      * 获取自动设备设置详情
-     * @param int $id 自动设备设置ID
+     * @param array $params 请求参数
      * @return bool
      */
-    public static function getAutoDeviceSettingDetail($params): bool
+    public static function getAutoDeviceSettingDetail(array $params): bool
     {
         try {
             $find = AutoDeviceSetting::where('user_id', self::$uid)->where('device_code', $params['device_code'])->findOrEmpty();
             if (!$find->isEmpty()) {
                 $result                       = $find->toArray();
+                $result['human_image']        = UserDisplaySanitizer::normalizeHumanImageForUser($result['human_image'] ?? []);
                 $imageMaterial = $find->image_material;
                 if (!empty($imageMaterial)) {
                     if (!is_array($imageMaterial)) {
@@ -307,11 +326,232 @@ class AutoDeviceSettingLogic extends ApiLogic
             }
 
             self::$returnData = $settings->toArray();
+            foreach (self::$returnData as &$setting) {
+                if (isset($setting['human_image']) && is_array($setting['human_image'])) {
+                    $setting['human_image'] = UserDisplaySanitizer::normalizeHumanImageForUser($setting['human_image']);
+                }
+            }
+            unset($setting);
             return true;
         } catch (Exception $e) {
             self::setError('获取自动设备设置列表异常：' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 获取自动化内容任务状态
+     * @return bool
+     */
+    public static function taskStatus(array $params): bool
+    {
+        try {
+            $date = self::normalizeTaskStatusDate($params['date'] ?? '');
+            $deviceCode = trim((string)($params['device_code'] ?? ''));
+
+            self::$returnData = [
+                'viral_topic_task_status' => self::getViralTopicTaskStatus($date, $deviceCode),
+                'shanjian_task_generate_status' => self::getShanjianTaskGenerateStatus($date, $deviceCode),
+            ];
+            return true;
+        } catch (\Throwable $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    private static function getViralTopicTaskStatus(string $date, string $deviceCode): int
+    {
+        $query = SvDeviceTask::where('user_id', self::$uid)
+            ->where('auto_type', 1)
+            ->where('task_scene', DeviceEnum::AUTO_TASK_SCENE_VIRAL_REWRITER)
+            ->where('day', $date);
+        if ($deviceCode !== '') {
+            $query->where('device_code', $deviceCode);
+        }
+
+        $statuses = array_map('intval', $query->column('status'));
+        if (empty($statuses)) {
+            return self::getScheduledTaskStatus($date, '01:00:00');
+        }
+
+        return self::aggregateDeviceTaskStatuses($statuses, $date, '01:00:00');
+    }
+
+    private static function getShanjianTaskGenerateStatus(string $date, string $deviceCode): int
+    {
+        [$start, $end] = self::getTaskStatusDayRange($date);
+        $devices = self::getAutoPublishDevices($deviceCode);
+        if (empty($devices)) {
+            return self::hasGeneratedShanjianTask($date, $deviceCode)
+                ? self::TASK_STATUS_FINISHED
+                : self::getScheduledTaskStatus($date, '03:00:00');
+        }
+
+        $statuses = [];
+        foreach ($devices as $device) {
+            $statuses[] = self::getDeviceShanjianTaskGenerateStatus($device, $date, $start, $end);
+        }
+
+        return self::aggregateContentTaskStatuses($statuses, $date, '03:00:00');
+    }
+
+    private static function getDeviceShanjianTaskGenerateStatus(array $device, string $date, int $start, int $end): int
+    {
+        $deviceCode = (string)($device['device_code'] ?? '');
+        $personaId = (int)($device['persona_id'] ?? 0);
+        if ($deviceCode === '' || $personaId <= 0) {
+            return self::TASK_STATUS_WAIT;
+        }
+
+        $config = AiPersonaSynthesisConfig::where('user_id', self::$uid)
+            ->where('persona_id', $personaId)
+            ->findOrEmpty();
+        $copywritingSource = $config->isEmpty() ? 0 : (int)$config->copywriting_source;
+
+        if ($copywritingSource === AiPersonaSynthesisConfig::COPYWRITING_SOURCE_IMITATE) {
+            return self::getImitationShanjianTaskGenerateStatus($deviceCode, $personaId, $date);
+        }
+
+        $generated = ShanjianVideoTask::where('user_id', self::$uid)
+            ->where('device_code', $deviceCode)
+            ->where('persona_id', $personaId)
+            ->where('auto_type', 1)
+            ->where('wechat_type', 0)
+            ->whereBetween('create_time', [$start, $end])
+            ->count();
+        if ((int)$generated > 0 || (int)($device['synthesis_m'] ?? 0) === 1) {
+            return self::TASK_STATUS_FINISHED;
+        }
+
+        return self::getScheduledTaskStatus($date, '03:00:00');
+    }
+
+    private static function getImitationShanjianTaskGenerateStatus(string $deviceCode, int $personaId, string $date): int
+    {
+        $query = AiPersonaSynthesisCopywriting::where('user_id', self::$uid)
+            ->where('device_code', $deviceCode)
+            ->where('persona_id', $personaId)
+            ->where('day', $date);
+
+        $total = (int)(clone $query)->count();
+        if ($total === 0) {
+            return self::getScheduledTaskStatus($date, '03:00:00');
+        }
+
+        $unused = (int)(clone $query)
+            ->where('use_state', '<>', AiPersonaSynthesisCopywriting::USE_STATE_USED)
+            ->count();
+        return $unused === 0 ? self::TASK_STATUS_FINISHED : self::TASK_STATUS_RUNNING;
+    }
+
+    private static function getAutoPublishDevices(string $deviceCode): array
+    {
+        $query = SvDevice::alias('d')
+            ->field('d.device_code,d.persona_id,d.synthesis_m')
+            ->join('ai_persona p', 'p.id = d.persona_id')
+            ->where('d.user_id', self::$uid)
+            ->where('d.auto_type', 1)
+            ->where('d.is_first', 0)
+            ->where('d.persona_id', '>', 0)
+            ->where('p.status', 1)
+            ->where('p.publish_mode', 1);
+        if ($deviceCode !== '') {
+            $query->where('d.device_code', $deviceCode);
+        }
+
+        return $query->select()->toArray();
+    }
+
+    private static function hasGeneratedShanjianTask(string $date, string $deviceCode): bool
+    {
+        [$start, $end] = self::getTaskStatusDayRange($date);
+        $query = ShanjianVideoTask::where('user_id', self::$uid)
+            ->where('auto_type', 1)
+            ->where('wechat_type', 0)
+            ->whereBetween('create_time', [$start, $end]);
+        if ($deviceCode !== '') {
+            $query->where('device_code', $deviceCode);
+        }
+
+        return (int)$query->count() > 0;
+    }
+
+    private static function aggregateDeviceTaskStatuses(array $statuses, string $date, string $startTime): int
+    {
+        $statuses = array_values($statuses);
+        if (empty($statuses)) {
+            return self::getScheduledTaskStatus($date, $startTime);
+        }
+
+        if (count(array_filter($statuses, fn($status) => $status === DeviceEnum::TASK_STATUS_FINISHED)) === count($statuses)) {
+            return self::TASK_STATUS_FINISHED;
+        }
+
+        if (count(array_filter($statuses, fn($status) => $status === DeviceEnum::TASK_STATUS_WAIT)) === count($statuses)) {
+            return self::getScheduledTaskStatus($date, $startTime);
+        }
+
+        return self::TASK_STATUS_RUNNING;
+    }
+
+    private static function aggregateContentTaskStatuses(array $statuses, string $date, string $startTime): int
+    {
+        $statuses = array_values(array_map('intval', $statuses));
+        if (empty($statuses)) {
+            return self::getScheduledTaskStatus($date, $startTime);
+        }
+
+        if (count(array_filter($statuses, fn($status) => $status === self::TASK_STATUS_FINISHED)) === count($statuses)) {
+            return self::TASK_STATUS_FINISHED;
+        }
+
+        if (count(array_filter($statuses, fn($status) => $status === self::TASK_STATUS_WAIT)) === count($statuses)) {
+            return self::getScheduledTaskStatus($date, $startTime);
+        }
+
+        return self::TASK_STATUS_RUNNING;
+    }
+
+    private static function getScheduledTaskStatus(string $date, string $startTime): int
+    {
+        $today = date('Y-m-d');
+        if ($date > $today) {
+            return self::TASK_STATUS_WAIT;
+        }
+        if ($date < $today) {
+            return self::TASK_STATUS_RUNNING;
+        }
+
+        $startTimestamp = strtotime($date . ' ' . $startTime);
+        if ($startTimestamp !== false && time() < $startTimestamp) {
+            return self::TASK_STATUS_WAIT;
+        }
+
+        return self::TASK_STATUS_RUNNING;
+    }
+
+    private static function getTaskStatusDayRange(string $date): array
+    {
+        return [
+            strtotime($date . ' 00:00:00'),
+            strtotime($date . ' 23:59:59'),
+        ];
+    }
+
+    private static function normalizeTaskStatusDate(mixed $date): string
+    {
+        $date = trim((string)$date);
+        if ($date === '') {
+            return date('Y-m-d');
+        }
+
+        $timestamp = strtotime($date);
+        if ($timestamp === false) {
+            throw new \Exception('日期格式错误');
+        }
+
+        return date('Y-m-d', $timestamp);
     }
 
     /**
@@ -569,6 +809,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                             }
                         }
 
+                        $coze = [];
                         switch ($key) {
                             case 0:
                                 $coze['sn'] = 5;
@@ -670,12 +911,17 @@ class AutoDeviceSettingLogic extends ApiLogic
                                 'create_time' => $currentTime,
                                 'update_time' => $currentTime
                             ];
-                            $materialDuration = 0;
                             $extradata = [
                                 'setting_index' => 1,
                                 'create_type' => 'batch'
                             ];
                             $auto_type = 0;
+                            // 预初始化，消除静态分析告警；isvideo 保留跨次循环已有值（与原逻辑一致）
+                            $isvideo = $isvideo ?? false;
+                            $scene = $scene ?? '';
+                            $material = $material ?? '';
+                            $pic = $pic ?? '';
+                            $copywritingResult4 = $copywritingResult4 ?? [];
                             switch ($type) {
                                 case 1:
                                 case 2:
@@ -691,21 +937,9 @@ class AutoDeviceSettingLogic extends ApiLogic
                                     $selectedImageMaterials = array_slice($imageMaterialArray, 0, $randomLength);
 
                                     $mergedMaterials = array_merge($selectedMaterials, $selectedImageMaterials);
+                                    $mergedMaterials = ShanjianVideoSettingLogic::trimMaterialsByDuration(array_values($mergedMaterials));
 
-                                    foreach ($mergedMaterials as $key => &$value) {
-                                        if (isset($value['duration'])) {
-                                            $nowDuration = $value['duration'];
-                                        } else {
-                                            $nowDuration = 2;
-                                        }
-                                        $materialDuration += $nowDuration;
-                                        if ($materialDuration > 290 || $nowDuration > 59) {
-                                            unset($mergedMaterials[$key]);
-                                            $materialDuration -= $nowDuration;
-                                        }
-                                    }
-
-                                    $material = json_encode(array_values($mergedMaterials), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                    $material = json_encode($mergedMaterials, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                     $anchor_id =  [
                                         [
                                             "anchor_id" => $firstHumanImage['shanjian_anchor_id'] ?? '',
@@ -747,31 +981,23 @@ class AutoDeviceSettingLogic extends ApiLogic
 
                                     $mergedMaterials = array_merge($selectedMaterials, $selectedImageMaterials);
                                     $isvideo = false;
-                                    foreach ($mergedMaterials as $key => &$value) {
+                                    foreach ($mergedMaterials as $materialKey => &$value) {
                                         if (isset($value['cover'])) {
                                             $pic = $value['cover'];
-                                            unset($mergedMaterials[$key]['cover']);
-                                        }
-                                        if (isset($value['duration'])) {
-                                            $nowDuration = $value['duration'];
-                                        } else {
-                                            $nowDuration = 2;
-                                        }
-                                        $materialDuration += $nowDuration;
-                                        if ($materialDuration > 290 || $nowDuration > 59) {
-                                            unset($mergedMaterials[$key]);
-                                            $materialDuration -= $nowDuration;
+                                            unset($mergedMaterials[$materialKey]['cover']);
                                         }
                                         if (isset($value['type']) && $value['type'] == 'video') {
-                                            $value['soundSwitch'] = true;
+                                            $value['soundSwitch'] = false;
                                             $isvideo = true;
                                         }
                                     }
+                                    unset($value);
+                                    $mergedMaterials = ShanjianVideoSettingLogic::trimMaterialsByDuration(array_values($mergedMaterials));
                                     if (!$isvideo) {
                                         break; // 跳过没有视频的任务
                                     }
 
-                                    $material = json_encode(array_values($mergedMaterials), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                    $material = json_encode($mergedMaterials, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                     // 素材类型需要特殊处理
                                     $scene = 'oralMixCutting';
                                     $shanjianVideoSettingData['material'] = $material;
@@ -790,35 +1016,27 @@ class AutoDeviceSettingLogic extends ApiLogic
                                     $randomLength = rand(2, 3);
                                     $selectedImageMaterials = array_slice($imageMaterialArray, 0, $randomLength);
                                     $mergedMaterials = array_merge($selectedMaterials, $selectedImageMaterials);
-                                    foreach ($mergedMaterials as $key => &$value) {
-                                        if (isset($value['duration'])) {
-                                            $nowDuration = $value['duration'];
-                                        } else {
-                                            $nowDuration = 2;
-                                        }
-                                        $materialDuration += $nowDuration;
-                                        if ($materialDuration > 290 || $nowDuration > 59) {
-                                            unset($mergedMaterials[$key]);
-                                            $materialDuration -= $nowDuration;
-                                        }
+                                    foreach ($mergedMaterials as $materialKey => &$value) {
                                         if (isset($value['cover'])) {
                                             $pic = $value['cover'];
-                                            unset($mergedMaterials[$key]['cover']);
+                                            unset($mergedMaterials[$materialKey]['cover']);
                                         }
                                         if (isset($value['type']) && $value['type'] == 'video') {
-                                            $value['soundSwitch'] = true;
+                                            $value['soundSwitch'] = false;
                                             $isvideo = true;
                                         }
                                     }
+                                    unset($value);
+                                    $mergedMaterials = ShanjianVideoSettingLogic::trimMaterialsByDuration(array_values($mergedMaterials));
 
                                     // 使用预先生成的文案
-                                    $material = json_encode(array_values($mergedMaterials), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                    $material = json_encode($mergedMaterials, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
                                     $copywritingResult4['0']['title'] = $copywritingResult['content']['0'] ?? '';
                                     $shanjianVideoSettingData['copywriting'] = json_encode($copywritingResult4, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                     $shanjianVideoSettingData['voice'] =  $firstHumanImage['shanjian_voice_id'] ?? '';
                                     $shanjianVideoSettingData['material'] = $material;
-                                    $extradata['videoDuration'] = 15;
+                                    $extradata['videoDuration'] = self::getNewsMixcutDurationByTask($task);
                                     // 新闻体类型需要特殊处理
                                     $scene = 'newsMixCutting';
 
@@ -827,7 +1045,6 @@ class AutoDeviceSettingLogic extends ApiLogic
                                     $material = ''; // 默认空字符串
                                     break;
                             }
-                            \think\facade\Log::channel('automedia')->info($task->id . '时长测试计算' . $materialDuration);
                             if (!$isvideo) {
                                 continue; // 跳过没有视频的任务
                             }
@@ -1123,7 +1340,7 @@ class AutoDeviceSettingLogic extends ApiLogic
         }
     }
 
-    private static function getTemplateType($materialCount)
+    private static function getTemplateType(int $materialCount): int
     {
         // 优先选择9张图，然后是6张图，5张图，4张图，3张图，2张图
         if ($materialCount >= 9) {
@@ -1139,7 +1356,7 @@ class AutoDeviceSettingLogic extends ApiLogic
         }
     }
 
-    public static function copywriting(array $data, int $userId, $type)
+    public static function copywriting(array $data, int $userId, int $type, bool $withBillingMeta = false)
     {
         try {
 
@@ -1167,6 +1384,20 @@ class AutoDeviceSettingLogic extends ApiLogic
                     $sn = $data['sn'] ?? 0;
                     $length = $data['length'] ?? 60;
                     break;
+                case 5:
+                    $scene = self::COZE_COPYWRITING;
+                    $channelVersion = 19;
+                    $number = $data['number'] ?? 1;
+                    $sn = $data['sn'] ?? 0;
+                    $length = $data['length'] ?? 60;
+                    break;
+                case 6:
+                    $scene = self::COZE_COPYWRITING_SENIOR;
+                    $channelVersion = 9;
+                    $number = $data['number'] ?? 1;
+                    $sn = $data['sn'] ?? 0;
+                    $length = $data['length'] ?? 60;
+                    break;
                 default:
                     throw new \Exception('参数错误');
             }
@@ -1183,6 +1414,13 @@ class AutoDeviceSettingLogic extends ApiLogic
                     'sn' => $sn,
                     'length' => $length
                 ];
+            } elseif ($type == 6) {
+                $request = [
+                    'keywords' => $keywords,
+                    'number' => $number,
+                    'sn' => $sn,
+                    'length' => $length
+                ];
             } else {
                 $request = [
                     'keywords' => $keywords,
@@ -1191,22 +1429,22 @@ class AutoDeviceSettingLogic extends ApiLogic
                 ];
             }
 
-            $result = self::requestUrl($request, $scene, $userId, $taskId);
+            $result = self::requestUrl($request, $scene, $userId, $taskId, $withBillingMeta);
             if (!empty($result) && isset($result['content'])) {
                 return $result;
             } else {
-                throw new \Exception('生成失败');
+                throw new \Exception('生成失败：' . $result['message'] ?? '未知coze错误');
             }
         } catch (\Exception $e) {
             \think\facade\Log::channel('automedia')->info('copywriting失败' . $e->__toString());
-            throw new \Exception($e->getMessage());
+            // 保留原始 code（如算力不足 4059），供上游按 TASK_TOKEN_ERROR 中断重试
+            throw new \Exception($e->getMessage(), (int)$e->getCode(), $e);
         }
     }
 
 
-    private static function requestUrl(array $request, string $scene, int $userId, string $taskId)
+    private static function requestUrl(array $request, string $scene, int $userId, string $taskId, bool $withBillingMeta = false)
     {
-
         try {
 
             [$tokenScene, $tokenCode] = match ($scene) {
@@ -1214,6 +1452,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                 self::NEWS_MIXCUT_TITLE => ['news_mixcut_title', AccountLogEnum::TOKENS_DEC_NEWS_MIXCUT_TITLE],
                 self::COMBINED_PICTURE_TITLE => ['combined_picture_title', AccountLogEnum::TOKENS_DEC_COMBINED_PICTURE_TITLE],
                 self::COZE_COPYWRITING => ['coze_copywriting',  AccountLogEnum::TOKENS_DEC_COZE_COPYWRITING],
+                self::COZE_COPYWRITING_SENIOR => ['coze_copywriting_senior',  AccountLogEnum::TOKENS_DEC_COZE_COPYWRITING_SENIOR],
             }; //计费
             $unit = TokenLogService::checkToken($userId, $tokenScene); // 添加辅助参数
             $request['task_id'] = $taskId;
@@ -1230,36 +1469,46 @@ class AutoDeviceSettingLogic extends ApiLogic
                     $response = \app\common\service\ToolsService::Coze()->title($request);
                     break;
                 case self::COZE_COPYWRITING:
-                    $response = \app\common\service\ToolsService::Coze()->settext($request);
+                    if (isset($request['channelVersion']) && $request['channelVersion'] == 19) {
+                        $response = \app\common\service\ToolsService::Coze()->text($request);
+                    } else {
+                        $response = \app\common\service\ToolsService::Coze()->settext($request);
+                    }
+                    break;
+                case self::COZE_COPYWRITING_SENIOR:
+                        $response = \app\common\service\ToolsService::Coze()->setseniortext($request);
                     break;
                 default:
             } //成功响应，需要扣费
+            \think\facade\Log::channel('automedia')->info('获取文案返回参数2' . json_encode([
+                'scene' => $scene,
+                'token_scene' => $tokenScene,
+                'task_id' => $taskId,
+                'user_id' => $userId,
+                'request' => $request,
+                'response' => $response ?? null,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             if (isset($response['code']) && $response['code'] == 10000) {
                 $points = $unit;
                 if ($points > 0) {
-                    $break = true;
                     $extra = [];
                     switch ($scene) {
                         case self::COPYWRITING_CREATE:
-                            $break = false;
                             $extra = ['扣费项目' => '口播混剪视频文案生成', '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         case self::NEWS_MIXCUT_TITLE:
-                            $break = false;
                             $extra = ['生成文案条数' => 1, '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         case self::COMBINED_PICTURE_TITLE:
-                            $break = false;
                             $extra = ['生成标题条数' => 1, '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         case self::COZE_COPYWRITING:
-                            $break = false;
+                            $extra = ['生成文案条数' => 1, '算力单价' => $unit, '实际消耗算力' => $points];
+                            break;
+                        case self::COZE_COPYWRITING_SENIOR:
                             $extra = ['生成文案条数' => 1, '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         default:
-                    }
-                    if ($break) {
-                        return $response['data'] ?? [];
                     }
 
                     //token扣除
@@ -1267,11 +1516,47 @@ class AutoDeviceSettingLogic extends ApiLogic
                     //记录日志
                     AccountLogLogic::recordUserTokensLog(true, $userId, $tokenCode, $points, $taskId, $extra);
                 }
-                return $response['data'] ?? [];
+                $data = $response['data'] ?? [];
+                if ($withBillingMeta && is_array($data)) {
+                    $data['_billing'] = [
+                        'task_id'    => $taskId,
+                        'token_code' => $tokenCode,
+                        'points'     => $points,
+                        'charged'    => $points > 0,
+                    ];
+                }
+                return $data;
             }
             return $response;
         } catch (\Exception $e) {
-            throw new \Exception($e->getMessage());
+            \think\facade\Log::channel('automedia')->info('获取文案异常' . json_encode([
+                'scene' => $scene ?? '',
+                'task_id' => $taskId,
+                'user_id' => $userId,
+                'request' => $request,
+                'error' => $e->getMessage(),
+                'code' => (int)$e->getCode(),
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            // 保留原始 code（如算力不足 4059），供上游按 TASK_TOKEN_ERROR 中断重试
+            throw new \Exception($e->getMessage(), (int)$e->getCode(), $e);
         }
+    }
+
+    private static function getNewsMixcutDurationByTask(AutoDeviceSetting $task): int
+    {
+        $personaId = (int)($task->persona_id ?? 0);
+        $userId = (int)($task->user_id ?? 0);
+        if ($personaId <= 0 && !empty($task->device_code)) {
+            $personaId = (int)SvDevice::where('device_code', $task->device_code)->value('persona_id');
+        }
+        if ($personaId <= 0 || $userId <= 0) {
+            return AiPersonaSynthesisConfig::NEWS_MIXCUT_DURATION_DEFAULT;
+        }
+
+        $duration = AiPersonaSynthesisConfig::where('persona_id', $personaId)
+            ->where('user_id', $userId)
+            ->value('news_mixcut_duration');
+
+        return AiPersonaSynthesisConfig::normalizeNewsMixcutDuration($duration);
     }
 }

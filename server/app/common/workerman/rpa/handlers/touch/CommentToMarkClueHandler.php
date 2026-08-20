@@ -134,7 +134,7 @@ class CommentToMarkClueHandler extends BaseMessageHandler
                 'device_code'         => $this->payload['deviceId'],
                 'task_id'             => $content['task_id'],
                 'hash'                => $hash,
-                'image' => $this->saveBase64ToImage($content['image'] ?? '', $hash, 'touch'),
+                'image'               => $this->toolUtil->saveBase64ToImage($content['image'] ?? '', $hash, 'touch'),
                 'content'             => $content['content'],
                 'exec_time'           => time(),
                 'account'             => $content['account'] ?? '',

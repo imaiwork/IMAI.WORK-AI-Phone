@@ -94,10 +94,17 @@ class DisplayLists extends BaseApiDataLists implements ListsSearchInterface
                         break;
 
                     case DeviceEnum::TASK_SOURCE_FRIENDS: //5
-                        $taskinfo = SvCrawlingManualTaskRecord::where('task_id', $item->sub_task_id)->count();
-                        $item->data_info = [
-                            'add_wechat_number' => $taskinfo,
-                        ];
+                        if ($item->sub_task_id > 0) {
+                            $taskinfo = SvCrawlingManualTaskRecord::where('task_id', $item->sub_task_id)->count();
+                            $item->data_info = [
+                                'add_wechat_number' => $taskinfo,
+                            ];
+                        }else{
+                            $item->data_info = [
+                                'add_wechat_number' =>  SvAddWechatRecord::where('exec_task_id', $item->id)->count(),
+                            ];
+                        }
+
                         break;
 
                     case DeviceEnum::TASK_SOURCE_CLUES: //4
@@ -124,15 +131,15 @@ class DisplayLists extends BaseApiDataLists implements ListsSearchInterface
                         $like_comment_number = SvDeviceCircleLikeReplyRecord::where('like_reply_account', $item->sub_data_id)->where('type', 3)->where('device_code', $item->device_code)->count();
                         $type = 1;
                         $number = 0;
-                        if($like_number > 0){
+                        if ($like_number > 0) {
                             $type = 1;
                             $number = $like_number;
                         }
-                        if($comment_number > 0){
+                        if ($comment_number > 0) {
                             $type = 2;
                             $number = $comment_number;
                         }
-                        if($like_comment_number > 0){
+                        if ($like_comment_number > 0) {
                             $type = 3;
                             $number = $like_comment_number;
                         }

@@ -12,18 +12,28 @@
                         <div
                             v-for="tab in tabsConfig"
                             :key="tab.name"
-                            @click="handleTabChange(tab.name)"
+                            @click="handleTabChange(tab)"
                             class="tab-item"
-                            :class="{ 'is-active': activeTab === tab.name }">
+                            :class="{ 'is-active': activeTab === tab.action }">
                             {{ tab.label }}
                         </div>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-3">
+                    <span
+                        v-if="spaceTeamId > 0"
+                        class="inline-flex items-center px-2.5 py-1 rounded-lg bg-[#FFF7ED] text-[#EA580C] text-xs font-black">
+                        当前企业·{{ spaceTeamName || "企业空间" }}
+                    </span>
+                    <span
+                        v-else
+                        class="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-xs font-black">
+                        当前·个人空间
+                    </span>
                     <ElButton
                         class="!w-10 !h-10 !p-0 !rounded-xl !border-[#E2E8F0] hover:!border-primary hover:!text-primary transition-all"
-                        @click="resetPage">
+                        @click="onRefresh">
                         <Icon name="el-icon-Refresh" :size="16"></Icon>
                     </ElButton>
                 </div>
@@ -69,11 +79,21 @@
                             </template>
                         </ElTableColumn>
 
-                        <ElTableColumn label="变动来源" min-width="140">
+                        <ElTableColumn label="变动来源" min-width="200">
                             <template #default="{ row }">
-                                <div
-                                    class="inline-flex px-2.5 py-1 rounded-lg bg-[#F1F6FF] text-primary text-[11px] font-black">
-                                    {{ row.type_desc }}
+                                <div class="flex flex-col items-center gap-1">
+                                    <div class="inline-flex flex-wrap items-center justify-center gap-1">
+                                        <span
+                                            class="inline-flex px-2.5 py-1 rounded-lg bg-[#F1F6FF] text-primary text-[11px] font-black">
+                                            {{ row.type_desc }}
+                                        </span>
+                                        <!-- 与来源同行,避免固定行高把企业标裁掉 -->
+                                        <span
+                                            v-if="isTeamRow(row)"
+                                            class="inline-flex px-2 py-0.5 rounded-md bg-[#FFF7ED] text-[#EA580C] text-[10px] font-black">
+                                            {{ row.team_name ? "企业·" + row.team_name : "企业空间" }}
+                                        </span>
+                                    </div>
                                 </div>
                             </template>
                         </ElTableColumn>
@@ -93,9 +113,14 @@
                             </template>
                         </ElTableColumn>
 
-                        <ElTableColumn label="剩余算力" min-width="140">
+                        <ElTableColumn label="剩余算力" min-width="160">
                             <template #default="{ row }">
                                 <div class="flex justify-center items-center gap-1.5">
+                                    <span
+                                        v-if="isTeamRow(row)"
+                                        class="inline-flex px-1.5 py-0.5 rounded bg-[#FFF7ED] text-[#EA580C] text-[10px] font-black">
+                                        团队
+                                    </span>
                                     <span class="text-sm font-black text-[#0F172A]">{{ row.left_tokens }}</span>
                                 </div>
                             </template>
@@ -118,12 +143,20 @@
 
 <script setup lang="ts">
 import { getTokensRecord } from "@/api/user";
+import { getTeamInfo } from "@/api/team";
+import { useUserStore } from "@/stores/user";
 
-const activeTab = ref("tokens");
+const userStore = useUserStore();
+
 const tabsConfig = [
-    { label: "消耗记录", name: "tokens" },
-    { label: "订阅记录", name: "balance" },
+    { label: "消耗记录", name: "tokens", action: 2 },
+    { label: "订阅记录", name: "tokens", action: 1 },
 ];
+const activeTab = ref(tabsConfig[0].action);
+
+/** 当前空间:企业则筛该企业流水并展示企业标 */
+const spaceTeamId = ref(0);
+const spaceTeamName = ref("");
 
 const params = reactive({
     type: "tokens",
@@ -135,14 +168,56 @@ const { pager, getLists, resetPage } = usePaging({
     params,
 });
 
-const handleTabChange = (name: string) => {
-    activeTab.value = name;
-    params.type = name as any;
-    params.action = name === "tokens" ? 2 : 1;
-    getLists();
+const isTeamRow = (row: any) => Number(row?.is_team) === 1 || Number(row?.team_id) > 0;
+
+const loadSpaceContext = async () => {
+    try {
+        const info: any = await getTeamInfo();
+        if (Number(info?.in_team) === 1 && Number(info?.team_id) > 0) {
+            spaceTeamId.value = Number(info.team_id);
+            spaceTeamName.value = String(info.name || "");
+        } else {
+            spaceTeamId.value = 0;
+            spaceTeamName.value = "";
+        }
+    } catch {
+        spaceTeamId.value = 0;
+        spaceTeamName.value = "";
+    }
 };
 
-getLists();
+const syncHeaderTokens = () => {
+    userStore.refreshTokens();
+};
+
+const handleTabChange = (item: any) => {
+    const { name, action } = item;
+    activeTab.value = action;
+    params.type = name;
+    params.action = action;
+    getLists();
+    syncHeaderTokens();
+};
+
+const onRefresh = async () => {
+    await loadSpaceContext();
+    resetPage();
+    syncHeaderTokens();
+};
+
+onMounted(async () => {
+    await loadSpaceContext();
+    getLists();
+    syncHeaderTokens();
+});
+
+watch(
+    () => userStore.teamVersion,
+    () => {
+        loadSpaceContext();
+    },
+);
+
 definePageMeta({ layout: "base" });
 </script>
 <style lang="scss">

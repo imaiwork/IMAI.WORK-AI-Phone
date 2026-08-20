@@ -1,15 +1,15 @@
 <?php
 
-
 namespace app\adminapi\lists\human;
 
-use  app\adminapi\lists\BaseAdminDataLists;
-use app\common\lists\ListsSearchInterface;
-use app\common\model\human\HumanVoice;
-use app\common\service\ConfigService;
-use app\common\service\FileService;
-use app\common\model\user\UserTokensLog;
+use app\adminapi\lists\BaseAdminDataLists;
+use app\common\enum\ChatEnum;
 use app\common\enum\user\AccountLogEnum;
+use app\common\lists\ListsSearchInterface;
+use app\common\model\chat\Models;
+use app\common\model\human\HumanVoice;
+use app\common\model\user\UserTokensLog;
+use app\common\service\FileService;
 
 /**
  * 音色
@@ -20,7 +20,7 @@ class VoiceLists extends BaseAdminDataLists implements ListsSearchInterface
     {
         return [
             "%like%" => ['name'],
-            "=" => ['model_version',]
+            "=" => ['model_version'],
         ];
     }
 
@@ -35,99 +35,111 @@ class VoiceLists extends BaseAdminDataLists implements ListsSearchInterface
      */
     public function lists(): array
     {
+        // 获取模型列表并以 id 为键重组，便于 O(1) 查找
+        $modelMap = array_column(
+            (new Models())
+                ->field(['id', 'type', 'channel', 'logo', 'name', 'is_enable'])
+                ->where(['type' => ChatEnum::MODEL_TYPE_HUMAN])
+                ->order('sort asc, id desc')
+                ->select()
+                ->toArray(),
+            null,
+            'id'
+        );
 
-        $type = $this->request->get('type','0');
-        if (trim($type) == ''){
-            $type = 0;
-        }
-        //模型版本
-        $modelList = ConfigService::get('model', 'list', []);
-        $modelVersion = $modelList['channel'];
-        return HumanVoice::alias('hv')
-            ->join('user u', 'u.id = hv.user_id')
+        return $this->buildQuery()
             ->field('hv.id,hv.name,hv.user_id,hv.model_version,hv.gender,hv.type,
-            hv.task_id,hv.create_time,hv.voice_urls,hv.status,u.nickname,u.avatar')
-            ->when($this->request->get('user'), function ($query) {
-                $query->where('u.nickname', 'like', '%' . $this->request->get('user') . '%');
-            })
-            ->when($type, function ($query)use ($type){
-                $query->where('hv.type', $type );
-            })
-            ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
-                $query->whereBetween('hv.create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
-            })
-            ->where($this->searchWhere)
+                hv.task_id,hv.create_time,hv.update_time,hv.voice_urls,hv.status,u.nickname,u.avatar')
             ->order(['hv.create_time' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
-            ->each(function ($item) use ($modelVersion) {
-                $item['url']        = FileService::getFileUrl($item['voice_urls']);
-                $item['avatar']     =  trim($item['avatar']) ?  FileService::getFileUrl($item['avatar']) : "";
+            ->each(function ($item) use ($modelMap) {
+                $item['url']    = FileService::getFileUrl($item['voice_urls']);
+                $item['avatar'] = trim($item['avatar']) ? FileService::getFileUrl($item['avatar']) : '';
 
-                //模型版本
-                foreach ($modelVersion as $value) {
-                    if ($value['id'] == $item['model_version']) {
+                // 模型名称
+                $item['model_name'] = $modelMap[$item['model_version']]['name'] ?? '';
 
-                        $item['model_name'] = $value['name'];
-                    }
-                }
-                switch ($item['model_version']) {
-                    case 1:
-                        $change_type = AccountLogEnum::TOKENS_DEC_HUMAN_VOICE;
-                        break;
-                    case 2:
-                        $change_type = AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_PRO;
-                        break;
-                    case 4:
-                        $change_type = AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_YM;
-                        break;
-                    case 6:
-                        $change_type = AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_YMT;
-                        break;
-                    case 7:
-                        $change_type = AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_CHANJING;
-                        break;
-                    case 8:
-                        $change_type = AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN;
-                        break;
-                }
+                // 消耗类型映射
+                $changeType = $this->getChangeType((int)$item['model_version']);
 
-                // 消耗情况
-                $points1 = UserTokensLog::where('user_id', $item['user_id'])->where('action',1)
-                    ->where('task_id', $item['task_id'])->where('change_type', $change_type)->value('change_amount') ?? 0;
-
-                $points2 = UserTokensLog::where('user_id', $item['user_id'])->where('action',2)
-                    ->where('task_id', $item['task_id'])->where('change_type', $change_type)->value('change_amount') ?? 0;
-                $item['points'] = $points1 + $points2 ;
+                // 消耗 Tokens 统计（增加 + 退还）
+                $item['points'] = $changeType ? $this->getTokensCost($item['user_id'], $item['task_id'], $changeType) : 0;
             })
             ->toArray();
     }
 
-
     /**
-     * @notes  获取数量
+     * @notes 获取数量
      * @return int
      * @author 段誉
      * @date 2023/2/23 18:43
      */
     public function count(): int
     {
-        $type = $this->request->get('type','0');
-        if (trim($type) == ''){
-            $type = 0;
-        }
+        return $this->buildQuery()->count();
+    }
+
+    /**
+     * 构建公共查询条件
+     */
+    protected function buildQuery()
+    {
+        $type      = $this->getType();
+        $user      = $this->request->get('user');
+        $startTime = $this->request->get('start_time');
+        $endTime   = $this->request->get('end_time');
+
         return HumanVoice::alias('hv')
             ->join('user u', 'u.id = hv.user_id')
-            ->when($this->request->get('user'), function ($query) {
-                $query->where('u.nickname', 'like', '%' . $this->request->get('user') . '%');
+            ->when($user, function ($query) use ($user) {
+                $query->where('u.nickname', 'like', '%' . $user . '%');
             })
-            ->when($type, function ($query)use ($type){
-                $query->where('hv.type', $type );
+            ->when($type, function ($query) use ($type) {
+                $query->where('hv.type', $type);
             })
-            ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
-                $query->whereBetween('hv.create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
+            ->when($startTime && $endTime, function ($query) use ($startTime, $endTime) {
+                $query->whereBetween('hv.create_time', [strtotime($startTime), strtotime($endTime)]);
             })
-            ->where($this->searchWhere)
-            ->count();
+            ->where($this->searchWhere);
+    }
+
+    /**
+     * 获取 type 参数（空字符串视为 0）
+     */
+    protected function getType(): int
+    {
+        $type = trim((string)$this->request->get('type', '0'));
+        return $type === '' ? 0 : (int)$type;
+    }
+
+    /**
+     * 根据 model_version 获取对应的 change_type
+     */
+    protected function getChangeType(int $modelVersion): ?int
+    {
+        return match ($modelVersion) {
+            1       => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE,
+            2       => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_PRO,
+            4       => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_YM,
+            6       => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_YMT,
+            7       => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_CHANJING,
+            8       => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN,
+            10      => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_CLONE_MINIMAX_HD,
+            11      => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_CLONE_MINIMAX_TURBO,
+            default => null,
+        };
+    }
+
+    /**
+     * 统计某任务的 tokens 消耗（扣减 + 退还）
+     */
+    protected function getTokensCost(int $userId, $taskId, int $changeType): int
+    {
+        return (int)UserTokensLog::where('user_id', $userId)
+            ->where('task_id', $taskId)
+            ->where('change_type', $changeType)
+            ->whereIn('action', [1, 2])
+            ->sum('change_amount');
     }
 }

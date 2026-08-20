@@ -58,7 +58,7 @@
                         ref="progressBoxRef"
                         class="flex-1 py-1 cursor-pointer group/progress"
                         @click.stop="clickProgress">
-                        <div class="bg-white/30 flex-1 relative h-1 rounded-full overflow-hidden">
+                        <div class="bg-[#ffffff]/30 flex-1 relative h-1 rounded-full overflow-hidden">
                             <div class="w-full h-full bg-white opacity-20 absolute"></div>
                             <div
                                 class="bg-primary h-full absolute left-0 rounded-full transition-all duration-100 ease-linear"
@@ -99,7 +99,7 @@ const props = withDefaults(
         playIconSize: 36, // web端 px通常比rpx小，调整了默认值
         borderRadius: 24,
         showClose: false,
-    }
+    },
 );
 
 const emit = defineEmits(["close"]);

@@ -9,7 +9,12 @@
         :show-close="false"
         style="border-radius: 16px; overflow: hidden; padding: 0"
         @close="close">
-        <div class="flex w-full h-[490px]">
+        <div class="flex w-full h-[490px] relative">
+            <div class="absolute top-4 right-4 z-[22]">
+                <div class="w-6 h-6" @click="close">
+                    <close-btn />
+                </div>
+            </div>
             <div class="w-[370px] flex-shrink-0 recharge-cover">
                 <div class="flex flex-col justify-end h-full relative">
                     <div class="absolute top-[180px] w-full flex justify-center">
@@ -261,30 +266,27 @@
                 </div>
             </div>
         </div>
-        <ElDialog
-            v-model="showPayResult"
-            width="400px"
-            confirm-button-text=""
-            cancel-button-text=""
-            style="border-radius: 16px; overflow: hidden; padding: 0; overflow: initial"
-            @close="resultClose">
-            >
-            <div class="px-[15px] pb-[15px]">
-                <div class="flex justify-center translate-y-[-14px]">
-                    <img src="@/assets/images/recharge_top.png" class="h-[74px]" />
-                </div>
-                <div class="h-[118px] rounded-lg flex justify-center items-center result-box">
-                    <span class="text-[32px] font-medium">算力+{{ getPackage.package_info?.tokens }}</span>
-                </div>
-                <div class="text-[#7C7C7C] mt-4 text-center">充值已到账，让先用AI的人富起来~</div>
-                <div
-                    class="mt-4 flex items-center justify-center bg-[#FFC8A3] h-[35px] w-[250px] mx-auto rounded-full cursor-pointer">
-                    <div class="font-medium text-[#472716]" @click="resultClose()">
-                        立即使用({{ resultCountDown }}s)
-                    </div>
-                </div>
+    </ElDialog>
+    <ElDialog
+        v-model="showPayResult"
+        width="400px"
+        confirm-button-text=""
+        cancel-button-text=""
+        style="border-radius: 16px; overflow: hidden; padding: 0; overflow: initial"
+        @close="resultClose">
+        <div class="px-[15px] pb-[15px]">
+            <div class="flex justify-center translate-y-[-14px]">
+                <img src="@/assets/images/recharge_top.png" class="h-[74px]" />
             </div>
-        </ElDialog>
+            <div class="h-[118px] rounded-lg flex justify-center items-center result-box">
+                <span class="text-[32px] font-medium">算力+{{ getPackage.package_info?.tokens }}</span>
+            </div>
+            <div class="text-[#7C7C7C] mt-4 text-center">充值已到账，让先用AI的人富起来~</div>
+            <div
+                class="mt-4 flex items-center justify-center bg-[#FFC8A3] h-[35px] w-[250px] mx-auto rounded-full cursor-pointer">
+                <div class="font-medium text-[#472716]" @click="resultClose()">立即使用({{ resultCountDown }}s)</div>
+            </div>
+        </div>
     </ElDialog>
 </template>
 
@@ -330,7 +332,14 @@ const handleTab = (key: RechargeTypeEnum) => {
     rechargeType.value = key;
 };
 
-const showPop = ref(false);
+const showPop = computed({
+    get() {
+        return appStore.showDataPackage;
+    },
+    set(value) {
+        appStore.showDataPackage = value;
+    },
+});
 const showPayResult = ref(false);
 
 const getPolicyUrl = (type: PolicyAgreementEnum) => {
@@ -473,7 +482,9 @@ const { lockFn: onUseRedeemCode, isLock: isUse } = useLockFn(async () => {
 const loading = ref(false);
 
 const close = () => {
+    showPop.value = false;
     cancelPay();
+    showPop.value = false;
     emit("close");
 };
 
@@ -494,9 +505,25 @@ const open = async () => {
     }
 };
 
-defineExpose({
-    open,
-});
+watch(
+    () => appStore.showDataPackage,
+    (value) => {
+        // OEM 站点兜底：即使误开套餐充值，也切到联系管理员 + 兑换码
+        if (value && Number(appStore.getOemConfig?.is_oem) === 1) {
+            appStore.showDataPackage = false;
+            appStore.showOemRecharge = true;
+            return;
+        }
+        if (!value) {
+            close();
+        } else {
+            open();
+        }
+    },
+    {
+        immediate: true,
+    },
+);
 </script>
 
 <style lang="scss" scoped>

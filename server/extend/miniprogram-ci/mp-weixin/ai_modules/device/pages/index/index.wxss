@@ -1,0 +1,1 @@
+.purchase-card.data-v-7d458df0{background:linear-gradient(135deg,#2b6eff 0%,#1a50d9 100%)}.add-phone-fixed.data-v-7d458df0{position:fixed;left:24rpx;right:24rpx;bottom:calc(120rpx + env(safe-area-inset-bottom));z-index:20}.phone-card.data-v-7d458df0{transition:transform .15s ease}.phone-card.data-v-7d458df0:active{transform:scale(.985)}

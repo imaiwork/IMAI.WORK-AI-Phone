@@ -38,6 +38,21 @@ class ShanjianAnchor extends BaseModel
         return $value ? FileService::setFileUrl($value) : '';
     }
 
+    public function getAnchorUrlAttr($value)
+    {
+        return $value ? FileService::getFileUrl($value) : '';
+    }
+
+    public function getAuthorizedPicAttr($value)
+    {
+        return $value ? FileService::getFileUrl($value) : '';
+    }
+
+    public function getAuthorizedUrlAttr($value)
+    {
+        return $value ? FileService::getFileUrl($value) : '';
+    }
+
 }
 
 

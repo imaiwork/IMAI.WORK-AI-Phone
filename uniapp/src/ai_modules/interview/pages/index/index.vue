@@ -182,7 +182,7 @@ onLoad((options: any) => {
     state.user_id = options.user_id;
     if (state.job_id && !isLogin.value) {
         uni.$u.route({
-            url: "pages/login/login",
+            url: "/packages/pages/login/login",
         });
     }
     init();

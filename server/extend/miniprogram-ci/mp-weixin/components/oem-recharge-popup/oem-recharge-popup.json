@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-popup": "../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
+    "oem-recharge-panel": "../oem-recharge-panel/oem-recharge-panel"
+  }
+}

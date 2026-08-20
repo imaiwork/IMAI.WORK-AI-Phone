@@ -86,7 +86,7 @@
                                             'bg-[#FEF2F2] text-[#EF4444] border-[#FEE2E2]': item.status == 2,
                                             'bg-[#EEF2FF] text-primary border-[#E0E7FF]': item.status == 3,
                                         }">
-                                        {{ ["未发布", "已发布", "发布失败", "发布中"][item.status] }}
+                                        {{ { 0: "未发布", 1: "已发布", 2: "发布失败", 3: "发布中" }[item.status] }}
                                     </div>
                                 </div>
 
@@ -184,6 +184,7 @@
     </ElDrawer>
     <preview-video v-if="showPreviewVideo" ref="previewVideoRef" @close="showPreviewVideo = false"></preview-video>
 </template>
+
 <script setup lang="ts">
 import { getDeviceAccountTaskDetail, getDeviceTaskRecordList, deleteDeviceTaskRecord } from "@/api/device";
 
@@ -233,7 +234,6 @@ const open = (row: any) => {
     show.value = true;
     currRow.value = row;
     getDetail(row.id);
-
     getLists();
 };
 
@@ -270,20 +270,10 @@ defineExpose({
     }
 }
 
-/* 视频控件隐藏 */
 video::-webkit-media-controls {
     display: none !important;
 }
 
-/* 滚动条美化 */
-:deep(.el-scrollbar__thumb) {
-    background-color: #e2e8f0 !important;
-    &:hover {
-        background-color: #cbd5e1 !important;
-    }
-}
-
-/* 按钮点击动效 */
 button:active {
     transform: scale(0.95);
 }

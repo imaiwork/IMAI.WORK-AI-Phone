@@ -13,8 +13,8 @@
         <div class="relative w-[480px] overflow-hidden rounded-[32px] bg-white border border-[#F1F5F9] ml-4">
             <template v-if="!loading">
                 <div class="relative h-[220px] bg-primary overflow-hidden">
-                    <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-2xl"></div>
-                    <div class="absolute top-20 -left-10 w-32 h-32 rounded-full bg-black/5 blur-xl"></div>
+                    <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[#ffffff]/10 blur-2xl"></div>
+                    <div class="absolute top-20 -left-10 w-32 h-32 rounded-full bg-[#000000]/5 blur-xl"></div>
 
                     <div class="absolute inset-0 flex flex-col justify-center px-10">
                         <div class="flex items-center gap-3 mb-2">

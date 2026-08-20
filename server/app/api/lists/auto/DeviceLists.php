@@ -6,6 +6,7 @@ namespace app\api\lists\auto;
 use app\api\lists\BaseApiDataLists;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\auto\AutoDeviceConfig;
+use app\common\service\UserDisplaySanitizer;
 
 /**
  * 设备自动任务列表
@@ -38,6 +39,9 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
             ->each(function ($item) {
+                if (isset($item['human_image']) && is_array($item['human_image'])) {
+                    $item['human_image'] = UserDisplaySanitizer::normalizeHumanImageForUser($item['human_image']);
+                }
                 return $item;
             })
             ->toArray();
@@ -57,4 +61,3 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface
             ->count();
     }
 }
-

@@ -1,0 +1,91 @@
+export function useScroll(emit: (event: string, ...args: any[]) => void) {
+    const scrollContainerRef = ref<HTMLDivElement | null>(null);
+    const previousScrollTop = ref(0);
+    const disabledScroll = ref(false);
+    const showBackToBottom = ref(false);
+
+    const BACK_TO_BOTTOM_THRESHOLD = 200;
+
+    const toScrollHeight = () => {
+        if (!scrollContainerRef.value) return 0;
+        return scrollContainerRef.value.scrollHeight - scrollContainerRef.value.clientHeight;
+    };
+
+    const checkNearBottom = (scrollTop: number) => {
+        if (!scrollContainerRef.value) return;
+        const maxScrollTop = scrollContainerRef.value.scrollHeight - scrollContainerRef.value.clientHeight;
+        showBackToBottom.value = maxScrollTop - scrollTop > BACK_TO_BOTTOM_THRESHOLD;
+    };
+
+    const scroll = (event: Event) => {
+        const target = event.target as HTMLElement;
+        const currentScrollTop = target.scrollTop;
+
+        checkNearBottom(currentScrollTop);
+
+        if (currentScrollTop < previousScrollTop.value - 50) {
+            disabledScroll.value = true;
+        } else if (currentScrollTop >= previousScrollTop.value) {
+            disabledScroll.value = false;
+        }
+
+        previousScrollTop.value = currentScrollTop;
+
+        if (currentScrollTop === 0) emit("top");
+    };
+
+    const resetScroll = () => {
+        disabledScroll.value = false;
+        previousScrollTop.value = 0;
+        showBackToBottom.value = false;
+    };
+
+    const scrollToBottom = async (smooth = false) => {
+        if (disabledScroll.value || !scrollContainerRef.value) return;
+        const scrollH = toScrollHeight();
+        await nextTick();
+        if (smooth) {
+            scrollContainerRef.value.scrollTo({ top: scrollH, behavior: "smooth" });
+        } else {
+            scrollContainerRef.value.scrollTop = scrollH;
+        }
+        showBackToBottom.value = false;
+    };
+
+    const scrollTo = async (top: number, smooth = true) => {
+        if (!scrollContainerRef.value) return;
+        await nextTick();
+        if (smooth) {
+            scrollContainerRef.value.scrollTo({ top, behavior: "smooth" });
+        } else {
+            scrollContainerRef.value.scrollTop = top;
+        }
+    };
+
+    const handleBackToBottom = async () => {
+        if (!scrollContainerRef.value) return;
+        await nextTick();
+        await scrollTo(toScrollHeight());
+        showBackToBottom.value = false;
+        disabledScroll.value = false;
+    };
+
+    const triggerContentPushUp = (containerRef: Ref<HTMLDivElement | null>) => {
+        nextTick(() => {
+            if (!scrollContainerRef.value || !containerRef.value) return;
+            setTimeout(() => scrollToBottom(true), 100);
+        });
+    };
+
+    return {
+        scrollContainerRef,
+        disabledScroll,
+        showBackToBottom,
+        scroll,
+        resetScroll,
+        scrollToBottom,
+        scrollTo,
+        handleBackToBottom,
+        triggerContentPushUp,
+    };
+}

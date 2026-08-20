@@ -9,15 +9,17 @@ class MaterialValidate extends BaseValidate
     protected $rule = [
         'persona_id' => 'require|number',
         'material_name' => 'require',
-        'material_type' => 'require|in:1,2',
+        'material_type' => 'require|in:1,2,3',
         'file_url' => 'require',
-        'thumbnail_url' => 'require',
+        'thumbnail_url' => 'checkThumbnailUrl',
         'duration' => 'number',
         'width' => 'number',
         'height' => 'number',
         'use_status' => 'in:0,1,2',
         'publish_mode' => 'in:1,2',
         'items' => 'require|array',
+        'ids' => 'require|array',
+        'id' => 'require|number',
     ];
 
     protected $message = [
@@ -25,9 +27,8 @@ class MaterialValidate extends BaseValidate
         'persona_id.number' => '人设ID必须是数字',
         'material_name.require' => '素材名称是必填项',
         'material_type.require' => '素材类型是必填项',
-        'material_type.in' => '素材类型值只能是1或2',
+        'material_type.in' => '素材类型值只能是1、2或3',
         'file_url.require' => '文件URL是必填项',
-        'thumbnail_url.require' => '缩略图URL是必填项',
         'duration.number' => '视频时长必须是数字',
         'width.number' => '宽度必须是数字',
         'height.number' => '高度必须是数字',
@@ -35,7 +36,25 @@ class MaterialValidate extends BaseValidate
         'publish_mode.in' => '发布模式值只能是1或2',
         'items.require' => '批量数据是必填项',
         'items.array' => '批量数据必须是数组',
+        'ids.require' => '删除ID是必填项',
+        'ids.array' => '删除ID必须是数组',
+        'id.require' => 'ID是必填项',
+        'id.number' => 'ID必须是数字',
     ];
+
+    /**
+     * 视频/图片缩略图必填；音乐素材(material_type=3)可空
+     */
+    protected function checkThumbnailUrl($value, $rule, array $data = [])
+    {
+        if ((int)($data['material_type'] ?? 0) === 3) {
+            return true;
+        }
+        if ($value === '' || $value === null) {
+            return '缩略图URL是必填项';
+        }
+        return true;
+    }
 
     public function sceneAdd()
     {
@@ -60,5 +79,15 @@ class MaterialValidate extends BaseValidate
     public function sceneDelete()
     {
         return $this->only(['id']);
+    }
+
+    public function sceneBatchDelete()
+    {
+        return $this->only(['ids']);
+    }
+
+    public function sceneDeleteFailedSlices()
+    {
+        return $this->only(['persona_id']);
     }
 }

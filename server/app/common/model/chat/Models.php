@@ -23,18 +23,18 @@ class Models extends BaseModel
     public static function checkModels(string $models): array
     {
         $array = explode(':', $models);
-        $mainId = intval($array[0]??0);
-        $costId = intval($array[1]??0);
+        $mainId = intval($array[0] ?? 0);
+        $costId = intval($array[1] ?? 0);
         if (count($array) < 2) {
             throw new Exception('模型异常,请管理员重新设置!');
         }
 
-        $mainModel = (new self())->where(['id'=>$mainId])->findOrEmpty()->toArray();
+        $mainModel = (new self())->where(['id' => $mainId])->findOrEmpty()->toArray();
         if (!$mainModel) {
             throw new Exception('主模型异常,请管理员检查配置!');
         }
 
-        $costModel = (new ModelsCost())->where(['id'=>$costId])->findOrEmpty()->toArray();
+        $costModel = (new ModelsCost())->where(['id' => $costId])->findOrEmpty()->toArray();
         if (!$costModel) {
             throw new Exception('子模型异常,请管理员检查配置!');
         }
@@ -58,6 +58,6 @@ class Models extends BaseModel
      */
     public function modelsLists(): HasMany
     {
-        return $this->hasMany(ModelsCost::class,'model_id','id');
+        return $this->hasMany(ModelsCost::class, 'model_id', 'id');
     }
 }

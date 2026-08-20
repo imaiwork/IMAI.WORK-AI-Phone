@@ -6,9 +6,11 @@ use app\api\controller\BaseApiController;
 use app\api\lists\shanjian\ShanjianAnchorLists;
 use app\api\logic\shanjian\ShanjianAnchorLogic;
 use app\api\validate\shanjian\ShanjianAnchorValidate;
+use app\common\service\MemberService;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\response\Json;
+use think\facade\Cache;
 
 class ShanjianAnchorController extends BaseApiController
 {
@@ -17,6 +19,11 @@ class ShanjianAnchorController extends BaseApiController
     public function add()
     {
         try {
+            $existing = MemberService::countQuotaDigitalHumans($this->userId);
+            $reason = '';
+            if (!MemberService::canCreate($this->userId, 'digital_human', $existing, $reason)) {
+                return $this->fail($reason . ',请升级会员');
+            }
             $params = (new ShanjianAnchorValidate())->post()->goCheck('add');
             $result = ShanjianAnchorLogic::add($params);
             if ($result) {
@@ -69,12 +76,12 @@ class ShanjianAnchorController extends BaseApiController
             $data = $this->request->all();
             Log::channel('shanjiannotice')->write('接收闪剪形象合成参数'.json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             $key = md5(json_encode($data));
-            $val = cache($key);
+            $val = Cache::store('redis')->get($key);
             if ($val) {
                 echo 1;
                 die;
             }
-            cache($key, 1, 20);
+            Cache::store('redis')->set($key, 1, 20);
             $result = ShanjianAnchorLogic::updateAnchor($data);
             if (!$result) {
                 return $this->fail(ShanjianAnchorLogic::getError());
@@ -95,12 +102,12 @@ class ShanjianAnchorController extends BaseApiController
             Log::channel('shanjiannotice')->write('接收闪剪音色合成参数'.json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
             $key = md5(json_encode($data));
-            $val = cache($key);
+            $val = Cache::store('redis')->get($key);
             if ($val) {
                 echo 1;
                 die;
             }
-            cache($key, 1, 20);
+            Cache::store('redis')->set($key, 1, 20);
 
             $result = ShanjianAnchorLogic::updateVoice($data);
             if (!$result) {

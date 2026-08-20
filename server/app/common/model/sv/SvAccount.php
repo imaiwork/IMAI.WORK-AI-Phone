@@ -4,4 +4,7 @@ namespace app\common\model\sv;
 
 use app\common\model\BaseModel;
 
-class SvAccount extends BaseModel {}
+class SvAccount extends BaseModel {
+
+    
+}

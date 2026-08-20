@@ -2,7 +2,6 @@
   "navigationBarTitleText": "背景音乐",
   "usingComponents": {
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "empty": "../../../../components/empty/empty",
     "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
     "upload-progress": "../../../../components/upload-progress/upload-progress",
     "popup-bottom": "../../../../components/popup-bottom/popup-bottom"

@@ -41,7 +41,7 @@ const props = withDefaults(
         show: false,
         poster: "",
         isBar: true,
-    }
+    },
 );
 
 const emit = defineEmits(["update:show"]);
@@ -65,7 +65,7 @@ watch(
                 videoPlayerRef.value.toggleVideo();
             });
         }
-    }
+    },
 );
 </script>
 

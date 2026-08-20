@@ -1,9 +1,11 @@
 import { storeToRefs } from "pinia";
 import { chatSendTextStream, getChatLog } from "@/api/chat";
+import { getAgentDetail } from "@/api/agent";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
 import { useChatStore, type ChatMessage } from "../stores/chat";
 import { useChatEventBus } from "./useChatEventBus";
+import { AGENT_UNAVAILABLE_TIP, canUseAgent } from "@/utils/agentPermission";
 import dayjs from "dayjs";
 import { cancelRequestsByUrl } from "@/utils/http/cancel";
 
@@ -75,7 +77,7 @@ export function useChatManager() {
                             });
                         }
 
-                        chatStore.setTaskId(newTaskId);
+                        chatStore.replaceTaskId(newTaskId);
                         replaceState({
                             task_id: newTaskId,
                             agent_id: agentValue.value?.id,
@@ -96,13 +98,30 @@ export function useChatManager() {
                         chatStore.updateLastMessage(update);
                     } else if (object === "finished") {
                         if (check_robot_id) {
-                            chatStore.setAgent({ id: check_robot_id });
+                            verifyAndBindCheckRobot(check_robot_id);
                         }
                         chatStore.updateLastMessage({ consume_tokens: usage });
                     }
                     chatScrollToBottom();
                 } catch (e) {}
             });
+    };
+
+    /**
+     * @description 校验流式返回的 check_robot_id 是否为当前用户可用智能体。
+     * 仅会员可用的智能体若用户无权限，则提示并跳过绑定。
+     */
+    const verifyAndBindCheckRobot = async (robotId: string | number) => {
+        try {
+            const agentDetail = await getAgentDetail({ id: robotId });
+            if (!canUseAgent(agentDetail, userInfo.value)) {
+                feedback.msgWarning(AGENT_UNAVAILABLE_TIP);
+                return;
+            }
+            chattingRef.value?.setSelectedAgent(robotId);
+        } catch (error) {
+            console.error("校验智能体权限失败:", error);
+        }
     };
 
     // --- 公开方法 ---
@@ -114,7 +133,6 @@ export function useChatManager() {
         if (!taskId.value || taskId.value === "undefined") return;
 
         chatStore.isLoading = true;
-        console.log(agentValue.value);
         try {
             const data = await getChatLog({
                 page_no: 1,
@@ -140,7 +158,7 @@ export function useChatManager() {
                                   is_reasoning_finished: true,
                                   form_avatar: item.avatar || agentValue.value?.image || chatConfig.value?.logo,
                                   consume_tokens: item.tokens_info,
-                              }
+                              },
                 ) ?? [];
 
             chatStore.chatContentList = historyMessages;
@@ -155,16 +173,28 @@ export function useChatManager() {
      * @param userInput - 用户输入的文本。
      * @param isNewChatPrompt - 是否为新会话的预设提示语。
      */
-    const sendMessage = async (userInput: string, isNewChatPrompt = false, cb?: () => void) => {
+    const sendMessage = async (
+        userInput: string,
+        isNewChatPrompt = false,
+        cb?: () => void,
+        chattingConfigOverride?: Record<string, any>,
+        /** 欢迎页等场景直接传入附件，避免只依赖 store 时被清空/覆盖 */
+        filesOverride?: any[],
+    ) => {
+        if (filesOverride?.length) {
+            chatStore.setFiles(filesOverride);
+        }
+        // 快照附件，后续 clearFiles / 配置展开都不能丢掉
+        const pendingFiles = [...(filesOverride?.length ? filesOverride : fileLists.value)];
         if (userTokens.value <= 1) return feedback.msgPowerInsufficient();
-        if (isReceiving.value || (!userInput.trim() && fileLists.value.length === 0)) return;
+        if (isReceiving.value || (!userInput.trim() && pendingFiles.length === 0)) return;
         // 1. 准备用户消息和机器人占位消息
         if (!isNewChatPrompt) {
             chatStore.addMessage({
                 type: 1,
                 message: userInput,
                 form_avatar: userInfo.value.avatar,
-                fileList: fileLists.value,
+                fileList: pendingFiles,
                 quotes: extraParams.value.quotes,
             });
         }
@@ -182,19 +212,22 @@ export function useChatManager() {
         chatStore.startReceiving();
         chattingRef.value?.clearQuote();
         resetScroll();
-
+        chatScrollToBottom();
         // 2. 发起API请求
         try {
+            const chattingParams = chattingConfigOverride ?? chattingRef.value?.getChatConfig?.() ?? {};
+            const fileInfo = pendingFiles.length ? pendingFiles[0] : undefined;
             await chatSendTextStream(
                 {
                     message: userInput,
                     task_id: taskId.value,
-                    robot_id: agentValue.value?.id,
                     open_reasoning: isDeep.value ? 1 : 0,
                     is_network_search: isNetwork.value ? 1 : 0,
-                    file_info: fileLists.value.length ? fileLists.value[0] : undefined,
-                    ...(chattingRef.value?.getChatConfig?.() || {}),
+                    ...chattingParams,
                     ...extraParams.value,
+                    robot_id: chattingParams.robot_id || agentValue.value?.id,
+                    // 必须放在展开之后，防止 getChatConfig / extraParams 冲掉附件
+                    file_info: fileInfo,
                 },
                 {
                     onstart: (reader) => {
@@ -211,13 +244,17 @@ export function useChatManager() {
                         }, 100);
                         cb?.();
                     },
-                }
+                },
             );
         } catch (error: any) {
             chatStore.stopReceiving();
             if (error?.type == "cancel") return;
             const errorMessage = error?.type == "cancel" ? "用户已停止内容生成" : error || "消息发送失败";
             chatStore.updateLastMessage({ error: errorMessage, loading: false });
+            // 错误气泡渲染后滚到底部，避免异常态停在半截
+            setTimeout(() => {
+                chatScrollToBottom();
+            }, 100);
         }
     };
 
@@ -294,7 +331,7 @@ export function useChatManager() {
             resetURLPath();
         } else if (routeTaskId && routeTaskId !== "undefined") {
             // 如果URL带有 task_id, 则加载历史记录
-            chatStore.setTaskId(routeTaskId as string);
+            chatStore.replaceTaskId(routeTaskId as string);
             await fetchChatHistory();
         }
         chatScrollToBottom();

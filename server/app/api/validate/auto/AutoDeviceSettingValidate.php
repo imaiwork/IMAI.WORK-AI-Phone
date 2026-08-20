@@ -17,6 +17,7 @@ class AutoDeviceSettingValidate extends BaseValidate
         'type' => 'require|in:1,3,4,5',
         'device_config_id' => 'require',
         'device_code' => 'max:255',
+        'date' => 'dateFormat:Y-m-d',
         'video_theme' => 'max:1000',
         'text_theme' => 'max:1000',
         'status' => 'in:0,1,2,3',
@@ -31,6 +32,7 @@ class AutoDeviceSettingValidate extends BaseValidate
         'type.in' => '平台类型值不正确',
         'device_config_id.require' => '请输入自动化配置ID',
         'device_code.max' => '设备号长度不能超过255个字符',
+        'date.dateFormat' => '日期格式必须为YYYY-MM-DD',
         'video_theme.max' => '视频营销主题长度不能超过1000个字符',
         'text_theme.max' => '图文营销主题长度不能超过1000个字符',
         'status.in' => '配置状态值不正确',
@@ -60,5 +62,11 @@ class AutoDeviceSettingValidate extends BaseValidate
     public function sceneDelete()
     {
         return $this->only(['id']);
+    }
+
+    // 自动化内容任务状态场景
+    public function sceneTaskStatus()
+    {
+        return $this->only(['date', 'device_code']);
     }
 }

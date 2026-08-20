@@ -60,7 +60,8 @@
 import { getAgentDetail, updateAgent, addAgent } from "@/api/agent";
 import { KnbTypeEnum } from "@/pages/knowledge_base/_enums";
 import { useDebounceFn } from "@vueuse/core";
-import { Agent, ModeTypeEnum } from "../_enums";
+import { useAppStore } from "@/stores/app";
+import { Agent, AgentTypeEnum, ModeTypeEnum } from "../_enums";
 import BaseSetting from "../_components/base-setting/index.vue";
 import KnbSetting from "../_components/knb-setting/index.vue";
 import HumanizeSetting from "../_components/humanize-setting/index.vue";
@@ -77,6 +78,7 @@ import Chat from "../_components/chat/index.vue";
 
 const emit = defineEmits<{ (e: "back"): void }>();
 const route = useRoute();
+const appStore = useAppStore();
 
 const agentId = Number(route.query.id);
 
@@ -152,6 +154,8 @@ const formData = reactive<Agent>({
 const formRef = ref();
 const chatRef = shallowRef<InstanceType<typeof Chat>>();
 const currentComponent = computed(() => tabs.value.find((tab) => tab.name === currentTab.value)?.component);
+/** 非创建者禁止保存/自动保存 */
+const isOwner = ref(true);
 
 /**
  * @description 在聊天窗口开始一个新对话
@@ -168,6 +172,18 @@ const getDetail = async () => {
     if (!agentId) return;
     try {
         const data = await getAgentDetail({ id: agentId });
+        // 团队共享智能体:非创建者仅可对话,不可进入编辑页
+        if (Number(data.is_owner) !== 1) {
+            isOwner.value = false;
+            feedback.msgWarning("仅创建者可编辑该智能体");
+            await navigateTo({
+                path: "/agent/chatting",
+                query: { agent_id: String(agentId), type: String(AgentTypeEnum.AGENT) },
+                replace: true,
+            });
+            return;
+        }
+        isOwner.value = true;
         setFormData(data, formData);
         if (formData.kb_type == KnbTypeEnum.RAG && data.kb_ids.length > 0) {
             formData.kb_ids = data.kb_ids[0];
@@ -186,8 +202,22 @@ const getDetail = async () => {
  * @description 提交保存智能体数据
  * @param isAutoSave - 是否为自动保存，用于区分手动和自动，以决定是否显示提示
  */
+const isModelAllowed = () => {
+    const list = appStore.getAllowedChatModel || [];
+    const modelId = formData.model_id;
+    if (modelId == null || modelId === "") return false;
+    return list.some(
+        (item: any) => item.model_id == modelId,
+    );
+};
+
 const handleSubmit = async (isAutoSave?: boolean) => {
+    if (!isOwner.value) return;
     try {
+        await appStore.ensureMemberQuota(true);
+        if (!isModelAllowed()) {
+            throw "当前模型不在会员等级可用范围内，请重新选择";
+        }
         await formRef.value?.validate?.();
         const params = {
             ...formData,
@@ -220,6 +250,7 @@ const { lockFn, isLock } = useLockFn(() => handleSubmit(false));
 watch(
     formData,
     () => {
+        if (!isOwner.value) return;
         throttleSave();
     },
     {

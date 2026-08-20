@@ -21,7 +21,7 @@
             </div>
         </div>
 
-        <div class="grow min-h-0 bg-gray-50/30 overflow-hidden" v-spin="{ show: loading }">
+        <div class="grow min-h-0 bg-[#f9f9f9]/30 overflow-hidden" v-spin="{ show: loading }">
             <div v-if="pager.lists && pager.lists.length" class="h-full flex flex-col">
                 <div class="grow min-h-0">
                     <ElScrollbar>

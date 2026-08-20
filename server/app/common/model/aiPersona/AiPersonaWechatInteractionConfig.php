@@ -6,18 +6,21 @@ use app\common\model\BaseModel;
 
 class AiPersonaWechatInteractionConfig extends BaseModel
 {
+    // 加群触发模式
+    const GROUP_TRIGGER_MODE_AI = 1;       // AI意图识别
+    const GROUP_TRIGGER_MODE_KEYWORD = 2;  // 自定义关键词
 
     public static function getTimesByType(int $personaType, int $accountType)
     {
         $maps = [
             1 => [
                 1 => [
-                    '22:00-22:30'
+                    '22:10-22:30'
                 ]
             ],
             2 => [
                 1 => [
-                    '12:00-12:30',
+                    '11:30-12:00',
                     '18:15-18:30'
                 ],
             ],
@@ -60,6 +63,46 @@ class AiPersonaWechatInteractionConfig extends BaseModel
     {
         return $value ? json_decode($value, true) : [];
     }
+
+    public function setSalesWechatAttr($value)
+    {
+        return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
+    }
+
+    public function getSalesWechatAttr($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    public function setGroupTriggerKeywordsAttr($value)
+    {
+        return is_array($value) ? json_encode(self::normalizeGroupTriggerKeywords($value), JSON_UNESCAPED_UNICODE) : $value;
+    }
+
+    public function getGroupTriggerKeywordsAttr($value)
+    {
+        $keywords = $value ? json_decode($value, true) : [];
+        return is_array($keywords) ? self::normalizeGroupTriggerKeywords($keywords) : [];
+    }
+
+    public static function normalizeGroupTriggerKeywords(array $keywords): array
+    {
+        return array_values(array_unique(array_filter(array_map(function ($word) {
+            return trim((string)$word);
+        }, $keywords), 'strlen')));
+    }
+
+    /**
+     * 自动加群内置默认触发关键词（仅作为配置初始值，用户可增删）
+     * @return array
+     */
+    public static function getDefaultGroupTriggerKeywords(): array
+    {
+        $words = ['拉我', '加我', '拉一下', '加一下', '带带我', '上车', '带飞', '进群', '群号', '二维码', '链接', '发我', '发一份', '给个', '分享下', '看看', '瞅瞅', '学习学习', '参考参考', '了解了解', '行吗', '可以吗', '能吗', '方便吗', '拉一把', '捎上', '拽进去', '放我进去', '排个队', '跟一个', '滴滴', '群号发我', '邀请链接', '申请入群', '通过一下', '让我进', '资料发我', '文件发我', '模板给个', '案例看看', '笔记分享下', '课件给份', '方案参考下', '教程发下', '攻略给个', '安装包', '提取码', '密码', '软件', '工具', '方法', '经验', '指点', '引荐', '介绍', '推荐', '告知', '解答', '确认', '允许', '批准', '通过', '给个机会', '围观', '参观', '观摩', '旁听', '体验', '试用', '福利', '优惠', '折扣', '码', '券', '组队', '拼单', '搭子', '拉我进去', '拉进群', '拉我一下', '加我一下', '拉个群', '捎我一下', '带我一个', '我也要', '我也进', '我也看看', '我也学习下', '方便拉吗', '能拉吗', '给个码', '扫我', '我加你', '你拉我', '发我链接', '链接发下', '文件发下', '发个资料', '给份资料', '有没有资料', '有群吗', '有资料吗', '能不能拉', '可以拉吗', '让我进去', '通过下', '同意下', '放行', '开门', '等等我', '慢点拉'];
+        return self::normalizeGroupTriggerKeywords($words);
+    }
+
+
 
     // public function setAddFriendScriptAttr($value)
     // {

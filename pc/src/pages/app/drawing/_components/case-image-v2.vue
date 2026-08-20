@@ -56,7 +56,7 @@
 
                                     <div class="absolute bottom-3 left-0 w-full px-3">
                                         <div
-                                            class="flex justify-center gap-1.5 p-2 rounded-xl bg-white/40 backdrop-blur-md border border-br">
+                                            class="flex justify-center gap-1.5 p-2 rounded-xl bg-[#ffffff]/40 backdrop-blur-md border border-br">
                                             <template v-for="(img, idx) in item.params.images.slice(0, 3)" :key="idx">
                                                 <div
                                                     class="w-10 h-10 rounded-lg overflow-hidden border border-br"

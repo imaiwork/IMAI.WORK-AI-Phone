@@ -17,11 +17,21 @@
                     <div class="text-[14px] font-medium text-[#64748B]">
                         拖拽 CSV/Excel 至此，或 <span class="text-primary font-[900]">点击选择文件</span>
                     </div>
-                    <ElButton link type="primary" class="!text-xs mt-2 font-black" @click.stop>
-                        <a href="/static/file/template/kn_qa.csv" target="_blank" class="flex items-center gap-1">
-                            <Icon name="el-icon-Download" :size="14" /> 下载官方导入模版
-                        </a>
-                    </ElButton>
+                    <div class="mt-2" @click.stop>
+                        <ElDropdown trigger="click" @command="handleDownloadTemplate">
+                            <ElButton link type="primary" class="!text-xs font-black">
+                                <span class="flex items-center gap-1">
+                                    <Icon name="el-icon-Download" :size="14" /> 下载官方导入模版
+                                </span>
+                            </ElButton>
+                            <template #dropdown>
+                                <ElDropdownMenu>
+                                    <ElDropdownItem command="csv">CSV 模版</ElDropdownItem>
+                                    <ElDropdownItem command="xlsx">Excel 模版</ElDropdownItem>
+                                </ElDropdownMenu>
+                            </template>
+                        </ElDropdown>
+                    </div>
                 </div>
             </ElUpload>
 
@@ -122,6 +132,17 @@ const loading = ref(false);
 
 const currIndex = ref(0);
 
+const templateUrls: Record<"csv" | "xlsx", string> = {
+    csv: "/static/file/template/kn_qa.csv",
+    xlsx: "/static/file/template/kn_qa.xlsx",
+};
+
+const handleDownloadTemplate = (type: "csv" | "xlsx") => {
+    const url = templateUrls[type];
+    if (!url) return;
+    window.open(url, "_blank");
+};
+
 const onFileChange = async ({ raw: file }: UploadFile) => {
     try {
         if (file) {
@@ -183,6 +204,10 @@ const handleDeleteFile = async (index: any) => {
         message: "确定要删除该段落吗？",
         onConfirm: () => {
             data.value.splice(index, 1);
+            fileList.value.splice(index, 1);
+            if (currIndex.value >= data.value.length) {
+                currIndex.value = Math.max(data.value.length - 1, 0);
+            }
         },
     });
 };

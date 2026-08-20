@@ -18,17 +18,13 @@ async function build() {
     if (existsSync(releasePath)) {
         await remove(releasePath)
     }
-    console.log(
-        `文件正在复制：dist/build/${argv.target} ==> ${releaseRelativePath}`
-    )
+    console.log(`文件正在复制：dist/build/${argv.target} ==> ${releaseRelativePath}`)
     try {
         await copyFile(distPath, releasePath)
     } catch (error) {
         console.log(`\n ${error}`)
     }
-    console.log(
-        `文件已复制：dist/build/${argv.target} ==> ${releaseRelativePath}`
-    )
+    console.log(`文件已复制：dist/build/${argv.target} ==> ${releaseRelativePath}`)
 }
 
 function copyFile(sourceDir, targetDir) {

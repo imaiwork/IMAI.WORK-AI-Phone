@@ -1,119 +1,183 @@
 <template>
-    <view class="h-screen device-bg flex flex-col">
+    <view class="h-screen flex flex-col bg-[#F7F9FC]">
         <u-navbar
             title-bold
             title="朋友圈发布"
             :border-bottom="false"
             :is-fixed="false"
-            :background="{
-                background: 'transparent',
-            }">
-        </u-navbar>
-        <view class="flex justify-end px-4 mt-4" v-if="circleList.length > 0">
-            <view class="bg-black rounded-full px-[20rpx] py-[10rpx]" @click="handleSetup()">
-                <u-icon name="plus" size="24" color="#ffffff"></u-icon>
-                <text class="text-sm text-white font-medium ml-1">新增内容</text>
+            :background="{ background: 'transparent' }" />
+
+        <view v-if="circleList.length > 0" class="flex items-center justify-between px-4 pt-[16rpx] pb-[8rpx]">
+            <view class="flex items-center gap-[10rpx]">
+                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                <text class="text-[30rpx] font-extrabold text-[#0D1117]">发布内容</text>
+                <text class="text-xs text-[#9CA3AF]">（{{ circleList.length }}）</text>
+            </view>
+            <view
+                class="flex items-center gap-[8rpx] bg-[#EBF2FF] px-[24rpx] py-[12rpx] rounded-full"
+                @click="handleSetup()">
+                <u-icon name="plus" color="#0065fb" size="18" />
+                <text class="font-bold text-primary">新增内容</text>
             </view>
         </view>
+
         <view class="grow min-h-0">
             <scroll-view class="h-full" scroll-y v-if="circleList.length > 0">
-                <view class="p-4 pb-[100rpx]">
+                <view class="px-4 pb-[32rpx] flex flex-col gap-[16rpx]">
                     <view
                         v-for="(item, index) in circleList"
                         :key="index"
-                        class="bg-white rounded-[16rpx] p-4 mb-4 shadow-[0_4rpx_12rpx_rgba(0,0,0,0.05)] transition-all duration-300"
-                        :class="[
-                            item.error ? 'border border-[#ff4d4f] shadow-[0_4rpx_12rpx_rgba(255,77,79,0.15)]' : '',
-                        ]">
+                        class="bg-white rounded-[24rpx] overflow-hidden transition-all duration-300"
+                        :class="
+                            item.error
+                                ? 'shadow-[0_2rpx_12rpx_rgba(239,68,68,0.15),0_0_0_1.5rpx_#FCA5A5]'
+                                : 'shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]'
+                        ">
                         <view
                             v-if="item.error"
-                            class="flex items-start bg-[#fff2f0] -mx-4 -mt-4 mb-3 px-4 py-2 border-b border-[#ffccc7]">
-                            <u-icon name="info-circle-fill" size="28" color="#ff4d4f" style="margin-top: 4rpx"></u-icon>
-
-                            <view class="flex-1 ml-2 mr-2">
-                                <text class="text-xs text-[#ff4d4f] font-medium block leading-normal">
-                                    {{ item.error }}
-                                </text>
-                            </view>
-
+                            class="flex items-start gap-[10rpx] bg-[#FEF2F2] px-[24rpx] py-[16rpx] border-[0] border-b border-solid border-[#FECACA]">
+                            <u-icon name="info-circle-fill" size="26" color="#EF4444" />
+                            <text class="flex-1 text-xs text-[#EF4444] leading-relaxed">{{ item.error }}</text>
                             <view
-                                class="text-xs text-[#ff4d4f] underline whitespace-nowrap mt-[2rpx]"
+                                class="flex-shrink-0 px-[16rpx] py-[6rpx] rounded-full bg-[#EF4444]"
                                 @click="handleSetup(index)">
-                                去修改
+                                <text class="text-[22rpx] text-white font-bold">去修改</text>
                             </view>
                         </view>
 
-                        <view class="flex justify-between items-center mb-2">
-                            <text class="text-lg font-medium text-gray-800">{{ item.title || item.name }}</text>
-                            <view class="flex items-center" @click="handleSetup(index)">
-                                <text class="text-sm font-medium" style="color: #0065fb">设置</text>
-                                <u-icon name="arrow-right" size="24" color="#0065fb"></u-icon>
-                            </view>
-                        </view>
-
-                        <view class="text-gray-600 mb-3 text-md leading-relaxed">
-                            {{ item.content }}
-                        </view>
-
-                        <view class="grid grid-cols-4 gap-2">
-                            <view
-                                v-for="(material, idx) in item.attachment_content"
-                                :key="idx"
-                                class="w-[156rpx] h-[156rpx]">
-                                <video
-                                    v-if="(material.type === 2 || !material.pic) && typeof material !== 'string'"
-                                    :src="material.url || material"
-                                    class="w-full h-full rounded-[12rpx]"
-                                    :autoplay="false"
-                                    :show-loading="false"
-                                    :controls="false"
-                                    :show-fullscreen-btn="false"
-                                    :show-center-play-btn="false"
-                                    :show-play-btn="false"
-                                    mode="aspectFill"></video>
-                                <image
-                                    v-else
-                                    :src="material.pic || material"
-                                    class="w-full h-full rounded-[12rpx]"
-                                    mode="aspectFill" />
-                            </view>
-                        </view>
-
-                        <view class="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
-                            <view class="flex items-center gap-4">
-                                <view class="flex items-center gap-1">
-                                    <image src="/static/images/icons/weixin.svg" class="w-[24rpx] h-[24rpx]"></image>
-                                    <text class="text-xs text-gray-500">{{ item.wechat_ids.length }}个账号</text>
+                        <view class="flex">
+                            <view class="w-[6rpx] flex-shrink-0" :class="item.error ? 'bg-[#EF4444]' : 'bg-primary'" />
+                            <view class="flex-1 px-[24rpx] pt-[20rpx] pb-[18rpx]">
+                                <view class="flex items-center justify-between mb-[14rpx]">
+                                    <view class="flex items-center gap-[10rpx]">
+                                        <view
+                                            class="w-[40rpx] h-[40rpx] rounded-full flex items-center justify-center flex-shrink-0"
+                                            :class="item.error ? 'bg-[#FEF2F2]' : 'bg-[#EBF2FF]'">
+                                            <text
+                                                class="text-[22rpx] font-bold"
+                                                :class="item.error ? 'text-[#EF4444]' : 'text-primary'">
+                                                {{ index + 1 }}
+                                            </text>
+                                        </view>
+                                        <text class="text-[30rpx] font-bold text-[#0D1117]">
+                                            {{ item.title || item.name }}
+                                        </text>
+                                    </view>
+                                    <view
+                                        class="flex items-center gap-[4rpx] bg-[#EBF2FF] px-[16rpx] py-[8rpx] rounded-full"
+                                        @click="handleSetup(index)">
+                                        <text class="text-xs font-bold text-primary">设置</text>
+                                        <u-icon name="arrow-right" size="20" color="#0065fb" />
+                                    </view>
                                 </view>
-                                <view class="flex items-center gap-1">
-                                    <u-icon name="clock-fill" size="26" color="#28C445"></u-icon>
-                                    <text class="text-[22rpx] text-[#000000]/70"> 发布：{{ item.date }} </text>
-                                </view>
-                            </view>
 
-                            <view
-                                class="flex items-center gap-1 opacity-40 hover:opacity-100"
-                                @tap="handleDelete(index)">
-                                <image src="/static/images/icons/delete.svg" class="w-[24rpx] h-[24rpx]"></image>
-                                <text class="text-sm text-[#000000]/30">删除</text>
+                                <text class="text-[#4B5563] leading-relaxed block mb-[16rpx]">
+                                    {{ item.content }}
+                                </text>
+
+                                <view
+                                    v-if="item.attachment_content && item.attachment_content.length > 0"
+                                    class="grid grid-cols-4 gap-[10rpx] mb-[16rpx]">
+                                    <view
+                                        v-for="(material, idx) in item.attachment_content"
+                                        :key="idx"
+                                        class="aspect-square rounded-[12rpx] overflow-hidden">
+                                        <video
+                                            v-if="
+                                                (material.type === 2 || !material.pic) && typeof material !== 'string'
+                                            "
+                                            :src="material.url || material"
+                                            class="w-full h-full"
+                                            :autoplay="false"
+                                            :show-loading="false"
+                                            :controls="false"
+                                            :show-fullscreen-btn="false"
+                                            :show-center-play-btn="false"
+                                            :show-play-btn="false"
+                                            mode="aspectFill" />
+                                        <image
+                                            v-else
+                                            :src="material.pic || material"
+                                            class="w-full h-full"
+                                            mode="aspectFill" />
+                                    </view>
+                                </view>
+
+                                <view
+                                    class="pt-[16rpx] border-[0] border-t border-solid border-[#F0F2F5] flex items-center justify-between">
+                                    <view class="flex items-center gap-[16rpx]">
+                                        <view
+                                            class="flex items-center gap-[6rpx] bg-[#F0F2F5] px-[14rpx] py-[6rpx] rounded-full">
+                                            <image src="/static/images/icons/weixin.svg" class="w-[24rpx] h-[24rpx]" />
+                                            <text class="text-[22rpx] text-[#4B5563] font-semibold">
+                                                {{ item.wechat_ids.length }} 个账号
+                                            </text>
+                                        </view>
+                                        <view class="flex items-center gap-[6rpx]">
+                                            <u-icon name="clock-fill" size="24" color="#16A34A" />
+                                            <text class="text-[22rpx] text-[#4B5563]">{{ item.date }}</text>
+                                        </view>
+                                    </view>
+                                    <view
+                                        class="flex items-center gap-[6rpx] px-[16rpx] py-[8rpx] rounded-full bg-[#FEF2F2]"
+                                        @tap="handleDelete(index)">
+                                        <u-icon name="trash" color="#EF4444" size="18" />
+                                        <text class="text-[22rpx] text-[#EF4444] font-semibold">删除</text>
+                                    </view>
+                                </view>
                             </view>
                         </view>
                     </view>
                 </view>
             </scroll-view>
-            <view class="flex flex-col items-center justify-center h-full" v-else>
-                <empty :size="200" text="暂无朋友圈发布内容" />
-                <view class="bg-black rounded-full px-[20rpx] py-[10rpx] mt-[40rpx]" @click="handleSetup()">
-                    <u-icon name="plus" size="24" color="#ffffff"></u-icon>
-                    <text class="text-sm text-white font-medium ml-1">新增内容</text>
+
+            <view v-else class="flex flex-col items-center justify-center h-full px-8">
+                <view class="relative mb-[48rpx]">
+                    <view class="w-[280rpx] h-[280rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center">
+                        <view class="w-[200rpx] h-[200rpx] rounded-full bg-[#DBEAFE] flex items-center justify-center">
+                            <view
+                                class="w-[120rpx] h-[120rpx] rounded-[32rpx] flex items-center justify-center shadow-[0_8rpx_24rpx_rgba(0,101,251,0.25)]"
+                                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)">
+                                <image
+                                    src="/static/images/icons/weixin.svg"
+                                    class="w-[64rpx] h-[64rpx]"
+                                    style="filter: brightness(10)" />
+                            </view>
+                        </view>
+                    </view>
+                    <view
+                        class="absolute top-[10rpx] right-[-10rpx] w-[56rpx] h-[56rpx] rounded-full bg-white shadow-[0_4rpx_12rpx_rgba(0,101,251,0.15)] flex items-center justify-center">
+                        <u-icon name="plus" color="#0065fb" size="22" />
+                    </view>
+                    <view
+                        class="absolute bottom-[10rpx] left-[-10rpx] w-[44rpx] h-[44rpx] rounded-full bg-[#FEF9C3] shadow-[0_4rpx_12rpx_rgba(0,0,0,0.08)] flex items-center justify-center">
+                        <u-icon name="clock-fill" color="#D97706" size="18" />
+                    </view>
+                </view>
+
+                <text class="text-[34rpx] font-extrabold text-[#0D1117] mb-[16rpx]">还没有发布内容</text>
+                <text class="text-[#9CA3AF] text-center leading-relaxed mb-[64rpx]">
+                    点击下方按钮，添加您的第一条朋友圈发布内容
+                </text>
+
+                <view
+                    class="flex items-center gap-[10rpx] h-[96rpx] px-[64rpx] rounded-[24rpx] relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.30)]"
+                    style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                    @click="handleSetup()">
+                    <u-icon name="plus" size="24" color="#fff" />
+                    <text class="text-[30rpx] font-extrabold text-white">新增内容</text>
                 </view>
             </view>
         </view>
-        <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 p-4">
+
+        <view
+            v-if="circleList.length > 0"
+            class="flex-shrink-0 bg-white border-[0] border-t border-solid border-[#F0F2F5] px-4 pt-[20rpx] pb-[50rpx]">
             <view
-                class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-medium flex items-center justify-center"
+                class="h-[96rpx] rounded-[24rpx] flex items-center justify-center gap-[10rpx] relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.35)]"
+                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
                 @click="handleCreateTask">
-                创建任务
+                <text class="text-[32rpx] font-extrabold text-white tracking-wide">创建任务</text>
             </view>
         </view>
     </view>
@@ -210,7 +274,7 @@ const validateTaskTimeConflict = () => {
             end: parseTimeMinutes(endStr),
             wechatIds: item.wechat_ids.map((id: any) => (typeof id === "object" ? id.account : id)),
             date: item.date,
-            task_exec_type: item.task_exec_type, // ✅ 新增：带入执行类型
+            task_exec_type: item.task_exec_type,
         };
     });
 
@@ -221,7 +285,6 @@ const validateTaskTimeConflict = () => {
             const taskA = compareList[i];
             const taskB = compareList[j];
 
-            // ✅ 任意一方是即时执行，跳过时间冲突检测
             if (taskA.task_exec_type === 1 || taskB.task_exec_type === 1) continue;
 
             if (taskA.date !== taskB.date) continue;
@@ -267,7 +330,7 @@ const handleCreateTask = async () => {
             const timeConfigStr = getFormattedTimeStr(item.time_config);
 
             const wechatIdList = item.wechat_ids.map((wechatId: any) =>
-                typeof wechatId === "object" ? wechatId.account : wechatId
+                typeof wechatId === "object" ? wechatId.account : wechatId,
             );
 
             return await createCircleTask({
@@ -365,5 +428,3 @@ onLoad(() => {
     });
 });
 </script>
-
-<style scoped lang="scss"></style>

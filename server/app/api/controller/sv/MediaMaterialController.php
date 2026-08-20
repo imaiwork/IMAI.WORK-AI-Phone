@@ -79,7 +79,7 @@ class MediaMaterialController extends BaseApiController
     public function batchUpdate()
     {
         try {
-            $params = $this->request->post();;
+            $params = $this->request->post();
             $result = SvMediaMaterialLogic::batchUpdateSvMediaMaterial($params);
             if ($result) {
                 return $this->success('更新成功');
@@ -88,5 +88,37 @@ class MediaMaterialController extends BaseApiController
         } catch (HttpResponseException $e) {
             return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }
+    }
+
+    /**
+     * @desc 根据分组id获取素材列表
+     */
+    public function getByGroupId()
+    {
+        try {
+            $params = $this->request->get();
+            $result = SvMediaMaterialLogic::getByGroupId($params);
+            if ($result) {
+                return $this->data(SvMediaMaterialLogic::getReturnData());
+            }
+            return $this->fail(SvMediaMaterialLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    public function batchUpdateDate()
+    {
+        try {
+            $params = $this->request->post();
+            $result = SvMediaMaterialLogic::batchUpdateDate($params);
+            if ($result) {
+                return $this->success('更新成功');
+            }
+            return $this->fail(SvMediaMaterialLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+
     }
 }

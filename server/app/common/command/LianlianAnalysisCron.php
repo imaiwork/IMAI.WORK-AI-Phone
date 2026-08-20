@@ -3,6 +3,8 @@
 
 namespace app\common\command;
 
+
+use app\api\logic\InterviewLogic;
 use app\api\logic\LianLianLogic;
 use think\console\Command;
 use think\console\Input;
@@ -25,6 +27,8 @@ class LianlianAnalysisCron extends Command
     {
         print_r("\n AI陪练分析任务...'\n");
         LianLianLogic::analysisCron();
+        print_r("\n AI面试分析任务...'\n");
+        InterviewLogic::analysisCron();
         return true;
     }
 }

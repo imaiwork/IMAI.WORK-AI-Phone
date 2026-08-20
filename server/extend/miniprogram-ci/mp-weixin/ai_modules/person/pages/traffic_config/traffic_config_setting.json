@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "获客与截流配置",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "keywords-edit": "../../components/keywords-edit/keywords-edit",
+    "setting-anti-block-frequency": "./components/setting-anti-block-frequency",
+    "setting-group-buy-intercept": "./components/setting-group-buy-intercept",
+    "setting-sph-account-leads": "./components/setting-sph-account-leads",
+    "setting-video-intercept": "./components/setting-video-intercept",
+    "setting-nearby-intercept": "./components/setting-nearby-intercept"
+  }
+}

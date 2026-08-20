@@ -39,6 +39,7 @@ class SvAccountLists extends BaseApiDataLists implements ListsSearchInterface
             ->where($this->searchWhere)
             ->order(['s.sort' => 'desc', 'w.id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
+            ->group('w.device_code, w.account')
             ->select()
             ->each(function ($item) {
                 if (empty($item['takeover_mode'])) {
@@ -88,9 +89,10 @@ class SvAccountLists extends BaseApiDataLists implements ListsSearchInterface
     {
         $this->searchWhere[] = ['w.user_id', '=', $this->userId];
         return SvAccount::alias('w')
-            ->field('w.id,w.device_code,w.account,w.nickname,w.avatarunt,w.status,w.create_time,s.takeover_mode, s.takeover_type, s.robot_id')
-            ->leftJoin('sv_setting s', 's.account = w.account')
+            ->field('w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,s.takeover_mode, s.takeover_type, s.robot_id')
+            ->join('sv_setting s', 's.account = w.account')
             ->where($this->searchWhere)
+            ->group('w.device_code, w.account')
             ->count();
     }
 }

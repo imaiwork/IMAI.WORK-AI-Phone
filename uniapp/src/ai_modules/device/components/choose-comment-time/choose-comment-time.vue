@@ -1,5 +1,5 @@
 <template>
-    <popup-bottom v-model="show" title="选择评论时间" height="40%" @close="close" :is-disabled-touch="true">
+    <popup-bottom v-model="show" title="选择时间段" height="40%" @close="close" :is-disabled-touch="true">
         <template #content>
             <view class="h-full flex flex-col">
                 <view class="grow min-h-0 flex flex-col items-center justify-center">
@@ -7,6 +7,7 @@
                         :value="commentTimeIndex"
                         indicator-style="height: 100rpx;"
                         indicator-class="font-medium"
+                        immediate-change
                         @change="changeCommentTime">
                         <picker-view-column>
                             <view
@@ -46,7 +47,7 @@ const props = withDefaults(
         modelValue: false,
         value: () => [0],
         list: () => [],
-    }
+    },
 );
 
 const emit = defineEmits<{
@@ -68,6 +69,7 @@ const commentTimeList = computed(() => props.list);
 const commentTimeIndex = ref(props.value);
 
 const changeCommentTime = (e: any) => {
+    console.log("e", e);
     commentTimeIndex.value = e.detail.value;
 };
 
@@ -90,7 +92,7 @@ watch(
     () => props.value,
     (newVal) => {
         commentTimeIndex.value = newVal;
-    }
+    },
 );
 </script>
 

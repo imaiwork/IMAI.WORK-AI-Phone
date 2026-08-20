@@ -2,8 +2,11 @@
 
 namespace app\adminapi\logic\recharge;
 
-use app\common\model\recharge\GiftPackage;
+use app\adminapi\logic\setting\pay\PayConfigLogic;
+use app\common\enum\PayEnum;
 use app\common\logic\BaseLogic;
+use app\common\model\pay\PayConfig;
+use app\common\model\recharge\GiftPackage;
 
 
 /**
@@ -21,15 +24,9 @@ class GiftPackageLogic extends BaseLogic
     public static function add(array $postData): bool
     {
         try {
-            $postData['package_info'] = json_encode($postData['package_info'], JSON_UNESCAPED_UNICODE);
-            $postData['package_info'] = json_decode($postData['package_info'], true);
-            $postData['package_info']['expired'] =  $postData['package_info']['expired'] ?? 50;
-            if($postData['package_info']['expired'] > 70){
-                throw new \Exception("过期时间不能大于70");
-            }
-            $postData['package_info'] = json_encode($postData['package_info'], JSON_UNESCAPED_UNICODE);
-        
-            self::$returnData     = GiftPackage::create($postData)->toArray();
+            $postData = self::normalizePackageData($postData);
+            self::assertVirtualProductId($postData);
+            self::$returnData = GiftPackage::create($postData)->toArray();
             return true;
         } catch (\Exception $exception) {
             self::setError($exception->getMessage());
@@ -71,19 +68,69 @@ class GiftPackageLogic extends BaseLogic
             if ($info->isEmpty()) {
                 throw new \Exception("信息异常");
             }
-            $postData['package_info'] = json_encode($postData['package_info'], JSON_UNESCAPED_UNICODE);
-            $postData['package_info'] = json_decode($postData['package_info'], true);
-            $postData['package_info']['expired'] =  $postData['package_info']['expired'] ?? 50;
-            if($postData['package_info']['expired'] > 70){
-                throw new \Exception("过期时间不能大于70");
-            }
-            $postData['package_info'] = json_encode($postData['package_info'], JSON_UNESCAPED_UNICODE);
+            $postData = self::normalizePackageData($postData);
+            self::assertVirtualProductId($postData);
             self::$returnData = GiftPackage::update($postData)->toArray();
             return true;
         } catch (\Exception $exception) {
             self::setError($exception->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 归一化礼包提交数据
+     */
+    private static function normalizePackageData(array $postData): array
+    {
+        $postData['product_id'] = trim((string)($postData['product_id'] ?? ''));
+        if (mb_strlen($postData['product_id']) > 64) {
+            throw new \Exception('虚拟支付产品ID不能超过64个字符');
+        }
+
+        $packageInfo = $postData['package_info'] ?? [];
+        if (is_string($packageInfo)) {
+            $packageInfo = json_decode($packageInfo, true) ?: [];
+        }
+        if (!is_array($packageInfo)) {
+            $packageInfo = [];
+        }
+        $packageInfo['expired'] = $packageInfo['expired'] ?? 50;
+        if ($packageInfo['expired'] > 70) {
+            throw new \Exception('过期时间不能大于70');
+        }
+        $postData['package_info'] = json_encode($packageInfo, JSON_UNESCAPED_UNICODE);
+        return $postData;
+    }
+
+    /**
+     * 小程序虚拟支付开启时，产品ID必填
+     */
+    private static function assertVirtualProductId(array $postData): void
+    {
+        if (!self::isMnpVirtualPayEnabled()) {
+            return;
+        }
+        if (trim((string)($postData['product_id'] ?? '')) === '') {
+            throw new \Exception('当前为小程序虚拟支付，请填写虚拟支付产品ID');
+        }
+    }
+
+    /**
+     * 是否开启小程序虚拟支付
+     */
+    public static function isMnpVirtualPayEnabled(): bool
+    {
+        $pay = PayConfig::where(['pay_way' => PayEnum::WECHAT_PAY])->findOrEmpty();
+        if ($pay->isEmpty()) {
+            return false;
+        }
+        $config = $pay['config'] ?? [];
+        if (!is_array($config)) {
+            return false;
+        }
+        return (int)($config['mnp_pay_type'] ?? PayConfigLogic::MNP_PAY_TYPE_WECHAT)
+            === PayConfigLogic::MNP_PAY_TYPE_VIRTUAL;
     }
 
 

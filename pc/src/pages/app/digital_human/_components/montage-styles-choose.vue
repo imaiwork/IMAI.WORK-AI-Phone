@@ -25,20 +25,6 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-1 bg-[#f1f5f9]/80 p-1 rounded-2xl border border-[#e2e8f0]/50">
-                    <button
-                        v-for="tab in tabs"
-                        :key="tab.value"
-                        @click="current = tab.value"
-                        :class="[
-                            'px-5 py-2 rounded-xl text-xs font-[1000] transition-all duration-300',
-                            current === tab.value
-                                ? 'bg-white text-primary shadow-sm scale-100'
-                                : 'text-slate-400 hover:text-slate-600 scale-95 hover:bg-white/50',
-                        ]">
-                        {{ tab.name }}
-                    </button>
-                </div>
                 <div class="w-9 h-9" @click="close">
                     <close-btn />
                 </div>
@@ -46,7 +32,11 @@
 
             <div class="h-[500px] min-h-0 relative bg-[#f8fafc]/50">
                 <ElScrollbar>
-                    <div v-if="currentTemplateList.length > 0" class="grid grid-cols-4 gap-6 p-6">
+                    <div v-if="loading" class="flex flex-col items-center justify-center py-32">
+                        <span class="text-xs font-black text-slate-300 uppercase tracking-[0.4em]">加载中...</span>
+                    </div>
+
+                    <div v-else-if="currentTemplateList.length > 0" class="grid grid-cols-4 gap-6 p-6">
                         <div
                             v-for="template in currentTemplateList"
                             :key="template.templateID"
@@ -131,6 +121,12 @@
                     </button>
                 </div>
 
+                <pagination
+                    v-if="pager.count > pager.size"
+                    v-model="pager"
+                    layout="prev, pager, next"
+                    @change="fetchTemplateList" />
+
                 <div class="flex items-center gap-3">
                     <button
                         @click="close"
@@ -154,8 +150,9 @@
     <preview-video v-if="showPreview && previewType === 'video'" ref="previewVideoRef" @close="showPreview = false" />
 </template>
 <script setup lang="ts">
-import { MontageStylesChooseType, MontageStylesType } from "../_enums";
-import { digitalPersonTemplates, realPersonTemplates, newsTemplates, materialTemplates } from "../_config";
+import { MontageStylesType } from "../_enums";
+import { getShanjianClipTemplateList } from "@/api/digital_human";
+import feedback from "@/utils/feedback";
 
 const props = defineProps<{
     type?: MontageStylesType;
@@ -169,16 +166,6 @@ const emit = defineEmits<{
 
 const popupRef = shallowRef();
 const previewVideoRef = shallowRef();
-const tabs = [
-    { name: "全部", value: MontageStylesChooseType.ALL },
-    { name: "高级感", value: MontageStylesChooseType.HIGH },
-    { name: "综艺感", value: MontageStylesChooseType.VARIETY },
-    { name: "热门", value: MontageStylesChooseType.HOT },
-    { name: "简约", value: MontageStylesChooseType.SIMPLE },
-    { name: "本地引流", value: MontageStylesChooseType.LOCAL },
-];
-
-const current = ref<MontageStylesChooseType>(MontageStylesChooseType.ALL);
 
 const currentTemp = computed(() => props.type ?? MontageStylesType.DIGITAL_PERSON);
 
@@ -193,21 +180,23 @@ const dialogTitle = computed(() => {
 });
 
 const selectedIds = ref<string[]>([...(props.selected ?? [])]);
+const loading = ref(false);
+const templateList = ref<any[]>([]);
+const pager = reactive({
+    page: 1,
+    size: 12,
+    count: 0,
+});
 
-const allTemplatesMap = {
-    [MontageStylesType.DIGITAL_PERSON]: digitalPersonTemplates,
-    [MontageStylesType.REAL_PERSON]: realPersonTemplates,
-    [MontageStylesType.NEWS]: newsTemplates,
-    [MontageStylesType.MATERIAL]: materialTemplates,
+const sceneMap: Record<MontageStylesType, string> = {
+    [MontageStylesType.DIGITAL_PERSON]: "virtualman",
+    [MontageStylesType.REAL_PERSON]: "realMan",
+    [MontageStylesType.NEWS]: "newsMixCutting",
+    [MontageStylesType.MATERIAL]: "oralMixCutting",
 };
 
 const currentTemplateList = computed<any[]>(() => {
-    const templates = allTemplatesMap[currentTemp.value as keyof typeof allTemplatesMap];
-    if (!templates) return [];
-    if (current.value === MontageStylesChooseType.ALL) {
-        return Object.values(templates).flat();
-    }
-    return (templates as any)[current.value] ?? [];
+    return templateList.value;
 });
 
 const toggleSelect = (template: any) => {
@@ -223,14 +212,9 @@ const toggleSelect = (template: any) => {
 const isSelected = (id: string) => selectedIds.value.includes(id);
 
 // ---- URL 工具 ----
-const getImageUrl = (pic: string) => {
-    if (currentTemp.value === MontageStylesType.REAL_PERSON) {
-        return `/static/videos/montage_template/${pic}`;
-    }
-    return `/static/images/montage_template/${pic}`;
-};
+const getImageUrl = (pic: string) => pic;
 
-const getVideoUrl = (link: string) => `/static/videos/montage_template/${link}`;
+const getVideoUrl = (link: string) => link;
 
 const showPreview = ref(false);
 const previewUrl = ref("");
@@ -239,9 +223,11 @@ const previewName = ref("");
 
 const previewTemplate = async (template: any) => {
     previewName.value = template.name;
-    if (currentTemp.value === MontageStylesType.REAL_PERSON) {
+
+    if (template.link) {
         previewUrl.value = getVideoUrl(template.link);
         showPreview.value = true;
+        previewType.value = "video";
         await nextTick();
         previewVideoRef.value.open();
         previewVideoRef.value.setUrl(previewUrl.value);
@@ -252,9 +238,37 @@ const previewTemplate = async (template: any) => {
     }
 };
 
+const normalizeTemplate = (item: any) => ({
+    name: item.name,
+    pic: item.cover_url,
+    link: item.demo_url,
+    templateID: item.id,
+});
+
+const fetchTemplateList = async () => {
+    loading.value = true;
+    try {
+        const res: any = await getShanjianClipTemplateList({
+            scene: sceneMap[currentTemp.value],
+            page_no: pager.page,
+            page_size: pager.size,
+        });
+        const lists = Array.isArray(res?.lists) ? res.lists : Array.isArray(res) ? res : [];
+        pager.count = Number(res?.count ?? lists.length);
+        templateList.value = lists.map(normalizeTemplate);
+    } catch (error) {
+        templateList.value = [];
+        pager.count = 0;
+        feedback.msgError("风格模板加载失败");
+    } finally {
+        loading.value = false;
+    }
+};
+
 const open = () => {
     popupRef.value?.open();
-    console.log(props.selected);
+    pager.page = 1;
+    fetchTemplateList();
 };
 
 const close = () => {
@@ -271,8 +285,15 @@ watch(
     () => props.selected,
     (val) => {
         selectedIds.value = [...(val ?? [])];
-    }
+    },
 );
+
+watch(currentTemp, () => {
+    pager.page = 1;
+    if (popupRef.value) {
+        fetchTemplateList();
+    }
+});
 
 defineExpose({
     open,

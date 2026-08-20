@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../common/vendor.js"),l=e.defineComponent({__name:"lead-tile",props:{icon:null,label:null,value:null,unit:null,desc:null},setup:l=>(n,t)=>({a:l.icon,b:e.t(l.label),c:e.t(l.value),d:e.t(l.unit),e:e.t(l.desc)})});wx.createComponent(l);

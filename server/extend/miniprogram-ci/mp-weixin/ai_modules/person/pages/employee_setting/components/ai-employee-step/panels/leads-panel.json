@@ -1,0 +1,9 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-switch": "../../../../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "u-icon": "../../../../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "action-config": "../../action-config",
+    "exclude-editor": "../../exclude-editor"
+  }
+}

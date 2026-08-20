@@ -5,24 +5,6 @@
         </el-card>
         <el-card class="!border-none mt-4" shadow="never">
             <el-form ref="formRef" class="mb-[-16px]" :model="queryParams" :inline="true">
-                <el-form-item label="生成状态">
-                    <el-select
-                        class="!w-[180px]"
-                        v-model="queryParams.status"
-                        placeholder="请选择任务状态"
-                        clearable
-                        :empty-values="[undefined, null]"
-                        @change="resetPage"
-                        @keyup.enter="resetPage">
-                        <el-option label="全部" value="" />
-                        <el-option label="形象合成中" value="1" />
-                        <el-option label="形象合成失败" value="2" />
-                        <el-option label="形象合成成功" value="3" />
-                        <el-option label="音色合成中" value="4" />
-                        <el-option label="音色合成失败" value="5" />
-                        <el-option label="音色合成成功" value="6" />
-                    </el-select>
-                </el-form-item>
                 <el-form-item label="创作时间">
                     <daterange-picker
                         v-model:startTime="queryParams.start_time"
@@ -86,21 +68,12 @@
                 <el-table-column label="素材" min-width="300">
                     <template #default="{ row }">
                         <div class="grid grid-cols-4 gap-2">
-                            <div v-for="item in row.material" :key="item.id" class="">
-                                <image-contain
-                                    v-if="item.type === 'image'"
-                                    :src="item.fileUrl"
-                                    width="60"
-                                    height="60"
-                                    fit="cover"
-                                    :preview-src-list="[item.fileUrl]"
-                                    preview-teleported></image-contain>
-                                <video
-                                    v-if="item.type === 'video'"
-                                    :src="item.fileUrl"
-                                    class="object-cover w-[60px] h-[60px]"
-                                    @click="handlePlay(item.fileUrl)"></video>
-                            </div>
+                            <material-thumb
+                                v-for="item in row.material"
+                                :key="item.id"
+                                :src="item.fileUrl"
+                                :type="item.type"
+                                @play="handlePlay" />
                         </div>
                     </template>
                 </el-table-column>
@@ -113,6 +86,7 @@
                 <el-table-column label="消耗算力" prop="video_token" min-width="120" />
                 <el-table-column label="备注" prop="remark" min-width="120" />
                 <el-table-column label="创作时间" prop="create_time" min-width="180" />
+                <el-table-column label="更新时间" prop="update_time" min-width="180" show-overflow-tooltip />
                 <el-table-column label="操作" width="160" fixed="right">
                     <template #default="{ row }">
                         <el-button type="primary" link @click="handlePlay(row.video_result_url)"> 播放 </el-button>
@@ -145,6 +119,7 @@ import { usePaging } from "@/hooks/usePaging";
 import feedback from "@/utils/feedback";
 import { downloadFile } from "@/utils/util";
 import { ElTable } from "element-plus";
+import MaterialThumb from "../components/material-thumb.vue";
 
 const route = useRoute();
 
@@ -177,12 +152,10 @@ const handleSelectionChange = (val: any[]) => {
 const getStatus = (status: number) => {
     //1:形象合成,2形象合成失败,3形象合成成功,4音色合成,5音色合成失败,6音色合成成功
     const statusMap = {
-        1: "形象合成中",
+        1: "生成中",
         2: "形象合成失败",
-        3: "形象合成成功",
-        4: "音色合成中",
         5: "音色合成失败",
-        6: "音色合成成功",
+        6: "生成成功",
     };
     return statusMap[status as keyof typeof statusMap];
 };

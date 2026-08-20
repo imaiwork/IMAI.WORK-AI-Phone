@@ -1,0 +1,1 @@
+"use strict";exports.splitText2Chunks=(t,s=512)=>{if(!t)return[];const e=Math.floor(.25*s),n=[];let r="";for(const u of t)r+=u,"。！？；.!?;\n".includes(u)&&(n.push(r),r="");r&&n.push(r);const l=[];let o="",h="";for(let u=0;u<n.length;u++){const t=n[u];h+=t,h.length>s-e&&(o+=t),h.length>=s&&(l.push(h),h=o,o="")}return h&&l.push(h),l.filter((t=>t.trim()))};

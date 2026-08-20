@@ -9,7 +9,7 @@ class WorkerEnum
     public const WS_WEB_TYPE = 'WEB_WOKER';
     public const WS_CLIENT_TYPE = 'webUser';
     public const WS_DEVICE_TYPE = 'device';
-    public const APP_VERSION = '2.4.01';
+    public const APP_VERSION = '2.9.34';
 
     public const ERROR_CODE = 400;
     public const SUCCESS_CODE = 200;
@@ -52,6 +52,7 @@ class WorkerEnum
     public const RPA_TAKE_OVER_TASK_SEND = 30; //接管任务发送
     public const RPA_TAKE_OVER_TASK_COMPLETED = 31; #接管任务完成
     public const RPA_TAKE_OVER_TASK_RESULT_SAVE = 32; #接管任务结果保存
+    public const RPA_SPH_COMMENT_THUMB = 34; #评论点赞
 
     public const RPA_ACTIVE_TASK_SEND = 40; //养号任务发送
     public const RPA_ACTIVE_TASK_COMPLETED = 41; #养号任务完成
@@ -59,6 +60,7 @@ class WorkerEnum
 
     public const RPA_ADD_WECHAT_TASK_NOTICE = 50; //加微信任务通知
     public const RPA_WECHAT_CIRCLE_LIKE_COMMENT = 52; #微信圈点赞评论
+    public const RPA_CREATE_GROUP_NOTICE = 53; #创建群聊通知
 
 
 
@@ -69,12 +71,13 @@ class WorkerEnum
 
 
     public const TO_RPA_DEVICE_INFO = 601; #获取设备信息
-    public const TO_RAP_USER_INFO = 602; #获取用户信息
-    public const TO_RAP_PRIVATE_MESSAGE_LIST = 603; #获取私信列表
-    public const TO_RAP_POST_STATUS_LIST = 604; #获取私信列表
+    public const TO_RPA_USER_INFO = 602; #获取用户信息
+    public const TO_RPA_PRIVATE_MESSAGE_LIST = 603; #获取私信列表
+    public const TO_RPA_POST_STATUS_LIST = 604; #获取私信列表
     public const TO_RPA_CARDS = 610; #获取卡片列表
     public const TO_RPA_SEND_CARD = 611; #发送卡片信息
     public const TO_RPA_SEND_MESSAGE = 6;
+    public const TO_RPA_DEVICE_UNBIND = 1212; # 服务端通知设备解绑清码
 
     public const RPA_GET_ACCOUNT_APP_SEND = 701; #正在发送指令
     public const RPA_GET_ACCOUNT_APP_EXEC = 702; #手机正在处理指令 appExec
@@ -88,6 +91,19 @@ class WorkerEnum
     public const RPA_COMMENT_TO_MSG_CHECK = 102; #评论区私信
     public const RPA_COMMENT_TO_MARK_CLUE_CHECK = 103; #评论区留痕获客
     public const RPA_COMMENT_TO_TOUCH_POST = 104; #评论区截流上报
+
+    public const RPA_CITY_EXPOSURE = 1001; # 同城曝光
+    public const RPA_CITY_TOUCH = 1002; # 同城截流
+    public const RPA_GROUP_BUY_TOUCH = 1003; # 团购截流
+    public const RPA_DEVICE_VIRAL_RITER_TASK = 1004; #设备爆款仿写任务发送
+    public const RPA_DEVICE_VIRAL_RITER_TASK_INTERACT = 1005; #设备爆款仿写任务交互
+    public const RPA_DEVICE_PRECISE_CLUES_TASK = 1006; #设备精准获客任务发送
+    public const RPA_PHONE_AGENT_EXEC = 1100; # AutoGLM-Phone执行
+    public const RPA_PHONE_AGENT_REPORT = 1101; # AutoGLM-Phone上报
+    public const RPA_PHONE_AGENT_CANCEL = 1102; # AutoGLM-Phone取消
+    public const RPA_PHONE_AGENT_OBSERVE = 1103; # AutoGLM-Phone观察
+    public const RPA_DEVICE_RUNNING_LOG = 2002; #设备运行日志
+
 
 
     # web指令
@@ -104,12 +120,12 @@ class WorkerEnum
 
 
 
-    public const DEVICE_INIT_OK = 2001; #设备初始化完成
-    public const INIT_CHECK = 2002; #初始化检查
-    public const SEND_CARD_OK = 2003; #发送名片成功
-    public const MSG_REPLY_RUNNING = 2004; #设备正在回复消息中
-    public const MSG_REPLY_COMPLETED = 2005; #设备回复消息完成
-    public const DEVICE_ONLINE = 2006; #设备已连接
+    public const DEVICE_INIT_OK = 3001; #设备初始化完成
+    public const INIT_CHECK = 3002; #初始化检查
+    public const SEND_CARD_OK = 3003; #发送名片成功
+    public const MSG_REPLY_RUNNING = 3004; #设备正在回复消息中
+    public const MSG_REPLY_COMPLETED = 3005; #设备回复消息完成
+    public const DEVICE_ONLINE = 3006; #设备已连接
 
     public const INVALID_REQUEST = 4004; #无效请求
     public const DEVICE_OFFLINE = 4005; #设备断开
@@ -170,6 +186,16 @@ class WorkerEnum
     public const RPA_COMMENT_TO_MARK_CLUE_FAIL = 4057; //评论区留痕获客失败;
     public const RPA_COMMENT_TO_TOUCH_POST_FAIL = 4058; //评论区截流上报异常;
     public const TASK_TOKEN_ERROR = 4059; //用户算力不足;
+
+    // 新增错误码
+    public const RPA_CITY_EXPOSURE_FAIL = 4060; // 同城曝光任务失败
+    public const RPA_CITY_TOUCH_FAIL = 4061; // 同城截流任务失败
+    public const RPA_GROUP_BUY_TOUCH_FAIL = 4062; // 团购截流任务失败
+    public const RPA_DEVICE_VIRAL_RITER_TASK_FAIL = 4063; // 设备爆款仿写任务失败
+    public const RPA_DEVICE_PRECISE_CLUES_TASK_FAIL = 4064; // 设备精准获客任务失败
+    public const RPA_DEVICE_RUNNING_LOG_FAIL = 4065; // 设备运行日志失败
+
+
 
 
 
@@ -292,6 +318,16 @@ class WorkerEnum
         self::RPA_COMMENT_TO_MARK_CLUE_FAIL => '评论区留痕获客失败',
         self::RPA_COMMENT_TO_TOUCH_POST_FAIL => '评论区截流上报异常',
 
+        self::RPA_CITY_EXPOSURE_FAIL => '同城曝光任务异常',
+        self::RPA_CITY_TOUCH_FAIL => '同城截流任务异常',
+        self::RPA_GROUP_BUY_TOUCH_FAIL => '团购截流任务异常',
+        self::RPA_DEVICE_VIRAL_RITER_TASK_FAIL => '爆款仿写任务异常',
+        self::RPA_DEVICE_PRECISE_CLUES_TASK_FAIL => '精准获客任务异常',
+        self::RPA_DEVICE_RUNNING_LOG_FAIL => '设备运行日志异常',
+        self::RPA_PHONE_AGENT_EXEC => 'AutoGLM-Phone执行',
+        self::RPA_PHONE_AGENT_REPORT => 'AutoGLM-Phone上报',
+        self::RPA_PHONE_AGENT_CANCEL => 'AutoGLM-Phone取消',
+        self::RPA_PHONE_AGENT_OBSERVE => 'AutoGLM-Phone观察',
     ];
     /**
      * 获取错误消息
@@ -301,7 +337,7 @@ class WorkerEnum
         return self::$messages[$code] ?? '未知错误';
     }
 
-    public static function getAccountTypeDesc($type, $flag = false)
+    public static function getAccountTypeDesc(mixed $type, $flag = false)
     {
         $desc = [
             0 => '未知',

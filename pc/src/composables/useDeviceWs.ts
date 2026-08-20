@@ -23,6 +23,9 @@ export default function useDeviceWs(options?: WebSocketOptions) {
         ...options,
     });
 
+    /** 当前连接已成功 bind 的 userId，避免无 userId 绑失败后收不到推送 */
+    const boundUserId = ref(0);
+
     // 事件触发器
     const triggerEvent = <D = { error: string; code: DeviceCmdCodeEnum }>(event: DeviceWsEvent, data?: D) => {
         const handler = eventHandlers.get(event);
@@ -37,6 +40,8 @@ export default function useDeviceWs(options?: WebSocketOptions) {
         eventHandlers.set(event, callback);
     };
 
+    const getUserId = () => Number(userInfo.value?.id || 0);
+
     // 重新定义send事件，需要添加而外参数
     const send = (data: any) => {
         if (!isConnected.value) {
@@ -48,7 +53,7 @@ export default function useDeviceWs(options?: WebSocketOptions) {
             type: data.type,
             content: {
                 ...data.content,
-                userId: userInfo.value.id,
+                userId: getUserId() || userInfo.value?.id,
                 deviceId: data.deviceId || undefined,
                 accountType: data.accountType,
             },
@@ -59,10 +64,12 @@ export default function useDeviceWs(options?: WebSocketOptions) {
         });
     };
 
-    // 监听连接事件
-    on("open", () => {
-        triggerEvent("open");
-        // 绑定Ws
+    /** 有有效 userId 且已连接时才 bind；用户信息晚到时会补绑 */
+    const bindSocket = () => {
+        const userId = getUserId();
+        if (!isConnected.value || !userId) return;
+        if (boundUserId.value === userId) return;
+
         send({
             type: DeviceCmdEnum.BIND_WS,
             content: {
@@ -70,10 +77,29 @@ export default function useDeviceWs(options?: WebSocketOptions) {
                 sourceType: "pc",
             },
         });
+        boundUserId.value = userId;
+    };
+
+    // 监听连接事件
+    on("open", () => {
+        boundUserId.value = 0;
+        triggerEvent("open");
+        bindSocket();
     });
+
+    // 用户信息接口晚于 WS 连接时，补发 bindSocket
+    watch(
+        () => getUserId(),
+        (userId) => {
+            if (userId && isConnected.value) {
+                bindSocket();
+            }
+        },
+    );
 
     // 监听关闭事件
     on("close", () => {
+        boundUserId.value = 0;
         triggerEvent("close", {
             error: DeviceWsMessage[DeviceCmdCodeEnum.CONNECT_ERROR],
             code: DeviceCmdCodeEnum.CONNECT_ERROR,
@@ -91,31 +117,25 @@ export default function useDeviceWs(options?: WebSocketOptions) {
         // 判断 content 是不是json格式
         content = isJson(content) ? JSON.parse(content) : content;
 
-        if (code == DeviceCmdCodeEnum.SUCCESS) {
-            switch (code) {
-                case DeviceCmdCodeEnum.SUCCESS:
-                case DeviceCmdCodeEnum.INIT_COMPLETE:
-                case DeviceCmdCodeEnum.CHECK_INIT:
-                case DeviceCmdCodeEnum.DEVICE_ONLINE:
-                    triggerEvent("success", {
-                        ...data,
-                        content,
-                    });
-                    break;
-                default:
-                    triggerEvent("error", {
-                        error: content.msg,
-                        code: DeviceCmdCodeEnum.PUSH_MESSAGE_ERROR,
-                        deviceCode: deviceId,
-                    });
-                    break;
-            }
+        // 进度指令可能把业务 code 放在 content 内，外层 code 缺失时仍按成功处理
+        const resolvedCode = code ?? content?.code;
+        const isSuccess =
+            resolvedCode == DeviceCmdCodeEnum.SUCCESS ||
+            resolvedCode == DeviceCmdCodeEnum.INIT_COMPLETE ||
+            resolvedCode == DeviceCmdCodeEnum.CHECK_INIT ||
+            resolvedCode == DeviceCmdCodeEnum.DEVICE_ONLINE;
+
+        if (isSuccess) {
+            triggerEvent("success", {
+                ...data,
+                content,
+            });
         } else {
             if (type == "pong") return;
             triggerEvent("error", {
-                error: content.msg,
+                error: content?.msg || DeviceWsMessage[DeviceCmdCodeEnum.PUSH_MESSAGE_ERROR],
                 type,
-                code,
+                code: resolvedCode,
                 content,
                 deviceCode: deviceId,
             });

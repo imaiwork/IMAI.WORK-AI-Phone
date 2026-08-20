@@ -1,7 +1,16 @@
 import cssMacro from "weapp-tailwindcss/css-macro";
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-    content: ["./index.html", "./src/**/*.{html,js,ts,jsx,tsx,vue}"],
+    // 收窄扫描范围，避免把 static/lib/uni_modules 里的大 JS（echarts、html2canvas 等）喂给 Tailwind
+    content: [
+        "./index.html",
+        "./src/**/*.{vue,ts,js}",
+        "!./src/**/static/**",
+        "!./src/lib/**",
+        "!./src/**/uni_modules/**",
+        "!./src/**/*.min.js",
+        "!./src/**/html2canvas*.js",
+    ],
     theme: {
         colors: {
             white: "var(--color-white, #ffffff)",

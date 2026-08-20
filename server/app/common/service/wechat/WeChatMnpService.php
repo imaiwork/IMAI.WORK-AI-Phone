@@ -20,8 +20,12 @@ class WeChatMnpService
 
     protected $config;
 
-    public function __construct()
+    /** 所属团队 id(0=主站小程序;>0=OEM 团队独立小程序) */
+    protected int $teamId = 0;
+
+    public function __construct(int $teamId = 0)
     {
+        $this->teamId = $teamId;
         $this->config = $this->getConfig();
         $this->app = new Application($this->config);
     }
@@ -36,7 +40,7 @@ class WeChatMnpService
      */
     protected function getConfig()
     {
-        $config = WeChatConfigService::getMnpConfig();
+        $config = WeChatConfigService::getMnpConfig($this->teamId);
         if (empty($config['app_id']) || empty($config['secret'])) {
             throw new \Exception('请先设置小程序配置');
         }
@@ -62,7 +66,24 @@ class WeChatMnpService
     public function getMnpResByCode(string $code)
     {
         $utils = $this->app->getUtils();
-        $response = $utils->codeToSession($code);
+        try {
+            $response = $utils->codeToSession($code);
+        } catch (\Throwable $e) {
+            $message = $e->getMessage();
+            // 40029: code 无效/已使用/过期；40163: code 已被使用
+            if (str_contains($message, '40029') || str_contains($message, '40163') || str_contains($message, 'invalid code')) {
+                throw new Exception('微信登录凭证已失效，请重试');
+            }
+            throw new Exception($message);
+        }
+
+        if (!empty($response['errcode'])) {
+            $errcode = (int)$response['errcode'];
+            if (in_array($errcode, [40029, 40163], true)) {
+                throw new Exception('微信登录凭证已失效，请重试');
+            }
+            throw new Exception('获取openID失败：' . ($response['errmsg'] ?? $errcode));
+        }
 
         if (!isset($response['openid']) || empty($response['openid'])) {
             throw new Exception('获取openID失败');

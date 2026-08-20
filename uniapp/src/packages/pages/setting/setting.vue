@@ -1,7 +1,7 @@
 <template>
     <view class="pt-[32rpx] flex flex-col h-screen">
         <view class="grow min-h-0">
-            <view class="text-[26rpx] mx-[32rpx] flex flex-col gap-y-[16rpx]">
+            <view class="mx-[32rpx] flex flex-col gap-y-[16rpx]">
                 <view class="rounded-[24rpx] bg-white px-[32rpx]">
                     <view
                         class="py-[40rpx] flex justify-between items-center leading-[0]"
@@ -50,7 +50,7 @@
                     'box-shadow': '0px 6px 12px 0px rgba(0,101,251,0.2)',
                 }"
                 @click="logout()">
-                <view class="text-[26rpx]">退出登录</view>
+                <view class="">退出登录</view>
             </u-button>
         </view>
     </view>
@@ -72,11 +72,11 @@
                                 <text class="font-medium text-[30rpx] mt-[40rpx]">
                                     {{ websiteConfig.shop_name }}
                                 </text>
-                                <text class="opacity-50 text-[26rpx] mt-[20rpx]"> 专为企业打造的下一代 AI 工具 </text>
+                                <text class="opacity-50 mt-[20rpx]"> 专为企业打造的下一代 AI 工具 </text>
                                 <view
                                     class="flex-shrink-0 rounded-full border border-solid border-[#ededed] mt-[60rpx] h-[100rpx] flex items-center justify-center w-full gap-x-4">
                                     <u-icon name="/static/images/icons/right.svg" :size="28"></u-icon>
-                                    <text class="opacity-30 text-[26rpx]">
+                                    <text class="opacity-30">
                                         {{ domain }}
                                     </text>
                                     <view class="leading-[0]" style="transform: rotate(180deg)">
@@ -85,9 +85,9 @@
                                 </view>
                             </view>
                             <view class="flex-shrink-0">
-                                <view class="text-[26rpx] text-center mb-[36rpx]">
+                                <view class="text-center mb-[36rpx]">
                                     <label class="opacity-50">当前版本：</label>Version
-                                    {{ config.version }}
+                                    {{ getVersion }}
                                 </view>
                                 <u-line />
                                 <view class="text-[#0000004d] text-[22rpx] mt-[30rpx]">
@@ -105,7 +105,7 @@
                         </view>
                         <view
                             v-if="[HandleType.USER_AGREEMENT, HandleType.PRIVACY_POLICY].includes(currHandleType)"
-                            class="grow min-h-0 px-[64rpx] text-[26rpx]">
+                            class="grow min-h-0 px-[64rpx]">
                             <scroll-view scroll-y class="h-full">
                                 <mp-html :content="agreementContent" />
                             </scroll-view>
@@ -121,7 +121,7 @@
                                 </view>
                             </view>
                             <view class="px-[32rpx] mt-[60rpx]">
-                                <view class="rounded-[24rpx] bg-white px-[32rpx] text-[26rpx]">
+                                <view class="rounded-[24rpx] bg-white px-[32rpx]">
                                     <view class="flex justify-between items-center h-[100rpx] gap-x-2">
                                         <view>用户昵称：</view>
                                         <view class="flex-1">
@@ -180,7 +180,7 @@ import { getPolicy } from "@/api/app";
 import { userEdit } from "@/api/user";
 import { updateUser } from "@/api/account";
 import { useCopy } from "@/hooks/useCopy";
-import UpdateUserInfo from "@/pages/login/components/update-user-info.vue";
+import UpdateUserInfo from "@/packages/pages/login/components/update-user-info.vue";
 
 const appStore = useAppStore();
 const userStore = useUserStore();
@@ -189,6 +189,7 @@ const { userInfo, isLogin } = toRefs(userStore);
 const domain = computed(() => appStore.config.domain);
 const websiteConfig = computed(() => appStore.getWebsiteConfig);
 const copyrightConfig = computed(() => appStore.getCopyRightConfig);
+const getVersion = computed(() => appStore.getVersion?.version_name);
 const byName = computed(() => appStore.getByName);
 enum HandleType {
     // 编辑资料
@@ -197,7 +198,6 @@ enum HandleType {
     USER_AGREEMENT = "service",
     // 隐私政策
     PRIVACY_POLICY = "privacy",
-
     // 关于我们
     ABOUT = "about",
 }
@@ -224,7 +224,7 @@ const handleMenu = (type: HandleType) => {
     if (HandleType.EDIT_PROFILE == type) {
         if (!isLogin.value) {
             uni.$u.route({
-                url: "/pages/login/login",
+                url: "/packages/pages/login/login",
             });
             return;
         }
@@ -263,7 +263,7 @@ const logout = () => {
             if (res.confirm) {
                 await userStore.logout();
                 uni.$u.route({
-                    url: "/pages/user/user",
+                    url: "/packages/pages/user/user",
                     type: "reLaunch",
                 });
             }

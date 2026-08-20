@@ -18,6 +18,8 @@ export type CardCodeFormType = {
     remark: string; // 否  备注
     rule_type: number; // 是 生成规则
     balance: string; // 否  电力值
+    member_level_id: number | string; // 否  会员等级ID
+    member_days: number | string; // 否  会员天数
 };
 
 //卡密新增

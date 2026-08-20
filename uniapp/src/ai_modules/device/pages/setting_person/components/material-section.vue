@@ -3,10 +3,10 @@
         <view class="flex items-center justify-between">
             <view class="flex items-baseline gap-1">
                 <text class="text-[28rpx] font-bold text-[#1A1A1A]">{{ title }}</text>
-                <text class="text-[24rpx] text-[#999999] font-medium">({{ count }})</text>
+                <text class="text-xs text-[#999999] font-medium">({{ count }})</text>
             </view>
             <view class="flex items-center text-[#999999]" @click="emit('more')">
-                <text class="text-[24rpx]">更多</text>
+                <text class="text-xs">更多</text>
                 <u-icon name="arrow-right" size="20"></u-icon>
             </view>
         </view>
@@ -16,10 +16,11 @@
                 <view
                     class="inline-flex flex-col items-center justify-center w-[160rpx] h-[214rpx] rounded-[20rpx] bg-[#F4F5F7] flex-shrink-0"
                     @click="emit('add')">
-                    <view class="w-[56rpx] h-[56rpx] rounded-full bg-black/5 flex items-center justify-center mb-1.5">
+                    <view
+                        class="w-[56rpx] h-[56rpx] rounded-full bg-[#000000]/5 flex items-center justify-center mb-1.5">
                         <u-icon name="plus" color="#666666" size="28"></u-icon>
                     </view>
-                    <text class="text-[24rpx] text-[#666666] font-medium">添加</text>
+                    <text class="text-xs text-[#666666] font-medium">添加</text>
                 </view>
 
                 <view
@@ -43,6 +44,18 @@
                 </view>
             </view>
         </scroll-view>
+
+        <view
+            class="flex items-center gap-2 px-3 py-2.5 rounded-[16rpx] bg-[#F0F6FF] border border-solid border-[#D0E6FF]"
+            @click="emit('more')">
+            <u-icon name="info-circle" color="#4A90E2" size="26"></u-icon>
+            <text class="text-[22rpx] text-[#4A90E2] flex-1">
+                当前只展示数据最新<text class="font-bold">3</text>条，点击
+                <text class="font-bold underline">查看更多</text>
+                可管理全部{{ title }}
+            </text>
+            <u-icon name="arrow-right" color="#4A90E2" size="22"></u-icon>
+        </view>
     </view>
 </template>
 
@@ -51,7 +64,7 @@ defineProps({
     title: { type: String, required: true },
     count: { type: Number, default: 0 },
     list: { type: Array as () => any[], default: () => [] },
-    isVideo: { type: Boolean, default: true }, // 控制是否显示播放按钮和时长
+    isVideo: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(["add", "more", "play"]);

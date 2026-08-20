@@ -19,10 +19,12 @@ class CardCodeController extends BaseApiController
      */
     public function checkCard()
     {
-        $sn = $this->request->get('sn','');
-        $result = (new CardCodeLogic())->checkCard($sn,$this->userId);
-        if(is_array($result)) {
-            return $this->success('',$result);
+        $sn = $this->request->get('sn', '');
+        // scene=tokens：仅允许算力卡(含代理算力卡)，拒绝会员兑换码
+        $scene = (string)$this->request->get('scene', '');
+        $result = (new CardCodeLogic())->checkCard($sn, $this->userId, $scene);
+        if (is_array($result)) {
+            return $this->success('', $result);
         }
         return $this->fail($result);
     }
@@ -36,9 +38,10 @@ class CardCodeController extends BaseApiController
      */
     public function useCard()
     {
-        $sn = $this->request->post('sn','');
-        $result = (new CardCodeLogic())->useCard($sn,$this->userId);
-        if(true === $result){
+        $sn = $this->request->post('sn', '');
+        $scene = (string)$this->request->post('scene', '');
+        $result = (new CardCodeLogic())->useCard($sn, $this->userId, $scene);
+        if (true === $result) {
             return $this->success('兑换成功');
         }
         return $this->fail($result);

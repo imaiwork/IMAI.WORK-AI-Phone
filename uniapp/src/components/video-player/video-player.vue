@@ -3,7 +3,7 @@
         class="h-full w-full bg-no-repeat relative"
         :style="{
             backgroundImage: `url(${poster})`,
-            backgroundSize: 'cover',
+            backgroundSize: '100% 100%',
             borderRadius: borderRadius + 'rpx',
         }">
         <view class="relative z-[88] w-full h-full video-box" :class="{ 'opacity-0': !isShowVideo }">
@@ -40,7 +40,7 @@
                 :style="{ width: `${playIconSize}rpx`, height: `${playIconSize}rpx` }"></image>
         </view>
         <view class="absolute bottom-2 left-0 right-0 z-[888] px-[40rpx]">
-            <view class="text-white text-[26rpx] flex items-center justify-center gap-x-1">
+            <view class="text-white flex items-center justify-center gap-x-1">
                 <text>{{ formatAudioTime(currDuration) }}</text> /
                 <text class="opacity-50">{{ formatAudioTime(videoDuration) }}</text>
             </view>
@@ -93,7 +93,7 @@ const props = withDefaults(
         borderRadius: 48,
         showClose: false,
         isBar: true,
-    }
+    },
 );
 
 const { statusBarHeight } = uni.$u.sys();
@@ -115,7 +115,7 @@ const loadedmetadata = async (e: any) => {
 const timeupdate = (e: any) => {
     const { currentTime, duration } = e.detail;
     currDuration.value = currentTime;
-    videoProgress.value = (currentTime / duration) * 100;
+    videoProgress.value = Math.ceil((currentTime / duration) * 100);
 };
 
 const fullscreenchange = (e: any) => {

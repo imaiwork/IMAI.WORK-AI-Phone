@@ -21,14 +21,14 @@
             <view
                 class="flex items-center gap-[8rpx] bg-[#F8F9FA] px-[24rpx] py-[12rpx] rounded-full border border-[#E5E5E5] active:scale-95 transition-transform"
                 @click="handleTabOptionChange()">
-                <text class="text-[26rpx] text-[#333333] font-medium">{{ getTabText(currTab) }}</text>
+                <text class="text-[#333333] font-medium">{{ getTabText(currTab) }}</text>
                 <u-icon name="arrow-down" size="20" color="#999999"></u-icon>
             </view>
 
             <view
                 class="flex items-center gap-[8rpx] active:opacity-70 transition-opacity"
                 @click="showCalendar = true">
-                <text class="text-[24rpx] text-[#666666] font-medium">{{ calendarRange.join(" - ") }}</text>
+                <text class="text-xs text-[#666666] font-medium">{{ calendarRange.join(" - ") }}</text>
                 <u-icon name="arrow-down-fill" size="18" color="#333333"></u-icon>
             </view>
         </view>
@@ -60,7 +60,7 @@
                                     </view>
                                 </view>
                                 <text
-                                    class="text-[24rpx] shrink-0 mt-[8rpx] font-medium"
+                                    class="text-xs shrink-0 mt-[8rpx] font-medium"
                                     :class="item.is_verify == 1 ? 'text-success' : 'text-[#B4B4B4]'"
                                     >{{ item.is_verify == 1 ? "已添加" : "未添加" }}</text
                                 >
@@ -68,13 +68,11 @@
 
                             <view class="flex items-center gap-[8rpx] text-[#999999] mb-[20rpx]">
                                 <u-icon name="share" size="24"></u-icon>
-                                <text class="text-[24rpx] truncate">来源：{{ item.task_name }}</text>
+                                <text class="text-xs truncate">来源：{{ item.task_name }}</text>
                             </view>
 
                             <view class="bg-[#F8F9FA] rounded-[16rpx] p-[24rpx] flex flex-col gap-[16rpx]">
-                                <text class="text-[26rpx] text-[#666666] leading-relaxed">{{
-                                    item.task_detail_described
-                                }}</text>
+                                <text class="text-[#666666] leading-relaxed">{{ item.task_detail_described }}</text>
                                 <view class="flex items-center justify-between mt-[8rpx]">
                                     <text class="text-[22rpx] text-[#B4B4B4] font-mono">{{ item.exec_time }}</text>
                                     <view
@@ -109,7 +107,7 @@
 
                             <view class="flex items-center gap-[8rpx] text-[#999999] mb-[20rpx]">
                                 <u-icon name="share" size="24"></u-icon>
-                                <text class="text-[24rpx] truncate">来源：{{ item.task_name }}</text>
+                                <text class="text-xs truncate">来源：{{ item.task_name }}</text>
                             </view>
 
                             <view class="bg-[#F8F9FA] rounded-[16rpx] p-[24rpx] flex items-start gap-[20rpx]">
@@ -122,13 +120,13 @@
                                 </view>
 
                                 <view class="flex flex-col gap-[16rpx] flex-1 min-w-0">
-                                    <text class="text-[26rpx] text-[#333333] leading-relaxed font-medium break-all">{{
+                                    <text class="text-[#333333] leading-relaxed font-medium break-all">{{
                                         item.task_detail_described
                                     }}</text>
                                     <view
                                         class="flex items-center gap-[4rpx] text-[#999999] active:opacity-70 w-fit"
                                         @click="handleDetail(item)">
-                                        <text class="text-[24rpx]">查看详情</text>
+                                        <text class="text-xs">查看详情</text>
                                         <u-icon name="arrow-right" size="22"></u-icon>
                                     </view>
                                 </view>
@@ -137,8 +135,8 @@
                             <view
                                 class="flex items-center justify-between pt-[24rpx] border-[0] border-t border-solid border-[#F5F5F5] mt-[24rpx] gap-[24rpx]">
                                 <view class="flex items-center gap-[8rpx] flex-1 min-w-0">
-                                    <text class="text-[24rpx] text-[#999999] shrink-0">执行:</text>
-                                    <text class="text-[24rpx] text-[#666666] font-medium truncate"
+                                    <text class="text-xs text-[#999999] shrink-0">执行:</text>
+                                    <text class="text-xs text-[#666666] font-medium truncate"
                                         >{{ item.device_name }}({{ item.device_code }})</text
                                     >
                                 </view>
@@ -212,7 +210,7 @@ const showTaskClueDetailPop = ref(false);
 const showTaskFollowDetailPop = ref(false);
 const detailData = ref<any>({});
 const calendarRange = ref<any[]>([
-    uni.$u.timeFormat(new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000), "yyyy-mm-dd"),
+    uni.$u.timeFormat(new Date(), "yyyy-mm-dd"),
     uni.$u.timeFormat(new Date(), "yyyy-mm-dd"),
 ]);
 const handleTabChange = (index: number) => {

@@ -1,6 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "u-loading": "../u-loading/u-loading"
-  }
-}

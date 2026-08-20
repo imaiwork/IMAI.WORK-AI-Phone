@@ -40,14 +40,31 @@ class KbKnowLogic extends BaseLogic
     public static function all(int $userId): array
     {
         $teamKbIds = (new KbKnowTeam())->where(['user_id'=>$userId])->column('kb_id');
+        // 资源跟人:企业空间→本企业全体有效成员创建的知识库 + 本人全部 + 单库共享给我的;
+        // 个人空间→本人全部 + 单库共享给我的
+        $teamId = \app\common\service\TeamContextService::currentTeamId($userId);
+        $memberIds = $teamId > 0
+            ? \app\common\service\TeamBillingService::activeMemberUserIds($teamId)
+            : [];
 
         $modelKbKnow = new KbKnow();
         $lists = $modelKbKnow
             ->field('id,name,image,embedding_model')
-            ->where([
-                ['user_id', '=', $userId],
-                ['id', 'in', $teamKbIds]
-            ])
+            ->where(function ($q) use ($userId, $teamId, $teamKbIds, $memberIds) {
+                if ($teamId > 0) {
+                    $q->where(function ($q2) use ($memberIds, $userId) {
+                        $q2->whereIn('user_id', $memberIds ?: [-1])
+                            ->whereOr('user_id', '=', $userId);
+                    });
+                } else {
+                    $q->where(function ($q2) use ($userId) {
+                        $q2->where('user_id', '=', $userId);
+                    });
+                }
+                if (!empty($teamKbIds)) {
+                    $q->whereOr('id', 'in', $teamKbIds);
+                }
+            })
             ->order('id desc')
             ->select()
             ->toArray();
@@ -118,15 +135,28 @@ class KbKnowLogic extends BaseLogic
             }
         }
 
-        if ($detail['user_id'] === $userId) {
+        if ((int)$detail['user_id'] === (int)$userId) {
             $detail['owned'] = KnowEnum::OWNED_SUPER;
             $detail['power'] = KnowEnum::POWER_ALL;
+            $detail['is_owner'] = 1;
+            $detail['is_super'] = 1;
         } else {
             $detail['owned'] = KnowEnum::OWNED_MEMBER;
-            $detail['power'] = (new KbKnowTeam())
+            $detail['is_owner'] = 0;
+            $detail['is_super'] = 0;
+            $power = (new KbKnowTeam())
                 ->where(['kb_id'=>$detail['id']])
                 ->where(['user_id'=>$userId])
                 ->value('power')??-1;
+            // 同企业空间且创建者仍在团:成员默认可见可用(查看/检索);破坏性操作仍归创建者/协作者
+            if ($power === -1 && \app\common\service\TeamContextService::canViewTeamResource(
+                $userId,
+                (int)($detail['team_id'] ?? 0),
+                (int)($detail['user_id'] ?? 0)
+            )) {
+                $power = KnowEnum::POWER_VIEW;
+            }
+            $detail['power'] = $power;
         }
 
         return $detail;
@@ -172,6 +202,8 @@ class KbKnowLogic extends BaseLogic
             $know = KbKnow::create([
                 'user_id'                => $userId,
                 'create_uid'             => $userId,
+                // 企业空间内创建→归属当前企业,团队全员共享;个人空间→0
+                'team_id'                => \app\common\service\TeamContextService::currentTeamId($userId),
                 'image'                  => FileService::setFileUrl($post['image']??''),
                 'name'                   => $post['name'],
                 'intro'                  => $post['intro']??'',
@@ -812,22 +844,34 @@ class KbKnowLogic extends BaseLogic
             throw new Exception('知识库被禁用,禁止操作!');
         }
 
-        // 如果不是拥有者
-        if ($know['user_id'] !== $userId) {
-            $team = $modelKbKnowTeam->where(['kb_id'=>$know['id'], 'user_id' => $userId])->findOrEmpty()->toArray();
-            if (!$team) {
-                throw new Exception('您不具备任何权限进行操作!');
-            }
+        // 拥有者:全部权限
+        if ((int)$know['user_id'] === (int)$userId) {
+            return KnowEnum::POWER_ALL;
+        }
 
+        // 单库协作者(KbKnowTeam)
+        $team = $modelKbKnowTeam->where(['kb_id'=>$know['id'], 'user_id' => $userId])->findOrEmpty()->toArray();
+        if ($team) {
             if ($team['power'] > $power) {
                 $error = [1=>'管理者无权限操作!', 2=>'编辑者无权限操作!', 3=>'查看者无权限操作!'];
                 throw new Exception($error[$team['power']]??'无权限操作!');
             }
-
-            return $team['power'];
+            return (int)$team['power'];
         }
 
-        return KnowEnum::POWER_ALL;
+        // 同企业空间且创建者仍在团:成员默认可查看/检索(破坏性操作仍归创建者/协作者)
+        if (\app\common\service\TeamContextService::canViewTeamResource(
+            $userId,
+            (int)($know['team_id'] ?? 0),
+            (int)($know['user_id'] ?? 0)
+        )) {
+            if ($power < KnowEnum::POWER_VIEW) {
+                throw new Exception('查看者无权限操作!');
+            }
+            return KnowEnum::POWER_VIEW;
+        }
+
+        throw new Exception('您不具备任何权限进行操作!');
     }
 
     /**
@@ -1006,7 +1050,7 @@ class KbKnowLogic extends BaseLogic
     {
         $know = KbKnow::where('name', '模型大管家')->where('user_id',$userId)->findOrEmpty();
         if ($know->isEmpty()){
-            return '检索开始：'."\n".'对问题"'.$content.'" 进行检索：'."\n未找到模型大管家。\n检索结束。\n现在你没有角色，恢复成常规对话模式，对问题进行回复。";
+            return '--检索开始：'."\n".'对问题"'.$content.'" 进行检索：'."\n未找到合适的智能体。\n--检索结束。\n现在你没有角色，恢复成常规对话模式。";
         }
         $KbId = $know['id'];
         // 接收参数
@@ -1051,10 +1095,10 @@ class KbKnowLogic extends BaseLogic
         $pgList = RecallUtils::filterMaxTokens($results, $searchTokens);
 
         if (!$pgList) {
-            return '检索开始：'."\n".'对问题："'.$content.'" 进行检索：'."\n未找到相关智能体。\n检索结束。\n现在你没有角色，恢复成常规对话模式，对问题进行回复。";
+            return '--检索开始：'."\n".'对问题："'.$content.'" 进行检索：'."\n未找到相关智能体。\n--检索结束。\n现在你没有角色，恢复成常规对话模式。";
         }
 
-        $searchContent = '检索开始：'."\n".'对问题："'.$content.'" 进行检索：'."\n";
+        $searchContent = '--检索开始：'."\n".'对问题："'.$content.'" 进行检索：'."\n";
 
         foreach ($pgList as $val) {
 
@@ -1064,11 +1108,11 @@ class KbKnowLogic extends BaseLogic
                 $robotName = KbRobot::where('id',$checkRobotId)->value('name','默认助理');
                 $searchContent .= '检索出的智能体结果是: 【@'.$robotName."】。\n";
             }else{
-                $searchContent .= "未找到匹配内容，现在你没有角色，恢复成常规对话模式，对问题进行回复。\n";
+                $searchContent .= "未找到匹配内容，现在你没有角色，恢复成常规对话模式。\n";
             }
             break;
         }
-        $searchContent .= '检索结束。';
+        $searchContent .= '--检索结束。';
         RecallKnow::destroy();
         return $searchContent;
     }
@@ -1111,8 +1155,8 @@ class KbKnowLogic extends BaseLogic
                                        'image'                  => '',
                                        'name'                   => '模型大管家',
                                        'intro'                  => '模型大管家检索智能体专用知识库',
-                                       'documents_model_id'     => 2,
-                                       'documents_model_sub_id' => 2,
+                                       'documents_model_id'     => 4,
+                                       'documents_model_sub_id' => 4,
                                        'embedding_model_id'     => 3,
                                        'embedding_model_sub_id' => 3,
                                        'is_enable'              => 1,

@@ -1,0 +1,1 @@
+"use strict";const t=require("../../../../../common/vendor.js");exports.STEPS=[{step:1,title:"选择素材"},{step:2,title:"填写文案"}],exports.createDefaultFormData=()=>({name:t.index.$u.timeFormat(Date.now(),"yyyymmddhhMM")+"发布任务",materialList:[],copywriterList:[]});

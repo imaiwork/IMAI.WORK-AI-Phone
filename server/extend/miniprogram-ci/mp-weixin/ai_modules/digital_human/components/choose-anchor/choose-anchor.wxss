@@ -1,0 +1,1 @@
+.rotate-anim.data-v-57592017{animation:spin-57592017 1s linear infinite}@keyframes spin-57592017{0%{transform:rotate(0)}to{transform:rotate(360deg)}}

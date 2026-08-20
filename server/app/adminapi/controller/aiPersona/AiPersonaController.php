@@ -51,6 +51,34 @@ class AiPersonaController extends BaseAdminController
     }
 
     /**
+     * 更新爆款关键词
+     * @return Json
+     */
+    public function updateHotWords(): Json
+    {
+        $params = $this->request->post();
+        $result = AiPersonaLogic::updateHotWords($params);
+        if ($result === false) {
+            return $this->fail(AiPersonaLogic::getError());
+        }
+        return $this->success('编辑成功', AiPersonaLogic::getReturnData());
+    }
+
+    /**
+     * 更新全局选项
+     * @return Json
+     */
+    public function updateOption(): Json
+    {
+        $params = $this->request->post();
+        $result = AiPersonaLogic::updateOption($params);
+        if ($result === false) {
+            return $this->fail(AiPersonaLogic::getError());
+        }
+        return $this->success('编辑成功', AiPersonaLogic::getReturnData());
+    }
+
+    /**
      * 删除AI人设
      * @return Json
      */
@@ -114,7 +142,7 @@ class AiPersonaController extends BaseAdminController
             }
             return $this->fail(AiPersonaLogic::getError());
         } catch (Exception $e) {
-            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+            return $this->fail($e->getMessage());
         }
     }
 
@@ -128,7 +156,7 @@ class AiPersonaController extends BaseAdminController
             }
             return $this->fail(AiPersonaLogic::getError());
         } catch (Exception $e) {
-            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+            return $this->fail($e->getMessage());
         }
     }
 
@@ -141,8 +169,47 @@ class AiPersonaController extends BaseAdminController
             }
             return $this->fail(AiPersonaLogic::getError());
         } catch (Exception $e) {
-            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+            return $this->fail($e->getMessage());
         }
+    }
+
+    public function publishConfigDetail(): Json
+    {
+        try {
+            $params = $this->request->get();
+            $personaId = intval($params['persona_id'] ?? $params['id'] ?? 0);
+            $result = AiPersonaLogic::publishConfigDetail($personaId);
+            if ($result) {
+                return $this->data(AiPersonaLogic::getReturnData());
+            }
+            return $this->fail(AiPersonaLogic::getError());
+        } catch (Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    public function publishConfigUpdate(): Json
+    {
+        try {
+            $params = $this->request->post();
+            $result = AiPersonaLogic::publishConfigUpdate($params);
+            if ($result) {
+                return $this->success('配置成功', AiPersonaLogic::getReturnData());
+            }
+            return $this->fail(AiPersonaLogic::getError());
+        } catch (Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    public function contentPublishConfigDetail(): Json
+    {
+        return $this->publishConfigDetail();
+    }
+
+    public function contentPublishConfigUpdate(): Json
+    {
+        return $this->publishConfigUpdate();
     }
 
 
@@ -163,6 +230,20 @@ class AiPersonaController extends BaseAdminController
         try {
             $params = $this->request->get();
             $result = AiPersonaLogic::wechat($params);
+            if ($result) {
+                return $this->success(data: AiPersonaLogic::getReturnData());
+            }
+            return $this->fail(AiPersonaLogic::getError());
+        } catch (Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    public function hotWords(): Json
+    {
+        try {
+            $params = $this->request->get();
+            $result = AiPersonaLogic::hotWords($params);
             if ($result) {
                 return $this->success(data: AiPersonaLogic::getReturnData());
             }

@@ -332,6 +332,7 @@ import { useDebounceFn, useThrottleFn } from "@vueuse/core";
 import { setRangeText } from "@/utils/dom";
 import type { InputInstance } from "element-plus";
 import { useUserStore } from "@/stores/user";
+import feedback from "@/utils/feedback";
 
 const route = useRoute();
 const router = useRouter();
@@ -522,7 +523,7 @@ const handleEdit = async (type: "auto" | "handle" = "auto") => {
     handleEditType.value = type;
     isManualSave.value = type == "handle";
     if (formData.name == "") {
-        ElMessage.error("请输入机器人名称");
+        feedback.msgError("请输入机器人名称");
         return;
     }
     if (editLoading.value) return;

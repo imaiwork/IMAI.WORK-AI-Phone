@@ -5,10 +5,42 @@ export enum ModeTypeEnum {
     TONE = 3, // 音色
 }
 
+// 形象克隆模式：2 一克二(极速) / 3 一克三(专业)
+export enum CloneModeEnum {
+    FAST = 2,
+    PRO = 3,
+}
+
+/** 闪剪形象 clone_type：1极速（普通） / 2专业 */
+export enum ShanjianCloneTypeEnum {
+    FAST = 1,
+    PRO = 2,
+}
+
+// 形象列表筛选 is_pro：0全部 / 1普通 / 2专业
+export enum AnchorListProFilterEnum {
+    ALL = 0,
+    NORMAL = 1,
+    PRO = 2,
+}
+
+/** 克隆模式 → 列表 is_pro：标准/极速→普通(1)，优质/专业→专业(2) */
+export const cloneModeToIsPro = (mode: CloneModeEnum): AnchorListProFilterEnum => {
+    return mode === CloneModeEnum.PRO ? AnchorListProFilterEnum.PRO : AnchorListProFilterEnum.NORMAL;
+};
+
 // 创建类型
 export enum CreateTypeEnum {
     TEXT = 1, // 文本
     AUDIO = 2, // 音频
+}
+
+/** 数字人纯口播 type5 无包装引擎 */
+export enum SpeechEngineTypeEnum {
+    /** 闪剪 */
+    SHANJIAN = 1,
+    /** 蝉镜 */
+    CHANJING = 2,
 }
 
 // 监听类型
@@ -105,4 +137,12 @@ export enum MontageStylesChooseType {
     HOT = 3,
     SIMPLE = 4,
     LOCAL = 5,
+}
+
+/** 闪剪成片下载状态 */
+export enum VideoDownloadStatusEnum {
+    PENDING = 0,
+    DOWNLOADING = 1,
+    SUCCESS = 2,
+    FAILED = 3,
 }

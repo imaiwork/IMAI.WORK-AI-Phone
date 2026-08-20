@@ -102,6 +102,7 @@ const {
     switchToSession,
     deleteSession,
     loadHistory,
+    reset,
 } = useChatHistory();
 
 const activePopoverId = ref<string | null>(null);
@@ -179,6 +180,7 @@ const load = (e: any) => {
 };
 
 onMounted(() => {
+    reset();
     fetchChatRecord();
 });
 </script>

@@ -65,7 +65,7 @@
             <view class="bg-white mt-2 rounded-[32rpx] p-2">
                 <scroll-view class="h-[350rpx]" scroll-y>
                     <view class="p-1 text-[#524B6B] leading-[44rpx] whitespace-pre-line" v-if="!tipsLoading">
-                        {{ tips }}
+                        {{ tips || "暂无话术提示" }}
                     </view>
                     <view class="chat-loader p-2" v-else></view>
                 </scroll-view>
@@ -120,7 +120,7 @@ const appStore = useAppStore();
 
 const getCurrVoice = computed(() => {
     const data = appStore.getLadderConfig?.voice || [];
-    return data.find((item: any) => item.code == detail.value?.coach_voice) || {};
+    return data.find((item: any) => item.voice == detail.value?.coach_voice) || {};
 });
 
 const state = reactive({
@@ -175,6 +175,11 @@ const getRecordList = async () => {
             }
         })
         .flat();
+    if (lists.length > 0) {
+        // 获取最后一个回复的内容
+        const lastReply = lists.at(-1);
+        getTips(lastReply.id);
+    }
     contentList.value = transformedLists;
     chattingRef.value?.scrollToBottom();
 };

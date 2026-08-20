@@ -24,7 +24,7 @@
                     :show-file-list="false"
                     :accept="accept"
                     :ratio-size="[ratioSize[0], ratioSize[1]]"
-                    :image-resolution="[imageResolution[0], imageResolution[1]]"
+                    :image-resolution="imageResolution"
                     :max-size="maxSize"
                     @success="getUploadImage($event, type)">
                     <div
@@ -105,10 +105,13 @@
                                     :show-file-list="false"
                                     :accept="accept"
                                     :max-size="5"
-                                    :image-resolution="[4096, 4096]"
+                                    :image-resolution="[
+                                        [0, 4096],
+                                        [0, 4096],
+                                    ]"
                                     @success="getUploadModelImage">
                                     <div
-                                        class="h-[140px] w-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-br bg-gray-50/50 hover:border-primary hover:bg-blue-50/50 transition-all cursor-pointer group">
+                                        class="h-[140px] w-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-br bg-[#f9f9f9]/50 hover:border-primary hover:bg-[#e6f0ff]/50 transition-all cursor-pointer group">
                                         <div
                                             class="w-10 h-10 rounded-full bg-white flex items-center justify-center mb-2 group-hover:scale-110 transition-all duration-300">
                                             <Icon name="el-icon-Plus" :size="20" color="var(--color-primary)"></Icon>
@@ -139,10 +142,10 @@
                                     </div>
 
                                     <div
-                                        class="absolute inset-0 opacity-0 rounded-xl group-hover:opacity-100 bg-black/20 backdrop-blur-[2px] transition-all duration-300 flex flex-col items-center justify-center gap-3">
+                                        class="absolute inset-0 opacity-0 rounded-xl group-hover:opacity-100 bg-[#000000]/20 backdrop-blur-[2px] transition-all duration-300 flex flex-col items-center justify-center gap-3">
                                         <div class="flex gap-2">
                                             <div
-                                                class="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/40 flex items-center justify-center backdrop-blur-md transition-colors"
+                                                class="w-8 h-8 rounded-lg bg-[#ffffff]/20 hover:bg-[#ffffff]/40 flex items-center justify-center backdrop-blur-md transition-colors"
                                                 @click.stop="previewModelImage(index)">
                                                 <Icon name="el-icon-FullScreen" :size="18" color="#ffffff" />
                                             </div>
@@ -155,7 +158,7 @@
                                     </div>
 
                                     <div
-                                        class="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+                                        class="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-[#000000]/20 to-transparent pointer-events-none"></div>
                                 </div>
                             </div>
                         </ElScrollbar>
@@ -179,7 +182,7 @@ import { getCaseLists, addModelCase, deleteModelCase } from "@/api/drawing";
 import { createReusableTemplate } from "@vueuse/core";
 import { FashionImageTypeEnum } from "../_enums";
 import CaseImageV2 from "./case-image-v2.vue";
-import CaseBtn from "./case-btn/index.vue";
+import CaseBtn from "./case-btn.vue";
 
 const emit = defineEmits<{
     (event: "update:formData", value: any): void;
@@ -205,7 +208,10 @@ const formData = reactive({
 const accept = ".jpg,.jpeg,.png";
 const maxSize = 10;
 const ratioSize = [1 / 3, 3];
-const imageResolution = [4096, 4096];
+const imageResolution = [
+    [360, 4096],
+    [360, 4096],
+] as [[number, number], [number, number]];
 
 const getUploadImage = (result: any, type: string) => {
     const uri = result.data.uri;

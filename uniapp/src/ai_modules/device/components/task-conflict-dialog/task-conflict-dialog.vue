@@ -122,7 +122,7 @@ watch(
     () => [props.messages.length, props.errors.length],
     () => {
         activeTab.value = props.messages.length > 0 ? "messages" : "errors";
-    }
+    },
 );
 
 const currentList = computed(() => (activeTab.value === "messages" ? props.messages : props.errors));
@@ -220,7 +220,7 @@ const handleConfirm = () => {
     }
 
     &__tab {
-        @apply flex-1 flex items-center justify-center gap-x-[10rpx] h-[72rpx] rounded-[12rpx] text-[24rpx] text-[#999];
+        @apply flex-1 flex items-center justify-center gap-x-[10rpx] h-[72rpx] rounded-[12rpx] text-xs text-[#999];
         transition: all 0.2s;
 
         &--active-warn {
@@ -276,7 +276,7 @@ const handleConfirm = () => {
     }
 
     &__item-text {
-        @apply text-[24rpx] leading-relaxed;
+        @apply text-xs leading-relaxed;
         word-break: break-all;
         &--warn {
             color: #c85a00;

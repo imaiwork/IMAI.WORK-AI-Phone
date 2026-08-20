@@ -3,7 +3,7 @@
         <div
             class="bg-white h-[72px] flex items-center justify-between px-8 rounded-[20px] border border-br flex-shrink-0">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-primary/10 text-primary mr-3">
+                <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary mr-3">
                     <Icon name="el-icon-Setting" :size="20" />
                 </div>
                 <div>

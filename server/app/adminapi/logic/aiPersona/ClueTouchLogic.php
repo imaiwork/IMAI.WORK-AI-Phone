@@ -3,6 +3,7 @@
 
 namespace app\adminapi\logic\aiPersona;
 
+use app\api\logic\ApiLogic;
 use app\common\logic\BaseLogic;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaTrafficConfig;
@@ -29,15 +30,24 @@ class ClueTouchLogic extends BaseLogic
             //     throw new \Exception('IP人设分析报告内容为空');
             // }
 
-            $personaRule = self::getPersonaRule($persona);
+            $personaRule = ApiLogic::getPersonaRule($persona);
             $config = AiPersonaTrafficConfig::where('persona_id', $params['id'])->findOrEmpty();
             if (!$config->isEmpty()) {
+                $config->clue_keywords = $personaRule->is_clue_updated === 1 || empty($config->clue_keywords) ? $personaRule->clue_keywords : $config->clue_keywords;
+                $config->acquire_keywords = $personaRule->is_clue_updated === 1 || empty($config->acquire_keywords) ? $personaRule->clue_acquire_keywords : $config->acquire_keywords;
+                $config->intercept_keywords = $personaRule->is_clue_updated === 1 || empty($config->intercept_keywords) ? $personaRule->clue_intercept_keywords : $config->intercept_keywords;
+                $config->comment_scripts = $personaRule->is_clue_updated === 1 || empty($config->comment_scripts) ? $personaRule->clue_comment_scripts : $config->comment_scripts;
+                $config->dm_scripts = $personaRule->is_clue_updated === 1 || empty($config->dm_scripts) ? $personaRule->clue_dm_scripts : $config->dm_scripts;
+                $config->save();
+                $personaRule->is_clue_updated = 0;
+                $personaRule->save();
                 return $config->toArray();
             } else {
 
                 $insertData = [
                     'user_id' => $persona->user_id,
                     'persona_id' => $params['id'],
+                    'clue_keywords' => $personaRule->clue_keywords ?? [],
                     'acquire_keywords' => $personaRule->clue_acquire_keywords ?? [],
                     'intercept_keywords' => $personaRule->clue_intercept_keywords ?? [],
                     'comment_scripts' => $personaRule->clue_comment_scripts ?? \app\common\service\ConfigService::get('touch_clue',  'touch_speech',  []),
@@ -45,13 +55,24 @@ class ClueTouchLogic extends BaseLogic
                     'message_number' => $params['message_number'] ?? 15,
                     'comment_number' => $params['comment_number'] ?? 15,
                     'reply_number' => $params['reply_number'] ?? 0,
-                    'content_publish_day' => $params['content_publish_day'] ?? 1,
+                    'content_publish_day' => AiPersonaTrafficConfig::normalizeContentPublishDay($params['content_publish_day'] ?? 0),
                     'comment_publish_day' => $params['comment_publish_day'] ?? 1,
+                    'intercept_max_number' => $params['intercept_max_number'] ?? 10,
+                    'intercept_keyword_used_type' => $params['intercept_keyword_used_type'] ?? 2,
+                    'clue_max_number' => $params['clue_max_number'] ?? 10,
+                    'clue_keyword_used_type' => $params['clue_keyword_used_type'] ?? 2,
+                    'group_buy_config' => [],
+                    'same_city_config' => [],
+                    'video_cutoff_number' => $params['video_cutoff_number'] ?? 30,
+                    'city_cutoff_number' => $params['city_cutoff_number'] ?? 30,
+                    'group_cutoff_number' => $params['group_cutoff_number'] ?? 30,
                     'exec_date' => date('Y-m-d', time()),
                     'is_first' => 1,
                     'status' => 0,
                 ];
                 $result = AiPersonaTrafficConfig::create($insertData);
+                $personaRule->is_clue_updated = 0;
+                $personaRule->save();
                 return $result->toArray();
             }
         } catch (\Throwable $th) {
@@ -68,6 +89,7 @@ class ClueTouchLogic extends BaseLogic
             if ($info->isEmpty()) {
                 throw new \Exception("配置数据不存在");
             }
+            $params['content_publish_day'] = AiPersonaTrafficConfig::normalizeContentPublishDay($params['content_publish_day'] ?? 0);
             $info->save($params);
             self::$returnData = $info->toArray();
             return true;
@@ -75,57 +97,5 @@ class ClueTouchLogic extends BaseLogic
             self::setError($exception->getMessage());
             return false;
         }
-    }
-
-    private static function getPersonaRule(AiPersona $persona)
-    {
-        if ($persona->persona_type == 1) {
-            $rule = \app\common\model\aiPersona\AiPersonaIndividual::where('persona_id', $persona->id)->findOrEmpty();
-            $personality_tags = implode(',', $rule->personality_tags);
-            $monetize_paths = implode(',', $rule->monetize_paths);
-            $identity = implode(',', $rule->identity);
-            $rule->clue_content = "\"我的昵称/网名是{$rule->nickname}，真实身份/职业是{$identity}，希望以{$personality_tags}的性格标签语气生成内容。
-
-            我能提供的核心价值如下：
-            {$rule->core_value}
-
-            想吸引的粉丝是{$rule->target_audience}，主要变现路径：{$monetize_paths}。
-
-            个人高光/逆袭故事：{$rule->highlight_story}。\"
-
-            我的产品内容：{$persona->main_business}";
-        } elseif ($persona->persona_type == 2) {
-            $rule = \app\common\model\aiPersona\AiPersonaEnterprise::where('persona_id', $persona->id)->findOrEmpty();
-            $brand_tone = implode(',', $rule->brand_tone);
-            $account_goal = implode(',', $rule->account_goal);
-            $spokesperson = implode(',', $rule->spokesperson);
-            $rule->clue_content = "我的企业/品牌名称是{$rule->brand_name}，由{$spokesperson}代表公司出镜，希望以{$brand_tone}的品牌调性生成内容。
-
-            主打的产品/解决方案如下：
-
-            {$rule->main_product}
-
-            目标客户画像是{$rule->target_customer}，账号核心目的：{$account_goal}。
-
-            行业背书/标杆案例：{$rule->industry_case}。";
-        } elseif ($persona->persona_type == 3) {
-            $rule = \app\common\model\aiPersona\AiPersonaLocal::where('persona_id', $persona->id)->findOrEmpty();
-            $store_atmosphere = implode(',', $rule->store_atmosphere);
-            $content_preference = implode(',', $rule->content_preference);
-            $spokesperson = implode(',', $rule->spokesperson);
-            $rule->clue_content = "我的门店及所在商圈是{$rule->store_name}，由{$spokesperson}出镜揽客，希望以{$store_atmosphere}的门店氛围感生成内容。
-
-            我们的招牌特色如下：
-
-            {$rule->signature_feature}
-
-            主要想吸引进店的客户是{$rule->target_customer}，偏好的引流内容：{$content_preference}。
-
-            开店初衷/门店优势：{$rule->open_story}。";
-        } else {
-            self::setError('IP人设类型错误');
-            return false;
-        }
-        return $rule;
     }
 }

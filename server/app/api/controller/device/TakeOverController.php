@@ -9,6 +9,7 @@ use think\exception\HttpResponseException;
 use app\api\validate\device\TakeOverValidate;
 use app\api\logic\device\TakeOverLogic;
 use app\api\lists\device\TakeOverLists;
+use app\api\lists\device\TakeOverSpeechHistoryLists;
 
 /**
  * TakeOverController
@@ -28,6 +29,25 @@ class TakeOverController extends BaseApiController
         return $this->dataLists(new TakeOverLists());
     }
 
+    public function speechHistory()
+    {
+        return $this->dataLists(new TakeOverSpeechHistoryLists());
+    }
+
+    public function speechDelete()
+    {
+        try {
+            $params = $this->request->post();
+            $result = TakeOverLogic::speechDelete($params);
+            if ($result) {
+                return $this->success();
+            }
+            return $this->fail(TakeOverLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
     public function add()
     {
         try {
@@ -36,7 +56,7 @@ class TakeOverController extends BaseApiController
             if ($result) {
                 return $this->success(data: TakeOverLogic::getReturnData());
             }
-            return $this->fail(TakeOverLogic::getError());   
+            return $this->fail(TakeOverLogic::getError());
         } catch (HttpResponseException $e) {
             return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }
@@ -65,6 +85,23 @@ class TakeOverController extends BaseApiController
             return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }
     }
+
+    /**
+     * @desc 读取加群触发关键词
+     */
+    public function groupTriggerKeywords()
+    {
+        try {
+            $result = TakeOverLogic::getGroupTriggerKeywords();
+            if ($result) {
+                return $this->success(data: TakeOverLogic::getReturnData());
+            }
+            return $this->fail(TakeOverLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
 
     public function cron()
     {

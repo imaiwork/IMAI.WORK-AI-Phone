@@ -3,7 +3,7 @@
   "enablePullDownRefresh": false,
   "disableScroll": true,
   "usingComponents": {
-    "empty": "../../../../components/empty/empty",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
     "video-preview": "../../../../components/video-preview/video-preview"
   }

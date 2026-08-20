@@ -11,6 +11,11 @@
 import Sidebar from "../_components/sidebar.vue";
 import SzrCreate from "./_pages/szr_create/index.vue";
 import MontageCreate from "./_pages/montage_create/index.vue";
+import MontagePersonCreate from "./_pages/montage_person_create/index.vue";
+import MontageMaterialCreate from "./_pages/montage_material_create/index.vue";
+import MontageNewsCreate from "./_pages/montage_news_create/index.vue";
+import OneSentenceVideo from "./_pages/one_sentence_video/index.vue";
+import MontageStoryboardCreate from "./_pages/montage_storyboard_create/index.vue";
 import Model from "./_pages/model/index.vue";
 import Tone from "./_pages/tone/index.vue";
 import Audio from "./_pages/audio/index.vue";
@@ -28,10 +33,11 @@ sidebar.value = [
         components: markRaw(MontageCreate),
         type: SidebarTypeEnum.BOUQUET_MIXING,
     },
-    { name: "真人口播视频混剪", components: markRaw(Tone), type: SidebarTypeEnum.REAL_PERSON_MIXING, disabled: true },
-    { name: "素材混剪神器", components: markRaw(Audio), type: SidebarTypeEnum.MATERIAL_MIXING, disabled: true },
-    { name: "新闻体视频", components: markRaw(Video), type: SidebarTypeEnum.NEWS_VIDEO, disabled: true },
-    { name: "一句话生成视频", components: markRaw(Audio), type: SidebarTypeEnum.ONE_WORD_VIDEO, disabled: true },
+    { name: "真人口播视频混剪", components: markRaw(MontagePersonCreate), type: SidebarTypeEnum.REAL_PERSON_MIXING },
+    { name: "素材混剪神器", components: markRaw(MontageMaterialCreate), type: SidebarTypeEnum.MATERIAL_MIXING },
+    { name: "新闻体视频", components: markRaw(MontageNewsCreate), type: SidebarTypeEnum.NEWS_VIDEO },
+    { name: "一句话生成视频", components: markRaw(OneSentenceVideo), type: SidebarTypeEnum.ONE_WORD_VIDEO },
+    { name: "分镜混剪", components: markRaw(MontageStoryboardCreate), type: SidebarTypeEnum.STORYBOARD_MIX },
     { name: "声音克隆", components: markRaw(Tone), type: SidebarTypeEnum.VOICE_CLONE },
     { name: "形象克隆", components: markRaw(ModelClone), type: SidebarTypeEnum.ANCHOR_CLONE },
     { name: "我的作品", components: markRaw(Video), type: SidebarTypeEnum.MY_WORKS },
@@ -55,6 +61,7 @@ const getSidebar = computed(() => {
         [SidebarTypeEnum.MATERIAL_MIXING]: SidebarGroupEnum.VIDEO_CREATION,
         [SidebarTypeEnum.NEWS_VIDEO]: SidebarGroupEnum.VIDEO_CREATION,
         [SidebarTypeEnum.ONE_WORD_VIDEO]: SidebarGroupEnum.VIDEO_CREATION,
+        [SidebarTypeEnum.STORYBOARD_MIX]: SidebarGroupEnum.VIDEO_CREATION,
         [SidebarTypeEnum.ANCHOR_CLONE]: SidebarGroupEnum.CLONE_MANAGEMENT,
         [SidebarTypeEnum.VOICE_CLONE]: SidebarGroupEnum.CLONE_MANAGEMENT,
         [SidebarTypeEnum.MY_WORKS]: SidebarGroupEnum.MY_WORKS,

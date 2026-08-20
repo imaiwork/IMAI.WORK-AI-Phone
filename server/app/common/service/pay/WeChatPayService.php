@@ -8,6 +8,7 @@ namespace app\common\service\pay;
 use app\common\enum\PayEnum;
 use app\common\enum\user\UserTerminalEnum;
 use app\common\logic\PayNotifyLogic;
+use app\common\model\deviceauth\DeviceAuthOrder;
 use app\common\model\recharge\GiftPackageOrder;
 use app\common\model\recharge\RechargeOrder;
 use app\common\model\user\UserAuth;
@@ -382,6 +383,13 @@ class WeChatPayService extends BasePayService
                                 return true;
                             }
                             PayNotifyLogic::handle('tokens', $message['out_trade_no'], $extra);
+                            break;
+                        case 'device_auth':
+                            $order = DeviceAuthOrder::where(['sn' => $message['out_trade_no']])->findOrEmpty();
+                            if ($order->isEmpty() || $order->pay_status == PayEnum::ISPAID) {
+                                return true;
+                            }
+                            PayNotifyLogic::handle('deviceAuth', $message['out_trade_no'], $extra);
                             break;
                     }
                 }

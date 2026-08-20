@@ -1,60 +1,58 @@
 <template>
-    <view class="h-screen flex flex-col device-bg">
+    <view class="flex flex-col h-screen bg-[#F7F9FC]">
         <u-navbar
             title="发布视频创建"
             title-bold
             :is-fixed="false"
             :border-bottom="false"
-            :background="{
-                background: 'transparent',
-            }">
-        </u-navbar>
-        <view class="flex-shrink-0 h-[150rpx] flex items-center">
-            <view class="grid grid-cols-2 w-full">
-                <view
-                    v-for="item in steps"
-                    :key="item.step"
-                    class="common-step-item"
-                    :class="{ active: step == item.step }"
-                    @click="handleStep(item.step)">
-                    <view v-if="step > item.step" class="common-step-item-success-icon">
-                        <u-icon name="checkmark" color="#ffffff" size="14"></u-icon>
-                    </view>
-                    <view class="common-step-item-icon" v-else> </view>
-                    <text class="common-step-item-title">{{ item.title }}</text>
-                    <view
-                        v-if="item.step !== steps.length"
-                        class="common-step-item-line"
-                        :class="{ '!border-primary': step > item.step }"></view>
-                </view>
-            </view>
+            :background="{ background: '#ffffff' }" />
+
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-b border-solid border-[#F0F2F5] px-6 pt-[24rpx] pb-[20rpx]">
+            <steps :steps="STEPS" :step="step" @step="handleStep" />
         </view>
-        <view class="grow min-h-0 mt-[24rpx]">
-            <view class="h-full flex flex-col" v-show="step == 1">
-                <view class="px-4">
-                    <view class="text-[30rpx] font-medium">视频素材({{ formData.materialList.length }})</view>
+
+        <view class="grow min-h-0">
+            <view class="h-full flex flex-col" v-show="step === 1">
+                <view class="px-4 pt-[16rpx] space-y-[16rpx]">
+                    <view class="flex items-center justify-between h-[80rpx]">
+                        <view class="flex items-center gap-[10rpx]">
+                            <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                            <text class="text-[32rpx] font-extrabold text-[#0D1117]">选择素材</text>
+                        </view>
+                        <text class="text-[22rpx] text-[#9CA3AF]">
+                            已选
+                            <text class="text-primary font-bold">{{ formData.materialList.length }}</text>
+                            个
+                        </text>
+                    </view>
+                    <view class="flex items-center gap-[8rpx] bg-[#EBF2FF] rounded-[16rpx] px-[20rpx] py-[16rpx]">
+                        <u-icon name="info-circle" color="#0065fb" size="20" />
+                        <text class="text-xs text-primary font-medium">支持同时添加图片与视频素材</text>
+                    </view>
                 </view>
+
                 <view class="grow min-h-0">
                     <scroll-view scroll-y class="h-full">
-                        <view class="grid grid-cols-3 gap-[26rpx] p-4">
+                        <view class="grid grid-cols-3 gap-[16rpx] p-4">
                             <view v-for="(item, index) in formData.materialList" :key="index" class="relative">
                                 <view
-                                    class="aspect-[3/4] rounded-[12rpx] relative overflow-hidden"
+                                    class="aspect-[3/4] rounded-[20rpx] relative overflow-hidden shadow-[0_2rpx_8rpx_rgba(0,0,0,0.08)]"
                                     @click="previewMaterial(item)">
-                                    <image
-                                        :src="item.pic"
-                                        class="w-full h-full rounded-[12rpx]"
-                                        mode="aspectFill"></image>
+                                    <image :src="item.pic" class="w-full h-full" mode="aspectFill" />
                                     <view
-                                        class="absolute bottom-0 h-[40rpx] w-full bg-[rgba(0,0,0,0.5)] flex items-center justify-center z-[88]">
-                                        <image
-                                            v-if="item.type === 'image'"
-                                            src="@/ai_modules/digital_human/static/icons/pic.svg"
-                                            class="w-[24rpx] h-[24rpx]"></image>
-                                        <image
-                                            v-else
-                                            src="@/ai_modules/digital_human/static/icons/video.svg"
-                                            class="w-[24rpx] h-[24rpx]"></image>
+                                        class="absolute top-1 left-1 flex items-center gap-[4rpx] bg-[#00000066] rounded-full px-[8rpx] py-[2rpx]">
+                                        <text class="text-[18rpx] text-white font-mono">
+                                            {{ item.type === "image" ? "图片" : formatAudioTime(item.duration || 0) }}
+                                        </text>
+                                    </view>
+                                </view>
+
+                                <view class="absolute bottom-2 w-full z-[89] flex justify-center">
+                                    <view
+                                        class="px-3 py-1 text-white text-xs rounded-full border border-solid border-[#ffffff]/30"
+                                        @click.stop="handleReplaceMaterial(index)">
+                                        替换
                                     </view>
                                 </view>
                                 <view
@@ -62,124 +60,162 @@
                                     @click="handleDeleteMaterial(index)">
                                     <u-icon name="close" color="#ffffff" size="16"></u-icon>
                                 </view>
-                                <div class="absolute bottom-4 w-full z-[89] flex justify-center">
-                                    <view class="dh-version-name" @click.stop="handleReplaceMaterial(index, 1)">
-                                        替换
-                                    </view>
-                                </div>
                             </view>
                             <view
-                                class="bg-white rounded-[12rpx] flex flex-col items-center justify-center aspect-[3/4]"
-                                @click="chooseUploadType(1)">
-                                <image
-                                    src="@/ai_modules/digital_human/static/icons/add.svg"
-                                    class="w-[40rpx] h-[40rpx]"></image>
-                                <text class="text-xs text-[#4E5158] mt-[24rpx]">添加素材</text>
+                                class="aspect-[3/4] rounded-[20rpx] border-2 border-dashed border-[#0065fb]/30 bg-[#F0F6FF] flex flex-col items-center justify-center gap-[10rpx]"
+                                @click="showUploadCategoryPanel = true">
+                                <view
+                                    class="w-[56rpx] h-[56rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center">
+                                    <u-icon name="plus" color="#0065fb" size="28" />
+                                </view>
+                                <text class="text-xs text-primary font-semibold">添加素材</text>
                             </view>
                         </view>
                     </scroll-view>
                 </view>
             </view>
+
             <view class="h-full flex flex-col" v-show="step === 2">
-                <view class="flex items-center gap-x-2 px-4">
-                    <view
-                        class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
-                        @click="handleShowCopywriter()">
-                        <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="font-medium text-[32rpx]">手动输入</text>
+                <view class="px-4 pt-[16rpx] space-y-[16rpx]">
+                    <view class="flex items-center justify-between h-[80rpx]">
+                        <view class="flex items-center gap-[10rpx]">
+                            <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                            <text class="text-[32rpx] font-extrabold text-[#0D1117]">填写文案</text>
+                        </view>
+                        <text class="text-[22rpx] text-[#9CA3AF]">
+                            共
+                            <text class="text-primary font-bold">{{ formData.copywriterList.length }}</text>
+                            条
+                        </text>
                     </view>
-                    <navigator
-                        url="/ai_modules/digital_human/pages/platform_publish_ai_copywriter/platform_publish_ai_copywriter"
-                        hover-class="none"
-                        class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-black rounded-[10rpx]">
-                        <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="text-white font-medium text-[32rpx]">AI生成</text>
-                    </navigator>
+                    <view class="flex gap-[12rpx]">
+                        <view
+                            class="flex-1 flex items-center justify-center gap-[10rpx] h-[96rpx] rounded-[24rpx] bg-white border border-solid border-[#E5E9F0] shadow-[0_2rpx_8rpx_rgba(0,0,0,0.04)]"
+                            @click="handleShowCopywriter()">
+                            <u-icon name="edit-pen" color="#4B5563" size="22" />
+                            <text class="text-[28rpx] font-bold text-[#334155]">手动输入</text>
+                        </view>
+                        <view
+                            class="flex-1 h-[96rpx] flex items-center justify-center gap-[10rpx] rounded-[24rpx] relative overflow-hidden shadow-[0_8rpx_20rpx_rgba(0,101,251,0.25)]"
+                            style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                            @click="showChooseAgent = true">
+                            <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]" />
+                            <text class="text-[28rpx] font-bold text-white">AI 智能生成</text>
+                        </view>
+                    </view>
                 </view>
-                <view class="grow min-h-0 mt-4">
+
+                <view class="grow min-h-0 mt-[16rpx]">
                     <scroll-view scroll-y class="h-full" v-if="formData.copywriterList.length > 0">
-                        <view class="px-4 flex flex-col gap-y-[30rpx] pb-[100rpx]">
+                        <view class="px-4 flex flex-col gap-[16rpx] pb-[40rpx]">
                             <view
                                 v-for="(item, index) in formData.copywriterList"
                                 :key="index"
-                                class="copywriter-item"
+                                class="relative bg-white rounded-[24rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]"
                                 @click="handleEditCopywriter(index)">
-                                <view class="text-[30rpx] font-medium"> {{ item.title }} </view>
-                                <view class="font-medium mt-[26rpx]">
-                                    {{ item.content }}
-                                </view>
-                                <view class="mt-[50rpx] flex items-center flex-wrap gap-2" v-if="item.topic.length > 0">
-                                    <view
-                                        v-for="(tag, tindex) in item.topic"
-                                        :key="tindex"
-                                        class="text-xs text-[#0000004d]">
-                                        #{{ tag }}
+                                <view class="absolute left-0 top-0 w-[6rpx] h-full bg-primary rounded-l-[24rpx]" />
+                                <view class="pl-[32rpx] pr-[24rpx] pt-[22rpx] pb-[20rpx]">
+                                    <view class="flex items-center gap-[12rpx] mb-[16rpx]">
+                                        <view
+                                            class="w-[40rpx] h-[40rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center flex-shrink-0">
+                                            <text class="text-[22rpx] font-bold text-primary">{{ index + 1 }}</text>
+                                        </view>
+                                        <text class="flex-1 text-[28rpx] font-bold text-[#0D1117] truncate">{{
+                                            item.title
+                                        }}</text>
+                                        <view
+                                            class="w-[40rpx] h-[40rpx] rounded-full bg-[#F3F4F6] flex items-center justify-center"
+                                            @click.stop="handleDeleteCopywriter(index)">
+                                            <u-icon name="close" color="#9CA3AF" size="14" />
+                                        </view>
                                     </view>
-                                </view>
-                                <view class="mt-2" v-if="item.poi">
-                                    <u-icon name="map-fill" size="24" color="#0000004d"></u-icon>
-                                    <text class="text-xs text-[#000000]/50 ml-1 font-medium">{{ item.poi }}</text>
-                                </view>
-                                <view
-                                    class="absolute top-2 right-2 w-5 h-5 flex items-center justify-center bg-[#0000004d] rounded-full"
-                                    @click.stop="handleDeleteCopywriter(index)">
-                                    <u-icon name="close" size="20" color="#ffffff"></u-icon>
+                                    <text class="text-[#4B5563] leading-relaxed">{{ item.content }}</text>
+                                    <view
+                                        v-if="item.topic && item.topic.length > 0"
+                                        class="mt-[16rpx] flex items-center flex-wrap gap-[8rpx]">
+                                        <view
+                                            v-for="(tag, tindex) in item.topic"
+                                            :key="tindex"
+                                            class="bg-[#F0F6FF] rounded-full px-[14rpx] py-[4rpx]">
+                                            <text class="text-[22rpx] text-primary">#{{ tag }}</text>
+                                        </view>
+                                    </view>
+                                    <view v-if="item.poi" class="flex items-center gap-[6rpx] mt-[12rpx]">
+                                        <u-icon name="map-fill" size="22" color="#9CA3AF" />
+                                        <text class="text-[22rpx] text-[#9CA3AF] font-medium">{{ item.poi }}</text>
+                                    </view>
+                                    <view
+                                        class="flex justify-end mt-[12rpx] pt-[16rpx] border-[0] border-t border-solid border-[#F0F2F5]">
+                                        <text class="text-[22rpx] text-[#C0C4CC]">{{ item.content.length }} 字</text>
+                                    </view>
                                 </view>
                             </view>
                         </view>
                     </scroll-view>
-                    <view v-else class="mt-[100rpx]">
-                        <empty :size="260" text="您还没有文案哦" />
-                    </view>
+                    <copywriter-empty v-else />
                 </view>
             </view>
         </view>
-        <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 pb-5">
-            <view class="flex items-center justify-between px-4 h-[140rpx]">
-                <template v-if="step != steps.length">
-                    <view
-                        v-if="step === 1"
-                        class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
-                        :class="[formData.materialList.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
-                        <text class="font-medium text-[32rpx]">{{ formData.materialList.length }}</text>
-                        <text class="text-xs mt-1">已选</text>
-                    </view>
-                    <view v-else>
-                        <view
-                            class="px-[48rpx] py-[20rpx] rounded-md border border-solid border-[#F1F2F5] text-[#878787]"
-                            @click="handleStep(step, 'prev')">
-                            上一步
-                        </view>
-                    </view>
-                    <view
-                        class="px-[48rpx] py-[20rpx] rounded-md text-white"
-                        :class="[canNext ? 'bg-black' : 'bg-[#787878CC]']"
-                        @click="handleStep(step, 'next')">
-                        下一步
-                    </view>
-                </template>
-                <template v-else>
-                    <view
-                        class="flex-1 rounded-[16rpx] w-[456rpx] h-[100rpx] bg-black text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
-                        @click="handleCreateVideo">
-                        创建任务
-                    </view>
-                </template>
+
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-t border-solid border-[#F0F2F5] px-6 pt-[20rpx] pb-[40rpx] flex items-center gap-[16rpx]">
+            <view
+                v-if="step === 1"
+                class="w-[100rpx] h-[96rpx] rounded-[20rpx] flex flex-col items-center justify-center transition-all duration-300"
+                :class="formData.materialList.length > 0 ? 'bg-[#EBF2FF]' : 'bg-[#F0F2F5]'">
+                <text
+                    class="text-[32rpx] font-extrabold leading-none"
+                    :class="formData.materialList.length > 0 ? 'text-primary' : 'text-[#C0C4CC]'">
+                    {{ formData.materialList.length }}
+                </text>
+                <text
+                    class="text-[20rpx] mt-[4rpx]"
+                    :class="formData.materialList.length > 0 ? 'text-[#0065fb]/70' : 'text-[#C0C4CC]'">
+                    已选
+                </text>
+            </view>
+
+            <view
+                v-else-if="step < STEPS.length"
+                class="h-[96rpx] px-[40rpx] rounded-[24rpx] flex items-center border border-solid border-[#E5E9F0] bg-white"
+                @click="handleStep(step, 'prev')">
+                <text class="text-[28rpx] font-semibold text-[#4B5563]">上一步</text>
+            </view>
+
+            <view
+                v-if="step < STEPS.length"
+                class="flex-1 h-[96rpx] rounded-[24rpx] flex items-center justify-center transition-all duration-300"
+                :class="canNext ? 'bg-primary shadow-[0_8rpx_24rpx_rgba(28,111,235,0.30)]' : 'bg-[#E5E7EB]'"
+                @click="handleStep(step, 'next')">
+                <text class="text-[30rpx] font-bold" :class="canNext ? 'text-white' : 'text-[#9CA3AF]'"> 下一步 </text>
+            </view>
+
+            <view
+                v-else
+                class="flex-1 h-[96rpx] rounded-[24rpx] flex items-center justify-center gap-[10rpx] relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.35)]"
+                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                @click="handleCreateVideo">
+                <text class="text-[30rpx] font-extrabold text-white tracking-wide relative z-10">创建任务</text>
             </view>
         </view>
     </view>
+
+    <upload-category-panel v-model="showUploadCategoryPanel" @select="handleSelectCategory" />
     <choose-history v-model="showHistory" :limit="replaceMaterialIndex === -1 ? 9 : 1" @select="handleSelectHistory" />
     <choose-material
         v-model="showMaterialLibrary"
-        :limit="replaceMaterialIndex === -1 ? 9 : 1"
+        :mode="uploadMaterialMode"
+        :limit="replaceMaterialIndex === -1 ? 9 - formData.materialList.length : 1"
         :type="uploadMaterialType"
         @select="handleSelectMaterial" />
+    <choose-agent v-if="showChooseAgent" v-model="showChooseAgent" @select="handleSelectAgent" />
+
     <video-preview
         v-if="showVideoPreview"
         v-model="showVideoPreview"
         :video-url="playItem.url"
         :poster="playItem.pic"
-        @update:show="showVideoPreview = false"></video-preview>
+        @update:show="showVideoPreview = false" />
     <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <create-success-pop
         v-if="showCreateSuccess"
@@ -192,298 +228,74 @@
 
 <script setup lang="ts">
 import { getVideoCreationRecord } from "@/api/app";
-import { createManualPublish } from "@/api/device";
-import useUpload from "@/hooks/useUpload";
-import { useMaterial } from "@/ai_modules/digital_human/hooks/useMaterial";
+import { formatAudioTime } from "@/utils/util";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
-import ChooseHistory from "@/ai_modules/digital_human/components/choose-history/choose-history.vue";
-import ChooseAgent from "@/ai_modules/digital_human/components/choose-agent/choose-agent.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
+import Steps from "@/ai_modules/digital_human/components/steps/steps.vue";
+import CopywriterEmpty from "@/ai_modules/digital_human/components/copywriter-empty/copywriter-empty.vue";
+import ChooseAgent from "@/ai_modules/digital_human/components/choose-agent/choose-agent.vue";
+
+import { STEPS, createDefaultFormData } from "./hooks/types";
+import { useStep } from "./hooks/useStep";
+import { useMaterialStep } from "./hooks/useMaterialStep";
+import { useCopywriter } from "./hooks/useCopywriter";
+import { useCreateTask } from "./hooks/useCreateTask";
 
 const { on } = useEventBusManager();
 
-const steps = ref([
-    { step: 1, title: "选择素材" },
-    { step: 2, title: "填写文案" },
-]);
+const formData = reactive(createDefaultFormData());
 
-const step = ref(1);
+const { step, canNext, handleStep } = useStep(formData);
+const {
+    showUploadCategoryPanel,
+    uploadMaterialType,
+    uploadMaterialMode,
+    showHistory,
+    showMaterialLibrary,
+    replaceMaterialIndex,
+    showVideoPreview,
+    playItem,
+    showUploadProgress,
+    uploadMaterialList,
+    handleSelectCategory,
+    previewMaterial,
+    handleReplaceMaterial,
+    handleDeleteMaterial,
+    handleSelectHistory,
+    handleSelectMaterial,
+} = useMaterialStep(formData);
+const {
+    showChooseAgent,
+    handleSelectAgent,
+    handleShowCopywriter,
+    handleEditCopywriter,
+    handleDeleteCopywriter,
+    onCopywriterConfirm,
+} = useCopywriter(formData);
 
-const formData = reactive<{
-    name: string;
-    copywriterList: any[];
-    materialList: any[];
-}>({
-    name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "发布视频",
-    copywriterList: [],
-    materialList: [],
-});
-const uploadMaterialType = ref<any>();
-const showHistory = ref(false);
-const showMaterialLibrary = ref(false);
-const replaceMaterialIndex = ref(-1);
-const showVideoPreview = ref(false);
-const playItem = reactive({
-    pic: "",
-    url: "",
-});
-
-const editCopywriterIndex = ref(-1);
-const showChooseAgent = ref(false);
-
-const showCreateSuccess = ref(false);
-
-const canStepProceed = (stepNumber: number) => {
-    const strategy: Record<number, () => boolean> = {
-        1: () => formData.materialList.length > 0,
-        2: () => true,
-    };
-    return strategy[stepNumber]?.() ?? false;
-};
-
-const canNext = computed(() => canStepProceed(step.value));
-
-const handleStep = (targetStep: number, type?: "next" | "prev") => {
-    if (type === "prev") {
-        step.value--;
-        return;
-    }
-
-    if (type === "next") {
-        if (canNext.value) {
-            step.value++;
-        } else {
-            const messages: Record<number, () => string> = {
-                1: () => "请至少选择一个素材",
-            };
-            uni.$u.toast(messages[step.value]?.() || "请完成当前步骤");
-        }
-        return;
-    }
-
-    if (targetStep === step.value) return;
-
-    if (targetStep < step.value) {
-        step.value = targetStep;
-    } else {
-        for (let i = 1; i < targetStep; i++) {
-            if (!canStepProceed(i)) {
-                uni.$u.toast("请按顺序完成步骤");
-                return;
-            }
-        }
-        step.value = targetStep;
-    }
-};
-
-const { processAndAppend } = useMaterial(toRef(formData, "materialList"));
-
-const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
-    onSuccess: (materials: any[]) => {
-        const targetList = "materialList";
-        const index = replaceMaterialIndex.value;
-        if (index !== -1) {
-            formData[targetList][index] = materials[0];
-        } else {
-            formData[targetList] = [...formData[targetList], ...materials];
-        }
-        replaceMaterialIndex.value = -1;
-    },
-});
-
-const chooseUploadType = (type: 0 | 1) => {
-    uni.showActionSheet({
-        itemList: ["从相册选择图片", "从相册选择视频", "从图片素材库选择", "从视频素材库选择", "从创作库选择"],
-        success: async (res) => {
-            const { tapIndex } = res;
-            if ([0, 1].includes(tapIndex)) {
-                uploadMaterialType.value = tapIndex === 0 ? "image" : "video";
-
-                uploadAndProcessFiles(uploadMaterialType.value);
-            } else if ([2, 3].includes(tapIndex)) {
-                uploadMaterialType.value = tapIndex === 2 ? "image" : "video";
-                showMaterialLibrary.value = true;
-            } else if (tapIndex === 4) {
-                showHistory.value = true;
-            }
-        },
-    });
-};
-
-const previewMaterial = (item: any) => {
-    const { type, pic, url } = item;
-    if (type === "image") {
-        uni.previewImage({
-            urls: [pic],
-        });
-    } else {
-        playItem.pic = pic;
-        playItem.url = url;
-        showVideoPreview.value = true;
-    }
-};
-
-const handleReplaceMaterial = (index: number, type: 0 | 1) => {
-    replaceMaterialIndex.value = index;
-    chooseUploadType(type);
-};
-
-const handleDeleteMaterial = (index: number) => {
-    formData.materialList.splice(index, 1);
-};
-
-const handleSelectHistory = async (lists: any[]) => {
-    const data = lists.map((item: any) => ({
-        pic: item.pic,
-        url: item.clip_result_url || item.video_result_url,
-        name: item.name,
-        duration: item.duration,
-    }));
-
-    const normalized = data.map((item) => ({
-        ...item,
-        actualUrl: item.url,
-    }));
-
-    await processAndAppend({
-        isParseVideoElement: false,
-        rawList: normalized,
-        urlField: "actualUrl",
-        type: "video",
-        replaceIndex: replaceMaterialIndex.value,
-        onSuccess: () => (showHistory.value = false),
-    });
-};
-const handleSelectMaterial = async (res: any[]) => {
-    const type = uploadMaterialType.value;
-    await processAndAppend({
-        isParseVideoElement: false,
-        rawList: res,
-        urlField: "url",
-        type: type as "video" | "image",
-        replaceIndex: replaceMaterialIndex.value,
-        onSuccess: () => (showMaterialLibrary.value = false),
-    });
-};
-
-const handleSelectCopywriter = (index: number) => {
-    editCopywriterIndex.value = index;
-    const selectedCopywriter = formData.copywriterList[index];
-    handleShowCopywriter(selectedCopywriter);
-};
-
-const handleEditCopywriter = (index: number) => {
-    editCopywriterIndex.value = index;
-    uni.$u.route({
-        url: "/ai_modules/digital_human/pages/platform_publish_copywriter/platform_publish_copywriter",
-        params: { copywriter: JSON.stringify(formData.copywriterList[index]) },
-    });
-};
-
-const handleShowCopywriter = (data?: any) => {
-    uni.$u.route({
-        url: "/ai_modules/digital_human/pages/platform_publish_copywriter/platform_publish_copywriter",
-        params: {
-            data: data ? JSON.stringify(data) : "",
-        },
-    });
-};
-
-const handleDeleteCopywriter = (index: number) => {
-    formData.copywriterList.splice(index, 1);
-};
-
-const handleSelectAgent = (res: any) => {
-    const { data } = res;
-    uni.$u.route({
-        url: "/ai_modules/digital_human/pages/platform_publish_ai_copywriter/platform_publish_ai_copywriter",
-        params: {
-            agentData: JSON.stringify(data),
-        },
-    });
-};
-
-const handleCreateVideo = async () => {
-    if (formData.copywriterList.length == 0) {
-        uni.$u.toast("请至少填写一个文案");
-        return;
-    }
-    const isOverLimit = formData.copywriterList.some((item: any) => item.content.length > 1000);
-    if (isOverLimit) {
-        uni.$u.toast("文案内容含有超过1000个字符的文案，请修改后重新提交");
-        return;
-    }
-    uni.showLoading({
-        title: "创建中...",
-        mask: true,
-    });
-    try {
-        await createManualPublish({
-            name: formData.name,
-            media_url: formData.materialList.map((item: any) => ({ url: item.url, pic: item.pic, type: item.type })),
-            copywriting: formData.copywriterList.map((item: any) => ({
-                title: item.title,
-                content: item.content,
-                topic: item.topic,
-                poi: item.poi,
-            })),
-        });
-        uni.hideLoading();
-        showCreateSuccess.value = true;
-    } catch (error: any) {
-        uni.hideLoading();
-        uni.showToast({
-            title: error,
-            icon: "none",
-            duration: 3000,
-        });
-    }
-};
-
-const toRecord = () => {
-    uni.$u.route({
-        url: "/ai_modules/digital_human/pages/platform_publish_works/platform_publish_works",
-        type: "redirect",
-    });
-};
+const { showCreateSuccess, handleCreateVideo, toRecord } = useCreateTask(formData);
 
 onLoad(async (options: any) => {
-    if (options.source === "creation_video") {
-        const videoIds = JSON.parse(options.ids || "[]");
+    if (options?.source === "creation_video") {
+        const videoIds: string[] = JSON.parse(options.ids || "[]");
         const { lists } = await getVideoCreationRecord({ page_size: 99999 });
-        if (lists?.length) {
-            lists
-                .filter((item: any) => videoIds.includes(item.task_id))
-                .forEach((item: any) => {
-                    formData.materialList.push({
-                        url: item.clip_result_url || item.video_result_url,
-                        pic: item.pic,
-                        type: "video",
-                    });
+        lists
+            ?.filter((item: any) => videoIds.includes(item.task_id))
+            .forEach((item: any) => {
+                formData.materialList.push({
+                    url: item.clip_result_url || item.video_result_url,
+                    pic: item.pic,
+                    type: "video",
+                    duration: item.duration,
                 });
-        }
+            });
     }
     on("confirm", (res: any) => {
         const { type, data } = res;
-        if (
-            type === ListenerTypeEnum.PLATFORM_PUBLISH_COPYWRITER ||
-            type === ListenerTypeEnum.PLATFORM_PUBLISH_AI_COPYWRITER
-        ) {
-            if (data.length == 0) return;
-            if (editCopywriterIndex.value !== -1) {
-                formData.copywriterList[editCopywriterIndex.value] = data[0];
-                editCopywriterIndex.value = -1;
-            } else {
-                formData.copywriterList.push(...data);
-            }
+        if (type === ListenerTypeEnum.PLATFORM_PUBLISH_COPYWRITER || type === ListenerTypeEnum.AI_COPYWRITER) {
+            onCopywriterConfirm(data);
         }
     });
 });
 </script>
-
-<style scoped lang="scss">
-.copywriter-item {
-    @apply rounded-[20rpx] bg-white p-[38rpx] relative;
-}
-</style>

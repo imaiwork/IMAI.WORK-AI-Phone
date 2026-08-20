@@ -1,184 +1,228 @@
 <template>
-    <view class="h-screen flex flex-col device-bg">
+    <view class="flex flex-col h-screen bg-[#F7F9FC]">
         <u-navbar
             title-bold
             title="视频号获客"
             :border-bottom="false"
             :is-fixed="false"
-            :background="{
-                background: 'transparent',
-            }">
-        </u-navbar>
-        <view class="flex-shrink-0 h-[150rpx] flex items-center">
-            <view class="grid grid-cols-4 w-full px-4">
+            :background="{ background: '#ffffff' }" />
+
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-b border-solid border-[#F0F2F5] px-6 pt-[24rpx] pb-[20rpx]">
+            <view class="grid grid-cols-4">
                 <view
-                    v-for="item in steps"
+                    v-for="item in STEPS"
                     :key="item.step"
-                    class="common-step-item"
-                    :class="{ active: step == item.step }"
+                    class="flex flex-col items-center relative"
                     @click="handleStep(item.step)">
-                    <view v-if="step > item.step" class="common-step-item-success-icon">
-                        <u-icon name="checkmark" color="#ffffff" size="14"></u-icon>
-                    </view>
-                    <view class="common-step-item-icon" v-else> </view>
-                    <text class="common-step-item-title">{{ item.title }}</text>
                     <view
-                        v-if="item.step !== steps.length"
-                        class="common-step-item-line"
-                        :class="{ '!border-primary': step > item.step }"></view>
+                        v-if="item.step !== STEPS.length"
+                        class="absolute top-[22rpx] left-[50%] w-full h-[2rpx] transition-all duration-300"
+                        :class="step > item.step ? 'bg-primary' : 'bg-[#E5E9F0]'" />
+                    <view
+                        class="w-[44rpx] h-[44rpx] rounded-full flex items-center justify-center z-10 transition-all duration-300 flex-shrink-0"
+                        :class="step > item.step ? 'bg-primary' : step === item.step ? 'bg-primary' : 'bg-[#E5E9F0]'">
+                        <u-icon v-if="step > item.step" name="checkmark" color="#fff" size="18" />
+                        <text
+                            v-else
+                            class="text-[20rpx] font-bold"
+                            :class="step === item.step ? 'text-white' : 'text-[#9CA3AF]'">
+                            {{ item.step }}
+                        </text>
+                    </view>
+                    <text
+                        class="text-[22rpx] mt-[8rpx] transition-all duration-300"
+                        :class="step >= item.step ? 'text-primary font-semibold' : 'text-[#9CA3AF]'">
+                        {{ item.title }}
+                    </text>
                 </view>
             </view>
         </view>
-        <view class="grow min-h-0 mt-[24rpx]">
+
+        <view class="grow min-h-0 mt-[16rpx]">
             <view v-if="step === 1" class="px-4">
-                <view class="text-[30rpx] font-medium">选择获客类型</view>
-                <view class="grid grid-cols-2 gap-x-[20rpx] mt-[30rpx]">
+                <view class="flex items-center gap-[10rpx] mb-[24rpx]">
+                    <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                    <text class="text-[30rpx] font-extrabold text-[#0D1117]">选择获客类型</text>
+                </view>
+                <view class="grid grid-cols-2 gap-[20rpx]">
                     <view
                         v-for="(item, index) in taskTypes"
                         :key="index"
-                        :class="{ 'shadow-[0_0_0_2rpx_var(--color-primary)]': formData.crawl_type == item.value }"
-                        class="bg-white h-[160rpx] flex flex-col items-center justify-center rounded-[10rpx]"
+                        class="bg-white h-[180rpx] flex flex-col items-center justify-center rounded-[24rpx] transition-all duration-200"
+                        :class="
+                            formData.crawl_type == item.value
+                                ? 'shadow-[0_0_0_2rpx_#0065fb,0_4rpx_16rpx_rgba(0,101,251,0.12)] bg-[#F0F6FF]'
+                                : 'shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]'
+                        "
                         @click="formData.crawl_type = item.value">
                         <image
                             :src="formData.crawl_type == item.value ? item.primaryIcon : item.icon"
-                            class="w-5 h-5"></image>
+                            class="w-[56rpx] h-[56rpx]" />
                         <text
-                            class="text-[30rpx] mt-[10rpx]"
-                            :class="{ 'text-primary': formData.crawl_type == item.value }"
-                            >{{ item.title }}</text
-                        >
+                            class="text-[28rpx] font-semibold mt-[16rpx]"
+                            :class="formData.crawl_type == item.value ? 'text-primary' : 'text-[#4B5563]'">
+                            {{ item.title }}
+                        </text>
                     </view>
                 </view>
             </view>
+
             <view v-if="step === 2" class="flex flex-col h-full">
-                <view class="flex items-center gap-x-2 px-4">
-                    <view
-                        class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
-                        @click="handleEditClue(-1)">
-                        <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="font-medium text-[32rpx]">手动输入</text>
+                <view class="px-4 flex flex-col gap-[16rpx]">
+                    <view class="flex gap-[16rpx]">
+                        <view
+                            class="flex-1 flex items-center justify-center gap-[10rpx] h-[96rpx] rounded-[24rpx] bg-white border border-solid border-[#E5E9F0] shadow-[0_2rpx_8rpx_rgba(0,0,0,0.04)]"
+                            @click="handleEditClue(-1)">
+                            <u-icon name="edit-pen" size="22" color="#4B5563" />
+                            <text class="text-[28rpx] font-bold text-[#0D1117]">手动输入</text>
+                        </view>
+                        <navigator
+                            :url="`/ai_modules/sph/pages/task_ai_clue/task_ai_clue?type=${
+                                formData.crawl_type == 0 ? 2 : 3
+                            }`"
+                            hover-class="none"
+                            class="flex-1 h-[96rpx] flex items-center justify-center gap-[10rpx] rounded-[24rpx] relative overflow-hidden shadow-[0_8rpx_20rpx_rgba(0,101,251,0.25)]"
+                            style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)">
+                            <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]" />
+                            <text class="text-[28rpx] font-bold text-white">AI 生成</text>
+                        </navigator>
                     </view>
-                    <navigator
-                        :url="`/ai_modules/sph/pages/task_ai_clue/task_ai_clue?type=${
-                            formData.crawl_type == 0 ? 2 : 3
-                        }`"
-                        hover-class="none"
-                        class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-primary rounded-[10rpx]">
-                        <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="text-white font-medium text-[32rpx]">AI生成</text>
-                    </navigator>
+                    <view class="flex items-center gap-[10rpx]">
+                        <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                        <text class="text-[28rpx] font-extrabold text-[#0D1117]">线索词列表</text>
+                        <text class="text-xs text-[#9CA3AF]">（{{ formData.keywords.length }}）</text>
+                    </view>
                 </view>
-                <view class="font-medium text-[30rpx] px-4 mt-[60rpx]"
-                    >线索词列表（{{ formData.keywords.length }}）</view
-                >
-                <view class="grow min-h-0 mt-[32rpx]">
+
+                <view class="grow min-h-0 mt-[16rpx]">
                     <scroll-view class="h-full" scroll-y>
-                        <view class="px-4 flex flex-wrap gap-4 pb-[100rpx]">
+                        <view class="px-4 flex flex-wrap gap-[12rpx] pb-[100rpx]">
                             <view
                                 v-for="(item, index) in formData.keywords"
                                 :key="index"
-                                class="keyword-item"
+                                class="flex items-center gap-[10rpx] bg-white rounded-[20rpx] px-[24rpx] py-[14rpx] shadow-[0_2rpx_8rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]"
                                 @click="handleEditClue(index)">
-                                <view>{{ item }}</view>
+                                <text class="text-[#0D1117] font-medium">{{ item }}</text>
                                 <view
-                                    class="w-4 h-4 flex items-center justify-center bg-[#0000004d] rounded-full"
+                                    class="w-[32rpx] h-[32rpx] flex items-center justify-center bg-[#F0F2F5] rounded-full"
                                     @click.stop="handleDeleteClue(index)">
-                                    <u-icon name="close" size="16" color="#ffffff"></u-icon>
+                                    <u-icon name="close" size="14" color="#9CA3AF" />
                                 </view>
                             </view>
                         </view>
                     </scroll-view>
                 </view>
             </view>
+
             <view v-if="step === 3" class="h-full">
                 <scroll-view class="h-full" scroll-y>
-                    <view class="px-4 pb-[100rpx]">
-                        <view class="bg-white rounded-[20rpx] p-[32rpx] mt-[32rpx]">
-                            <view>
-                                <view class="text-[#00000080] flex items-center gap-x-2" @click="showOCRTip = true">
-                                    线索识别方式
-                                    <view
-                                        class="text-white bg-[rgba(0,0,0,0.3)] w-[24rpx] h-[24rpx] rounded-full flex items-center justify-center"
-                                        ><u-icon name="info" :size="16" color="#ffffff"></u-icon
-                                    ></view>
-                                </view>
-                                <view class="mt-[32rpx]">
-                                    <u-radio-group v-model="formData.ocr_type">
-                                        <u-radio :name="1" label-size="24" size="28">云端OCR识别</u-radio>
-                                        <u-radio :name="2" label-size="24" size="28">本地识别</u-radio>
-                                    </u-radio-group>
+                    <view class="px-4 pb-[120rpx] flex flex-col gap-[16rpx]">
+                        <view
+                            class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center gap-[10rpx] px-[28rpx] py-[22rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[28rpx] font-extrabold text-[#0D1117]">线索识别方式</text>
+                                <view
+                                    class="w-[32rpx] h-[32rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center"
+                                    @click="showOCRTip = true">
+                                    <u-icon name="info" size="16" color="#0065fb" />
                                 </view>
                             </view>
-                            <view class="mt-[24rpx]">
-                                <view class="flex items-center justify-between">
+                            <view class="px-[28rpx] py-[24rpx]">
+                                <u-radio-group v-model="formData.ocr_type">
+                                    <u-radio :name="1" label-size="26" size="28">云端 OCR 识别</u-radio>
+                                    <u-radio :name="2" label-size="26" size="28">本地识别</u-radio>
+                                </u-radio-group>
+                            </view>
+                        </view>
+
+                        <view
+                            class="bg-white rounded-[28rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center justify-between px-[28rpx] py-[24rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="flex items-center gap-[10rpx]">
+                                    <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
                                     <view>
-                                        <view class="text-[#00000080]"> 自动添加好友 </view>
-                                        <view class="text-[20rpx] text-[#000000]/50 mt-1">
-                                            线索采集后，将生成加好友任务，根据您所设置的加微任务时间执行
-                                        </view>
-                                    </view>
-                                    <view>
-                                        <u-switch
-                                            :model-value="formData.add_type == '1'"
-                                            :size="32"
-                                            active-value="1"
-                                            inactive-value="0"
-                                            @change="(e: any) => formData.add_type = e == '1' ? '0' : '1'" />
+                                        <text class="text-[28rpx] font-extrabold text-[#0D1117] block"
+                                            >自动添加好友</text
+                                        >
+                                        <text class="text-[22rpx] text-[#9CA3AF] mt-[6rpx] block leading-relaxed">
+                                            线索采集后将生成加好友任务，根据加微任务时间执行
+                                        </text>
                                     </view>
                                 </view>
-                                <template v-if="formData.add_type == '1'">
-                                    <view class="mt-[32rpx]">
-                                        <view class="mb-3">加微微信</view>
-                                        <data-select
-                                            v-model="formData.wechat_id"
-                                            multiple
-                                            :localdata="optionsData.wechatLists"></data-select>
-                                    </view>
-                                    <view class="mt-[32rpx]">
-                                        <view class="mb-3">加微规则</view>
-                                        <data-select
-                                            v-model="formData.wechat_reg_type"
-                                            :clear="false"
-                                            :localdata="[
-                                                { text: '全部', value: 0 },
-                                                { text: '微信号', value: 1 },
-                                                { text: '手机号', value: 2 },
-                                            ]"></data-select>
-                                    </view>
-                                    <view class="flex gap-x-[30rpx] mt-[32rpx]">
+                                <u-switch
+                                    v-model="formData.add_type"
+                                    :size="32"
+                                    :active-value="1"
+                                    :inactive-value="0" />
+                            </view>
+
+                            <template v-if="formData.add_type == 1">
+                                <view class="px-[28rpx] py-[20rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                    <text class="text-xs text-[#9CA3AF] block mb-[12rpx]">加微微信</text>
+                                    <data-select
+                                        v-model="formData.wechat_id"
+                                        multiple
+                                        :localdata="optionsData.wechatLists" />
+                                </view>
+                                <view class="px-[28rpx] py-[20rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                    <text class="text-xs text-[#9CA3AF] block mb-[12rpx]">加微规则</text>
+                                    <data-select
+                                        v-model="formData.wechat_reg_type"
+                                        :clear="false"
+                                        :localdata="[
+                                            { text: '全部', value: 0 },
+                                            { text: '微信号', value: 1 },
+                                            { text: '手机号', value: 2 },
+                                        ]" />
+                                </view>
+                                <view class="px-[28rpx] py-[20rpx]">
+                                    <view class="flex gap-[24rpx]">
                                         <view class="flex-1">
-                                            <view>当前执行</view>
-                                            <view class="flex items-center gap-x-2 mt-[24rpx]">
+                                            <text class="text-xs text-[#9CA3AF] block mb-[12rpx]">当前执行</text>
+                                            <view class="flex items-center gap-[8rpx]">
                                                 <view
-                                                    class="flex-1 flex items-center h-[80rpx] rounded-xl shadow-[0_0_0_1px_#efefef] px-[24rpx]">
+                                                    class="flex-1 bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] h-[80rpx] flex items-center border border-solid border-[#E5E9F0]">
                                                     <u-input
                                                         v-model="formData.add_number"
                                                         type="digit"
                                                         placeholder="请输入"
-                                                        placeholder-style="font-size:26rpx;color:rgba(0,0,0,0.2)" /> </view
-                                                >次
+                                                        placeholder-style="font-size:26rpx;color:#C0C4CC" />
+                                                </view>
+                                                <text class="text-[#9CA3AF] flex-shrink-0">次</text>
                                             </view>
                                         </view>
                                         <view class="flex-1">
-                                            <view>每次间隔</view>
-                                            <view class="flex items-center gap-x-2 mt-[24rpx]">
+                                            <text class="text-xs text-[#9CA3AF] block mb-[12rpx]">每次间隔</text>
+                                            <view class="flex items-center gap-[8rpx]">
                                                 <view
-                                                    class="flex-1 flex items-center h-[80rpx] rounded-xl shadow-[0_0_0_1px_#efefef] px-[24rpx]">
+                                                    class="flex-1 bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] h-[80rpx] flex items-center border border-solid border-[#E5E9F0]">
                                                     <u-input
                                                         v-model="formData.add_interval_time"
                                                         type="digit"
                                                         placeholder="请输入"
-                                                        placeholder-style="font-size:26rpx;color:rgba(0,0,0,0.2)" /> </view
-                                                >分钟
+                                                        placeholder-style="font-size:26rpx;color:#C0C4CC" />
+                                                </view>
+                                                <text class="text-[#9CA3AF] flex-shrink-0">分钟</text>
                                             </view>
                                         </view>
                                     </view>
-                                </template>
-                            </view>
+                                </view>
+                            </template>
                         </view>
-                        <view class="mt-[24rpx] bg-white rounded-[20rpx] p-[32rpx]" v-if="formData.add_type == '1'">
-                            <view class="flex items-center justify-between">
-                                <view>加好友备注内容：</view>
+
+                        <view
+                            v-if="formData.add_type == 1"
+                            class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center justify-between px-[28rpx] py-[22rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="flex items-center gap-[10rpx]">
+                                    <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                    <text class="text-[28rpx] font-extrabold text-[#0D1117]">加好友备注内容</text>
+                                </view>
                                 <u-switch
                                     :model-value="formData.add_remark_enable"
                                     :size="32"
@@ -186,255 +230,277 @@
                                     inactive-value="0"
                                     @change="(e: any) => formData.add_remark_enable = e == 1 ? 0 : 1" />
                             </view>
+
                             <template v-if="formData.add_remark_enable == 0">
-                                <view class="mt-[24rpx] rounded-xl shadow-[0_0_0_1px_#efefef] p-[12rpx]">
-                                    <u-input
-                                        v-model="formData.remark"
-                                        type="textarea"
-                                        height="160"
-                                        placeholder="请输入打招呼内容，为了避免封控，系统将自动调用AI进行去重润色"
-                                        placeholder-style="font-size:26rpx;color:rgba(0,0,0,0.2)" />
-                                </view>
-                                <view class="flex justify-end mt-[24rpx]">
-                                    <u-button
-                                        type="primary"
-                                        :custom-style="{
-                                            width: '240rpx',
-                                            height: '80rpx',
-                                            boxShadow: '0 6px 12px 0 rgba(0, 101, 251, 0.20)',
-                                            fontSize: '26rpx',
-                                            borderRadius: '24rpx',
-                                        }"
-                                        @click="handleGreetingContentSetting(GreetingContentSettingTypeEnum.ADD_FRIEND)"
-                                        >AI提示词设置</u-button
-                                    >
-                                </view>
-                            </template>
-                            <view v-if="formData.add_remark_enable == 1" class="mt-[24rpx]">
-                                <view class="flex flex-wrap gap-2">
+                                <view class="px-[28rpx] py-[20rpx]">
                                     <view
-                                        v-for="(item, index) in formData.remarks"
-                                        :key="index"
-                                        class="border border-solid border-[#E5E5E5] rounded-md px-4 py-2 flex items-center cursor-pointer"
-                                        @click="handleEditRemark(index)">
-                                        <view class="text-xs">{{ item }}</view>
-                                        <view class="w-[2rpx] h-[24rpx] bg-[#E5E5E5] mx-2"></view>
+                                        class="bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0]">
+                                        <u-input
+                                            v-model="formData.remark"
+                                            type="textarea"
+                                            height="160"
+                                            placeholder="请输入打招呼内容，为了避免封控，系统将自动调用AI进行去重润色"
+                                            placeholder-style="font-size:26rpx;color:#C0C4CC" />
+                                    </view>
+                                    <view class="flex justify-end mt-[20rpx]">
                                         <view
-                                            class="flex-shrink-0 w-4 h-4 rounded-full border border-solid border-[#E5E5E5] flex items-center justify-center"
-                                            @click.stop="handleDeleteRemark(index)">
-                                            <u-icon name="close" :size="16" color="#00000080"></u-icon>
+                                            class="flex items-center gap-[8rpx] h-[72rpx] px-[36rpx] rounded-[20rpx] relative overflow-hidden shadow-[0_6rpx_16rpx_rgba(0,101,251,0.25)]"
+                                            style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                                            @click="
+                                                handleGreetingContentSetting(GreetingContentSettingTypeEnum.ADD_FRIEND)
+                                            ">
+                                            <text class="text-xs font-bold text-white">AI 提示词设置</text>
                                         </view>
                                     </view>
                                 </view>
-                                <view class="flex justify-end mt-[24rpx]">
-                                    <u-button
-                                        type="primary"
-                                        :custom-style="{
-                                            boxShadow: '0 6px 12px 0 rgba(0, 101, 251, 0.20)',
-                                            fontSize: '26rpx',
-                                            borderRadius: '24rpx',
-                                        }"
+                            </template>
+
+                            <view v-if="formData.add_remark_enable == 1" class="px-[28rpx] py-[20rpx]">
+                                <view class="flex flex-wrap gap-[12rpx]">
+                                    <view
+                                        v-for="(item, index) in formData.remarks"
+                                        :key="index"
+                                        class="flex items-center gap-[10rpx] bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[12rpx] border border-solid border-[#E5E9F0]"
+                                        @click="handleEditRemark(index)">
+                                        <text class="text-xs text-[#0D1117]">{{ item }}</text>
+                                        <view class="w-[2rpx] h-[24rpx] bg-[#E5E9F0]" />
+                                        <view
+                                            class="w-[32rpx] h-[32rpx] rounded-full bg-[#F0F2F5] flex items-center justify-center"
+                                            @click.stop="handleDeleteRemark(index)">
+                                            <u-icon name="close" size="14" color="#9CA3AF" />
+                                        </view>
+                                    </view>
+                                </view>
+                                <view class="flex justify-end mt-[20rpx]">
+                                    <view
+                                        class="flex items-center gap-[8rpx] h-[72rpx] px-[36rpx] rounded-[20rpx] relative overflow-hidden shadow-[0_6rpx_16rpx_rgba(0,101,251,0.25)]"
+                                        style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
                                         @click="showAddRemark = true">
-                                        新增备注</u-button
-                                    >
+                                        <u-icon name="plus" size="20" color="#fff" />
+                                        <text class="text-xs font-bold text-white">新增备注</text>
+                                    </view>
                                 </view>
                             </view>
                         </view>
                     </view>
                 </scroll-view>
             </view>
+
             <view v-if="step === 4" class="h-full">
                 <scroll-view class="h-full" scroll-y>
-                    <view class="px-4 pb-[100rpx]">
-                        <view>
-                            <view class="text-[30rpx] font-medium"> 基础设置 </view>
-                            <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
-                                <view>
-                                    <view class="text-[#7C7E80]">任务名称</view>
-                                    <view class="mt-[12rpx]">
-                                        <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1">
-                                            <u-input
-                                                v-model="formData.name"
-                                                placeholder-style="font-size: 24rpx;"
-                                                placeholder="请输入任务名称"
-                                                maxlength="50" />
-                                        </view>
-                                    </view>
-                                </view>
-                                <view class="mt-[28rpx]">
-                                    <view class="text-[#7C7E80]">设备选择</view>
-                                    <view class="mt-[12rpx]">
-                                        <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1">
-                                            <navigator
-                                                :url="`/ai_modules/device/pages/device_choose/device_choose?device=${JSON.stringify(
-                                                    formData.device_codes
-                                                )}`"
-                                                class="flex items-center justify-between h-[70rpx]"
-                                                hover-class="none">
-                                                <text
-                                                    :class="[
-                                                        formData.device_codes.length
-                                                            ? 'text-primary font-medium'
-                                                            : 'text-[#00000033]',
-                                                    ]"
-                                                    >{{
-                                                        formData.device_codes.length
-                                                            ? `${formData.device_codes.length}个设备`
-                                                            : "选择设备"
-                                                    }}</text
-                                                >
-                                                <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
-                                            </navigator>
-                                        </view>
-                                    </view>
+                    <view class="px-4 pb-[120rpx] flex flex-col gap-[16rpx]">
+                        <view
+                            class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center gap-[10rpx] px-[28rpx] py-[22rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[28rpx] font-extrabold text-[#0D1117]">基础设置</text>
+                            </view>
+                            <view class="px-[28rpx] py-[20rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <text class="text-xs text-[#9CA3AF] block mb-[12rpx]">任务名称</text>
+                                <view
+                                    class="bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[14rpx] border border-solid border-[#E5E9F0]">
+                                    <u-input
+                                        v-model="formData.name"
+                                        placeholder-style="font-size:26rpx;color:#C0C4CC;"
+                                        placeholder="请输入任务名称"
+                                        maxlength="50" />
                                 </view>
                             </view>
+                            <navigator
+                                :url="`/ai_modules/device/pages/device_choose/device_choose?device=${JSON.stringify(
+                                    formData.device_codes,
+                                )}`"
+                                class="flex items-center justify-between px-[28rpx] h-[100rpx]"
+                                hover-class="none">
+                                <text class="text-xs text-[#9CA3AF]">设备选择</text>
+                                <view class="flex items-center gap-[6rpx]">
+                                    <text
+                                        class="font-semibold"
+                                        :class="formData.device_codes.length ? 'text-primary' : 'text-[#C0C4CC]'">
+                                        {{
+                                            formData.device_codes.length
+                                                ? `${formData.device_codes.length} 个设备`
+                                                : "选择设备"
+                                        }}
+                                    </text>
+                                    <u-icon name="arrow-right" size="20" color="#C0C4CC" />
+                                </view>
+                            </navigator>
                         </view>
-                        <view class="mt-[32rpx]">
-                            <view class="text-[30rpx] font-medium"> 时间设置 </view>
-                            <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
-                                <view>
-                                    <view class="bg-[#F4F5F9] rounded-[16rpx] p-[6rpx] flex mb-[36rpx] gap-2">
-                                        <view
-                                            v-for="(item, index) in taskExecTypeOptions"
-                                            class="flex-1 flex items-center justify-center gap-x-[8rpx] h-[72rpx] rounded-[12rpx] text-[28rpx]"
-                                            :key="index"
-                                            :class="
-                                                formData.task_exec_type === item.value
-                                                    ? 'bg-white text-primary font-medium shadow-[0_2rpx_8rpx_rgba(0,0,0,0.06)]'
-                                                    : 'text-[#00000066]'
-                                            "
-                                            @click="formData.task_exec_type = item.value">
-                                            <u-icon
-                                                :name="item.icon"
-                                                size="32"
-                                                :color="
-                                                    formData.task_exec_type === item.value ? '#2979ff' : '#00000066'
-                                                "></u-icon>
-                                            <text>{{ item.text }}</text>
-                                        </view>
+
+                        <view
+                            class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center gap-[10rpx] px-[28rpx] py-[22rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[28rpx] font-extrabold text-[#0D1117]">时间设置</text>
+                            </view>
+                            <view class="px-[28rpx] py-[20rpx]">
+                                <view class="flex bg-[#F0F2F5] rounded-[20rpx] p-[6rpx] mb-[24rpx]">
+                                    <view
+                                        v-for="(item, index) in TASK_EXEC_TYPE_OPTIONS"
+                                        :key="index"
+                                        class="flex-1 flex items-center justify-center gap-[8rpx] h-[72rpx] rounded-[16rpx] font-semibold transition-all duration-200"
+                                        :class="
+                                            formData.task_exec_type === item.value
+                                                ? 'bg-white text-primary shadow-[0_2rpx_8rpx_rgba(0,0,0,0.08)]'
+                                                : 'text-[#9CA3AF]'
+                                        "
+                                        @click="formData.task_exec_type = item.value">
+                                        <u-icon
+                                            :name="item.icon"
+                                            size="26"
+                                            :color="formData.task_exec_type === item.value ? '#0065fb' : '#9CA3AF'" />
+                                        <text>{{ item.text }}</text>
                                     </view>
                                 </view>
-                                <view class="mt-[28rpx]" v-if="formData.task_exec_type === 0">
-                                    <view class="text-[#7C7E80]">任务频率</view>
-                                    <view class="mt-[22rpx]">
-                                        <view class="flex flex-wrap gap-x-2 gap-y-3">
-                                            <view
-                                                v-for="(item, index) in [1, 3, 5, 10, 30]"
-                                                :key="index"
-                                                :class="{ active: formData.task_frep == item && currentFrequency != 5 }"
-                                                class="frequency-item"
-                                                @click="handleFrequency(item, index)">
+
+                                <view v-if="formData.task_exec_type === 0" class="mb-[24rpx]">
+                                    <text class="text-xs text-[#9CA3AF] block mb-[16rpx]">任务频率</text>
+                                    <view class="flex flex-wrap gap-[12rpx]">
+                                        <view
+                                            v-for="(item, index) in FREQUENCY_OPTIONS"
+                                            :key="index"
+                                            class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                            :class="
+                                                formData.task_frep == item && currentFrequency != 5
+                                                    ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                    : 'bg-[#F0F2F5]'
+                                            "
+                                            @click="handleFrequency(item, index)">
+                                            <text
+                                                class="font-bold"
+                                                :class="
+                                                    formData.task_frep == item && currentFrequency != 5
+                                                        ? 'text-primary'
+                                                        : 'text-[#9CA3AF]'
+                                                ">
                                                 {{ item }}天
-                                            </view>
-                                            <view
-                                                class="frequency-item"
-                                                :class="{ active: currentFrequency == 5 }"
-                                                @click="handleCustomDate(1)">
-                                                自定义
-                                            </view>
+                                            </text>
+                                        </view>
+                                        <view
+                                            class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                            :class="
+                                                currentFrequency == 5
+                                                    ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                    : 'bg-[#F0F2F5]'
+                                            "
+                                            @click="handleCustomDate(1)">
+                                            <text
+                                                class="font-bold"
+                                                :class="currentFrequency == 5 ? 'text-primary' : 'text-[#9CA3AF]'"
+                                                >自定义</text
+                                            >
                                         </view>
                                     </view>
                                 </view>
 
-                                <view class="mt-[28rpx]" v-if="formData.custom_date.length && currentFrequency == 5">
-                                    <view class="flex items-center justify-between">
-                                        <view class="text-[#7C7E80]">任务时间</view>
+                                <view v-if="formData.custom_date.length && currentFrequency == 5" class="mb-[24rpx]">
+                                    <view class="flex items-center justify-between mb-[12rpx]">
+                                        <text class="text-xs text-[#9CA3AF]">任务时间</text>
                                         <view
-                                            class="flex items-center gap-x-1"
                                             v-if="formData.custom_date.length > 8"
+                                            class="flex items-center gap-[4rpx]"
                                             @click="isExpandDate = !isExpandDate">
-                                            <text class="text-[rgba(0,0,0,0.5)]">{{
+                                            <text class="text-xs text-[#9CA3AF]">{{
                                                 isExpandDate ? "收起" : "展开"
                                             }}</text>
                                             <u-icon
                                                 :name="isExpandDate ? 'arrow-up' : 'arrow-down'"
-                                                size="24"
-                                                color="#00000033"></u-icon>
+                                                size="22"
+                                                color="#9CA3AF" />
                                         </view>
                                     </view>
-                                    <view
-                                        class="mt-[22rpx]"
-                                        :class="{ 'max-h-[120rpx] overflow-hidden': !isExpandDate }">
-                                        <view class="flex flex-wrap gap-2">
+                                    <view :class="{ 'max-h-[120rpx] overflow-hidden': !isExpandDate }">
+                                        <view class="flex flex-wrap gap-[10rpx]">
                                             <view
                                                 v-for="(item, index) in formData.custom_date"
                                                 :key="index"
-                                                class="date-item">
-                                                {{ formatDate(item) }}
+                                                class="px-[16rpx] py-[8rpx] rounded-[12rpx] bg-[#EBF2FF]">
+                                                <text class="text-[22rpx] text-primary font-semibold">{{
+                                                    formatDate(item)
+                                                }}</text>
                                             </view>
                                         </view>
                                     </view>
                                 </view>
-                                <view class="mt-[28rpx]" v-if="formData.task_exec_type === 1">
-                                    <view
-                                        class="flex items-center justify-between pb-[36rpx] border-[0] border-b-[1rpx] border-solid border-[#F4F5F9] mb-[36rpx]">
-                                        <view>
-                                            <view class="font-medium text-[28rpx] text-[#333]">任务执行时间</view>
-                                            <view class="text-[#00000066] text-[22rpx] mt-[10rpx] leading-[1.6]">
-                                                当内容执行完成后，任务会根据<br />设定时间提前结束
-                                            </view>
-                                        </view>
-                                        <view class="flex items-center gap-x-[16rpx]">
-                                            <view
-                                                class="w-[60rpx] h-[60rpx] rounded-[12rpx] border border-solid border-[#EDEDED] flex items-center justify-center bg-[#FAFAFA]"
-                                                @click="handleExecuteMinuteChange(-1)">
-                                                <text class="text-[36rpx] text-[#333] leading-none">-</text>
-                                            </view>
-                                            <view class="max-w-[130rpx] flex items-center justify-center">
-                                                <u-input
-                                                    class="flex-1 font-bold"
-                                                    v-model="formData.minutes"
-                                                    type="digit"
-                                                    placeholder=""
-                                                    :custom-style="{ textAlign: 'center' }" />
 
-                                                <text class="text-[#00000066] text-[26rpx]"> 分钟</text>
-                                            </view>
-                                            <view
-                                                class="w-[60rpx] h-[60rpx] rounded-[12rpx] border border-solid border-[#EDEDED] flex items-center justify-center bg-[#FAFAFA]"
-                                                @click="handleExecuteMinuteChange(1)">
-                                                <text class="text-[36rpx] text-[#333] leading-none">+</text>
-                                            </view>
+                                <view
+                                    v-if="formData.task_exec_type === 1"
+                                    class="flex items-center justify-between py-[20rpx] border-[0] border-b border-solid border-[#F0F2F5] mb-[20rpx]">
+                                    <view>
+                                        <text class="text-[28rpx] font-semibold text-[#0D1117] block mb-[8rpx]"
+                                            >任务执行时间</text
+                                        >
+                                        <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed"
+                                            >当内容执行完成后，任务会根据设定时间提前结束</text
+                                        >
+                                    </view>
+                                    <view class="flex items-center gap-[12rpx] flex-shrink-0 ml-[16rpx]">
+                                        <view
+                                            class="w-[56rpx] h-[56rpx] rounded-[16rpx] border border-solid border-[#E5E9F0] bg-white flex items-center justify-center"
+                                            @click="handleExecuteMinuteChange(-1)">
+                                            <text class="text-[32rpx] text-primary font-bold leading-none">−</text>
+                                        </view>
+                                        <view
+                                            class="w-[100rpx] h-[56rpx] bg-[#EBF2FF] rounded-[14rpx] flex items-center justify-center">
+                                            <u-input
+                                                v-model="formData.minutes"
+                                                type="digit"
+                                                placeholder=""
+                                                :custom-style="{
+                                                    color: '#0065fb',
+                                                    fontWeight: '800',
+                                                    fontSize: '28rpx',
+                                                    textAlign: 'center',
+                                                }"
+                                                input-align="center" />
+                                        </view>
+                                        <text class="text-xs text-[#9CA3AF]">分钟</text>
+                                        <view
+                                            class="w-[56rpx] h-[56rpx] rounded-[16rpx] border border-solid border-[#E5E9F0] bg-white flex items-center justify-center"
+                                            @click="handleExecuteMinuteChange(1)">
+                                            <text class="text-[32rpx] text-primary font-bold leading-none">＋</text>
                                         </view>
                                     </view>
                                 </view>
-                                <view class="mt-[28rpx]">
-                                    <view class="text-[#7C7E80]">每日执行时间</view>
+
+                                <view>
+                                    <text class="text-xs text-[#9CA3AF] block mb-[16rpx]">每日执行时间</text>
                                     <template v-if="formData.task_exec_type == 1">
                                         <view
-                                            class="mt-[12rpx] flex items-center justify-between h-[90rpx] border-[0] border-b-[1rpx] border-solid border-[#EDEDED]">
-                                            <text class="text-[#333] font-medium text-[28rpx]">今日发布时间</text>
+                                            class="flex items-center justify-between h-[80rpx] bg-[#F0FDF4] rounded-[16rpx] px-[20rpx] border border-solid border-[#BBF7D0]">
+                                            <text class="font-semibold text-[#16A34A]">今日发布时间</text>
                                             <view
-                                                class="px-[24rpx] py-[10rpx] rounded-full bg-[#EEF3FF] text-primary font-medium text-[26rpx]">
-                                                立即执行
+                                                class="px-[20rpx] py-[8rpx] rounded-full bg-[#DCFCE7] border border-solid border-[#BBF7D0]">
+                                                <text class="text-xs font-bold text-[#16A34A]">立即执行</text>
                                             </view>
                                         </view>
                                     </template>
-                                    <view class="mt-[12rpx] flex items-center gap-x-4" v-else>
+                                    <view v-else class="flex items-center gap-[16rpx]">
                                         <view
-                                            class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
+                                            class="flex-1 bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0]">
                                             <picker
                                                 mode="time"
                                                 class="w-full"
                                                 :value="formData.time_config[0]"
                                                 @change="handleStartTimeChange">
-                                                <view class="flex items-center justify-between h-[70rpx]">
+                                                <view class="flex items-center justify-between">
                                                     <text
-                                                        :class="[
-                                                            formData.time_config[0]
-                                                                ? 'text-primary font-medium'
-                                                                : 'text-[#00000033]',
-                                                        ]"
-                                                        >{{ formData.time_config[0] || "开始时间" }}</text
-                                                    >
-                                                    <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
+                                                        class="font-semibold"
+                                                        :class="
+                                                            formData.time_config[0] ? 'text-primary' : 'text-[#C0C4CC]'
+                                                        ">
+                                                        {{ formData.time_config[0] || "开始时间" }}
+                                                    </text>
+                                                    <u-icon name="arrow-right" size="20" color="#C0C4CC" />
                                                 </view>
                                             </picker>
                                         </view>
-                                        <view class="text-[#7C7E80]">至</view>
+                                        <text class="text-xs text-[#9CA3AF] flex-shrink-0">至</text>
                                         <view
-                                            class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
+                                            class="flex-1 bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0]">
                                             <picker
                                                 mode="time"
                                                 class="w-full"
@@ -442,16 +508,15 @@
                                                 :disabled="!formData.time_config[0]"
                                                 @click="handleEndTimeClick"
                                                 @change="handleEndTimeChange">
-                                                <view class="flex items-center justify-between h-[70rpx]">
+                                                <view class="flex items-center justify-between">
                                                     <text
-                                                        :class="[
-                                                            formData.time_config[1]
-                                                                ? 'text-primary font-medium'
-                                                                : 'text-[#00000033]',
-                                                        ]"
-                                                        >{{ formData.time_config[1] || "结束时间" }}</text
-                                                    >
-                                                    <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
+                                                        class="font-semibold"
+                                                        :class="
+                                                            formData.time_config[1] ? 'text-primary' : 'text-[#C0C4CC]'
+                                                        ">
+                                                        {{ formData.time_config[1] || "结束时间" }}
+                                                    </text>
+                                                    <u-icon name="arrow-right" size="20" color="#C0C4CC" />
                                                 </view>
                                             </picker>
                                         </view>
@@ -459,201 +524,239 @@
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-[32rpx]" v-if="formData.add_type == '1'">
-                            <view class="text-[30rpx] font-medium"> 【加微任务】时间设置 </view>
-                            <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
+
+                        <view
+                            v-if="formData.add_type == 1"
+                            class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center gap-[10rpx] px-[28rpx] py-[22rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[28rpx] font-extrabold text-[#0D1117]">【加微任务】时间设置</text>
+                            </view>
+                            <view class="px-[28rpx] py-[20rpx]">
                                 <u-radio-group v-model="formData.wechat_time_type">
-                                    <u-radio :name="0" :size="28" label-size="26"> 当日获客任务完成后执行 </u-radio>
-                                    <u-radio :name="1" :size="28" label-size="26"> 自定义 </u-radio>
+                                    <u-radio :name="0" :size="28" label-size="26">当日获客任务完成后执行</u-radio>
+                                    <u-radio :name="1" :size="28" label-size="26">自定义</u-radio>
                                 </u-radio-group>
-                                <view class="mt-[38rpx]" v-if="formData.wechat_time_type == 1">
+
+                                <view
+                                    v-if="formData.wechat_time_type == 1"
+                                    class="mt-[24rpx] flex flex-col gap-[20rpx]">
                                     <view>
-                                        <view class="text-xs text-[#000000]/30">任务频率</view>
-                                        <view class="mt-[22rpx]">
-                                            <view class="flex flex-wrap gap-x-2 gap-y-3">
-                                                <view
-                                                    v-for="(item, index) in [1, 3, 5, 10, 30]"
-                                                    :key="index"
-                                                    :class="{
-                                                        active:
-                                                            formData.wechat_task_frep == item &&
-                                                            currentWechatFrequency != 5,
-                                                    }"
-                                                    class="frequency-item"
-                                                    @click="handleWechatFrequency(item, index)">
+                                        <text class="text-xs text-[#9CA3AF] block mb-[16rpx]">任务频率</text>
+                                        <view class="flex flex-wrap gap-[12rpx]">
+                                            <view
+                                                v-for="(item, index) in FREQUENCY_OPTIONS"
+                                                :key="index"
+                                                class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                                :class="
+                                                    formData.wechat_task_frep == item && currentWechatFrequency != 5
+                                                        ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                        : 'bg-[#F0F2F5]'
+                                                "
+                                                @click="handleWechatFrequency(item, index)">
+                                                <text
+                                                    class="font-bold"
+                                                    :class="
+                                                        formData.wechat_task_frep == item && currentWechatFrequency != 5
+                                                            ? 'text-primary'
+                                                            : 'text-[#9CA3AF]'
+                                                    ">
                                                     {{ item }}天
-                                                </view>
-                                                <view
-                                                    class="frequency-item"
-                                                    :class="{ active: currentWechatFrequency == 5 }"
-                                                    @click="handleCustomDate(2)">
-                                                    自定义
-                                                </view>
+                                                </text>
+                                            </view>
+                                            <view
+                                                class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                                :class="
+                                                    currentWechatFrequency == 5
+                                                        ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                        : 'bg-[#F0F2F5]'
+                                                "
+                                                @click="handleCustomDate(2)">
+                                                <text
+                                                    class="font-bold"
+                                                    :class="
+                                                        currentWechatFrequency == 5 ? 'text-primary' : 'text-[#9CA3AF]'
+                                                    "
+                                                    >自定义</text
+                                                >
                                             </view>
                                         </view>
                                     </view>
-                                    <view class="mt-[30rpx]" v-if="formData.wechat_custom_date.length">
-                                        <view class="] text-xs text-[#000000]/30">任务日期</view>
+
+                                    <view v-if="formData.wechat_custom_date.length">
+                                        <text class="text-xs text-[#9CA3AF] block mb-[12rpx]">任务日期</text>
                                         <view
-                                            class="mt-[22rpx] border-[0] border-b-[1rpx] border-solid border-[#000000]/[0.03] pb-2">
-                                            <view :class="{ 'max-h-[120rpx] overflow-hidden': !isWechatExpandDate }">
-                                                <view class="flex flex-wrap gap-2">
-                                                    <view
-                                                        v-for="(item, index) in formData.wechat_custom_date"
-                                                        :key="index"
-                                                        class="date-item">
-                                                        {{ formatDate(item) }}
-                                                    </view>
+                                            :class="{
+                                                'max-h-[120rpx] overflow-hidden': !isWechatExpandDate,
+                                            }">
+                                            <view class="flex flex-wrap gap-[10rpx]">
+                                                <view
+                                                    v-for="(item, index) in formData.wechat_custom_date"
+                                                    :key="index"
+                                                    class="px-[16rpx] py-[8rpx] rounded-[12rpx] bg-[#EBF2FF]">
+                                                    <text class="text-[22rpx] text-primary font-semibold">{{
+                                                        formatDate(item)
+                                                    }}</text>
                                                 </view>
                                             </view>
                                         </view>
                                     </view>
-                                    <view class="mt-[30rpx]">
-                                        <view class="text-xs text-[#000000]/30">每日加微执行时间</view>
-                                        <view class="text-xs text-[#000000]/30"
-                                            >设定的时间小于获客任务时间时，将在次日执行</view
+
+                                    <view>
+                                        <text class="text-xs text-[#9CA3AF] block mb-[4rpx]">每日加微执行时间</text>
+                                        <text class="text-[22rpx] text-[#C0C4CC] block mb-[16rpx]"
+                                            >设定的时间小于获客任务时间时，将在次日执行</text
                                         >
-                                        <view class="mt-[28rpx]">
-                                            <view class="flex items-center gap-x-4">
-                                                <view
-                                                    class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
-                                                    <picker
-                                                        mode="time"
-                                                        class="w-full"
-                                                        :value="formData.wechat_time_config[0]"
-                                                        @change="handleWechatStartTimeChange">
-                                                        <view class="flex items-center justify-between h-[70rpx]">
-                                                            <text
-                                                                :class="[
-                                                                    formData.wechat_time_config[0]
-                                                                        ? 'text-primary font-medium'
-                                                                        : 'text-[#00000033]',
-                                                                ]"
-                                                                >{{
-                                                                    formData.wechat_time_config[0] || "开始时间"
-                                                                }}</text
-                                                            >
-                                                            <u-icon
-                                                                name="arrow-right"
-                                                                size="24"
-                                                                color="#00000033"></u-icon>
-                                                        </view>
-                                                    </picker>
-                                                </view>
-                                                <view class="text-[#7C7E80]">至</view>
-                                                <view
-                                                    class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1 flex-1">
-                                                    <picker
-                                                        mode="time"
-                                                        class="w-full"
-                                                        :value="formData.wechat_time_config[1]"
-                                                        :disabled="!formData.wechat_time_config[0]"
-                                                        @click="handleWechatEndTimeClick"
-                                                        @change="handleWechatEndTimeChange">
-                                                        <view class="flex items-center justify-between h-[70rpx]">
-                                                            <text
-                                                                :class="[
-                                                                    formData.wechat_time_config[1]
-                                                                        ? 'text-primary font-medium'
-                                                                        : 'text-[#00000033]',
-                                                                ]"
-                                                                >{{
-                                                                    formData.wechat_time_config[1] || "结束时间"
-                                                                }}</text
-                                                            >
-                                                            <u-icon
-                                                                name="arrow-right"
-                                                                size="24"
-                                                                color="#00000033"></u-icon>
-                                                        </view>
-                                                    </picker>
-                                                </view>
+                                        <view class="flex items-center gap-[16rpx]">
+                                            <view
+                                                class="flex-1 bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0]">
+                                                <picker
+                                                    mode="time"
+                                                    class="w-full"
+                                                    :value="formData.wechat_time_config[0]"
+                                                    @change="handleWechatStartTimeChange">
+                                                    <view class="flex items-center justify-between">
+                                                        <text
+                                                            class="font-semibold"
+                                                            :class="
+                                                                formData.wechat_time_config[0]
+                                                                    ? 'text-primary'
+                                                                    : 'text-[#C0C4CC]'
+                                                            ">
+                                                            {{ formData.wechat_time_config[0] || "开始时间" }}
+                                                        </text>
+                                                        <u-icon name="arrow-right" size="20" color="#C0C4CC" />
+                                                    </view>
+                                                </picker>
+                                            </view>
+                                            <text class="text-xs text-[#9CA3AF] flex-shrink-0">至</text>
+                                            <view
+                                                class="flex-1 bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0]">
+                                                <picker
+                                                    mode="time"
+                                                    class="w-full"
+                                                    :value="formData.wechat_time_config[1]"
+                                                    :disabled="!formData.wechat_time_config[0]"
+                                                    @click="handleWechatEndTimeClick"
+                                                    @change="handleWechatEndTimeChange">
+                                                    <view class="flex items-center justify-between">
+                                                        <text
+                                                            class="font-semibold"
+                                                            :class="
+                                                                formData.wechat_time_config[1]
+                                                                    ? 'text-primary'
+                                                                    : 'text-[#C0C4CC]'
+                                                            ">
+                                                            {{ formData.wechat_time_config[1] || "结束时间" }}
+                                                        </text>
+                                                        <u-icon name="arrow-right" size="20" color="#C0C4CC" />
+                                                    </view>
+                                                </picker>
                                             </view>
                                         </view>
                                     </view>
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-[50rpx]" v-if="taskErrorMsg">
-                            <view class="font-medium">任务冲突</view>
-                            <view class="text-[#ff2442] mt-[20rpx]">
-                                {{ taskErrorMsg }}
+
+                        <view
+                            v-if="taskErrorMsg"
+                            class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center gap-[10rpx] px-[28rpx] py-[20rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="w-[6rpx] h-[32rpx] bg-[#EF4444] rounded-full" />
+                                <u-icon name="warning-fill" size="24" color="#EF4444" />
+                                <text class="text-[28rpx] font-bold text-[#EF4444]">任务冲突</text>
+                            </view>
+                            <view class="px-[28rpx] py-[20rpx]">
+                                <text class="text-[#EF4444] leading-relaxed">{{ taskErrorMsg }}</text>
                             </view>
                         </view>
                     </view>
                 </scroll-view>
             </view>
         </view>
-        <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 pb-5">
-            <view class="flex items-center justify-between px-4 h-[140rpx]">
-                <template v-if="step != steps.length">
-                    <view>
-                        <view
-                            v-show="step != 1"
-                            class="px-[48rpx] py-[20rpx] rounded-md border border-solid border-[#F1F2F5] text-[#878787]"
-                            @click="handleStep(step, 'prev')">
-                            上一步
-                        </view>
-                    </view>
-                    <view
-                        class="px-[48rpx] py-[20rpx] rounded-md text-white"
-                        :class="[canNext ? 'bg-primary' : 'bg-[#787878CC]']"
-                        @click="handleStep(step, 'next')">
-                        下一步
-                    </view>
-                </template>
-                <template v-else>
-                    <view
-                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
-                        @click="handleCreateTask">
-                        创建任务
-                    </view>
-                </template>
-            </view>
+
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-t border-solid border-[#F0F2F5] px-4 pt-[20rpx] pb-[40rpx] flex items-center gap-[16rpx]">
+            <template v-if="step != STEPS.length">
+                <view
+                    v-show="step != 1"
+                    class="h-[96rpx] px-[40rpx] rounded-[24rpx] flex items-center gap-[8rpx] border border-solid border-[#E5E9F0] bg-white"
+                    @click="handleStep(step, 'prev')">
+                    <text class="text-[28rpx] font-semibold text-[#4B5563]">上一步</text>
+                </view>
+                <view
+                    class="flex-1 h-[96rpx] rounded-[24rpx] flex items-center justify-center transition-all duration-300"
+                    :class="canNext ? 'shadow-[0_8rpx_24rpx_rgba(28,111,235,0.30)]' : ''"
+                    :style="
+                        canNext
+                            ? 'background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)'
+                            : 'background: #C0C4CC'
+                    "
+                    @click="handleStep(step, 'next')">
+                    <text class="text-[30rpx] font-bold text-white">下一步</text>
+                </view>
+            </template>
+            <template v-else>
+                <view
+                    class="flex-1 h-[100rpx] rounded-[24rpx] flex items-center justify-center relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.35)]"
+                    style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                    @click="handleCreateTask">
+                    <text class="text-[32rpx] font-extrabold text-white tracking-wide">创建任务</text>
+                </view>
+            </template>
         </view>
     </view>
+
     <clue-edit ref="clueEditRef" v-model="showClueEdit" @confirm="handleClueConfirm" @close="showClueEdit = false" />
+
     <u-popup v-model="showOCRTip" mode="bottom" border-radius="24" @close="showOCRTip = false">
-        <view>
-            <view class="text-center text-lg font-medium py-3"> 线索识别方式 </view>
-            <u-line />
-            <view class="w-full overflow-hidden text-[#4C4B6A] text-xs p-6">
-                <view>
-                    本地识别（每条扣{{
-                        getOCRLocalToken
-                    }}算力）使用系统内置识别逻辑完成，识别率较依赖本地环境，复杂图片可能不够精准
+        <view class="p-[32rpx]">
+            <view class="text-center text-[30rpx] font-bold text-[#0D1117] py-[16rpx]">线索识别方式</view>
+            <view class="w-full h-[2rpx] bg-[#F0F2F5] mb-[24rpx]" />
+            <view class="flex flex-col gap-[16rpx] pb-[40rpx]">
+                <view class="bg-[#F7F9FC] rounded-[20rpx] p-[24rpx] border border-solid border-[#E5E9F0]">
+                    <text class="font-semibold text-[#0D1117] block mb-[8rpx]"
+                        >本地识别（每条扣 {{ getOCRLocalToken }} 算力）</text
+                    >
+                    <text class="text-xs text-[#9CA3AF] leading-relaxed"
+                        >使用系统内置识别逻辑完成，识别率较依赖本地环境，复杂图片可能不够精准</text
+                    >
                 </view>
-                <view class="mt-3">
-                    云端OCR识别（每条扣 {{ getOCRCloudToken }} 算力）使用云端OCR服务识别微信号，每次识别消耗{{
-                        getOCRCloudToken
-                    }}算力，识别率更高，支持更复杂的图片和场景
+                <view class="bg-[#EBF2FF] rounded-[20rpx] p-[24rpx] border border-solid border-[#BFDBFE]">
+                    <text class="font-semibold text-primary block mb-[8rpx]"
+                        >云端 OCR 识别（每条扣 {{ getOCRCloudToken }} 算力）</text
+                    >
+                    <text class="text-xs text-[#4B5563] leading-relaxed"
+                        >使用云端 OCR 服务识别微信号，识别率更高，支持更复杂的图片和场景</text
+                    >
                 </view>
             </view>
         </view>
     </u-popup>
+
     <u-popup v-model="showAddRemark" mode="center" border-radius="24" width="90%" closeable>
-        <view class="w-full p-4">
-            <view class="text-center text-lg font-medium"> 加好友备注文案 </view>
-            <view class="border border-solid border-[#E5E5E5] rounded-md p-2 my-4">
+        <view class="p-[32rpx]">
+            <text class="text-center text-[30rpx] font-bold text-[#0D1117] block mb-[28rpx]">加好友备注文案</text>
+            <view
+                class="bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0] mb-[24rpx]">
                 <u-input
                     v-model="addRemarkContent"
                     maxlength="100"
                     placeholder="请输入打招呼内容"
-                    placeholder-style="font-size:26rpx;color:rgba(0,0,0,0.2)" />
+                    placeholder-style="font-size:26rpx;color:#C0C4CC" />
             </view>
-            <u-button
-                type="primary"
-                :custom-style="{
-                    height: '100rpx',
-                    boxShadow: '0 6px 12px 0 rgba(0, 101, 251, 0.20)',
-                    fontSize: '26rpx',
-                    borderRadius: '24rpx',
-                }"
+            <view
+                class="h-[96rpx] rounded-[24rpx] flex items-center justify-center relative overflow-hidden shadow-[0_8rpx_20rpx_rgba(0,101,251,0.25)]"
+                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
                 @click="handleAddRemark">
-                立即保存
-            </u-button>
+                <text class="text-[28rpx] font-bold text-white">立即保存</text>
+            </view>
         </view>
     </u-popup>
+
     <confirm-dialog
         v-model="showCreateTaskSuccessDialog"
         center
@@ -670,99 +773,62 @@
 </template>
 
 <script setup lang="ts">
-import { createTask } from "@/api/sph";
-import { getPublishAccountList, checkTaskPublishTime } from "@/api/device";
+import { getPublishAccountList } from "@/api/device";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
+import { useDictOptions } from "@/hooks/useDictOptions";
 import AccountIcon from "@/ai_modules/sph/static/icons/account.svg";
 import AccountPrimaryIcon from "@/ai_modules/sph/static/icons/account_primary.svg";
 import VideoIcon from "@/ai_modules/sph/static/icons/video.svg";
 import VideoPrimaryIcon from "@/ai_modules/sph/static/icons/video_primary.svg";
 import { ListenerTypeEnum } from "@/ai_modules/sph/enums";
-import { AppTypeEnum, TokensSceneEnum } from "@/enums/appEnums";
-import { useDictOptions } from "@/hooks/useDictOptions";
+import { TokensSceneEnum } from "@/enums/appEnums";
 import ClueEdit from "@/ai_modules/sph/components/clue-edit/clue-edit.vue";
 import TaskConflictDialog from "@/ai_modules/sph/components/task-conflict-dialog/task-conflict-dialog.vue";
 
-enum CrawlType {
-    ACCOUNT = 1,
-    VIDEO = 0,
-}
+// ── 引入拆分的 Hooks & 常量 ──────────────────────────────────────
+import {
+    CrawlType,
+    GreetingContentSettingTypeEnum,
+    STEPS,
+    TASK_EXEC_TYPE_OPTIONS,
+    FREQUENCY_OPTIONS,
+} from "./hooks/types";
+import type { SphFormData } from "./hooks/types";
+import { useStep } from "./hooks/useStep";
+import { useClueStep } from "./hooks/useClue";
+import { useRemarkStep } from "./hooks/useRemark";
+import { useTimeConfig } from "./hooks/useTimeConfig";
 
-enum GreetingContentSettingTypeEnum {
-    ADD_FRIEND = "add_friends_prompt",
-    PRIVATE_CHAT = "private_message_prompt",
-}
-
-const { on } = useEventBusManager();
-
+// ── Store ────────────────────────────────────────────────────────
 const appStore = useAppStore();
 const userStore = useUserStore();
-const getWechatRemarks = computed(() => {
-    return appStore.config.wechat_remarks || [];
-});
+const { on } = useEventBusManager();
 
-const getOCRCloudToken = computed(() => {
-    return userStore.getTokenByScene(TokensSceneEnum.SPH_OCR)?.score;
-});
-
-const getOCRLocalToken = computed(() => {
-    return userStore.getTokenByScene(TokensSceneEnum.SPH_LOCAL_OCR)?.score;
-});
-
-// 步骤
-const steps = ref([
-    { step: 1, title: "选择类型" },
-    { step: 2, title: "设置线索" },
-    { step: 3, title: "填设置" },
-    { step: 4, title: "设定时间" },
-]);
-const step = ref(1);
+const getWechatRemarks = computed(() => appStore.config.wechat_remarks || []);
+const getOCRCloudToken = computed(() => userStore.getTokenByScene(TokensSceneEnum.SPH_OCR)?.score);
+const getOCRLocalToken = computed(() => userStore.getTokenByScene(TokensSceneEnum.SPH_LOCAL_OCR)?.score);
 
 const taskTypes = [
-    { title: "账号获客", value: CrawlType.ACCOUNT, icon: AccountIcon, primaryIcon: AccountPrimaryIcon },
+    {
+        title: "账号获客",
+        value: CrawlType.ACCOUNT,
+        icon: AccountIcon,
+        primaryIcon: AccountPrimaryIcon,
+    },
     { title: "视频获客", value: CrawlType.VIDEO, icon: VideoIcon, primaryIcon: VideoPrimaryIcon },
 ];
 
-const formData = reactive<{
-    name: string;
-    crawl_type: CrawlType;
-    chat_type: string;
-    chat_number: number;
-    chat_interval_time: number;
-    greeting_content: string;
-    add_type: string;
-    remark: string;
-    add_number: number;
-    add_interval_time: number;
-    private_message_prompt: string;
-    add_friends_prompt: string;
-    wechat_id: string;
-    wechat_reg_type: number;
-    add_remark_enable: number;
-    remarks: string[];
-    keywords: string[];
-    device_codes: string[];
-    ocr_type: 1 | 2;
-    task_frep: number;
-    time_config: [string, string];
-    custom_date: string[];
-    wechat_time_type: 0 | 1;
-    wechat_task_frep: number;
-    wechat_time_config: [string, string];
-    wechat_custom_date: string[];
-    task_exec_type: number;
-    minutes: number;
-    task_ids: string[];
-}>({
+// ── 共享 formData ────────────────────────────────────────────────
+const formData = reactive<SphFormData>({
     name: `视频号获客任务${uni.$u.timeFormat(Date.now(), "yyyymmddhhMM")}`,
-    crawl_type: 1,
+    crawl_type: CrawlType.ACCOUNT,
     chat_type: "0",
     chat_number: 30,
     chat_interval_time: 10,
     greeting_content: "",
-    add_type: "1",
+    add_type: 1,
     remark: "",
     add_number: 15,
     add_interval_time: 10,
@@ -787,395 +853,79 @@ const formData = reactive<{
     task_ids: [],
 });
 
-const taskExecTypeOptions = [
-    { icon: "arrow-upward", text: "即时执行", value: 1 },
-    { icon: "clock", text: "定时执行", value: 0 },
-];
+// ── Hooks ────────────────────────────────────────────────────────
+const { step, canNext, handleStep } = useStep(formData);
 
-const showClueEdit = ref(false);
-const clueEditRef = shallowRef();
-// 编辑线索词
-const editClueIndex = ref<number>(-1);
+const { showClueEdit, clueEditRef, handleEditClue, handleClueConfirm, handleDeleteClue } = useClueStep(formData);
 
-const showOCRTip = ref(false);
-const showAddRemark = ref(false);
-const editRemarkIndex = ref(-1);
-const addRemarkContent = ref("");
-const customDateType = ref<1 | 2>(1);
-const currentFrequency = ref(0);
-const currentWechatFrequency = ref(0);
-const isExpandDate = ref(false);
-const isWechatExpandDate = ref(false);
-const taskErrorMsg = ref("");
-const showTaskMsgPop = ref(false);
-const taskMsgPopContent = ref<string[]>([]);
+const {
+    showAddRemark,
+    showOCRTip,
+    addRemarkContent,
+    handleGreetingContentSetting,
+    handleAddRemark,
+    handleEditRemark,
+    handleDeleteRemark,
+} = useRemarkStep(formData);
 
-const timeInterval = 15;
+const {
+    currentFrequency,
+    currentWechatFrequency,
+    isExpandDate,
+    isWechatExpandDate,
+    taskErrorMsg,
+    showTaskMsgPop,
+    taskMsgPopContent,
+    showCreateTaskSuccessDialog,
+    formatDate,
+    applyCustomDate,
+    handleFrequency,
+    handleWechatFrequency,
+    handleCustomDate,
+    handleExecuteMinuteChange,
+    handleStartTimeChange,
+    handleEndTimeChange,
+    handleEndTimeClick,
+    handleWechatStartTimeChange,
+    handleWechatEndTimeChange,
+    handleWechatEndTimeClick,
+    handleCreateTask,
+    handleTaskMsgPopConfirm,
+    handleCreateTaskSuccess,
+} = useTimeConfig(formData);
 
-const showCreateTaskSuccessDialog = ref(false);
-
-const currentGreetingContentSettingType = ref<GreetingContentSettingTypeEnum>(
-    GreetingContentSettingTypeEnum.PRIVATE_CHAT
-);
-
-// 计算当前步骤是否可以点击“下一步”
-const canNext = computed(() => canStepProceed(step.value));
-
-//判断是否可以下一步
-const canStepProceed = (s: number) => {
-    const strategy: Record<number, () => boolean> = {
-        1: () => true,
-        2: () => formData.keywords.length > 0,
-        3: () =>
-            formData.add_type === "0" ||
-            (formData.wechat_id.length > 0 && (formData.add_remark_enable === 0 || formData.remarks.length > 0)),
-        4: () => formData.device_codes.length > 0 && !!formData.time_config[0],
-    };
-    return strategy[s]?.() ?? false;
-};
-
-const handleStep = (targetStep: number, type?: "next" | "prev") => {
-    // 点击“上一步”
-    if (type === "prev") {
-        step.value--;
-        return;
-    }
-
-    // 点击“下一步”
-    if (type === "next") {
-        if (canNext.value) {
-            step.value++;
-        } else {
-            uni.$u.toast("请完成当前步骤");
-        }
-        return;
-    }
-
-    // 直接点击步骤条进行跳转
-    if (targetStep === step.value) return;
-
-    if (targetStep < step.value) {
-        step.value = targetStep;
-    } else {
-        for (let i = 1; i < targetStep; i++) {
-            if (!canStepProceed(i)) {
-                const messages: { [key: number]: string } = {
-                    2: "请至少添加一条线索",
-                    3: "请完善加微设置",
-                    4: "请设定时间",
-                };
-                uni.$u.toast(messages[i] || "请按顺序完成步骤");
-                return;
-            }
-        }
-        step.value = targetStep;
-    }
-};
-
-const { optionsData } = useDictOptions<{
-    wechatLists: any[];
-}>({
+// ── 字典数据 ─────────────────────────────────────────────────────
+const { optionsData } = useDictOptions<{ wechatLists: any[] }>({
     wechatLists: {
         api: getPublishAccountList,
         params: { page_size: 9999, type: 1 },
-        transformData: (res: any) =>
-            res.lists?.map((item: any) => ({
-                text: item.nickname,
-                value: item.account,
-            })),
+        transformData: (res: any) => res.lists?.map((item: any) => ({ text: item.nickname, value: item.account })),
     },
 });
 
-const handleEditClue = async (index: number) => {
-    showClueEdit.value = true;
-    await nextTick();
-
-    if (index >= 0) {
-        editClueIndex.value = index;
-        clueEditRef.value.setFormData(formData.keywords[index]);
-    }
-};
-
-const handleClueConfirm = (val: string) => {
-    if (editClueIndex.value == -1) {
-        formData.keywords.push(val);
-    } else {
-        formData.keywords[editClueIndex.value] = val;
-    }
-    showClueEdit.value = false;
-};
-
-const handleDeleteClue = (index: number) => {
-    formData.keywords.splice(index, 1);
-};
-
-const handleGreetingContentSetting = (type: GreetingContentSettingTypeEnum) => {
-    currentGreetingContentSettingType.value = type;
-    uni.$u.route({
-        url: "/ai_modules/sph/pages/task_prompt/task_prompt",
-        params: {
-            type,
-            prompt: JSON.stringify(formData[type]),
-        },
-    });
-};
-
-const handleAddRemark = () => {
-    if (!addRemarkContent.value) {
-        uni.$u.toast("请输入加好友备注内容");
-        return;
-    }
-    if (editRemarkIndex.value == -1) {
-        formData.remarks.push(addRemarkContent.value);
-    } else {
-        formData.remarks[editRemarkIndex.value] = addRemarkContent.value;
-    }
-    editRemarkIndex.value = -1;
-    addRemarkContent.value = "";
-    showAddRemark.value = false;
-};
-
-const handleDeleteRemark = (index: number) => {
-    formData.remarks.splice(index, 1);
-};
-
-const handleEditRemark = (index: number) => {
-    editRemarkIndex.value = index;
-    addRemarkContent.value = formData.remarks[index];
-    showAddRemark.value = true;
-};
-
-const handleFrequency = (item: number, index: number) => {
-    currentFrequency.value = index;
-    formData.task_frep = item;
-};
-
-const handleWechatFrequency = (item: number, index: number) => {
-    currentWechatFrequency.value = index;
-    formData.wechat_task_frep = item;
-};
-
-const formatDate = (date: string) => {
-    return uni.$u.timeFormat(new Date(date), "mm月dd日");
-};
-
-const handleCustomDate = (type: 1 | 2) => {
-    customDateType.value = type;
-    uni.$u.route({
-        url: "/ai_modules/device/pages/custom_date/custom_date",
-        params: {
-            date:
-                type == 1
-                    ? formData.custom_date.length > 0
-                        ? JSON.stringify(formData.custom_date)
-                        : null
-                    : formData.wechat_custom_date.length > 0
-                    ? JSON.stringify(formData.wechat_custom_date)
-                    : null,
-        },
-    });
-};
-
-const handleStartTimeChange = (e: any) => {
-    const { value } = e.detail;
-    const endTime = new Date(`2000/01/01 ${value}`);
-
-    formData.time_config[0] = value;
-    endTime.setMinutes(endTime.getMinutes() + timeInterval);
-    formData.time_config[1] = uni.$u.timeFormat(endTime, "hh:MM");
-};
-
-const handleEndTimeChange = (e: any) => {
-    const { value } = e.detail;
-    // 这里需要判断结束时间是否大于开始时间，并且要大于开始
-    if (value <= formData.time_config[0]) {
-        uni.$u.toast("结束时间不能小于开始时间");
-        return;
-    }
-    const startTIme = new Date(`2000/01/01 ${formData.time_config[0]}`);
-    const endTime = new Date(`2000/01/01 ${value}`);
-    if (endTime.getTime() - startTIme.getTime() < timeInterval * 60 * 1000) {
-        uni.$u.toast(`结束时间不能小于开始时间${timeInterval}分钟`);
-        return;
-    }
-    formData.time_config[1] = value;
-};
-
-const handleEndTimeClick = () => {
-    if (!formData.time_config[0]) {
-        uni.$u.toast("请先选择开始时间");
-        return;
-    }
-};
-
-const handleWechatStartTimeChange = (e: any) => {
-    const { value } = e.detail;
-    const endTime = new Date(`2000/01/01 ${value}`);
-    formData.wechat_time_config[0] = value;
-    endTime.setMinutes(endTime.getMinutes() + timeInterval);
-    formData.wechat_time_config[1] = uni.$u.timeFormat(endTime, "hh:MM");
-};
-
-const handleWechatEndTimeChange = (e: any) => {
-    const { value } = e.detail;
-    // 这里需要判断结束时间是否大于开始时间，并且要大于开始
-    if (value <= formData.wechat_time_config[0]) {
-        uni.$u.toast("结束时间不能小于开始时间");
-        return;
-    }
-    const startTIme = new Date(`2000/01/01 ${formData.wechat_time_config[0]}`);
-    const endTime = new Date(`2000/01/01 ${value}`);
-    if (endTime.getTime() - startTIme.getTime() < timeInterval * 60 * 1000) {
-        uni.$u.toast(`结束时间不能小于开始时间${timeInterval}分钟`);
-        return;
-    }
-    formData.wechat_time_config[1] = value;
-};
-const handleExecuteMinuteChange = (delta: number) => {
-    const next = Number(formData.minutes) + delta;
-    if (next < 1) return;
-    formData.minutes = next;
-};
-
-const handleWechatEndTimeClick = () => {
-    if (!formData.wechat_time_config[0]) {
-        uni.$u.toast("请先选择每日加微执行开始时间");
-        return;
-    }
-};
-
-const handleCreateTaskSuccess = () => {
-    showCreateTaskSuccessDialog.value = false;
-    uni.$u.route({
-        url: "/ai_modules/sph/pages/index/index",
-        type: "reLaunch",
-    });
-};
-
-const executeCreateTask = async () => {
-    uni.showLoading({ title: "创建中...", mask: true });
-    try {
-        await createTask({
-            ...formData,
-            time_config: formData.task_exec_type === 1 ? "" : `${formData.time_config[0]}-${formData.time_config[1]}`,
-            wechat_time_config:
-                formData.wechat_time_type === 1
-                    ? `${formData.wechat_time_config[0]}-${formData.wechat_time_config[1]}`
-                    : "",
-            type: [AppTypeEnum.SPH],
-        });
-
-        uni.hideLoading();
-        showCreateTaskSuccessDialog.value = true;
-    } catch (error: any) {
-        uni.hideLoading();
-        taskErrorMsg.value = error;
-        uni.$u.toast(error);
-    }
-};
-
-const handleCreateTask = async () => {
-    if (!formData.name) return uni.$u.toast("请输入任务名称");
-    if (formData.device_codes.length === 0) return uni.$u.toast("请选择设备");
-    if (formData.task_exec_type === 0) {
-        if (!formData.time_config[0] || !formData.time_config[1]) {
-            return uni.$u.toast("请设置每日执行时间");
-        }
-    }
-    if (formData.task_exec_type == 1) {
-        if (formData.minutes < 1) return uni.$u.toast("执行时间不能小于1分钟");
-        if (formData.minutes > 9999) return uni.$u.toast("执行时间不能超过9999分钟");
-    }
-
-    if (formData.task_exec_type === 1) {
-        uni.showLoading({ title: "检测冲突中...", mask: true });
-        try {
-            const { messages, task_ids } = await checkTaskPublishTime({
-                device_codes: formData.device_codes,
-                minutes: formData.minutes,
-            });
-
-            uni.hideLoading();
-
-            if (messages && messages.length > 0) {
-                taskMsgPopContent.value = messages;
-                formData.task_ids = task_ids;
-                showTaskMsgPop.value = true;
-                return;
-            }
-
-            await executeCreateTask();
-        } catch (error: any) {
-            uni.hideLoading();
-            taskErrorMsg.value = error;
-            uni.$u.toast(error);
-        }
-    } else {
-        await executeCreateTask();
-    }
-};
-
-const handleTaskMsgPopConfirm = async () => {
-    await executeCreateTask();
-};
-
+// ── watch ────────────────────────────────────────────────────────
 watch(
     () => appStore.config.wechat_remarks,
     () => {
         formData.remarks = getWechatRemarks.value;
-    }
+    },
 );
 
+// ── onLoad ───────────────────────────────────────────────────────
 onLoad(({ type }: any) => {
-    if (type) {
-        formData.crawl_type = parseInt(type);
-    }
+    if (type) formData.crawl_type = parseInt(type);
+
     on("confirm", (res: any) => {
         const { type, data } = res;
         if (type === ListenerTypeEnum.TASK_AI_CLUE) {
-            if (data.length === 0) return;
-            formData.keywords.push(...data);
+            if (data.length) formData.keywords.push(...data);
         }
         if (type === ListenerTypeEnum.CHOOSE_DEVICE) {
-            if (data.length === 0) return;
-            formData.device_codes = data;
+            if (data.length) formData.device_codes = data;
         }
         if (type === ListenerTypeEnum.CHOOSE_DATE) {
-            if (data.length === 0) {
-                if (customDateType.value == 1) {
-                    currentFrequency.value = 0;
-                    formData.custom_date = [];
-                } else {
-                    currentWechatFrequency.value = 0;
-                    formData.wechat_custom_date = [];
-                }
-                return;
-            }
-            if (customDateType.value == 1) {
-                currentFrequency.value = 5;
-                formData.custom_date = data;
-            } else {
-                currentWechatFrequency.value = 5;
-                formData.wechat_custom_date = data;
-            }
-            formData.custom_date = data;
+            applyCustomDate(data || []);
         }
     });
 });
 </script>
-
-<style scoped lang="scss">
-.keyword-item {
-    @apply bg-white rounded-[20rpx] px-4 py-2 flex items-center gap-x-2 relative;
-}
-
-.frequency-item {
-    @apply px-[32rpx] py-[16rpx] rounded-[10rpx] bg-[#F6F6F6];
-    &.active {
-        @apply text-primary shadow-[0_0_0_2rpx_#0065FB] bg-white;
-    }
-}
-.date-item {
-    @apply text-xs font-medium text-[#000000b3] rounded-[10rpx] px-[20rpx] py-[10rpx] bg-[#F6F6F6];
-}
-</style>

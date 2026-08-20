@@ -1,0 +1,12 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-icon": "../../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-input": "../../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "popup-bottom": "../../../../../components/popup-bottom/popup-bottom",
+    "u-popup": "../../../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
+    "billing-device-selector": "../../../components/billing-package/billing-device-selector",
+    "billing-plan-selector": "../../../components/billing-package/billing-plan-selector",
+    "billing-pay-methods": "../../../components/billing-package/billing-pay-methods"
+  }
+}

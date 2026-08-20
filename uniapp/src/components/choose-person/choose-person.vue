@@ -8,9 +8,11 @@
         <template #content>
             <view class="h-full flex flex-col bg-[#F7F9FC]">
                 <view class="flex items-center justify-between px-[30rpx] mt-3 mb-1" v-if="limit > 1">
-                    <text class="text-[26rpx] text-[#666666] font-medium">请选择人设</text>
-                    <view class="text-[24rpx] text-[#999999]">
-                        已选 <text class="text-primary font-bold mx-0.5">{{ chooseLists.length }}</text> / {{ limit }}
+                    <text class="text-[#666666] font-medium">请选择人设</text>
+                    <view class="text-xs text-[#999999]">
+                        已选
+                        <text class="text-primary font-bold mx-0.5">{{ chooseLists.length }}</text>
+                        / {{ limit }}
                     </view>
                 </view>
 
@@ -20,6 +22,7 @@
                         v-model="dataLists"
                         :fixed="false"
                         :safe-area-inset-bottom="true"
+                        :hide-empty-view="true"
                         @query="queryList">
                         <view class="py-[20rpx] px-[30rpx] grid grid-cols-3 gap-x-3 gap-y-4">
                             <view
@@ -29,13 +32,13 @@
                                     class="w-[64rpx] h-[64rpx] rounded-full bg-white shadow-[0_4rpx_12rpx_rgba(0,0,0,0.05)] flex items-center justify-center mb-2">
                                     <u-icon name="plus" color="#0065fb" size="32"></u-icon>
                                 </view>
-                                <text class="text-[24rpx] text-[#666666] font-medium">去创建</text>
+                                <text class="text-xs text-[#666666] font-medium">去创建</text>
                             </view>
 
                             <view
                                 v-for="(item, index) in dataLists"
                                 :key="index"
-                                class="relative inline-flex flex-col items-center justify-center w-full h-[260rpx] rounded-[32rpx] border-[3rpx] transition-all duration-300 overflow-hidden bg-white border-transparent shadow-[0_4rpx_16rpx_rgba(0,0,0,0.04)]"
+                                class="relative inline-flex flex-col items-center justify-center w-full h-[260rpx] rounded-[32rpx] border-[3rpx] transition-all duration-300 overflow-hidden bg-white border-[transparent] shadow-[0_4rpx_16rpx_rgba(0,0,0,0.04)]"
                                 :class="[
                                     !item.is_configured ? 'opacity-70' : '',
                                     isDisabled(item) ? 'cursor-not-allowed' : '',
@@ -109,10 +112,6 @@
                                 </view>
                             </view>
                         </view>
-
-                        <template #empty>
-                            <empty />
-                        </template>
                     </z-paging>
                 </view>
 
@@ -143,9 +142,14 @@
                             type="primary"
                             shape="circle"
                             ripple
-                            :custom-style="{ fontSize: '28rpx', fontWeight: 'bold', height: '88rpx' }"
+                            :custom-style="{
+                                fontSize: '28rpx',
+                                fontWeight: 'bold',
+                                height: '88rpx',
+                            }"
                             @click="confirm">
-                            确定选择 {{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
+                            确定选择
+                            {{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
                         </u-button>
                     </view>
                 </view>
@@ -155,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { getPersonList } from "@/api/person";
+import { checkViralAssets, getPersonList } from "@/api/person";
 import { PersonTypeMap } from "@/enums/appEnums";
 
 const props = withDefaults(
@@ -164,13 +168,15 @@ const props = withDefaults(
         limit?: number;
         isConfig?: boolean;
         skipUnConfig?: boolean;
+        checkViralAssets?: boolean;
     }>(),
     {
         modelValue: false,
         limit: 99,
         isConfig: true,
         skipUnConfig: false,
-    }
+        checkViralAssets: false,
+    },
 );
 
 const emit = defineEmits<{
@@ -189,10 +195,15 @@ const show = computed({
 const dataLists = ref<any[]>([]);
 const pagingRef = ref<any>(null);
 const chooseLists = ref<any[]>([]);
+const checkingId = ref<string | number | null>(null);
 
 const queryList = async (page_no: number, page_size: number) => {
     try {
-        const { lists } = await getPersonList({ page_no, page_size, is_configured: props.isConfig ? 1 : "" });
+        const { lists } = await getPersonList({
+            page_no,
+            page_size,
+            is_configured: props.isConfig ? 1 : "",
+        });
         pagingRef.value?.complete(lists);
     } catch (error) {
         pagingRef.value?.complete([]);
@@ -227,7 +238,13 @@ const isDisabled = (item: any) => {
     return props.skipUnConfig && !item.is_configured;
 };
 
-const handleSelect = (item: any) => {
+/** 形象、音色均无时不可选（爆款复刻） */
+const hasViralAssets = async (id: string | number) => {
+    const res = await checkViralAssets({ id });
+    return Number(res?.has_avatar) === 1 || Number(res?.has_voice) === 1;
+};
+
+const handleSelect = async (item: any) => {
     // 禁用未配置项
     if (isDisabled(item)) {
         uni.showToast({ title: "该人设未配置，无法选择", icon: "none" });
@@ -237,16 +254,34 @@ const handleSelect = (item: any) => {
     const index = chooseLists.value.findIndex((c) => c.id === item.id);
     if (index > -1) {
         chooseLists.value.splice(index, 1);
-    } else {
-        if (props.limit === 1) {
-            chooseLists.value = [item];
-        } else {
-            if (chooseLists.value.length >= props.limit) {
-                uni.showToast({ title: `最多只能选择${props.limit}个`, icon: "none" });
-            } else {
-                chooseLists.value.push(item);
+        return;
+    }
+
+    if (props.checkViralAssets) {
+        if (checkingId.value != null) return;
+        checkingId.value = item.id;
+        try {
+            uni.showLoading({ title: "校验中...", mask: true });
+            const ok = await hasViralAssets(item.id);
+            uni.hideLoading();
+            if (!ok) {
+                uni.showToast({ title: "该人设没有形象及音色，不支持选择", icon: "none", duration: 3000 });
+                return;
             }
+        } catch {
+            uni.hideLoading();
+            return;
+        } finally {
+            checkingId.value = null;
         }
+    }
+
+    if (props.limit === 1) {
+        chooseLists.value = [item];
+    } else if (chooseLists.value.length >= props.limit) {
+        uni.showToast({ title: `最多只能选择${props.limit}个`, icon: "none" });
+    } else {
+        chooseLists.value.push(item);
     }
 };
 

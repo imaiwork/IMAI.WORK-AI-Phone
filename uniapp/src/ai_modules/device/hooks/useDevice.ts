@@ -33,7 +33,7 @@ export function useDevice(options: UseDeviceOptions = {}) {
 
         // 方法
         connectWebSocket: () => deviceStore.connectWebSocket(),
-        handleGetAccount: (deviceCode: string, forceRefetch: boolean = false) => {
+        handleGetAccount: (deviceCode: string, forceRefetch = false) => {
             return deviceStore.startGetAccounts(deviceCode, forceRefetch, options);
         },
         stopGetAccount: () => deviceStore.stopGetAccount(),

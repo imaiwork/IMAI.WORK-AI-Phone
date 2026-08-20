@@ -1,53 +1,58 @@
-import request from "@/utils/request";
+import request from '@/utils/request'
 
 export const getMaterialMusicList = (data: any) => {
-    return request.get({ url: "/material.music/lists", data });
-};
+    return request.get({ url: '/material.music/lists', data })
+}
 
 export const addMaterialMusic = (data: any) => {
-    return request.post({ url: "/material.music/add", data });
-};
+    return request.post({ url: '/material.music/add', data })
+}
 
 // 平台素材库列表
 export function getMaterialLibraryList(data: any) {
-    return request.get({ url: "/sv.mediaMaterial/lists", data });
+    return request.get({ url: '/sv.mediaMaterial/lists', data })
 }
 
 // 平台素材库添加
 export function addMaterialLibrary(data: any) {
-    return request.post({ url: "/sv.mediaMaterial/add", data }, { ignoreCancel: true });
+    return request.post({ url: '/sv.mediaMaterial/add', data }, { ignoreCancel: true })
 }
 
 // 平台素材库删除
 export function deleteMaterialLibrary(data: any) {
-    return request.post({ url: "/sv.mediaMaterial/delete", data }, { ignoreCancel: true });
+    return request.post({ url: '/sv.mediaMaterial/delete', data }, { ignoreCancel: true })
 }
 
 // 平台素材库编辑
 export function editMaterialLibrary(data: any) {
-    return request.post({ url: "/sv.mediaMaterial/edit", data });
+    return request.post({ url: '/sv.mediaMaterial/edit', data })
 }
 
 // 素材分组列表
 export function getMaterialLibraryGroupList(data: any) {
-    return request.get({ url: "/sv.mediaMaterialGroup/lists", data });
+    return request.get({ url: '/sv.mediaMaterialGroup/lists', data })
 }
 // 更新素材分组
 export function updateMaterialLibraryGroup(data: any) {
-    return request.post({ url: "/sv.mediaMaterialGroup/update", data });
+    return request.post({ url: '/sv.mediaMaterialGroup/update', data })
 }
 
 // 批量更新素材到分组
 export function batchUpdateMaterialToGroup(data: any) {
-    return request.post({ url: "/sv.mediaMaterial/batchUpdate", data });
+    return request.post({ url: '/sv.mediaMaterial/batchUpdate', data })
+}
+
+// 批量更新素材
+export function batchUpdateMaterialDate(data: any) {
+    return request.post({ url: '/sv.mediaMaterial/batchUpdateDate', data })
 }
 
 // 添加素材组
 export function addMaterialLibraryGroup(data: any) {
-    return request.post({ url: "/sv.mediaMaterialGroup/add", data });
+    return request.post({ url: '/sv.mediaMaterialGroup/add', data })
 }
 
 // 删除素材组
 export function deleteMaterialLibraryGroup(data: any) {
-    return request.post({ url: "/sv.mediaMaterialGroup/delete", data });
+    return request.post({ url: '/sv.mediaMaterialGroup/delete', data })
 }

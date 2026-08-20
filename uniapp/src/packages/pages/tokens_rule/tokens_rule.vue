@@ -21,8 +21,10 @@
             :class="screenHeight < 600 ? 'pt-[285rpx]' : 'pt-[435rpx]'">
             <view
                 class="rule-card h-[770rpx] w-full flex flex-col"
-                :style="{ backgroundImage: `url(${config.baseUrl}static/images/tokens_rule_card_bg.png)` }">
-                <view class="text-white text-[26rpx] text-center pt-[123rpx]"> 算力规则 </view>
+                :style="{
+                    backgroundImage: `url(${config.baseUrl}static/images/tokens_rule_card_bg.png)`,
+                }">
+                <view class="text-white text-center pt-[123rpx]"> 算力规则 </view>
                 <view class="grow min-h-0 py-[40rpx] px-[20rpx] container">
                     <scroll-view scroll-y class="h-full">
                         <view class="px-[20rpx]">
@@ -30,7 +32,7 @@
                                 v-for="(item, index) in tokensConfig"
                                 :key="index"
                                 class="border-b border-solid border-[#151924] border-0 h-[92rpx] flex items-center justify-between gap-x-2">
-                                <view class="text-white text-[26rpx] flex items-center gap-x-1 flex-1">
+                                <view class="text-white flex items-center gap-x-1 flex-1">
                                     <view
                                         class="rounded-full bg-[#1F222E] w-[32rpx] h-[32rpx] flex items-center justify-center"
                                         >{{ index + 1 }}</view
@@ -44,7 +46,7 @@
                                             src="@/packages/static/icons/tokens.svg"
                                             class="w-[32rpx] h-[32rpx]"></image>
                                         <view
-                                            class="text-[#16F49F] text-[26rpx] flex-1 text-center mx-[4rpx] break-all flex-shrink-0">
+                                            class="text-[#16F49F] flex-1 text-center mx-[4rpx] break-all flex-shrink-0">
                                             {{ item.score }}{{ item.unit }}
                                         </view>
                                     </view>
@@ -77,7 +79,7 @@ const { isLogin, tokensConfig } = toRefs(userStore);
 const handleOpenBill = () => {
     if (!isLogin.value) {
         uni.$u.route({
-            url: "/pages/login/login",
+            url: "/packages/pages/login/login",
         });
     }
     uni.$u.route({

@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../common/vendor.js");if(!Array){e.resolveComponent("u-icon")()}Math;const t=e.defineComponent({__name:"copywriter-empty",props:{title:{default:"还没有文案"},description:{default:"手动输入或使用 AI 一键生成您的发布文案"}},setup:t=>(o,n)=>({a:e.p({name:"edit-pen",color:"#fff",size:"44"}),b:e.t(t.title),c:e.t(t.description)})});wx.createComponent(t);

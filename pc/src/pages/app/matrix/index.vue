@@ -22,7 +22,6 @@ import CopywritingLibrary from "./_pages/copywriting_library/index.vue";
 const { sidebar, sidebarIndex, getComponents, getSliderIndex, updateSliderIndex } = useSidebar();
 
 sidebar.value = [
-    { name: "快速开始", icon: "menu_create", components: markRaw(Home), type: SidebarTypeEnum.QUICK_START },
     {
         name: "去发布",
         icon: "menu_video_task",
@@ -35,45 +34,45 @@ sidebar.value = [
         components: markRaw(Publish),
         type: SidebarTypeEnum.ME_PUBLISH,
     },
-    {
-        name: "发布混剪任务",
-        icon: "menu_mix_task",
-        components: "",
-        type: SidebarTypeEnum.PUBLISH_MIX_TASK,
-        disabled: true,
-    },
-    {
-        name: "数字人创作",
-        icon: "menu_digital_human",
-        components: markRaw(DhCreation),
-        type: SidebarTypeEnum.DIGITAL_HUMAN_CREATION,
-    },
-    {
-        name: "图文创作",
-        icon: "menu_image_creation",
-        components: "",
-        type: SidebarTypeEnum.IMAGE_CREATION,
-        disabled: true,
-    },
-    {
-        name: "混剪任务创作",
-        icon: "menu_mix_creation",
-        components: "",
-        type: SidebarTypeEnum.MIX_TASK_CREATION,
-        disabled: true,
-    },
+    // {
+    //     name: "发布混剪任务",
+    //     icon: "menu_mix_task",
+    //     components: "",
+    //     type: SidebarTypeEnum.PUBLISH_MIX_TASK,
+    //     disabled: true,
+    // },
+    // {
+    //     name: "数字人创作",
+    //     icon: "menu_digital_human",
+    //     components: markRaw(DhCreation),
+    //     type: SidebarTypeEnum.DIGITAL_HUMAN_CREATION,
+    // },
+    // {
+    //     name: "图文创作",
+    //     icon: "menu_image_creation",
+    //     components: "",
+    //     type: SidebarTypeEnum.IMAGE_CREATION,
+    //     disabled: true,
+    // },
+    // {
+    //     name: "混剪任务创作",
+    //     icon: "menu_mix_creation",
+    //     components: "",
+    //     type: SidebarTypeEnum.MIX_TASK_CREATION,
+    //     disabled: true,
+    // },
     {
         name: "素材库",
         icon: "menu_material_library",
         components: markRaw(MaterialLibrary),
         type: SidebarTypeEnum.MATERIAL_LIBRARY,
     },
-    {
-        name: "视频作品",
-        icon: "menu_generate_video",
-        components: markRaw(VideoWorks),
-        type: SidebarTypeEnum.VIDEO_WORKS,
-    },
+    // {
+    //     name: "视频作品",
+    //     icon: "menu_generate_video",
+    //     components: markRaw(VideoWorks),
+    //     type: SidebarTypeEnum.VIDEO_WORKS,
+    // },
     {
         name: "文案库",
         icon: "menu_copywriting_library",
@@ -90,7 +89,6 @@ enum SidebarGroupEnum {
 
 const getSidebar = computed(() => {
     const typeToGroupMap = {
-        [SidebarTypeEnum.QUICK_START]: null,
         [SidebarTypeEnum.CREATE]: SidebarGroupEnum.PUBLISH_TASK,
         [SidebarTypeEnum.PUBLISH_IMAGE_TASK]: SidebarGroupEnum.PUBLISH_TASK,
         [SidebarTypeEnum.PUBLISH_MIX_TASK]: SidebarGroupEnum.PUBLISH_TASK,

@@ -47,8 +47,8 @@ class CardHandler extends BaseMessageHandler
             $this->sendError($this->connection,  $this->payload);
         }
     }
-    private function _receiveCardToWeb($content) {}
-    private function _sendCardToRpa($content)
+    private function _receiveCardToWeb(array $content) {}
+    private function _sendCardToRpa(array $content)
     {
         try {
             $device = $content['deviceId'] ?? $this->payload['deviceId'];
@@ -116,7 +116,7 @@ class CardHandler extends BaseMessageHandler
         }
     }
 
-    private function _getCardsByRpa($content)
+    private function _getCardsByRpa(array $content)
     {
         try {
             $device = $content['deviceId'];
@@ -188,7 +188,7 @@ class CardHandler extends BaseMessageHandler
         }
     }
 
-    private function _updateCards($content)
+    private function _updateCards(array $content)
     {
         try {
 
@@ -227,7 +227,7 @@ class CardHandler extends BaseMessageHandler
         }
     }
 
-    private function _sendWeb($content)
+    private function _sendWeb(array $content)
     {
         try {
             $userId = $this->userId;

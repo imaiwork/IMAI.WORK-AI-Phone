@@ -40,11 +40,15 @@ export default function useAgent(options: Options) {
         keywords,
         number,
         length,
+        type,
+        persona_id,
     }: {
         sn: number;
         keywords: string;
         number: number;
         length: number;
+        type: number;
+        persona_id: number;
     }) => {
         return new Promise<any>((resolve, reject) => {
             getCopyWritingGenerate({
@@ -52,6 +56,8 @@ export default function useAgent(options: Options) {
                 keywords,
                 number,
                 length,
+                type,
+                persona_id,
             })
                 .then((res) => {
                     resolve(res);

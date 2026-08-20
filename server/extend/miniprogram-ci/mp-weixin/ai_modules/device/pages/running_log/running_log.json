@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "运行日志",
+  "usingComponents": {
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging"
+  }
+}

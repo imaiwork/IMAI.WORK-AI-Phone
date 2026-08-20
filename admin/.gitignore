@@ -33,3 +33,6 @@ components.d.ts
 # .env
 .env.development
 .env.production
+
+yarn.lock
+package-lock.json

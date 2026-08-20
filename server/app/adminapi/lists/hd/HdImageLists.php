@@ -11,6 +11,7 @@ use app\common\service\FileService;
 use app\common\model\user\UserTokensLog;
 use app\common\enum\user\AccountLogEnum;
 use app\common\model\hd\HdImage;
+use app\common\service\draw\DrawBillingService;
 
 
 /**
@@ -62,7 +63,7 @@ class HdImageLists extends BaseAdminDataLists implements ListsSearchInterface
                 $query->whereBetween('l.create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
             })
             ->whereIn('l.type', [1, 2, 3, 4, 5])
-            ->field('l.id,l.user_id,l.type,l.create_time,u.nickname,u.avatar,l.task_id,l.params,l.model_type')
+            ->field('l.id,l.user_id,l.type,l.create_time,u.nickname,u.avatar,l.task_id,l.params,l.model_type,l.draw_task_id,l.task_status')
             ->order('l.id', 'desc')
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
@@ -71,17 +72,18 @@ class HdImageLists extends BaseAdminDataLists implements ListsSearchInterface
                 // 获取对应列表
                 $item['images'] = HdImage::where('log_id', $item['id'])->field('image, task_status')->select()->toArray();
 
-                $points = 0;
                 $images = 0;
+                $scene = [];
+                $typeName = '';
 
                 //转换
                 switch ($item['type']) {
                     case 1:
-                        $scene = AccountLogEnum::TOKENS_DEC_GOODS_IMAGE;
+                        $scene = [AccountLogEnum::TOKENS_DEC_GOODS_IMAGE];
                         $typeName = '商品图';
                         break;
                     case 2:
-                        $scene = AccountLogEnum::TOKENS_DEC_MODEL_IMAGE;
+                        $scene = [AccountLogEnum::TOKENS_DEC_MODEL_IMAGE];
                         $typeName = '模特换衣图';
                         break;
                     case 3:
@@ -93,7 +95,7 @@ class HdImageLists extends BaseAdminDataLists implements ListsSearchInterface
                         $typeName = '图生图';
                         break;
                     case 5:
-                        $scene = AccountLogEnum::TOKENS_DEC_VOLC_TEXT_TO_POSTERIMAGE;
+                        $scene = [AccountLogEnum::TOKENS_DEC_VOLC_TEXT_TO_POSTERIMAGE];
                         $typeName = '海报图';
                         break;
                 }
@@ -101,21 +103,39 @@ class HdImageLists extends BaseAdminDataLists implements ListsSearchInterface
                 $item['type_name'] = $typeName;
                 $item['params']    = json_decode($item['params'], true) ?? [];
 
-                //扣费记录
+                $scene[] = AccountLogEnum::TOKENS_DEC_DRAW_IMAGE;
+
                 UserTokensLog::where('user_id', $item['user_id'])
                     ->whereIn('change_type', $scene)
-                    ->where('task_id', $item['task_id'])
-                    ->field('extra, change_type')
+                    ->where(function ($q) use ($item) {
+                        $taskId = (string)($item['task_id'] ?? '');
+                        if ($taskId === '') {
+                            return;
+                        }
+                        $q->where('task_id', $taskId)->whereOr('source_sn', $taskId);
+                    })
+                    ->field('extra')
                     ->select()
-                    ->each(function ($item) use (&$points, &$images) {
-                        $info = json_decode($item['extra'], true);
-
+                    ->each(function ($log) use (&$images) {
+                        $info = is_array($log['extra'] ?? null)
+                            ? $log['extra']
+                            : (json_decode((string)($log['extra'] ?? ''), true) ?: []);
                         $images += $info['生成图片数'] ?? 0;
-                        $points += $info['实际消耗算力'] ?? 0;
                     });
 
-                $item['points']          = $points;
-                $item['image_count']     = $images;
+                $item['points'] = DrawBillingService::resolveRecordPoints(
+                    (int)$item['user_id'],
+                    (string)($item['task_id'] ?? ''),
+                    (int)($item['draw_task_id'] ?? 0),
+                    $scene
+                );
+                $imageState = match ((int)($item['task_status'] ?? 0)) {
+                    1 => 'consume',
+                    2 => 'refund',
+                    default => 'hold',
+                };
+                $item['points_remark'] = DrawBillingService::consumePointsRemark($imageState, (float)$item['points']);
+                $item['image_count'] = $images;
             })
             ->toArray();
     }

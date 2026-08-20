@@ -1,7 +1,12 @@
 <template>
+    <!-- 触摸挂在整条轨道上：最大值时滑钮半溢出，只点滑钮会失效；整轨拖动可覆盖音量/语速两端 -->
     <view
         class="u-slider"
         @tap="onClick"
+        @touchstart.stop="onTouchStart"
+        @touchmove.stop.prevent="onTouchMove"
+        @touchend.stop="onTouchEnd"
+        @touchcancel.stop="onTouchEnd"
         :class="[disabled ? 'u-slider--disabled' : '']"
         :style="{
             backgroundColor: inactiveColor,
@@ -15,12 +20,7 @@
                     backgroundColor: activeColor,
                 },
             ]">
-            <view
-                class="u-slider__button-wrap"
-                @touchstart.stop="onTouchStart"
-                @touchmove.stop="onTouchMove"
-                @touchend="onTouchEnd"
-                @touchcancel="onTouchEnd">
+            <view class="u-slider__button-wrap">
                 <slot v-if="$slots.default || $slots.$default" />
                 <view
                     v-else
@@ -131,6 +131,8 @@ export default {
             newValue: 0,
             distanceX: 0,
             startValue: 0,
+            // 拖动结束后忽略紧随的 tap，避免与 touch 重复改值
+            skipClick: false,
             barStyle: {},
             sliderRect: {
                 left: 0,
@@ -148,9 +150,12 @@ export default {
         this.updateValue(this.valueCom, false);
     },
     mounted() {
-        // 获取滑块条的尺寸信息
-        this.$uGetRect(".u-slider").then((rect) => {
-            this.sliderRect = rect;
+        // 弹层内首次 mounted 时宽度常为 0，延迟再测一次
+        this.$nextTick(() => {
+            this.refreshSliderRect();
+            setTimeout(() => {
+                this.refreshSliderRect();
+            }, 100);
         });
     },
     computed: {
@@ -165,8 +170,18 @@ export default {
         },
     },
     methods: {
+        refreshSliderRect() {
+            return this.$uGetRect(".u-slider").then((rect) => {
+                if (rect && rect.width) {
+                    this.sliderRect = rect;
+                }
+                return rect;
+            });
+        },
         onTouchStart(event) {
             if (this.disabled) return;
+            // 每次拖动前刷新尺寸，避免弹窗内首次测量为 0 导致卡在最大值
+            this.refreshSliderRect();
             this.startX = 0;
             // 触摸点集
             let touches = event.touches[0];
@@ -179,6 +194,11 @@ export default {
         },
         onTouchMove(event) {
             if (this.disabled) return;
+            // 宽度未就绪时不要参与计算，否则 distanceX/0 → Infinity → 被钳成 max，表现为滑到最大后无法回调
+            if (!this.sliderRect.width) {
+                this.refreshSliderRect();
+                return;
+            }
             // 连续触摸的过程会一直触发本方法，但只有手指触发且移动了才被认为是拖动了，才发出事件
             // 触摸后第一次移动已经将status设置为moving状态，故触摸第二次移动不会触发本事件
             if (this.status == "start") this.$emit("start");
@@ -200,15 +220,22 @@ export default {
             if (this.status === "moving") {
                 this.updateValue(this.newValue, false);
                 this.$emit("end");
+                // 阻止 touch 结束后的 tap 再写一次值
+                this.skipClick = true;
+                setTimeout(() => {
+                    this.skipClick = false;
+                }, 50);
             }
             this.status = "end";
         },
         updateValue(value, drag) {
             // 去掉小数部分，同时也是对step步进的处理
             const width = this.format(value);
+            const min = Number(this.min);
+            const max = Number(this.max);
 
             // 设置移动的百分比值
-            const percent = ((width - this.min) / (this.max - this.min)) * 100;
+            const percent = max === min ? 0 : ((width - min) / (max - min)) * 100;
 
             let barStyle = {
                 width: percent + "%",
@@ -241,8 +268,18 @@ export default {
             return formattedValue;
         },
         onClick(event) {
-            if (this.disabled) return;
+            if (this.disabled || this.skipClick) return;
             // 直接点击滑块的情况，计算方式与onTouchMove方法相同
+            if (!this.sliderRect.width) {
+                this.refreshSliderRect().then(() => {
+                    if (!this.sliderRect.width) return;
+                    this.applyClickValue(event);
+                });
+                return;
+            }
+            this.applyClickValue(event);
+        },
+        applyClickValue(event) {
             const value =
                 ((event.detail.x - this.sliderRect.left) / this.sliderRect.width) *
                     (Number(this.max) - Number(this.min)) +
@@ -261,6 +298,9 @@ export default {
     border-radius: 999px;
     border-radius: 999px;
     background-color: #ebedf0;
+    /* 加大纵向热区，最大值时不必精准点中半溢出的滑钮 */
+    padding: 20rpx 0;
+    background-clip: content-box;
 }
 
 .u-slider:before {
@@ -268,9 +308,8 @@ export default {
     right: 0;
     left: 0;
     content: "";
-    top: -8px;
-    bottom: -8px;
-    z-index: -1;
+    top: 0;
+    bottom: 0;
 }
 
 .u-slider__gap {

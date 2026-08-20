@@ -26,7 +26,7 @@ use app\api\logic\sv\ToolsLogic;
  */
 class PublishLogic extends ApiLogic
 {
-    protected static  $VideoPublishTimeMaps = [
+    protected static array $VideoPublishTimeMaps = [
         DeviceEnum::ACCOUNT_TYPE_DY => [
             '08:01',
             '13:01',
@@ -56,13 +56,13 @@ class PublishLogic extends ApiLogic
     ];
 
     /**
-     * @notes 设置山尖视频发布任务
+     * @notes 设置闪剪视频发布任务
      * @param array $params 发布参数
      * @return bool
      * @author 系统
      * @date 2026/03/11
      */
-    public static function setShanjianPublish($params = [])
+    public static function setShanjianPublish(array $params = [])
     {
         $handler = null;
         try {
@@ -141,7 +141,7 @@ class PublishLogic extends ApiLogic
                 while ($retryCount < $maxRetries && !$success) {
                     try {
 
-                        $success = self::runCreateShanjianPublish($params, $handler, $RUNNING_KEY);
+                        $success = self::runCreateShanjianPublish($params);
                         if ($success) {
                             \think\facade\Log::channel('auto')->write('任务执行成功', 'publish');
                         } else {
@@ -233,7 +233,7 @@ class PublishLogic extends ApiLogic
         }
     }
 
-    private static function runCreateShanjianPublish($params)
+    private static function runCreateShanjianPublish(array $params)
     {
 
         Db::startTrans();
@@ -443,7 +443,7 @@ class PublishLogic extends ApiLogic
                             'publish_time' => date('Y-m-d H:i:s', $publishTime),
                             'create_time' => time()
                         ]);
-                        $detail->refresh();
+                        //$detail->refresh();
 
                         $time = self::$execTime[(int)date('H', $publishTime)];
                         $tmpTime = explode('-', $time);
@@ -733,7 +733,7 @@ class PublishLogic extends ApiLogic
         }
     }
 
-    private static function getPuzzleMedias($puzzles)
+    private static function getPuzzleMedias(iterable $puzzles): array
     {
 
         $imgArr = array();

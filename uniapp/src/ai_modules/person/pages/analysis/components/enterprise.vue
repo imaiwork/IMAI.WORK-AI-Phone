@@ -339,7 +339,7 @@
                 <text class="text-lg font-black leading-snug tracking-wide block"
                     >你缺的是一个<br /><text class="text-[#FEF08A]">B端企业专属获客引擎</text></text
                 >
-                <view class="w-10 h-px bg-white/30 mx-auto my-3"></view>
+                <view class="w-10 h-px bg-[#ffffff]/30 mx-auto my-3"></view>
                 <text class="text-xs font-bold text-[#ffffff]/90 leading-relaxed block"
                     >这不是普通获客，是高端商机对接。<br />你只需要做一件事：<text
                         class="text-[#FEF08A] text-sm font-black"
@@ -352,8 +352,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
-
 const props = defineProps<{
     reportData: any;
 }>();

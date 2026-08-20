@@ -235,9 +235,9 @@ const startRecord = () => {
                         lineWidth: 5,
                         keep: false,
                     });
-                }
+                },
             );
-        }
+        },
     );
 };
 
@@ -275,7 +275,7 @@ const stopRecord = async () => {
                 (err: any) => {
                     isUploadError.value = true;
                     reject(false);
-                }
+                },
             );
             isRecording.value = false;
             isPaused.value = true;

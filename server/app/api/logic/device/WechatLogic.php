@@ -108,6 +108,7 @@ class WechatLogic extends ApiLogic
                             'end_time' => $time['end_time'],
                             'time_config' => json_encode($params['time_config'], JSON_UNESCAPED_UNICODE),
                             'sub_task_id' => $strategy->id,
+                            'task_scene' => DeviceEnum::AUTO_TASK_SCENE_TAKE_OVER,
                             'source' => DeviceEnum::TASK_SOURCE_WECHAT_RPA,
                             'create_time' => time(),
                         ]);

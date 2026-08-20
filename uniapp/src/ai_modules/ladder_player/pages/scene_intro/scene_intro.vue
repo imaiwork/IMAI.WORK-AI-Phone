@@ -120,7 +120,7 @@ const rechargeRef = shallowRef();
 const handleStart = () => {
     const { is_draft } = detail.value;
     if (userTokens.value <= 0) {
-        uni.$u.toast("算力不足，请充值！");
+        powerInsufficientTip();
         rechargeRef.value.open();
         return;
     }

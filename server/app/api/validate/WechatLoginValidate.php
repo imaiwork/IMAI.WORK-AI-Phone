@@ -21,6 +21,7 @@ class WechatLoginValidate extends BaseValidate
         'access_token' => 'require',
         'terminal' => 'require',
         'avatar' => 'require',
+        'phoneNumber' => 'require',
     ];
 
     protected $message = [
@@ -54,7 +55,14 @@ class WechatLoginValidate extends BaseValidate
      */
     public function sceneMnpLogin()
     {
-        return $this->only(['code']);
+        $this->message['phoneNumber.require'] = '请先授权手机号';
+        return $this->only(['code', 'phoneNumber']);
+    }
+
+    public function sceneMnpRegister()
+    {
+        $this->message['phoneNumber.require'] = '请先授权手机号';
+        return $this->only(['code', 'phoneNumber']);
     }
 
 

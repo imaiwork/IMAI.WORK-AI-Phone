@@ -49,7 +49,7 @@ class InteractiveMessageHandler extends BaseMessageHandler
         }
     }
 
-    private function _getPostStatusByRpa($content)
+    private function _getPostStatusByRpa(array $content)
     {
         try {
 
@@ -65,12 +65,12 @@ class InteractiveMessageHandler extends BaseMessageHandler
             $message = array(
                 'messageId' => $uid,
                 'deviceId' => $this->payload['deviceId'],
-                'type' => WorkerEnum::TO_RAP_POST_STATUS_LIST,
+                'type' => WorkerEnum::TO_RPA_POST_STATUS_LIST,
                 'appVersion' => WorkerEnum::APP_VERSION,
                 'appType' => $this->payload['appType'] ?? 3,
                 'code' => WorkerEnum::SUCCESS_CODE,
                 'reply' => [
-                    'type' => WorkerEnum::TO_RAP_POST_STATUS_LIST,
+                    'type' => WorkerEnum::TO_RPA_POST_STATUS_LIST,
                     'msg' => '获取笔记列表信息',
                     'deviceId' => $this->payload['deviceId']
                 ]
@@ -85,7 +85,7 @@ class InteractiveMessageHandler extends BaseMessageHandler
     }
 
 
-    private function _updatePostListStatus($content)
+    private function _updatePostListStatus(array $content)
     {
         try {
 

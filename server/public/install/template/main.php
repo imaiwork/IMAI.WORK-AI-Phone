@@ -596,7 +596,7 @@
                                             <div class="flex items-center gap-2">
                                                 <input type="code" name="code"
                                                     value="<?= $post['code'] ?>" />
-    
+
                                                 <button class="accept-btn code-btn h-full py-[5px] rounded-md" onclick="sendCode(event)">
                                                     发送
                                                 </button>
@@ -612,7 +612,7 @@
                                     <!--                                            <input type="checkbox" name="import_test_data"-->
                                     <!--                                                   --><?php //if ($post['import_test_data'] == 'on'): 
                                                                                                 ?><!--checked--><?php //endif; 
-                                                                                                                        ?>
+                                                                                                                ?>
                                     <!--                                                   title="导入测试数据"/>-->
                                     <!--                                            <div style="color: #666666;">&nbsp;导入测试数据</div>-->
                                     <!--                                        </div>-->
@@ -620,7 +620,7 @@
                                 </div>
                             </div>
 
-                          
+
                             <div class="mounted-item">
                                 <div class="content-header">
                                     PostgreSQL配置项
@@ -677,41 +677,6 @@
                                     </div>
                                 </div>
                             </div>
-                            
-
-                          
-                            <!-- <div class="mounted-item">
-                                <div class="content-header mt16">
-                                    授权
-                                </div>
-                                <div class="content-form">
-                                    <div class="form-box-item">
-                                         <div class="form-desc">
-                                            是否有卡号
-                                        </div>
-                                        <div>
-                                            <label for="toggle-auth-account" class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" checked id="toggle-auth-account" class="sr-only peer" onclick="onToogleAuthAccount()">
-                                            <div class="w-11 h-6 bg-gray-200 rounded-full peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                                          </label>
-                                        </div>
-                                    </div>
-                                    <div id="auth-account">
-                                         <div class="form-box-item">
-                                            <div class="form-desc">
-                                                授权卡号
-                                            </div>
-                                            <div>
-                                                <input id="cdkey"  type="text" name="cdkey" value="<?= $post['cdkey'] ?>" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                   
-                                    <div class="mt-2 ml-[74px] text-[#FF3014]">
-                                        <a href="https://shop.AI获客系统/static/html/pc.html" target="_blank">去购买授权卡号</a>
-                                    </div>
-                                </div>
-                            </div> -->
                         </div>
                     <?php } ?>
 
@@ -738,36 +703,35 @@
                                             <img src="./images/icon_mountSuccess.png" />
                                         </div>
                                         <div class="mt16 result">安装完成，进入管理后台</div>
-                                        <div style="margin-top: 5px;font-size:14px;">版本号：2.9.0</div>
                                         <div class="tips rounded-lg">
                                             为了您站点的安全，安装完成后即可将网站根目录的“public”下的“install”文件夹删除，或者根目录下创建install.lock文件防止重复安装。
                                         </div>
-                                        <div class="rounded-lg py-4 px-10 bg-[#F8F8F8] mt-4 w-[400px]" >
-                                           <div id="info-content">
-                                               <div>
-                                               <div class="text-lg font-bold">
-                                                   后台信息
-                                               </div>
-                                               <div class="mt-2">
-                                                   <div>地址：<?= $address['admin'] ?></div>
-                                                   <div>账号：<?= $post['admin_user'] ?></div>
-                                                   <div>密码: <?= $post['admin_password'] ?></div>
-                                               </div>
-                                               </div>
-                                               <div class="mt-4">
-                                                   <div class="text-lg font-bold">
-                                                       数据中台
-                                                   </div>
-                                                   <div class="mt-2">
-                                                       <div>地址：<?= $address['ai'] ?></div>
-                                                       <div>账号：<?= $post['mobile'] ?></div>
-                                                       <div>密码: <?= $post['ai_password'] ?></div>
-                                                   </div>
-                                               </div>
-                                           </div>
-                                           <div class="flex justify-center w-full mt-2">
-                                               <button class="bg-[#2C85EA] py-[7px] px-[35px] text-white rounded-lg" onclick="onCopyInfoContnet(event)">一键复制</button>
-                                         </div>
+                                        <div class="rounded-lg py-4 px-10 bg-[#F8F8F8] mt-4 w-[400px]">
+                                            <div id="info-content">
+                                                <div>
+                                                    <div class="text-lg font-bold">
+                                                        后台信息
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <div>地址：<?= $address['admin'] ?></div>
+                                                        <div>账号：<?= $post['admin_user'] ?></div>
+                                                        <div>密码: <?= $post['admin_password'] ?></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-4">
+                                                    <div class="text-lg font-bold">
+                                                        数据中台
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <div>地址：<?= $address['ai'] ?></div>
+                                                        <div>账号：<?= $domain ?></div>
+                                                        <div>密码: <?= $domain ?></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="flex justify-center w-full mt-2">
+                                                <button class="bg-[#2C85EA] py-[7px] px-[35px] text-white rounded-lg" onclick="onCopyInfoContnet(event)">一键复制</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -778,7 +742,7 @@
                     <div class="flex justify-center">
                         <?php if (in_array($step, ['2', "3"])) { ?>
                             <div class="item-btn-group show">
-                                 <button class="cancel-btn" onclick="goStep(<?php echo $lastStep ?>)" style="padding: 7px 63px;margin-right: 16px">    
+                                <button class="cancel-btn" onclick="goStep(<?php echo $lastStep ?>)" style="padding: 7px 63px;margin-right: 16px">
                                     上一步
                                 </button>
                                 <?php if ($modelInstall->getAllowNext()): ?>

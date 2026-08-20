@@ -12,25 +12,35 @@
                 <el-form-item label="卡密类型" prop="type">
                     <el-radio-group v-model="formData.type">
                         <el-radio :label="3">算力值</el-radio>
+                        <el-radio :label="6">会员兑换码</el-radio>
                     </el-radio-group>
                 </el-form-item>
-                <el-form-item label="算力值" prop="balance">
+                <el-form-item label="算力值" prop="balance" v-if="formData.type == 3">
                     <el-input
                         class="w-full"
                         v-model="formData.balance"
-                        type="number"
-                        placeholder="请输入算力值"
-                        :min="0"
-                        :max="9999" />
+                        v-number-input="{ min: 1, max: 1000000 }"
+                        placeholder="请输入算力值" />
+                </el-form-item>
+                <el-form-item label="会员等级" prop="member_level_id" v-if="formData.type == 6">
+                    <el-select v-model="formData.member_level_id" placeholder="请选择目标会员等级" class="w-full">
+                        <el-option v-for="l in memberLevels" :key="l.id" :label="l.level_name" :value="l.id" />
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="会员天数" prop="member_days" v-if="formData.type == 6">
+                    <el-input
+                        class="w-full"
+                        v-model="formData.member_days"
+                        v-number-input="{ min: 1, max: 3650 }"
+                        placeholder="兑换后获得多少天会员" />
                 </el-form-item>
                 <el-form-item label="卡密数量" prop="card_num">
                     <div class="flex-1">
                         <el-input
                             class="w-full"
                             v-model="formData.card_num"
-                            placeholder="请输入卡密数量"
-                            :min="0"
-                            :max="500" />
+                            v-number-input="{ min: 1, max: 500 }"
+                            placeholder="请输入卡密数量" />
                         <div class="form-tips !text-base">单次生成最多支持500张</div>
                     </div>
                 </el-form-item>
@@ -71,6 +81,17 @@ import Popup from "@/components/popup/index.vue";
 import { cardcodePackageLists, cardcodeAdd } from "@/api/marketing/redeem_code";
 import type { CardCodeFormType } from "@/api/marketing/redeem_code";
 import { useLockFn } from "@/hooks/useLockFn";
+import { getUserLevelList } from "@/api/consumer";
+
+const memberLevels = ref<any[]>([]);
+(async () => {
+    try {
+        const res: any = await getUserLevelList({ page_no: 1, page_size: 100 });
+        memberLevels.value = res?.lists ?? [];
+    } catch (e) {
+        /* ignore */
+    }
+})();
 
 const emit = defineEmits(["success", "close"]);
 //表单ref
@@ -93,24 +114,49 @@ const formData: any = ref<CardCodeFormType>({
     remark: "",
     rule_type: 1,
     balance: "",
+    member_level_id: "",
+    member_days: "",
 });
 //表单校验规则
 const rules = {
     balance: [
         {
+            validator: (rule: any, value: any, callback: any) => {
+                if (formData.value.type != 3) return callback();
+                if (value === "" || value == null) return callback(new Error("请输入算力值"));
+                if (value > 10000000) callback(new Error("算力值不能大于1000000"));
+                else if (!/^\d+$/.test(String(value))) callback(new Error("算力值必须是纯数字"));
+                else callback();
+            },
+            trigger: ["blur"],
+        },
+    ],
+    member_level_id: [
+        {
             required: true,
-            message: "请输入算力值",
+            message: "请选择会员等级",
+            trigger: ["blur", "change"],
+        },
+        {
+            validator: (rule: any, value: any, callback: any) => {
+                if (formData.value.type != 6) return callback();
+                if (!value) callback(new Error("请选择会员等级"));
+                else callback();
+            },
+            trigger: ["blur", "change"],
+        },
+    ],
+    member_days: [
+        {
+            required: true,
+            message: "请输入会员天数",
             trigger: ["blur"],
         },
         {
             validator: (rule: any, value: any, callback: any) => {
-                if (value > 9999) {
-                    callback(new Error("算力值不能大于9999"));
-                } else if (!/^\d+$/.test(value)) {
-                    callback(new Error("算力值必须是纯数字"));
-                } else {
-                    callback();
-                }
+                if (formData.value.type != 6) return callback();
+                if (!value || value < 1) callback(new Error("请输入有效天数"));
+                else callback();
             },
             trigger: ["blur"],
         },

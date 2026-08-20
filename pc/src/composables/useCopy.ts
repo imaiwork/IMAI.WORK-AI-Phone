@@ -1,6 +1,5 @@
 import { useClipboard } from "@vueuse/core";
-import { ElMessage } from "element-plus";
-
+import feedback from "@/utils/feedback";
 interface Options {
     errMsg?: string;
     successMsg?: string;
@@ -9,7 +8,7 @@ interface Options {
 export function useCopy() {
     const copy = async (text: string, options?: Options) => {
         if (!text) {
-            ElMessage.error({ message: options?.errMsg || "复制失败" });
+            feedback.msgError(options?.errMsg || "复制失败");
             return;
         }
         const { copy } = useClipboard({ source: text });
@@ -26,9 +25,9 @@ export function useCopy() {
                 document.execCommand("copy");
                 document.body.removeChild(textarea);
             }
-            ElMessage.success({ message: options?.successMsg || "复制成功" });
+            feedback.msgSuccess(options?.successMsg || "复制成功");
         } catch (error) {
-            ElMessage.error({ message: options?.errMsg || "复制失败" });
+            feedback.msgError(options?.errMsg || "复制失败");
         }
     };
     return {

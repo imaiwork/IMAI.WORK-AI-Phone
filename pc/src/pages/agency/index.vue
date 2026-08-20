@@ -49,8 +49,9 @@
                     </div>
                     <div class="flex flex-col justify-center gap-2">
                         <div
-                            class="px-3 py-1 rounded-full gap-1.5 bg-[#ffc83c2e] border border-[#ffc83c4d] w-fit"
-                            v-if="agentUserInfo?.level !== 0">
+                            class="px-3 py-1 rounded-full gap-1.5 bg-[#ffc83c2e] border border-[#ffc83c4d] w-fit select-none"
+                            v-if="agentUserInfo?.level !== 0"
+                            @click="handleLevelTap">
                             <span class="text-[10px] font-black tracking-widest text-[#ffe066]">
                                 {{ agentUserInfo?.level_name }}
                             </span>
@@ -74,7 +75,30 @@
                     </div>
                 </div>
 
-                <div class="relative z-10 flex items-center">
+                <div class="relative z-10 flex items-center gap-8">
+                    <div class="flex flex-col justify-center gap-2">
+                        <span class="text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                            团队累计充值（含所有层级下级）
+                        </span>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-primary text-lg font-black">￥</span>
+                            <ElStatistic
+                                :value="agentUserInfo?.team_recharge_amount || 0"
+                                :precision="2"
+                                :value-style="{
+                                    color: '#ffffff',
+                                    fontSize: '32px',
+                                    fontWeight: '1000',
+                                    letterSpacing: '-0.02em',
+                                    lineHeight: '1',
+                                }" />
+                        </div>
+                        <span class="text-slate-500 text-[10px] font-bold tracking-wider">
+                            {{ agentUserInfo?.team_recharge_count || 0 }} 笔 ·
+                            {{ agentUserInfo?.team_user_count || 0 }} 位下级
+                        </span>
+                    </div>
+
                     <button
                         @click="handleInvite"
                         class="px-6 py-3 bg-primary text-white text-sm font-[1000] rounded-xl hover:bg-[#0056d6] hover:scale-105 active:scale-95 transition-all shadow-light shadow-[#0065fb]/30 flex items-center gap-2">
@@ -133,7 +157,7 @@
                 <div class="grow min-h-0">
                     <ElTable :data="pager.lists" height="100%" class="custom-table" v-loading="pager.loading">
                         <template v-if="activeTab == 1">
-                            <ElTableColumn label="用户信息" min-width="260">
+                            <ElTableColumn label="用户信息" min-width="220">
                                 <template #default="{ row }">
                                     <div class="flex items-center justify-center gap-4">
                                         <div class="relative">
@@ -152,7 +176,37 @@
                                     </div>
                                 </template>
                             </ElTableColumn>
-                            <ElTableColumn label="可用点数" min-width="140" align="center">
+                            <ElTableColumn label="下级人数" min-width="140" align="center">
+                                <template #default="{ row }">
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-slate-900 font-[1000]">{{ getDescendantCount(row) }}</span>
+                                        <button
+                                            v-if="canViewSubUsers(row)"
+                                            class="text-primary text-[11px] font-black mt-0.5 hover:underline"
+                                            @click="handleViewSubUsers(row)">
+                                            {{ DESCENDANT_HINT }} · 查看
+                                        </button>
+                                        <span
+                                            v-else-if="getDescendantCount(row) > 0"
+                                            class="text-slate-300 text-[11px] font-bold mt-0.5">
+                                            {{ DESCENDANT_HINT }}
+                                        </span>
+                                    </div>
+                                </template>
+                            </ElTableColumn>
+                            <ElTableColumn label="充值业绩" min-width="160" align="center">
+                                <template #default="{ row }">
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-slate-900 font-[1000]">￥{{ row.recharge_amount || 0 }}</span>
+                                        <button
+                                            class="text-primary text-[11px] font-black mt-0.5 hover:underline"
+                                            @click="handleViewRecharge(row)">
+                                            {{ row.recharge_count || 0 }} 笔 · 查看流水
+                                        </button>
+                                    </div>
+                                </template>
+                            </ElTableColumn>
+                            <ElTableColumn label="可用点数" min-width="120" align="center">
                                 <template #default="{ row }">
                                     <span class="text-slate-900 font-[1000]">{{ row.tokens || 0 }}</span>
                                 </template>
@@ -172,20 +226,25 @@
                             <ElTableColumn label="加入时间" min-width="180" align="center">
                                 <template #default="{ row }">
                                     <div class="flex flex-col">
-                                        <span class="text-slate-600 text-xs font-bold">{{
-                                            row.become_time?.split(" ")[0]
-                                        }}</span>
-                                        <span class="text-slate-300 text-[10px]">{{
-                                            row.become_time?.split(" ")[1]
-                                        }}</span>
+                                        <span class="text-slate-600 text-xs font-bold">
+                                            {{ splitTime(row.become_time)[0] || "--" }}
+                                        </span>
+                                        <span class="text-slate-300 text-[10px]">
+                                            {{ splitTime(row.become_time)[1] }}
+                                        </span>
                                     </div>
                                 </template>
                             </ElTableColumn>
-                            <ElTableColumn label="快捷管理" width="280" align="right" fixed="right">
+                            <ElTableColumn label="快捷管理" width="300" align="right" fixed="right">
                                 <template #default="{ row }">
                                     <div class="flex justify-end gap-2">
+                                        <button
+                                            class="action-btn text-slate-600 bg-slate-50 hover:bg-slate-600 hover:text-white"
+                                            @click="handleViewRecharge(row)">
+                                            充值流水
+                                        </button>
                                         <ElPopover
-                                            v-if="isShowAdjustLevel(row)"
+                                            v-if="canAdjustLevel"
                                             trigger="click"
                                             :width="150"
                                             :show-arrow="false"
@@ -203,12 +262,9 @@
                                                     class="table-action-item">
                                                     普通用户
                                                 </button>
-                                                <template v-for="item in agentLevel" :key="item.level">
+                                                <template v-for="item in settableLevels" :key="item.level">
                                                     <button
-                                                        v-if="
-                                                            1000 - (agentUserInfo?.level || 0) > 1000 - item.level &&
-                                                            item.level != row.level
-                                                        "
+                                                        v-if="item.level != row.level"
                                                         @click="handleUpgrade(row, item.level)"
                                                         class="table-action-item">
                                                         {{ item.name }}
@@ -321,6 +377,16 @@
                 ref="giftTokensRef"
                 @success="getLists"
                 @close="showGiftTokens = false" />
+            <sub-users
+                v-if="showSubUsers"
+                ref="subUsersRef"
+                :agent-level="agentLevel"
+                @view-recharge="handleViewRecharge"
+                @close="showSubUsers = false" />
+            <recharge-records
+                v-if="showRechargeRecords"
+                ref="rechargeRecordsRef"
+                @close="showRechargeRecords = false" />
         </template>
     </div>
 </template>
@@ -342,6 +408,8 @@ import BatchGenerateCard from "./_components/batch-generate-card.vue";
 import AgencyContact from "./_components/agency-contact.vue";
 import GiftTokens from "./_components/gift-tokens.vue";
 import AgentInvitePoster from "./_components/agent-invite-poster.vue";
+import RechargeRecords from "./_components/recharge-records.vue";
+import SubUsers from "./_components/sub-users.vue";
 
 const userStore = useUserStore();
 const { userTokens, userInfo } = toRefs(userStore);
@@ -350,7 +418,7 @@ const isAgent = computed(() => userInfo.value.is_distribution_agent);
 
 const { copy } = useCopy();
 
-const agentUserInfo = ref<{ level: number; level_name: string } | null>(null);
+const agentUserInfo = ref<Record<string, any> | null>(null);
 const agentLevel = ref<any[]>([]);
 
 const fetchAgentUserInfo = async () => {
@@ -374,6 +442,10 @@ const showAgencyContact = ref(false);
 const agencyContactRef = ref<InstanceType<typeof AgencyContact>>();
 const showGiftTokens = ref(false);
 const giftTokensRef = ref<InstanceType<typeof GiftTokens>>();
+const showRechargeRecords = ref(false);
+const rechargeRecordsRef = ref<InstanceType<typeof RechargeRecords>>();
+const showSubUsers = ref(false);
+const subUsersRef = ref<InstanceType<typeof SubUsers>>();
 
 const tabsList = ref([
     { id: 1, name: "代理用户管理" },
@@ -398,6 +470,23 @@ const handleTabChange = (id: number) => {
     getLists();
 };
 
+const handleViewRecharge = async (row: any) => {
+    showRechargeRecords.value = true;
+    await nextTick();
+    rechargeRecordsRef.value?.open(row);
+};
+
+const DESCENDANT_HINT = "含子孙";
+const getDescendantCount = (row: any) => Number(row?.descendant_count ?? row?.sub_count ?? 0);
+const canViewSubUsers = (row: any) => Number(row?.sub_count ?? 0) > 0;
+
+// 只支持看到下级的下级这一层，孙级卡片里不再有继续下钻的入口
+const handleViewSubUsers = async (row: any) => {
+    showSubUsers.value = true;
+    await nextTick();
+    subUsersRef.value?.open(row);
+};
+
 const handleOpenAgencyContact = () => {
     showAgencyContact.value = true;
     nextTick(() => {
@@ -419,6 +508,9 @@ const handleInvite = () => {
     });
 };
 
+// 早期后台绑定的下级没有加入时间，拿到的可能是 0/空，不能直接当字符串切分
+const splitTime = (value: any) => (typeof value === "string" ? value.split(" ") : []);
+
 const getLevelClass = (level: number) => {
     const base = "px-3 py-1.5 rounded-xl text-[10px] font-black tracking-tight border ";
     if (!level) return base + "bg-slate-50 text-slate-400 border-slate-100";
@@ -427,13 +519,41 @@ const getLevelClass = (level: number) => {
     return base + "bg-slate-50 text-slate-400 border-slate-100";
 };
 
-const isShowAdjustLevel = (row: any) => {
-    const { level } = agentUserInfo.value || {};
-    const { level: rowLevel } = row || {};
-    return rowLevel == 0 && level != 3
-        ? level > rowLevel
-        : 1000 - level > 1000 - rowLevel && level != rowLevel && level != 0;
+// 隐藏入口：连点 5 次自己的等级标签，弹出后台为该等级配置的备注说明
+const LEVEL_REMARK_TAPS = 5;
+const currentLevelRemark = computed(
+    () => agentLevel.value.find((item: any) => item.level == agentUserInfo.value?.level)?.remark || "",
+);
+let levelTapCount = 0;
+let levelTapTimer: ReturnType<typeof setTimeout> | null = null;
+
+const handleLevelTap = () => {
+    // 该等级没配备注时不做任何反馈，保持入口隐形
+    if (!currentLevelRemark.value) return;
+
+    if (levelTapTimer) clearTimeout(levelTapTimer);
+    levelTapCount += 1;
+
+    if (levelTapCount < LEVEL_REMARK_TAPS) {
+        // 间隔太久视为零散误触，重新计数
+        levelTapTimer = setTimeout(() => (levelTapCount = 0), 1500);
+        return;
+    }
+
+    levelTapCount = 0;
+    useNuxtApp().$confirm({
+        title: `${agentUserInfo.value?.level_name || "当前等级"}说明`,
+        message: currentLevelRemark.value,
+        confirmButtonText: "知道了",
+        cancelButtonText: "",
+    });
 };
+
+// 等级数字越大等级越低，只能把下级设置成比自己更低的等级；等级数量后台可增删，不能写死
+const settableLevels = computed(() =>
+    agentLevel.value.filter((item: any) => item.level > (agentUserInfo.value?.level ?? 0)),
+);
+const canAdjustLevel = computed(() => (agentUserInfo.value?.level ?? 0) > 0 && settableLevels.value.length > 0);
 
 const handleUpgrade = async (row: any, level: number) => {
     useNuxtApp().$confirm({
@@ -536,9 +656,11 @@ onMounted(() => {
     0% {
         background-position: 0% 50%;
     }
+
     50% {
         background-position: 100% 50%;
     }
+
     100% {
         background-position: 0% 50%;
     }
@@ -554,6 +676,7 @@ onMounted(() => {
         opacity: 0.5;
         transform: scale(1);
     }
+
     50% {
         opacity: 0.8;
         transform: scale(1.05);

@@ -77,9 +77,9 @@ class TriggerConversationPushTaskHandler extends BaseHandler
             $request->setTaskId($data['TaskId']);
         }
 
-        // if (isset($data['Limit'])) {
-        //     $request->setLimit($data['Limit']);
-        // }
+        if (isset($data['Limit'])) {
+            $request->setLimit($data['Limit']);
+        }
 
         if (isset($data['Offset'])) {
             $request->setOffset($data['Offset']);

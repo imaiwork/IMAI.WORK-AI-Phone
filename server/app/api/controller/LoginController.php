@@ -3,11 +3,13 @@
 
 namespace app\api\controller;
 
-use app\api\validate\{LoginAccountValidate,
+use app\api\validate\{
+    LoginAccountValidate,
     MnpAuthPcValidate,
     RegisterValidate,
     WebScanLoginValidate,
-    WechatLoginValidate};
+    WechatLoginValidate
+};
 use app\api\logic\LoginLogic;
 
 /**
@@ -18,7 +20,15 @@ use app\api\logic\LoginLogic;
 class LoginController extends BaseApiController
 {
 
-    public array $notNeedLogin = ['register', 'account', 'logout', 'codeUrl', 'oaLogin',  'mnpLogin', 'getScanCode', 'scanLogin', 'getMobileNumber', 'getMnpQrCode', 'mnpAuthPcLogin','mnpAuthStatus'];
+    public array $notNeedLogin = ['register', 'account', 'logout', 'codeUrl', 'oaLogin',  'mnpLogin', 'mnpRegister', 'getScanCode', 'scanLogin', 'getMobileNumber', 'getMnpQrCode', 'mnpAuthPcLogin', 'mnpAuthStatus', 'registerMode'];
+
+    /**
+     * @notes 公开:获取注册模式 + 默认邀请来源
+     */
+    public function registerMode()
+    {
+        return $this->data(LoginLogic::getRegisterMode());
+    }
 
 
     /**
@@ -29,12 +39,19 @@ class LoginController extends BaseApiController
      */
     public function register()
     {
-        $params = (new RegisterValidate())->post()->goCheck('register');
+        $mobile = $this->request->post('mobile', $this->request->post('account', ''));
+        $terminal = (int)$this->request->post('terminal', $this->terminal);
+        $params = (new RegisterValidate())->post()->goCheck('register', [
+            'account' => $mobile,
+            'mobile' => $mobile,
+            'terminal' => $terminal,
+            'channel' => $this->request->post('channel', $terminal),
+        ]);
         $result = LoginLogic::register($params);
-        if (true === $result) {
-            return $this->success('注册成功', [], 1, 1);
+        if (false === $result) {
+            return $this->fail(LoginLogic::getError());
         }
-        return $this->fail(LoginLogic::getError());
+        return $this->success('注册成功', $result, 1, 1);
     }
 
 
@@ -46,10 +63,10 @@ class LoginController extends BaseApiController
      */
     public function account()
     {
-        $params = (new LoginAccountValidate())->post()->goCheck();
+        $params = (new LoginAccountValidate())->post()->goApiCheck();
         $result = LoginLogic::login($params);
         if (false === $result) {
-            return $this->fail(LoginLogic::getError());
+            return $this->fail(LoginLogic::getError(), [], 0, 0);
         }
         return $this->data($result);
     }
@@ -120,6 +137,20 @@ class LoginController extends BaseApiController
     }
 
     /**
+     * @notes 小程序注册接口
+     * @return \think\response\Json
+     */
+    public function mnpRegister()
+    {
+        $params = (new WechatLoginValidate())->post()->goCheck('mnpRegister');
+        $res = LoginLogic::mnpRegister($params);
+        if (false === $res) {
+            return $this->fail(LoginLogic::getError());
+        }
+        return $this->success('注册成功', $res, 1, 1);
+    }
+
+    /**
      * @notes 获取小程序手机号
      * @return \think\response\Json
      * @author 段誉
@@ -184,7 +215,7 @@ class LoginController extends BaseApiController
      */
     public function getScanCode()
     {
-        $redirectUri = $this->request->domain().'/pc';
+        $redirectUri = $this->request->domain() . '/pc';
         $result = LoginLogic::getScanCode($redirectUri);
         if (false === $result) {
             return $this->fail(LoginLogic::getError() ?? '未知错误');
@@ -229,13 +260,14 @@ class LoginController extends BaseApiController
      * @author Rick
      * @date 2025/6/3 19:15
      */
-    public function mnpAuthPcLogin(){
+    public function mnpAuthPcLogin()
+    {
         $params = (new MnpAuthPcValidate())->post()->goCheck();
         $result = LoginLogic::mnpAuthPcLogin($params);
         if (false === $result) {
             return $this->fail(LoginLogic::getError());
         }
-        return $this->success('授权成功',$result);
+        return $this->success('授权成功', $result);
     }
 
     /**
@@ -244,12 +276,13 @@ class LoginController extends BaseApiController
      * @author Rick
      * @date 2025/6/3 19:15
      */
-    public function mnpAuthStatus(){
+    public function mnpAuthStatus()
+    {
         $params = $this->request->post();
         $result = LoginLogic::mnpAuthStatus($params);
         if (false === $result) {
             return $this->fail(LoginLogic::getError());
         }
-        return $this->success('已授权',$result);
+        return $this->success('已授权', $result);
     }
 }

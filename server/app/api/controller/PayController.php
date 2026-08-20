@@ -8,6 +8,7 @@ use app\api\validate\PayValidate;
 use app\common\enum\user\UserTerminalEnum;
 use app\common\logic\PaymentLogic;
 use app\common\service\pay\AliPayService;
+use app\common\service\pay\MnpVirtualPayService;
 use app\common\service\pay\WeChatPayService;
 
 /**
@@ -18,7 +19,7 @@ use app\common\service\pay\WeChatPayService;
 class PayController extends BaseApiController
 {
 
-    public array $notNeedLogin = ['notifyMnp', 'notifyOa', 'aliNotify'];
+    public array $notNeedLogin = ['notifyMnp', 'notifyOa', 'aliNotify', 'mnpVirtualNotify'];
 
     /**
      * @notes 支付方式
@@ -45,7 +46,8 @@ class PayController extends BaseApiController
      */
     public function prepay()
     {
-        $params = (new PayValidate())->post()->goCheck();
+        // 仅校验预支付必要字段，避免命中虚拟支付专用的 code 等规则
+        $params = (new PayValidate())->post()->goCheck('prepay');
         //订单信息
         $order = PaymentLogic::getPayOrderInfo($params);
         if (false === $order) {
@@ -75,6 +77,70 @@ class PayController extends BaseApiController
             return $this->fail(PaymentLogic::getError());
         }
         return $this->data($result);
+    }
+
+
+    /**
+     * @notes 小程序虚拟支付预下单
+     * @return \think\response\Json
+     */
+    public function mnpVirtualPrepay()
+    {
+        $params = (new PayValidate())->post()->goCheck('mnpVirtualPrepay', [
+            'user_id' => $this->userId,
+        ]);
+        $result = MnpVirtualPayService::prepay($params);
+        if ($result === false) {
+            return $this->fail(MnpVirtualPayService::getError(), $params);
+        }
+        return $this->success('', $result);
+    }
+
+
+    /**
+     * @notes 小程序虚拟支付结果查询
+     * @return \think\response\Json
+     */
+    public function mnpVirtualConfirm()
+    {
+        $params = (new PayValidate())->post()->goCheck('mnpVirtualConfirm', [
+            'user_id' => $this->userId,
+        ]);
+        $result = MnpVirtualPayService::confirm($params);
+        if ($result === false) {
+            return $this->fail(MnpVirtualPayService::getError(), $params);
+        }
+        return $this->data($result);
+    }
+
+
+    /**
+     * @notes 小程序虚拟支付回调（消息推送 xpay_goods_deliver_notify 等）
+     * 请在小程序后台「开发管理-开发设置-消息推送」或虚拟支付发货推送中配置为本接口地址
+     * @return \think\response\Response
+     */
+    public function mnpVirtualNotify()
+    {
+        $params = $this->request->param();
+        $raw = $this->request->getInput();
+        if (!empty($raw)) {
+            $json = json_decode($raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($json)) {
+                $params = array_merge($params, $json);
+            } else if (stripos($raw, '<xml') !== false) {
+                $params['_raw_is_xml'] = true;
+                $xml = simplexml_load_string($raw, 'SimpleXMLElement', LIBXML_NOCDATA);
+                if ($xml !== false) {
+                    $params = array_merge($params, json_decode(json_encode($xml), true) ?: []);
+                    $params['_raw_is_xml'] = true;
+                }
+            }
+        }
+
+        $result = MnpVirtualPayService::notify($params);
+        return response($result['body'] ?? 'fail', 200, [
+            'Content-Type' => $result['content_type'] ?? 'text/plain; charset=utf-8',
+        ]);
     }
 
 

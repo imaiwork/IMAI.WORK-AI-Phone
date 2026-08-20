@@ -4,11 +4,11 @@
 namespace app\api\logic;
 
 
-use app\common\{enum\notice\NoticeEnum, enum\user\UserTerminalEnum, enum\YesNoEnum, logic\BaseLogic, model\distribution\DistributionAgent, model\user\User, model\user\UserAuth, service\FileService, service\sms\SmsDriver, service\wechat\WeChatMnpService};
+use app\adminapi\logic\setting\DistributionAgentConfigLogic;
+use app\common\{enum\notice\NoticeEnum, enum\user\UserTerminalEnum, enum\YesNoEnum, logic\BaseLogic, model\distribution\DistributionAgent, model\sv\SvDevice, model\user\User, model\user\UserAuth, model\user\UserLevel, service\FileService, service\MemberService, service\sms\SmsDriver, service\wechat\WeChatMnpService};
+use app\common\service\deviceauth\DeviceAuthActivateWatchService;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
 use Ramsey\Uuid\Uuid;
 use think\facade\Config;
 
@@ -32,7 +32,7 @@ class UserLogic extends BaseLogic
     public static function center(array $userInfo): array
     {
         $user = User::where(['id' => $userInfo['user_id']])
-            ->field('id,sn,sex,account,nickname,real_name,avatar,mobile,create_time,is_new_user,user_money,tokens,password')
+            ->field('id,sn,sex,account,nickname,real_name,avatar,mobile,create_time,is_new_user,user_money,tokens,password,level_id,team_id,team_role')
             ->findOrEmpty();
 
         if (in_array($userInfo['terminal'], [UserTerminalEnum::WECHAT_MMP, UserTerminalEnum::WECHAT_OA])) {
@@ -44,6 +44,14 @@ class UserLogic extends BaseLogic
         $user->hidden(['password']);
 
         $user = $user->toArray();
+        // 企业空间可用算力口径:团队成员=企业钱包+团队长个人算力(与后端计费一致),
+        // 供 pc/uniapp 的"算力不足"预检与顶部展示;团队主/散客/个人=各自个人算力(spendableTokens 已处理)。
+        // personal_tokens 保留个人算力原值备用。
+        $user['personal_tokens'] = $user['tokens'];
+        $user['tokens'] = \app\common\service\TeamBillingService::spendableTokens((int)$user['id']);
+        $user['level_name'] = intval($user['level_id'] ?? -1) > 0
+            ? (UserLevel::where('id', intval($user['level_id']))->value('level_name') ?? '')
+            : '';
 
         // 查找用户是否为代理用户
         $agent = DistributionAgent::where('user_id', $user['id'])->findOrEmpty();
@@ -53,8 +61,13 @@ class UserLogic extends BaseLogic
             }else{
                 $user['is_distribution_agent'] = YesNoEnum::YES;
             }
+            $parentId = (int)($agent['parent_id'] ?? 0);
+            $user['has_parent_agent'] = $parentId > 0 ? YesNoEnum::YES : YesNoEnum::NO;
+            $user['parent_agent_id'] = $parentId > 0 ? $parentId : 0;
         } else {
             $user['is_distribution_agent'] = YesNoEnum::NO;
+            $user['has_parent_agent'] = YesNoEnum::NO;
+            $user['parent_agent_id'] = 0;
         }
 
         return $user;
@@ -71,11 +84,14 @@ class UserLogic extends BaseLogic
     public static function info(int $userId)
     {
         $user = User::where(['id' => $userId])
-            ->field('id,sn,sex,account,password,nickname,real_name,avatar,mobile,create_time,user_money,tokens')
+            ->field('id,sn,sex,account,password,nickname,real_name,avatar,mobile,create_time,user_money,tokens,level_id')
             ->findOrEmpty();
         $user['has_password'] = !empty($user['password']);
         $user['has_auth'] = self::hasWechatAuth($userId);
         $user['version'] = config('project.version');
+        $user['level_name'] = intval($user['level_id'] ?? -1) > 0
+            ? (UserLevel::where('id', intval($user['level_id']))->value('level_name') ?? '')
+            : '';
         $user->hidden(['password']);
         return $user->toArray();
     }
@@ -213,7 +229,7 @@ class UserLogic extends BaseLogic
     public static function getMobileByMnp(array $params)
     {
         try {
-            $response = (new WeChatMnpService())->getUserPhoneNumber($params['code']);
+            $response = (new WeChatMnpService(\app\api\logic\TeamLogic::currentRequestSiteTeamId()))->getUserPhoneNumber($params['code']);
             $phoneNumber = $response['phone_info']['purePhoneNumber'] ?? '';
             if (empty($phoneNumber)) {
                 throw new \Exception('获取手机号码失败');
@@ -300,6 +316,13 @@ class UserLogic extends BaseLogic
     public static function getDeviceBindCode(array $params): bool
     {
         try {
+            $userId = (int)($params['user_id'] ?? 0);
+            $existing = (int)SvDevice::where('user_id', $userId)->count();
+            $reason = '';
+            if (!MemberService::canBindDevice($userId, $existing, $reason)) {
+                throw new \Exception($reason);
+            }
+
             $deviceBindCode = User::where('id', '=', $params['user_id'])->value('device_bind_qrcode');
             $host = env('app.host');
             $domain = parse_url($host)['host'] ?? $_SERVER['HTTP_HOST'];
@@ -336,10 +359,13 @@ class UserLogic extends BaseLogic
                 $url = 'https://' . $domain . $deviceBindCode;
             }
 
+            $snapshot = DeviceAuthActivateWatchService::snapshot($params['user_id']);
+
             self::$returnData = [
                 'user_id' => $params['user_id'],
                 'url' => $url,
                 'uuid' => $uuid,
+                'watch_code_count' => DeviceAuthActivateWatchService::unusedCountFromMap($snapshot),
             ];
             return true;
         } catch (\Exception $e) {
@@ -349,7 +375,7 @@ class UserLogic extends BaseLogic
     }
 
     /**
-     * @notes 获取用户设备绑定状态
+     * @notes 获取用户设备绑定/激活状态（轮询本地设备CDK状态变化）
      * @param array $params
      * @return bool
      * @author L
@@ -358,76 +384,44 @@ class UserLogic extends BaseLogic
     public static function getDeviceBindStatus(array $params): bool
     {
         try {
-            $user = User::where('id', '=', $params['user_id'])->find();
-            $status = 1;
-            $message = '绑定成功';
-            if ($user['device_bind_num'] == 0) {
-                $status = 0;
-                $message = '设备未绑定';
-            }
-            if ((time() - $user['device_bind_time']) > 15) {
-                $status = 0;
-                $message = '设备未绑定，请稍后再试';
-            }
-
-            $domain = $_SERVER['HTTP_HOST'];
-            $uuid = pathinfo(basename($user['device_bind_code']), PATHINFO_FILENAME);
-            $params = [
-                'user_id' => $user['id'],
-                'domain' => $domain,
-                'uuid' => $uuid,
-            ];
-            $res = self::getDeviceBindRequest($params);
-
-            if (empty($res)) {
-                $status = 0;
-                $message = '绑定失败';
+            $userId = (int)$params['user_id'];
+            if (!DeviceAuthActivateWatchService::hasSnapshot($userId)) {
+                self::$returnData = [
+                    'status'         => 0,
+                    'message'        => '请先获取绑定二维码',
+                    'device_code'    => '',
+                    'code'           => '',
+                    'auth_type_desc' => '',
+                ];
+                return true;
             }
 
+            $activated = DeviceAuthActivateWatchService::detectActivated($userId);
+            if ($activated === null) {
+                self::$returnData = [
+                    'status'         => 0,
+                    'message'        => '等待激活',
+                    'device_code'    => '',
+                    'code'           => '',
+                    'auth_type_desc' => '',
+                ];
+                return true;
+            }
+
+            DeviceAuthActivateWatchService::clear($userId);
+            $status = (int)($activated['status'] ?? 1);
             self::$returnData = [
-                'status' => $status,
-                'message' => $message,
-                'device_code' => User::where('id', '=', $params['user_id'])->value('last_bind_device_code') ?? ''
+                'status'         => $status,
+                'message'        => $activated['message'] ?? ($status === 1 ? '激活成功' : '绑定失败'),
+                'device_code'    => $activated['device_code'] ?? '',
+                'code'           => $activated['code'] ?? '',
+                'auth_type_desc' => $activated['auth_type_desc'] ?? '',
             ];
             return true;
-        } catch (GuzzleException $e) {
+        } catch (\Exception $e) {
             self::setError($e->getMessage());
             return false;
         }
-    }
-
-    /**
-     * @throws GuzzleException
-     */
-    public static function getDeviceBindRequest($params): array
-    {
-        $auth = \app\common\service\ToolsService::Auth();
-        $url = $auth::CODE_REQUEST_URL;
-        $token = $auth::CODE_REQUEST_TOKEN;
-        $body = [
-            'user_id' => $params['user_id'],
-            'domain' => $params['domain'],
-            'uuid' => $params['uuid'],
-        ];
-        $option = [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $token,
-                'Content-Type' => 'application/json'
-            ],
-            'json' => $body
-        ];
-        $client = new Client();
-        $rsp = $client->request('POST', $url, $option);
-        $contents = $rsp->getBody()->getContents();
-        $data = json_decode($contents, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return [];
-        }
-        if (($data['code'] ?? 0) === 1) {
-            return $data;
-        }
-        return [];
     }
 
     /**
@@ -452,6 +446,8 @@ class UserLogic extends BaseLogic
             if ($inviterAgent->isEmpty() || $inviterAgent->status == 0) {
                 throw new \Exception('上级用户还不是代理');
             }
+            // 按后台 getSubLimits：对被绑用户当前等级做对应类型人数校验
+            DistributionAgentConfigLogic::checkCanAcceptBind((int)$inviter['id'], (int)$params['user_id']);
             $agent = DistributionAgent::where('user_id', $params['user_id'])->findOrEmpty();
             if ($agent->isEmpty()) {
                 DistributionAgent::create([

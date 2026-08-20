@@ -4,8 +4,12 @@ namespace app\api\logic;
 
 use app\api\logic\service\TokenLogService;
 use app\api\logic\shanjian\ShanjianAnchorLogic;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
+use app\api\logic\shanjian\ShanjianVideoTaskLogic;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
+use app\common\model\aiPersona\AiPersonaDigitalAvatar;
+use app\common\model\aiPersona\AiPersonaDigitalVoice;
 use app\common\model\digitalHuman\DigitalHumanAnchor;
 use app\common\model\human\HumanAnchor;
 use app\common\model\human\HumanAudio;
@@ -17,9 +21,12 @@ use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
+use app\common\service\UserDisplaySanitizer;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
+use think\facade\Cache;
+use think\facade\Db;
 use think\facade\Log;
 
 class HumanLogic extends ApiLogic
@@ -126,15 +133,16 @@ class HumanLogic extends ApiLogic
                             self::refundTokens($item->user_id, $item->anchor_id, $item->task_id, 'human_anchor_chanjing');
                         }else{
                             if (!empty($item->dh_id) && $digitalHuman->status == 4){
-                                    $shanjianAuth = ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI');
+                                    $shanjianAuth = ConfigService::get('digital_human', 'shanjian_auth', '数字人');
+                                    $shanjianAuth = UserDisplaySanitizer::digitalHumanAuthName($shanjianAuth);
                                     $sqmsg = "我授权" . $shanjianAuth . "使用视频中的肖像、声音，为我生成定制数字人及声音，并在本人账号中创作使用。";
                                     $adddata = [
                                         'user_id' => $digitalHuman->user_id,
                                         'name' => $digitalHuman->name . 'ai授权视频',
                                         'pic' => $digitalHuman->image,
                                         'gender' => $item->gender ?? 'male',
-                                        'width' => $digitalHuman->width,
-                                        'height' => $digitalHuman->height,
+                                        'width' => $item->width,
+                                        'height' => $item->height,
                                         'audio_type' => 1,
                                         'anchor_id' => $data['id'],
                                         'anchor_name' => $digitalHuman->name,
@@ -149,6 +157,7 @@ class HumanLogic extends ApiLogic
                                         'music_type' => 1,
                                         'automatic_clip' => 0,
                                         'clip_type' => 1,
+                                        'is_ai' => 1,
                                     ];
                                     HumanVideoTask::create($adddata);
                                     $task_ids['chanjing']['status'] = 1;
@@ -394,7 +403,7 @@ class HumanLogic extends ApiLogic
                     $item->result_url   =  FileService::downloadFileBySource($data['video_Url'], 'video');
                     $item->remark       = $data['msg'] ?? '';
                 }
-                if ($item->model_version === 7) { //标准版
+                if ((int)$item->model_version === 7) { //蝉镜
                     $status = (int)$data['status'];
                     if ($status != 10) {
                         $item->status = ($data['status'] == 30) ? 1 : 2;
@@ -417,8 +426,17 @@ class HumanLogic extends ApiLogic
                     }
 
                     if ($status == 30){
-                        $item->result_url   = FileService::downloadFileBySource($data['video_url'], 'video');
-                        $item->audio_url   = FileService::downloadFileBySource($data['audio_urls'][0], 'audio');
+                        if (!empty($data['video_url'])) {
+                            $item->result_url = FileService::downloadFileBySource((string)$data['video_url'], 'video');
+                        }
+                        // 音频驱动回调常不带 audio_urls；缺省时保留创建时已有 audio_url，避免中断落库与 type5 桥接回写
+                        $audioRemote = '';
+                        if (!empty($data['audio_urls']) && is_array($data['audio_urls'])) {
+                            $audioRemote = trim((string)($data['audio_urls'][0] ?? ''));
+                        }
+                        if ($audioRemote !== '') {
+                            $item->audio_url = FileService::downloadFileBySource($audioRemote, 'audio');
+                        }
                         $item->duration   = $data['duration'] ?? 0;
                         $user = User::find( $item->user_id);
                         $unit = ModelConfig::where('scene', 'human_video_chanjing')->value('score', 0);
@@ -426,37 +444,47 @@ class HumanLogic extends ApiLogic
                         $points = round($duration * $unit,2);
                         $newpoints = UserTokensLog::where('user_id', $item->user_id)->where('change_type', AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_CHANJING)->where('task_id',  $item->task_id )->value('change_amount') ?? 0;
 
-                        $sl = $newpoints - $points ;
+                        $sl = round($newpoints - $points, 2);
                         if ($sl > 0) {
-                            //调整可用余额
+                            // 结余退费必须走企业钱包(勿直接改 user.tokens,否则团队模式剩余不涨)
                             $kf = '克隆数字人视频预扣费超额扣费退费：'.$sl.'算力';
-                            $user->tokens += $sl;
-                            $user->save();
-                            //记录日志
+                            $logTeamId = \app\common\service\TeamBillingService::refundByOriginalLog(
+                                (int)$user->id,
+                                $sl,
+                                AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_CHANJING,
+                                (string)$item->task_id
+                            );
                             AccountLogLogic::add(
                                 $user->id,
                                 AccountLogEnum::TOKENS_INC_HUMAN,
                                 AccountLogEnum::INC,
                                 $sl,
                                 1,
-                                '',
-                                $kf
-
+                                (string)$item->task_id,
+                                $kf,
+                                [],
+                                $logTeamId
                             );
                         } else {
-                            $sl =  $points - $newpoints ;
+                            $sl = round($points - $newpoints, 2);
                             $kf = '克隆数字人视频预扣费补足费用补扣：'.$sl.'算力';
-                            $user->tokens -= $sl;
-                            $user->save();
-                            //记录日志
+                            // 补扣主体按预扣那一次的空间(用户切换空间后仍算原空间)
+                            $logTeamId = \app\common\service\TeamBillingService::deductByOriginalLog(
+                                (int)$user->id,
+                                $sl,
+                                AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_CHANJING,
+                                (string)$item->task_id
+                            );
                             AccountLogLogic::add(
                                 $user->id,
                                 AccountLogEnum::TOKENS_DEC_HUMAN_EXT,
                                 AccountLogEnum::DEC,
                                 $sl,
                                 1,
-                                '',
-                                $kf
+                                (string)$item->task_id,
+                                $kf,
+                                [],
+                                $logTeamId
                             );
                         }
 
@@ -478,11 +506,35 @@ class HumanLogic extends ApiLogic
                             ];
                             ShanjianAnchorLogic::add($shanjianData);
                             Log::channel('digital')->write('ai授权视频,闪剪视频头像克隆：' . json_encode($shanjianData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                            // 一克三：AI 授权视频就绪后随极速克隆一起提交专业克隆
+                            $digitalHumanAnchor = DigitalHumanAnchor::where('id', $dh_id)->find();
+                            if ((int)($digitalHumanAnchor['clone_mode'] ?? 2) === 3) {
+                                try {
+                                    $shanjianData['resolution'] = DigitalHumanLogic::resolveShanjianResolution($digitalHumanAnchor['width'] ?? 0, $digitalHumanAnchor['height'] ?? 0);
+                                    ShanjianAnchorLogic::addPro($shanjianData);
+                                    Log::channel('digital')->write('ai授权视频,闪剪专业形象克隆：' . json_encode($shanjianData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                                } catch (\Exception $e) {
+                                    // 回调链路中隔离异常（如算力不足），避免第三方重推回调导致极速克隆重复提交
+                                    Log::channel('digital')->write('ai授权视频,闪剪专业形象克隆提交失败: dh_id=' . $dh_id . ' err=' . $e->getMessage());
+                                }
+                            }
                         }
                     }
                     $item->remark = $data['msg'] ?? '';
                 }
-                if($item->status == 1 && $item->automatic_clip == 1&& $item->clip_status == 1){
+
+                // type5 蝉镜桥接：成功/失败回写闪剪 type5，成功且开智剪则派生闪剪包装
+                $isType5ChanjingBridge = false;
+                if ((int)$item->model_version === 7) {
+                    try {
+                        $isType5ChanjingBridge = ShanjianVideoTaskLogic::syncType5BridgeFromChanjing($item);
+                    } catch (\Throwable $e) {
+                        Log::channel('shanjiannotice')->write('蝉镜桥接回写失败 task_id=' . $item->task_id . ' err=' . $e->getMessage());
+                    }
+                }
+
+                // type5 桥接任务走闪剪包装，跳过旧 Sv()->clip
+                if ($item->status == 1 && $item->automatic_clip == 1 && $item->clip_status == 1 && !$isType5ChanjingBridge) {
                     $unit = TokenLogService::checkToken($item->user_id, 'video_clip');
                     $result_url = FileService::getFileUrl($item->result_url);
                     $params = [
@@ -519,7 +571,7 @@ class HumanLogic extends ApiLogic
                         'userId' => $item->user_id,
                         'content' => $item->name,
                         'status' => $statusmsg
-                    ], 'video');
+                    ], 402);
                 }
                 $item->save();
             });
@@ -610,7 +662,11 @@ class HumanLogic extends ApiLogic
         try {
             $anchor_id = $request['anchor_id'] ?? '';
             $anchor_name = $request['anchor_name'] ?? '';
-            $name = $request['name'] ?? '';
+            $name = trim((string)($request['name'] ?? ''));
+            // 未填视频名称时给默认名（前端清空输入框会传空串）
+            if ($name === '') {
+                $name = '数字人口播' . date('mdHi');
+            }
             $gender = $request['gender'] ?? 'male';
             $pic = $request['pic'] ?? '';
             $video_url = $request['video_url'] ?? '';
@@ -627,7 +683,17 @@ class HumanLogic extends ApiLogic
             $music_url = $request['music_url'] ?? '';
             $music_type = $request['music_type'] ?? 1;
 
-            if (empty($anchor_name) || empty($name) || !in_array($model_version, [1, 2, 4, 6, 7]) || !in_array($gender, ['male', 'female'])) {
+            // 蝉镜 + MiniMax：旧 videoTask 按 model_version=7 查音色会误报「音色不存在」。
+            // MiniMax(model_version=10/11) 需先 TTS 再音频驱动蝉镜，统一走 type5 蝉镜引擎桥接。
+            if ((int)$model_version === 7
+                && trim((string)$voice_id) !== ''
+                && (string)$voice_id !== '-1'
+                && ShanjianVideoSettingLogic::isMinimaxVoiceId((string)$voice_id, (int)self::$uid)
+            ) {
+                return self::videoTaskViaType5ChanjingMinimax($request);
+            }
+
+            if (empty($anchor_name) || !in_array($model_version, [1, 2, 4, 6, 7]) || !in_array($gender, ['male', 'female'])) {
 
                 throw new \Exception('参数错误');
             }
@@ -753,6 +819,13 @@ class HumanLogic extends ApiLogic
             if ($anchor_id) {
                 $anchor = HumanAnchor::where('anchor_id', $anchor_id)->where('model_version',$model_version)->where('status',1)->findOrEmpty();
                 if ($anchor->isEmpty()) {
+                    if (HumanAnchor::where('anchor_id', $anchor_id)
+                        ->where('model_version', $model_version)
+                        ->where('status', ShanjianVideoSettingLogic::memberFrozenStatus())
+                        ->whereNull('delete_time')
+                        ->count() > 0) {
+                        throw new \Exception(ShanjianVideoSettingLogic::frozenAnchorTip());
+                    }
                     throw new \Exception('形象不存在');
                 }
                 $video_url =  $anchor['url'];
@@ -769,6 +842,9 @@ class HumanLogic extends ApiLogic
             if ($voice_id && $voice_type == 1) {
                 $voice = HumanVoice::where('voice_id', $voice_id)->where('model_version',$model_version)->where('status',1)->findOrEmpty();
                 if ($voice->isEmpty()) {
+                    if (ShanjianVideoSettingLogic::isVoiceMemberFrozen((string)$voice_id, (int)self::$uid)) {
+                        throw new \Exception(ShanjianVideoSettingLogic::frozenVoiceTip());
+                    }
                     throw new \Exception('音色不存在');
                 }
                 $voice_name =  $voice['name'];
@@ -782,7 +858,8 @@ class HumanLogic extends ApiLogic
                 }
             }
             if ($model_version == 7 & (trim($width) == '' || trim($height) == '' || $width == 0 || $height == 0)){
-                throw new \Exception('蝉镜模型宽高不能为空');
+                $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion((int)$model_version) ?: '数字人';
+                throw new \Exception($modelName . '模型宽高不能为空');
             }
 
            
@@ -822,6 +899,271 @@ class HumanLogic extends ApiLogic
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 旧入口 /human/videoTask 兼容：蝉镜 + MiniMax 转发到 type5 蝉镜引擎
+     * （含 MiniMax TTS 占位 → 回填 audio → videoTaskCron）
+     */
+    private static function videoTaskViaType5ChanjingMinimax(array $request): bool
+    {
+        $audioType = (int)($request['audio_type'] ?? 1);
+        $audioUrl = trim((string)($request['audio_url'] ?? ''));
+        $msg = (string)($request['msg'] ?? '');
+        $voiceId = trim((string)($request['voice_id'] ?? ''));
+
+        if ($audioType === 1 && trim($msg) === '') {
+            self::setError('选择MiniMax音色时，必须填写文案');
+            return false;
+        }
+        if ($audioType === 2 && $audioUrl === '') {
+            self::setError('音频文件不能为空');
+            return false;
+        }
+
+        $videoName = trim((string)($request['name'] ?? ''));
+        if ($videoName === '') {
+            $videoName = '数字人口播' . date('mdHi');
+        }
+
+        $params = [
+            'name' => $videoName,
+            'pic' => (string)($request['pic'] ?? ''),
+            'shanjian_type' => 5,
+            'engine_type' => ShanjianVideoSettingLogic::ENGINE_TYPE_CHANJING,
+            // 旧 automatic_clip 走 Sv()->clip；type5 包装用 ai_clip_enabled，此处不映射以免混用
+            'ai_clip_enabled' => 0,
+            'anchor' => [
+                ['anchor_id' => trim((string)($request['anchor_id'] ?? ''))],
+            ],
+            'voice' => [
+                ['voice_id' => $voiceId],
+            ],
+            'extra' => [
+                'video_count' => 1,
+                'volume' => 0.3,
+                'width' => (string)($request['width'] ?? ''),
+                'height' => (string)($request['height'] ?? ''),
+            ],
+        ];
+
+        if ($audioType === 2) {
+            $params['audio'] = [['url' => $audioUrl]];
+        } else {
+            $params['copywriting'] = [['content' => $msg]];
+        }
+
+        $ok = ShanjianVideoSettingLogic::addType5($params);
+        if ($ok) {
+            self::$returnData = ShanjianVideoSettingLogic::getReturnData();
+            return true;
+        }
+        self::setError(ShanjianVideoSettingLogic::getError() ?: '创建失败');
+        return false;
+    }
+
+    /**
+     * type5 无包装(蝉镜引擎)创建 HumanVideoTask(model_version=7)
+     * 复用 videoTask 的蝉镜规则；MiniMax 时 audio_type=2 且 audio_url 可先空，等 TTS 回填
+     * 视频原音时 voice_id 为空，videoTaskCron 会用形象视频克隆音色后再合成
+     *
+     * @param array $params
+     * @return HumanVideoTask
+     * @throws \Exception
+     */
+    public static function createType5ChanjingVideoTask(array $params): HumanVideoTask
+    {
+        $userId = (int)($params['user_id'] ?? self::$uid);
+        $anchorId = trim((string)($params['anchor_id'] ?? ''));
+        $voiceId = trim((string)($params['voice_id'] ?? ''));
+        $isOriginalVoice = ShanjianVideoSettingLogic::isChanjingOriginalVoiceId($voiceId);
+        if ($isOriginalVoice) {
+            $voiceId = '';
+        }
+        $name = trim((string)($params['name'] ?? ''));
+        if ($name === '') {
+            $name = '数字人口播' . date('mdHi');
+        }
+        $msg = (string)($params['msg'] ?? '');
+        $audioType = (int)($params['audio_type'] ?? 1);
+        $audioUrl = trim((string)($params['audio_url'] ?? ''));
+        $width = trim((string)($params['width'] ?? ''));
+        $height = trim((string)($params['height'] ?? ''));
+        $pic = trim((string)($params['pic'] ?? ''));
+        $taskId = trim((string)($params['task_id'] ?? ''));
+        $minimaxPending = !empty($params['minimax_pending']);
+
+        if ($userId <= 0) {
+            $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion(7) ?: '数字人';
+            throw new \Exception($modelName . '任务缺少用户ID');
+        }
+        if ($anchorId === '') {
+            $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion(7) ?: '数字人';
+            throw new \Exception($modelName . '形象不能为空');
+        }
+        if ($width === '' || $height === '' || (float)$width <= 0 || (float)$height <= 0) {
+            $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion(7) ?: '数字人';
+            throw new \Exception($modelName . '模型宽高不能为空');
+        }
+        if ($taskId === '') {
+            $taskId = generate_unique_task_id();
+        }
+
+        $taskCount = HumanVideoTask::where('user_id', $userId)
+            ->where('status', 0)
+            ->where('model_version', 7)
+            ->count();
+        if ($taskCount >= 5) {
+            throw new \Exception('当前您已有5个任务正在排队处理中，请等待任务完成后再创建');
+        }
+
+        $anchor = HumanAnchor::where('anchor_id', $anchorId)
+            ->where('model_version', 7)
+            ->where('status', 1)
+            ->findOrEmpty();
+        if ($anchor->isEmpty()) {
+            if (ShanjianVideoSettingLogic::isChanjingAnchorMemberFrozen($anchorId, $userId)) {
+                throw new \Exception(ShanjianVideoSettingLogic::frozenAnchorTip());
+            }
+            $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion(7) ?: '数字人';
+            throw new \Exception($modelName . '形象不存在');
+        }
+        $videoUrl = (string)($anchor['url'] ?? '');
+        $gender = (string)($anchor['gender'] ?? 'male');
+        if (!in_array($gender, ['male', 'female'], true)) {
+            $gender = 'male';
+        }
+        $anchorName = (string)($anchor['name'] ?? $name);
+
+        if ($pic === '') {
+            $thumb = self::getVideoThumbnailFromUrl($videoUrl);
+            if ($thumb === false || $thumb === '') {
+                throw new \Exception('封面获取失败');
+            }
+            $pic = (string)$thumb;
+        }
+
+        $voiceName = '';
+        // 视频原音：同一形象视频已克隆成功过音色时直接复用
+        // 否则一次提交多条视频会按 task_id 各克隆一次，重复调上游并重复扣算力
+        if ($isOriginalVoice && $audioType === 1 && !$minimaxPending && $videoUrl !== '') {
+            $clonedVoice = HumanVoice::where('user_id', $userId)
+                ->where('model_version', 7)
+                ->where('voice_urls', $videoUrl)
+                ->where('status', 1)
+                ->where('voice_id', '<>', '')
+                ->order('id', 'desc')
+                ->findOrEmpty();
+            if (!$clonedVoice->isEmpty()) {
+                $voiceId = (string)$clonedVoice['voice_id'];
+                $voiceName = (string)($clonedVoice['name'] ?? '');
+                $isOriginalVoice = false;
+            }
+        }
+        if (!$minimaxPending && $audioType === 1 && !$isOriginalVoice) {
+            if ($voiceId === '') {
+                throw new \Exception('音色不能为空');
+            }
+            if (ShanjianVideoSettingLogic::isVoiceMemberFrozen($voiceId, $userId)) {
+                throw new \Exception(ShanjianVideoSettingLogic::frozenVoiceTip());
+            }
+            // MiniMax 已在上层识别；此处仅校验蝉镜音色
+            if (!ShanjianVideoSettingLogic::isMinimaxVoiceId($voiceId, $userId)) {
+                $voice = HumanVoice::where('voice_id', $voiceId)
+                    ->where('model_version', 7)
+                    ->where('status', 1)
+                    ->findOrEmpty();
+                if ($voice->isEmpty()) {
+                    $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion(7) ?: '数字人';
+                    throw new \Exception($modelName . '音色不存在');
+                }
+                $voiceName = (string)($voice['name'] ?? '');
+            }
+        }
+
+        if ($audioType === 1) {
+            $msg = self::stripEmojiForChanjing($msg);
+        } elseif ($audioType === 2 && !$minimaxPending && $audioUrl === '') {
+            throw new \Exception('音频文件不能为空');
+        }
+
+        $pattern = '/^[a-zA-Z0-9\x{4e00}-\x{9fa5}]*$/u';
+        if (!preg_match($pattern, $name)) {
+            // 与 videoTask 标题规则对齐；宽松降级截断为合法字符
+            $name = preg_replace('/[^a-zA-Z0-9\x{4e00}-\x{9fa5}]/u', '', $name) ?: ('数字人口播' . date('mdHi'));
+        }
+        $name = mb_substr($name, 0, 10, 'UTF-8');
+
+        $videoTaskData = [
+            'user_id' => $userId,
+            'name' => $name,
+            'pic' => $pic,
+            'gender' => $gender,
+            'width' => $width,
+            'height' => $height,
+            'audio_type' => $audioType,
+            'anchor_id' => $anchorId,
+            'anchor_name' => $anchorName,
+            'voice_id' => $voiceId,
+            'voice_name' => $voiceName,
+            'msg' => $msg,
+            'task_id' => $taskId,
+            'model_version' => 7,
+            'upload_video_url' => $videoUrl,
+            'upload_audio_url' => $audioUrl,
+            'music_url' => '',
+            'music_type' => 1,
+            'automatic_clip' => 0, // type5 包装走闪剪，不走旧 Sv()->clip
+            'clip_type' => 1,
+            'status' => 0,
+        ];
+        if ($audioType === 2) {
+            $videoTaskData['audio_url'] = $audioUrl;
+        }
+
+        return HumanVideoTask::create($videoTaskData);
+    }
+
+    /**
+     * 蝉镜文案去表情（对齐 videoTask model=7）
+     */
+    public static function stripEmojiForChanjing(string $string): string
+    {
+        $result = '';
+        $length = mb_strlen($string);
+        for ($i = 0; $i < $length; $i++) {
+            $char = mb_substr($string, $i, 1);
+            $codePoint = mb_ord($char);
+            if ($codePoint >= 0x1F600 && $codePoint <= 0x1F64F) {
+                continue;
+            }
+            if ($codePoint >= 0x1F300 && $codePoint <= 0x1F5FF) {
+                continue;
+            }
+            if ($codePoint >= 0x1F680 && $codePoint <= 0x1F6FF) {
+                continue;
+            }
+            if ($codePoint >= 0x1F700 && $codePoint <= 0x1F77F) {
+                continue;
+            }
+            if ($codePoint >= 0x1F900 && $codePoint <= 0x1F9FF) {
+                continue;
+            }
+            if ($codePoint >= 0x2600 && $codePoint <= 0x26FF) {
+                continue;
+            }
+            if ($codePoint >= 0x2700 && $codePoint <= 0x27BF) {
+                continue;
+            }
+            if ($codePoint >= 0x1F1E6 && $codePoint <= 0x1F1FF) {
+                continue;
+            }
+            if ($codePoint >= 0x1F3FB && $codePoint <= 0x1F3FF) {
+                continue;
+            }
+            $result .= $char;
+        }
+        return $result;
     }
 
     /**
@@ -966,7 +1308,8 @@ class HumanLogic extends ApiLogic
             if (!empty($dh_id)) {
                 $digitalHuman->task_ids = json_encode($task_ids);
                 $digitalHuman->status = 3;
-                $digitalHuman->remark = '标准版/禅镜形象合成失败';
+                $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion((int)$model_version) ?: '数字人';
+                $digitalHuman->remark =  $modelName . '形象合成失败';
                 $digitalHuman->save();
             }
             self::setError('合成失败');
@@ -1235,6 +1578,16 @@ class HumanLogic extends ApiLogic
             }
 
         } else {
+            Log::channel('human')->write(
+                '音色合成失败: ' . json_encode([
+                    'user_id' => self::$uid,
+                    'scene' => $scene,
+                    'model_version' => $model_version,
+                    'task_id' => $taskId,
+                    'request' => $request,
+                    'result' => $result,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            );
             self::setError('合成失败');
             return false;
         }
@@ -1396,7 +1749,7 @@ class HumanLogic extends ApiLogic
         }
 
         if (in_array($builtin,[0,3])) {
-            $voice = HumanVoice::getModelList();
+            $voice = HumanVoice::getModelList((string)$type);
             if ($voice) {
                 foreach ($voice['voice'] as $key => &$v) {
                     $v['builtin'] = 0;
@@ -1427,19 +1780,65 @@ class HumanLogic extends ApiLogic
      */
     public static function voiceDelete($data)
     {
+        Db::startTrans();
         try {
+            $ids = self::normalizeVoiceDeleteIds($data);
+            if (empty($ids)) {
+                throw new \Exception('请选择要删除的音色');
+            }
+            $now = time();
 
-            if (is_string($data['id'])) {
-                HumanVoice::destroy(['id' => $data['id'], 'user_id' => self::$uid]);
-            } else {
-                HumanVoice::whereIn('id', $data['id'])->where('user_id', self::$uid)->select()->delete();
+            $thirdVoiceIds = HumanVoice::whereIn('id', $ids)
+                ->where('user_id', self::$uid)
+                ->whereNull('delete_time')
+                ->where('voice_id', '<>', '')
+                ->column('voice_id');
+            $deleted = HumanVoice::whereIn('id', $ids)
+                ->where('user_id', self::$uid)
+                ->whereNull('delete_time')
+                ->update([
+                    'delete_time' => $now,
+                    'update_time' => $now,
+                ]);
+            $deleted += AiPersonaDigitalVoice::whereIn('voice_id', $ids)
+                ->where('user_id', self::$uid)
+                ->whereNull('delete_time')
+                ->update([
+                    'delete_time' => $now,
+                    'update_time' => $now,
+                ]);
+            if (!empty($thirdVoiceIds)) {
+                $deleted += AiPersonaDigitalAvatar::whereIn('third_voice_id', $thirdVoiceIds)
+                    ->where('user_id', self::$uid)
+                    ->where('is_original_voice', 0)
+                    ->whereNull('delete_time')
+                    ->update([
+                        'delete_time' => $now,
+                        'update_time' => $now,
+                    ]);
+            }
+            if (!$deleted) {
+                throw new \Exception('音色不存在或已删除');
             }
 
+            Db::commit();
             return true;
         } catch (\Exception $exception) {
+            Db::rollback();
             self::setError($exception->getMessage());
             return false;
         }
+    }
+
+    private static function normalizeVoiceDeleteIds(array $data): array
+    {
+        $value = $data['id'] ?? ($data['ids'] ?? ($data['voice_id'] ?? []));
+        if (is_string($value)) {
+            $value = explode(',', $value);
+        } elseif (!is_array($value)) {
+            $value = [$value];
+        }
+        return array_values(array_unique(array_filter(array_map('intval', $value))));
     }
 
     /**
@@ -1872,169 +2271,6 @@ class HumanLogic extends ApiLogic
         }
     }
 
-    /**
-     * @desc 视频信息定时任务
-     * @return bool
-     */
-    public static function videoInfoCron(): bool
-    {
-
-        try {
-            HumanVideoTask::where('status', 0)
-                ->where('result_id', '<>', '')
-                ->where('model_version', '=', 2)
-                ->order('tries', 'asc')
-                ->limit(3)
-                ->select()
-                ->each(function ($item) {
-                    try {
-                        $response = \app\common\service\ToolsService::Human()->detailPro([
-                            'id' => $item['result_id']
-                        ]);
-                        //阿里极速版  2
-                        //  Log::write('阿里获取视频结果' . json_encode($response));
-                        if (!empty($response['data']['url'])) {
-                            $item->status = 1;
-                            $item->tries = $item['tries'] + 1;
-                            $item->result_url = FileService::downloadFileBySource($response['data']['url'], 'video');
-                            $item->save();
-                            return true;
-                        }else{
-                            $item->tries = $item['tries'] + 1;
-                            $item->save();
-                            return true;
-                        }
-                    } catch (\think\exception\HttpResponseException $e) {
-                        Log::write('数字人视频保存失败' .$item['tries'].'----' . $e->getResponse()->getData()['msg']);
-                        $item->remark = $e->getResponse()->getData()['msg'] ?? '';
-                        $item->tries = $item['tries'] + 1;
-                        $item->status = 2;
-                        $item->save();
-                        //退费
-                        //查询是否已返还
-                        if (UserTokensLog::where('user_id', $item->user_id)->where('change_type', AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_PRO)->where('action', 1)->where('task_id', $item->task_id)->count() == 0) {
-
-                            $points = UserTokensLog::where('user_id', $item->user_id)->where('change_type', AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_PRO)->where('task_id', $item->task_id)->value('change_amount') ?? 0;
-
-                            AccountLogLogic::recordUserTokensLog(false, $item->user_id, AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_PRO, $points, $item->task_id);
-                        }
-
-                        return true;
-                    }
-                    return true;
-                });
-            return true;
-        } catch (\Exception $e) {
-            Log::write('视频信息定时任务失败' . $e->getMessage());
-            return true;
-        }
-    }
-
-    public static function videoWjInfoCron(): bool
-    {
-        try {
-            print_r("\n查询标准版数字人视频任务结果\n");
-            HumanVideoTask::where('status', 0)
-                ->where('result_id', '<>', '')
-                ->where('model_version', '=', 1)
-                ->order('tries', 'asc')
-                ->limit(3)
-                ->select()
-                ->each(function ($item) {
-                    try {
-                        $response = \app\common\service\ToolsService::Human()->getWjDetail([
-                            'id' => $item['result_id'],
-                            'model_version' => 1,
-                            'type' => 4,
-                        ]);
-                        $task_info = $response['data']['task_info'] ?? [];
-
-                        if(!isset($task_info['current_status'])){
-                            return true;
-                        }
-
-                        if($task_info['current_status'] === 'init'){
-                            return true;
-
-                        }
-                        if($task_info['current_status'] === 'fail'){
-                            $item->status = 2;
-                            $item->tries = $item['tries'] + 1;
-                            $item->save();
-                            //退费
-                            self::refundTokens($item->user_id, $item->result_id, $item->task_id, 'human_video');
-                            return true;
-                        }
-                        if($task_info['current_status'] === 'success'){
-                            if($item->download_tries < 3){
-                                $item->download_tries = $item['download_tries'] + 1;
-                                $item->save();
-                            }
-                            $item->status = 1;
-                            $item->result_url = $item->download_tries >= 3 ? $task_info['result'] : FileService::downloadFileBySource($task_info['result'], 'video');
-                            $item->save();
-                        }
-
-                        if($item->status == 1 && $item->automatic_clip == 1&& $item->clip_status == 1){
-                            $unit = TokenLogService::checkToken($item->user_id, 'video_clip');
-                            $result_url = FileService::getFileUrl($item->result_url);
-                            $params = [
-                                'video_id' => $item->id,
-                                'task_id' => $item->task_id,
-                                'clip_type' => $item->clip_type,
-                                'music_url' => $item->music_url,
-                                'music_type' => $item->music_type,
-                                'result_url' => $result_url,
-                                'msg' => $item->msg,
-                                'type' => 1,
-                            ];
-
-                            $response = \app\common\service\ToolsService::Sv()->clip($params);
-                            if (isset($response['code']) && $response['code'] == 10000) {
-
-                                $points = $unit;
-
-                                if ($points > 0) {
-                                    $extra = [
-                                        '场景' => '数字人 - 标准版'
-                                    ];
-                                    //token扣除
-                                    User::userTokensChange($item->user_id, $points);
-
-                                    //记录日志
-                                    AccountLogLogic::recordUserTokensLog(true, $item->user_id, AccountLogEnum::TOKENS_DEC_VIDEO_CLIP, $points,  $item->task_id, $extra);
-                                }
-                                $item->clip_status = 2;
-                            }
-                            $item->save();
-                        }
-                        return true;
-                    } catch (\think\exception\HttpResponseException $e) {
-                        Log::write('wj数字人视频保存失败' .$item['tries'].'----' . $e->getResponse()->getData()['msg']);
-                        $item->remark = $e->getResponse()->getData()['msg'] ?? '';
-                        $item->tries = $item['tries'] + 1;
-                        $item->status = 2;
-                        $item->save();
-                        //退费
-                        //查询是否已返还
-                        if (UserTokensLog::where('user_id', $item->user_id)->where('change_type', AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO)->where('action', 1)->where('task_id', $item->task_id)->count() == 0) {
-
-                            $points = UserTokensLog::where('user_id', $item->user_id)->where('change_type', AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO)->where('task_id', $item->task_id)->value('change_amount') ?? 0;
-
-                            AccountLogLogic::recordUserTokensLog(false, $item->user_id, AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO, $points, $item->task_id);
-                        }
-
-                        return true;
-                    }
-                    return true;
-                });
-            return true;
-        } catch (\Exception $e) {
-            Log::write('wj视频信息定时任务失败' . $e->getMessage());
-            return true;
-        }
-    }
-
 
     /**
      * @desc 视频定时任务
@@ -2053,7 +2289,7 @@ class HumanLogic extends ApiLogic
                 // 请求30分钟内，还处于0状态的任务
                 HumanVideoTask::where('status', 0)
                     ->where('result_id', '')
-                    ->where('create_time', '<=', strtotime('-30 minutes'))
+                    ->where('create_time', '<=', strtotime('-50 minutes'))
                     ->select()
                     ->each(function ($item) {
                         self::setTimeoutTask($item->task_id);
@@ -2063,7 +2299,7 @@ class HumanLogic extends ApiLogic
             $taskModel = HumanVideoTask::where('status', 0)
                 ->where('result_id', '')
                 ->where('tries', '<', 3)
-                ->limit(3);
+                ->limit(5);
 
             if ($taskId) {
 
@@ -2078,34 +2314,25 @@ class HumanLogic extends ApiLogic
 
                     return true;
                 }
+                // 任务执行中锁：走 redis，存在则跳过，避免并发重复执行
+                $lockKey = 'human:video_task:running:' . $item->task_id;
+                $redis = Cache::store('concurrent_redis');
+                if ($redis->has($lockKey)) {
+                    return true;
+                }
+                $redis->set($lockKey, time(), 300);
                 try {
                     $tries = $item->tries;
-                    //step1 形象
-                    $anchor = HumanAnchor::where('user_id', $item['user_id'])->where('model_version',$item['model_version'])->where('anchor_id', $item->anchor_id)->findOrEmpty();
-                    // 如果形象不存在，则创建形象
-                    if ($anchor->isEmpty()) {
-
-                        $anchor = HumanAnchor::create([
-                            'task_id' => $item->task_id,
-                            'model_version' => $item->model_version,
-                            'height' => $item->height,
-                            'width' => $item->width,
-                            'name' => $item->anchor_name,
-                            'gender' => $item->gender,
-                            'status' => 0,
-                            'pic' => $item->pic,
-                            'url' => $item->upload_video_url,
-                            'user_id' => $item['user_id']
-                        ]);
+                    //step1 形象：优先按 task_id 查（含软删），避免唯一键 (model_version, task_id) 重复插入
+                    $anchor = self::findOrCreateHumanAnchor($item);
+                    if ($anchor === null) {
+                        return true;
                     }
 
                     if ($anchor->anchor_id == ""){
                         switch ($item->model_version) {
                             case 1:
                                 $scene = self::AVATAR_TRAINING;
-                                break;
-                            case 2:
-                                $scene = self::AVATAR_TRAINING_PRO;
                                 break;
                             case 4:
                                 $scene = self::AVATAR_TRAINING_YM;
@@ -2127,6 +2354,13 @@ class HumanLogic extends ApiLogic
                             'video_url' => $anchor->url,
                         ], $scene, $item->user_id, $item->task_id);
                         if (empty($response['id'])) {
+                            Log::channel('human')->write(
+                                '形象创建失败: task_id=' . $item->task_id .
+                                ', user_id=' . $item->user_id .
+                                ', model_version=' . $item->model_version .
+                                ', scene=' . $scene .
+                                ', response=' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                            );
                             $item->remark = $response['message'] ?? '形象创建失败';
                             $item->save();
                             message('形象创建失败');
@@ -2155,28 +2389,13 @@ class HumanLogic extends ApiLogic
                     }
                     // 文案驱动
                     if ($item->audio_type == 1) {
-                        //step2 音色
-                        $voice = HumanVoice::where('user_id', $item['user_id'])->where('model_version',$item['model_version'])->where('voice_id', $item->voice_id)->findOrEmpty();
-                        $voiceres = false;
-                        // 如果音色不存在，则创建音色
-                        if ($voice->isEmpty()) {
-                            $BuiltInVoice = HumanVoice::getBuiltInVoiceList($item->model_version);
-                            if (!in_array($item->voice_id, $BuiltInVoice)) {
-                                $voice = HumanVoice::create([
-                                    'task_id' => $item->task_id,
-                                    'model_version' => $item->model_version,
-                                    'name' => $item->voice_name ? $item->voice_name : $item->name,
-                                    'gender' => $item->gender,
-                                    'voice_urls' => $item->upload_video_url,
-                                    'user_id' => $item['user_id']
-                                ]);
-                                $voiceres = false;
-
-                            }else{
-                                $voice->voice_id = $item->voice_id;
-                                $voiceres = true;
-                            }
+                        //step2 音色：优先按 task_id 查（含软删），避免唯一键重复插入
+                        $voiceResult = self::findOrCreateHumanVoice($item);
+                        if ($voiceResult === null) {
+                            return true;
                         }
+                        $voice = $voiceResult['voice'];
+                        $voiceres = $voiceResult['voiceres'];
 
 
                         // 如果没有训练，请求训练
@@ -2280,20 +2499,10 @@ class HumanLogic extends ApiLogic
                             $item->save();
                             return ;
                         }
-                        //step3 音频
-                        $audio = HumanAudio::where('user_id', $item['user_id'])->where('task_id', $item->task_id)->findOrEmpty();
-
-                        // 如果音频不存在，则创建音频
-                        if ($audio->isEmpty()) {
-
-                            $audio = HumanAudio::create([
-                                'user_id' => $item['user_id'],
-                                'task_id' => $item->task_id,
-                                'model_version' => $item->model_version,
-                                'name' => $item->name,
-                                'msg' => $item->msg,
-                                'voice_id' => $voice->voice_id
-                            ]);
+                        //step3 音频：优先按 task_id 查（含软删），避免唯一键重复插入
+                        $audio = self::findOrCreateHumanAudio($item, $voice->voice_id);
+                        if ($audio === null) {
+                            return true;
                         }
 
                         // 如果没有训练，请求训练
@@ -2441,6 +2650,25 @@ class HumanLogic extends ApiLogic
                         self::updateFailTask($item->task_id, $remark);
                     }
                     return true;
+                } catch (\Throwable $e) {
+                    // 单任务异常隔离，避免中断后续任务（如唯一键冲突、DB异常等）
+                    Log::channel('human')->write(
+                        '数字人单任务错误: task_id=' . ($item->task_id ?? '') .
+                        ', msg=' . $e->getMessage()
+                    );
+                    try {
+                        $item->tries = ($tries ?? $item->tries) + 1;
+                        $item->remark = mb_substr($e->getMessage(), 0, 200);
+                        $item->save();
+                        if ($item->tries >= 3) {
+                            self::updateFailTask($item->task_id, $item->remark);
+                        }
+                    } catch (\Throwable $inner) {
+                        Log::channel('human')->write('数字人单任务状态更新失败:'.$inner->getMessage());
+                    }
+                    return true;
+                } finally {
+                    Cache::store('concurrent_redis')->delete($lockKey);
                 }
             });
         } catch (\Exception $e) {
@@ -2451,174 +2679,244 @@ class HumanLogic extends ApiLogic
     }
 
     /**
-     * @desc 数字人定时任务
-     * @return bool
+     * 查找或创建形象记录（含软删恢复），避免 (model_version, task_id) 唯一键冲突
      */
-    public static function humanInfoCron(): bool
+    private static function findOrCreateHumanAnchor($item)
     {
+        // 1) 任务已有 anchor_id：按业务 id 查
+        if ($item->anchor_id !== '' && $item->anchor_id !== null) {
+            $anchor = HumanAnchor::where('user_id', $item['user_id'])
+                ->where('model_version', $item['model_version'])
+                ->where('anchor_id', $item->anchor_id)
+                ->findOrEmpty();
+            if (!$anchor->isEmpty()) {
+                return $anchor;
+            }
+        }
+
+        // 2) 按唯一键查（含软删）
+        $anchor = HumanAnchor::withTrashed()
+            ->where('model_version', $item->model_version)
+            ->where('task_id', $item->task_id)
+            ->findOrEmpty();
+
+        if (!$anchor->isEmpty()) {
+            if (!empty($anchor->delete_time)) {
+                $anchor->restore();
+            }
+            // 补齐可能缺失的字段
+            $needSave = false;
+            if ($anchor->user_id != $item['user_id']) {
+                $anchor->user_id = $item['user_id'];
+                $needSave = true;
+            }
+            if ($needSave) {
+                $anchor->save();
+            }
+            return $anchor;
+        }
+
+        // 3) 创建；并发冲突时再查一次
+        // 任务已带可用 anchor_id（如 type5 公共/已克隆形象）时直接落为完成，避免重复训练卡住合成
         try {
-            HumanTask::where('status', 0)
-                ->whereIn('model_version',[4,6])
-                ->where('tries', '<', 8)
-                ->order('tries', 'asc')
-                ->limit(3)
-                ->select()
-                ->each(function ($item) {
-                    try {
-                        $methodMap = [
-                            4 => 'detailYm',
-                            6 => 'detailYmt',
-                        ];
-
-                        $method = $methodMap[$item['model_version']] ?? 'detailYmt';
-                        if($item['type'] == 2){
-
-                            $response = \app\common\service\ToolsService::Human()->$method([
-                                'type' => $item['type'],
-                                'id' => $item['data_id']
-                            ]);
-                            // Log::write('高级版获取音色结果' . json_encode($response));
-                            if (isset($response['data']['status']) && $response['data']['status'] == 3) {
-                                $item->result_id = $response['data']['train_id'];
-                                $item->status = 1;
-                                $item->tries = $item['tries'] + 1;
-                                $item->result_url = $response['data']['demo_audio'];
-                                $item->upload_url = FileService::downloadFileBySource($response['data']['demo_audio'], 'audio');
-                                $item->save();
-
-                                $task = HumanVoice::where([
-                                    'user_id'=> $item['user_id'],
-                                    'task_id'=> $item['task_id'],
-                                    'status' =>0
-                                ])->update([
-                                    'status' =>1,
-                                    'voice_urls'=> $item->upload_url
-                                ]);
-                                $tt = HumanVideoTask::where([
-                                    'user_id'=> $item['user_id'],
-                                    'task_id'=> $item['task_id'],
-                                    'status' =>0
-                                ])->update([
-                                    'tries'=> 1
-                                ]);
-                                return true;
-                            }else{
-                                $item->tries = $item['tries'] + 1;
-                                $item->save();
-                                return true;
-                            }
-                        }
-
-
-                        if($item['type'] == 3){
-                            $response = \app\common\service\ToolsService::Human()->$method([
-                                'type' => $item['type'],
-                                'id' => $item['data_id']
-                            ]);
-                            //阿里极速版  2
-                            if (isset($response['data']['status']) && $response['data']['status'] == 3) {
-                                $upload_url = FileService::downloadFileBySource($response['data']['speech_url'], 'audio');
-                                $item->result_id = $response['data']['id'];
-                                $item->status = 1;
-                                $item->tries = $item['tries'] + 1;
-                                $item->result_url = $response['data']['speech_url'];
-                                $item->upload_url =  $upload_url;
-                                $item->save();
-
-                                $task = HumanAudio::where([
-                                    'user_id'=> $item['user_id'],
-                                    'task_id'=> $item['task_id'],
-                                    'status' =>0,
-                                    'audio_id'=> $response['data']['task_id'],
-                                ])->update([
-                                    'status' =>1,
-                                    'url' => $upload_url
-                                ]);
-                                $tt = HumanVideoTask::where([
-                                    'user_id'=> $item['user_id'],
-                                    'task_id'=> $item['task_id'],
-                                    'status' =>0
-                                ])->update([
-                                    'tries'=> 1,
-                                    'audio_url' => $upload_url
-
-                                ]);
-                                return true;
-                            }else{
-                                $item->tries = $item['tries'] + 1;
-                                $item->save();
-                                return true;
-                            }
-                        }
-
-                    } catch (\think\exception\HttpResponseException $e) {
-                        Log::write('数字人保存失败' .$item['tries'].'----' . $e->getResponse()->getData()['msg']);
-                        $item->remark = $e->getResponse()->getData()['msg'] ?? '';
-                        $item->tries = $item['tries'] + 1;
-                        $item->status = 2;
-                        $item->save();
-                        if($item->type == 2){
-                            if($item->model_version == 4){
-                                $scene = AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_YM;
-                            }else{
-                                $scene = AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_YMT;
-                            }
-                            //查询是否已返还
-                            if (UserTokensLog::where('user_id', $item->user_id)->where('change_type', $scene)->where('action', 1)->where('task_id', $item->task_id)->count() == 0) {
-
-                                $points = UserTokensLog::where('user_id', $item->user_id)->where('change_type', $scene)->where('task_id', $item->task_id)->value('change_amount') ?? 0;
-
-                                AccountLogLogic::recordUserTokensLog(false, $item->user_id, $scene, $points, $item->task_id);
-                            }
-                        }else{
-                            if($item->model_version == 4){
-                                $scene = AccountLogEnum::TOKENS_DEC_HUMAN_AUDIO_YM;
-                            }else{
-                                $scene = AccountLogEnum::TOKENS_DEC_HUMAN_AUDIO_YMT;
-                            }
-                            if (UserTokensLog::where('user_id', $item->user_id)->where('change_type', $scene)->where('action', 1)->where('task_id', $item->task_id)->count() == 0) {
-
-                                $points = UserTokensLog::where('user_id', $item->user_id)->where('change_type',  $scene)->where('task_id', $item->task_id)->value('change_amount') ?? 0;
-
-                                AccountLogLogic::recordUserTokensLog(false, $item->user_id,  $scene, $points, $item->task_id);
-                            }
-                        }
-                        //退费
-
-
-                        return true;
-                    }
-                    return true;
-                });
-            return true;
-        } catch (\Exception $e) {
-            Log::write('视频信息定时任务失败' . $e->getMessage());
-            return true;
+            $createData = [
+                'task_id' => $item->task_id,
+                'model_version' => $item->model_version,
+                'height' => $item->height,
+                'width' => $item->width,
+                'name' => $item->anchor_name,
+                'gender' => $item->gender,
+                'status' => 0,
+                'pic' => $item->pic,
+                'url' => $item->upload_video_url,
+                'user_id' => $item['user_id'],
+            ];
+            $existingAnchorId = trim((string)($item->anchor_id ?? ''));
+            if ($existingAnchorId !== '') {
+                $createData['anchor_id'] = $existingAnchorId;
+                $createData['status'] = 1;
+            }
+            return HumanAnchor::create($createData);
+        } catch (\Throwable $e) {
+            if (strpos($e->getMessage(), 'Duplicate entry') === false && strpos($e->getMessage(), '1062') === false) {
+                throw $e;
+            }
+            $anchor = HumanAnchor::withTrashed()
+                ->where('model_version', $item->model_version)
+                ->where('task_id', $item->task_id)
+                ->findOrEmpty();
+            if ($anchor->isEmpty()) {
+                Log::channel('human')->write('形象唯一键冲突后仍未找到: task_id=' . $item->task_id);
+                return null;
+            }
+            if (!empty($anchor->delete_time)) {
+                $anchor->restore();
+            }
+            // 冲突恢复后若任务已有 anchor_id，补齐以免继续卡在训练
+            $existingAnchorId = trim((string)($item->anchor_id ?? ''));
+            if ($existingAnchorId !== '' && trim((string)($anchor->anchor_id ?? '')) === '') {
+                $anchor->anchor_id = $existingAnchorId;
+                $anchor->status = 1;
+                $anchor->save();
+            }
+            return $anchor;
         }
     }
 
+    /**
+     * 查找或创建音色记录（含软删恢复）
+     * @return array{voice: mixed, voiceres: bool}|null
+     */
+    private static function findOrCreateHumanVoice($item)
+    {
+        $BuiltInVoice = HumanVoice::getBuiltInVoiceList($item->model_version);
+        // 内置音色：无需落库训练
+        if ($item->voice_id !== '' && $item->voice_id !== null && in_array($item->voice_id, $BuiltInVoice)) {
+            $voice = HumanVoice::where('user_id', $item['user_id'])
+                ->where('model_version', $item['model_version'])
+                ->where('voice_id', $item->voice_id)
+                ->findOrEmpty();
+            if ($voice->isEmpty()) {
+                $voice = new HumanVoice();
+                $voice->voice_id = $item->voice_id;
+                $voice->status = 1;
+            }
+            return ['voice' => $voice, 'voiceres' => true];
+        }
+
+        // 1) 已有 voice_id：按业务 id 查
+        if ($item->voice_id !== '' && $item->voice_id !== null) {
+            $voice = HumanVoice::where('user_id', $item['user_id'])
+                ->where('model_version', $item['model_version'])
+                ->where('voice_id', $item->voice_id)
+                ->findOrEmpty();
+            if (!$voice->isEmpty()) {
+                return ['voice' => $voice, 'voiceres' => false];
+            }
+        }
+
+        // 2) 按唯一键查（含软删）
+        $voice = HumanVoice::withTrashed()
+            ->where('model_version', $item->model_version)
+            ->where('task_id', $item->task_id)
+            ->findOrEmpty();
+
+        if (!$voice->isEmpty()) {
+            if (!empty($voice->delete_time)) {
+                $voice->restore();
+            }
+            return ['voice' => $voice, 'voiceres' => false];
+        }
+
+        // 3) 蝉镜视频原音：同一形象视频已在克隆或已克隆完成时复用，避免同批任务各克隆一份
+        if ((int)$item->model_version === 7
+            && ($item->voice_id === '' || $item->voice_id === null)
+            && !empty($item->upload_video_url)
+        ) {
+            $sibling = HumanVoice::where('user_id', $item['user_id'])
+                ->where('model_version', 7)
+                ->where('voice_urls', $item->upload_video_url)
+                ->where('voice_id', '<>', '')
+                ->whereIn('status', [0, 1])
+                ->order('id', 'desc')
+                ->findOrEmpty();
+            if (!$sibling->isEmpty()) {
+                // 还在训练中，等下一轮，别再发一次克隆请求
+                if ((int)$sibling->status !== 1) {
+                    return null;
+                }
+                $item->voice_id = $sibling->voice_id;
+                $item->voice_name = $item->voice_name ?: $sibling->name;
+                $item->save();
+                return ['voice' => $sibling, 'voiceres' => true];
+            }
+        }
+
+        // 4) 创建；并发冲突时再查一次
+        try {
+            $voice = HumanVoice::create([
+                'task_id' => $item->task_id,
+                'model_version' => $item->model_version,
+                'name' => $item->voice_name ? $item->voice_name : $item->name,
+                'gender' => $item->gender,
+                'voice_urls' => $item->upload_video_url,
+                'user_id' => $item['user_id']
+            ]);
+            return ['voice' => $voice, 'voiceres' => false];
+        } catch (\Throwable $e) {
+            if (strpos($e->getMessage(), 'Duplicate entry') === false && strpos($e->getMessage(), '1062') === false) {
+                throw $e;
+            }
+            $voice = HumanVoice::withTrashed()
+                ->where('model_version', $item->model_version)
+                ->where('task_id', $item->task_id)
+                ->findOrEmpty();
+            if ($voice->isEmpty()) {
+                Log::channel('human')->write('音色唯一键冲突后仍未找到: task_id=' . $item->task_id);
+                return null;
+            }
+            if (!empty($voice->delete_time)) {
+                $voice->restore();
+            }
+            return ['voice' => $voice, 'voiceres' => false];
+        }
+    }
 
     /**
-     * @desc 删除失败任务
-     * @param $taskId
-     * @return void
-     * @date 2024/10/2 10:43
-     * @author dagouzi
+     * 查找或创建音频记录（含软删恢复）
      */
-    private static function deleteFailTask(string $taskId): void
+    private static function findOrCreateHumanAudio($item, $voiceId)
     {
-        //删除音频失败任务, status=0,2  
-        // TODO 不删除  让用户手动重试
-        // HumanAudio::where('task_id', $taskId)->whereIn('status', [0, 2])->findOrEmpty()->delete();
+        $audio = HumanAudio::withTrashed()
+            ->where('user_id', $item['user_id'])
+            ->where('task_id', $item->task_id)
+            ->findOrEmpty();
 
-        // //删除音色失败任务, status=0,2
-        // HumanVoice::where('task_id', $taskId)->whereIn('status', [0, 2])->findOrEmpty()->delete();
+        if (!$audio->isEmpty()) {
+            if (!empty($audio->delete_time)) {
+                $audio->restore();
+            }
+            return $audio;
+        }
 
-        // //删除形象失败任务, status=0,2
-        // HumanAnchor::where('task_id', $taskId)->whereIn('status', [0, 2])->findOrEmpty()->delete();
+        // 再按唯一键兜底（不同 user 同 task 极少见，但唯一键不含 user_id）
+        $audio = HumanAudio::withTrashed()
+            ->where('model_version', $item->model_version)
+            ->where('task_id', $item->task_id)
+            ->findOrEmpty();
+        if (!$audio->isEmpty()) {
+            if (!empty($audio->delete_time)) {
+                $audio->restore();
+            }
+            return $audio;
+        }
 
-        // //删除视频失败任务, status=0,2
-        // HumanVideoTask::where('task_id', $taskId)->whereIn('status', [0, 2])->findOrEmpty()->delete();
+        try {
+            return HumanAudio::create([
+                'user_id' => $item['user_id'],
+                'task_id' => $item->task_id,
+                'model_version' => $item->model_version,
+                'name' => $item->name,
+                'msg' => $item->msg,
+                'voice_id' => $voiceId
+            ]);
+        } catch (\Throwable $e) {
+            if (strpos($e->getMessage(), 'Duplicate entry') === false && strpos($e->getMessage(), '1062') === false) {
+                throw $e;
+            }
+            $audio = HumanAudio::withTrashed()
+                ->where('model_version', $item->model_version)
+                ->where('task_id', $item->task_id)
+                ->findOrEmpty();
+            if ($audio->isEmpty()) {
+                Log::channel('human')->write('音频唯一键冲突后仍未找到: task_id=' . $item->task_id);
+                return null;
+            }
+            if (!empty($audio->delete_time)) {
+                $audio->restore();
+            }
+            return $audio;
+        }
     }
 
 
@@ -2652,6 +2950,27 @@ class HumanLogic extends ApiLogic
             'status' => 2,
             'remark' => $remark
         ]);
+
+        // type5 蝉镜桥接任务需同步失败态，避免列表一直「合成中」
+        self::syncType5BridgeAfterHumanUpdate($taskId);
+    }
+
+    /**
+     * human 状态变更后同步 type5 蝉镜桥接（成功/失败）
+     */
+    private static function syncType5BridgeAfterHumanUpdate(string $taskId): void
+    {
+        try {
+            $human = HumanVideoTask::where('task_id', $taskId)->where('model_version', 7)->find();
+            if (!$human) {
+                return;
+            }
+            ShanjianVideoTaskLogic::syncType5BridgeFromChanjing($human);
+        } catch (\Throwable $e) {
+            Log::channel('shanjiannotice')->write(
+                '蝉镜桥接回写失败 task_id=' . $taskId . ' err=' . $e->getMessage()
+            );
+        }
     }
 
     /**
@@ -2741,6 +3060,11 @@ class HumanLogic extends ApiLogic
             }
             self::refundTokens($item['user_id'], $item['result_id'], $item['task_id'], $scene);
 
+        }
+
+        // 超时失败也要同步 type5 桥接，否则列表永久「合成中」
+        if ($Video) {
+            self::syncType5BridgeAfterHumanUpdate($taskId);
         }
 
     }
@@ -2891,7 +3215,7 @@ class HumanLogic extends ApiLogic
 
             $points = $unit;
 
-            if ($points >= 0) {
+            if ($points > 0) {
 
                 $extra = ['算力单价' => $unit, '实际消耗算力' => $points];
 

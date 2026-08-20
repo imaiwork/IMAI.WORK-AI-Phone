@@ -7,12 +7,15 @@
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
+    "upload-category-panel": "../../../../components/upload-category-panel/upload-category-panel",
+    "choose-material": "../../../../components/choose-material/choose-material",
+    "choose-history": "../../../../components/choose-history/choose-history",
     "upload-progress": "../../../../components/upload-progress/upload-progress",
     "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
     "video-preview": "../../../../components/video-preview/video-preview",
     "tokens-cost": "../../components/tokens-cost/tokens-cost",
     "create-success-pop": "../../components/create-success-pop/create-success-pop",
-    "choose-role": "../../components/choose-role/choose-role",
     "choose-agent": "../../components/choose-agent/choose-agent"
   }
 }

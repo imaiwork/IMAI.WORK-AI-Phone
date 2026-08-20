@@ -42,7 +42,8 @@ class DistributionAgentUserLogic extends BaseLogic
             'real_name' => $user->real_name,
             'level' => $agent->level ?? 0,
             'status' => $agent->status ?? 0,
-            'become_time' => $agent->become_time ?? 0,
+            // 早期后台绑定的代理可能没有加入时间，给空串而不是 0，避免前端显示成 0
+            'become_time' => $agent->become_time ?: '',
             'qr_code' => !empty($agent->qr_code) ? \app\common\service\FileService::getFileUrl($agent->qr_code) : '',
             'downline_count' => DistributionAgent::where(['parent_id' => $userId])->count(), // 下一级人数
         ];

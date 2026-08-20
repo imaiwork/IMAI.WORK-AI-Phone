@@ -8,9 +8,11 @@
         <template #content>
             <view class="h-full flex flex-col bg-[#F7F9FC]">
                 <view class="flex items-center justify-between px-[30rpx] mt-3 mb-1" v-if="limit > 1">
-                    <text class="text-[26rpx] text-[#666666] font-medium">请选择形象</text>
-                    <view class="text-[24rpx] text-[#999999]">
-                        已选 <text class="text-primary font-bold mx-0.5">{{ chooseLists.length }}</text> / {{ limit }}
+                    <text class="text-[#666666] font-medium">请选择形象</text>
+                    <view class="text-xs text-[#999999]">
+                        已选
+                        <text class="text-primary font-bold mx-0.5">{{ chooseLists.length }}</text>
+                        / {{ limit }}
                     </view>
                 </view>
 
@@ -29,7 +31,7 @@
                                         class="w-[64rpx] h-[64rpx] rounded-full bg-white shadow-[0_4rpx_12rpx_rgba(0,0,0,0.05)] flex items-center justify-center mb-2">
                                         <u-icon name="plus" color="#0065fb" size="32"></u-icon>
                                     </view>
-                                    <text class="text-[24rpx] text-[#666666] font-medium">去克隆</text>
+                                    <text class="text-xs text-[#666666] font-medium">去克隆</text>
                                 </view>
                             </view>
 
@@ -39,7 +41,7 @@
                                 class="flex flex-col gap-2"
                                 @click.stop="handleSelect(item)">
                                 <view
-                                    class="relative w-full aspect-[3/4] rounded-[24rpx] overflow-hidden bg-[#F4F5F7] shadow-[0_4rpx_16rpx_rgba(0,0,0,0.03)] border border-black/5">
+                                    class="relative w-full aspect-[3/4] rounded-[24rpx] overflow-hidden bg-[#F4F5F7] shadow-[0_4rpx_16rpx_rgba(0,0,0,0.03)] border border-[#000000]/5">
                                     <image :src="item.pic" class="w-full aspect-[3/4]" mode="aspectFill"></image>
 
                                     <view
@@ -83,7 +85,7 @@
                                 </view>
 
                                 <text
-                                    class="text-[26rpx] font-bold text-center truncate px-1"
+                                    class="font-bold text-center truncate px-1"
                                     :class="isDisabled(item) ? 'text-[#BBBBBB]' : 'text-[#333333]'">
                                     {{ item.name || "形象名称" }}
                                 </text>
@@ -122,9 +124,14 @@
                             type="primary"
                             shape="circle"
                             ripple
-                            :custom-style="{ fontSize: '28rpx', fontWeight: 'bold', height: '88rpx' }"
+                            :custom-style="{
+                                fontSize: '28rpx',
+                                fontWeight: 'bold',
+                                height: '88rpx',
+                            }"
                             @click="confirm">
-                            确定选择 {{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
+                            确定选择
+                            {{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
                         </u-button>
                     </view>
                 </view>
@@ -144,7 +151,7 @@ const props = withDefaults(
     {
         modelValue: false,
         limit: 99,
-    }
+    },
 );
 
 const emit = defineEmits<{
@@ -180,7 +187,7 @@ const queryList = async (page_no: number, page_size: number) => {
                 name: item.name,
                 url: item.result_url,
                 status: item.status,
-            })) || []
+            })) || [],
         );
     } catch (error) {
         pagingRef.value?.complete([]);

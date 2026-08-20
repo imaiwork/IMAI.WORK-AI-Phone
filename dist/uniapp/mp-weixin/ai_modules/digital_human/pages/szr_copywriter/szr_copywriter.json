@@ -1,9 +1,0 @@
-{
-  "navigationBarTitleText": "数字人口播文案",
-  "disableScroll": true,
-  "navigationStyle": "custom",
-  "usingComponents": {
-    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
-    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input"
-  }
-}

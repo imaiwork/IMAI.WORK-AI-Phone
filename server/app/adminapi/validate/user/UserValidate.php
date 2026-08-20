@@ -4,6 +4,7 @@ namespace app\adminapi\validate\user;
 
 
 use app\common\model\user\User;
+use app\common\model\user\UserLevel;
 use app\common\validate\BaseValidate;
 
 /**
@@ -21,6 +22,9 @@ class UserValidate extends BaseValidate
         'id' => 'require|checkUser',
         'field' => 'require|checkField',
         'value' => 'require',
+        'level_id' => 'require|checkLevelId',
+        'days' => 'integer|egt:0',
+        'day' => 'integer|egt:0',
 
         'password' => 'require|min:6|max:20|regex:password',
 
@@ -30,6 +34,7 @@ class UserValidate extends BaseValidate
         'id.require' => '请选择用户',
         'field.require' => '请选择操作',
         'value.require' => '请输入内容',
+        'level_id.require' => '请选择会员等级',
 
         'password.require' => '请填写登录密码',
         'password.min'     => '登录密码最少6位数',
@@ -124,6 +129,30 @@ class UserValidate extends BaseValidate
                     return '手机号码已存在';
                 }
                 break;
+
+            case 'level_id':
+                return $this->checkLevelId($data['value']);
+        }
+        return true;
+    }
+
+    /**
+     * @notes 校验会员等级
+     * @param $value
+     * @return bool|string
+     */
+    public function checkLevelId($value)
+    {
+        $levelId = intval($value);
+        if ($levelId === -1) {
+            return true;
+        }
+        if ($levelId <= 0) {
+            return '会员等级不正确';
+        }
+        $level = UserLevel::where('id', $levelId)->findOrEmpty();
+        if ($level->isEmpty()) {
+            return '会员等级不存在';
         }
         return true;
     }
@@ -136,5 +165,10 @@ class UserValidate extends BaseValidate
     public function sceneSetInfo(): UserValidate
     {
         return $this->only(['id', 'field', 'value']);
+    }
+
+    public function sceneChangeLevel(): UserValidate
+    {
+        return $this->only(['id', 'level_id', 'days', 'day']);
     }
 }

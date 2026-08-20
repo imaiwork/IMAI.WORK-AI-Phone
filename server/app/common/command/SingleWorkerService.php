@@ -45,13 +45,13 @@ class SingleWorkerService extends Command
         }
 
         try {
-            Worker::$stdoutFile = root_path(). '/runtime/log/workerman.log';
+            $this->configureWorkermanLogs();
             // 初始化Channel服务（用于跨进程通信）
             //$channel_server = new \Channel\Server('0.0.0.0', env('WORKERMAN.CHANNEL_PROT', 2206));
             // 在这里放心的实例化worker,
             Worker::$daemonize = true;
             $rpaWorker = new Worker('websocket://0.0.0.0:2345');
-            $rpaWorker->count = 1;
+            $rpaWorker->count = 4;
             $rpaWorker->name = 'AiRpaService';
             $service = new \app\common\workerman\rpa\RpaSocketService($rpaWorker);
             $rpaWorker->onWorkerStart = array($service, 'onWorkerStart');
@@ -85,6 +85,29 @@ class SingleWorkerService extends Command
         } catch (\Exception $e) {
             //            clogger($e);
             print_r($e->__toString());
+        }
+    }
+
+    private function configureWorkermanLogs(): void
+    {
+        $logRoot = root_path() . 'runtime' . DIRECTORY_SEPARATOR . 'log';
+        $workermanLog = $logRoot . DIRECTORY_SEPARATOR . 'workerman.log';
+        $this->ensureDirectory(dirname($workermanLog));
+
+        Worker::$stdoutFile = $workermanLog;
+        Worker::$logFile = $workermanLog;
+
+        $this->ensureDirectory($logRoot . DIRECTORY_SEPARATOR . 'socket' . DIRECTORY_SEPARATOR . date('Ymd') . DIRECTORY_SEPARATOR . date('Ym'));
+    }
+
+    private function ensureDirectory(string $path): void
+    {
+        if (is_dir($path)) {
+            return;
+        }
+
+        if (!mkdir($path, 0755, true) && !is_dir($path)) {
+            throw new \RuntimeException('Cannot create log directory: ' . $path);
         }
     }
 }

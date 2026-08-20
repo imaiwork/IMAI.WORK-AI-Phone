@@ -82,7 +82,9 @@
                         popper-class="!border-none !rounded-xl !p-[10px] !w-[172px]">
                         <div class="w-full h-full flex items-center justify-center">
                             <div class="w-[152px] h-[152px]">
-                                <img :src="getCustomerService.wx_image" class="w-full h-full" />
+                                <img
+                                    :src="agentUserParentQrcode || getCustomerService.wx_image"
+                                    class="w-full h-full" />
                             </div>
                         </div>
                         <template #reference>
@@ -98,6 +100,7 @@
 <script setup lang="ts">
 import { AppKeyEnum } from "@/enums/appEnums";
 import { useAppStore } from "@/stores/app";
+import { useUserStore } from "@/stores/user";
 import DownLoadMacImg from "@/assets/images/down_mac_icon.png";
 import DownLoadWebImg from "@/assets/images/down_windows_icon.png";
 import DownLoadAndImg from "@/assets/images/down_and_icon.png";
@@ -106,7 +109,10 @@ import DownLoadMiniImg from "@/assets/images/down_mini_icon.png";
 const route = useRoute();
 
 const appStore = useAppStore();
+const userStore = useUserStore();
 const websiteConfig = computed(() => appStore.getWebsiteConfig);
+// 上级代理二维码：全局共享，由 middleware 触发，刷新页面只请求一次
+const agentUserParentQrcode = computed(() => userStore.agentUserParentQrcode);
 
 enum ClientDownloadType {
     MacIntel = "mac_intel",
@@ -139,6 +145,7 @@ const getCustomerService = computed(() => {
     }
     return {};
 });
+
 const handleDownload = (key: string) => {
     if (getClient.value[key]?.url && key != ClientDownloadType.MiniPrograms) {
         window.open(getClient.value[key].url, "_blank");

@@ -58,7 +58,7 @@
                         <div
                             class="line-clamp-1 text-primary hover:underline cursor-pointer"
                             @click="jumpUrl(row.authorized_url)">
-                            {{ row.anchor_url }}
+                            {{ row.authorized_url }}
                         </div>
                     </template>
                 </el-table-column>
@@ -72,6 +72,9 @@
                         </el-tag>
                         <el-tag v-if="row.status == 4" type="warning">
                             {{ "音色合成中" }}
+                        </el-tag>
+                        <el-tag v-if="row.status == 3" type="warning">
+                            {{ "生成中" }}
                         </el-tag>
                         <el-tag v-if="row.status == 2" type="danger">
                             {{ "形象合成失败" }}

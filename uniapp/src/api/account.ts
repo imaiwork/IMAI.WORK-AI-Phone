@@ -17,11 +17,6 @@ export function register(data: Record<string, any>) {
     });
 }
 
-//发送邮箱验证码
-export function sendEmailCode(data: any) {
-    return request.post({ url: "/email/sendCode", data });
-}
-
 //向微信请求code的链接
 export function getWxCodeUrl(data: Record<string, any>) {
     return request.get({ url: "/login/codeUrl", data });

@@ -6,10 +6,12 @@
   "usingComponents": {
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "u-line-progress": "../../../../uni_modules/vk-uview-ui/components/u-line-progress/u-line-progress",
     "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
     "dragon-button": "../../../../components/dragon-button/dragon-button",
-    "tabbar": "../../../../components/tabbar/tabbar",
-    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog"
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
+    "add-phone-popup": "../../../../components/add-phone-popup/add-phone-popup",
+    "activation-codes-popup": "./components/activation-codes-popup",
+    "purchase-code-popup": "./components/purchase-code-popup",
+    "renew-popup": "./components/renew-popup"
   }
 }

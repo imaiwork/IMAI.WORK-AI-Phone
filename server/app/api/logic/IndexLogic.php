@@ -4,13 +4,19 @@
 namespace app\api\logic;
 
 
+use app\common\enum\PayEnum;
 use app\common\logic\BaseLogic;
 use app\common\model\article\Article;
 use app\common\model\decorate\DecoratePage;
 use app\common\model\decorate\DecorateTabbar;
 use app\common\model\human\HumanVoice;
+use app\common\model\pay\PayConfig;
+use app\common\service\chat\ChatModelsService;
 use app\common\service\ConfigService;
+use app\common\service\draw\MediaModelsService;
 use app\common\service\FileService;
+use app\common\service\transcoding\OssMediaProcessService;
+use app\common\service\UserDisplaySanitizer;
 
 
 /**
@@ -142,12 +148,12 @@ class IndexLogic extends BaseLogic
 
             'customer_service' => self::getCustomerService(),
             'client_download'                 => [
-                'windows' =>  ConfigService::get('client_download','windows',''),
-                'mac_intel' =>  ConfigService::get('client_download','mac_intel',''),
-                'mac_apple' =>  ConfigService::get('client_download','mac_apple',''),
-                'android' =>  ConfigService::get('client_download','android',''),
-                'mini_programs' =>  ConfigService::get('client_download','mini_programs',''),
-                'h5' =>  ConfigService::get('client_download','h5',''),
+                'windows' =>  ConfigService::get('client_download', 'windows', ''),
+                'mac_intel' =>  ConfigService::get('client_download', 'mac_intel', ''),
+                'mac_apple' =>  ConfigService::get('client_download', 'mac_apple', ''),
+                'android' =>  ConfigService::get('client_download', 'android', ''),
+                'mini_programs' =>  ConfigService::get('client_download', 'mini_programs', ''),
+                'h5' =>  ConfigService::get('client_download', 'h5', ''),
             ],
         ];
 
@@ -180,59 +186,37 @@ class IndexLogic extends BaseLogic
         ];
 
         //大语言模型
-        $chatModels = ConfigService::get('chat', 'ai_model', []);
-        foreach ($chatModels['channel'] as $key=>$value){
-            $chatModels['channel'][$key]['logo'] = isset($value['logo']) ? FileService::getFileUrl($value['logo']) : '';
-        }
-
+        $chatModels = ChatModelsService::getChannelList();
+        // 生图/生视频模型（与 PC PcLogic.draw_model 同源）
+        $drawModels = MediaModelsService::getChannelList();
         //视频案例
         $videoCases = ConfigService::get('digital_human', 'video_case', []);
-        foreach ($videoCases as $key=> $videoCase){
+        foreach ($videoCases as $key => $videoCase) {
             $videoCases[$key]['image'] = FileService::getFileUrl($videoCase['image']);
             $videoCases[$key]['video_case_url'] = FileService::getFileUrl($videoCase['video_case_url']);
         }
 
-        $transcoding = true;
-        $config = [
-            'default' => ConfigService::get('storage', 'default', 'local'),
-            'engine' => ConfigService::get('storage') ?? ['local' => []],
-        ];
+        // 团队 OEM 站点用品牌管理的备案号/企业名称覆盖平台 copyright
+        $copyright = ConfigService::get('copyright', 'config', '');
+        $oemCopyright = \app\api\logic\TeamLogic::siteCopyright();
+        if ($oemCopyright !== null) {
+            $copyright = $oemCopyright;
+        }
 
-        switch ($config['default']) {
-            case 'aliyun':
-                $aliyun = $config['engine']['aliyun'];
-                if (!isset($aliyun['PipelineId']) || !isset($aliyun['Location']) || !isset($aliyun['TemplateId'])) {
-                    $transcoding = false;
-                }
-                if (empty($aliyun['PipelineId']) || empty($aliyun['Location']) || empty($aliyun['TemplateId'])) {
-                    $transcoding = false;
-                }
-                break;
-            case 'qcloud':
-                $qcloud = $config['engine']['qcloud'];
-                if (!isset($qcloud['TemplateId'])) {
-                    $transcoding = false;
-                }
-                if (empty($qcloud['TemplateId'])) {
-                    $transcoding = false;
-                }
-                break;
-            default:
-                $transcoding = false;
-                break;
-            }
-
-
+        $siteClosed = \app\api\logic\TeamLogic::currentRequestSiteClosed() ? 1 : 0;
         return [
-            'is_robot_show' => ConfigService::get('assistants', 'is_robot_show',0),
-            'copyright' => ConfigService::get('copyright', 'config',''),
-//            'domain' => FileService::getFileUrl(),
+            'is_robot_show' => ConfigService::get('assistants', 'is_robot_show', 0),
+            'copyright' => $copyright,
+            //            'domain' => FileService::getFileUrl(),
             'domain' => config('app.app_host') . '/',
+            'site_closed' => $siteClosed,
             'style' => $style,
             'tabbar' => $tabbar,
             'login' => $loginConfig,
+            'register' => LoginLogic::getRegisterMode(),
             'website' => $website,
-            'is_oss_transcode' => $transcoding,
+            // 与后台「媒体处理」一致：仅阿里云 + OSS 切割/转码(MPS) 且配置完整时为 true
+            'is_oss_transcode' => OssMediaProcessService::isEnabled(),
             'webPage' => $webPage,
             'index_config' => $indexConfig,
             'version' => $version,
@@ -241,26 +225,27 @@ class IndexLogic extends BaseLogic
             'mnp_share_config' => $mnpShareConfig,
             'digital_human' => [
                 'privacy' => ConfigService::get('digital_human', 'privacy', []),
-                'channel' => $modelList['channel'] ?? [],
                 'voice' => $modelList['voice'] ?? [],
-                'shanjian_auth' => ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI'),
-                'banner' =>  FileService::getFileUrl(ConfigService::get('digital_human', 'banner', $banner)),
+                'shanjian_auth' => UserDisplaySanitizer::digitalHumanAuthName(ConfigService::get('digital_human', 'shanjian_auth', '数字人')),
                 'video_case' => $videoCases,
                 'video_case_open' => (int)ConfigService::get('digital_human', 'video_case_open', 0),
             ],
             'draw' => [
                 'channel' => $hdList['channel'] ?? [],
             ],
+            'draw_model' => $drawModels,
             'card_code'                 => [
-                'is_open'   => ConfigService::get('card_code','is_open',0),
+                'is_open'   => ConfigService::get('card_code', 'is_open', 0),
             ],
             'recharge'                 => [
-                'is_ios_open'   => ConfigService::get('recharge','is_ios_open',0),
-                'is_and_open'   => ConfigService::get('recharge','is_and_open',0),
+                'is_ios_open'   => ConfigService::get('recharge', 'is_ios_open', 0),
+                'is_and_open'   => ConfigService::get('recharge', 'is_and_open', 0),
+                // 小程序算力充值支付方式：1普通微信支付 2虚拟支付
+                'mnp_pay_type'  => self::getMnpPayType(),
             ],
             'app_config' => ConfigService::get('app_config', 'redbook', []),
             'ai_live' =>  ConfigService::get('ai_live', 'config', []),
-            'by_name'=>  self::getByName(),
+            'by_name' =>  self::getByName(),
             'ai_model' => $chatModels,
             'wechat_remarks' => ConfigService::get('add_remark', 'wechat', []),
             'comment_screening' => ConfigService::get('touch_clue', 'comment_screening', []),
@@ -291,6 +276,18 @@ class IndexLogic extends BaseLogic
         if (isset($info['fs_image'])) {
 
             $info['fs_image'] = FileService::getFileUrl($info['fs_image']);
+        }
+
+        // 团队 OEM 站点(PC/小程序均按请求域名解析):联系客服统一用 OEM 设置的管理员联系二维码
+        try {
+            $tenant = \app\api\logic\TeamLogic::resolveTenant((string)\think\facade\Request::domain(), '');
+            $adminQr = (string)($tenant['admin_qr'] ?? '');
+            if ((int)($tenant['team_id'] ?? 0) > 0 && $adminQr !== '') {
+                $info['image'] = $adminQr;
+                $info['wx_image'] = $adminQr;
+                $info['fs_image'] = $adminQr;
+            }
+        } catch (\Throwable $e) {
         }
 
         return $info;
@@ -368,14 +365,15 @@ class IndexLogic extends BaseLogic
 
             foreach ($info['voice'] as $key => $value) {
 
-                if ($value['status'] != 1) {
+                if ($value['status'] != 1 || !isset($value['type']) || $value['type'] != 3) {
 
                     unset($info['voice'][$key]);
 
                     continue;
                 }
 
-                $info['voice'][$key]['logo']    = FileService::getFileUrl($value['logo']);
+                $info['voice'][$key]['logo']    = FileService::getFileUrl($value['logo'] ?? '');
+                $info['voice'][$key]['url']    = FileService::getFileUrl($value['url'] ?? '');
             }
 
             $info['voice'] = array_values($info['voice']);
@@ -388,5 +386,22 @@ class IndexLogic extends BaseLogic
         $response =  \app\common\service\ToolsService::Auth()->checkby();;
 
         return  $response['byname'] ?? '';
+    }
+
+    /**
+     * @notes 小程序微信支付模式：1普通支付 2虚拟支付
+     */
+    private static function getMnpPayType(): int
+    {
+        $pay = PayConfig::where(['pay_way' => PayEnum::WECHAT_PAY])->findOrEmpty();
+        if ($pay->isEmpty()) {
+            return 1;
+        }
+        $config = $pay['config'] ?? [];
+        if (!is_array($config)) {
+            return 1;
+        }
+        $mnpPayType = (int)($config['mnp_pay_type'] ?? 1);
+        return in_array($mnpPayType, [1, 2], true) ? $mnpPayType : 1;
     }
 }

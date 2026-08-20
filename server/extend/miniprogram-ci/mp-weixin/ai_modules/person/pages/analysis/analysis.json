@@ -4,6 +4,9 @@
   "usingComponents": {
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "enterprise-v2": "./components/enterprise-v2",
+    "individual-v2": "./components/individual-v2",
+    "local-v2": "./components/local-v2",
     "enterprise": "./components/enterprise",
     "local": "./components/local",
     "individual": "./components/individual",

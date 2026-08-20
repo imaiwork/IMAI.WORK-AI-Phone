@@ -3,6 +3,7 @@
 namespace app\common\model\aiPersona;
 
 use app\common\model\BaseModel;
+use app\common\service\aiPersona\AiPersonaTextService;
 use think\model\concern\SoftDelete;
 
 class AiPersonaLocal extends BaseModel
@@ -13,20 +14,44 @@ class AiPersonaLocal extends BaseModel
     protected $pk = 'id';
     protected $autoWriteTimestamp = false;
 
-    public function getClueContent()
+    public function getClueContent($persona)
     {
-        $store_atmosphere = implode(',', $this->store_atmosphere);
-        $content_preference = implode(',', $this->content_preference);
-        $spokesperson = implode(',', $this->spokesperson);
-        $this->clue_content = "我的门店及所在商圈是{$this->store_name}，由{$spokesperson}出镜揽客，希望以{$store_atmosphere}的门店氛围感生成内容。
+        $store_atmosphere = AiPersonaTextService::join($this->store_atmosphere);
+        $content_preference = AiPersonaTextService::join($this->content_preference);
+        $spokesperson = AiPersonaTextService::join($this->spokesperson);
+        $this->clue_content = "我的IP名称是{$persona->devicpersona_namee_code}。
 
-            我们的招牌特色如下：
+                    IP介绍如下：
+                    {$persona->persona_desc}
 
-            {$this->signature_feature}
+                    账号类型是{$persona->persona_type}。
 
-            主要想吸引进店的客户是{$this->target_customer}，偏好的引流内容：{$content_preference}。
+                    我的职业/业务是：
+                    {$spokesperson}
 
-            开店初衷/门店优势：{$this->open_story}。";
+                    我主要分享的内容是：
+                    {$persona->core_value}
+
+                    这个账号整体想呈现的感觉是：
+                    {$store_atmosphere}
+
+                    我所在的城市/地点是：
+                    {$persona->store_position}
+
+                    我希望用户看完内容之后的行为是：
+                    {$content_preference}
+
+                    我正在销售的产品/服务是：
+                    {$persona->main_business}
+
+                    我想卖给的人群是：
+                    {$persona->target_pain_points}
+
+                    相比同行，我的优势是：
+                    {$persona->conversion_hook}
+
+                    以下是我的产品内容：
+                    {$this->core_value}";
         return $this->clue_content;
     }
 
@@ -66,6 +91,16 @@ class AiPersonaLocal extends BaseModel
         return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
     }
 
+    public function getClueKeywordsAttr($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    // 修改器：获客截流线索词JSON
+    public function setClueKeywordsAttr($value)
+    {
+        return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
+    }
 
     // 获取器：获客截流线索词JSON
     public function getClueAcquireKeywordsAttr($value)
@@ -136,6 +171,30 @@ class AiPersonaLocal extends BaseModel
 
     // 修改器：朋友圈评论话术JSON
     public function setWechatCommentSpeechAttr($value)
+    {
+        return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
+    }
+
+    // 获取器：爆款关键词JSON
+    public function getHotWordsAttr($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    // 修改器：爆款关键词JSON
+    public function setHotWordsAttr($value)
+    {
+        return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
+    }
+
+    // 获取器：全局选项JSON
+    public function getGlobalOptionAttr($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    // 修改器：全局选项JSON
+    public function setGlobalOptionAttr($value)
     {
         return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
     }

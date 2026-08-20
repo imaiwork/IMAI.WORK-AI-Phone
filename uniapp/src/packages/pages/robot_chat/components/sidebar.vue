@@ -46,7 +46,7 @@ const props = withDefaults(
     {
         formList: () => [],
         title: "",
-    }
+    },
 );
 const emit = defineEmits(["open", "close", "success"]);
 
@@ -77,7 +77,7 @@ const formRef = shallowRef();
 
 const submit = async () => {
     if (userTokens.value <= 0) {
-        uni.$u.toast("算力不足，请充值！");
+        powerInsufficientTip();
         return;
     }
     await formRef.value?.validate();

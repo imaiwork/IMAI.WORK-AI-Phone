@@ -35,13 +35,19 @@ class KbFilesLists extends BaseApiDataLists
             throw new Exception('知识库已不存在');
         }
 
-        if ($know['user_id'] !== $this->userId) {
+        $uid = (int)$this->userId;
+        if ((int)$know['user_id'] !== $uid) {
             $team = (new KbKnowTeam())
                 ->where(['kb_id'=>$this->params['kb_id']])
-                ->where(['user_id'=>$this->userId])
+                ->where(['user_id'=>$uid])
                 ->findOrEmpty()
                 ->toArray();
-            if (!$team) {
+            // 同企业空间且创建者仍在团:全员可查看文件列表
+            if (!$team && !\app\common\service\TeamContextService::canViewTeamResource(
+                $uid,
+                (int)($know['team_id'] ?? 0),
+                (int)($know['user_id'] ?? 0)
+            )) {
                 throw new Exception('无权限查看');
             }
         }

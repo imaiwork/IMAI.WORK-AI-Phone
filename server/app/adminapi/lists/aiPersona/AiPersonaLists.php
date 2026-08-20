@@ -106,7 +106,10 @@ class AiPersonaLists extends BaseAdminDataLists implements ListsSearchInterface
                        ->field([
                                    'ap.id', 'ap.user_id', 'ap.persona_name', 'ap.persona_type', 'ap.avatar_url',
                                    'ap.quick_desc', 'ap.industry', 'ap.is_configured', 'ap.status',
-                                   'ap.create_time', 'ap.report_status', 'ap.report_gen_time', 'ap.publish_mode'
+                                   'ap.create_time', 'ap.report_status', 'ap.report_gen_time', 'ap.publish_mode',
+                                   'ap.workflow_template_id',
+                                   'ap.main_business', 'ap.target_pain_points', 'ap.conversion_hook',
+                                   'ap.is_shopping_cart', 'ap.goods_name', 'ap.is_store_position', 'ap.store_position'
                                ])
                        ->where($this->where())
                        ->where($this->searchWhere) // 使用 setSearch 定义的搜索条件
@@ -149,6 +152,8 @@ class AiPersonaLists extends BaseAdminDataLists implements ListsSearchInterface
             // 检查AI人设配置状态
             $result = AiPersonaLogic::checkAiPersonaConfigStatus($item['id'], $item['user_id']);
             $item['is_configured'] = $result['is_configured'] ?? 0;
+            // 查询AI人设使用的模板
+            $item['template_info'] = \app\common\model\marketing\MarketingTemplate::where('id', $item['workflow_template_id'])->findOrEmpty()->toArray();
         }
 
         return $lists;

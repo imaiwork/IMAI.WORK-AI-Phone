@@ -28,6 +28,11 @@ export function uploadFile(params: any, onProgress?: (percent: number) => void) 
     return $request.uploadFile({ url: "/upload/file", requestOptions: { ignoreCancel: true } }, params, onProgress);
 }
 
+// 上传视频
+export function uploadVideo(params: any, onProgress?: (percent: number) => void) {
+    return $request.uploadFile({ url: "/upload/video", requestOptions: { ignoreCancel: true } }, params, onProgress);
+}
+
 // 上传GPT文件
 export function uploadGPTFile(params: any, onProgress?: (percent: number) => void) {
     // 确保requestKey参数被正确传递
@@ -107,4 +112,9 @@ export function videoTranscode(params: any) {
 // 批量获取视频信息
 export function batchGetVideoInfoByUrl(params: any) {
     return $request.post({ url: "/videoInfo/batchGetInfo", params });
+}
+
+// 获取AI模型列表
+export function getAiModelsLists() {
+    return $request.get({ url: "/aiModels/lists" });
 }

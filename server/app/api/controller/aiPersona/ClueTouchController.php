@@ -48,17 +48,4 @@ class ClueTouchController extends BaseApiController
         }
     }
     
-    public function cron()
-    {
-
-        try {
-            $deviceId = $this->request->get('device_code');
-            # 获客与截流任务
-            $device = \app\common\model\sv\SvDevice::where('auto_type', 1)->where('device_code', $deviceId)->limit(1)->findOrEmpty();
-            ClueTouchLogic::trafficTaskCron($device, 1);
-        } catch (HttpResponseException $e) {
-            print_r($e->__toString());
-            die;
-        }
-    }
 }

@@ -99,12 +99,23 @@ class AssistantsLogic extends BaseLogic
                 }
             }
 
+            if (isset($data['scene_id'])){
+                if (is_array($data['scene_id']) && count($data['scene_id']) == 2){
+                    $sceneId = (int)$data['scene_id'][1];
+                }else{
+                    $sceneId = (int)$data['scene_id'];
+                }
+            }else{
+                $sceneId = $assistantInfo->scene_id;
+            }
+
             // 检查关联场景是否存在
-            $scene = Scene::where('id', $data['scene_id'])->findOrEmpty();
+            $scene = Scene::where('id', $sceneId)->findOrEmpty();
             if ($scene->isEmpty()) {
                 self::setError('场景分类不存在');
                 return false;
             }
+            $data['scene_id'] = $sceneId;
 
             if (isset($data['logo'])) {
                 $data['logo'] = FileService::setFileUrl($data['logo']);

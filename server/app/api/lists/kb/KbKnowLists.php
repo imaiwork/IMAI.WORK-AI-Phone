@@ -28,14 +28,17 @@ class KbKnowLists extends BaseApiDataLists
     public function where(): array
     {
         $where = [];
+        if ($this->userId <= 0) {
+            $where[] = ['id', '=', 0];
+            return $where;
+        }
         $type = intval($this->request->get('type', 0));
         if (!empty($this->request->get('name'))) {
             $where[] = ['name', 'like', '%'.$this->request->get('name').'%'];
         }
         $where[] = ['name', '<>', '模型大管家'];
         switch ($type){
-            case 1: // 我的知识库
-                $where[] = ['user_id', '=', $this->userId];
+            case 1: // 我的/团队知识库(空间范围见 scope())
                 break;
             case 2: // 共享给我的
                 $shareKbIds = (new KbKnowTeam())->where(['user_id'=>$this->userId])->column('kb_id');
@@ -81,12 +84,39 @@ class KbKnowLists extends BaseApiDataLists
                     }
                 }
 
-                $where[] = ['user_id', '=', $this->userId];
 //                $where[] = ['id', 'in', $shareKbIds??[0]];
                 break;
         }
 
         return $where;
+    }
+
+    /**
+     * @notes 空间归属范围(资源跟人,与 KbRobotLists::scope 同口径):
+     *        企业空间→本企业全体有效成员创建的知识库(成员加入即共享、退团/移除/到期自动退出) ∪ 本人全部;
+     *        个人空间→本人创建的全部。type=2(共享给我的)不加空间范围。
+     */
+    private function scope(): \Closure
+    {
+        $userId = (int)$this->userId;
+        $type = intval($this->request->get('type', 0));
+        if ($userId <= 0 || $type === 2) {
+            return function ($q) {
+            };
+        }
+        $teamId = \app\common\service\TeamContextService::currentTeamId($userId);
+        if ($teamId > 0) {
+            $memberIds = \app\common\service\TeamBillingService::activeMemberUserIds($teamId);
+            return function ($q) use ($memberIds, $userId) {
+                $q->where(function ($q2) use ($memberIds, $userId) {
+                    $q2->whereIn('user_id', $memberIds ?: [-1])
+                        ->whereOr('user_id', '=', $userId);
+                });
+            };
+        }
+        return function ($q) use ($userId) {
+            $q->where('user_id', '=', $userId);
+        };
     }
 
     /**
@@ -103,6 +133,7 @@ class KbKnowLists extends BaseApiDataLists
         $lists = $model
             ->field(['id,user_id,image,name,intro,is_enable,create_time'])
             ->where($this->where())
+            ->where($this->scope())
             ->order('id desc')
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
@@ -140,7 +171,8 @@ class KbKnowLists extends BaseApiDataLists
             $item['request_counts'] = $stats['request_counts'] ?? 0;
             // $item['embedding_model'] = $embeddingModel;
             $item['team_people'] = $modelKbKnowTeam->where(['kb_id'=>$item['id']])->count() + 1;
-            $item['is_super'] = $item['user_id'] == $this->userId ? 1 : 0;
+            $item['is_super'] = (int)$item['user_id'] === (int)$this->userId ? 1 : 0;
+            $item['is_owner'] = $item['is_super'];
             unset($item['user_id']);
             unset($stats);
         }
@@ -159,6 +191,7 @@ class KbKnowLists extends BaseApiDataLists
         $model = new KbKnow();
         return $model
             ->where($this->where())
+            ->where($this->scope())
             ->count();
     }
 }

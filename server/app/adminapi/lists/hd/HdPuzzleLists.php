@@ -8,6 +8,7 @@ use app\common\model\hd\HdPuzzle;
 use app\common\model\hd\HdPuzzleSetting;
 use app\common\model\user\User;
 use app\common\service\FileService;
+use app\common\service\draw\DrawBillingService;
 
 class HdPuzzleLists extends BaseAdminDataLists implements ListsSearchInterface
 {
@@ -49,6 +50,12 @@ class HdPuzzleLists extends BaseAdminDataLists implements ListsSearchInterface
 
                 // 处理类型文本
                 $item['type_text'] = $this->getTypeText($item['type']);
+                $detailState = match ((int)$item['status']) {
+                    1 => 'consume',
+                    2 => 'refund',
+                    default => 'hold',
+                };
+                $item['points_remark'] = DrawBillingService::consumePointsRemark($detailState, (float)($item['img_token'] ?? 0));
             })
             ->toArray();
         

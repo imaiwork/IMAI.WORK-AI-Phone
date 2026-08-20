@@ -120,6 +120,7 @@ ALTER TABLE `la_sv_device_circle_like_reply_account`
 ADD COLUMN `remark` varchar(500) DEFAULT NULL COMMENT '执行结果' AFTER `status`,
 ADD COLUMN `persona_id` int NULL DEFAULT 0 COMMENT 'ip人设id' AFTER `remark`;
 
+
 ALTER TABLE `la_sv_lead_scraping_setting`
 ADD COLUMN `persona_id` int NULL DEFAULT 0 COMMENT 'ip人设id' AFTER `task_date`;
 
@@ -598,6 +599,5 @@ ALTER TABLE `la_sv_publish_setting`
 
 INSERT INTO `la_config` (`type`, `name`, `value`, `create_time`, `update_time`) VALUES ('recharge', 'is_and_open', '1', 1749805431, 1751353142);
 DELETE FROM `la_shanjian_clip_template` WHERE  `id` = "67dbbe408e231d0030bd072b";
-
 
 UPDATE `la_dev_crontab` SET `expression` =  '*/3 * * * *' WHERE `command` = 'shanjian_video_task';

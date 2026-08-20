@@ -3,12 +3,11 @@
 namespace app\api\logic\interview;
 
 use app\common\logic\BaseLogic;
-use app\common\model\interview\InterviewRecord;
 use app\common\model\interview\Interview;
 use app\common\model\interview\InterviewJob;
-use think\facade\Db;
+use app\common\model\interview\InterviewRecord;
 use Exception;
-use think\facade\Queue;
+use think\facade\Db;
 
 /**
  * 面试记录逻辑层
@@ -278,10 +277,8 @@ class InterviewRecordLogic extends BaseLogic
             if($job->user_id != $userId){
                 throw new \Exception('非法操作');
             }
-            Queue::push('app\common\Jobs\EndInterviewJob@handle',  $interview->id);
-            
-         
-            // 更新状态
+
+            // 更新状态为分析中，由 lianlian_analysis_cron 拉取执行
             $record->status = InterviewRecord::STATUS_ANALYZE;    
             $record->save();
 

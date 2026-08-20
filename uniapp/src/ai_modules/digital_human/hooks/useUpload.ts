@@ -170,7 +170,12 @@ export const useUpload = (options: Options) => {
     };
 
     const uploadVideo = async (file: string) => {
-        const { uri, thumbnail_path, width, height }: any = await uploadFile(
+        const {
+            uri,
+            thumbnail_path = "",
+            width = 0,
+            height = 0,
+        }: any = await uploadFile(
             "video",
             {
                 filePath: file,
@@ -181,7 +186,7 @@ export const useUpload = (options: Options) => {
             },
             (e) => {
                 onProgress?.({ type: "video", progress: e });
-            }
+            },
         );
         uploadResult.url = uri;
         uploadResult.pic = thumbnail_path;

@@ -21,7 +21,7 @@ const appStore = useAppStore();
 const getCurrVoice = () => {
 	const data = appStore.config?.lianlian?.voice || [];
 	return (
-		data.find((item: any) => item.code == props.sceneDetail?.coach_voice) ||
+		data.find((item: any) => item.voice == props.sceneDetail?.coach_voice) ||
 		{}
 	);
 };

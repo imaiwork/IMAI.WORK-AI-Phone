@@ -50,7 +50,7 @@
                 class="w-[64rpx] h-[64rpx] rounded-[14rpx] shrink-0" />
             <view class="flex-1 min-w-0">
                 <text class="text-[20rpx] text-[#AAAAAA] block mb-[6rpx]">来源笔记</text>
-                <text class="text-[24rpx] text-[#444444] leading-relaxed" :class="noteExpanded ? '' : 'line-clamp-2'">{{
+                <text class="text-xs text-[#444444] leading-relaxed" :class="noteExpanded ? '' : 'line-clamp-2'">{{
                     item.note_title
                 }}</text>
                 <view class="mt-[8rpx] flex items-center gap-[6rpx]" @click="noteExpanded = !noteExpanded">
@@ -72,7 +72,7 @@
                     <view
                         class="w-[6rpx] h-[32rpx] rounded-full"
                         style="background: linear-gradient(to bottom, #ff8c42, #ff5c5c)"></view>
-                    <text class="text-[24rpx] font-semibold text-[#BA6F0D]">{{ collapseTypeLabel }}</text>
+                    <text class="text-xs font-semibold text-[#BA6F0D]">{{ collapseTypeLabel }}</text>
                     <view v-if="item.filter_keyword" class="bg-[#FFE0B2] rounded-[20rpx] px-[14rpx] py-[4rpx]">
                         <text class="text-[20rpx] text-[#BA6F0D] font-medium">#{{ item.filter_keyword }}</text>
                     </view>
@@ -96,7 +96,7 @@
                             class="w-[36rpx] h-[36rpx] rounded-full border-[2rpx] border-[#FFCC80] bg-[#FFF3E0] flex items-center justify-center shrink-0">
                             <text class="text-[20rpx] font-bold text-[#BA6F0D]">1</text>
                         </view>
-                        <text class="text-[24rpx] font-semibold text-[#BA6F0D]">Ta 的评论</text>
+                        <text class="text-xs font-semibold text-[#BA6F0D]">Ta 的评论</text>
                     </view>
                     <view class="flex gap-[16rpx] items-start pl-[12rpx]">
                         <image :src="item.avatar" lazy-load class="w-[60rpx] h-[60rpx] rounded-full shrink-0" />
@@ -105,7 +105,7 @@
                                 item.account_name
                             }}</text>
                             <view class="bg-[#F2F2F2] rounded-[8rpx_28rpx_28rpx_28rpx] px-[20rpx] py-[16rpx]">
-                                <text class="text-[24rpx] text-[#333333] leading-relaxed">{{ item.content }}</text>
+                                <text class="text-xs text-[#333333] leading-relaxed">{{ item.content }}</text>
                             </view>
                         </view>
                     </view>
@@ -123,7 +123,7 @@
                             class="w-[36rpx] h-[36rpx] rounded-full border-[2rpx] border-[#FFCC80] bg-[#FFF3E0] flex items-center justify-center shrink-0">
                             <text class="text-[20rpx] font-bold text-[#BA6F0D]">1</text>
                         </view>
-                        <text class="text-[24rpx] font-semibold text-[#BA6F0D]">Ta 的内容</text>
+                        <text class="text-xs font-semibold text-[#BA6F0D]">Ta 的内容</text>
                     </view>
                     <view class="flex gap-[16rpx] items-start pl-[12rpx]">
                         <image :src="item.avatar" lazy-load class="w-[60rpx] h-[60rpx] rounded-full shrink-0" />
@@ -132,7 +132,7 @@
                                 >{{ item.account_name }}（Ta）</text
                             >
                             <view class="bg-[#F2F2F2] rounded-[8rpx_28rpx_28rpx_28rpx] px-[20rpx] py-[16rpx]">
-                                <text class="text-[24rpx] text-[#333333] leading-relaxed">{{ item.content }}</text>
+                                <text class="text-xs text-[#333333] leading-relaxed">{{ item.content }}</text>
                             </view>
                         </view>
                     </view>
@@ -148,7 +148,7 @@
                             style="background: linear-gradient(135deg, #ff8c42, #ff5c5c)">
                             <text class="text-[20rpx] font-bold text-white">2</text>
                         </view>
-                        <text class="text-[24rpx] font-semibold text-[#FF6B35]">已评论了 Ta</text>
+                        <text class="text-xs font-semibold text-[#FF6B35]">已评论了 Ta</text>
                     </view>
                     <view class="flex gap-[16rpx] items-start flex-row-reverse pl-[12rpx]">
                         <image :src="item.execute_avatar" lazy-load class="w-[60rpx] h-[60rpx] rounded-full shrink-0" />
@@ -159,7 +159,7 @@
                             <view
                                 class="rounded-[28rpx_8rpx_28rpx_28rpx] px-[20rpx] py-[16rpx] text-right"
                                 style="background: linear-gradient(135deg, #ff8c42, #ff5c5c)">
-                                <text class="text-[24rpx] text-white leading-relaxed">{{ item.comment_content }}</text>
+                                <text class="text-xs text-white leading-relaxed">{{ item.comment_content }}</text>
                             </view>
                         </view>
                     </view>
@@ -181,7 +181,7 @@
                             style="background: linear-gradient(135deg, #ff8c42, #ff5c5c)">
                             <text class="text-[20rpx] font-bold text-white">{{ blocks.theirComment ? "2" : "1" }}</text>
                         </view>
-                        <text class="text-[24rpx] font-semibold text-[#FF6B35]">{{ blocks.myActionTitle }}</text>
+                        <text class="text-xs font-semibold text-[#FF6B35]">{{ blocks.myActionTitle }}</text>
                     </view>
                     <view class="flex gap-[16rpx] items-start flex-row-reverse pl-[12rpx]">
                         <image :src="item.execute_avatar" lazy-load class="w-[60rpx] h-[60rpx] rounded-full shrink-0" />
@@ -192,7 +192,7 @@
                             <view
                                 class="rounded-[28rpx_8rpx_28rpx_28rpx] px-[20rpx] py-[16rpx] text-right"
                                 style="background: linear-gradient(135deg, #ff8c42, #ff5c5c)">
-                                <text class="text-[24rpx] text-white leading-relaxed">{{
+                                <text class="text-xs text-white leading-relaxed">{{
                                     item.comment_content || "--"
                                 }}</text>
                             </view>

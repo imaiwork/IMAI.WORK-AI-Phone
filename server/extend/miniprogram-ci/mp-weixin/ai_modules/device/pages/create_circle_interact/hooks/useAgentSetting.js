@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../../common/vendor.js");exports.useAgentSetting=function(o){const n=e.ref(!1),t=e.shallowRef();return{showChooseAgent:n,chooseAgentRef:t,handleChooseAgentConfirm:e=>{o.robot_id=e.id,o.robot_name=e.name,n.value=!1}}};

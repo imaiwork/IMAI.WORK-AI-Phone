@@ -35,6 +35,36 @@ export function getMemberList(params?: any) {
     return request.get({ url: "/member.member_package/commonLists", params });
 }
 
+// 会员等级列表
+export function getUserLevelList(params?: any) {
+    return request.get({ url: "/user.userLevel/lists", params });
+}
+
+// 会员等级详情
+export function getUserLevelDetail(params: any) {
+    return request.get({ url: "/user.userLevel/detail", params });
+}
+
+// 会员等级新增
+export function addUserLevel(params: any) {
+    return request.post({ url: "/user.userLevel/add", params });
+}
+
+// 会员等级编辑
+export function editUserLevel(params: any) {
+    return request.post({ url: "/user.userLevel/edit", params });
+}
+
+// 会员等级删除
+export function deleteUserLevel(params: any) {
+    return request.post({ url: "/user.userLevel/delete", params });
+}
+
+// 调整用户会员等级
+export function changeLevel(params: any) {
+    return request.post({ url: "/user.user/changeLevel", params });
+}
+
 // 调整用户视频合成时长
 export function adjustVideo(params: any) {
     return request.post({ url: "/user.user/adjustAccount", params });
@@ -119,4 +149,29 @@ export function userBatchImport(params: any) {
 // 修改代理上级
 export function adjustLeader(params: any) {
     return request.post({ url: "/user.user/setDistribution", params });
+}
+
+// 消耗记录
+export function getConsumeLists(params: any) {
+    return request.get({ url: "/user.user/accountLogLists", params });
+}
+
+// 下级充值业绩清零
+export function resetRechargeStats(params: any) {
+    return request.post({ url: "/user.user/resetRechargeStats", params });
+}
+
+// 会员列表
+export function getMemberUserList(params: any) {
+    return request.get({ url: "/user.memberUser/lists", params });
+}
+
+// 会员等级授予
+export function grantMember(params: any) {
+    return request.post({ url: "/user.memberUser/grant", params });
+}
+
+// 取消会员
+export function cancelMember(params: any) {
+    return request.post({ url: "/user.memberUser/cancel", params });
 }

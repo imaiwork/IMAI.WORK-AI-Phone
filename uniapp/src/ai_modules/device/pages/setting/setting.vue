@@ -1,131 +1,137 @@
 <template>
-    <view class="px-[26rpx] pt-4">
+    <view class="px-[32rpx] pt-[24rpx]">
         <template v-if="loading">
-            <view class="bg-white rounded-[24rpx] p-[32rpx] animate-pulse flex flex-col gap-3">
-                <view class="h-[22rpx] w-[120rpx] bg-[#F0F0F0] rounded-full" />
-                <view class="h-[34rpx] w-[200rpx] bg-[#F0F0F0] rounded-full" />
-                <view class="h-[1rpx] bg-[#F7F7F7]" />
-                <view class="h-[22rpx] w-[280rpx] bg-[#F0F0F0] rounded-full" />
-                <view class="h-[22rpx] w-[220rpx] bg-[#F0F0F0] rounded-full" />
+            <view
+                class="bg-white rounded-[32rpx] p-[32rpx] animate-pulse flex flex-col gap-3 shadow-sm border border-gray-50">
+                <view class="h-[22rpx] w-[120rpx] bg-[#EEF2FF] rounded-full" />
+                <view class="h-[34rpx] w-[200rpx] bg-[#EEF2FF] rounded-full" />
+                <view class="h-[1rpx] bg-[#F4F6FB]" />
+                <view class="h-[22rpx] w-[280rpx] bg-[#EEF2FF] rounded-full" />
+                <view class="h-[22rpx] w-[220rpx] bg-[#EEF2FF] rounded-full" />
             </view>
 
-            <view class="mt-[30rpx] flex flex-col gap-[20rpx]">
-                <view class="h-[22rpx] w-[100rpx] bg-[#F0F0F0] rounded-full animate-pulse" />
-                <view class="bg-white rounded-[24rpx] p-[32rpx] animate-pulse flex flex-col gap-4">
+            <view class="mt-[32rpx] flex flex-col gap-[20rpx]">
+                <view class="h-[22rpx] w-[100rpx] bg-[#EEF2FF] rounded-full animate-pulse" />
+                <view
+                    class="bg-white rounded-[32rpx] p-[32rpx] animate-pulse flex flex-col gap-4 shadow-sm border border-gray-50">
                     <view v-for="i in 3" :key="i" class="flex items-center justify-between">
                         <view class="flex items-center gap-x-[24rpx]">
-                            <view class="w-[72rpx] h-[72rpx] bg-[#F0F0F0] rounded-[20rpx]" />
+                            <view class="w-[72rpx] h-[72rpx] bg-[#EEF2FF] rounded-[20rpx]" />
                             <view class="flex flex-col gap-2">
-                                <view class="h-[28rpx] w-[120rpx] bg-[#F0F0F0] rounded-full" />
-                                <view class="h-[20rpx] w-[160rpx] bg-[#F0F0F0] rounded-full" />
+                                <view class="h-[28rpx] w-[120rpx] bg-[#EEF2FF] rounded-full" />
+                                <view class="h-[20rpx] w-[160rpx] bg-[#EEF2FF] rounded-full" />
                             </view>
                         </view>
-                        <view class="h-[40rpx] w-[80rpx] bg-[#F0F0F0] rounded-full" />
+                        <view class="h-[40rpx] w-[80rpx] bg-[#EEF2FF] rounded-full" />
                     </view>
                 </view>
 
-                <view class="h-[22rpx] w-[140rpx] bg-[#F0F0F0] rounded-full animate-pulse mt-[10rpx]" />
-                <view class="bg-white rounded-[24rpx] px-[32rpx] animate-pulse">
+                <view class="h-[22rpx] w-[140rpx] bg-[#EEF2FF] rounded-full animate-pulse mt-[10rpx]" />
+                <view class="bg-white rounded-[32rpx] px-[32rpx] animate-pulse shadow-sm border border-gray-50">
                     <view
                         v-for="i in 3"
                         :key="i"
-                        class="py-3 flex items-center justify-between border-b border-[#F7F7F7] last:border-b-0">
+                        class="py-[24rpx] flex items-center justify-between border-b border-[#F4F6FB] last:border-b-0">
                         <view class="flex items-center gap-x-[24rpx]">
-                            <view class="w-[60rpx] h-[60rpx] bg-[#F0F0F0] rounded-full" />
+                            <view class="w-[60rpx] h-[60rpx] bg-[#EEF2FF] rounded-full" />
                             <view class="flex flex-col gap-2">
-                                <view class="h-[28rpx] w-[80rpx] bg-[#F0F0F0] rounded-full" />
-                                <view class="h-[22rpx] w-[120rpx] bg-[#F0F0F0] rounded-full" />
+                                <view class="h-[28rpx] w-[80rpx] bg-[#EEF2FF] rounded-full" />
+                                <view class="h-[22rpx] w-[120rpx] bg-[#EEF2FF] rounded-full" />
                             </view>
                         </view>
-                        <view class="h-[48rpx] w-[100rpx] bg-[#F0F0F0] rounded-full" />
+                        <view class="h-[48rpx] w-[100rpx] bg-[#EEF2FF] rounded-full" />
                     </view>
                 </view>
             </view>
         </template>
 
         <template v-else>
-            <view class="bg-white rounded-[24rpx] p-[32rpx]">
-                <view class="flex items-center justify-between">
+            <view class="bg-white rounded-[32rpx] p-[32rpx] shadow-sm border border-solid border-[#f9f9f9]">
+                <view class="flex items-center justify-between mb-[20rpx]">
                     <view>
-                        <view class="text-[22rpx] text-[#000000]/30">设备名称</view>
-                        <view class="mt-1 flex items-center gap-2">
-                            <text class="text-[34rpx] font-medium">{{ detail.device_name }}</text>
-                            <view @click="handleEditDevice">
-                                <u-icon name="edit-pen" color="#CCCCCC" />
+                        <text class="text-[22rpx] text-[#676767] block mb-[6rpx]">设备名称</text>
+                        <view class="flex items-center gap-x-[12rpx]">
+                            <text class="text-[34rpx] font-bold text-[#212121]">{{ detail.device_name }}</text>
+                            <view
+                                class="w-[48rpx] h-[48rpx] rounded-full bg-[#F4F6FB] flex items-center justify-center active:opacity-70"
+                                @click="handleEditDevice">
+                                <u-icon name="edit-pen" color="#94A3B8" size="22" />
                             </view>
                         </view>
                     </view>
                 </view>
-                <view class="h-[1rpx] bg-[#F7F7F7] my-2" />
-                <view>
-                    <view class="text-xs text-[#000000]/50 flex items-center font-medium">
-                        设备码：{{ detail.device_code }}
-                        <view class="ml-2" @click="copy(detail.device_code)">
-                            <image
-                                src="@/ai_modules/device/static/icons/copy.svg"
-                                mode="widthFix"
-                                class="w-[24rpx] h-[24rpx]" />
-                        </view>
-                    </view>
-                    <view class="text-xs text-[#000000]/50 mt-[10rpx] font-medium">
-                        绑定时间：{{ detail.create_time }}
+
+                <view class="h-[1rpx] bg-[#F4F6FB] mb-[20rpx]" />
+
+                <view class="flex items-center gap-x-[12rpx] mb-[8rpx]">
+                    <text class="text-[22rpx] text-[#676767]">设备码：{{ detail.device_code }}</text>
+                    <view
+                        class="w-[40rpx] h-[40rpx] rounded-full bg-[#F4F6FB] flex items-center justify-center active:opacity-70"
+                        @click="copy(detail.device_code)">
+                        <image
+                            src="@/ai_modules/device/static/icons/copy.svg"
+                            mode="widthFix"
+                            class="w-[24rpx] h-[24rpx]" />
                     </view>
                 </view>
+                <text class="text-[22rpx] text-[#676767]">绑定时间：{{ detail.create_time }}</text>
             </view>
 
-            <view class="mt-[30rpx]">
-                <view class="text-[22rpx] font-medium">基本设置</view>
-                <view class="bg-white rounded-[24rpx] p-[32rpx] mt-[20rpx]">
-                    <view class="flex items-center justify-between gap-x-2">
-                        <view class="flex items-center gap-x-[24rpx] shrink-0">
+            <view class="mt-[32rpx]">
+                <view class="flex items-center gap-x-[10rpx] mb-[20rpx]">
+                    <view class="w-[6rpx] h-[28rpx] bg-primary rounded-full"></view>
+                    <text class="text-[26rpx] font-bold text-[#424242]">基本设置</text>
+                </view>
+
+                <view class="bg-white rounded-[32rpx] px-[32rpx] shadow-sm border border-solid border-[#f9f9f9]">
+                    <view
+                        class="py-[28rpx] flex items-center justify-between border-b border-[#F4F6FB]"
+                        @click="handleSetPersona">
+                        <view class="flex items-center gap-x-[20rpx]">
                             <view
-                                class="w-[72rpx] h-[72rpx] bg-[#F6F6F6] rounded-[20rpx] flex items-center justify-center">
+                                class="w-[72rpx] h-[72rpx] bg-[#F4F6FB] rounded-[20rpx] flex items-center justify-center">
                                 <image
                                     src="@/ai_modules/device/static/icons/user_edit.svg"
                                     class="w-[36rpx] h-[36rpx]" />
                             </view>
                             <view>
-                                <view class="text-[28rpx] font-medium">IP人设</view>
-                                <view class="text-xs text-[#000000]/30 mt-[6rpx]">24h任务素材设置</view>
+                                <text class="text-[28rpx] font-semibold text-[#212121] block">IP人设</text>
+                                <text class="text-[22rpx] text-[#676767] mt-[6rpx] block">24h任务素材设置</text>
                             </view>
                         </view>
-                        <view class="flex items-center gap-x-[12rpx]" @click="handleSetPersona">
+                        <view class="flex items-center gap-x-[12rpx]">
                             <view
                                 v-if="detail.persona_info?.persona_name"
                                 class="text-[#00C08E] text-xs bg-[#F2FCF9] font-medium rounded-[100rpx] px-[16rpx] py-[8rpx]">
                                 <text class="line-clamp-1">{{ detail.persona_info.persona_name }}</text>
                             </view>
-                            <view
-                                v-else
-                                class="text-[#FF2442] text-xs bg-[#FFF4F5] font-medium rounded-[100rpx] px-[16rpx] py-[8rpx]"
-                                >去设置</view
-                            >
-                            <u-icon name="arrow-right" color="#B2B2B2" size="20" />
+                            <view v-else class="bg-[#FEF2F2] px-[16rpx] py-[8rpx] rounded-full">
+                                <text class="text-[22rpx] text-error font-medium">去设置</text>
+                            </view>
+                            <u-icon name="arrow-right" color="#CBD5E1" size="20" />
                         </view>
                     </view>
 
-                    <view class="h-[1rpx] bg-[#F7F7F7] my-3" />
-
-                    <view class="flex items-center justify-between">
-                        <view class="flex items-center gap-x-[24rpx]">
+                    <view class="py-[28rpx] flex items-center justify-between border-b border-[#F4F6FB]">
+                        <view class="flex items-center gap-x-[20rpx]">
                             <view
-                                class="w-[72rpx] h-[72rpx] bg-[#F6F6F6] rounded-[20rpx] flex items-center justify-center">
+                                class="w-[72rpx] h-[72rpx] bg-[#F4F6FB] rounded-[20rpx] flex items-center justify-center">
                                 <image src="@/ai_modules/device/static/icons/switch.svg" class="w-[36rpx] h-[36rpx]" />
                             </view>
                             <view>
-                                <view class="text-[28rpx] font-medium">任务模式</view>
-                                <view class="text-xs text-[#000000]/30 mt-[6rpx]">
+                                <text class="text-[28rpx] font-semibold text-[#212121] block">任务模式</text>
+                                <text class="text-[22rpx] text-[#676767] mt-[6rpx] block">
                                     当前：{{ detail.auto_type === 0 ? "手动" : "24h自动" }}
-                                </view>
+                                </text>
                             </view>
                         </view>
-                        <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx]">
-                            <view class="grid grid-cols-2 gap-x-[12rpx] h-[60rpx] relative w-[248rpx]">
+                        <view class="bg-[#F4F6FB] rounded-[16rpx] px-[6rpx]">
+                            <view class="grid grid-cols-2 h-[60rpx] relative w-[248rpx]">
                                 <view
                                     v-for="(item, index) in taskModeList"
                                     :key="item.value"
-                                    class="rounded-[12rpx] font-medium flex items-center justify-center z-10 transition-colors duration-500 text-xs"
-                                    :class="{ 'text-primary': taskModeIndex === index }"
+                                    class="rounded-[16rpx] font-medium flex items-center justify-center z-10 text-[22rpx]"
+                                    :class="taskModeIndex === index ? 'text-primary' : 'text-[#676767]'"
                                     @click="handleTaskModeClick(index)">
                                     {{ item.label }}
                                 </view>
@@ -136,52 +142,60 @@
                         </view>
                     </view>
 
-                    <view class="h-[1rpx] bg-[#F7F7F7] my-3" />
-
-                    <view class="flex items-center justify-between" @click="handleUnbindDevice">
-                        <view class="flex items-center gap-x-[24rpx]">
+                    <view class="py-[28rpx] flex items-center justify-between" @click="handleUnbindDevice">
+                        <view class="flex items-center gap-x-[20rpx]">
                             <view
-                                class="w-[72rpx] h-[72rpx] bg-[#F6F6F6] rounded-[20rpx] flex items-center justify-center">
+                                class="w-[72rpx] h-[72rpx] bg-[#FEF2F2] rounded-[20rpx] flex items-center justify-center">
                                 <image src="@/ai_modules/device/static/icons/offline.svg" class="w-[36rpx] h-[36rpx]" />
                             </view>
                             <view>
-                                <view class="text-[28rpx] font-medium">解除设备绑定</view>
-                                <view class="text-xs text-[#000000]/30 mt-[6rpx]">解绑后数据将删除</view>
+                                <text class="text-[28rpx] font-semibold text-[#EF4444] block">解除设备绑定</text>
+                                <text class="text-[22rpx] text-[#676767] mt-[6rpx] block">解绑后数据将删除</text>
                             </view>
                         </view>
-                        <u-icon name="arrow-right" color="#B2B2B2" size="20" />
+                        <u-icon name="arrow-right" color="#CBD5E1" size="20" />
                     </view>
                 </view>
-                <view class="text-[22rpx] font-medium mt-[30rpx]">平台账号设置</view>
-                <view class="bg-white rounded-[24rpx] px-[32rpx] mt-[20rpx]">
+            </view>
+
+            <view class="mt-[32rpx] mb-[48rpx]">
+                <view class="flex items-center gap-x-[10rpx] mb-[20rpx]">
+                    <view class="w-[6rpx] h-[28rpx] bg-primary rounded-full"></view>
+                    <text class="text-[26rpx] font-bold text-[#424242]">平台账号设置</text>
+                </view>
+
+                <view class="bg-white rounded-[32rpx] px-[32rpx] shadow-sm border border-solid border-[#f9f9f9]">
                     <view
                         v-for="item in sortedPlatform"
                         :key="item.type"
-                        class="py-3 border-[0] border-b border-solid border-[#F7F7F7] last:border-b-0 flex items-center justify-between"
+                        class="py-[24rpx] border-b border-[#F4F6FB] last:border-b-0 flex items-center justify-between"
                         @click="handleAccount(item)">
-                        <view class="flex items-center gap-x-[24rpx]">
-                            <image :src="item.activeIcon" class="w-[60rpx] h-[60rpx]" />
+                        <view class="flex items-center gap-x-[20rpx]">
+                            <image :src="item.activeIcon" class="w-[56rpx] h-[56rpx] rounded-full" />
                             <view>
-                                <view>{{ item.name }}</view>
-                                <view class="text-[22rpx] font-medium mt-[6rpx]">
-                                    <text v-if="item.status === AccountStatus.NOT_LOGIN" class="text-[#000000]/30"
+                                <text class="text-[28rpx] font-semibold text-[#212121] block">{{ item.name }}</text>
+                                <view class="mt-[6rpx]">
+                                    <text
+                                        v-if="item.status === AccountStatus.NOT_LOGIN"
+                                        class="text-[22rpx] text-[#676767]"
                                         >未登录</text
                                     >
-                                    <text v-else class="text-[#00C08E]">已登录：{{ item.nickname }}</text>
+                                    <text v-else class="text-[22rpx] text-primary">已登录：{{ item.nickname }}</text>
                                 </view>
                             </view>
                         </view>
+
                         <view class="flex items-center gap-x-[12rpx]" @click.stop="handleUpdateAccount(item)">
                             <view
-                                class="rounded-[100rpx] px-[16rpx] py-[8rpx] font-medium text-xs"
+                                class="rounded-full px-[20rpx] py-[8rpx] font-medium text-[22rpx]"
                                 :class="
                                     item.status === AccountStatus.NOT_LOGIN
-                                        ? 'bg-[#FFF4F5] text-[#FF2442]'
-                                        : 'bg-primary text-white'
+                                        ? 'bg-[#FEF2F2] text-[#EF4444]'
+                                        : 'bg-[#EEF4FF] text-primary'
                                 ">
                                 {{ item.status === AccountStatus.NOT_LOGIN ? "去登录" : "更新" }}
                             </view>
-                            <u-icon name="arrow-right" color="#B2B2B2" size="20" />
+                            <u-icon name="arrow-right" color="#CBD5E1" size="20" />
                         </view>
                     </view>
                 </view>
@@ -196,105 +210,48 @@
         @confirm="handleEditDeviceConfirm"
         @close="showEditDevicePopup = false" />
 
-    <u-popup v-model="showUpdate" mode="center" border-radius="20" width="80%" @close="showUpdate = false">
-        <view class="rounded-[20rpx] bg-white p-5">
-            <view class="text-[30rpx] font-medium text-center">提示</view>
-            <view class="text-xs text-[#00000080] mt-[32rpx] text-center">
-                当前如果有任务执行中，该任务会中断并且不再执行，手机将等待下一时间段任务再开始执行，确认是否还要继续？
+    <u-popup v-model="showUpdate" mode="center" border-radius="32" width="82%" @close="showUpdate = false">
+        <view class="bg-white rounded-[32rpx] p-[40rpx]">
+            <view class="flex items-center gap-x-[12rpx] mb-[16rpx]">
+                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full"></view>
+                <text class="text-[30rpx] font-bold text-[#212121]">提示</text>
             </view>
-            <view class="flex items-center gap-x-5 mt-[56rpx]">
+            <text class="text-[24rpx] text-[#676767] block leading-relaxed mb-[40rpx]">
+                当前如果有任务执行中，该任务会中断并且不再执行，手机将等待下一时间段任务再开始执行，确认是否还要继续？
+            </text>
+            <view class="flex items-center gap-[16rpx]">
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium"
+                    class="flex-1 h-[88rpx] flex items-center justify-center rounded-full bg-[#F4F6FB] active:opacity-70"
                     @click="showUpdate = false">
-                    取消
+                    <text class="text-[28rpx] font-semibold text-[#676767]">取消</text>
                 </view>
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
+                    class="flex-1 h-[88rpx] flex items-center justify-center rounded-full bg-primary shadow-sm active:opacity-90"
                     @click="handleAccountConfirm">
-                    确定
+                    <text class="text-[28rpx] font-semibold text-white">确定</text>
                 </view>
             </view>
         </view>
     </u-popup>
 
-    <u-popup
+    <account-update-progress
         v-model="showUpdateProgress"
-        mode="center"
-        border-radius="20"
-        width="80%"
-        :mask-close-able="false"
-        @close="showUpdateProgress = false">
-        <view class="rounded-[20rpx] bg-white px-5 py-[78rpx]">
-            <view class="flex flex-col gap-y-3 w-[70%] mx-auto">
-                <view v-for="(item, index) in updateAccountSteps" :key="index" class="flex gap-x-[28rpx]">
-                    <view class="flex-shrink-0 mt-[4rpx] relative">
-                        <view class="w-[28rpx] h-[28rpx]">
-                            <view
-                                v-if="item.status === StepStatus.PENDING"
-                                class="w-full h-full rounded-full border border-solid border-[#0000001a]" />
-                            <view
-                                v-else-if="item.status === StepStatus.RUNNING"
-                                class="w-full h-full rounded-full border border-solid border-primary-light-8 flex items-center justify-center">
-                                <view class="w-[12rpx] h-[12rpx] rounded-full bg-primary" />
-                            </view>
-                            <view
-                                v-else-if="item.status === StepStatus.DONE"
-                                class="w-full h-full rounded-full flex items-center justify-center border border-solid border-primary">
-                                <u-icon name="checkmark" color="#0065FB" size="16" />
-                            </view>
-                            <view
-                                v-else
-                                class="w-full h-full rounded-full flex items-center justify-center border border-solid border-[#FF2442]">
-                                <u-icon name="close" color="#FF2442" size="16" />
-                            </view>
-                        </view>
-                        <view
-                            v-if="index !== updateAccountSteps.length - 1"
-                            class="absolute top-[60%] left-[14rpx] w-[2rpx] h-[60%]"
-                            :class="item.status === StepStatus.DONE ? 'bg-primary' : 'bg-[#0000001a]'" />
-                    </view>
-                    <view class="h-[80rpx]">
-                        <view class="font-medium" :class="{ 'text-[#0000004d]': item.status === StepStatus.PENDING }">
-                            {{ item.title }}
-                        </view>
-                        <view class="mt-1">
-                            <text v-if="item.status === StepStatus.RUNNING" class="text-primary font-medium text-xs"
-                                >获取中...</text
-                            >
-                            <text
-                                v-else-if="item.status === StepStatus.FAILED"
-                                class="text-[#FF2442] font-medium text-xs"
-                                >获取失败</text
-                            >
-                        </view>
-                    </view>
-                </view>
-            </view>
-            <view class="mt-2 flex flex-col gap-y-2">
-                <u-button
-                    v-if="isExecuteComplete"
-                    type="primary"
-                    :custom-style="{ height: '90rpx', width: '100%', fontWeight: 'bold', borderRadius: '20rpx' }"
-                    @click="showUpdateProgress = false">
-                    确认
-                </u-button>
-                <u-button
-                    :custom-style="{ height: '90rpx', fontWeight: 'bold', borderRadius: '20rpx' }"
-                    @click="showUpdateProgress = false">
-                    取消
-                </u-button>
-            </view>
-        </view>
-    </u-popup>
+        :steps="updateAccountSteps"
+        :error="progressError"
+        :error-msg="progressErrorMsg"
+        @close="handleAccountProgressClose"
+        @retry="handleAccountRetry" />
 </template>
 
 <script setup lang="ts">
-import { getDeviceDetail, unbindDevice, addDeviceAccount, updateDeviceAccount, updateDevice } from "@/api/device";
+import { getDeviceDetail, unbindDevice, fetchDeviceAccount, updateDevice } from "@/api/device";
 import { AppTypeEnum, DeviceCmdEnum, DeviceCmdCodeEnum } from "@/enums/appEnums";
 import { DeviceEventAction } from "@/ai_modules/device/enums";
 import { useCopy } from "@/hooks/useCopy";
 import { useDevice } from "@/ai_modules/device/hooks/useDevice";
 import useDeviceWs from "@/ai_modules/device/hooks/useDeviceWs";
+import { applyAccountFetchError } from "@/ai_modules/device/hooks/apply-account-fetch-error";
+import AccountUpdateProgress from "@/ai_modules/device/components/account-update-progress/account-update-progress.vue";
 import keywordsEdit from "@/ai_modules/device/components/keywords-edit/keywords-edit.vue";
 
 // ─── 枚举 ─────────────────────────────────────────────────────────
@@ -348,7 +305,7 @@ const deviceCode = ref<string>("");
 
 const { copy } = useCopy();
 const { sortedPlatform, initializePlatform } = useDevice();
-const { send, onEvent, close } = useDeviceWs();
+const { onEvent, close } = useDeviceWs();
 
 // ─── 任务模式 ─────────────────────────────────────────────────────
 
@@ -457,18 +414,24 @@ const handleUnbindDevice = (): void => {
 
 const showUpdate = ref<boolean>(false);
 const showUpdateProgress = ref<boolean>(false);
+const progressError = ref(false);
+const progressErrorMsg = ref("");
 const currentStep = ref<number>(0);
 const currentPlatform = ref<AppTypeEnum>(AppTypeEnum.WECHAT);
 const eventAction = ref<DeviceEventAction | null>(null);
+/** 已下发 fetch，等待 appCompleted 后刷新账号列表 */
+const isAccountFetching = ref(false);
+const isAccountRefreshing = ref(false);
 
 const currentPlatformItem = computed(() => sortedPlatform.value.find((item) => item.type === currentPlatform.value));
 
-const isExecuteComplete = computed<boolean>(() =>
-    updateAccountSteps.value.every((item) => item.status === StepStatus.DONE)
-);
-
 const updateAccountSteps = ref<UpdateStep[]>([
-    { title: "正在发送指令", status: StepStatus.PENDING, type: "send", errorCode: DeviceCmdCodeEnum.OPEN_APP_ERROR },
+    {
+        title: "正在发送指令",
+        status: StepStatus.PENDING,
+        type: "send",
+        errorCode: DeviceCmdCodeEnum.OPEN_APP_ERROR,
+    },
     {
         title: "手机正在处理指令",
         status: StepStatus.PENDING,
@@ -499,7 +462,12 @@ const updateAccountSteps = ref<UpdateStep[]>([
         type: DeviceCmdEnum.DATA_SEND,
         errorCode: DeviceCmdCodeEnum.DATA_SEND_ERROR,
     },
-    { title: "已完成", status: StepStatus.PENDING, type: DeviceCmdEnum.GET_ACCOUNT_INFO_COMPLETE },
+    {
+        title: "已完成",
+        status: StepStatus.PENDING,
+        type: DeviceCmdEnum.GET_ACCOUNT_INFO_COMPLETE,
+        errorCode: DeviceCmdCodeEnum.GET_ACCOUNT_INFO_COMPLETE_ERROR,
+    },
 ]);
 
 const resetSteps = (): void => {
@@ -532,24 +500,75 @@ const handleUpdateAccount = (item: any): void => {
     }
 };
 
-const handleAccountConfirm = (): void => {
+/** appCompleted 后轮询详情，等待服务端落库 */
+const ACCOUNT_FETCH_REFRESH_DELAY = 800;
+const ACCOUNT_FETCH_REFRESH_MAX_RETRY = 5;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const handleAccountProgressClose = (): void => {
+    progressError.value = false;
+    progressErrorMsg.value = "";
+    isAccountFetching.value = false;
+    isAccountRefreshing.value = false;
+    showUpdateProgress.value = false;
+};
+
+const handleAccountRetry = (): void => {
+    progressError.value = false;
+    progressErrorMsg.value = "";
+    resetSteps();
+    handleAccountConfirm();
+};
+
+const handleAccountConfirm = async (): Promise<void> => {
     showUpdate.value = false;
-    if (currentPlatform.value !== AppTypeEnum.WECHAT) {
+    progressError.value = false;
+    progressErrorMsg.value = "";
+    if (currentPlatform.value !== AppTypeEnum.WECHAT || showUpdateProgress.value) {
         showUpdateProgress.value = true;
     } else {
         uni.showLoading({ title: "更新中...", mask: true });
     }
     updateAccountSteps.value[0].status = StepStatus.RUNNING;
-    send({
-        type: DeviceCmdEnum.GET_USER_INFO,
-        content: { deviceId: deviceCode.value },
-        deviceId: deviceCode.value,
-        appType: currentPlatform.value,
-    });
+    try {
+        await fetchDeviceAccount({
+            device_code: deviceCode.value,
+            type: currentPlatform.value,
+        });
+        isAccountFetching.value = true;
+    } catch (error: unknown) {
+        isAccountFetching.value = false;
+        showUpdateProgress.value = false;
+        uni.hideLoading();
+        const msg = typeof error === "string" ? error : "下发获取账号指令失败";
+        uni.showToast({ title: msg, icon: "none", duration: 3000 });
+    }
+};
+
+const finishAccountFetch = async () => {
+    if (isAccountRefreshing.value) return;
+    isAccountRefreshing.value = true;
+    const expectNewLogin = eventAction.value === DeviceEventAction.ADD_ACCOUNT;
+    try {
+        for (let i = 0; i < ACCOUNT_FETCH_REFRESH_MAX_RETRY; i++) {
+            await sleep(ACCOUNT_FETCH_REFRESH_DELAY);
+            await getDetail();
+            const item = sortedPlatform.value.find((p) => p.type === currentPlatform.value);
+            const loggedIn = item && item.status !== AccountStatus.NOT_LOGIN;
+            if (!expectNewLogin || loggedIn) break;
+        }
+    } finally {
+        isAccountFetching.value = false;
+        isAccountRefreshing.value = false;
+        eventAction.value = null;
+        showUpdate.value = false;
+        uni.hideLoading();
+    }
 };
 
 onEvent("success", async (data: any) => {
-    const { type, content, deviceId, appType } = data;
+    const { type, appType } = data;
 
     if (currentPlatform.value !== AppTypeEnum.WECHAT) {
         const isStep = updateAccountSteps.value.find((item) => item.type === type);
@@ -573,43 +592,27 @@ onEvent("success", async (data: any) => {
         }
     }
 
-    if (type === DeviceCmdEnum.GET_USER_INFO) {
-        const { account, account_no, extra, avatar, nickname } = content;
-        const params = {
-            account,
-            account_no,
-            avatar,
-            nickname,
-            device_code: deviceId,
-            type: appType,
-            extra: JSON.stringify(extra),
-        };
-        try {
-            if (eventAction.value === DeviceEventAction.ADD_ACCOUNT) {
-                await addDeviceAccount(params);
-            } else if (eventAction.value === DeviceEventAction.UPDATE_ACCOUNT) {
-                await updateDeviceAccount({ ...params, id: currentPlatformItem.value?.id });
-            }
-            eventAction.value = null;
-            showUpdate.value = false;
-            getDetail();
-        } catch (error: unknown) {
-            const msg = typeof error === "string" ? error : "账号更新失败";
-            uni.showToast({ title: msg, icon: "none", duration: 3000 });
-        } finally {
-            uni.hideLoading();
-        }
+    if (
+        type === DeviceCmdEnum.GET_ACCOUNT_INFO_COMPLETE &&
+        isAccountFetching.value &&
+        (appType == null || appType === currentPlatform.value)
+    ) {
+        await finishAccountFetch();
     }
 });
 
 onEvent("error", (error: any) => {
-    const { type, code } = error;
+    const { type } = error;
     uni.hideLoading();
-    for (const item of updateAccountSteps.value) {
-        if (item.type === type && code === item.errorCode) {
-            item.status = StepStatus.FAILED;
-            break;
-        }
+    const msg = applyAccountFetchError(updateAccountSteps.value, error, StepStatus.FAILED);
+    const isCurrentPlatform = error.appType == null || error.appType === currentPlatform.value;
+    if ((isAccountFetching.value || showUpdateProgress.value) && isCurrentPlatform) {
+        isAccountFetching.value = false;
+        isAccountRefreshing.value = false;
+        progressError.value = true;
+        progressErrorMsg.value = msg;
+        showUpdateProgress.value = true;
+        return;
     }
     if (type === DeviceCmdEnum.GET_USER_INFO) {
         uni.showToast({ title: error.error, icon: "none", duration: 3000 });

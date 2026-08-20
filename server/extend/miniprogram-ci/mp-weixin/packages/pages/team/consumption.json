@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "团队消耗明细",
+  "enablePullDownRefresh": false,
+  "disableScroll": true,
+  "backgroundColor": "#F4F6FA",
+  "usingComponents": {
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
+    "consume-output-popup": "./components/consume-output-popup"
+  }
+}

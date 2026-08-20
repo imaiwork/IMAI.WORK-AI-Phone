@@ -1,270 +1,396 @@
 <template>
-    <view class="h-screen flex flex-col bg-[#F5F7FA]">
+    <view class="flex flex-col h-screen bg-[#F7F9FC]">
         <u-navbar
             title="智能数字人"
             title-bold
             :is-fixed="false"
             :border-bottom="false"
-            :background="{ background: 'transparent' }">
-        </u-navbar>
+            :background="{ background: 'transparent' }" />
 
         <view class="grow min-h-0">
             <scroll-view scroll-y class="h-full">
-                <view class="p-4 pb-8 flex flex-col gap-y-4">
-                    <view class="bg-white rounded-[32rpx] p-5 shadow-sm">
-                        <view class="flex items-center justify-between mb-4">
-                            <view class="flex items-center gap-x-1">
-                                <view class="w-1 h-4 bg-black rounded-full mr-1"></view>
-                                <text class="font-medium text-[32rpx] text-[#1A1A1A]">上传形象视频</text>
-                                <text class="text-[#FF3C26] text-[32rpx]">*</text>
+                <view class="px-4 pt-[16rpx] pb-[120rpx] flex flex-col gap-[16rpx]">
+                    <!-- 克隆模型选择 -->
+                    <view
+                        class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                        <view
+                            class="flex items-center justify-between px-[28rpx] h-[88rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                            <view class="flex items-center gap-[10rpx]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[28rpx] font-extrabold text-[#0D1117]">克隆模型选择</text>
+                                <text class="text-[#EF4444] text-[28rpx] font-bold">*</text>
                             </view>
-                            <view
-                                v-if="anchorData.pic"
-                                class="text-[26rpx] px-3 py-1 bg-[#F5F7FA] rounded-full text-[#666] active:opacity-70"
-                                @click="handleUploadAnchorVideo">
-                                更换视频
-                            </view>
+                            <text class="text-[22rpx] text-[#9CA3AF]">不同模型算力不同</text>
                         </view>
 
-                        <view class="h-[440rpx] rounded-[24rpx] overflow-hidden relative group">
+                        <view class="p-[20rpx]">
                             <view
-                                v-if="!anchorData.pic"
-                                class="flex flex-col items-center justify-center h-full bg-[#F8F9FB] rounded-[24rpx] border-2 border-dashed border-[#E1E4E8] transition-all active:bg-[#F0F2F5]"
-                                @click="handleUploadAnchorVideo">
-                                <view
-                                    class="w-[88rpx] h-[88rpx] bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/icons/add2.svg"
-                                        class="w-[48rpx] h-[48rpx]"></image>
-                                </view>
-                                <text class="upload-text text-[30rpx]">点击上传训练视频</text>
-
-                                <view class="mt-3 px-4 py-3 bg-[#ffffff]/60 rounded-[16rpx] w-[90%] backdrop-blur-sm">
-                                    <view class="flex flex-col gap-y-1.5">
-                                        <view class="info-item">
-                                            <text class="info-dot"></text>
-                                            <text
-                                                >时长：{{ commonUploadLimit.videoMinDuration }}-{{
-                                                    commonUploadLimit.videoMaxDuration
-                                                }}秒，大小≤{{ commonUploadLimit.size }}MB</text
-                                            >
-                                        </view>
-                                        <view class="info-item">
-                                            <text class="info-dot"></text>
-                                            <text
-                                                >分辨率：单边 ≤ {{ commonUploadLimit.maxWidthResolution }}*{{
-                                                    commonUploadLimit.maxHeightResolution
-                                                }}</text
-                                            >
-                                        </view>
-                                        <view class="info-item">
-                                            <text class="info-dot"></text>
-                                            <text>编码：h264，帧率：25fps</text>
-                                        </view>
-                                        <view class="info-item">
-                                            <text class="info-dot"></text>
-                                            <text>格式：{{ SUPPORTED_EXTENSIONS.join(" / ") }}</text>
-                                        </view>
+                                class="bg-[#F7F9FC] border border-solid border-[#EEF1F6] rounded-[28rpx] px-[24rpx] py-[24rpx]"
+                                @click="showCloneModeDrop = !showCloneModeDrop">
+                                <view class="flex items-center gap-[16rpx]">
+                                    <view
+                                        class="clone-chip flex-shrink-0"
+                                        :class="
+                                            currCloneMode === CloneModeEnum.PRO
+                                                ? 'clone-chip--pro'
+                                                : 'clone-chip--fast'
+                                        ">
+                                        {{ currCloneModeOption.name }}
                                     </view>
+                                    <text class="flex-1 min-w-0 text-[26rpx] font-bold text-[#1F2937]">{{
+                                        currCloneModeOption.name
+                                    }}</text>
+                                    <view class="flex-shrink-0 flex flex-col items-end">
+                                        <text class="text-[28rpx] font-extrabold text-[#F86E21] leading-none">{{
+                                            currCloneModeOption.cost
+                                        }}</text>
+                                        <text class="text-[20rpx] text-[#9CA3AF] mt-[4rpx]">算力/个</text>
+                                    </view>
+                                    <u-icon
+                                        :name="showCloneModeDrop ? 'arrow-up' : 'arrow-down'"
+                                        color="#9CA3AF"
+                                        size="20" />
                                 </view>
+                                <view class="text-[22rpx] text-[#9CA3AF] mt-[12rpx] leading-relaxed">{{
+                                    currCloneModeOption.desc
+                                }}</view>
                             </view>
 
-                            <view v-else class="w-full h-full relative bg-black">
-                                <video
-                                    :src="anchorData.url"
-                                    :poster="anchorData.pic"
-                                    class="w-full h-full object-cover"></video>
+                            <view
+                                v-if="showCloneModeDrop"
+                                class="mt-[16rpx] bg-white border border-solid border-[#EEF1F6] rounded-[28rpx] overflow-hidden shadow-[0_16rpx_48rpx_rgba(0,0,0,0.08)]">
                                 <view
-                                    class="absolute inset-0 pointer-events-none border border-[#000000]/5 rounded-[24rpx]"></view>
+                                    v-for="(item, index) in cloneModeOptions"
+                                    :key="item.value"
+                                    class="px-[24rpx] py-[24rpx]"
+                                    :class="index === 0 ? 'border-[0] border-b border-solid border-[#F5F6F8]' : ''"
+                                    @click="handleSelectCloneMode(item.value)">
+                                    <view class="flex items-center gap-[16rpx]">
+                                        <view
+                                            class="clone-chip flex-shrink-0"
+                                            :class="
+                                                item.value === CloneModeEnum.PRO
+                                                    ? 'clone-chip--pro'
+                                                    : 'clone-chip--fast'
+                                            ">
+                                            {{ item.name }}
+                                        </view>
+                                        <text class="flex-1 min-w-0 text-[26rpx] font-bold text-[#1F2937]">{{
+                                            item.name
+                                        }}</text>
+                                        <view class="flex-shrink-0 flex flex-col items-end mr-[8rpx]">
+                                            <text class="text-[26rpx] font-bold text-[#F86E21] leading-none">{{
+                                                item.cost
+                                            }}</text>
+                                            <text class="text-[20rpx] text-[#9CA3AF] mt-[4rpx]">算力/个</text>
+                                        </view>
+                                        <u-icon
+                                            v-if="currCloneMode === item.value"
+                                            name="checkmark"
+                                            color="#2F73F6"
+                                            size="20" />
+                                        <view v-else class="w-[40rpx] flex-shrink-0" />
+                                    </view>
+                                    <view class="text-[22rpx] text-[#9CA3AF] mt-[12rpx] leading-relaxed">{{
+                                        item.desc
+                                    }}</view>
+                                </view>
                             </view>
                         </view>
                     </view>
 
-                    <view class="bg-white rounded-[32rpx] p-5 shadow-sm">
-                        <view class="flex items-center justify-between mb-4">
-                            <view class="flex items-center gap-x-1">
-                                <view class="w-1 h-4 bg-black rounded-full mr-1"></view>
-                                <text class="font-medium text-[32rpx] text-[#1A1A1A]">上传授权视频</text>
-                                <text class="text-[#FF3C26] text-[32rpx]">*</text>
+                    <view
+                        class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                        <view
+                            class="flex items-center justify-between px-[28rpx] h-[88rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                            <view class="flex items-center gap-[10rpx]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[28rpx] font-extrabold text-[#0D1117]">上传形象视频</text>
+                                <text class="text-[#EF4444] text-[28rpx] font-bold">*</text>
                             </view>
-                            <view class="flex items-center gap-x-2">
-                                <view class="bg-[#F3F4FB] rounded-[16rpx] px-[4rpx] w-fit">
-                                    <view class="w-[268rpx] grid grid-cols-2 relative h-[60rpx]">
-                                        <view
-                                            v-for="(item, index) in ['手动授权', 'AI授权']"
-                                            :key="index"
-                                            class="rounded-[12rpx] text-xs font-medium flex items-center justify-center z-10 transition-colors duration-500"
-                                            :class="authIndex === index ? 'text-primary' : 'text-[#000000]/50'"
-                                            @click="authIndex = index">
-                                            {{ item }}
+                            <view
+                                v-if="anchorData.url"
+                                class="flex items-center gap-[6rpx] h-[56rpx] px-[20rpx] rounded-[14rpx] bg-[#F0F2F5]"
+                                @click="handleUploadAnchorVideo">
+                                <u-icon name="reload" color="#4B5563" size="18" />
+                                <text class="text-xs font-semibold text-[#4B5563]">更换视频</text>
+                            </view>
+                        </view>
+
+                        <view class="p-[20rpx]">
+                            <view
+                                v-if="!anchorData.url"
+                                class="h-[440rpx] rounded-[20rpx] border-2 border-dashed border-[#BFDBFE] bg-[#F0F6FF] flex flex-col items-center justify-center gap-[16rpx]"
+                                @click="handleUploadAnchorVideo">
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/add2.svg"
+                                    class="w-[100rpx] h-[100rpx]" />
+                                <text class="text-[28rpx] font-extrabold upload-gradient-text">点击上传训练视频</text>
+                                <view class="w-[90%] bg-[#ffffff]/80 rounded-[16rpx] px-[20rpx] py-[14rpx]">
+                                    <view class="flex flex-col gap-[10rpx]">
+                                        <view class="flex items-start gap-[10rpx]">
+                                            <view
+                                                class="w-[10rpx] h-[10rpx] rounded-full bg-[#BFDBFE] mt-[8rpx] flex-shrink-0" />
+                                            <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed">
+                                                时长：{{ commonUploadLimit.videoMinDuration }}-{{
+                                                    commonUploadLimit.videoMaxDuration
+                                                }}秒，大小≤{{ commonUploadLimit.size }}MB
+                                            </text>
                                         </view>
-                                        <view
-                                            class="tab-slider"
-                                            :style="{
-                                                transform: `translateX(${authIndex * 100}%)`,
-                                            }"></view>
+                                        <view class="flex items-start gap-[10rpx]">
+                                            <view
+                                                class="w-[10rpx] h-[10rpx] rounded-full bg-[#BFDBFE] mt-[8rpx] flex-shrink-0" />
+                                            <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed">
+                                                分辨率：单边 ≤
+                                                {{ commonUploadLimit.maxWidthResolution }}*{{
+                                                    commonUploadLimit.maxHeightResolution
+                                                }}
+                                            </text>
+                                        </view>
+                                        <view class="flex items-start gap-[10rpx]">
+                                            <view
+                                                class="w-[10rpx] h-[10rpx] rounded-full bg-[#BFDBFE] mt-[8rpx] flex-shrink-0" />
+                                            <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed"
+                                                >编码：h264，帧率：25fps</text
+                                            >
+                                        </view>
+                                        <view class="flex items-start gap-[10rpx]">
+                                            <view
+                                                class="w-[10rpx] h-[10rpx] rounded-full bg-[#BFDBFE] mt-[8rpx] flex-shrink-0" />
+                                            <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed"
+                                                >格式：{{ SUPPORTED_EXTENSIONS.join(" / ") }}</text
+                                            >
+                                        </view>
+                                    </view>
+                                </view>
+                            </view>
+
+                            <view v-else class="h-[440rpx] rounded-[20rpx] overflow-hidden relative bg-black">
+                                <video
+                                    :src="anchorData.url"
+                                    :poster="anchorData.pic"
+                                    class="w-full h-full object-cover" />
+                                <view
+                                    class="absolute inset-0 pointer-events-none border border-[#000000]/5 rounded-[20rpx]" />
+                            </view>
+                        </view>
+                    </view>
+
+                    <view
+                        class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                        <view
+                            class="flex items-center justify-between px-[28rpx] h-[88rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                            <view class="flex items-center gap-[10rpx]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[28rpx] font-extrabold text-[#0D1117]">上传授权视频</text>
+                                <text class="text-[#EF4444] text-[28rpx] font-bold">*</text>
+                            </view>
+                            <view class="flex items-center gap-[12rpx]">
+                                <view class="flex bg-[#F0F2F5] rounded-[16rpx] p-[4rpx] gap-[4rpx]">
+                                    <view
+                                        v-for="(item, index) in ['手动授权', 'AI授权']"
+                                        :key="index"
+                                        class="h-[52rpx] px-[20rpx] rounded-[12rpx] flex items-center justify-center text-[22rpx] font-semibold transition-all duration-200"
+                                        :class="
+                                            authIndex === index
+                                                ? 'bg-white text-primary shadow-[0_2rpx_8rpx_rgba(0,0,0,0.08)]'
+                                                : 'text-[#9CA3AF]'
+                                        "
+                                        @click="authIndex = index">
+                                        {{ item }}
                                     </view>
                                 </view>
                                 <view @click="showAuthHelp = true">
-                                    <u-icon name="question-circle-fill" color="#CCCCCC" size="24"></u-icon>
+                                    <u-icon name="question-circle-fill" color="#BFDBFE" size="28" />
                                 </view>
                             </view>
                         </view>
-                        <template v-if="authIndex === 0">
-                            <view class="h-[420rpx] rounded-[24rpx] overflow-hidden relative">
-                                <view
-                                    v-if="!authData.pic"
-                                    class="flex flex-col items-center justify-center h-full bg-[#F8F9FB] rounded-[24rpx] border-2 border-dashed border-[#E1E4E8] transition-all active:bg-[#F0F2F5]"
-                                    @click="handleUploadAuthVideo">
-                                    <view
-                                        class="w-[88rpx] h-[88rpx] bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                        <image
-                                            src="@/ai_modules/digital_human/static/icons/add2.svg"
-                                            class="w-[48rpx] h-[48rpx]"></image>
-                                    </view>
-                                    <text class="upload-text text-[30rpx]">点击上传授权视频</text>
 
-                                    <view
-                                        class="mt-6 px-4 py-3 bg-[#ffffff]/60 rounded-[16rpx] w-[90%] backdrop-blur-sm">
-                                        <view class="flex flex-col gap-y-1.5">
-                                            <view class="info-item">
-                                                <text class="info-dot"></text>
-                                                <text>视频时长：小于{{ AUTH_VIDEO_MAX_DURATION / 60 }}分钟</text>
+                        <view class="p-[20rpx]">
+                            <template v-if="authIndex === 0">
+                                <view
+                                    v-if="!authData.url"
+                                    class="h-[420rpx] rounded-[20rpx] border-2 border-dashed border-[#BFDBFE] bg-[#F0F6FF] flex flex-col items-center justify-center gap-[16rpx]"
+                                    @click="handleUploadAuthVideo">
+                                    <image
+                                        src="@/ai_modules/digital_human/static/icons/add2.svg"
+                                        class="w-[100rpx] h-[100rpx]" />
+                                    <text class="text-[28rpx] font-extrabold upload-gradient-text"
+                                        >点击上传授权视频</text
+                                    >
+                                    <view class="w-[90%] bg-[#ffffff]/80 rounded-[16rpx] px-[20rpx] py-[14rpx]">
+                                        <view class="flex flex-col gap-[10rpx]">
+                                            <view class="flex items-start gap-[10rpx]">
+                                                <view
+                                                    class="w-[10rpx] h-[10rpx] rounded-full bg-[#BFDBFE] mt-[8rpx] flex-shrink-0" />
+                                                <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed">
+                                                    视频时长：小于{{ AUTH_VIDEO_MAX_DURATION / 60 }}分钟
+                                                </text>
                                             </view>
-                                            <view class="info-item">
-                                                <text class="info-dot"></text>
-                                                <text>视频编码：h264</text>
+                                            <view class="flex items-start gap-[10rpx]">
+                                                <view
+                                                    class="w-[10rpx] h-[10rpx] rounded-full bg-[#BFDBFE] mt-[8rpx] flex-shrink-0" />
+                                                <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed"
+                                                    >视频编码：h264</text
+                                                >
                                             </view>
-                                            <view class="info-item">
-                                                <text class="info-dot"></text>
-                                                <text class="text-[#FF3C26]">确保本人出镜授权，保证声音清晰</text>
+                                            <view class="flex items-start gap-[10rpx]">
+                                                <view
+                                                    class="w-[10rpx] h-[10rpx] rounded-full bg-[#EF4444] mt-[8rpx] flex-shrink-0" />
+                                                <text class="text-[22rpx] text-[#EF4444] leading-relaxed font-semibold"
+                                                    >确保本人出镜授权，保证声音清晰</text
+                                                >
                                             </view>
                                         </view>
                                     </view>
                                 </view>
-                                <view v-else class="w-full h-full relative bg-black">
-                                    <video
-                                        :src="authData.url"
-                                        :poster="authData.pic"
-                                        class="w-full h-full object-cover"></video>
-                                    <view
-                                        class="absolute inset-0 pointer-events-none border border-[#000000]/5 rounded-[24rpx]"></view>
+
+                                <view v-else>
+                                    <view class="h-[420rpx] rounded-[20rpx] overflow-hidden relative bg-black">
+                                        <video
+                                            :src="authData.url"
+                                            :poster="authData.pic"
+                                            class="w-full h-full object-cover" />
+                                        <view
+                                            class="absolute inset-0 pointer-events-none border border-[#000000]/5 rounded-[20rpx]" />
+                                    </view>
+                                    <view class="flex justify-end mt-[12rpx]">
+                                        <view
+                                            class="flex items-center gap-[6rpx] h-[56rpx] px-[20rpx] rounded-[14rpx] bg-[#F0F2F5]"
+                                            @click="handleUploadAuthVideo">
+                                            <u-icon name="reload" color="#4B5563" size="18" />
+                                            <text class="text-xs font-semibold text-[#4B5563]">更换视频</text>
+                                        </view>
+                                    </view>
                                 </view>
-                            </view>
-                            <view class="flex items-center justify-end mt-4" v-if="authData.pic">
+                            </template>
+
+                            <template v-else>
                                 <view
-                                    class="text-[26rpx] px-3 py-1 bg-[#F5F7FA] rounded-full text-[#666]"
-                                    @click="handleUploadAuthVideo">
-                                    更换视频
+                                    class="bg-[#EBF2FF] rounded-[20rpx] px-[24rpx] py-[20rpx] flex items-start gap-[12rpx]">
+                                    <u-icon
+                                        name="info-circle-fill"
+                                        color="#0065fb"
+                                        size="28"
+                                        class="flex-shrink-0 mt-[2rpx]" />
+                                    <text class="text-xs text-primary leading-relaxed">
+                                        AI授权将自动使用您已上传的训练视频生成授权声明视频，按次消耗算力，确认训练视频无误后使用。
+                                    </text>
                                 </view>
-                            </view>
-                        </template>
+                            </template>
+                        </view>
                     </view>
                 </view>
             </scroll-view>
         </view>
 
         <view
-            class="flex-shrink-0 p-4 pb-[calc(20rpx+env(safe-area-inset-bottom))] bg-white flex items-center gap-x-3 shadow-[0_-4rpx_16rpx_rgba(0,0,0,0.03)] z-10">
+            class="flex-shrink-0 bg-white border-[0] border-t border-solid border-[#F0F2F5] px-4 pt-[20rpx] pb-[calc(20rpx+env(safe-area-inset-bottom))] flex items-center gap-[16rpx]">
             <view
-                class="h-[96rpx] w-[200rpx] bg-[#F5F7FA] rounded-full flex items-center justify-center text-[28rpx] font-medium text-[#333] active:scale-95 transition-transform"
+                class="h-[96rpx] w-[200rpx] flex items-center justify-center gap-[8rpx] rounded-[24rpx] bg-[#F0F2F5] border border-solid border-[#E5E9F0]"
                 @click="showExample = true">
-                <u-icon name="play-circle" size="32" class="mr-1"></u-icon>
-                拍摄教程
+                <u-icon name="play-circle" color="#4B5563" size="28" />
+                <text class="font-semibold text-[#4B5563]">拍摄教程</text>
             </view>
+
             <view
-                class="flex-1 h-[96rpx] text-white flex items-center justify-center rounded-full font-medium text-[30rpx] shadow-lg active:scale-[0.98] transition-all"
-                :class="[isCreate ? 'bg-[#1A1A1A] shadow-[#000000]/20' : 'bg-[#E1E4E8] text-[#999] shadow-[none]']"
+                class="flex-1 h-[96rpx] flex items-center justify-center gap-[8rpx] rounded-[24rpx] relative overflow-hidden transition-all duration-200"
+                :class="isCreate ? 'shadow-[0_10rpx_30rpx_rgba(28,111,235,0.30)]' : 'opacity-60'"
+                :style="
+                    isCreate ? 'background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)' : 'background: #C0C4CC'
+                "
                 @click="handleCreateAnchor">
-                开始克隆 <text class="text-[24rpx] font-normal ml-1 opacity-80"> (消耗{{ getToken }}算力)</text>
+                <text class="text-[30rpx] font-extrabold text-white tracking-wide">开始克隆</text>
+                <view class="flex items-center gap-[4rpx] bg-[#ffffff]/20 rounded-full px-[14rpx] py-[6rpx]">
+                    <text class="text-[22rpx] text-white font-medium">消耗 {{ getToken }} 算力</text>
+                </view>
             </view>
         </view>
     </view>
 
     <u-popup v-model="showCreateStatus" mode="center" border-radius="48" width="85%" :mask-close-able="false">
-        <view class="bg-white rounded-[48rpx] p-8 flex flex-col items-center">
+        <view class="bg-white rounded-[48rpx] px-[40rpx] py-[48rpx] flex flex-col items-center">
             <view
-                class="rounded-full w-[100rpx] h-[100rpx] flex items-center justify-center mb-6"
-                :class="isSuccess ? 'bg-[#1A1A1A]' : 'bg-red-50'">
+                class="w-[120rpx] h-[120rpx] rounded-full flex items-center justify-center mb-[28rpx] shadow-[0_8rpx_24rpx_rgba(0,0,0,0.12)]"
+                :style="
+                    isSuccess ? 'background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)' : 'background: #FEF2F2'
+                ">
                 <u-icon
                     :name="isSuccess ? 'checkmark' : 'close'"
-                    :color="isSuccess ? '#ffffff' : '#FF3C26'"
-                    size="40"></u-icon>
+                    :color="isSuccess ? '#ffffff' : '#EF4444'"
+                    size="44" />
             </view>
-            <text class="text-[36rpx] font-medium text-[#1A1A1A] mb-2">{{
-                isSuccess ? "创建任务成功" : "创建任务失败"
-            }}</text>
-            <text v-if="!isSuccess" class="text-[#666] text-center text-[28rpx]">{{
-                detail.remark || "请检查网络或稍后重试"
-            }}</text>
-
+            <text class="text-[36rpx] font-extrabold text-[#0D1117] mb-[10rpx]">
+                {{ isSuccess ? "创建任务成功" : "创建任务失败" }}
+            </text>
+            <text v-if="!isSuccess" class="text-[#9CA3AF] text-center leading-relaxed">
+                {{ detail.remark || "请检查网络或稍后重试" }}
+            </text>
             <view
-                class="w-full h-[96rpx] text-white flex items-center justify-center rounded-full bg-[#1A1A1A] mt-8 text-[30rpx] font-medium active:opacity-90"
+                class="w-full h-[96rpx] flex items-center justify-center rounded-[24rpx] mt-[40rpx] relative overflow-hidden shadow-[0_8rpx_24rpx_rgba(28,111,235,0.30)]"
+                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
                 @click="handleConfirm">
-                确认
+                <text class="text-[30rpx] font-extrabold text-white">确认</text>
             </view>
         </view>
     </u-popup>
 
     <popup-bottom v-model="showExample" title="拍摄教程" height="85%" @close="showExample = false">
         <template #content>
-            <scroll-view scroll-y class="h-full bg-[#F5F7FA]">
-                <view class="p-4 pb-8">
-                    <!-- 教程内容样式优化 -->
-                    <view class="bg-white p-4 rounded-[24rpx] mb-4 overflow-hidden">
-                        <view class="flex items-center gap-x-2 mb-4">
-                            <view class="w-1 h-4 bg-[#1A1A1A] rounded-full"></view>
-                            <text class="text-[30rpx] font-medium text-[#1A1A1A]">视频教程</text>
+            <scroll-view scroll-y class="h-full bg-[#F7F9FC]">
+                <view class="px-4 pt-[16rpx] pb-[40rpx] flex flex-col gap-[16rpx]">
+                    <view
+                        class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                        <view
+                            class="flex items-center gap-[10rpx] px-[28rpx] h-[80rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                            <view class="w-[6rpx] h-[28rpx] bg-primary rounded-full" />
+                            <text class="text-[28rpx] font-extrabold text-[#0D1117]">视频教程</text>
                         </view>
-                        <view class="h-[384rpx] rounded-[24rpx] overflow-hidden relative bg-black">
-                            <video-player
-                                :play-icon-size="88"
-                                :poster="`${config.baseUrl}static/images/dh_example_bg2.png`"
-                                :video-url="`${config.baseUrl}static/videos/dh_example2.mp4`"></video-player>
+                        <view class="p-[20rpx]">
+                            <view class="h-[384rpx] rounded-[20rpx] overflow-hidden relative bg-black">
+                                <video-player
+                                    :play-icon-size="88"
+                                    :poster="`${config.baseUrl}static/images/dh_example_bg2.png`"
+                                    :video-url="`${config.baseUrl}static/videos/dh_example2.mp4`" />
+                            </view>
                         </view>
                     </view>
 
-                    <view class="grid grid-cols-1 gap-y-4">
-                        <view class="bg-white p-4 rounded-[24rpx]">
-                            <view class="flex items-center gap-x-2 mb-4">
-                                <view class="w-1 h-4 bg-[#1A1A1A] rounded-full"></view>
-                                <text class="text-[30rpx] font-medium text-[#1A1A1A]">拍摄要求</text>
-                            </view>
+                    <view
+                        class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                        <view
+                            class="flex items-center gap-[10rpx] px-[28rpx] h-[80rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                            <view class="w-[6rpx] h-[28rpx] bg-primary rounded-full" />
+                            <text class="text-[28rpx] font-extrabold text-[#0D1117]">拍摄要求</text>
+                        </view>
+                        <view class="p-[20rpx]">
                             <image
                                 class="w-full rounded-[16rpx]"
                                 mode="widthFix"
-                                src="@/ai_modules/digital_human/static/images/common/video_upload_temp.png"></image>
+                                src="@/ai_modules/digital_human/static/images/common/video_upload_temp.png" />
                         </view>
+                    </view>
 
-                        <view class="bg-white p-4 rounded-[24rpx]">
-                            <view class="flex items-center gap-x-2 mb-4">
-                                <view class="w-1 h-4 bg-[#FF3C26] rounded-full"></view>
-                                <text class="text-[30rpx] font-medium text-[#1A1A1A]">错误示例</text>
-                            </view>
-                            <view class="grid grid-cols-2 gap-3">
-                                <view class="bg-[#F8F9FB] p-3 rounded-[16rpx] flex flex-col items-center">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/images/common/example_error1.png"
-                                        class="w-[120rpx] h-[120rpx] mb-2"></image>
-                                    <text class="text-[#666] text-[24rpx]">遮挡面部</text>
-                                </view>
-                                <view class="bg-[#F8F9FB] p-3 rounded-[16rpx] flex flex-col items-center">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/images/common/example_error2.png"
-                                        class="w-[120rpx] h-[120rpx] mb-2"></image>
-                                    <text class="text-[#666] text-[24rpx]">人脸出框</text>
-                                </view>
-                                <view class="bg-[#F8F9FB] p-3 rounded-[16rpx] flex flex-col items-center">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/images/common/example_error3.png"
-                                        class="w-[120rpx] h-[120rpx] mb-2"></image>
-                                    <text class="text-[#666] text-[24rpx]">侧脸拍摄</text>
-                                </view>
-                                <view class="bg-[#F8F9FB] p-3 rounded-[16rpx] flex flex-col items-center">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/images/common/example_error4.png"
-                                        class="w-[120rpx] h-[120rpx] mb-2"></image>
-                                    <text class="text-[#666] text-[24rpx]">多人出镜</text>
+                    <view
+                        class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                        <view
+                            class="flex items-center gap-[10rpx] px-[28rpx] h-[80rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                            <view class="w-[6rpx] h-[28rpx] bg-[#EF4444] rounded-full" />
+                            <text class="text-[28rpx] font-extrabold text-[#0D1117]">错误示例</text>
+                        </view>
+                        <view class="p-[20rpx]">
+                            <view class="grid grid-cols-2 gap-[12rpx]">
+                                <view
+                                    v-for="(item, i) in [
+                                        { src: UploadErrorTip1, label: '遮挡面部' },
+                                        { src: UploadErrorTip2, label: '人脸出框' },
+                                        { src: UploadErrorTip3, label: '侧脸拍摄' },
+                                        { src: UploadErrorTip4, label: '多人出镜' },
+                                    ]"
+                                    :key="i"
+                                    class="bg-[#FEF2F2] rounded-[16rpx] p-[16rpx] flex flex-col items-center gap-[10rpx]">
+                                    <image :src="item.src" class="w-[120rpx] h-[120rpx] rounded-[12rpx]" />
+                                    <text class="text-[22rpx] text-[#EF4444] font-semibold">{{ item.label }}</text>
                                 </view>
                             </view>
                         </view>
@@ -275,18 +401,28 @@
     </popup-bottom>
 
     <u-popup v-model="showAuthHelp" mode="center" border-radius="20" width="85%">
-        <view class="bg-white px-[54rpx] py-[44rpx]">
-            <view class="text-[30rpx] font-medium"> AI授权是什么？ </view>
-            <view class="mt-[32rpx] text-[#000000]/70 font-medium leading-6">
-                启用后，无需自行录制授权视频，系统将自动使用您已上传的训练视频生成一段带口型同步的授权声明视频。
+        <view class="bg-white rounded-[28rpx] px-[40rpx] py-[40rpx]">
+            <view class="flex items-center gap-[10rpx] mb-[24rpx]">
+                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                <text class="text-[30rpx] font-extrabold text-[#0D1117]">AI授权是什么？</text>
             </view>
-            <view class="mt-[32rpx] text-[#000000]/70 font-medium leading-6">
-                该功能按次收费，每次生成会消耗对应算力/金额。 建议在确认训练视频无误后再使用，可减少重复扣费。
+            <view class="flex flex-col gap-[16rpx]">
+                <view class="bg-[#EBF2FF] rounded-[16rpx] px-[20rpx] py-[16rpx]">
+                    <text class="text-[#4B5563] leading-relaxed">
+                        启用后，无需自行录制授权视频，系统将自动使用您已上传的训练视频生成一段带口型同步的授权声明视频。
+                    </text>
+                </view>
+                <view class="bg-[#FFF7ED] rounded-[16rpx] px-[20rpx] py-[16rpx]">
+                    <text class="text-[#92400E] leading-relaxed">
+                        该功能按次收费，每次生成会消耗对应算力/金额。建议在确认训练视频无误后再使用，可减少重复扣费。
+                    </text>
+                </view>
             </view>
             <view
-                class="mt-[70rpx] w-[320rpx] h-[90rpx] mx-auto bg-[#F3F3F3] rounded-[20rpx] text-center leading-[90rpx] text-[30rpx] font-medium"
+                class="w-full h-[90rpx] flex items-center justify-center rounded-[20rpx] mt-[32rpx] shadow-[0_6rpx_16rpx_rgba(0,101,251,0.25)]"
+                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
                 @click="showAuthHelp = false">
-                我已知晓
+                <text class="text-[28rpx] font-bold text-white">我已知晓</text>
             </view>
         </view>
     </u-popup>
@@ -296,25 +432,26 @@
         :progress="uploadProgressNum"
         :loading-text="loadingText"
         :progress-type="uploadProgressType"
-        @cancel="handleUploadCancel"></upload-loading>
-    <recharge-popup ref="rechargePopupRef"></recharge-popup>
+        @cancel="handleUploadCancel" />
+    <recharge-popup ref="rechargePopupRef" />
 </template>
 
 <script setup lang="ts">
-import { getVideoTranscodeResult, videoTranscode } from "@/api/app";
 import { batchCloneAnchor } from "@/api/digital_human";
-import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
-import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { CloneModeEnum, ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { useEventBusManager } from "@/hooks/useEventBusManager";
 import requestCancel from "@/utils/request/cancel";
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
 import config from "@/config";
 import { requestAuthorization } from "@/utils/file";
-import usePolling from "@/hooks/usePolling";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { useUpload, commonUploadLimit } from "@/ai_modules/digital_human/hooks/useUpload";
 import UploadLoading from "@/ai_modules/digital_human/components/upload-loading/upload-loading.vue";
-import { useEventBusManager } from "@/hooks/useEventBusManager";
+import UploadErrorTip1 from "@/ai_modules/digital_human/static/images/common/example_error1.png";
+import UploadErrorTip2 from "@/ai_modules/digital_human/static/images/common/example_error2.png";
+import UploadErrorTip3 from "@/ai_modules/digital_human/static/images/common/example_error3.png";
+import UploadErrorTip4 from "@/ai_modules/digital_human/static/images/common/example_error4.png";
 
 const { emit, on } = useEventBusManager();
 
@@ -339,11 +476,53 @@ const authData = reactive<any>({
 const authIndex = ref(0);
 const showAuthHelp = ref(false);
 
+const currCloneMode = ref<CloneModeEnum>(CloneModeEnum.FAST);
+const showCloneModeDrop = ref(false);
+
+const parseSceneScore = (scene: TokensSceneEnum) => {
+    return parseFloat(userStore.getTokenByScene(scene)?.score) || 0;
+};
+
+const fastCloneCost = computed(() => {
+    return (
+        parseSceneScore(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN) +
+        parseSceneScore(TokensSceneEnum.HUMAN_AVATAR_CHANJING)
+    );
+});
+
+const proCloneCost = computed(() => {
+    return fastCloneCost.value + parseSceneScore(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN_PRO);
+});
+
+const cloneModeOptions = computed(() => [
+    {
+        value: CloneModeEnum.FAST,
+        name: "极速版",
+        desc: "生成速度快、消耗算力低，适合批量克隆",
+        cost: fastCloneCost.value,
+    },
+    {
+        value: CloneModeEnum.PRO,
+        name: "专业版",
+        desc: "唇形与细节还原更逼真，适合品牌 IP 出镜",
+        cost: proCloneCost.value,
+    },
+]);
+
+const currCloneModeOption = computed(() => {
+    return (
+        cloneModeOptions.value.find((item) => item.value === currCloneMode.value) || cloneModeOptions.value[0]
+    );
+});
+
+const handleSelectCloneMode = (mode: CloneModeEnum) => {
+    currCloneMode.value = mode;
+    showCloneModeDrop.value = false;
+};
+
 const detail = ref<any>({});
 const showCreateStatus = ref(false);
 const activePollingEnds = ref<Array<() => void>>([]);
-
-const pageSource = ref<DigitalHumanModelVersionEnum | DigitalHumanModelVersionEnum[]>();
 
 const isSuccess = ref(false);
 
@@ -366,13 +545,10 @@ const rechargePopupRef = shallowRef();
 
 // 获取消耗的算力
 const getToken = computed(() => {
-    const token1 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN)?.score;
-    const token2 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_CHANJING)?.score;
-    const token3 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR)?.score;
-    const token4 = userStore.getTokenByScene(TokensSceneEnum.AI_SHANJIAN_AUTHORIZED_VIDEO)?.score;
-    return (
-        parseFloat(token1) + parseFloat(token2) + parseFloat(token3) + (authIndex.value === 1 ? parseFloat(token4) : 0)
-    );
+    const baseCost = currCloneMode.value === CloneModeEnum.PRO ? proCloneCost.value : fastCloneCost.value;
+    const authCost =
+        authIndex.value === 1 ? parseSceneScore(TokensSceneEnum.AI_SHANJIAN_AUTHORIZED_VIDEO) : 0;
+    return baseCost + authCost;
 });
 
 const isCreate = computed(() => {
@@ -466,38 +642,6 @@ const resetNavigationBarColor = () => {
     // #endif
 };
 
-// 视频转码
-const handleVideoTranscode = async (url: string) => {
-    return new Promise(async (resolve: any, reject: any) => {
-        try {
-            const data = await videoTranscode({
-                video_url: url,
-            });
-            const { start, end } = usePolling(async () => {
-                try {
-                    const result = await getVideoTranscodeResult({
-                        jobid: data.jobid,
-                    });
-                    if (result.state == "TranscodeSuccess") {
-                        end();
-                        resolve(true);
-                    } else if (result.state == "TranscodeFail" || result.state == "TranscodeCancelled") {
-                        end();
-                        resolve(false);
-                    }
-                } catch (error: any) {
-                    end();
-                    resolve(false);
-                }
-            }, {});
-            activePollingEnds.value.push(end);
-            await start();
-        } catch (error: any) {
-            resolve(false);
-        }
-    });
-};
-
 const handleUploadAuthVideoAlbum = () => {
     const { upload } = useUpload({
         duration: [1, AUTH_VIDEO_MAX_DURATION],
@@ -566,13 +710,19 @@ const handleCreateAnchor = async () => {
             pic: anchorData.pic,
             authorized_pic: authIndex.value === 0 ? authData.pic : "",
             ai_type: authIndex.value,
+            clone_mode: currCloneMode.value,
         });
         uni.hideLoading();
         showCreateStatus.value = true;
         isSuccess.value = true;
-    } catch (error) {
+    } catch (error: any) {
         isSuccess.value = false;
         uni.hideLoading();
+        uni.showToast({
+            title: error,
+            icon: "none",
+            duration: 3000,
+        });
     }
 };
 
@@ -580,7 +730,7 @@ const handleConfirm = () => {
     if (isSuccess.value) {
         emit("confirm", {
             type: ListenerTypeEnum.CREATE_ANCHOR,
-            data: DigitalHumanModelVersionEnum.SHANJIAN == pageSource.value ? detail.value : anchorData,
+            data: anchorData,
         });
         uni.navigateBack();
     } else {
@@ -610,7 +760,6 @@ const getAuthData = (data: any) => {
 };
 
 onLoad((options: any) => {
-    if (options.source) pageSource.value = options.source;
     on("confirm", (result: any) => {
         const { type, data } = result;
         if (type === ListenerTypeEnum.VIDEO_UPLOAD) {
@@ -658,5 +807,17 @@ onUnload(() => {
     background-color: #ccc;
     margin-top: 10rpx;
     flex-shrink: 0;
+}
+
+.clone-chip {
+    @apply text-[20rpx] font-bold text-white px-[16rpx] py-[4rpx] rounded-full whitespace-nowrap leading-none;
+}
+
+.clone-chip--fast {
+    background: linear-gradient(90deg, #2680f7, #3e9bff);
+}
+
+.clone-chip--pro {
+    background: linear-gradient(90deg, #7b61ff, #a855f7);
 }
 </style>

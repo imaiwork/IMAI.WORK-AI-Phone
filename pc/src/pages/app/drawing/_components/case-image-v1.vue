@@ -47,7 +47,7 @@
                                             </ElImage>
 
                                             <div
-                                                class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-4">
+                                                class="absolute inset-0 bg-[#000000]/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-4">
                                                 <button class="copy-pill-btn" @click="handleCopy(item.title)">
                                                     <Icon name="el-icon-CopyDocument"></Icon>
                                                     <span class="ml-1.5">使用文案</span>

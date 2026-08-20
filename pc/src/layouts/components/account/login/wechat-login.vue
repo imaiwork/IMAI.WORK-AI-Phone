@@ -1,12 +1,17 @@
 <template>
     <div class="h-full flex flex-col items-center justify-center">
         <div
-            class="w-[200px] h-[200px] rounded-xl p-1 border border-token-primary relative overflow-hidden"
+            class="w-[200px] h-[200px] rounded-xl p-1 border border-token-primary relative overflow-hidden flex items-center justify-center"
             v-loading="loading">
-            <img :src="qrcode" class="w-full h-full" v-if="!loading" />
+            <img :src="qrcode" class="w-full h-full" v-if="!loading && qrcode" />
+            <div
+                v-else-if="!loading && errorMessage"
+                class="px-3 text-center text-xs text-slate-400 leading-relaxed">
+                {{ errorMessage }}
+            </div>
             <div
                 v-if="isScanSuccess"
-                class="absolute top-0 left-0 w-full h-full bg-black/5 flex flex-col items-center justify-center text-white">
+                class="absolute top-0 left-0 w-full h-full bg-[#000000]/5 flex items-center justify-center">
                 <div class="text-white">扫码成功</div>
             </div>
         </div>
@@ -37,23 +42,27 @@ import { useUserStore } from "@/stores/user";
 
 const userStore = useUserStore();
 
-const { loginType, changeLoginType } = useUserLogin();
+const { loginType } = useUserLogin();
 
 const qrcode = ref("");
 const authKey = ref("");
 const loading = ref(true);
+const errorMessage = ref("");
 
 const getCode = async () => {
     loading.value = true;
+    errorMessage.value = "";
+    qrcode.value = "";
+    authKey.value = "";
     try {
         const { url, auth_key } = await getMnpQrcode({
-            path: "pages/login/login",
+            path: "packages/pages/login/login",
             mnp_auth: "1",
         });
         qrcode.value = url;
         authKey.value = auth_key;
     } catch (error) {
-        console.error(error);
+        errorMessage.value = typeof error === "string" && error ? error : "二维码获取失败";
     } finally {
         loading.value = false;
     }
@@ -69,6 +78,7 @@ watch(
             getCode();
             // 轮询查询扫码状态
             loopTimer.value = setInterval(async () => {
+                if (!authKey.value) return;
                 const { token } = await getMnpScanStatus({
                     auth_key: authKey.value,
                 });
@@ -88,7 +98,7 @@ watch(
     },
     {
         immediate: true,
-    }
+    },
 );
 </script>
 

@@ -1,6 +1,7 @@
 import { getAgentDetail, getCozeAgentDetail, cozeAgentChatRecord, cozeAgentChatRecordClear } from "@/api/agent";
 import { getChatRecord, deleteChatRecord as clearChatRecord } from "@/api/chat";
 import { useUserStore } from "@/stores/user";
+import { canUseAgent } from "@/utils/agentPermission";
 import { AgentTypeEnum, CozeTypeEnum } from "../_enums";
 
 // 统一聊天记录Item的接口
@@ -25,6 +26,7 @@ export function useAgentManager() {
     const detail = ref<any>({});
     const loading = ref(true);
     const currentRecordId = ref<string | null>(null);
+    const isAgentUnavailable = ref(false);
 
     // --- 详情获取 ---
     const getDetail = async () => {
@@ -35,6 +37,8 @@ export function useAgentManager() {
         };
         if (apis[agentType]) {
             detail.value = await apis[agentType]({ id: agentId });
+            // 仅会员可用的智能体（含 Coze 智能体 / Coze 工作流）若用户无权限，标记不可用，UI 会显示提示并禁用发送
+            isAgentUnavailable.value = !canUseAgent(detail.value, useUserStore().userInfo);
         }
     };
 
@@ -139,6 +143,9 @@ export function useAgentManager() {
         loading.value = true;
         try {
             await getDetail();
+            // 路由可被手动改 agent_id，命中"仅会员可用"且无权限时直接阻断，
+            // 不再拉取聊天记录、不渲染聊天组件，由页面层渲染不可用提示。
+            if (isAgentUnavailable.value) return;
             await getChatRecordLists();
             // // 从路由设置当前选中的记录
             currentRecordId.value = (route.query.conversation_id as string) || (route.query.task_id as string) || null;
@@ -159,6 +166,7 @@ export function useAgentManager() {
         agentType,
         detail,
         loading,
+        isAgentUnavailable,
         chatRecordPager,
         currentRecordId,
         loadRecordMore,

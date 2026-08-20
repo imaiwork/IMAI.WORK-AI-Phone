@@ -1,6 +1,12 @@
 <template>
     <div class="flex flex-col">
-        <user-popup v-model="selectData" :title="title" :type="type" :maxNum="maxNum" :disabled="disabled">
+        <user-popup
+            v-model="selectData"
+            :title="title"
+            :type="type"
+            :maxNum="maxNum"
+            :disabled="disabled"
+            :params="params">
             <slot name="popup"></slot>
         </user-popup>
         <!--        <table-detail v-model="selectData" :status="status" />-->
@@ -20,6 +26,8 @@ const props = withDefaults(
         type?: string;
         maxNum?: number;
         disabled?: boolean;
+        /** 透传给用户列表接口的额外筛选参数，如 { only_agent: 1 } */
+        params?: Record<string, any>;
     }>(),
     {
         modelValue: [],
@@ -30,6 +38,7 @@ const props = withDefaults(
         // 选择最大数量
         maxNum: 10,
         disabled: false,
+        params: () => ({}),
     }
 );
 

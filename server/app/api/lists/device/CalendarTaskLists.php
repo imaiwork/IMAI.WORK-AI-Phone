@@ -6,20 +6,25 @@ namespace app\api\lists\device;
 use app\api\lists\BaseApiDataLists;
 use app\common\enum\DeviceEnum;
 use app\common\lists\ListsSearchInterface;
+use app\common\model\sv\SvCityExposureTaskAccount;
+use app\common\model\sv\SvCityTouchTaskAccount;
 use app\common\model\sv\SvCrawlingManualTask;
 use app\common\model\sv\SvCrawlingTask;
+use app\common\model\sv\SvCrawlingWechatTask;
+use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceActive;
 use app\common\model\sv\SvDeviceActiveAccount;
+use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
 use app\common\model\sv\SvDeviceTakeOverTask;
 use app\common\model\sv\SvDeviceTakeOverTaskAccount;
 use app\common\model\sv\SvDeviceTask;
+use app\common\model\sv\SvGroupBuyTaskAccount;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSettingAccount;
-use app\common\model\wechat\AiWechatCircleTaskConfig;
-use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
 use app\common\model\sv\SvWechatStrategy;
-
-use app\common\model\sv\SvCrawlingWechatTask;
+use app\common\model\wechat\AiWechatCircleTaskConfig;
+use app\common\model\sv\SvDeviceViral;
+use app\common\model\sv\SvDevicePreciseClues;
 
 /**
  * 设备任务列表
@@ -44,6 +49,11 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
     public function lists(): array
     {
         $this->searchWhere[] = ['dt.user_id', '=', $this->userId];
+        if ($this->request->get('device_code', '') !== '') {
+            $this->searchWhere[] = ['dt.auto_type', '=', SvDevice::where('device_code', $this->request->get('device_code'))->value('auto_type')];
+        }
+
+
         return SvDeviceTask::alias('dt')
             ->field('dt.*')
             ->where($this->searchWhere)
@@ -51,10 +61,17 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
             ->each(function ($item) {
+                // if ($item->status == DeviceEnum::TASK_STATUS_RUNNING && $item->end_time < time()) {
+                //     $item->status = DeviceEnum::TASK_STATUS_FINISHED;
+                //     $item->remark = '任务执行完成';
+                //     $item->update_time = time();
+                //     $item->save();
+                // }
                 $item['start_time'] = date('H:i', $item['start_time']);
                 $item['end_time'] = date('H:i', $item['end_time']);
                 $item['account_type'] = $item['source'] === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $item['account_type'];
-                $item['task_category'] = !in_array($item['source'], [5, 7, 8]) ? DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskTypeDesc($item['task_type']) : DeviceEnum::getTaskSceneDesc($item['task_type']);
+                //$item['task_category'] = !in_array($item['source'], [5, 7, 8]) ? DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskTypeDesc($item['task_type']) : DeviceEnum::getTaskSceneDesc($item['task_type']);
+                $item['task_category'] = DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskSceneDesc($item['task_scene']);
                 if (
                     in_array($item['task_type'], [DeviceEnum::TASK_TYPE_TAKEOVER, DeviceEnum::AUTO_TYPE_TAKE_OVER]) &&
                     $item['source'] == DeviceEnum::TASK_SOURCE_TAKEOVER &&
@@ -62,6 +79,13 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                 ) {
                     $item['task_category'] = '微信私信接管';
                 }
+                if ($item['task_scene'] == DeviceEnum::AUTO_TASK_SCENE_COMMENT_TAKE_OVER) {
+                    $item['task_category'] = DeviceEnum::getAccountTypeDesc($item['account_type']) . '评论' . ((int)$item['account_type'] === 1 ? '点赞' : '接管');
+                }
+                if($item['task_scene'] == DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH){
+                    $item['task_category'] = strpos($item['task_name'], '图文') !== false ? str_replace('视频', '图文', $item['task_category']) : $item['task_category'];
+                }
+
                 $item['name'] = '';
                 switch ($item['source']) {
 
@@ -128,6 +152,40 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                         //sv_wechat_strategy
                         $taskinfo = SvWechatStrategy::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
                         $item['name'] = $taskinfo['task_name'] ?? $item['task_name'];
+                        break;
+                    case DeviceEnum::TASK_SOURCE_SAME_CITY_EXPOSURE:
+                        //sv_city_exposure_task_account
+                        $taskinfo = SvCityExposureTaskAccount::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['name'] ?? '';
+                        break;
+                    case DeviceEnum::TASK_SOURCE_SAME_CITY_CUTOFF:
+                        //sv_city_touch_task_account
+                        $taskinfo = SvCityTouchTaskAccount::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['name'] ?? '';
+                        break;
+                    case DeviceEnum::TASK_SOURCE_GROUP_BUY:
+                        //sv_group_buy_task_account
+                        $taskinfo = SvGroupBuyTaskAccount::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['name'] ?? '';
+                        break;
+                    case DeviceEnum::TASK_SOURCE_SPH_THUMB:
+                        //sv_sph_thumb_task_account
+                        $taskinfo = SvDeviceTakeOverTaskAccount::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        if (!$taskinfo) {
+                            $item['name'] = '';
+                            break;
+                        }
+                        $item['name'] = SvDeviceTakeOverTask::where('id', $taskinfo['take_over_id'])->value('task_name') ?? $item['task_name'];
+                        break;
+                    case DeviceEnum::TASK_SOURCE_VIRAL_REWRITER:
+                        //sv_viral_rewriter_task_account
+                        $taskinfo = SvDeviceViral::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['task_name'] ?? '';
+                        break;    
+                    case DeviceEnum::TASK_SOURCE_PRECISE_CLUES:
+                        //sv_precise_clues_task_account
+                        $taskinfo = SvDevicePreciseClues::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['task_name'] ?? '';
                         break;
                     default:
                         break;

@@ -21,7 +21,7 @@
                 </ElSelect>
 
                 <div
-                    class="flex items-center rounded-full h-11 border border-br px-1.5 bg-gray-50/50 transition-all bg-white focus-within:border-primary focus-within:bg-white">
+                    class="flex items-center rounded-full h-11 border border-br px-1.5 bg-[#f9f9f9]/50 transition-all focus-within:border-primary focus-within:bg-white">
                     <ElInput
                         v-model="queryParams.name"
                         class="search-input-clean !w-[180px]"
@@ -89,9 +89,9 @@
 
                 <ElTableColumn label="任务状态" width="120" align="center">
                     <template #default="{ row }">
-                        <div class="status-badge" :class="row.status == 1 ? 'is-running' : 'is-success'">
+                        <div class="status-badge" :class="statusClass(row.status)">
                             <span class="badge-dot"></span>
-                            <span class="badge-text">{{ row.status == 1 ? "进行中" : "已完成" }}</span>
+                            <span class="badge-text">{{ statusText(row.status) }}</span>
                         </div>
                     </template>
                 </ElTableColumn>
@@ -122,6 +122,20 @@
                                 {{ getPublishCycle(row) }}
                             </div>
                         </div>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn label="备注" min-width="160">
+                    <template #default="{ row }">
+                        <ElTooltip
+                            v-if="row.remark"
+                            :content="row.remark"
+                            placement="top"
+                            :show-after="300"
+                            popper-class="remark-tooltip">
+                            <span class="remark-text">{{ row.remark }}</span>
+                        </ElTooltip>
+                        <span v-else class="text-xs text-tx-placeholder">—</span>
                     </template>
                 </ElTableColumn>
 
@@ -157,11 +171,13 @@
                 </template>
             </ElTable>
         </div>
+
         <div class="shrink-0 h-[72px] px-8 flex items-center justify-between">
             <div class="text-xs font-medium text-[#CBD5E1]">共计 {{ pager.count }} 个分发任务已就绪</div>
             <pagination v-model="pager" layout="prev, pager, next" @change="getLists"></pagination>
         </div>
     </div>
+
     <rename-pop
         v-if="showRename"
         ref="renamePopupRef"
@@ -189,6 +205,7 @@ const queryParams = reactive({
 
 const { pager, getLists, resetPage } = usePaging({
     fetchFun: getDeviceAccountTaskList,
+    size: 20,
     params: queryParams,
 });
 
@@ -197,6 +214,30 @@ const detailPopupRef = ref<InstanceType<typeof Detail>>();
 
 const showRename = ref(false);
 const renamePopupRef = shallowRef();
+
+// 状态文字映射
+const statusText = (status: number) => {
+    const map: Record<number, string> = {
+        0: "待开始",
+        1: "执行中",
+        2: "已完成",
+        3: "执行失败",
+        4: "已中断",
+    };
+    return map[status] ?? "-";
+};
+
+// 状态样式映射
+const statusClass = (status: number) => {
+    const map: Record<number, string> = {
+        0: "is-pending", // 待开始 — 灰色
+        1: "is-running", // 执行中 — 蓝色
+        2: "is-success", // 已完成 — 绿色
+        3: "is-failed", // 执行失败 — 红色
+        4: "is-aborted", // 已中断 — 橙色
+    };
+    return map[status] ?? "is-pending";
+};
 
 // 获取发布周期
 const getPublishCycle = (row: any) => {
@@ -220,7 +261,6 @@ const handleEdit = async (row: any) => {
     renamePopupRef.value.setFormData({ id: row.id, name: row.name });
 };
 
-// 添加发布视频 End
 const handleDelete = async (id) => {
     useNuxtApp().$confirm({
         message: "是否删除该任务？",
@@ -247,6 +287,7 @@ getLists();
         box-shadow: none;
     }
 }
+
 :deep(.custom-select-pill) {
     .el-select__wrapper {
         border-radius: 99px !important;
@@ -256,10 +297,16 @@ getLists();
         }
     }
 }
+
 .status-badge {
     @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-black;
+
     .badge-dot {
         @apply w-1.5 h-1.5 rounded-full bg-[currentColor];
+    }
+
+    &.is-pending {
+        @apply bg-gray-50 text-gray-400 border-gray-200;
     }
 
     &.is-running {
@@ -268,8 +315,21 @@ getLists();
             @apply animate-pulse;
         }
     }
+
     &.is-success {
         @apply bg-green-50 text-green-600 border-green-100;
     }
+
+    &.is-failed {
+        @apply bg-red-50 text-red-500 border-red-100;
+    }
+
+    &.is-aborted {
+        @apply bg-amber-50 text-amber-500 border-amber-100;
+    }
+}
+
+.remark-text {
+    @apply text-xs text-tx-secondary block truncate max-w-[140px] cursor-default;
 }
 </style>

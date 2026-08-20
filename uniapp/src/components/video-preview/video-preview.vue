@@ -6,12 +6,14 @@
             </view>
             <view class="font-medium text-center mt-[24rpx] text-[30rpx]"> {{ title }} </view>
             <view
-                class="border-[4rpx] border-solid border-[#0065fb4d] rounded-[48rpx] h-[846rpx] mt-[40rpx] p-0.5 shadow-lg">
+                class="border-[4rpx] border-solid border-[#0065fb4d] rounded-[48rpx] h-[846rpx] mt-[40rpx] p-0.5 shadow-lg"
+            >
                 <video-player
                     v-if="showPopup"
                     ref="videoPlayerRef"
                     :poster="poster || `${config.baseUrl}static/images/dh_example_bg1.png`"
-                    :video-url="videoUrl"></video-player>
+                    :video-url="videoUrl"
+                ></video-player>
             </view>
             <view class="mt-[40rpx]">
                 <u-button
@@ -20,7 +22,7 @@
                     :custom-style="{
                         height: '90rpx',
                         boxShadow: ' 0px 3px 12px 0px rgba(0, 0, 0, 0.12)',
-                        fontSize: '26rpx',
+                        fontSize: '26rpx'
                     }"
                     @click="confirm"
                     >{{ confirmBtnText }}</u-button
@@ -31,63 +33,63 @@
 </template>
 
 <script setup lang="ts">
-import config from "@/config";
-import VideoPlayer from "../video-player/video-player.vue";
+import config from '@/config'
+import VideoPlayer from '../video-player/video-player.vue'
 const props = withDefaults(
     defineProps<{
-        title?: string;
-        modelValue: boolean;
-        videoUrl: string;
-        confirmBtnText?: string;
-        poster?: string;
-        zIndex?: number;
+        title?: string
+        modelValue: boolean
+        videoUrl: string
+        confirmBtnText?: string
+        poster?: string
+        zIndex?: number
     }>(),
     {
-        title: "视频预览",
+        title: '视频预览',
         modelValue: false,
-        poster: "",
-        confirmBtnText: "确定",
-        zIndex: 1000,
+        poster: '',
+        confirmBtnText: '确定',
+        zIndex: 1000
     }
-);
+)
 
-const emit = defineEmits(["update:modelValue", "confirm", "close"]);
+const emit = defineEmits(['update:modelValue', 'confirm', 'close'])
 
 const showPopup = computed({
     get() {
-        return props.modelValue;
+        return props.modelValue
     },
     set(val) {
-        emit("update:modelValue", val);
-    },
-});
+        emit('update:modelValue', val)
+    }
+})
 
 watch(
     () => props.modelValue,
     async (val) => {
         setTimeout(() => {
-            videoPlayerRef.value?.toggleVideo();
-        }, 300);
+            videoPlayerRef.value?.toggleVideo()
+        }, 300)
     }
-);
+)
 
-const videoPlayerRef = ref<InstanceType<typeof VideoPlayer>>();
+const videoPlayerRef = ref<InstanceType<typeof VideoPlayer>>()
 
 const confirm = () => {
-    emit("confirm");
-    close();
-};
+    emit('confirm')
+    close()
+}
 
 const close = () => {
-    showPopup.value = false;
-    emit("close");
-};
+    showPopup.value = false
+    emit('close')
+}
 
 defineExpose({
     toggleVideo: () => {
-        videoPlayerRef.value?.toggleVideo();
-    },
-});
+        videoPlayerRef.value?.toggleVideo()
+    }
+})
 </script>
 
 <style scoped lang="scss">

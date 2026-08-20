@@ -1,0 +1,1 @@
+"use strict";const o=require("../../../../common/vendor.js"),t=1e6;exports.useStudioScrollBottom=function(){const e=o.ref(0);let r=[];const c=()=>{r.forEach((o=>clearTimeout(o))),r=[]},s=()=>{e.value=e.value===t?999999:t};return o.onUnmounted(c),{scrollTop:e,scrollToBottom:(o=[120,360,800])=>{c(),s(),o.forEach((o=>{r.push(setTimeout(s,o))}))}}};

@@ -1,6 +1,6 @@
 <template>
     <div
-        class="top-0 absolute w-[380px] h-full bg-white/95 backdrop-blur-xl rounded-tr-[24px] rounded-br-[24px] border-l border-[#F1F5F9] left-full flex flex-col z-20 shadow-[20px_0_40px_rgba(0,0,0,0.05)] overflow-hidden animate-in slide-in-from-left duration-300">
+        class="top-0 absolute w-[380px] h-full bg-[#ffffff]/95 backdrop-blur-xl rounded-tr-[24px] rounded-br-[24px] border-l border-[#F1F5F9] left-full flex flex-col z-20 shadow-[20px_0_40px_rgba(0,0,0,0.05)] overflow-hidden animate-in slide-in-from-left duration-300">
         <div class="p-6 flex items-center justify-between border-b border-[#F8FAFC]">
             <div>
                 <div class="text-[18px] font-[900] text-[#1E293B] flex items-center gap-2">

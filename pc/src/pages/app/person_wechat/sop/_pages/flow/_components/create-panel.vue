@@ -188,7 +188,7 @@
             </div>
         </div>
 
-        <div class="absolute w-full h-full flex items-center justify-center bg-white/50 z-50" v-if="loading">
+        <div class="absolute w-full h-full flex items-center justify-center bg-[#ffffff]/50 z-50" v-if="loading">
             <loader />
         </div>
     </div>

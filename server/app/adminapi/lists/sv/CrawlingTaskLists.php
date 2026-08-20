@@ -53,8 +53,8 @@ class CrawlingTaskLists extends BaseAdminDataLists implements ListsSearchInterfa
             ->each(function($item){
                 $item['tokens'] = SvCrawlingRecord::where('task_id', $item['id'])->fetchSql(false)->sum('tokens');
                 $item['devices'] = SvDevice::field('device_model, device_code, status, sdk_version')->where('device_code', 'in',  json_decode($item['device_codes'], true))->select()->toArray();
-                $item['total_progress'] = count(json_decode($item['keywords'], true)) * 11;
-                $item['current_progress'] = SvCrawlingRecord::where('task_id', $item['id'])->count();
+                $item['total_progress'] = count(json_decode($item['keywords'], true)) * 1;
+                $item['current_progress'] = SvCrawlingRecord::where('task_id', $item['id'])->group('exec_keyword')->count();
 
             })
             ->toArray();

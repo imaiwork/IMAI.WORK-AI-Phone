@@ -5,6 +5,7 @@ namespace app\api\lists\aiPersona;
 use app\api\lists\BaseApiDataLists;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\aiPersona\AiPersonaDigitalAvatar;
+use app\common\service\aiPersona\DigitalAssetUsageService;
 use app\common\service\FileService;
 use think\db\exception\DbException;
 
@@ -43,7 +44,7 @@ class DigitalAvatarLists extends BaseApiDataLists implements ListsSearchInterfac
      */
     public function lists(): array
     {
-        return AiPersonaDigitalAvatar::alias('ad')
+        $list = AiPersonaDigitalAvatar::availableQuery()
                                      ->with([
                                                 // 关联人设主表
                                                 'persona'     => function ($query) {
@@ -53,7 +54,7 @@ class DigitalAvatarLists extends BaseApiDataLists implements ListsSearchInterfac
                                                 'humanAnchor' => function ($query) {
                                                     $query->field('id,name,image,result_url,width,height,status');
                                                 },
-                                            ])
+                                     ])
                                      ->field([
                                                  'ad.id',
                                                  'ad.user_id',
@@ -94,6 +95,18 @@ class DigitalAvatarLists extends BaseApiDataLists implements ListsSearchInterfac
                                          }
                                      })
                                      ->toArray();
+
+        $useCountMap = DigitalAssetUsageService::getAvatarUseCountMap($list);
+        foreach ($list as &$item) {
+            $item['use_count'] = DigitalAssetUsageService::getUseCount(
+                $useCountMap,
+                $item['persona_id'] ?? 0,
+                $item['third_avatar_id'] ?? ''
+            );
+        }
+        unset($item);
+
+        return $list;
     }
 
     /**
@@ -103,7 +116,7 @@ class DigitalAvatarLists extends BaseApiDataLists implements ListsSearchInterfac
      */
     public function count(): int
     {
-        return AiPersonaDigitalAvatar::alias('ad')
+        return AiPersonaDigitalAvatar::availableQuery()
                                      ->where($this->where())
                                      ->where($this->searchWhere)
                                      ->count('ad.id');

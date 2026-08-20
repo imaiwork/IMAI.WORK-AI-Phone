@@ -137,7 +137,7 @@ const props = withDefaults(
     defineProps<{
         formData: Record<string, any>;
     }>(),
-    { formData: () => ({}) }
+    { formData: () => ({}) },
 );
 
 const emit = defineEmits(["success", "close", "recharge"]);
@@ -232,7 +232,7 @@ const getAudioDuration = (msg: string, duration: number) => {
 const handleConfirm = () => {
     initData();
     if (userTokens.value < parseFloat(getConstTotal.value || 0)) {
-        uni.$u.toast("算力不足，请充值！");
+        powerInsufficientTip();
         emit("recharge");
         show.value = false;
         return;

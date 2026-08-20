@@ -12,7 +12,7 @@
 
             <view class="grow flex flex-col items-center justify-center mt-4">
                 <view class="relative w-full h-[140rpx] flex items-center justify-center">
-                    <view class="absolute w-[300rpx] h-[60rpx] bg-primary/5 blur-[40rpx] rounded-full"></view>
+                    <view class="absolute w-[300rpx] h-[60rpx] bg-[#0065fb]/5 blur-[40rpx] rounded-full"></view>
                     <canvas type="2d" class="audio-canvas w-full h-[120rpx] z-10" :height="100"></canvas>
                 </view>
 
@@ -50,7 +50,7 @@ const props = withDefaults(
     {
         modelValue: false,
         minDuration: 15,
-    }
+    },
 );
 
 const emit = defineEmits<{
@@ -105,10 +105,10 @@ const { start, stop, pause, resume, authorize, recordTime } = useRecorder(
                         lineWidth: 3,
                         keep: false,
                     });
-                }
+                },
             );
         },
-    }
+    },
 );
 
 const reply = async () => {
@@ -217,7 +217,7 @@ watch(
     },
     {
         immediate: true,
-    }
+    },
 );
 
 onUnmounted(() => {

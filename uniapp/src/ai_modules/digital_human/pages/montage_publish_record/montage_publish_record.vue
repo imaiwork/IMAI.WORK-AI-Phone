@@ -51,7 +51,9 @@
                                     >{{ item.status != 3 ? "执行中" : "已完成" }}</view
                                 >
                             </view>
-                            <view class="text-xs text-[#00000080] mt-[12rpx]"> {{ item.create_time }} </view>
+                            <view class="text-xs text-[#00000080] mt-[12rpx]">
+                                {{ item.create_time }}
+                            </view>
                             <view class="mt-4">
                                 <view class="flex gap-x-2">
                                     <image
@@ -120,6 +122,7 @@
 
 <script setup lang="ts">
 import { getPublishRecord, deletePublishRecord } from "@/api/digital_human";
+import CircleProgress from "@/ai_modules/digital_human/components/circle-progress/circle-progress.vue";
 const searchValue = ref("");
 const dataLists = ref<any[]>([]);
 

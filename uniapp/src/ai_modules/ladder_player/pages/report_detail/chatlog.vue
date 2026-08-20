@@ -34,7 +34,7 @@ const { getLadderConfig } = appStore;
 
 const getCurrVoice = computed(() => {
     const data = appStore.getLadderConfig?.voice || [];
-    return data.find((item: any) => item.code == props.sceneDetail?.coach_voice) || {};
+    return data.find((item: any) => item.voice == props.sceneDetail?.coach_voice) || {};
 });
 
 const contentList = ref<any[]>([]);

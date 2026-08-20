@@ -123,8 +123,8 @@ import ImageUpload from "./image-upload.vue";
 import ResolutionSelect from "./resolution-select.vue";
 import InspirationImage from "./inspiration-image.vue";
 import CaseImageV1 from "./case-image-v1.vue";
-import CaseBtn from "./case-btn/index.vue";
-import NumberSelect from "./number-select/index.vue";
+import CaseBtn from "./case-btn.vue";
+import NumberSelect from "./number-select.vue";
 
 const emit = defineEmits<{
     (event: "update:formData", value: any): void;
@@ -140,13 +140,11 @@ const appStore = useAppStore();
 const getModelChannel = computed(() => {
     appStore.getHdConfig.channel.forEach((item) => (item.id = parseInt(item.id)));
     if (formData.type == FormTypeEnum.IMAGE2IMAGE) {
-        return appStore.getHdConfig.channel.filter((item: any) =>
-            [ModelEnum.HIDREAMAI, ModelEnum.SEEDREAM].includes(item.id)
-        );
+        return appStore.getHdConfig.channel.filter((item: any) => [, ModelEnum.SEEDREAM].includes(item.id));
     }
     if (formData.type == FormTypeEnum.TXT2IMAGE) {
         return appStore.getHdConfig.channel.filter((item: any) =>
-            [ModelEnum.HIDREAMAI, ModelEnum.GENERAL, ModelEnum.SEEDREAM].includes(item.id)
+            [ModelEnum.GENERAL, ModelEnum.SEEDREAM].includes(item.id),
         );
     }
 });
@@ -266,7 +264,7 @@ watch(
     },
     {
         immediate: true,
-    }
+    },
 );
 
 watchEffect(() => {

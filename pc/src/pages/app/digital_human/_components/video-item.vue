@@ -39,6 +39,37 @@
                         </span>
                     </div>
                 </div>
+
+                <!-- 成片下载中 / 下载失败（成功不展示） -->
+                <div
+                    v-if="showDownloadStatusUi"
+                    class="absolute inset-0 z-[35] flex flex-col items-center justify-center bg-[#020617]/60 rounded-[24px]">
+                    <div class="absolute inset-0 backdrop-blur-[6px] rounded-[24px] -z-10"></div>
+                    <div class="flex justify-center items-center flex-col gap-3 relative z-10 px-4">
+                        <template v-if="isDownloadFailed">
+                            <div
+                                class="w-10 h-10 flex items-center justify-center rounded-2xl bg-[#ef4444]/20 border border-[#ef4444]/20">
+                                <Icon name="local-icon-video2" color="#f87171" :size="20"></Icon>
+                            </div>
+                            <span class="text-white font-black text-sm text-center">下载失败</span>
+                            <span class="text-[#ffffff]/40 text-[10px] font-medium">成片转存失败，请重试</span>
+                            <button
+                                class="mt-1 px-4 py-1.5 rounded-full bg-primary text-white text-[11px] font-black tracking-wide hover:bg-[#0055d6] transition-colors disabled:opacity-60"
+                                :disabled="isRedownloading"
+                                @click.stop="handleRedownload">
+                                {{ isRedownloading ? "重新下载中..." : "重新下载" }}
+                            </button>
+                        </template>
+                        <template v-else>
+                            <div
+                                class="w-9 h-9 rounded-full border-[3px] border-[#0065fb]/20 border-t-primary animate-spin mb-1"></div>
+                            <span class="text-white font-black text-xs uppercase tracking-widest opacity-80"
+                                >下载中...</span
+                            >
+                            <span class="text-primary font-medium text-[10px] animate-pulse">成片转存中，请稍候</span>
+                        </template>
+                    </div>
+                </div>
             </template>
 
             <template v-else>
@@ -56,6 +87,16 @@
                                 item.remark || "生成失败"
                             }}</span>
                             <span class="text-[#ffffff]/40 text-[10px] font-medium">请检查视频素材</span>
+                        </template>
+                        <template v-else-if="isQueueWaiting(item)">
+                            <div
+                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fef3c7]/95 border border-[#fbbf24]/40">
+                                <span class="queue-waiting-dot"></span>
+                                <span class="text-[11px] font-black text-[#92400e]">队列中</span>
+                            </div>
+                            <span class="text-white font-black text-sm tracking-wide">
+                                当前第 {{ item.queue_position }} 位
+                            </span>
                         </template>
                         <template v-else>
                             <div
@@ -130,7 +171,7 @@
                                 <div class="flex items-center gap-2">
                                     <span class="text-[15px] font-black text-slate-700">下载 AI 剪辑版</span>
                                     <span
-                                        class="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] rounded font-medium"
+                                        class="px-1.5 py-0.5 bg-[#0065fb]/10 text-primary text-[10px] rounded font-medium"
                                         >推荐</span
                                     >
                                 </div>
@@ -242,7 +283,15 @@
 <script setup lang="ts">
 import { HandleMenuType } from "@/components/handle-menu/typings";
 import { updateVideoCreationRecord } from "@/api/app";
-import { CreateVideoTypeEnum } from "@/pages/app/digital_human/_enums";
+import { downloadShanjianVideoTask } from "@/api/digital_human";
+import { CreateVideoTypeEnum, VideoDownloadStatusEnum } from "@/pages/app/digital_human/_enums";
+
+/** 视频创作队列状态 */
+enum QueueStatus {
+    WAITING = "waiting",
+    SUBMITTED = "submitted",
+    FAILED = "failed",
+}
 
 const props = withDefaults(
     defineProps<{
@@ -254,7 +303,7 @@ const props = withDefaults(
         item: () => ({}),
         showVersion: true,
         isCreate: false,
-    }
+    },
 );
 
 const emit = defineEmits(["edit", "delete", "retry"]);
@@ -264,8 +313,14 @@ const showRenamePop = ref(false);
 const showDownload = ref(false);
 const showVideo = ref(false);
 const showPlaySelection = ref(false);
+const isRedownloading = ref(false);
 
 const videoPlayerRef = shallowRef();
+
+const downloadStatus = computed(() => Number(props.item?.download_status ?? VideoDownloadStatusEnum.SUCCESS));
+const isDownloadFailed = computed(() => downloadStatus.value === VideoDownloadStatusEnum.FAILED);
+const isDownloading = computed(() => downloadStatus.value === VideoDownloadStatusEnum.DOWNLOADING);
+const showDownloadStatusUi = computed(() => isDownloadFailed.value || isDownloading.value);
 
 const menuList = ref<HandleMenuType[]>([
     {
@@ -327,14 +382,23 @@ const getStatus = (item: any) => {
     }
 };
 
+/** 是否处于排队等待中 */
+const isQueueWaiting = (item: any) => {
+    const status = item?.queue_status;
+    return status !== "" && status === QueueStatus.WAITING;
+};
+
 const getTypeName = (type: number) => {
     return [
         { name: "数字人口播", key: CreateVideoTypeEnum.DIGITAL_HUMAN },
+        { name: "数字人口播", key: CreateVideoTypeEnum.DIGITAL_HUMAN_SHANJIAN },
         { name: "口播混剪", key: CreateVideoTypeEnum.ORAL_MIX },
         { name: "真人口播", key: CreateVideoTypeEnum.REAL_PERSON_MIXING },
         { name: "素材混剪", key: CreateVideoTypeEnum.MATERIAL_MIX },
         { name: "新闻体", key: CreateVideoTypeEnum.NEWS },
         { name: "一句话生成", key: CreateVideoTypeEnum.SENTENCE },
+        { name: "分镜混剪", key: CreateVideoTypeEnum.STORYBOARD },
+        { name: "爆款仿写", key: CreateVideoTypeEnum.HOT_WRITE },
     ].find((item: any) => item.key === type)?.name;
 };
 
@@ -368,12 +432,39 @@ const handleRetry = async (item: any) => {
 };
 
 const handlePlayCheck = () => {
+    if (showDownloadStatusUi.value) return;
+
     const { video_result_url } = props.item;
 
     if (hasClipVideo.value) {
         showPlaySelection.value = true;
     } else {
         triggerPlay(video_result_url);
+    }
+};
+
+const handleRedownload = async () => {
+    if (isRedownloading.value || !props.item?.id) return;
+    isRedownloading.value = true;
+    props.item.download_status = VideoDownloadStatusEnum.DOWNLOADING;
+    try {
+        const res = await downloadShanjianVideoTask({ id: props.item.id });
+        props.item.download_status = Number(res?.download_status ?? VideoDownloadStatusEnum.SUCCESS);
+        if (res?.video_result_url) {
+            props.item.video_result_url = res.video_result_url;
+        }
+        if (props.item.download_status === VideoDownloadStatusEnum.SUCCESS) {
+            feedback.msgSuccess("下载成功");
+        }
+    } catch (error: any) {
+        const msg = String(error || "");
+        // 服务端已在下载中时保持下载中态，避免误标失败
+        if (!msg.includes("正在下载中")) {
+            props.item.download_status = VideoDownloadStatusEnum.FAILED;
+        }
+        feedback.msgError(error || "重新下载失败");
+    } finally {
+        isRedownloading.value = false;
     }
 };
 const selectPlay = (url: string) => {
@@ -396,6 +487,23 @@ const triggerPlay = async (url: string) => {
 <style lang="scss" scoped>
 .video-item {
     @apply flex flex-col relative transition-all duration-300;
+}
+
+.queue-waiting-dot {
+    @apply w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[#f59e0b];
+    animation: queuePulse 1.4s ease-in-out infinite;
+}
+
+@keyframes queuePulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.45;
+        transform: scale(0.85);
+    }
 }
 
 .isolation-isolate {

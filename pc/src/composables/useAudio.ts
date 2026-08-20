@@ -60,8 +60,12 @@ export const useAudio = (options?: Options) => {
 		if (!audio.value) {
 			createAudio();
 		}
-		if (src) {
-			setUrl(src);
+		// 显式传入空地址时不复用旧 src，避免「无音频项」误播上一条
+		if (src !== undefined) {
+			if (!String(src).trim()) {
+				return;
+			}
+			setUrl(String(src).trim());
 		}
 		audio.value.play();
 	};

@@ -942,6 +942,7 @@ class PublishLogic extends SvBaseLogic
                 ->where('vs.id', 'in', $video_ids)
                 ->where('vt.id', 'NOT IN', $usedVideoIds[$account['account_type']])
                 ->where('vt.status', 'in', $status)
+                ->where('vt.persona_id', '=', 0)
                 ->limit($account['count'])
                 ->select()->toArray();
 
@@ -965,19 +966,23 @@ class PublishLogic extends SvBaseLogic
                     'code' => 10000,
                 ];
                 if ($media['status'] === 3) {
-                    $response = \app\common\service\ToolsService::Sv()->getPublishContent([
-                        'keywords' => $media['msg'],
-                        'task_id' => $task_id,
-                        'source' => 'sora',
-                        'user_id' => $account['user_id'],
-                    ]);
+                    if (trim($media['msg']) != ''){
+                        $response = \app\common\service\ToolsService::Sv()->getPublishContent([
+                            'keywords' => $media['msg'],
+                            'task_id' => $task_id,
+                            'source' => 'sora',
+                            'user_id' => $account['user_id'],
+                        ]);
+                    }
                 }
 
                 if ((int)$response['code'] === 10000) {
+                    $title = $response['data']['title'] ?? '';
+                    $content = $response['data']['content'] ?? '';
                     $mergedArray[] = [
                         'material_url' => $media['status'] == 2 ? '' : FileService::getFileUrl($media['video_result_url']),
-                        'material_title' => $media['status'] == 2 ? '' : $response['data']['title'], // 循环匹配title
-                        'material_subtitle' => $media['status'] == 2 ? '' : $response['data']['content'],
+                        'material_title' => $media['status'] == 2 ? '' : $title, // 循环匹配title
+                        'material_subtitle' => $media['status'] == 2 ? '' : $content,
                         'material_status' => $media['status'] == 2 ? 2 : 0, // 2失败 0待发布
                         'material_remark' => $media['remark'],
                         'pic' => $media['pic'],
@@ -1220,7 +1225,7 @@ class PublishLogic extends SvBaseLogic
                         'messageId' => 0,
                         'type' => 5,
                         'deviceId' => $publish['device_code'],
-                        'appVersion' => '2.1.2',
+                        'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                         'code' => 200,
                         'action' => 'send',
                         'content' => json_encode(array(
@@ -1270,7 +1275,7 @@ class PublishLogic extends SvBaseLogic
                     'task_id' => $app->id
                 ], JSON_UNESCAPED_UNICODE),
                 "deviceId" => $deviceid,
-                "appVersion" => "2.1.2"
+                "appVersion" => \app\common\enum\DeviceEnum::APP_VERSION,
             ];
 
             $channel = "device.{$deviceid}.message";

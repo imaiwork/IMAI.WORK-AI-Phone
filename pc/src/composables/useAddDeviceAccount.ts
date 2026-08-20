@@ -5,8 +5,7 @@
  *  2. 添加多个平台账号
  *  3. 刷新账号
  */
-import { addAccount as addAccountApi, updateAccount as updateAccountApi } from "@/api/service";
-import { addDevice as addDeviceApi } from "@/api/device";
+import { addDevice as addDeviceApi, fetchDeviceAccount } from "@/api/device";
 import { AppTypeEnum, DeviceCmdEnum, DeviceCmdCodeEnum } from "@/enums/appEnums";
 
 export enum EventAction {
@@ -18,6 +17,9 @@ export enum EventAction {
     // 批量更新账号
     BatchUpdateAccount = "batchUpdateAccount",
 }
+
+/** 等服务端落库后再通知页面刷新（appCompleted 可能早于落库） */
+const ACCOUNT_FETCH_REFRESH_DELAY = 1500;
 
 interface SuccessMsg {
     msg: string;
@@ -40,7 +42,7 @@ interface RefreshAccount {
 }
 
 export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
-    const { send, onEvent } = options;
+    const { onEvent } = options;
 
     const showAddDevice = ref(false);
     const addDeviceLoading = ref(false);
@@ -48,6 +50,7 @@ export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
 
     const progressValue = ref(0);
     const progressInterval = ref<NodeJS.Timeout | null>(null);
+    const finishTimer = ref<NodeJS.Timeout | null>(null);
 
     // 刷新账号数据
     const refreshAccount = ref<RefreshAccount[]>([]);
@@ -55,19 +58,69 @@ export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
     // 事件动作
     const eventAction = ref<any>(null);
 
-    // 发送获取用户信息指令
-    const sendGetUserInfo = (deviceId: string, appType: AppTypeEnum) => {
-        send({
-            type: DeviceCmdEnum.GET_USER_INFO,
-            content: { deviceId },
-            deviceId,
-            appType,
-        });
+    const clearProgressTimer = () => {
+        if (progressInterval.value) {
+            clearInterval(progressInterval.value);
+            progressInterval.value = null;
+        }
+    };
+
+    const clearFinishTimer = () => {
+        if (finishTimer.value) {
+            clearTimeout(finishTimer.value);
+            finishTimer.value = null;
+        }
+    };
+
+    const isAccountFetchAction = (action: any) =>
+        action === EventAction.AddAccount ||
+        action === EventAction.UpdateAccount ||
+        action === EventAction.BatchUpdateAccount;
+
+    /** HTTP 触发 RPA 拉号，进度仍走 WS */
+    const fetchAccountInfo = async (deviceId: string, appType: AppTypeEnum) => {
+        try {
+            await fetchDeviceAccount({
+                device_code: deviceId,
+                type: appType,
+            });
+        } catch (error) {
+            clearProgressTimer();
+            clearFinishTimer();
+            addDeviceLoading.value = false;
+            options.onError?.({
+                error,
+                type: DeviceCmdEnum.GET_USER_INFO,
+                code: DeviceCmdCodeEnum.API_ERROR,
+            });
+        }
+    };
+
+    const finishAccountFetch = (data: any) => {
+        clearFinishTimer();
+        finishTimer.value = setTimeout(() => {
+            const action = eventAction.value;
+            clearProgressTimer();
+            progressValue.value = 100;
+            addDeviceLoading.value = false;
+
+            if (action === EventAction.AddAccount) {
+                showAddDevice.value = false;
+                feedback.msgSuccess("添加账号成功");
+                options.onSuccess?.({ msg: "添加账号成功", type: DeviceCmdEnum.GET_USER_INFO, data });
+            } else if (action === EventAction.UpdateAccount) {
+                feedback.msgSuccess("更新成功");
+                options.onSuccess?.({ msg: "更新成功", type: DeviceCmdEnum.GET_USER_INFO, data });
+            } else if (action === EventAction.BatchUpdateAccount) {
+                options.onSuccess?.({ msg: "批量更新成功", type: DeviceCmdEnum.GET_USER_INFO, data });
+            }
+            finishTimer.value = null;
+        }, ACCOUNT_FETCH_REFRESH_DELAY);
     };
 
     // 事件监听
     onEvent("success", async (data: any) => {
-        const { type, content, deviceId, appType } = data;
+        const { type, content } = data;
         const msg = content.msg || "";
         switch (type) {
             case DeviceCmdEnum.ADD_DEVICE:
@@ -93,64 +146,16 @@ export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
                     showAddDevice.value = false;
                     feedback.closeLoading();
                 }
-                // if (socialPlatformList.length > 0) {
-                //     sendGetUserInfo(content.deviceId, socialPlatformList[0].type);
-                // }
-                // eventAction.value = EventAction.AddAccount;
+                break;
+            case DeviceCmdEnum.GET_ACCOUNT_INFO_COMPLETE:
+                // 进度文案先更新，再延迟收尾（避免落库未完成就刷新）
+                options.onSuccess?.({ msg, type, data });
+                if (isAccountFetchAction(eventAction.value)) {
+                    finishAccountFetch(data);
+                }
                 break;
             case DeviceCmdEnum.GET_USER_INFO:
-                try {
-                    const { account, account_no, extra, avatar, nickname } = content;
-                    const params = {
-                        account,
-                        account_no,
-                        avatar,
-                        device_code: deviceId,
-                        type: appType,
-                        nickname,
-                        extra: JSON.stringify(extra),
-                    };
-
-                    const upsertAccount = async () => {
-                        const currentAccount = refreshAccount.value
-                            .filter((item: any) => item.type == params.type)
-                            .find((item: any) => item.account == params.account);
-                        if (currentAccount) {
-                            await updateAccountApi({ id: currentAccount.id, ...params });
-                        } else {
-                            await addAccountApi(params);
-                        }
-                    };
-
-                    try {
-                        const action = eventAction.value;
-
-                        if (action === EventAction.AddAccount) {
-                            await addAccountApi(params);
-                            showAddDevice.value = false;
-                            feedback.msgSuccess("添加账号成功");
-                            options.onSuccess?.({ msg: "添加账号成功", type, data });
-                        } else if (action === EventAction.UpdateAccount) {
-                            await upsertAccount();
-                            progressValue.value = 100;
-                            feedback.msgSuccess("更新成功");
-                            options.onSuccess?.({ msg: "更新成功", type, data });
-                        } else if (action === EventAction.BatchUpdateAccount) {
-                            await upsertAccount();
-                            options.onSuccess?.({ msg: "批量更新成功", type, data });
-                        }
-                    } catch (error) {
-                        options.onError?.({ error, type, code: DeviceCmdCodeEnum.API_ERROR });
-                    }
-                } catch (error) {
-                    options.onError?.({
-                        error,
-                        type,
-                        code: DeviceCmdCodeEnum.API_ERROR,
-                    });
-                }
-                addDeviceLoading.value = false;
-                clearInterval(progressInterval.value);
+                // 账号已由服务端落库，前端不再 add/update
                 break;
             default:
                 options.onSuccess?.({ msg, type, data });
@@ -160,10 +165,9 @@ export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
 
     onEvent("error", (error: any) => {
         addDeviceLoading.value = false;
+        clearFinishTimer();
         options.onError?.(error);
-        if (progressInterval.value) {
-            clearInterval(progressInterval.value);
-        }
+        clearProgressTimer();
     });
 
     // 确认添加设备
@@ -173,28 +177,24 @@ export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
     const handleRefreshAccount = (deviceId: string, type: AppTypeEnum) => {
         eventAction.value = EventAction.UpdateAccount;
         completeProgress();
-        sendGetUserInfo(deviceId, type);
+        fetchAccountInfo(deviceId, type);
     };
 
     // 批量更新账号
     const handleBatchUpdateAccount = (params: any) => {
         eventAction.value = EventAction.BatchUpdateAccount;
-        sendGetUserInfo(params.device_code, params.type);
+        fetchAccountInfo(params.device_code, params.type);
     };
 
     // 添加账号
     const handleAddAccount = (params: any) => {
         eventAction.value = EventAction.AddAccount;
         completeProgress();
-        sendGetUserInfo(params.device_code, params.type);
+        fetchAccountInfo(params.device_code, params.type);
     };
 
     const completeProgress = () => {
-        // 清除之前的定时器
-        if (progressInterval.value) {
-            clearInterval(progressInterval.value);
-            progressInterval.value = null;
-        }
+        clearProgressTimer();
 
         const startTime = Date.now();
         const duration = 15 * 1000;
@@ -210,10 +210,7 @@ export const useAddDeviceAccount = (options: UseAddDeviceAccountOptions) => {
             progressValue.value = Math.floor(Math.min(99, progressValue.value + randomIncrement));
 
             if (progressValue.value >= 99 || elapsedTime >= duration) {
-                if (progressInterval.value) {
-                    clearInterval(progressInterval.value);
-                    progressInterval.value = null;
-                }
+                clearProgressTimer();
                 progressValue.value = 99;
             }
         }, updateInterval);

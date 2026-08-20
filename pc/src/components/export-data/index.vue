@@ -26,7 +26,7 @@
                         </div>
                     </div>
 
-                    <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
+                    <div class="bg-[#eff6ff]/50 border border-blue-100 rounded-xl p-4">
                         <div class="text-xs text-blue-600 mb-1 flex items-center gap-1">
                             <Icon name="el-icon-Warning" :size="14" /> 导出限制说明
                         </div>

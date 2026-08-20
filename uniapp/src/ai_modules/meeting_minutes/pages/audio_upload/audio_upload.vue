@@ -123,7 +123,7 @@ const extension = ["mp3", "wav", "wma", "aac", "ogg", "amr", "flac", "aiff"];
 
 const openFile = async () => {
     if (userTokens.value < tokensValue.value) {
-        uni.$u.toast("算力不足，请充值！");
+        powerInsufficientTip();
         rechargePopupRef.value?.open();
         return;
     }
@@ -233,7 +233,7 @@ const submitFileUpload = async (item: any, index: number) => {
 
 const handleCreate = async () => {
     if (userTokens.value <= 0) {
-        uni.$u.toast("算力不足，请充值！");
+        powerInsufficientTip();
         rechargePopupRef.value.open();
         return;
     }
@@ -277,7 +277,7 @@ const startRecord = async () => {
                     }
                 },
             });
-        }
+        },
     );
 };
 

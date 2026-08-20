@@ -135,6 +135,25 @@ class RobotController extends BaseAdminController
     }
 
     /**
+     * @notes 修改后台智能体权限
+     * @return Json
+     */
+    public function changePermissions(): Json
+    {
+        (new IDMustValidate())->post()->goCheck();
+
+        $params = $this->request->post();
+        $id = intval($params['id']);
+
+        $result = KbRobotLogic::changePermissions($id, $params);
+        if ($result === false) {
+            return $this->fail(KbRobotLogic::getError());
+        }
+
+        return $this->success('修改成功', KbRobotLogic::getReturnData(), 1, 1);
+    }
+
+    /**
      * @notes 机器人问答记录
      * @return Json
      * @author kb

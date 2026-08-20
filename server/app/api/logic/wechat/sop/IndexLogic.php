@@ -130,8 +130,7 @@ class IndexLogic extends ApiLogic
                                       ->field('l.id,l.create_time as push_time,l.update_time as push_real_time,l.status,l.content_id,l.content,m.wechat_id,m.friend_id,m.nickname,m.remark,m.avatar')
                                       ->where('l.push_id', $params['push_id'])
                                       ->where($where)
-                                      ->order('l.push_real_day', 'desc')
-                                      ->order('l.push_real_time', 'desc')
+                                      ->order('l.create_time', 'desc')
                                       ->limit((int)($page_no - 1) * $page_size, (int)$page_size)
                                       ->select();
             $common = AiWechatSopPushLog::alias('l')

@@ -1,1 +1,1 @@
-<view class="flex flex-col gap-y-2 data-v-734cf6d8"><view wx:for="{{a}}" wx:for-item="val" wx:key="e" class="data-v-734cf6d8"><task-card wx:if="{{val.d}}" class="data-v-734cf6d8" bindclick="{{val.a}}" bindeditName="{{val.b}}" u-i="{{val.c}}" bind:__l="__l" u-p="{{val.d}}"/></view></view>
+<view class="flex flex-col gap-y-2 data-v-06050d5c"><view wx:for="{{a}}" wx:for-item="val" wx:key="e" class="data-v-06050d5c"><task-card wx:if="{{val.d}}" class="data-v-06050d5c" bindclick="{{val.a}}" bindeditName="{{val.b}}" u-i="{{val.c}}" bind:__l="__l" u-p="{{val.d}}"/></view></view>

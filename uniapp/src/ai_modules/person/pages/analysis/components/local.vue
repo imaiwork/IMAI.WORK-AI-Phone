@@ -338,7 +338,7 @@
                 <text class="text-lg font-black leading-snug tracking-wide block"
                     >你缺的是一个<br /><text class="text-[#FEF08A]">每天稳定给你搞人的系统</text></text
                 >
-                <view class="w-10 h-px bg-white/30 mx-auto my-3"></view>
+                <view class="w-10 h-px bg-[#ffffff]/30 mx-auto my-3"></view>
                 <text class="text-xs font-bold text-[#ffffff]/90 leading-relaxed block"
                     >这不是爆款玩法，是流水线搞人玩法。<br />你只需要做一件事：<text
                         class="text-[#FEF08A] text-sm font-black"

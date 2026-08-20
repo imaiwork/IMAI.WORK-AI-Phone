@@ -10,6 +10,9 @@ import { useAppStore } from "./stores/app";
 // 布局组件导入
 import LayoutAccount from "@/layouts/components/account/index.vue";
 import LayoutSurvey from "@/layouts/components/survey/index.vue";
+import DataPackage from "@/components/data-package/index.vue";
+import OemRecharge from "@/components/oem-recharge/index.vue";
+import SiteClosedPage from "@/components/site-closed/index.vue";
 
 // Store 实例化
 const userStore = useUserStore();
@@ -20,13 +23,19 @@ const config = {
     locale: zhCn,
 };
 
+const isSiteClosed = computed(() => appStore.isSiteClosed);
+
 // 网站配置
 const { pc_title, pc_ico, pc_keywords, pc_desc } = appStore.getWebsiteConfig;
 const { is_oem, logo_url, name } = appStore.getOemConfig;
 
 // 设置网站头部信息
 useHead({
-    title: (is_oem == 1 ? name : pc_title) || "AI数字员工开源系统",
+    title: computed(() =>
+        isSiteClosed.value
+            ? "站点已关闭"
+            : (is_oem == 1 ? name : pc_title) || "AI数字员工开源系统"
+    ),
     meta: [
         {
             name: "description",
@@ -53,7 +62,9 @@ useHead({
 
 <template>
     <ElConfigProvider v-bind="config">
-        <NuxtLayout>
+        <!-- OEM 团队已解散：全屏关站，不渲染业务壳/不回落主站 -->
+        <SiteClosedPage v-if="isSiteClosed" />
+        <NuxtLayout v-else>
             <!-- 加载指示器 -->
             <NuxtLoadingIndicator />
 
@@ -63,6 +74,8 @@ useHead({
             <!-- 全局弹窗组件 -->
             <LayoutAccount v-if="userStore.showLogin" />
             <LayoutSurvey v-if="appStore.showSurvey" />
+            <data-package v-if="appStore.showDataPackage"></data-package>
+            <OemRecharge v-if="appStore.showOemRecharge" />
         </NuxtLayout>
     </ElConfigProvider>
 </template>

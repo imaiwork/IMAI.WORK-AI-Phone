@@ -5,6 +5,7 @@ namespace app\adminapi\lists\aiPersona;
 use app\adminapi\lists\BaseAdminDataLists;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\aiPersona\AiPersonaDigitalAvatar;
+use app\common\service\aiPersona\DigitalAssetUsageService;
 use app\common\service\FileService;
 use think\db\exception\DbException;
 
@@ -42,7 +43,7 @@ class DigitalAvatarLists extends BaseAdminDataLists implements ListsSearchInterf
      */
     public function lists(): array
     {
-        return AiPersonaDigitalAvatar::alias('ad')
+        $list = AiPersonaDigitalAvatar::availableQuery()
                                      ->with([
                                                 // 关联人设主表
                                                 'persona'     => function ($query) {
@@ -92,6 +93,18 @@ class DigitalAvatarLists extends BaseAdminDataLists implements ListsSearchInterf
                                          }
                                      })
                                      ->toArray();
+
+        $useCountMap = DigitalAssetUsageService::getAvatarUseCountMap($list);
+        foreach ($list as &$item) {
+            $item['use_count'] = DigitalAssetUsageService::getUseCount(
+                $useCountMap,
+                $item['persona_id'] ?? 0,
+                $item['third_avatar_id'] ?? ''
+            );
+        }
+        unset($item);
+
+        return $list;
     }
 
     /**
@@ -101,7 +114,7 @@ class DigitalAvatarLists extends BaseAdminDataLists implements ListsSearchInterf
      */
     public function count(): int
     {
-        return AiPersonaDigitalAvatar::alias('ad')
+        return AiPersonaDigitalAvatar::availableQuery()
                                      ->where($this->where())
                                      ->where($this->searchWhere)
                                      ->count('ad.id');

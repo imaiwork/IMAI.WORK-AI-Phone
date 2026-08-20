@@ -1,8 +1,8 @@
 <template>
     <div class="h-full flex flex-col bg-white rounded-[20px] overflow-hidden border border-br" v-if="!isCreate">
         <div class="flex-shrink-0 px-6 border-b border-br bg-white">
-            <div class="flex items-center justify-between h-[80px]">
-                <div class="flex items-center gap-x-3">
+            <div class="flex items-center justify-between h-[80px] gap-x2">
+                <div class="flex items-center gap-x-3 shrink-0">
                     <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-[#0065fb]/10 text-primary">
                         <Icon name="el-icon-Document" :size="20"></Icon>
                     </div>
@@ -268,7 +268,7 @@ const getCopywritingContent = (data: any) => {
             return arr.reduce(
                 (acc: string, curr: any, index: number) =>
                     acc + `“${curr.content}”` + (index !== arr.length - 1 ? "、" : ""),
-                ""
+                "",
             );
         }
     };

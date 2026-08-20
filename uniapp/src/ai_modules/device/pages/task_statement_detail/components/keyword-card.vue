@@ -3,8 +3,8 @@
         <view class="flex items-center justify-between mb-[28rpx]">
             <view
                 class="flex items-center gap-[4rpx] bg-[#FFF3E0] border-[1rpx] border-[#FFD180] rounded-[30rpx] px-[20rpx] py-[6rpx]">
-                <text class="text-[26rpx] font-bold text-[#BA6F0D]">#</text>
-                <text class="text-[24rpx] font-bold text-[#BA6F0D]">{{ item.exec_keyword }}</text>
+                <text class="font-bold text-[#BA6F0D]">#</text>
+                <text class="text-xs font-bold text-[#BA6F0D]">{{ item.exec_keyword }}</text>
             </view>
             <view class="flex items-center gap-[8rpx] bg-[#F5F5F5] rounded-[30rpx] px-[20rpx] py-[6rpx]">
                 <view class="w-[14rpx] h-[14rpx] rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF5C5C]"></view>
@@ -41,7 +41,7 @@
         <view class="h-[1rpx] bg-[#F0F0F0] my-[24rpx]"></view>
 
         <view class="flex items-center justify-between" @click="onViewDetail">
-            <text class="text-[26rpx] font-semibold text-[#333333]">查看详情</text>
+            <text class="font-semibold text-[#333333]">查看详情</text>
             <view class="w-[48rpx] h-[48rpx] rounded-full bg-[#FFF3E0] flex items-center justify-center">
                 <u-icon name="arrow-right" color="#FF8C42" size="14"></u-icon>
             </view>

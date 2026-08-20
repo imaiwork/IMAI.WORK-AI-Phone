@@ -1,1 +1,0 @@
-"use strict";const e=require("../utils/request/index.js");exports.knowledgeBaseLists=function(t){return e.request.get({url:"/knowledge/lists",data:t})},exports.vectorKnowledgeBaseLists=function(t){return e.request.get({url:"/kb.know/lists",data:t})};

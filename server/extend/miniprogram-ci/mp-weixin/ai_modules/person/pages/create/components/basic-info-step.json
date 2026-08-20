@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-icon": "../../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "avatar-upload": "../../../components/avatar-upload/avatar-upload",
+    "option-select-popup": "./option-select-popup"
+  }
+}

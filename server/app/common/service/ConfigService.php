@@ -18,20 +18,22 @@ class ConfigService
      * @author 段誉
      * @date 2021/12/27 15:00
      */
-    public static function set(string $type, string $name, $value)
+    public static function set(string $type, string $name, $value, int $teamId = 0)
     {
         $original = $value;
         if (is_array($value)) {
             $value = json_encode($value, JSON_UNESCAPED_UNICODE);
         }
 
-        $data = Config::where(['type' => $type, 'name' => $name])->findOrEmpty();
+        // team_id=0 为平台全局配置;>0 为团队(企业OEM)独立配置,按团队隔离
+        $data = Config::where(['type' => $type, 'name' => $name, 'team_id' => $teamId])->findOrEmpty();
 
         if ($data->isEmpty()) {
             Config::create([
                 'type' => $type,
                 'name' => $name,
                 'value' => $value,
+                'team_id' => $teamId,
             ]);
         } else {
             $data->value = $value;
@@ -51,10 +53,11 @@ class ConfigService
      * @author Tab
      * @date 2021/7/15 15:16
      */
-    public static function get(string $type, string $name = '', $default_value = null)
+    public static function get(string $type, string $name = '', $default_value = null, int $teamId = 0)
     {
         if (!empty($name)) {
-            $value = Config::where(['type' => $type, 'name' => $name])->value('value');
+            // team_id=0 平台全局;>0 团队独立配置(未配置则不跨团队回退,由 default_value 兜底,保证白标隔离)
+            $value = Config::where(['type' => $type, 'name' => $name, 'team_id' => $teamId])->value('value');
             if (!is_null($value)) {
                 $json = json_decode($value, true);
                 $value = json_last_error() === JSON_ERROR_NONE ? $json : $value;
@@ -80,8 +83,8 @@ class ConfigService
             return config('project.' . $type . '.' . $name);
         }
 
-        // 取某个类型下的所有name的值
-        $data = Config::where(['type' => $type])->column('value', 'name');
+        // 取某个类型下的所有name的值(按 team_id 隔离)
+        $data = Config::where(['type' => $type, 'team_id' => $teamId])->column('value', 'name');
         foreach ($data as $k => $v) {
             $json = json_decode($v, true);
             if (json_last_error() === JSON_ERROR_NONE) {

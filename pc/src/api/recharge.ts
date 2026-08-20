@@ -22,11 +22,11 @@ export function getPayResult(params: any) {
     return $request.get({ url: "/pay/payStatus", params });
 }
 
-export function checkRedeemCode(params: { sn: number | string }) {
+export function checkRedeemCode(params: { sn: number | string; scene?: string }) {
     return $request.get({ url: "/cardCode/checkCard", params });
 }
 
-// 兑换卡密
-export function useRedeemCode(params: any) {
+// 兑换卡密；scene=tokens 时后端仅允许算力卡
+export function useRedeemCode(params: { sn: number | string; scene?: string } | any) {
     return $request.post({ url: "/cardCode/useCard", params });
 }

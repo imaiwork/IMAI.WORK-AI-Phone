@@ -1,7 +1,7 @@
 <template>
     <div class="edit-popup">
         <popup ref="popupRef" title="使用详情" :async="true" width="920px" @confirm="handleSubmit" @close="handleClose">
-            <div class="flex flex-wrap">
+            <div class="flex flex-wrap gap-x-4">
                 <el-form-item label-width="90px" label="批次编号:">
                     {{ usageDetails.sn }}
                 </el-form-item>

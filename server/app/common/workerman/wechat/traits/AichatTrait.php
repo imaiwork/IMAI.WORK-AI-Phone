@@ -5,21 +5,19 @@ declare(strict_types=1);
 namespace app\common\workerman\wechat\traits;
 
 use app\api\logic\ChatLogic;
-use app\api\logic\service\TokenLogService;
 use app\api\logic\wechat\sop\StageLogic;
 use app\common\enum\user\AccountLogEnum;
-use app\common\logic\AccountLogLogic;
 use app\common\model\chat\ChatLog;
 use app\common\model\ChatPrompt;
 use app\common\model\kb\KbRobot;
 use app\common\model\sv\SvReplyStrategy;
 use app\common\model\sv\SvRobotKeyword;
-use app\common\model\user\User;
 use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatContact;
 use app\common\model\wechat\AiWechatDevice;
 use app\common\model\wechat\AiWechatFriendTag;
 use app\common\model\wechat\AiWechatTagStrategy;
+use app\common\service\chat\ChatBillingService;
 use app\common\service\FileService;
 use app\common\workerman\wechat\constants\SocketType;
 use app\common\workerman\wechat\handlers\client\TalkToFriendTaskHandler;
@@ -83,6 +81,19 @@ trait AichatTrait
             $robot = $this->_getWechatRobot($wechat['robot_id']);
             //查询原来的模型名
             $robot->model = \app\common\model\chat\ModelsCost::where('id', $robot->model_sub_id)->limit(1)->value('alias');
+            try {
+                \app\common\service\chat\ChatModelsService::assertChatModelUsable(
+                    (int)$robot->model_id,
+                    (int)$robot->model_sub_id,
+                    (int)($device['user_id'] ?? 0) ?: null
+                );
+            } catch (\Throwable $e) {
+                $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('对话模型不可用')->withContext([
+                    'msg' => $e->getMessage(),
+                    'robot_id' => $robot->id ?? 0,
+                ])->log();
+                return;
+            }
             $reply = $this->_getReplyStrategy($robot);
             $payload['userId'] = $device['user_id'];
             $isChatroom = strpos($payload['FriendId'], '@chatroom') !== false ? 1 : 0;
@@ -478,17 +489,6 @@ trait AichatTrait
 
             $task_id = generate_unique_task_id();
             $knowledge = [];
-            if ($robot->kb_type == 1) { //rag
-                // 检查是否挂载知识库
-                $bind = \app\common\model\knowledge\KnowledgeBind::where('data_id', $robot->id)->where('user_id', $request['user_id'])->where('type', 1)->limit(1)->find();
-                if (!empty($bind)) {
-                    $knowledge = \app\common\model\knowledge\Knowledge::where('id', $bind['kid'])->limit(1)->find();
-                    if (empty($knowledge)) {
-                        throw new \Exception('挂载的知识库不存在');
-                    }
-                    $knowledge['task_id'] = $task_id;
-                }
-            }
 
             if ($robot->kb_type == 2) { //向量
                 // 检查是否挂载知识库
@@ -673,34 +673,28 @@ trait AichatTrait
 
     private function _handleResponse(array $response, array $request)
     {
-        //检查扣费
-        $unit = TokenLogService::checkToken($request['user_id'], 'ai_wechat');
-        // 获取回复内容
-        $reply = $response['data']['message'] ?? '';
+        $modelAlias = $request['model'] ?? 'gpt-4o';
+        ChatBillingService::checkBalance((int)$request['user_id'], $modelAlias);
 
-        //计费
-        $tokens = $response['data']['usage']['total_tokens'] ?? 0;
-        if (!$reply || $tokens == 0) {
+        $reply = $response['data']['message'] ?? '';
+        $usage = $response['data']['usage'] ?? [];
+
+        if (!$reply || empty($usage['total_tokens'])) {
             throw new \Exception('获取内容失败');
         }
 
-        $response = [
+        ChatLogic::saveChatResponseLog($request, [
             'reply' => $reply,
-            'usage_tokens' => $response['data']['usage'] ?? [],
-        ];
+            'usage_tokens' => $usage,
+        ]);
 
-        // 保存聊天记录
-        ChatLogic::saveChatResponseLog($request, $response);
-
-        //计算消耗tokens
-        $points = $unit > 0 ? round($tokens / $unit, 2) : 0;
-        //token扣除
-        User::userTokensChange($request['user_id'], (float)$points);
-
-        $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points];
-
-        //扣费记录
-        AccountLogLogic::recordUserTokensLog(true, $request['user_id'], AccountLogEnum::TOKENS_DEC_AI_WECHAT, (float)$points, $request['task_id'], $extra);
+        ChatBillingService::charge(
+            (int)$request['user_id'],
+            $modelAlias,
+            $usage,
+            AccountLogEnum::TOKENS_DEC_AI_WECHAT,
+            (string)$request['task_id']
+        );
 
         return $reply;
     }

@@ -3,9 +3,10 @@
   "usingComponents": {
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "upload-category-panel": "../../../../components/upload-category-panel/upload-category-panel",
     "upload-progress": "../../../../components/upload-progress/upload-progress",
     "choose-material": "../../../../components/choose-material/choose-material",
+    "choose-history": "../../../../components/choose-history/choose-history",
     "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog"
   }
 }

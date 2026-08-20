@@ -2,9 +2,5 @@
   "navigationBarTitleText": "",
   "enablePullDownRefresh": false,
   "navigationStyle": "custom",
-  "usingComponents": {
-    "semi-circle-progress": "../../components/semi-circle-progress/semi-circle-progress",
-    "u-line-progress": "../../uni_modules/vk-uview-ui/components/u-line-progress/u-line-progress",
-    "tabbar": "../../components/tabbar/tabbar"
-  }
+  "usingComponents": {}
 }

@@ -17,7 +17,8 @@
             </el-form>
         </el-card>
         <el-card class="!border-none mt-4" shadow="never">
-            <div class="mb-4">
+            <div class="mb-4 flex items-center justify-between">
+                <el-button type="primary" @click="handleImport">添加新文件</el-button>
                 <el-button
                     v-perms="['ai_application.kn.files/del']"
                     type="default"
@@ -45,7 +46,7 @@
                 <el-table-column label="最近更新时间" prop="update_time" min-width="180" />
                 <el-table-column label="操作" width="140" fixed="right">
                     <template #default="{ row }">
-                        <el-button type="primary" link @click="handleChunkDetail(row)"> 查看分段 </el-button>
+                        <el-button type="primary" link @click="handleChunkDetail(row)"> 编辑内容 </el-button>
                         <el-button
                             v-perms="['ai_application.kn.files/del']"
                             type="danger"
@@ -62,6 +63,7 @@
         </el-card>
     </div>
     <vector-data ref="vectorDataRef" v-if="showVectorData" @close="showVectorData = false" />
+    <vector-import ref="vectorImportRef" :kb-id="queryParams.kb_id" :kb-name="knName" @success="handleImportSuccess" />
 </template>
 <script lang="ts" setup>
 import { knowKnowledgeVectorFileList, knowKnowledgeVectorFileDelete } from "@/api/ai_application/knowledge_base/files";
@@ -69,12 +71,14 @@ import { formatFileSize } from "@/utils/util";
 import { usePaging } from "@/hooks/usePaging";
 import feedback from "@/utils/feedback";
 import VectorData from "./vector-data.vue";
+import VectorImport from "./vector-import.vue";
 const router = useRoute();
 
 const queryParams = reactive({
     kb_id: router.query.id as string,
     name: "",
 });
+const knName = computed(() => (router.query.name as string) || "");
 
 const { pager, getLists, resetPage, resetParams } = usePaging({
     fetchFun: knowKnowledgeVectorFileList,
@@ -95,16 +99,24 @@ const handleDelete = async (id: number | number[]) => {
 
 const vectorDataRef = ref<any>(null);
 const showVectorData = ref(false);
+const vectorImportRef = shallowRef<InstanceType<typeof VectorImport>>();
 
 const handleChunkDetail = async (row: any) => {
     showVectorData.value = true;
     await nextTick();
-    vectorDataRef.value.open({ kb_id: queryParams.kb_id, id: row.id });
+    vectorDataRef.value.open({ kb_id: row.kb_id, id: row.id });
+};
+
+const handleImport = () => {
+    vectorImportRef.value?.open();
+};
+
+const handleImportSuccess = () => {
+    getLists();
 };
 
 onMounted(async () => {
     queryParams.kb_id = router.query.id as string;
     getLists();
-    console.log(queryParams.kb_id);
 });
 </script>

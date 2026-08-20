@@ -238,7 +238,7 @@ async function showModal(title: string, content: string) {
             title,
             content,
             success: resolve,
-        })
+        }),
     ).then((res: any) => res.confirm);
 }
 </script>

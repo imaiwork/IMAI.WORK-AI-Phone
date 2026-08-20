@@ -3,6 +3,16 @@ export function getDeviceList(params: any) {
     return $request.get({ url: "/device.device/lists", params });
 }
 
+// 获取指定设备二维码
+export function getDeviceQrcode(params: { device_code: string }) {
+    return $request.get({ url: "/device.device/qrcode", params });
+}
+
+// 兑换手机激活码
+export function redeemDeviceCode(params: { cdk_code: string; device_code: string }) {
+    return $request.post({ url: "/device.device/redeem", params });
+}
+
 // 更新设备
 export function updateDevice(params: any) {
     return $request.post({ url: "/device.device/update", params });
@@ -15,7 +25,17 @@ export function addDevice(params: any) {
 
 // 删除设备
 export function deleteDevice(params: any) {
-    return $request.post({ url: "/sv.device/remove", params });
+    return $request.post({ url: "/device.device/remove", params });
+}
+
+// 使用/重置设备
+export function updateDeviceUsed(params: { device_code: string; is_used: 0 | 1 }) {
+    return $request.post({ url: "/device.device/used", params });
+}
+
+// 扫码绑定设备二维码
+export function scanOldDeviceQrcode(params: { device_code: string; activation_code: string }) {
+    return $request.post({ url: "/device.device/scanOldQrcode", params });
 }
 
 // 设备配置列表
@@ -101,6 +121,11 @@ export function deleteDeviceTaskRecord(params: any) {
 // 设备账号列表
 export function getDeviceAccountList(params: any) {
     return $request.get({ url: "/device.account/lists", params });
+}
+
+/** 触发 RPA 拉取平台账号（异步落库） */
+export function fetchDeviceAccount(params: { device_code: string; type: number }) {
+    return $request.post({ url: "/device.account/fetch", params });
 }
 
 // 发布账号列表

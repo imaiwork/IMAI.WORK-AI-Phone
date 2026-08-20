@@ -46,10 +46,11 @@
                                         :show-arrow="false"
                                         @change="handleModelChange">
                                         <ElOption
-                                            v-for="item in aiModelChannel"
+                                            v-for="item in modelSelectOptions"
                                             :key="item.id"
-                                            :label="item.name"
-                                            :value="item.model_id"></ElOption>
+                                            :label="item.label"
+                                            :value="item.model_id"
+                                            :disabled="item.disabled"></ElOption>
                                     </ElSelect>
                                 </ElFormItem>
                             </div>
@@ -118,12 +119,51 @@ const props = withDefaults(
     }>(),
     {
         modelValue: () => ({} as Agent),
-    }
+    },
 );
 
 // store
 const appStore = useAppStore();
-const aiModelChannel = computed(() => appStore.getAiModelConfig.channel || []);
+const allowedModels = computed(() => appStore.getAllowedChatModel || []);
+const allChatModels = computed(() => appStore.getChatModel || []);
+
+const findModelInChannel = (list: any[], modelId?: string | number, modelSubId?: string | number) => {
+    if (!list.length || modelId == null || modelId === "") return null;
+    return (
+        list.find((item: any) => item.model_id == modelId && item.model_sub_id == modelSubId) ||
+        list.find((item: any) => item.model_id == modelId) ||
+        list.find((item: any) => item.id == modelId) ||
+        null
+    );
+};
+
+/** 下拉选项：仅会员允许模型可选；已保存但不在会员范围的仅用于回显且禁用 */
+const modelSelectOptions = computed(() => {
+    const options = allowedModels.value.map((item: any) => ({
+        id: item.id,
+        model_id: item.model_id,
+        model_sub_id: item.model_sub_id,
+        label: item.name,
+        disabled: false,
+    }));
+    const currentId = formData.value?.model_id;
+    if (!currentId) return options;
+    const inAllowed = options.some((item) => item.model_id == currentId);
+    if (inAllowed) return options;
+    const saved = findModelInChannel(allChatModels.value, currentId, formData.value?.model_sub_id);
+    if (!saved) return options;
+    // 仅回显：禁用，不可再选
+    return [
+        {
+            id: `saved-${saved.id}`,
+            model_id: saved.model_id,
+            model_sub_id: saved.model_sub_id,
+            label: `${saved.name}（当前会员不可用）`,
+            disabled: true,
+        },
+        ...options,
+    ];
+});
 
 // 表单引用和数据模型
 const formRef = ref<FormInstance>();
@@ -149,16 +189,42 @@ const getBgSuccessImage = (res: any) => {
  * @description 处理智能体模型变化
  * @param value - 当前选中的模型ID
  */
-const handleModelChange = (value?: string) => {
-    const selectedModel = aiModelChannel.value.find((item) => item.model_id == value);
-    if (selectedModel) {
-        formData.value.model_sub_id = selectedModel.model_sub_id;
-    } else if (!value && aiModelChannel.value.length > 0) {
-        // 如果没有选中值且模型列表不为空，则默认选中第一个
-        const defaultModel = aiModelChannel.value[0];
+const handleModelChange = (value?: string | number) => {
+    // 只允许切到会员可用模型
+    const selectedModel = allowedModels.value.find((item: any) => item.model_id == value);
+    if (!selectedModel) return;
+    formData.value.model_id = selectedModel.model_id;
+    formData.value.model_sub_id = selectedModel.model_sub_id;
+};
+
+/** 编辑时保留已保存模型；新建时默认选允许列表第一项 */
+const syncSavedModel = () => {
+    const currentId = formData.value?.model_id;
+    if (!currentId) return;
+    const matched = findModelInChannel(allChatModels.value, currentId, formData.value?.model_sub_id);
+    if (!matched) return;
+    formData.value.model_sub_id = matched.model_sub_id;
+    if (formData.value.model_id != matched.model_id) {
+        formData.value.model_id = matched.model_id;
+    }
+};
+
+const ensureModelSelection = () => {
+    if (formData.value?.id) {
+        syncSavedModel();
+        return;
+    }
+    const list = allowedModels.value;
+    if (!list.length) return;
+    const currentId = formData.value?.model_id;
+    const inList = !!currentId && list.some((item) => item.model_id == currentId);
+    if (!inList) {
+        const defaultModel = list[0];
         formData.value.model_id = defaultModel.model_id;
         formData.value.model_sub_id = defaultModel.model_sub_id;
+        return;
     }
+    handleModelChange(currentId);
 };
 
 /**
@@ -169,14 +235,28 @@ const handleWriteExample = () => {
 };
 
 // 组件挂载后，处理模型默认值
-onMounted(() => {
-    handleModelChange(formData.value.model_id as string);
+onMounted(async () => {
+    // 每次进入新建/编辑都拉最新会员配额,保证模型列表与等级同步
+    await appStore.ensureMemberQuota(true);
+    ensureModelSelection();
 });
+
+watch([modelSelectOptions, () => formData.value?.model_id, () => formData.value?.id], ensureModelSelection);
+
+/** 当前 model 是否在会员等级允许列表内 */
+const isModelAllowed = (modelId?: string | number, modelSubId?: string | number) => {
+    if (modelId == null || modelId === "") return false;
+    return allowedModels.value.some((item: any) => item.model_id == modelId);
+};
 
 // 暴露验证方法，供父组件调用
 defineExpose({
-    validate: () => {
-        return new Promise((resolve, reject) => formRef.value?.validate().then(resolve).catch(reject));
+    validate: async () => {
+        await appStore.ensureMemberQuota(true);
+        await formRef.value?.validate();
+        if (!isModelAllowed(formData.value?.model_id, formData.value?.model_sub_id)) {
+            throw "当前模型不在会员等级可用范围内，请重新选择";
+        }
     },
 });
 </script>

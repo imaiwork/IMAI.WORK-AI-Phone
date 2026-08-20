@@ -7,8 +7,8 @@
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-search": "../../../../uni_modules/vk-uview-ui/components/u-search/u-search",
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "circle-progress": "../../../../components/circle-progress/circle-progress",
     "empty": "../../../../components/empty/empty",
-    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging"
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "circle-progress": "../../components/circle-progress/circle-progress"
   }
 }

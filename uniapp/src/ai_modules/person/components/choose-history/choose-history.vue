@@ -6,7 +6,7 @@
                     <view class="flex gap-x-2 py-1 px-1">
                         <view v-for="(item, index) in typeList" :key="index" @click="handleType(item.key)">
                             <view
-                                class="px-[24rpx] py-[10rpx] rounded-[10rpx] whitespace-nowrap text-[24rpx]"
+                                class="px-[24rpx] py-[10rpx] rounded-[10rpx] whitespace-nowrap text-xs"
                                 :class="[
                                     currentType === item.key
                                         ? 'bg-black text-white'
@@ -93,6 +93,8 @@ enum VideoType {
     NEWS = 5,
     SENTENCE = 6,
     MONTAGE_STORYBOARD = 7,
+    /** 闪剪数字人纯口播，展示归「数字人口播」 */
+    DIGITAL_HUMAN_SHANJIAN = 9,
 }
 
 // ✅ 与 creation.vue 保持一致的分类列表
@@ -112,7 +114,10 @@ const props = withDefaults(defineProps<{ modelValue: boolean; type?: number; lim
     limit: 9,
 });
 
-const emit = defineEmits<{ (e: "update:modelValue", value: boolean): void; (e: "select", value: any[]): void }>();
+const emit = defineEmits<{
+    (e: "update:modelValue", value: boolean): void;
+    (e: "select", value: any[]): void;
+}>();
 
 const show = computed({
     get: () => props.modelValue,
@@ -138,11 +143,14 @@ const handleType = (key: VideoType) => {
 
 const queryList = async (page_no: number, page_size: number) => {
     try {
-        const { lists } = await getVideoCreationRecord({
-            page_no,
-            page_size,
-            type: currentType.value === VideoType.ALL ? "" : currentType.value,
-        });
+        const params: Record<string, any> = { page_no, page_size };
+        // 数字人口播需同时查蝉镜(1)与闪剪纯口播(9)
+        if (currentType.value === VideoType.DIGITAL_HUMAN) {
+            params.type = `${VideoType.DIGITAL_HUMAN},${VideoType.DIGITAL_HUMAN_SHANJIAN}`;
+        } else if (currentType.value !== VideoType.ALL) {
+            params.type = currentType.value;
+        }
+        const { lists } = await getVideoCreationRecord(params);
         pagingRef.value?.complete(lists.filter((item: any) => getStatus(item) == 1));
     } catch (error) {
         console.error("查询历史记录失败:", error);
@@ -212,7 +220,7 @@ watch(
             pagingRef.value?.reload();
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 </script>
 

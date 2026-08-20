@@ -20,8 +20,7 @@ export function isExternal(path: string) {
 /**
  * @description 是否是http
  */
-export const isLinkHttp = (link: string): boolean =>
-    /^(https?:)?\/\//.test(link)
+export const isLinkHttp = (link: string): boolean => /^(https?:)?\/\//.test(link)
 
 /**
  * @description 是否是电话号码

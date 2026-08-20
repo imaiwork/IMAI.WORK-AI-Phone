@@ -250,7 +250,7 @@ class PublishController extends BaseApiController
     
     public function setPublishDetail(){
 
-        PublishLogic::setPublishDetail();
+        //PublishLogic::setPublishDetail();
     }
 }
 

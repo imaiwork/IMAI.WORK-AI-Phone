@@ -4,6 +4,8 @@ namespace app\adminapi\controller\setting\ai;
 use app\adminapi\controller\BaseAdminController;
 use app\adminapi\logic\setting\ai\AiModelsLogic;
 use app\adminapi\validate\setting\ModelsValidate;
+use app\common\service\chat\ChatModelsSyncService;
+use app\common\service\draw\MediaModelsSyncService;
 use think\response\Json;
 
 /**
@@ -31,6 +33,37 @@ class ModelsController extends BaseAdminController
     {
         $lists = AiModelsLogic::lists();
         return $this->data($lists);
+    }
+
+    /**
+     * @notes 同步中台对话模型
+     * @return Json
+     */
+    public function sync(): Json
+    {
+        try {
+            $result = ChatModelsSyncService::sync();
+            // GEO 监测计价模型缺失/未下发时,把提示随成功 toast 透出给管理员
+            $notice = (string)($result['geo_monitor']['notice'] ?? '');
+            $msg = $notice !== '' ? "同步成功;{$notice}" : '同步成功';
+            return $this->success($msg, $result);
+        } catch (\Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    /**
+     * @notes 同步中台生图/生视频模型
+     * @return Json
+     */
+    public function syncMedia(): Json
+    {
+        try {
+            $result = MediaModelsSyncService::sync();
+            return $this->success('同步成功', $result);
+        } catch (\Exception $e) {
+            return $this->fail($e->getMessage());
+        }
     }
 
     /**
@@ -106,5 +139,19 @@ class ModelsController extends BaseAdminController
             return $this->fail(AiModelsLogic::getError());
         }
         return $this->success('操作成功');
+    }
+
+    /**
+     * @notes 一键开关聊天大模型
+     * @return Json
+     */
+    public function switchChatModels(): Json
+    {
+        $params = (new ModelsValidate())->post()->goCheck('switchChatModels');
+        $result = AiModelsLogic::switchChatModels($params);
+        if ($result === false) {
+            return $this->fail(AiModelsLogic::getError());
+        }
+        return $this->success('操作成功', [], 1, 1);
     }
 }

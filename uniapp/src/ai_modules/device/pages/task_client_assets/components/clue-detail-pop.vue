@@ -36,42 +36,32 @@
 
                                 <view class="flex flex-col gap-y-[20rpx]">
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >线索类型</text
-                                        >
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">线索类型</text>
                                         <view class="px-[14rpx] py-[4rpx] bg-[rgba(0,101,251,0.06)] rounded-[10rpx]">
-                                            <text class="text-primary text-[24rpx] font-medium">{{
+                                            <text class="text-primary text-xs font-medium">{{
                                                 detailData.clue_type_name || "-"
                                             }}</text>
                                         </view>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >所在地区</text
-                                        >
-                                        <text class="text-[#000000cc] text-[26rpx]">{{
-                                            detailData.address || "-"
-                                        }}</text>
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">所在地区</text>
+                                        <text class="text-[#000000cc]">{{ detailData.address || "-" }}</text>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >匹配关键词</text
-                                        >
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">匹配关键词</text>
                                         <view class="px-[14rpx] py-[4rpx] bg-[#00000005] rounded-[10rpx]">
-                                            <text class="text-[#000000cc] text-[24rpx]">{{
+                                            <text class="text-[#000000cc] text-xs">{{
                                                 detailData.exec_keyword || "-"
                                             }}</text>
                                         </view>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >消耗积分</text
-                                        >
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">消耗算力</text>
                                         <view class="flex items-center gap-x-1">
                                             <text class="text-[#FF9500] font-semibold text-[28rpx]">{{
                                                 detailData.tokens ?? "-"
                                             }}</text>
-                                            <text class="text-[#0000004d] text-[24rpx]">积分</text>
+                                            <text class="text-[#0000004d] text-xs">算力</text>
                                         </view>
                                     </view>
                                 </view>
@@ -90,7 +80,7 @@
                                         class="flex items-center gap-x-2 bg-[#F3F3F3] rounded-[12rpx] px-[20rpx] py-[14rpx]">
                                         <view
                                             class="w-[12rpx] h-[12rpx] rounded-full bg-[#00C08E] flex-shrink-0"></view>
-                                        <text class="text-[#000000cc] text-[26rpx] font-medium">{{ item }}</text>
+                                        <text class="text-[#000000cc] font-medium">{{ item }}</text>
                                     </view>
                                 </view>
                             </view>
@@ -102,9 +92,7 @@
                                 </view>
                                 <view class="h-[2rpx] bg-[#00000005] mb-3"></view>
                                 <view class="bg-[#FAFAFA] rounded-[12rpx] p-4">
-                                    <text class="text-[#000000b3] text-[26rpx] leading-relaxed">{{
-                                        detailData.crawl_content
-                                    }}</text>
+                                    <text class="text-[#000000b3] leading-relaxed">{{ detailData.crawl_content }}</text>
                                 </view>
                             </view>
 
@@ -116,30 +104,24 @@
                                 <view class="h-[2rpx] bg-[#00000005] mb-3"></view>
                                 <view class="flex flex-col gap-y-[20rpx]">
                                     <view class="flex items-start">
-                                        <text
-                                            class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0 leading-relaxed"
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0 leading-relaxed"
                                             >任务名称</text
                                         >
-                                        <text class="text-[#000000cc] text-[26rpx] flex-1 leading-relaxed">{{
+                                        <text class="text-[#000000cc] flex-1 leading-relaxed">{{
                                             detailData.task_name || "-"
                                         }}</text>
                                     </view>
                                     <view class="flex items-start">
-                                        <text
-                                            class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0 leading-relaxed"
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0 leading-relaxed"
                                             >录入说明</text
                                         >
-                                        <text class="text-[#000000cc] text-[26rpx] flex-1 leading-relaxed">{{
+                                        <text class="text-[#000000cc] flex-1 leading-relaxed">{{
                                             detailData.task_detail_described || "-"
                                         }}</text>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >执行时间</text
-                                        >
-                                        <text class="text-[#000000cc] text-[26rpx]">{{
-                                            detailData.exec_time || "-"
-                                        }}</text>
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">执行时间</text>
+                                        <text class="text-[#000000cc]">{{ detailData.exec_time || "-" }}</text>
                                     </view>
                                 </view>
                             </view>
@@ -159,7 +141,7 @@
                                         </text>
                                     </view>
                                     <view class="flex-1 min-w-0">
-                                        <view class="text-[#000000cc] text-[26rpx] font-medium truncate">
+                                        <view class="text-[#000000cc] font-medium truncate">
                                             {{ detailData.exec_account_name || "-" }}
                                         </view>
                                         <view class="text-[#0000004d] text-[22rpx] mt-[4rpx] truncate">
@@ -169,26 +151,16 @@
                                 </view>
                                 <view class="flex flex-col gap-y-[20rpx]">
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >设备名称</text
-                                        >
-                                        <text class="text-[#000000cc] text-[26rpx]">{{
-                                            detailData.device_name || "-"
-                                        }}</text>
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">设备名称</text>
+                                        <text class="text-[#000000cc]">{{ detailData.device_name || "-" }}</text>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >设备型号</text
-                                        >
-                                        <text class="text-[#000000cc] text-[26rpx]">{{
-                                            detailData.device_model || "-"
-                                        }}</text>
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">设备型号</text>
+                                        <text class="text-[#000000cc]">{{ detailData.device_model || "-" }}</text>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >设备编码</text
-                                        >
-                                        <text class="text-[#00000066] text-[24rpx] font-mono">{{
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">设备编码</text>
+                                        <text class="text-[#00000066] text-xs font-mono">{{
                                             detailData.device_code || "-"
                                         }}</text>
                                     </view>

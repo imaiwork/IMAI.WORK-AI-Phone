@@ -5,6 +5,7 @@ namespace app\common\workerman\rpa\handlers\sph;
 use Workerman\Connection\TcpConnection;
 use app\common\workerman\rpa\BaseMessageHandler;
 use app\common\workerman\rpa\WorkerEnum;
+use app\common\command\DeviceAutoTaskScheduler;
 use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvCrawlingTaskDeviceBind;
 
@@ -55,15 +56,27 @@ class TaskCompletedHandler extends BaseMessageHandler
             if ($find->isEmpty()) {
                 throw new \Exception('任务不存在');
             }
-            //$find->status = 3;
+
+            $deviceCode = (string)($content['deviceId'] ?? $this->payload['deviceId'] ?? '');
+
+            // 自动化获客：时间未到且未满 2 词时续派第二词
+            if (DeviceAutoTaskScheduler::tryContinueSphClueWithNextKeyword($find, $deviceCode)) {
+                return [
+                    'deviceId' => $deviceCode,
+                    'task_id' => $content['task_id'],
+                    'status' => 1,
+                    'time' => date('Y-m-d H:i:s'),
+                    'msg' => '第一词执行完成，已续派第二词继续执行',
+                ];
+            }
 
             //更新任务设备绑定表
-            SvCrawlingTaskDeviceBind::where('task_id',  $content['task_id'])->where('device_code', $content['deviceId'])->update([
+            SvCrawlingTaskDeviceBind::where('task_id',  $content['task_id'])->where('device_code', $deviceCode)->update([
                 'status' => 3,
                 'update_time' => time(),
             ]);
 
-            $devices_count = count(json_decode($find->device_codes, true));
+            $devices_count = count(json_decode($find->device_codes, true) ?: []);
             $count = SvCrawlingTaskDeviceBind::where('task_id',  $content['task_id'])->where('status', 3)->group('device_code')->count();
             if ($count == $devices_count) {
                 $find->status = 3;
@@ -72,7 +85,7 @@ class TaskCompletedHandler extends BaseMessageHandler
             $find->save();
 
             return [
-                'deviceId' => $this->payload['deviceId'],
+                'deviceId' => $deviceCode,
                 'task_id' =>  $content['task_id'],
                 'status' => 3,
                 'time' => date('Y-m-d H:i:s'),

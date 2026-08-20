@@ -17,6 +17,7 @@ use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\shanjian\ShanjianClipTemplate;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use Exception;
 
 /**
@@ -333,27 +334,18 @@ class AutoDeviceWechatCircleConfigLogic extends ApiLogic
 
                     $mergedMaterials = array_merge($selectedMaterials, $selectedImageMaterials);
                     $isvideo = false;
-                    $materialDuration = 0;
                     foreach ($mergedMaterials as $key => &$value) {
                         if (isset($value['cover'])) {
                             $pic = $value['cover'];
                             unset($mergedMaterials[$key]['cover']);
                         }
-                        if (isset($value['duration'])) {
-                            $nowDuration = $value['duration'];
-                        } else {
-                            $nowDuration = 2;
-                        }
-                        $materialDuration += $nowDuration;
-                        if ($materialDuration > 290 || $nowDuration > 59) {
-                            unset($mergedMaterials[$key]);
-                            $materialDuration -= $nowDuration;
-                        }
                         if (isset($value['type']) && $value['type'] == 'video') {
-                            $value['soundSwitch'] = true;
+                            $value['soundSwitch'] = false;
                             $isvideo = true;
                         }
                     }
+                    unset($value);
+                    $mergedMaterials = ShanjianVideoSettingLogic::trimMaterialsByDuration(array_values($mergedMaterials));
                     if (!$isvideo) {
                         continue; // 跳过没有视频的任务
                     }
@@ -372,7 +364,7 @@ class AutoDeviceWechatCircleConfigLogic extends ApiLogic
                         'create_time' => time(),
                         'update_time' => time()
                     ];
-                    $material = json_encode(array_values($mergedMaterials), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    $material = json_encode($mergedMaterials, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                     // 素材类型需要特殊处理
                     $scene = 'oralMixCutting';
                     $shanjianVideoSettingData['material'] = $material;

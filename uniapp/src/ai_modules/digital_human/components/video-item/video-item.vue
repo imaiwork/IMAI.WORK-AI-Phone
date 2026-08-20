@@ -97,7 +97,7 @@ const props = withDefaults(
         showPlay: true,
         showMore: false,
         showName: true,
-    }
+    },
 );
 
 const emit = defineEmits(["play", "delete", "retry", "download", "preview"]);
@@ -121,7 +121,7 @@ const handlePlay = (url: string) => {
 
 const handleMore = () => {
     const { status, id, clip_status, automatic_clip } = props.item;
-    let itemList = [];
+    const itemList = [];
     if (status == 1) {
         itemList.push("下载视频", "播放克隆视频");
         if (automatic_clip == 1 && clip_status == 3) {

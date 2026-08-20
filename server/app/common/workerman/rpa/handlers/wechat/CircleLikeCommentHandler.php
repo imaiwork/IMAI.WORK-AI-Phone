@@ -2,23 +2,22 @@
 
 namespace app\common\workerman\rpa\handlers\wechat;
 
-use app\common\workerman\rpa\BaseMessageHandler;
-use Workerman\Connection\TcpConnection;
+use app\api\logic\ChatLogic;
+use app\api\logic\service\TokenLogService;
+use app\common\enum\user\AccountLogEnum;
+use app\common\logic\AccountLogLogic;
+use app\common\model\aiPersona\AiPersonaWechatInteractionConfig;
+use app\common\model\kb\KbRobot;
+use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceCircleLikeReply;
 use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
 use app\common\model\sv\SvDeviceCircleLikeReplyRecord;
-use app\common\model\kb\KbRobot;
-use app\common\workerman\rpa\WorkerEnum;
-use app\common\enum\user\AccountLogEnum;
-use app\api\logic\service\TokenLogService;
-use app\api\logic\ChatLogic;
 use app\common\model\user\User;
-use app\common\logic\AccountLogLogic;
-use app\common\model\sv\SvDevice;
-
-use app\common\model\aiPersona\AiPersonaWechatInteractionConfig;
-
-
+use app\common\service\chat\ChatBillingService;
+use app\common\service\sv\CircleInteractionActionService;
+use app\common\workerman\rpa\BaseMessageHandler;
+use app\common\workerman\rpa\WorkerEnum;
+use Workerman\Connection\TcpConnection;
 
 class CircleLikeCommentHandler extends BaseMessageHandler
 {
@@ -35,7 +34,6 @@ class CircleLikeCommentHandler extends BaseMessageHandler
             $taskId = $content['taskId'] ?? 0;
             $nickname = $content['nickname'] ?? '';
             $message = $content['content'] ?? '';
-            
 
             $task = SvDeviceCircleLikeReplyAccount::where('id', $taskId)->findOrEmpty();
             if (!$task->isEmpty()) {
@@ -44,62 +42,51 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                 $setting = SvDeviceCircleLikeReply::where('id', $task->circle_like_reply_id)->findOrEmpty();
                 if ($setting->isEmpty()) {
                     $this->setLog('任务配置不存在', 'like');
-                    $this->payload['reply'] = array(
-                        'type' => 1,
-                        'content' => [],
-                        'link' => '',
-                        'isLike' => 0,
-                        'isComment' => 0,
-                        'msg' => '任务配置不存在',
-                        'targetRecipient' => $content['nickname'] ?? '',
-                        'lastMessageContent' => $content['content'] ?? ''
-                    );
+                    $this->payload['reply'] = $this->emptyReply($content, '任务配置不存在');
                     $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
                     return;
                 }
+
                 $autoConfig = null;
-                if ($setting->auto_reply_config_id > 0) {
+                if ((int)$setting->auto_reply_config_id > 0) {
                     $autoConfig = AiPersonaWechatInteractionConfig::where('id', $setting->auto_reply_config_id)->findOrEmpty();
                     if ($autoConfig->isEmpty()) {
-                        $this->setLog('自动回复配置不存在', 'like');
-                        $this->payload['reply'] = array(
-                            'type' => 1,
-                            'content' => [],
-                            'link' => '',
-                            'isLike' => 0,
-                            'isComment' => 0,
-                            'msg' => '自动回复配置不存在',
-                            'targetRecipient' => $content['nickname'] ?? '',
-                            'lastMessageContent' => $content['content'] ?? ''
+                        $liveFlags = CircleInteractionActionService::loadLiveFlags(
+                            (int)$setting->auto_reply_config_id,
+                            (int)($setting->persona_id ?? 0)
                         );
-                        $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
-                        return;
-                    }
-                    $setting->action = ($autoConfig->is_like === 1 && $autoConfig->is_comment === 1) ? 3 : ($autoConfig->is_like === 1 ? 1 : ($autoConfig->is_comment === 1 ? 2 : 0));
-
-                    //判断每天的互动次数
-                    $count = SvDeviceCircleLikeReplyRecord::where('user_id', $task->user_id)
-                        ->where('device_code', $task->device_code)
-                        ->where('auto_type', 1)
-                        ->whereBetween('create_time', [strtotime(date('Y-m-d 00:00:00', time())), strtotime(date('Y-m-d 23:59:59', time()))])
-                        ->count();
-                    if ($count >= $autoConfig->number) {
-                        $this->setLog('互动次数已达上限', 'like');
-                        $this->payload['reply'] = array(
-                            'type' => 1,
-                            'content' => [],
-                            'link' => '',
-                            'isLike' => 0,
-                            'isComment' => 0,
-                            'msg' => '互动次数已达上限',
-                            'targetRecipient' => $content['nickname'] ?? '',
-                            'lastMessageContent' => $content['content'] ?? ''
-                        );
-                        $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
-                        return;
+                        if ($liveFlags === null) {
+                            $this->setLog('自动回复配置不存在', 'like');
+                            $this->payload['reply'] = $this->emptyReply($content, '自动回复配置不存在');
+                            $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+                            return;
+                        }
+                        $autoConfig = null;
+                    } else {
+                        //判断每天的互动次数（人设互动管家）
+                        $count = SvDeviceCircleLikeReplyRecord::where('user_id', $task->user_id)
+                            ->where('device_code', $task->device_code)
+                            ->where('auto_type', 1)
+                            ->whereBetween('create_time', [strtotime(date('Y-m-d 00:00:00', time())), strtotime(date('Y-m-d 23:59:59', time()))])
+                            ->count();
+                        if ($count >= $autoConfig->number) {
+                            $this->setLog('互动次数已达上限', 'like');
+                            $this->payload['reply'] = $this->emptyReply($content, '互动次数已达上限');
+                            $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+                            return;
+                        }
                     }
                 }
 
+                // 优先 live 配置，回退任务快照 action（口径：1仅点赞 2仅评论 3点赞+评论）
+                $deviceFlags = CircleInteractionActionService::resolveDeviceFlagsFromOption($setting);
+                $action = (int)$deviceFlags['action'];
+                if ($action === CircleInteractionActionService::ACTION_NONE) {
+                    $this->setLog('未开启点赞或评论', 'like');
+                    $this->payload['reply'] = $this->emptyReply($content, '未开启点赞或评论');
+                    $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+                    return;
+                }
 
                 $hash = hash('sha256', $nickname . $message);
                 $record = SvDeviceCircleLikeReplyRecord::where('user_id', $task->user_id)
@@ -107,48 +94,60 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     ->where('device_code', $task->device_code)
                     ->where('account', $task->account)
                     ->where('hash', $hash)
-                    ->where('type', $setting->action)
+                    ->where('type', $action)
                     ->findOrEmpty();
                 if (!$record->isEmpty()) {
                     $this->setLog('重复评论', 'like');
-                    $this->payload['reply'] = array(
-                        'type' => 1,
-                        'content' => [],
-                        'link' => '',
-                        'isLike' => 0,
-                        'isComment' => 0,
-                        'msg' => '重复评论',
-                        'targetRecipient' => $content['nickname'] ?? '',
-                        'lastMessageContent' => $content['content'] ?? ''
-                    );
+                    $this->payload['reply'] = $this->emptyReply($content, '重复评论');
                     $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
                     return;
                 }
 
-                $count =  SvDeviceCircleLikeReplyRecord::where('user_id', $task->user_id)
+                $count = SvDeviceCircleLikeReplyRecord::where('user_id', $task->user_id)
                     ->where('like_reply_account', $task->id)
                     ->where('device_code', $task->device_code)
                     ->where('nickname', $nickname)
-                    ->where('type', $setting->action)
+                    ->where('type', $action)
                     ->count();
                 if ($count >= $setting->number) {
                     $this->setLog('互动次数已达上限', 'like');
-                    $this->payload['reply'] = array(
-                        'type' => 1,
-                        'content' => [],
-                        'link' => '',
-                        'isLike' => 0,
-                        'isComment' => 0,
-                        'msg' => '互动次数已达上限',
-                        'targetRecipient' => $content['nickname'] ?? '',
-                        'lastMessageContent' => $content['content'] ?? ''
-                    );
+                    $this->payload['reply'] = $this->emptyReply($content, '互动次数已达上限');
                     $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
                     return;
                 }
 
                 $request_id = generate_unique_task_id();
-                $comment = $this->getCircleComment($content['content'], $task, $request_id, $autoConfig);
+                $circleContent = (string)($content['content'] ?? '');
+                // 仅评论且正文为空：无法生成评论，整单失败且不扣费
+                if ($deviceFlags['hasComment'] === 1 && $deviceFlags['hasLiked'] !== 1 && trim($circleContent) === '') {
+                    $this->setLog('朋友圈内容为空，仅评论无法执行', 'like');
+                    $this->payload['reply'] = $this->emptyReply($content, '朋友圈内容为空');
+                    $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+                    return;
+                }
+
+                $comment = $this->getCircleComment(
+                    $circleContent,
+                    $task,
+                    $request_id,
+                    $autoConfig,
+                    $deviceFlags,
+                    $setting
+                );
+
+                // 评论开启但未产出内容：仅评论失败；双开则降级为仅点赞回包
+                if ($deviceFlags['hasComment'] === 1 && empty($comment)) {
+                    if ($deviceFlags['hasLiked'] !== 1) {
+                        $this->setLog('评论内容生成失败', 'like');
+                        $this->payload['reply'] = $this->emptyReply($content, '评论内容生成失败');
+                        $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+                        return;
+                    }
+                    $deviceFlags['hasComment'] = 0;
+                    $deviceFlags['is_comment'] = 0;
+                    $action = CircleInteractionActionService::ACTION_LIKE;
+                    $deviceFlags['action'] = $action;
+                }
 
                 SvDeviceCircleLikeReplyRecord::create([
                     'user_id' => $task->user_id,
@@ -159,10 +158,10 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     'nickname' => $content['nickname'] ?? '',
                     'content' => $content['content'] ?? '',
                     'comment' => implode(",", $comment),
-                    'hash' =>  $hash,
-                    'image' => $this->saveBase64ToImage($content['image'] ?? '', $hash, 'wechat'),
+                    'hash' => $hash,
+                    'image' => $this->toolUtil->saveBase64ToImage($content['image'] ?? '', $hash, 'wechat'),
                     'task_id' => $request_id,
-                    'type' => $setting->action,
+                    'type' => $action,
                     'create_time' => time(),
                 ]);
 
@@ -170,124 +169,198 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                 $task->update_time = time();
                 $task->save();
 
-
-
                 $this->payload['reply'] = array(
                     'type' => 1,
                     'content' => $comment,
                     'link' => '',
-                    'isLike' => in_array($setting->action, [1, 3]) ? 1 : 0,
-                    'isComment' => in_array($setting->action, [2, 3]) ? 1 : 0,
+                    'isLike' => $deviceFlags['hasLiked'],
+                    'isComment' => $deviceFlags['hasComment'],
                     'msg' => '互动成功',
                     'targetRecipient' => $content['nickname'] ?? '',
                     'lastMessageContent' => $content['content'] ?? ''
                 );
             } else {
-                $this->payload['reply'] = array(
-                    'type' => 1,
-                    'content' => [
-                        'hi'
-                    ],
-                    'link' => '',
-                    'isLike' => 1,
-                    'isComment' => 1,
-                    'msg' => '演示互动',
-                    'targetRecipient' => $content['nickname'] ?? '',
-                    'lastMessageContent' => $content['content'] ?? ''
-                );
+                // 任务不存在时不演示双开，避免误触发点赞/评论
+                $this->payload['reply'] = $this->emptyReply($content, '任务不存在');
             }
 
-            $this->payload['code'] =  WorkerEnum::SUCCESS_CODE;
+            $this->payload['code'] = WorkerEnum::SUCCESS_CODE;
             $this->payload['type'] = 6;
             $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
         } catch (\Exception $e) {
             $this->setLog('异常信息' . $e, 'like');
 
             $this->payload['reply'] = $e->getMessage();
-            $this->payload['code'] =  WorkerEnum::DEVICE_ERROR_CODE;
+            $this->payload['code'] = WorkerEnum::DEVICE_ERROR_CODE;
             $this->payload['type'] = 'error';
-            $this->sendError($this->connection,  $this->payload);
+            $this->sendError($this->connection, $this->payload);
         } finally {
             unset($content);
         }
     }
 
-    private function getCircleComment(string $circleContent, SvDeviceCircleLikeReplyAccount $task, string $request_id, AiPersonaWechatInteractionConfig $autoConfig = null)
-    {
+    /**
+     * @param array{hasLiked:int,hasComment:int,is_like:int,is_comment:int,action?:int} $deviceFlags
+     */
+    private function getCircleComment(
+        string $circleContent,
+        SvDeviceCircleLikeReplyAccount $task,
+        string $request_id,
+        ?AiPersonaWechatInteractionConfig $autoConfig,
+        array $deviceFlags,
+        SvDeviceCircleLikeReply $option
+    ): array {
         try {
-            if (empty($circleContent)) {
-                $this->setLog('朋友圈内容为空', 'like');
+            if ($deviceFlags['hasComment'] !== 1 && $deviceFlags['hasLiked'] !== 1) {
                 return [];
             }
 
-            $option = SvDeviceCircleLikeReply::where('id', $task->circle_like_reply_id)->findOrEmpty();
-            if ($option->isEmpty()) {
-                $this->setLog('点赞回复选项不存在', 'like');
-                return [];
+            $canComment = $deviceFlags['hasComment'] === 1 && trim($circleContent) !== '';
+            if ($deviceFlags['hasComment'] === 1 && !$canComment) {
+                $this->setLog('朋友圈内容为空，跳过评论生成', 'like');
             }
-
 
             $replyContent = '';
-            if (!is_null($autoConfig) && $option->robot_id == 0) {
-                $replyContent = $this->getReplyContentByAuto($autoConfig, $task, $circleContent, $request_id);
+            $commentType = (int)($option->comment_type ?? 0);
+            $robotId = (int)($option->robot_id ?? 0);
+            $personaId = (int)($option->persona_id ?? 0);
 
-                if ($autoConfig->is_like === 1) {
-                    $request = [
-                        'user_id' => $task->user_id,
-                        'task_id' => $request_id,
-                        'chat_type' => AccountLogEnum::TOKENS_DEC_AI_WECHAT,
-                        'now'       => time(),
-                        'action' => 'chat',
-                        'is_like' => $autoConfig->is_like,
-                        'is_comment' => $autoConfig->is_comment,
-                    ];
-                    // 处理响应
-                    $response = \app\common\service\ToolsService::Automation()->friendsCirclePraise($request);
-                    if (isset($response['code']) && $response['code'] == 10000) {
-                        $unit = TokenLogService::checkToken($request['user_id'], 'automation_friends_circle_praise');
-                        $extra = ['算力单价' => $unit, '实际消耗算力' => $unit, '场景' => '朋友圈点赞'];
-                        $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_PRAISE;
-                        //扣费记录
-                        AccountLogLogic::recordUserTokensLog(true, $request['user_id'], $desc, (float)$unit, $request_id, $extra);
+            // 人设新任务：comment_type=2 固定话术，或 robot_id>0 智能体（来自 agent_config.moments_*）
+            if ($personaId > 0 && ($commentType === 2 || $robotId > 0)) {
+                if ($canComment) {
+                    if ($commentType === 2) {
+                        $replyContent = $this->getReplyContentByMomentsSpeech($option, $task);
+                    } else {
+                        $replyContent = $this->getReplyContentByRobbot($option, $task, $circleContent, $request_id, $deviceFlags);
                     }
                 }
+                if ($deviceFlags['hasLiked'] === 1) {
+                    $this->chargeFriendsCirclePraise(
+                        (int)$task->user_id,
+                        $request_id,
+                        $canComment && $replyContent !== ''
+                    );
+                }
+            } elseif ($personaId > 0 && $deviceFlags['hasComment'] !== 1 && $deviceFlags['hasLiked'] === 1) {
+                // 人设仅点赞（无评论、无 robot）：不走旧 prompt，只记点赞费
+                $this->chargeFriendsCirclePraise((int)$task->user_id, $request_id, false);
+            } elseif (!is_null($autoConfig) && $robotId === 0) {
+                // 历史任务回退：旧 interaction prompt / 固定话术路径
+                if ($canComment) {
+                    $replyContent = $this->getReplyContentByAuto($autoConfig, $task, $circleContent, $request_id);
+                }
+                if ($deviceFlags['hasLiked'] === 1) {
+                    $this->chargeFriendsCirclePraise(
+                        (int)$task->user_id,
+                        $request_id,
+                        $canComment && $replyContent !== ''
+                    );
+                }
             } else {
-                if ($option->action !== 1) {
-                    $replyContent = $this->getReplyContentByRobbot($option, $task, $circleContent, $request_id);
+                if ($canComment) {
+                    $replyContent = $this->getReplyContentByRobbot($option, $task, $circleContent, $request_id, $deviceFlags);
                 }
             }
-            return [
-                $replyContent
-            ];
+
+            return $replyContent === '' ? [] : [$replyContent];
         } catch (\Throwable $e) {
             $this->setLog('异常信息' . $e->__toString(), 'like');
             return [];
         }
     }
 
-    private function getReplyContentByAuto(AiPersonaWechatInteractionConfig $autoConfig, SvDeviceCircleLikeReplyAccount $task, string $circleContent, string $request_id)
+    private function chargeFriendsCirclePraise(int $userId, string $requestId, bool $hasComment): void
     {
+        $request = [
+            'user_id' => $userId,
+            'task_id' => $requestId,
+            'chat_type' => AccountLogEnum::TOKENS_DEC_AI_WECHAT,
+            'now' => time(),
+            'action' => 'chat',
+            'is_like' => 1,
+            'is_comment' => $hasComment ? 1 : 0,
+        ];
+        $response = \app\common\service\ToolsService::Automation()->friendsCirclePraise($request);
+        if (isset($response['code']) && $response['code'] == 10000) {
+            $unit = TokenLogService::checkToken($request['user_id'], 'automation_friends_circle_praise');
+            if ($unit > 0) {
+                User::userTokensChange($request['user_id'], (float)$unit);
+                $extra = ['算力单价' => $unit, '实际消耗算力' => $unit, '场景' => '朋友圈点赞'];
+                $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_PRAISE;
+                AccountLogLogic::recordUserTokensLog(true, $request['user_id'], $desc, (float)$unit, $requestId, $extra);
+            }
+        }
+    }
 
+    /**
+     * 固定话术：优先任务快照 comment(JSON)，否则 live moments_speech
+     */
+    private function getReplyContentByMomentsSpeech(
+        SvDeviceCircleLikeReply $option,
+        SvDeviceCircleLikeReplyAccount $task
+    ): string {
+        try {
+            $speech = CircleInteractionActionService::normalizeMomentsSpeech($option->comment ?? '');
+            if (empty($speech) && (int)($option->persona_id ?? 0) > 0) {
+                $agentConfig = CircleInteractionActionService::loadPersonaMomentsConfig((int)$option->persona_id);
+                if ($agentConfig !== null) {
+                    $speech = CircleInteractionActionService::normalizeMomentsSpeech($agentConfig->moments_speech);
+                }
+            }
+            if (empty($speech)) {
+                $this->setLog('朋友圈固定话术为空', 'like');
+                return '';
+            }
+
+            $replyContent = $speech[array_rand($speech)];
+            $tokens = mb_strlen($replyContent) * 5;
+            $unit = TokenLogService::checkToken($task->user_id, 'automation_friends_circle_comments');
+            $points = $unit > 0 ? round($tokens / $unit, 2) : 0;
+            User::userTokensChange($task->user_id, (float)$points);
+
+            $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points, '场景' => '朋友圈评论'];
+            $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS;
+            AccountLogLogic::recordUserTokensLog(true, $task->user_id, $desc, (float)$points, $task->id, $extra);
+
+            return $replyContent;
+        } catch (\Throwable $th) {
+            $this->setLog('getReplyContentByMomentsSpeech异常信息' . $th->__toString(), 'like');
+            return '';
+        }
+    }
+
+    private function getReplyContentByAuto(
+        AiPersonaWechatInteractionConfig $autoConfig,
+        SvDeviceCircleLikeReplyAccount $task,
+        string $circleContent,
+        string $request_id
+    ): string {
         try {
             TokenLogService::checkToken($task->user_id, '');
             $replyContent = '';
-            if ($autoConfig->comment_method === 2 && $autoConfig->is_comment === 1) {
-                $replyContent = $autoConfig->comment_speech[array_rand($autoConfig->comment_speech)];
+            $flags = CircleInteractionActionService::normalizeFlags($autoConfig->is_like, $autoConfig->is_comment);
+            if ($flags['is_comment'] !== 1) {
+                return '';
+            }
+
+            if ((int)$autoConfig->comment_method === 2) {
+                $speech = $autoConfig->comment_speech;
+                if (!is_array($speech) || empty($speech)) {
+                    return '';
+                }
+                $replyContent = $speech[array_rand($speech)];
 
                 $tokens = mb_strlen($replyContent) * 5;
                 $unit = TokenLogService::checkToken($task->user_id, 'automation_friends_circle_comments');
-                //计算消耗tokens
                 $points = $unit > 0 ? round($tokens / $unit, 2) : 0;
-                //token扣除
                 User::userTokensChange($task->user_id, (float)$points);
 
                 $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points, '场景' => '朋友圈评论'];
                 $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS;
-                //扣费记录
                 AccountLogLogic::recordUserTokensLog(true, $task->user_id, $desc, (float)$points, $task->id, $extra);
             }
 
-            if ($autoConfig->comment_method === 1 && $autoConfig->is_comment === 1) {
+            if ((int)$autoConfig->comment_method === 1) {
                 $messages = array(
                     array(
                         'role' => 'system',
@@ -313,15 +386,14 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     'user_id' => $task->user_id,
                     'task_id' => $request_id,
                     'chat_type' => AccountLogEnum::TOKENS_DEC_AI_WECHAT,
-                    'now'       => time(),
+                    'now' => time(),
                     'action' => 'chat',
-                    'is_like' => $autoConfig->is_like,
-                    'is_comment' => $autoConfig->is_comment,
+                    'is_like' => $flags['is_like'],
+                    'is_comment' => 1,
                 ];
                 $this->setLog('自动参数: ' . json_encode($request, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
                 $response = \app\common\service\ToolsService::Automation()->friendsCircleComments($request);
                 if (isset($response['code']) && $response['code'] == 10000) {
-                    // 处理响应
                     $replyContent = $this->handleResponse($response, $request, 1);
                 } else {
                     $this->setLog('队列请求知识库失败: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
@@ -336,9 +408,21 @@ class CircleLikeCommentHandler extends BaseMessageHandler
         }
     }
 
-    private function getReplyContentByRobbot(SvDeviceCircleLikeReply $option, SvDeviceCircleLikeReplyAccount $task, string $circleContent, string $request_id)
-    {
+    /**
+     * @param array{hasLiked:int,hasComment:int,is_like:int,is_comment:int,action?:int} $deviceFlags
+     */
+    private function getReplyContentByRobbot(
+        SvDeviceCircleLikeReply $option,
+        SvDeviceCircleLikeReplyAccount $task,
+        string $circleContent,
+        string $request_id,
+        array $deviceFlags
+    ): string {
         try {
+            if ($deviceFlags['hasComment'] !== 1) {
+                return '';
+            }
+
             $robot = KbRobot::where('id', $option->robot_id)->findOrEmpty();
 
             $replyContent = '';
@@ -346,9 +430,19 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                 $this->setLog('点赞回复机器人不存在', 'like');
                 return '';
             }
+            try {
+                \app\common\service\chat\ChatModelsService::assertChatModelUsable(
+                    (int)$robot->model_id,
+                    (int)$robot->model_sub_id,
+                    (int)$task->user_id > 0 ? (int)$task->user_id : null,
+                    (string)($robot->model ?? '')
+                );
+            } catch (\Throwable $e) {
+                $this->setLog('对话模型不可用: ' . $e->getMessage(), 'like');
+                return '';
+            }
             $knowledge = [];
             if ($robot->kb_type == 1) { //rag
-                // 检查是否挂载知识库
                 $bind = \app\common\model\knowledge\KnowledgeBind::where('data_id', $robot->id)->where('user_id', $task->user_id)->where('type', 1)->limit(1)->find();
                 if (!empty($bind)) {
                     $bindFind = \app\common\model\knowledge\Knowledge::where('id', $bind['kid'])->limit(1)->find();
@@ -362,7 +456,6 @@ class CircleLikeCommentHandler extends BaseMessageHandler
             }
 
             if ($robot->kb_type == 2) { //向量
-                // 检查是否挂载知识库
                 $bind = \app\common\model\knowledge\KnowledgeBind::where('data_id', $robot->id)->where('user_id', $task->user_id)->where('type', 1)->limit(1)->find();
                 if (!empty($bind)) {
                     $bindFind = \app\common\model\kb\KbKnow::where('id', $bind['kid'])->limit(1)->find();
@@ -384,7 +477,6 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     'role' => 'user',
                     'content' => $circleContent,
                 ),
-
             );
 
             $this->setLog(json_encode($messages, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
@@ -407,7 +499,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     return '';
                 } else {
                     if (isset($response['choices'][0]) && !empty($response['choices'][0])) {
-                        $replyContent =  $response['choices'][0]['message']['content'];
+                        $replyContent = $response['choices'][0]['message']['content'];
                     }
                 }
             } else {
@@ -419,26 +511,21 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                     'user_id' => $task->user_id,
                     'task_id' => $request_id,
                     'chat_type' => AccountLogEnum::TOKENS_DEC_AI_WECHAT,
-                    'now'       => time(),
+                    'now' => time(),
                     'action' => 'chat',
-                    'is_like' => ($option->action === 1 || $option->action === 3) ? 1 : 0,
-                    'is_comment' => ($option->action === 2 || $option->action === 3) ? 1 : 0,
+                    'is_like' => $deviceFlags['hasLiked'],
+                    'is_comment' => $deviceFlags['hasComment'],
                 ];
                 $this->setLog('请求参数: ' . json_encode($request, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
                 $autoType = SvDevice::where('device_code', $task->device_code)->value('auto_type') ?? 0;
                 if ($autoType == 0) {
-                    // 执行微信AI消息处理
                     $response = \app\common\service\ToolsService::Wechat()->chat($request);
                 } else {
-                    // 执行自动化消息处理
                     $response = \app\common\service\ToolsService::Automation()->friendsCircleComments($request);
                 }
                 if (isset($response['code']) && $response['code'] == 10000) {
-                    // 处理响应
                     $replyContent = $this->handleResponse($response, $request, $autoType);
                 } else {
-                    // 重试
-
                     $this->setLog('队列请求知识库失败: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'like');
                     return '';
                 }
@@ -450,51 +537,59 @@ class CircleLikeCommentHandler extends BaseMessageHandler
         }
     }
 
-    private function handleResponse(array $response, array $request, $autoType)
+    private function handleResponse(array $response, array $request, int $autoType)
     {
         try {
-            if ($autoType == 0) {
-                $scene = $request['model'] == 'deepseek' ? 'ai_reply_like' : 'openai_chat';
-            } else {
-                $scene = 'automation_friends_circle_comments';
-            }
+            $modelAlias = $request['model'] ?? 'gpt-4o';
+            ChatBillingService::checkBalance((int)$request['user_id'], $modelAlias);
 
-            //检查扣费
-            $unit = TokenLogService::checkToken($request['user_id'], $scene);
-            // 获取回复内容
             $reply = $response['data']['message'] ?? '';
+            $usage = $response['data']['usage'] ?? [];
 
-            //计费
-            $tokens = $response['data']['usage']['total_tokens'] ?? 0;
-            if (!$reply || $tokens == 0) {
+            if (!$reply || empty($usage['total_tokens'])) {
                 throw new \Exception('获取内容失败');
             }
 
-            $response = [
+            ChatLogic::saveChatResponseLog($request, [
                 'reply' => $reply,
-                'usage_tokens' => $response['data']['usage'] ?? [],
-            ];
-            // 保存聊天记录
-            ChatLogic::saveChatResponseLog($request, $response);
+                'usage_tokens' => $usage,
+            ]);
 
-            //计算消耗tokens
-            $points = $unit > 0 ? round($tokens / $unit, 2) : 0;
-            //token扣除
-            User::userTokensChange($request['user_id'], (float)$points);
-
-            $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points, '场景' => '朋友圈评论'];
             if ($autoType == 0) {
-                $desc = $request['model'] == 'deepseek' ? AccountLogEnum::TOKENS_DEC_AI_REPLY_LIKE : AccountLogEnum::TOKENS_DEC_OPENAI_CHAT;
+                $logType = $request['model'] == 'deepseek'
+                    ? AccountLogEnum::TOKENS_DEC_AI_REPLY_LIKE
+                    : AccountLogEnum::TOKENS_DEC_OPENAI_CHAT;
             } else {
-                $desc = AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS;
+                $logType = AccountLogEnum::TOKENS_DEC_AUTOMATION_FRIENDS_CIRCLE_COMMENTS;
             }
-            //扣费记录
-            AccountLogLogic::recordUserTokensLog(true, $request['user_id'], $desc, (float)$points, $request['task_id'], $extra);
+
+            ChatBillingService::charge(
+                (int)$request['user_id'],
+                $modelAlias,
+                $usage,
+                $logType,
+                (string)$request['task_id'],
+                ['场景' => '朋友圈评论']
+            );
 
             return $reply;
         } catch (\Throwable $th) {
             $this->setLog('handleResponse异常信息' . $th->__toString(), 'like');
             return '';
         }
+    }
+
+    private function emptyReply(array $content, string $msg): array
+    {
+        return [
+            'type' => 1,
+            'content' => [],
+            'link' => '',
+            'isLike' => 0,
+            'isComment' => 0,
+            'msg' => $msg,
+            'targetRecipient' => $content['nickname'] ?? '',
+            'lastMessageContent' => $content['content'] ?? '',
+        ];
     }
 }

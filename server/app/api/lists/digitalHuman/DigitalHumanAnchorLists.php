@@ -3,11 +3,13 @@
 namespace app\api\lists\digitalHuman;
 
 use app\api\lists\BaseApiDataLists;
+use app\api\logic\shanjian\ShanjianAnchorLogic;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\digitalHuman\DigitalHumanAnchor;
 use app\common\model\human\HumanAnchor;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\service\FileService;
+use app\common\service\UserDisplaySanitizer;
 
 class DigitalHumanAnchorLists extends BaseApiDataLists implements ListsSearchInterface
 {
@@ -38,17 +40,29 @@ class DigitalHumanAnchorLists extends BaseApiDataLists implements ListsSearchInt
             $item['update_time'] = !empty($item['update_time']) ? $item['update_time'] : '';
             $weiju              = HumanAnchor::where('model_version', '=', 1)->where('dh_id', '=', $item['id'])->find();
             $chanjing           = HumanAnchor::where('model_version', '=', 7)->where('dh_id', '=', $item['id'])->find();
-            $shanjian           = ShanjianAnchor::where('dh_id', '=', $item['id'])->find();
+            $cloneMode          = (int)($item['clone_mode'] ?? 2);
+            $shanjianFast       = ShanjianAnchor::where('dh_id', '=', $item['id'])
+                ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_FAST)
+                ->find();
+            $shanjianPro        = $cloneMode === 3
+                ? ShanjianAnchor::where('dh_id', '=', $item['id'])
+                    ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_PRO)
+                    ->find()
+                : null;
+            $shanjianDisplay = ($cloneMode === 3 && !empty($shanjianPro) && !empty($shanjianPro->anchor_id))
+                ? $shanjianPro
+                : $shanjianFast;
             $item['anchor_ids'] = [
                 'weiju_anchor_id'    => $weiju->anchor_id ?? '',
                 'chanjing_anchor_id' => $chanjing->anchor_id ?? '',
-                'shanjian_anchor_id' => $shanjian->anchor_id ?? '',
+                'shanjian_anchor_id' => $shanjianDisplay->anchor_id ?? '',
             ];
             $item['extra_info'] = [
                 'width'  => $weiju->width ?? ($chanjing->width ?? ''),
-                'height' => $weiju->height ?? ($chanjing->width ?? ''),
-                'shanjian_voice_id' => $shanjian->voice_id ?? '',
+                'height' => $weiju->height ?? ($chanjing->height ?? ''),
+                'shanjian_voice_id' => !empty($shanjianFast) ? ($shanjianFast->voice_id ?? '') : '',
             ];
+            $item = UserDisplaySanitizer::digitalHumanAnchorItem($item);
         }
         return $list;
     }
@@ -63,5 +77,3 @@ class DigitalHumanAnchorLists extends BaseApiDataLists implements ListsSearchInt
         return DigitalHumanAnchor::where($this->searchWhere)->count();
     }
 }
-
-

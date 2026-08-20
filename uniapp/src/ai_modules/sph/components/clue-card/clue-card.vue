@@ -58,7 +58,7 @@
         <view class="mt-[24rpx] space-y-[12rpx]">
             <view class="flex items-start gap-x-2">
                 <u-icon name="map" size="24" color="#999" class="mt-[4rpx]"></u-icon>
-                <text class="text-[24rpx] text-[#666] leading-[1.4] line-clamp-2">
+                <text class="text-xs text-[#666] leading-[1.4] line-clamp-2">
                     {{ item.address || "暂无地址信息" }}
                 </text>
             </view>

@@ -11,10 +11,10 @@
         @close="close">
         <div class="rounded-2xl h-[720px] bg-white flex relative overflow-hidden">
             <div class="w-[400px] border-r border-slate-100 flex flex-col bg-[#f8fafc]/50">
-                <div class="px-6 h-16 flex items-center border-b border-slate-100 bg-white/50 backdrop-blur-md">
+                <div class="px-6 h-16 flex items-center border-b border-slate-100 bg-[#ffffff]/50 backdrop-blur-md">
                     <div class="flex items-center gap-2">
                         <div
-                            class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                            class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-[#0065fb]/20">
                             <Icon name="el-icon-MagicStick" color="white" :size="18" />
                         </div>
                         <h2 class="text-base font-[1000] text-slate-800 tracking-tight">参数配置</h2>
@@ -39,7 +39,7 @@
                                 class="premium-textarea"
                                 :maxlength="contentMaxLength" />
                             <div
-                                class="absolute bottom-2 right-2 text-[10px] font-black px-2 py-1 bg-white/80 text-slate-300 rounded-md">
+                                class="absolute bottom-2 right-2 text-[10px] font-black px-2 py-1 bg-[#ffffff]/80 text-slate-300 rounded-md">
                                 {{ contentVal.length }}/{{ contentMaxLength }}
                             </div>
                         </div>
@@ -203,6 +203,7 @@
 
 <script setup lang="ts">
 import { generateShanjianPrompt, generateNewsBodyPrompt } from "@/api/digital_human";
+import { copywritingLimit } from "@/pages/app/digital_human/_config";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 
@@ -218,7 +219,7 @@ const props = withDefaults(
     }>(),
     {
         type: MontageTypeEnum.NEWS_BODY,
-    }
+    },
 );
 
 const emit = defineEmits(["close", "confirm"]);
@@ -230,11 +231,11 @@ const popupRef = shallowRef();
 
 // 响应式数据
 const contentVal = ref<string>("");
-const contentMaxLength = 500;
+const contentMaxLength = copywritingLimit.maxLength;
 const chatContentList = ref<any[]>([]);
 
 const promptList = [
-    { id: 1, name: "长", length: 500 },
+    { id: 1, name: "长", length: copywritingLimit.maxLength },
     { id: 2, name: "中", length: 300 },
     { id: 3, name: "短", length: 150 },
 ];
@@ -256,7 +257,7 @@ const isGenerated = computed(() => {
 
 const getToken = computed(() => {
     const token = userStore.getTokenByScene(
-        isNewsBody.value ? TokensSceneEnum.NEWS_MIX_CUT_TITLE : TokensSceneEnum.SHANJIAN_COPYWRITING_CREATE
+        isNewsBody.value ? TokensSceneEnum.NEWS_MIX_CUT_TITLE : TokensSceneEnum.SHANJIAN_COPYWRITING_CREATE,
     )?.score;
     return parseFloat(token) * currentPromptNum.value;
 });

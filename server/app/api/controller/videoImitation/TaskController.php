@@ -89,6 +89,33 @@ class TaskController extends BaseApiController
     }
 
     /**
+     * 确认选图并启动图片改写
+     */
+    public function confirmImageRewrite()
+    {
+        try {
+            $params = (new TaskValidate())->post()->goCheck('confirmImageRewrite');
+            // title / rewritten_text 为可选，不纳入 scene，避免全局 rewritten_text.require 误伤
+            $result = TaskLogic::confirmImageRewrite(
+                (int)$params['id'],
+                (int)$this->userId,
+                $params['image_indexes'] ?? [],
+                (string)$this->request->post('title', ''),
+                (string)$this->request->post('rewritten_text', '')
+            );
+
+            if ($result !== false) {
+                return $this->success('确认成功，已开始排队改写', $result);
+            }
+            return $this->fail(TaskLogic::getError() ?: '确认失败');
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '请求异常');
+        } catch (\Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    /**
      * 用户确认文本并开始生成视频
      */
     public function generate()
@@ -113,6 +140,27 @@ class TaskController extends BaseApiController
     }
 
     /**
+     * 重新生成仿写文案
+     */
+    public function regenerateCopywriting()
+    {
+        try {
+            $params = (new TaskValidate())->post()->goCheck('regenerateCopywriting');
+            $result = \app\api\logic\videoImitation\VideoImitationLogic::reGenerateCopywriting($params['id'], $this->userId);
+            
+            if ($result !== false) {
+                return $this->success('重新生成成功', $result);
+            }
+            
+            return $this->fail(\app\api\logic\videoImitation\VideoImitationLogic::getError() ?: '处理失败');
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '处理异常');
+        } catch (\Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    /**
      * 接收远端服务(如闪剪)异步回调
      */
     public function notify(): Json
@@ -129,6 +177,7 @@ class TaskController extends BaseApiController
             $result = TaskLogic::notify($data);
             
             if (!$result) {
+                Log::channel('shanjiannotice')->error('视频复刻回调处理失败: ' . TaskLogic::getError());
                 return $this->fail(TaskLogic::getError());
             }
 
@@ -150,18 +199,36 @@ class TaskController extends BaseApiController
 
         try {
             $data = $this->request->post();
-            $taskId = $data['task_id'] ?? 0;
+            $taskId = (int)($data['task_id'] ?? 0);
+            $parseSign = (string)($data['parse_sign'] ?? '');
 
-            if (!$taskId) {
+            if ($taskId <= 0) {
                 return $this->fail('缺少 task_id');
             }
+            if ($parseSign === '') {
+                return $this->fail('缺少 parse_sign');
+            }
 
-            // 直接调用处理逻辑
-            \app\api\logic\videoImitation\VideoImitationLogic::processParseTask($data);
+            $task = \app\common\model\videoImitation\VideoImitationTask::where('id', $taskId)->find();
+            if (!$task) {
+                return $this->fail('任务不存在');
+            }
+            if (!\app\api\logic\videoImitation\VideoImitationLogic::verifyParseSign($task, $parseSign)) {
+                return $this->fail('签名校验失败');
+            }
+            if ((int)$task->status !== \app\common\model\videoImitation\VideoImitationTask::STATUS_PARSING) {
+                return $this->success('ok');
+            }
+
+            // 直接调用处理逻辑（内部再强制以任务表字段为准）
+            \app\api\logic\videoImitation\VideoImitationLogic::processParseTask([
+                'task_id' => $taskId,
+                'parse_sign' => $parseSign,
+            ]);
             
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::write("视频复刻接口解析异常: " . $e->getMessage(), 'error');
+            Log::write("视频复刻接口解析异常: " . $e->getMessage() . '文件：' . $e->getFile() . '第' . $e->getLine() . '行', 'error');
             return $this->fail('fail');
         }
     }

@@ -13,9 +13,9 @@
         <view class="h-full flex flex-col" :class="customClass" :style="customStyle">
             <view
                 v-if="clearable"
-                class="w-4 h-4 flex items-center justify-center rounded-full absolute top-3 right-4 border border-solid border-[#8B9199]"
+                class="w-6 h-6 flex items-center justify-center rounded-full bg-[#f3f4f6] absolute top-3 right-4"
                 @click="closePopup">
-                <u-icon name="close" color="#8B9199" :size="16"></u-icon>
+                <u-icon name="close" color="#8B9199" :size="20"></u-icon>
             </view>
             <view>
                 <view class="px-[60rpx]" v-if="!$slots.header">
@@ -66,7 +66,7 @@ const props = defineProps({
     },
     isDisabledTouch: {
         type: Boolean,
-        default: false,
+        default: true,
     },
     clearable: {
         type: Boolean,

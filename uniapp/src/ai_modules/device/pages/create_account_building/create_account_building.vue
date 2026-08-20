@@ -1,25 +1,32 @@
 <template>
-    <view class="p-4 pb-[120rpx]">
-        <base-setting
-            v-model="formData"
-            :show-device="false"
-            :show-accounts="true"
-            :current-frequency="currentFrequency"
-            :platform-types="[AppTypeEnum.XHS, AppTypeEnum.DOUYIN, AppTypeEnum.KUAISHOU]"
-            @change-frequency="currentFrequency = $event" />
-        <view class="mt-[50rpx]" v-if="taskErrorMsg">
-            <view class="font-medium">任务冲突：</view>
-            <view class="text-font-medium text-[#ff2442] text-xs mt-[20rpx]">
-                {{ taskErrorMsg }}
-            </view>
+    <view class="flex flex-col h-screen bg-[#F7F9FC]">
+        <view class="grow min-h-0">
+            <scroll-view class="h-full" scroll-y>
+                <view class="px-4 pt-4">
+                    <base-setting
+                        v-model="formData"
+                        :show-device="false"
+                        :show-accounts="true"
+                        :current-frequency="currentFrequency"
+                        :platform-types="[AppTypeEnum.XHS, AppTypeEnum.DOUYIN, AppTypeEnum.KUAISHOU]"
+                        @change-frequency="currentFrequency = $event" />
+                    <view class="mt-[50rpx]" v-if="taskErrorMsg">
+                        <view class="font-medium">任务冲突：</view>
+                        <view class="text-font-medium text-[#ff2442] text-xs mt-[20rpx]">
+                            {{ taskErrorMsg }}
+                        </view>
+                    </view>
+                </view>
+            </scroll-view>
         </view>
-        <view class="fixed bottom-0 left-0 w-full px-4 pt-2 pb-5">
-            <u-button
-                type="primary"
-                :custom-style="{ height: '100rpx', borderRadius: '20rpx', fontWeight: 'bold' }"
-                @click="handleSubmit"
-                >创建任务</u-button
-            >
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-t border-solid border-[#F0F2F5] px-4 pt-[20rpx] pb-[40rpx] flex items-center gap-[16rpx]">
+            <view
+                class="flex-1 h-[96rpx] rounded-[24rpx] flex items-center justify-center relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.35)]"
+                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                @click="handleCreateTask">
+                <text class="text-[32rpx] font-extrabold text-white tracking-wide">创建任务</text>
+            </view>
         </view>
     </view>
     <confirm-dialog
@@ -123,7 +130,7 @@ const executeCreateTask = async () => {
     }
 };
 
-const handleSubmit = async () => {
+const handleCreateTask = async () => {
     if (!formData.name) {
         uni.$u.toast("请输入任务名称");
         return;
@@ -190,8 +197,15 @@ onLoad(() => {
     on("confirm", (e: any) => {
         const { type, data } = e;
         if (type === ListenerTypeEnum.CHOOSE_ACCOUNT) {
-            if (data.length === 0) return;
-            formData.accounts = data.map((item: any) => ({ id: item.id, account: item.account, type: item.type }));
+            if (data.length === 0) {
+                formData.accounts = [];
+                return;
+            }
+            formData.accounts = data.map((item: any) => ({
+                id: item.id,
+                account: item.account,
+                type: item.type,
+            }));
         }
         if (type === ListenerTypeEnum.CHOOSE_DATE) {
             if (data.length === 0) {

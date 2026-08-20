@@ -45,4 +45,45 @@ export enum CreateTypeEnum {
     CIRCLE = "CIRCLE", // 发朋友圈
     CIRCLE_INTERACT = "CIRCLE_INTERACT", // 朋友圈互动
     WECHAT_MSG = "WECHAT_MSG", // 个微接管
+    GROUP_PURCHASE = "GROUP_PURCHASE", // 团购评论截流
+    CITY_EXPOSURE = "CITY_EXPOSURE", // 同城曝光
+    CITY_INTERCEPT = "CITY_INTERCEPT", // 同城截流
+}
+
+export enum ActionKey {
+    Like = 1,
+    Follow = 2,
+    Comment = 3,
+    Dm = 4,
+}
+
+export const GENDER_LIST = [
+    { label: "不限", value: "不限" },
+    { label: "男", value: "男" },
+    { label: "女", value: "女" },
+];
+
+// 设备激活码业务来源标识（预支付 / 支付状态使用）
+export const DEVICE_AUTH_PAY_FROM = "device_auth";
+
+// 手机列表筛选 tab
+export type DeviceAuthTabKey = "all" | "active" | "inactive";
+
+// 前端 tab → 接口 tab 参数（全部传空字符串）
+export const DEVICE_AUTH_TAB_PARAM: Record<DeviceAuthTabKey, number | string> = {
+    all: "",
+    active: 1,
+    inactive: 0,
+};
+
+/** 业务类型：1购买CDK 2设备续费 */
+export enum DeviceAuthBizType {
+    PURCHASE = 1,
+    RENEW = 2,
+}
+
+// 支付方式（接口 pay_type）：1 微信支付，2 算力支付
+export enum DeviceAuthPayType {
+    CASH = 1,
+    COMPUTE = 2,
 }

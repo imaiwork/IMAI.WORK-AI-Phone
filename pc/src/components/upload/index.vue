@@ -5,7 +5,7 @@
             class="w-[inherit] upload-wrap"
             ref="uploadRefs"
             :drag="drag"
-            :action="action"
+            :action="uploadAction"
             :multiple="multiple"
             :limit="limit"
             :disabled="disabled"
@@ -87,6 +87,11 @@ export default defineComponent({
             type: Boolean,
             default: true,
         },
+        // 仅本地选择文件，不上传到服务器；用于二维码解析等只需 rawFile 的场景
+        local: {
+            type: Boolean,
+            default: false,
+        },
         accept: {
             type: String,
             default: "",
@@ -105,25 +110,18 @@ export default defineComponent({
         },
         // 图片分辨率
         imageResolution: {
-            type: Array as unknown as PropType<[number, number]>, // 0: width, 1: height
-            default: () => [99999, 99999],
+            type: Array as unknown as PropType<[[number, number], [number, number]]>, // 0:[min, max] width, 1: [min, max] height
+            default: () => [
+                [360, 10000],
+                [360, 10000],
+            ],
         },
-        // 视频分辨率
-        videoMaxWidth: {
-            type: Number,
-            default: 99999,
-        },
-        videoMinWidth: {
-            type: Number,
-            default: 1,
-        },
-        videoMaxHeight: {
-            type: Number,
-            default: 99999,
-        },
-        videoMinHeight: {
-            type: Number,
-            default: 1,
+        videoResolution: {
+            type: Array as unknown as PropType<[[number, number], [number, number]]>, // 0:[min, max] width, 1: [min, max] height
+            default: () => [
+                [360, 10000],
+                [360, 10000],
+            ],
         },
         // 视频时长
         minDuration: {
@@ -140,7 +138,7 @@ export default defineComponent({
         const userStore = useUserStore();
         const uploadRefs = shallowRef<InstanceType<typeof ElUpload>>();
         const progressDialogRef = shallowRef<InstanceType<typeof ProgressDialog>>();
-        const action = ref(props.action || `${getApiUrl()}${getApiPrefix()}/upload/${props.type}`);
+        const uploadAction = ref(props.action || `${getApiUrl()}${getApiPrefix()}/upload/${props.type}`);
         const headers = computed(() => ({
             token: userStore.token,
             version: getVersion(),
@@ -149,19 +147,8 @@ export default defineComponent({
         const fileList = ref<any[]>([]);
 
         const beforeUpload: UploadProps["beforeUpload"] = async (rawFile) => {
-            const {
-                type,
-                ratioSize,
-                imageResolution,
-                videoMaxWidth,
-                videoMinWidth,
-                videoMaxHeight,
-                videoMinHeight,
-                minDuration,
-                maxDuration,
-                minSize,
-                maxSize,
-            } = props;
+            const { type, ratioSize, imageResolution, videoResolution, minDuration, maxDuration, minSize, maxSize } =
+                props;
             const sizeInMB = rawFile.size / 1024 / 1024;
 
             // 文件大小校验
@@ -182,14 +169,20 @@ export default defineComponent({
                 return new Promise<boolean>((resolve) => {
                     const img = new Image();
                     img.onload = () => {
-                        const isResolutionValid = img.height <= imageResolution[0] && img.width <= imageResolution[1];
+                        const isResolutionValid =
+                            img.height <= imageResolution[0][1] &&
+                            img.width <= imageResolution[0][1] &&
+                            img.height >= imageResolution[0][0] &&
+                            img.width >= imageResolution[0][0];
                         // 判断图片比例是否符合要求
                         const isRatioValid = checkAspectRatio(img.width, img.height);
                         // 判断图片分辨率是否符合要求
                         if (!isResolutionValid) {
-                            feedback.msgError(`上传图片分辨率不能大于 ${imageResolution[0]}*${imageResolution[1]}`);
+                            feedback.msgError(
+                                `上传图片分辨率区间为宽${imageResolution[0][0]}-${imageResolution[0][1]}，高${imageResolution[1][0]}-${imageResolution[1][1]}`,
+                            );
                         } else if (!isRatioValid) {
-                            feedback.msgError(`上传图片尺寸不能大于 ${ratioSize[0]}*${ratioSize[1]}`);
+                            feedback.msgError(`上传图片尺寸区间为 ${ratioSize[0]}/${ratioSize[1]}`);
                         }
                         resolve(isResolutionValid && isRatioValid);
                     };
@@ -233,36 +226,96 @@ export default defineComponent({
 
             // 视频校验
             const validateVideo = async () => {
-                if (videoMaxWidth <= 0 || videoMinWidth <= 0) return true;
-
                 return new Promise<boolean>((resolve) => {
+                    const objectUrl = URL.createObjectURL(rawFile);
                     const video = document.createElement("video");
-                    video.src = URL.createObjectURL(rawFile);
-                    video.muted = true;
-                    video.playsInline = true;
-                    video.preload = "auto";
-                    video.crossOrigin = "anonymous";
+                    let settled = false;
+                    let pollTimer: ReturnType<typeof setTimeout> | null = null;
 
-                    video.addEventListener("loadedmetadata", () => {
+                    const cleanup = () => {
+                        video.removeEventListener("loadedmetadata", onReady);
+                        video.removeEventListener("loadeddata", onReady);
+                        video.removeEventListener("canplay", onReady);
+                        video.removeEventListener("error", onError);
+                        if (pollTimer) clearTimeout(pollTimer);
+                        URL.revokeObjectURL(objectUrl);
+                        video.src = "";
+                        video.load();
+                    };
+
+                    const settle = (result: boolean) => {
+                        if (settled) return;
+                        settled = true;
+                        cleanup();
+                        resolve(result);
+                    };
+
+                    const timeoutTimer = setTimeout(() => {
+                        settle(true);
+                    }, 8000);
+
+                    const doValidate = () => {
+                        clearTimeout(timeoutTimer);
                         const { videoWidth, videoHeight, duration } = video;
-                        const fileDuration = duration;
-                        const isWidthValid = videoWidth >= videoMinWidth && videoWidth <= videoMaxWidth;
-                        const isHeightValid = videoHeight >= videoMinHeight && videoHeight <= videoMaxHeight;
-                        const isDurationValid = fileDuration >= minDuration && fileDuration <= maxDuration;
+                        const isWidthValid = videoWidth >= videoResolution[0][0] && videoWidth <= videoResolution[0][1];
+                        const isHeightValid =
+                            videoHeight >= videoResolution[1][0] && videoHeight <= videoResolution[1][1];
+                        const isDurationValid = duration >= minDuration && duration <= maxDuration;
+
                         if (!isHeightValid) {
-                            feedback.msgError(`上传视频高度不能小于${videoMinHeight}或大于${videoMaxHeight}`);
+                            feedback.msgError(
+                                `上传视频高度不能小于${videoResolution[1][0]}或大于${videoResolution[1][1]}`,
+                            );
                         } else if (!isWidthValid) {
-                            feedback.msgError(`上传视频宽度不能小于${videoMinWidth}或大于${videoMaxWidth}`);
+                            feedback.msgError(
+                                `上传视频宽度不能小于${videoResolution[0][0]}或大于${videoResolution[0][1]}`,
+                            );
                         } else if (!isDurationValid) {
                             feedback.msgError(`上传视频时长不能小于${minDuration}秒或大于${maxDuration}秒`);
                         }
-                        resolve(isHeightValid && isWidthValid && isDurationValid);
-                    });
+                        settle(isWidthValid && isHeightValid && isDurationValid);
+                    };
+
+                    const waitForDuration = () => {
+                        if (settled) return;
+                        if (video.duration && isFinite(video.duration) && video.duration > 0) {
+                            doValidate();
+                        } else {
+                            pollTimer = setTimeout(waitForDuration, 100);
+                        }
+                    };
+
+                    const onReady = () => {
+                        if (settled) return;
+                        waitForDuration();
+                    };
+
+                    const onError = (e: Event) => {
+                        if (!e.target) return;
+                        clearTimeout(timeoutTimer);
+                        settle(false);
+                    };
+
+                    video.addEventListener("loadedmetadata", onReady);
+                    video.addEventListener("loadeddata", onReady);
+                    video.addEventListener("canplay", onReady);
+                    video.addEventListener("error", onError);
+
+                    video.muted = true;
+                    video.playsInline = true;
+                    video.preload = "metadata";
+                    video.src = objectUrl;
+                    video.load();
                 });
             };
 
             // 执行校验
             if (!validateFileSize()) return false;
+
+            if (props.local) {
+                emit("change", rawFile);
+                return false;
+            }
 
             switch (type) {
                 case "image":
@@ -291,15 +344,15 @@ export default defineComponent({
                 visible.value = false;
                 progressDialogRef.value?.close();
             }
-            emit("change", file);
             if (response.code == RequestCodeEnum.SUCCESS) {
-                feedback.msgSuccess(response.msg || "上传成功");
+                emit("change", file);
                 emit("success", response);
+                return;
             }
             if (response.code == RequestCodeEnum.FAIL) {
                 fileList.value.splice(
                     fileList.value.findIndex((item: any) => item.raw.uid == file.raw.uid),
-                    1
+                    1,
                 );
                 feedback.msgError(response.msg || "上传失败");
             }
@@ -308,7 +361,6 @@ export default defineComponent({
             feedback.msgError(`${file.name}文件上传失败`);
             uploadRefs.value?.abort(file);
             visible.value = false;
-            emit("change", file);
             emit("error", file);
         };
         const handleExceed = (files) => {
@@ -359,8 +411,8 @@ export default defineComponent({
         watch(
             () => props.type,
             (newVal) => {
-                action.value = `${getApiUrl()}${getApiPrefix()}/upload/${newVal}`;
-            }
+                uploadAction.value = `${getApiUrl()}${getApiPrefix()}/upload/${newVal}`;
+            },
         );
         expose({
             setFileList: (data: any[]) => {
@@ -371,7 +423,7 @@ export default defineComponent({
         return {
             uploadRefs,
             progressDialogRef,
-            action,
+            uploadAction,
             headers,
             visible,
             fileList,

@@ -8,10 +8,83 @@
         <div class="flex flex-col gap-3 lg:flex-row items-start">
             <div class="flex-1 bg-white rounded-[32px] border border-br p-8 space-y-10">
                 <section>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-sm shadow-lg shadow-[#0065FB]/20">
+                                1
+                            </div>
+                            <h2 class="text-lg font-[900] text-[#1E293B]">克隆模型选择</h2>
+                            <span class="text-red-500 font-black">*</span>
+                        </div>
+                        <span class="text-xs text-slate-400 font-medium">不同模型算力不同</span>
+                    </div>
+
+                    <div class="relative">
+                        <div
+                            class="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 cursor-pointer hover:border-primary/30 transition-all"
+                            @click="showCloneModeDrop = !showCloneModeDrop">
+                            <span
+                                class="clone-chip shrink-0"
+                                :class="
+                                    currCloneMode === CloneModeEnum.PRO ? 'clone-chip--pro' : 'clone-chip--fast'
+                                ">
+                                {{ currCloneModeOption.name }}
+                            </span>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-black text-slate-800">{{ currCloneModeOption.name }}</div>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <div class="text-base font-black text-[#F86E21] leading-none">
+                                    {{ currCloneModeOption.cost }}
+                                </div>
+                                <div class="text-[10px] text-slate-400 mt-1">算力/个</div>
+                            </div>
+                            <Icon
+                                :name="showCloneModeDrop ? 'el-icon-ArrowUp' : 'el-icon-ArrowDown'"
+                                :size="16"
+                                color="#94A3B8" />
+                        </div>
+
+                        <div
+                            v-if="showCloneModeDrop"
+                            class="absolute left-0 right-0 top-full z-20 mt-2 bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-lg">
+                            <div
+                                v-for="(item, index) in cloneModeOptions"
+                                :key="item.value"
+                                class="flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-slate-50 transition-colors"
+                                :class="index === 0 ? 'border-b border-slate-100' : ''"
+                                @click="handleSelectCloneMode(item.value)">
+                                <span
+                                    class="clone-chip shrink-0"
+                                    :class="item.value === CloneModeEnum.PRO ? 'clone-chip--pro' : 'clone-chip--fast'">
+                                    {{ item.name }}
+                                </span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-black text-slate-800">{{ item.name }}</div>
+                                    <div class="text-xs text-slate-400 mt-0.5">{{ item.desc }}</div>
+                                </div>
+                                <div class="shrink-0 text-right mr-1">
+                                    <div class="text-sm font-black text-[#F86E21] leading-none">{{ item.cost }}</div>
+                                    <div class="text-[10px] text-slate-400 mt-1">算力/个</div>
+                                </div>
+                                <Icon
+                                    v-if="currCloneMode === item.value"
+                                    name="el-icon-Check"
+                                    :size="16"
+                                    color="#2F73F6" />
+                                <div v-else class="w-4 shrink-0" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-slate-400 mt-2 leading-relaxed">{{ currCloneModeOption.desc }}</div>
+                </section>
+
+                <section>
                     <div class="flex items-center gap-3 mb-3">
                         <div
                             class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-sm shadow-lg shadow-[#0065FB]/20">
-                            1
+                            2
                         </div>
                         <h2 class="text-lg font-[900] text-[#1E293B]">训练形象视频</h2>
                     </div>
@@ -23,6 +96,10 @@
                             drag
                             show-progress
                             :limit="1"
+                            :data="{
+                                generate_thumbnail: 1,
+                                fetch_video_info: 1,
+                            }"
                             :accept="commonUploadLimit.videoExtension.join(',')"
                             :show-file-list="false"
                             :max-size="commonUploadLimit.size"
@@ -34,10 +111,10 @@
                                 v-loading="anchorParseLoading">
                                 <div
                                     class="w-full h-full relative rounded-xl overflow-hidden shadow-inner"
-                                    v-if="anchorData.pic">
+                                    v-if="anchorData.url">
                                     <video :src="anchorData.url" class="w-full max-h-[300px] bg-black" controls />
                                     <button
-                                        class="absolute top-3 right-3 w-8 h-8 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors"
+                                        class="absolute top-3 right-3 w-8 h-8 bg-[#000000]/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors"
                                         @click.stop="clearAnchorData">
                                         <Icon name="el-icon-Close" />
                                     </button>
@@ -81,7 +158,7 @@
                         <div class="flex items-center gap-3">
                             <div
                                 class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-black text-sm shadow-lg shadow-[#0065FB]/20">
-                                2
+                                3
                             </div>
                             <h2 class="text-lg font-[900] text-[#1E293B]">人身核验与授权</h2>
                         </div>
@@ -141,6 +218,10 @@
                             type="video"
                             show-progress
                             :show-file-list="false"
+                            :data="{
+                                generate_thumbnail: 1,
+                                fetch_video_info: 1,
+                            }"
                             :accept="commonUploadLimit.videoExtension.join(',')"
                             :max-size="commonUploadLimit.size"
                             :max-duration="120"
@@ -152,7 +233,7 @@
                                     v-if="authData.url">
                                     <video :src="authData.url" class="w-full max-h-[200px] bg-black" controls />
                                     <button
-                                        class="absolute top-3 right-3 w-8 h-8 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors"
+                                        class="absolute top-3 right-3 w-8 h-8 bg-[#000000]/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors"
                                         @click.stop="clearAuthData">
                                         <Icon name="el-icon-Close" />
                                     </button>
@@ -279,10 +360,10 @@ import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import { uploadImage } from "@/api/app";
 import { batchCloneAnchor } from "@/api/digital_human";
-import { commonUploadLimit } from "@/pages/app/digital_human/_hooks/useUpload";
+import { commonUploadLimit, getValidUploadFileData } from "@/pages/app/digital_human/_hooks/useUpload";
 import { TokensSceneEnum, PolicyAgreementEnum } from "@/enums/appEnums";
 import { getApiUrl } from "@/utils/env";
-import { DigitalHumanModelVersionEnum, SidebarTypeEnum } from "@/pages/app/digital_human/_enums";
+import { CloneModeEnum, DigitalHumanModelVersionEnum, SidebarTypeEnum } from "@/pages/app/digital_human/_enums";
 import VideoPlayer from "@/pages/app/digital_human/_components/video-player.vue";
 import ChooseAnchorAuth from "@/pages/app/digital_human/_components/choose-anchor-auth.vue";
 import exampleError1 from "@/pages/app/digital_human/_assets/images/example_error1.png";
@@ -294,6 +375,48 @@ const appStore = useAppStore();
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
 const isOssTranscode = computed(() => appStore.config?.is_oss_transcode);
+
+const currCloneMode = ref<CloneModeEnum>(CloneModeEnum.FAST);
+const showCloneModeDrop = ref(false);
+
+const parseSceneScore = (scene: TokensSceneEnum) => {
+    return parseFloat(userStore.getTokenByScene(scene)?.score) || 0;
+};
+
+const fastCloneCost = computed(() => {
+    return (
+        parseSceneScore(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN) +
+        parseSceneScore(TokensSceneEnum.HUMAN_AVATAR_CHANJING)
+    );
+});
+
+const proCloneCost = computed(() => {
+    return fastCloneCost.value + parseSceneScore(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN_PRO);
+});
+
+const cloneModeOptions = computed(() => [
+    {
+        value: CloneModeEnum.FAST,
+        name: "极速版",
+        desc: "生成速度快、消耗算力低，适合批量克隆",
+        cost: fastCloneCost.value,
+    },
+    {
+        value: CloneModeEnum.PRO,
+        name: "专业版",
+        desc: "唇形与细节还原更逼真，适合品牌 IP 出镜",
+        cost: proCloneCost.value,
+    },
+]);
+
+const currCloneModeOption = computed(() => {
+    return cloneModeOptions.value.find((item) => item.value === currCloneMode.value) || cloneModeOptions.value[0];
+});
+
+const handleSelectCloneMode = (mode: CloneModeEnum) => {
+    currCloneMode.value = mode;
+    showCloneModeDrop.value = false;
+};
 
 const anchorData = reactive({
     name: dayjs().format("YYYYMMDDHHmm"),
@@ -330,16 +453,9 @@ const authMethod = ref<"manual" | "ai">("manual");
 
 const shanjianAuth = computed(() => appStore.getDigitalHumanConfig.shanjian_auth);
 const getToken = computed(() => {
-    const token1 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN)?.score;
-    const token2 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_CHANJING)?.score;
-    const token3 = userStore.getTokenByScene(TokensSceneEnum.HUMAN_AVATAR)?.score;
-    const token4 = userStore.getTokenByScene(TokensSceneEnum.AI_SHANJIAN_AUTHORIZED_VIDEO)?.score;
-    return (
-        parseFloat(token1) +
-        parseFloat(token2) +
-        parseFloat(token3) +
-        (authMethod.value === "ai" ? parseFloat(token4) : 0)
-    );
+    const baseCost = currCloneMode.value === CloneModeEnum.PRO ? proCloneCost.value : fastCloneCost.value;
+    const authCost = authMethod.value === "ai" ? parseSceneScore(TokensSceneEnum.AI_SHANJIAN_AUTHORIZED_VIDEO) : 0;
+    return baseCost + authCost;
 });
 
 const uploadTemplateContentLists = computed(() => {
@@ -384,15 +500,15 @@ const clearSelectedAuthVideo = () => {
 // ─── 上传相关 ────────────────────────────────────────────────────────────────
 
 const handleUploadChange = async (res: any, type: "anchor" | "auth") => {
+    const data = getValidUploadFileData(res);
+    if (!data) return;
     if (type === "anchor") {
         anchorParseLoading.value = true;
     } else {
         authParseLoading.value = true;
     }
     try {
-        const { raw, response } = res;
-        const { uri, thumbnail_path } = response.data;
-        const { file, width, height } = await getVideoFirstFrame(uri);
+        const { uri, thumbnail_path, width, height } = data;
         if (type === "anchor") {
             anchorData.pic = thumbnail_path;
             anchorData.width = width;
@@ -406,8 +522,6 @@ const handleUploadChange = async (res: any, type: "anchor" | "auth") => {
             // 手动上传后清除历史授权选择
             clearSelectedAuthVideo();
         }
-    } catch (error) {
-        feedback.msgError("解析视频失败");
     } finally {
         anchorParseLoading.value = false;
         authParseLoading.value = false;
@@ -492,6 +606,7 @@ const handleClone = async () => {
             pic: anchorData.pic,
             authorized_pic: authorizedPic,
             ai_type: authMethod.value === "manual" ? 0 : 1,
+            clone_mode: currCloneMode.value,
         });
         useNuxtApp().$confirm({
             title: "提示",
@@ -504,7 +619,7 @@ const handleClone = async () => {
         clearAuthData();
         clearSelectedAuthVideo();
     } catch (error) {
-        feedback.msgError("克隆失败");
+        feedback.msgError(error || "克隆失败");
     }
 };
 
@@ -512,6 +627,18 @@ const { isLock, lockFn } = useLockFn(handleClone);
 </script>
 
 <style scoped lang="scss">
+.clone-chip {
+    @apply text-[11px] font-bold text-white px-2.5 py-0.5 rounded-full whitespace-nowrap leading-none;
+}
+
+.clone-chip--fast {
+    background: linear-gradient(90deg, #2680f7, #3e9bff);
+}
+
+.clone-chip--pro {
+    background: linear-gradient(90deg, #7b61ff, #a855f7);
+}
+
 :deep(.el-upload-dragger) {
     padding: 0;
     border: none;

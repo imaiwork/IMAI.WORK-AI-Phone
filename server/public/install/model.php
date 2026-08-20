@@ -24,6 +24,10 @@ class installModel
     * @var bool
     */
    private $clearDB = false;
+   /**
+    * @var string
+    */
+   private $lastError = '';
 
    /**
     * Notes: php版本
@@ -666,30 +670,174 @@ class installModel
     * @author luzg(2020/8/25 11:58)
     */
 
-   public function importAIModelData()
-   {
-      $sqlDir = $this->getInstallRoot() . '/db/';
-      $files = glob($sqlDir . 'update*.sql'); // 获取所有以update开头的sql文件
+    public function getLastError(): string
+    {
+        return $this->lastError;
+    }
 
-      foreach ($files as $file) {
-         $content = file_get_contents($file); // 读取文件内容
-         $content = str_replace(";\r\n", ";\n", $content);
-         $insertTables = explode(";\n", $content);
-         foreach ($insertTables as $table) {
-            $table = trim($table);
-            if (empty($table)) continue;
-            $table = str_replace('`la_', $this->name . '.`la_', $table);
-            $table = str_replace('`la_', '`' . $this->prefix, $table);
+    public function importAIModelData()
+    {
+        $this->lastError = '';
+        @set_time_limit(0);
 
-            if (!$this->dbh->query($table)) return false;
-         }
-      }
+        $sqlDir = $this->getInstallRoot() . '/db/';
+        $files  = glob($sqlDir . 'update*.sql') ?: [];
 
-      // 移动图片资源
-      $this->cpFiles($this->getInstallRoot() . '/uploads', $this->getAppRoot() . '/public/uploads');
+        usort($files, function ($a, $b) {
+            preg_match('/^update(\d+)\.sql$/i', basename($a), $matchA);
+            preg_match('/^update(\d+)\.sql$/i', basename($b), $matchB);
 
-      return true;
-   }
+            $numA = isset($matchA[1]) ? (int)$matchA[1] : 0;
+            $numB = isset($matchB[1]) ? (int)$matchB[1] : 0;
+
+            return $numA <=> $numB;
+        });
+
+        foreach ($files as $file) {
+            $content      = file_get_contents($file);
+            $content      = str_replace(";\r\n", ";\n", $content);
+            $insertTables = explode(";\n", $content);
+            foreach ($insertTables as $table) {
+                $table = trim($table);
+                if ($table === '') {
+                    continue;
+                }
+                $stripped = trim(preg_replace('/^\s*--[^\n]*$/m', '', $table));
+                if ($stripped === '') {
+                    continue;
+                }
+                // 只换前缀，不要拼库名。拼上库名会把 TRIM('`la_xxx`') 弄成
+                // TRIM('库名.`iw_xxx`')，information_schema 永远查不到，幂等 ADD 会再次 1060。
+                $table = str_replace('`la_', '`' . $this->prefix, $table);
+
+                if (!$this->executeUpdateSql($table, $file)) {
+                    return false;
+                }
+            }
+        }
+
+        // 移动图片资源
+        $this->cpFiles($this->getInstallRoot() . '/uploads', $this->getAppRoot() . '/public/uploads');
+
+        return true;
+    }
+
+    /**
+     * 执行安装增量 SQL：列/索引/表已存在时跳过，避免重装或半截安装直接 Fatal。
+     */
+    private function executeUpdateSql(string $sql, string $file): bool
+    {
+        $queue = $this->splitAlterTableActions($sql) ?? [$sql];
+
+        foreach ($queue as $one) {
+            try {
+                $this->dbh->query($one);
+            } catch (PDOException $e) {
+                if ($this->isIgnorableSchemaError($e, $one)) {
+                    continue;
+                }
+                $this->lastError = basename($file) . ': ' . $e->getMessage();
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function isIgnorableSchemaError(PDOException $e, string $sql): bool
+    {
+        $code = (int)($e->errorInfo[1] ?? 0);
+        // 1050 表已存在 / 1060 列已存在 / 1061 索引名重复 / 1068 主键已存在
+        // 1091 删除的列或索引不存在 / 1826 外键名重复 / 1022 重复键
+        $ddlCodes = [1050, 1060, 1061, 1068, 1091, 1826, 1022];
+        if (in_array($code, $ddlCodes, true)) {
+            return true;
+        }
+        if ($code === 1062 && preg_match('/^\s*(INSERT|REPLACE)\b/i', $sql)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 把 ALTER TABLE 的多个动作拆开，避免「其中一列已存在」导致整句后半段被跳过。
+     */
+    private function splitAlterTableActions(string $sql): ?array
+    {
+        if (!preg_match('/^ALTER\s+TABLE\s+((?:`[^`]+`\.|[a-zA-Z0-9_$\x80-\xff]+\.)?`[^`]+`)\s+/is', $sql, $m)) {
+            return null;
+        }
+
+        $table = $m[1];
+        $rest = trim(substr($sql, strlen($m[0])));
+        $rest = rtrim($rest, " \t\n\r;");
+        $actions = $this->splitTopLevelCommaList($rest);
+        if (count($actions) <= 1) {
+            return null;
+        }
+
+        $out = [];
+        foreach ($actions as $action) {
+            $action = trim($action);
+            if ($action === '') {
+                continue;
+            }
+            $out[] = 'ALTER TABLE ' . $table . ' ' . $action;
+        }
+
+        return $out ?: null;
+    }
+
+    private function splitTopLevelCommaList(string $text): array
+    {
+        $parts = [];
+        $buf = '';
+        $depth = 0;
+        $quote = '';
+        $len = strlen($text);
+
+        for ($i = 0; $i < $len; $i++) {
+            $ch = $text[$i];
+            if ($quote !== '') {
+                $buf .= $ch;
+                if ($ch === '\\' && $i + 1 < $len) {
+                    $buf .= $text[++$i];
+                    continue;
+                }
+                if ($ch === $quote) {
+                    $quote = '';
+                }
+                continue;
+            }
+            if ($ch === "'" || $ch === '"' || $ch === '`') {
+                $quote = $ch;
+                $buf .= $ch;
+                continue;
+            }
+            if ($ch === '(') {
+                $depth++;
+                $buf .= $ch;
+                continue;
+            }
+            if ($ch === ')') {
+                $depth = max(0, $depth - 1);
+                $buf .= $ch;
+                continue;
+            }
+            if ($ch === ',' && $depth === 0) {
+                $parts[] = trim($buf);
+                $buf = '';
+                continue;
+            }
+            $buf .= $ch;
+        }
+
+        if (trim($buf) !== '') {
+            $parts[] = trim($buf);
+        }
+
+        return $parts;
+    }
 
    /**
     * 将一个文件夹下的所有文件及文件夹
@@ -905,11 +1053,12 @@ class installModel
 
    public function updateVersionSql()
    {
+      $projectVersion = $this->getProjectVersionConfig();
 
       $params = [
          'name'            => "Powered by IMAI.WORK",
-         'version_name'    => "V2.9.0.260403_Release",
-         'version_number'  => "290",
+         'version_name'    => $projectVersion['version_name'],
+         'version_number'  => $projectVersion['version_number'],
          "install_time"    => date('Y-m-d H:i:s'),
          "update_time"     => date('Y-m-d H:i:s'),
       ];
@@ -919,5 +1068,29 @@ class installModel
       $sql = "UPDATE `{$this->prefix}config` SET value = '{$params}' WHERE type = 'website' AND name = 'version'";
 
       $this->dbh->query($sql);
+   }
+
+   private function getProjectVersionConfig(): array
+   {
+      $version       = '';
+      $versionNumber = '';
+      $configFile    = $this->getAppRoot() . '/config/project.php';
+
+      if (is_file($configFile)) {
+         $content = file_get_contents($configFile);
+
+         if (preg_match("/'version'\\s*=>\\s*'([^']+)'/", $content, $matches)) {
+            $version = $matches[1];
+         }
+
+         if (preg_match("/'version_number'\\s*=>\\s*'([^']+)'/", $content, $matches)) {
+            $versionNumber = $matches[1];
+         }
+      }
+
+      return [
+         'version_name'   => $version,
+         'version_number' => $versionNumber,
+      ];
    }
 }

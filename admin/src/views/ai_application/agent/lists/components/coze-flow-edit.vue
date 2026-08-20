@@ -95,6 +95,11 @@
                                     <template #append>算力/次</template>
                                 </el-input-number>
                             </el-form-item>
+                            <el-form-item label="可使用的权限类型">
+                                <permission-select
+                                    v-model:permissions="formData.permissions"
+                                    v-model:member-level-ids="formData.member_level_ids" />
+                            </el-form-item>
                         </div>
                         <!-- 右侧输入输出配置 -->
                         <div class="flex-1">
@@ -275,6 +280,7 @@ import { useLockFn } from "@/hooks/useLockFn";
 import type { Ref } from "vue";
 import CozeBg from "@/assets/images/coze_bg.png";
 import AgentLogo from "./agent-logo.vue";
+import PermissionSelect from "./permission-select.vue";
 import { CozeTypeEnum, FormFieldTypeEnum } from "./enums";
 
 // 为组件命名，便于调试
@@ -302,6 +308,7 @@ const initialFormData = () => ({
     stream: 0, // 工作流默认为非流式
     avatar: "",
     permissions: 0,
+    member_level_ids: [] as number[],
     output_key: "",
     outputs: [],
     inputs: [],
@@ -433,6 +440,10 @@ const { lockFn, isLock } = useLockFn(async () => {
 
     await formRef.value?.validate();
 
+    if (formData.permissions === 1 && formData.member_level_ids.length === 0) {
+        return feedback.msgError("请至少选择一个会员等级");
+    }
+
     if (!validateTableData(formData.inputs, "输入配置")) return;
     if (!validateTableData(formData.outputs, "输出配置")) return;
 
@@ -469,6 +480,7 @@ const getDetail = async (id: any) => {
     // outputs 和 inputs 是JSON字符串，需要解析
     formData.outputs = isJson(res.outputs) ? JSON.parse(res.outputs) : [];
     formData.inputs = isJson(res.inputs) ? JSON.parse(res.inputs) : [];
+    formData.member_level_ids = Array.isArray(res.member_level_ids) ? res.member_level_ids : [];
 };
 
 // 暴露方法

@@ -14,9 +14,9 @@
             <div
                 class="relative w-full h-[180px] bg-cover bg-center transition-all duration-500"
                 :style="{ backgroundImage: `url(${formData.bg_image || CozeBg})` }">
-                <div class="absolute inset-0 bg-gradient-to-b from-black/30 to-black/10"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-[#000000]/30 to-[#000000]/10"></div>
                 <button
-                    class="absolute right-4 top-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 transition-all text-white backdrop-blur-md"
+                    class="absolute right-4 top-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-[#000000]/10 hover:bg-[#000000]/20 transition-all text-white backdrop-blur-md"
                     @click="close">
                     <Icon name="el-icon-Close" :size="18" />
                 </button>

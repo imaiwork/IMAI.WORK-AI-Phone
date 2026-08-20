@@ -117,12 +117,12 @@ const getContentItemRect = async () => {
     contentItemRect.value = result;
 };
 
-const contentScroll = async (currentTime: number = 0) => {
+const contentScroll = async (currentTime = 0) => {
     const contentList = getContentList.value;
     //@ts-ignore
     currentTime = parseInt(currentTime);
     currentParagraphIndex.value = contentList.findIndex(
-        (item: any) => currentTime >= item.Words[0].Start && currentTime <= item.Words[item.Words.length - 1].End
+        (item: any) => currentTime >= item.Words[0].Start && currentTime <= item.Words[item.Words.length - 1].End,
     );
     getContentList.value.forEach((item: any) => {
         item.style = "";
@@ -175,7 +175,7 @@ watch(
         if (value) {
             getContentItemRect();
         }
-    }
+    },
 );
 
 defineExpose({

@@ -24,14 +24,37 @@
                                     :key="index"
                                     class="bg-[#E8F0FF] rounded-full h-[92rpx] px-1 flex items-center"
                                     :class="{
-                                        'bg-primary text-white': formData.coach_voice === item.code,
+                                        'bg-primary text-white': formData.coach_voice === item.voice,
                                     }"
-                                    @click="formData.coach_voice = item.code">
-                                    <view class="w-[76rpx] h-[76rpx] rounded-full bg-white p-1">
-                                        <image :src="item.logo" class="w-full h-full rounded-full"></image>
+                                    @click="formData.coach_voice = item.voice">
+                                    <view class="w-[76rpx] h-[76rpx] rounded-full bg-white p-1 flex-shrink-0">
+                                        <image
+                                            :src="item.logo || item.image"
+                                            class="w-full h-full rounded-full"></image>
                                     </view>
-                                    <view class="font-medium flex-1 px-2 whitespace-nowrap">
+                                    <view class="font-medium flex-1 px-2 whitespace-nowrap line-clamp-1">
                                         {{ item.name }}
+                                    </view>
+                                    <view
+                                        class="w-[56rpx] h-[56rpx] flex items-center justify-center flex-shrink-0 mr-1 rounded-full active:opacity-70"
+                                        :class="
+                                            formData.coach_voice === item.voice ? 'bg-[#ffffff]/20' : 'bg-white'
+                                        "
+                                        @click.stop="toggleVoicePreview(item)">
+                                        <u-icon
+                                            :name="
+                                                isPlaying && currVoiceCode === item.code
+                                                    ? 'pause-circle-fill'
+                                                    : 'play-circle-fill'
+                                            "
+                                            :size="36"
+                                            :color="
+                                                formData.coach_voice === item.voice
+                                                    ? '#ffffff'
+                                                    : isPlaying && currVoiceCode === item.code
+                                                    ? '#FF4D4F'
+                                                    : '#0065fb'
+                                            " />
                                     </view>
                                 </view>
                             </view>
@@ -51,21 +74,23 @@
                             </view>
                         </view>
                     </view>
-                    <view>
+                    <!-- <view>
                         <view class="font-medium text-xl"> 挂载知识库 </view>
                         <view class="mt-4">
                             <view
                                 class="px-4 py-1 bg-white rounded-lg flex items-center justify-between"
-                                @click="openKnb()">
+                                @click="openKnb()"
+                            >
                                 <u-input
                                     v-model="activeKnb.name"
                                     placeholder="点击配置挂载知识库"
                                     placeholder-style="color: #524B6B;"
-                                    disabled></u-input>
+                                    disabled
+                                ></u-input>
                                 <u-icon name="arrow-right" color="#524B6B" :size="24"></u-icon>
                             </view>
                         </view>
-                    </view>
+                    </view> -->
                     <view>
                         <view class="font-medium text-xl">
                             <text class="text-[#FF4D4F]">*</text>
@@ -219,18 +244,18 @@
             </view>
         </view>
     </u-popup>
-    <knb-select ref="knbSelectRef" :show-vector="false" @confirm="getSelectKnb"></knb-select>
 </template>
 
 <script setup lang="ts">
 import { lpSceneAdd, lpSceneEdit, lpSceneDetail, lpSceneDelete } from "@/api/ladder_player";
 import useKeyboardHeight from "@/hooks/useKeyboardHeight";
+import { useAudio } from "@/hooks/useAudio";
 import { useAppStore } from "@/stores/app";
-import KnbSelect from "@/components/knb-select/knb-select.vue";
-import { KnbTypeEnum } from "@/enums/appEnums";
 const appStore = useAppStore();
 
 const { dynamicHeight } = useKeyboardHeight();
+const { isPlaying, play, pause, pauseAll } = useAudio();
+const currVoiceCode = ref<string | null>(null);
 
 const formData = reactive<Record<string, any>>({
     id: "",
@@ -277,35 +302,31 @@ const voiceList = computed(() => {
     const data = appStore.getLadderConfig?.voice || [];
     if (data.length) {
         if (!formData.id) {
-            formData.coach_voice = data[0].code;
+            formData.coach_voice = data[0].voice;
         }
         return data;
     }
     return [];
 });
 
-const knbSelectRef = shallowRef<InstanceType<typeof KnbSelect>>();
+const toggleVoicePreview = (item: any) => {
+    if (!item?.url) {
+        uni.$u.toast("暂无试听音频");
+        return;
+    }
+    if (isPlaying.value && currVoiceCode.value === item.code) {
+        pause();
+        return;
+    }
+    if (isPlaying.value) pauseAll();
+    currVoiceCode.value = item.code;
+    play(item.url);
+};
+
 const activeKnb = ref<any>({
     name: "",
     index_id: "",
 });
-const openKnb = async () => {
-    await nextTick();
-    knbSelectRef.value?.open(activeKnb.value);
-};
-
-const getSelectKnb = (val: any) => {
-    const { type, data } = val;
-    activeKnb.value = data;
-    if (type == KnbTypeEnum.RAG) {
-        formData.index_id = data.index_id;
-        formData.kb_id = undefined;
-    } else {
-        formData.kb_id = data.id;
-        formData.index_id = undefined;
-    }
-    formData.kb_type = type == KnbTypeEnum.RAG ? 1 : 2;
-};
 
 const showPopup = ref(false);
 

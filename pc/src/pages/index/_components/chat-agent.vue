@@ -18,7 +18,7 @@
         </div>
 
         <div class="px-3 mb-3">
-            <ElButton class="modern-new-btn w-full !h-[48px] !rounded-2xl" type="primary" @click="createNewSession()">
+            <ElButton class="modern-new-btn w-full !h-[48px] !rounded-2xl" type="primary" @click="changeNewSession()">
                 <Icon name="local-icon-history_add" :size="18"></Icon>
                 <span class="ml-2 text-[14px] font-[900] tracking-wide">新建智能会话</span>
             </ElButton>
@@ -267,7 +267,12 @@
                 <span class="text-xs text-slate-400 font-medium mr-1">
                     {{ isExpanded ? "收起" : "展开全部" }}
                 </span>
-                <Icon :name="isExpanded ? 'el-icon-ArrowUp' : 'el-icon-ArrowDown'" :size="14" color="#94a3b8"></Icon>
+                <span>
+                    <Icon
+                        :name="isExpanded ? 'el-icon-ArrowUp' : 'el-icon-ArrowDown'"
+                        :size="14"
+                        color="#94a3b8"></Icon>
+                </span>
             </div>
         </div>
 
@@ -308,6 +313,7 @@ const { createNewSession } = useChatHistory();
 
 const emit = defineEmits<{
     (e: "select-agent", agent: any): void;
+    (e: "change-new-session"): void;
 }>();
 
 const search = ref("");
@@ -315,7 +321,7 @@ const agentList = ref<{ name: string; id: string; image: string }[]>([]);
 const agentGroupList = ref<any[]>([]);
 const isLoading = ref(true);
 const isExpanded = ref(false);
-const selectedAgentId = ref<number | null>(-1);
+const selectedAgentId = ref<number | null>(0);
 const activeCollapse = ref<number[]>([0]);
 
 // 搜索相关状态
@@ -418,6 +424,13 @@ const handleSearchClear = () => {
     }
 };
 
+const changeNewSession = () => {
+    createNewSession();
+    // 选中模型大管家
+    selectedAgentId.value = 0;
+    emit("change-new-session");
+};
+
 // Popover 显示/隐藏处理
 const handleGroupPopoverShow = (groupId: number) => {
     activeGroupPopoverId.value = groupId;
@@ -509,7 +522,7 @@ const handleCloseMovePopup = () => {
 // 确认移动智能体
 const handleConfirmMove = async ({ agent, targetGroupId }: { agent: any; targetGroupId: number }) => {
     try {
-        await addAgentToGroup({ group_id: targetGroupId, robot_id: agent.id, type: agent.type });
+        await addAgentToGroup({ group_id: targetGroupId, robot_id: agent.id, type: agent.type ?? 1 });
         await getAgentGroupList();
         handleCloseMovePopup();
         handleAgentPopoverHide();
@@ -521,7 +534,7 @@ const handleConfirmMove = async ({ agent, targetGroupId }: { agent: any; targetG
 
 const handleRemoveAgent = async (agent: any, groupId: number) => {
     try {
-        await deleteAgentFromGroup({ robot_id: agent.id, type: agent.type });
+        await deleteAgentFromGroup({ robot_id: agent.id, type: agent.type ?? 1 });
         await getAgentGroupList();
         handleAgentPopoverHide();
         feedback.msgSuccess("移除成功");
@@ -571,11 +584,7 @@ const init = async () => {
         // 加载搜索历史
         const savedHistory = localStorage.getItem("agent-search-history");
         if (savedHistory) {
-            try {
-                searchHistory.value = JSON.parse(savedHistory);
-            } catch (e) {
-                console.warn("Failed to parse search history:", e);
-            }
+            searchHistory.value = JSON.parse(savedHistory);
         }
     } finally {
         isLoading.value = false;
@@ -590,7 +599,7 @@ onUnmounted(() => {
 
 defineExpose({
     clearSelectedAgent: () => {
-        selectedAgentId.value = -1;
+        selectedAgentId.value = 0;
     },
     selectAgent: (agentId: number) => {
         selectedAgentId.value = agentId;

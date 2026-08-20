@@ -457,7 +457,7 @@ const getChatRecord = async () => {
                     duration: item.answer_duration,
                     message: item.answer,
                     link: item.answer_url,
-                }
+                },
             );
         });
     }

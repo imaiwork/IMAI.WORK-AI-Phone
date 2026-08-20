@@ -58,7 +58,7 @@
 
             <template v-if="getStatus(item) == 1">
                 <div
-                    class="absolute inset-0 flex items-center justify-center z-[99] cursor-pointer group-hover:bg-black/10 transition-colors"
+                    class="absolute inset-0 flex items-center justify-center z-[99] cursor-pointer group-hover:bg-[#000000]/10 transition-colors"
                     @click="handlePlay(item.url)">
                     <div
                         class="w-12 h-12 rounded-full bg-[#ffffff]/10 backdrop-blur-xl border border-[#ffffff]/20 flex items-center justify-center transition-all group-hover:bg-primary group-hover:scale-110 group-hover:border-primary group-hover:shadow-light group-hover:shadow-[#0065fb]/40">
@@ -121,7 +121,7 @@ const props = withDefaults(
             remark: "",
             source_type: "",
         }),
-    }
+    },
 );
 
 const emit = defineEmits(["delete", "retry"]);

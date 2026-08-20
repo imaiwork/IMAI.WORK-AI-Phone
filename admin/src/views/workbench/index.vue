@@ -109,7 +109,7 @@
                         <Icon name="el-icon-Money" class="absolute -right-4 -bottom-4 opacity-20" :size="80" />
                         <div class="text-sm">总收入</div>
                         <div class="text-3xl font-bold mt-1">
-                            {{ workbenchData.finance?.total_income || 0 }}
+                            {{ workbenchData.finance?.total_income?.toFixed(3) || 0 }}
                         </div>
                     </div>
                     <div
@@ -118,7 +118,7 @@
                         <Icon name="el-icon-Money" class="absolute -right-4 -bottom-4 opacity-20" :size="80" />
                         <div class="text-sm">今日收入</div>
                         <div class="text-3xl font-bold mt-1">
-                            {{ workbenchData.finance?.today_income || 0 }}
+                            {{ workbenchData.finance?.today_income?.toFixed(3) || 0 }}
                         </div>
                     </div>
                     <div
@@ -186,17 +186,11 @@
                 <el-tab-pane label="美工设计">
                     <ConfigTable :data="getAiDrawConfig" />
                 </el-tab-pane>
-                <el-tab-pane label="思维导图">
-                    <ConfigTable :data="getMindMapConfig" />
-                </el-tab-pane>
                 <el-tab-pane label="会议纪要">
                     <ConfigTable :data="getMeetingConfig" />
                 </el-tab-pane>
                 <el-tab-pane label="AI陪练">
                     <ConfigTable :data="getAiTrainConfig" />
-                </el-tab-pane>
-                <el-tab-pane label="AI客服">
-                    <ConfigTable :data="getServiceConfig" />
                 </el-tab-pane>
                 <el-tab-pane label="AI面试">
                     <ConfigTable :data="getInterviewConfig" />
@@ -245,7 +239,7 @@
 
 <script lang="ts" setup name="workbench">
 import { getWorkbench } from "@/api/app";
-import { upgradeCheck } from "@/api/setting/update";
+import { checkVersion } from "@/api/setting/update";
 import { rechargeCDK } from "@/api/marketing/recharge";
 import useAppStore from "@/stores/modules/app";
 import feedback from "@/utils/feedback";
@@ -280,10 +274,8 @@ const rechargeRules = reactive({
 const getWebName = computed(() => config.value.web_name);
 
 const getUpdate = async () => {
-    const result = await upgradeCheck({
-        version: config.value.version_number,
-    });
-    workbenchData.is_update = result.is_update;
+    const result = await checkVersion();
+    workbenchData.is_update = result.has_update;
 };
 
 // 获取工作台主页数据
@@ -303,26 +295,12 @@ const getData = () => {
 };
 
 const getCommonConfig = computed(() => {
-    return workbenchData.tokens_lists.filter((item: any) =>
-        ["common_chat", "scene_chat", "coze_agent_chat", "coze_workflow", "gemini_chat", "openai_chat"].includes(
-            item.scene
-        )
-    );
+    return workbenchData.tokens_lists.filter((item: any) => ["coze_agent_chat", "coze_workflow"].includes(item.scene));
 });
 
 const getAiPersonConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) =>
         [
-            "human_avatar",
-            "human_voice",
-            "human_video",
-            "human_audio",
-            "human_video_ym",
-            "human_audio_ym",
-            "human_avatar_ym",
-            "human_video_ymt",
-            "human_audio_ymt",
-            "human_avatar_ymt",
             "human_avatar_chanjing",
             "human_voice_chanjing",
             "human_video_chanjing",
@@ -332,48 +310,30 @@ const getAiPersonConfig = computed(() => {
             "shanjian_realman_broadcast",
             "shanjian_broadcast_mixcut",
             "shanjian_news_mixcut",
-            "sora_video_create",
-            "sora_pro_video_create",
-            "sora_copywriting_create",
-            "human_avatar_sora",
-            "sora_draw_avatar",
             "ai_shanjian_authorized_video",
             "storyboard_video_create",
-        ].includes(item.scene)
+            "seedance2_480p_image2video_create",
+            "seedance2_720p_image2video_create",
+            "seedance2_480p_video2video_create",
+            "seedance2_720p_video2video_create",
+            "human_voice_minimax_hd",
+            "human_voice_minimax_turbo",
+            "human_audio_minimax_hd",
+            "human_audio_minimax_turbo",
+            "shanjian_ai_cover",
+            "human_avatar_shanjian_pro",
+        ].includes(item.scene),
     );
 });
 
 const getAiDrawConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) =>
-        [
-            "text_to_image",
-            "image_to_image",
-            "goods_image",
-            "model_image",
-            "image_prompt",
-            "txt_to_posterimg",
-            "volc_txt_to_img",
-            "volc_txt_to_posterimg",
-            "volc_txt_to_posterimg_v2",
-            "volc_text_to_video",
-            "volc_image_to_video",
-            "volc_img_to_img_v2",
-            "volc_txt_to_img_v2",
-            "doubao_txt_to_video",
-            "doubao_img_to_video",
-            "ai_draw_video_prompt",
-            "combined_picture_title",
-            "combined_picture",
-        ].includes(item.scene)
+        ["ai_draw_video_prompt", "combined_picture_title", "combined_picture"].includes(item.scene),
     );
 });
 
 const getMeetingConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) => ["meeting"].includes(item.scene));
-});
-
-const getMindMapConfig = computed(() => {
-    return workbenchData.tokens_lists.filter((item: any) => ["mind_map"].includes(item.scene));
 });
 
 const getAiTrainConfig = computed(() => {
@@ -384,21 +344,15 @@ const getInterviewConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) => ["interview_chat"].includes(item.scene));
 });
 
-const getServiceConfig = computed(() => {
-    return workbenchData.tokens_lists.filter((item: any) =>
-        ["ai_wechat", "ai_reply_like", "ai_xhs"].includes(item.scene)
-    );
-});
-
 const getKnbConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) =>
-        ["knowledge_create", "knowledge_chat", "create_vector_knowledge", "text_to_vector"].includes(item.scene)
+        ["knowledge_create", "knowledge_chat", "create_vector_knowledge", "text_to_vector"].includes(item.scene),
     );
 });
 
 const getMatrixConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) =>
-        ["keyword_to_title", "keyword_to_subtitle", "keyword_to_copywriting"].includes(item.scene)
+        ["keyword_to_title", "keyword_to_subtitle", "keyword_to_copywriting"].includes(item.scene),
     );
 });
 
@@ -411,12 +365,12 @@ const getSphConfig = computed(() => {
             "sph_search_terms",
             "sph_ocr",
             "sph_local_ocr",
-        ].includes(item.scene)
+        ].includes(item.scene),
     );
 });
 
 const getHotWriteConfig = computed(() => {
-    return workbenchData.tokens_lists.filter((item: any) => ["video_copywriting_imitation"].includes(item.scene));
+    return workbenchData.tokens_lists.filter((item: any) => ["video_imitation_copywriting_parse"].includes(item.scene));
 });
 
 const getOtherConfig = computed(() => {
@@ -428,7 +382,17 @@ const getOtherConfig = computed(() => {
             "douyin_js",
             "ai_persona_analysis",
             "ai_persona_report",
-        ].includes(item.scene)
+            "coze_copywriting_senior",
+            "grab_image",
+            "grab_video",
+            "get_hot_words",
+            "extract_keywords",
+            "map_chat_clues",
+            "images_explosion_rewrite",
+            "video_imitation_copywriting_parse",
+            "material_slice_oss",
+            "material_slice_local",
+        ].includes(item.scene),
     );
 });
 
@@ -447,7 +411,11 @@ const getPhoneAutoConfig = computed(() => {
             "automation_social_media_nursing",
             "automation_ocr_local",
             "automation_ocr_img",
-        ].includes(item.scene)
+            "automation_city_exposure",
+            "automation_city_touch",
+            "automation_group_buy",
+            "automation_precise_clues",
+        ].includes(item.scene),
     );
 });
 

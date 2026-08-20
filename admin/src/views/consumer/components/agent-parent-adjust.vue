@@ -13,7 +13,8 @@
                         title="代理上级"
                         v-model="formData.leader_id"
                         v-model:select-data="selectData"
-                        type="single">
+                        type="single"
+                        :params="{ only_agent: 1 }">
                         <template #popup>
                             <div class="flex">
                                 <span class="mr-2" v-if="selectData?.id">

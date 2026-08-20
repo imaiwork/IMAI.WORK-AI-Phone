@@ -2,7 +2,9 @@
 
 namespace app\adminapi\validate\user;
 
+use app\adminapi\logic\setting\DistributionAgentConfigLogic;
 use app\common\validate\BaseValidate;
+use app\common\model\distribution\DistributionAgent;
 use app\common\model\user\User;
 
 /**
@@ -51,10 +53,17 @@ class UserDistributionValidate extends BaseValidate
             if (!User::find($data['value'])) {
                 return '上级用户不存在';
             }
+            // 仅有效代理可作为上级（与邀请码绑定规则一致）
+            $parentAgent = DistributionAgent::where('user_id', (int)$data['value'])->findOrEmpty();
+            if ($parentAgent->isEmpty() || (int)$parentAgent['status'] !== 1 || (int)$parentAgent['level'] <= 0) {
+                return '上级用户必须是有效代理';
+            }
         }
 
         if ($value == 'level') {
-            if (!in_array($data['value'], [0, 1, 2, 3])) {
+            // 0=普通用户，其余等级取后台「代理等级」配置，数量可增删
+            $allowLevel = array_merge([0], DistributionAgentConfigLogic::getLevelValues());
+            if (!in_array((int)$data['value'], $allowLevel, true)) {
                 return '代理等级错误';
             }
         }

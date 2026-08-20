@@ -61,11 +61,22 @@ class SvMediaMaterialLogic extends SvBaseLogic
     {
         // 删除素材逻辑
         try {
-            if (is_string($id)) {
-                SvMediaMaterial::destroy(['id' => $id, 'user_id' => self::$uid]);
-            } else {
-                SvMediaMaterial::whereIn('id', $id)->where('user_id', self::$uid)->select()->delete();
+            $ids = is_array($id) ? $id : [$id];
+            $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+            if (empty($ids)) {
+                self::setError('请选择要删除的素材');
+                return false;
             }
+
+            $materials = SvMediaMaterial::whereIn('id', $ids)
+                ->where('user_id', self::$uid)
+                ->select();
+            if ($materials->isEmpty()) {
+                self::setError('素材不存在');
+                return false;
+            }
+
+            $materials->delete();
             return true;
         } catch (\Exception $e) {
             self::setError($e->getMessage());
@@ -113,6 +124,53 @@ class SvMediaMaterialLogic extends SvBaseLogic
         }
     }
 
+    public static function getByGroupId(array $params)
+    {
+        // 根据分组id获取素材列表
+        try {
+            $material = SvMediaMaterial::where('group_id',$params['group_id'])->where('user_id', self::$uid)
+                ->select();
+            if ($material->isEmpty()) {
+                self::setError('素材不存在');
+                return false;
+            }
+            self::$returnData = $material->toArray();
+            return true;
+        } catch (\Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
 
+    public static function batchUpdateDate(array $params)
+    {
+        try {
+           
+            $ids = array_column($params, 'id');
+            $ids = array_unique(array_filter($ids));
+            if (empty($ids)) {
+                self::setError('请选择要操作的素材');
+                return false;
+            }
+            $material = SvMediaMaterial::whereIn('id', $ids)->where('user_id', self::$uid)
+                ->select();
+            if ($material->isEmpty()) {
+                self::setError('素材不存在');
+                return false;
+            }
+            
+            $materialIds = $material->column('id');
+            $updateDate = array_values(array_filter($params, function($item) use ($materialIds) {
+                return in_array($item['id'], $materialIds);
+            }));
+          
+            $SvMediaMaterialModel = new SvMediaMaterial;
+            $SvMediaMaterialModel->saveAll($updateDate);
+            return true;
+        } catch (\Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
 
 }

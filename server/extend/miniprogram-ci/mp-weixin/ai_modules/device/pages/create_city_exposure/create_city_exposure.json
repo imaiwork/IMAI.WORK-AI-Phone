@@ -1,0 +1,13 @@
+{
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "steps": "../../components/steps/steps",
+    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog",
+    "base-setting": "../../components/base-setting/base-setting"
+  }
+}

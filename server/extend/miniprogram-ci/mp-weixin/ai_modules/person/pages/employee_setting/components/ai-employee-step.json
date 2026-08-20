@@ -1,0 +1,16 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-switch": "../../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "u-icon": "../../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "choose-agent-v2": "../../../components/choose-agent-v2/choose-agent-v2",
+    "keyword-edit-popup": "./keyword-edit-popup",
+    "rule-setting-pop": "../../material_library/components/rule-setting-pop",
+    "trending-panel": "./ai-employee-step/panels/trending-panel",
+    "operator-panel": "./ai-employee-step/panels/operator-panel",
+    "cs-panel": "./ai-employee-step/panels/cs-panel",
+    "leads-panel": "./ai-employee-step/panels/leads-panel",
+    "private-panel": "./ai-employee-step/panels/private-panel",
+    "employee-sheet-popup": "./popups/employee-sheet-popup"
+  }
+}

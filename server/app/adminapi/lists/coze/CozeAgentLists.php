@@ -8,6 +8,7 @@ use app\common\model\auth\Admin;
 use app\common\model\coze\AgentCate;
 use app\common\model\coze\CozeAgent;
 use app\common\model\user\User;
+use app\common\service\AgentPermissionService;
 
 class CozeAgentLists extends BaseAdminDataLists implements ListsSearchInterface
 {
@@ -55,6 +56,7 @@ class CozeAgentLists extends BaseAdminDataLists implements ListsSearchInterface
             $item['source_text'] = CozeAgent::getSourceText((int)($item['source'] ?? 0));
             $item['type_text'] = CozeAgent::getTypeText((int)($item['type'] ?? 0));
             $item['permissions_text'] = CozeAgent::getPermissionsText((int)($item['permissions'] ?? 0));
+            $item['member_level_ids'] = AgentPermissionService::levelIdsToArray($item['member_level_ids'] ?? '');
             $item['stream_text'] = CozeAgent::getStreamText((int)($item['stream'] ?? 0));
             $item['deduction_text'] = CozeAgent::getDeductionText((int)($item['deduction'] ?? 0));
             if ($item['source'] == CozeAgent::SOURCE_USER) {

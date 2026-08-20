@@ -40,18 +40,18 @@
     <div class="grid grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4 gap-4">
         <div v-for="(item, index) in materialList" :key="index" class="material-card group">
             <div class="relative w-full h-full overflow-hidden rounded-[18px] bg-slate-50">
-                <video
-                    v-if="type == PublishTaskTypeEnum.VIDEO"
-                    :src="item.url"
-                    class="w-full h-full object-cover"
-                    @click="handlePreviewVideo(item.url)"></video>
                 <ElImage
-                    v-else-if="type == PublishTaskTypeEnum.IMAGE"
-                    :src="item.url"
+                    v-if="item.pic"
+                    :src="item.pic"
                     class="w-full h-full"
                     fit="cover"
                     preview-teleported
-                    :preview-src-list="[item.url]"></ElImage>
+                    :preview-src-list="[item.pic]"></ElImage>
+                <video
+                    v-else-if="type == PublishTaskTypeEnum.VIDEO"
+                    :src="item.url"
+                    class="w-full h-full object-cover"
+                    @click="handlePreviewVideo(item.url)"></video>
 
                 <div
                     class="absolute top-2 right-2 z-20 translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
@@ -65,7 +65,7 @@
                     <ElPopover trigger="click" width="240" popper-class="custom-material-popover" :show-arrow="false">
                         <template #reference>
                             <div
-                                class="w-full h-9 rounded-xl bg-white/90 backdrop-blur-md flex items-center justify-center gap-2 cursor-pointer hover:bg-white active:scale-95 transition-all"
+                                class="w-full h-9 rounded-xl bg-[#ffffff]/90 backdrop-blur-md flex items-center justify-center gap-2 cursor-pointer hover:bg-white active:scale-95 transition-all"
                                 @click="handleReplaceMaterial(index)">
                                 <Icon name="el-icon-Refresh" :size="14" color="var(--color-primary)"></Icon>
                                 <span class="text-xs font-black text-primary">替换素材</span>
@@ -76,7 +76,7 @@
                 </div>
 
                 <div
-                    class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none"></div>
+                    class="absolute inset-0 bg-[#000000]/0 group-hover:bg-[#000000]/20 transition-colors pointer-events-none"></div>
             </div>
         </div>
         <ElPopover
@@ -100,7 +100,7 @@
                             </div>
                             <div class="mt-1 flex items-center justify-center gap-1.5">
                                 <span
-                                    class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-medium text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                                    class="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-medium text-slate-400 group-hover:bg-[#0065fb]/10 group-hover:text-primary transition-all">
                                     {{ materialList.length }} / {{ getUploadProps.limit }}
                                 </span>
                                 <span
@@ -141,7 +141,7 @@ const props = withDefaults(
         maxVideoCount: 30,
         maxImageCount: 18,
         maxSize: 100,
-    }
+    },
 );
 
 const emit = defineEmits(["update:materialList", "previewVideo", "importMaterial", "changeMaterial"]);
@@ -158,6 +158,7 @@ const getUploadProps = computed(() => {
 
 const getUploadSuccess = async (result: any) => {
     const { uri } = result.data;
+
     if (type.value == PublishTaskTypeEnum.VIDEO) {
         const { file } = await getVideoFirstFrame(uri);
         const res = await uploadImage({ file });
@@ -174,11 +175,12 @@ const getUploadSuccess = async (result: any) => {
     } else {
         if (replaceMaterialIndex.value > -1) {
             materialList.value[replaceMaterialIndex.value].url = uri;
+            materialList.value[replaceMaterialIndex.value].pic = uri;
         } else {
             if (materialList.value.length > maxImageCount.value) {
                 return;
             }
-            materialList.value.push({ url: uri });
+            materialList.value.push({ url: uri, pic: uri });
         }
     }
     emit("update:materialList", materialList.value);

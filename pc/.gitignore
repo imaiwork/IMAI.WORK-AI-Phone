@@ -10,3 +10,6 @@ node_modules
 *.env.development
 *.env.production
 dist
+
+yarn.lock
+package-lock.json

@@ -15,19 +15,28 @@
                 :src="image"
                 lazy-load
                 class="w-[156rpx] h-[156rpx] rounded-[10rpx]"
-                @click.stop="previewImage(item.puzzle_url, imageIndex)"></image>
+                @click.stop="previewImage(item.puzzle_url, imageIndex)"
+            ></image>
         </view>
-        <view v-else class="bg-[#F1F2F5] rounded-[16rpx] h-[156rpx] flex flex-col items-center justify-center mt-2">
+        <view
+            v-else
+            class="bg-[#F1F2F5] rounded-[16rpx] h-[156rpx] flex flex-col items-center justify-center mt-2"
+        >
             <view v-if="[0, 1, 2].includes(item.status)" class="flex items-center gap-x-2">
                 <view class="gen-loading"></view>
                 <view class="gen-loading-text">拼图中...</view>
             </view>
             <template v-else class="">
                 <view class="flex items-center gap-x-2">
-                    <image src="@/packages/static/icons/stop.svg" class="w-[28rpx] h-[28rpx]"></image>
+                    <image
+                        src="@/packages/static/icons/stop.svg"
+                        class="w-[28rpx] h-[28rpx]"
+                    ></image>
                     <text class="text-[#F12A46] font-medium">拼图失败</text>
                 </view>
-                <view class="text-center text-[20rpx] text-[#00000066] w-[70%] mt-1">{{ item.remark }}</view>
+                <view class="text-center text-[20rpx] text-[#00000066] w-[70%] mt-1">{{
+                    item.remark
+                }}</view>
             </template>
         </view>
         <view class="flex items-center justify-between mt-[26rpx]">
@@ -41,58 +50,58 @@
 </template>
 
 <script setup lang="ts">
-import { deletePuzzleTask } from "@/api/drawing";
+import { deletePuzzleTask } from '@/api/drawing'
 
 const props = defineProps<{
-    item: any;
-}>();
+    item: any
+}>()
 
-const emit = defineEmits(["delete"]);
+const emit = defineEmits(['delete'])
 
 const handleDelete = (id: any) => {
     uni.showModal({
-        title: "提示",
-        content: "删除后无法找回，是否确认删除？",
+        title: '提示',
+        content: '删除后无法找回，是否确认删除？',
         success: async (res) => {
             if (res.confirm) {
                 uni.showLoading({
-                    title: "删除中...",
-                    mask: true,
-                });
+                    title: '删除中...',
+                    mask: true
+                })
                 try {
-                    await deletePuzzleTask({ id });
-                    uni.hideLoading();
+                    await deletePuzzleTask({ id })
+                    uni.hideLoading()
                     uni.showToast({
-                        title: "删除成功",
-                        icon: "none",
-                        duration: 3000,
-                    });
-                    emit("delete", id);
+                        title: '删除成功',
+                        icon: 'none',
+                        duration: 3000
+                    })
+                    emit('delete', id)
                 } catch (error: any) {
-                    uni.hideLoading();
+                    uni.hideLoading()
                     uni.showToast({
                         title: error,
-                        icon: "none",
-                        duration: 3000,
-                    });
+                        icon: 'none',
+                        duration: 3000
+                    })
                 }
             }
-        },
-    });
-};
+        }
+    })
+}
 
 const toDetail = () => {
     uni.navigateTo({
-        url: `/ai_modules/drawing/pages/puzzle_detail/puzzle_detail?id=${props.item.id}`,
-    });
-};
+        url: `/ai_modules/drawing/pages/puzzle_detail/puzzle_detail?id=${props.item.id}`
+    })
+}
 
 const previewImage = (urls: string[], index: number) => {
     uni.previewImage({
         urls: urls,
-        current: index,
-    });
-};
+        current: index
+    })
+}
 </script>
 
 <style scoped lang="scss">
@@ -118,7 +127,7 @@ const previewImage = (urls: string[], index: number) => {
     position: relative;
     animation: spin 1.2s linear infinite;
     &::before {
-        content: "";
+        content: '';
         position: absolute;
         top: 4rpx;
         left: 4rpx;

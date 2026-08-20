@@ -38,10 +38,11 @@
                     <div class="grid grid-cols-2 gap-[20px]">
                         <div class="strategy-card-mini">
                             <div class="flex flex-col">
-                                <span class="font-[900] text-tx-primary text-[14px]">语音回复 (WeChat)</span>
+                                <span class="font-[900] text-tx-primary text-[14px]">语音回复</span>
                                 <span class="text-xs text-tx-secondary mt-[4px]">支持将语音转文字后回复</span>
                             </div>
                             <ElSwitch v-model="formData.voice_enable" :active-value="1" :inactive-value="0" />
+                            <div class="text-xs text-tx-secondary mt-[4px]">只支持AI销售</div>
                         </div>
                         <div class="strategy-card-mini">
                             <div class="flex flex-col">

@@ -36,7 +36,7 @@
                     </view>
                 </view>
             </view>
-            <view class="text-center mt-[48rpx] text-[#9999997F] text-[26rpx]"> 请勿熄屏或切换应用 </view>
+            <view class="text-center mt-[48rpx] text-[#9999997F]"> 请勿熄屏或切换应用 </view>
         </view>
     </u-popup>
 </template>
@@ -51,7 +51,7 @@ const props = withDefaults(
         modelValue: false,
         // 上传列表
         uploadList: () => [],
-    }
+    },
 );
 
 const emit = defineEmits<{

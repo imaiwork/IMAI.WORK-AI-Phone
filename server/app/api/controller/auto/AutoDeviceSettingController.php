@@ -120,4 +120,25 @@ class AutoDeviceSettingController extends BaseApiController
         }
     }
 
+    /**
+     * 获取自动化内容任务状态
+     */
+    public function taskStatus()
+    {
+        try {
+            $params = $this->request->param();
+            $validate = new AutoDeviceSettingValidate();
+            if (!$validate->scene('taskStatus')->check($params)) {
+                return $this->fail($validate->getError());
+            }
+            $result = AutoDeviceSettingLogic::taskStatus($params);
+            if ($result) {
+                return $this->success('获取成功', AutoDeviceSettingLogic::getReturnData());
+            }
+            return $this->fail(AutoDeviceSettingLogic::getError());
+        } catch (\Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
 }

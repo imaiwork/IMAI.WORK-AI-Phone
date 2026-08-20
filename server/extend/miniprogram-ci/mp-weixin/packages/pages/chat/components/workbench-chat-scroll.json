@@ -1,0 +1,15 @@
+{
+  "component": true,
+  "usingComponents": {
+    "chat-record-item": "../../../components/chat-record-item/chat-record-item",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "popup-bottom": "../../../../components/popup-bottom/popup-bottom",
+    "empty": "../../../../components/empty/empty",
+    "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
+    "file-item": "../../../components/chat-scroll-view/components/file-item",
+    "mount-popup": "../../../components/chat-scroll-view/components/mount-popup",
+    "workbench-result-card": "./workbench-result-card",
+    "image-optimize-card": "./image-optimize-card"
+  }
+}

@@ -494,7 +494,7 @@
                                     </div>
 
                                     <div
-                                        class="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
+                                        class="absolute -right-4 -bottom-4 w-24 h-24 bg-[#0065fb]/5 rounded-full blur-2xl group-hover:bg-[#0065fb]/10 transition-colors"></div>
                                 </div>
 
                                 <div class="bg-white p-7 rounded-[28px] border border-slate-100">
@@ -732,7 +732,7 @@ watch(
     (val) => {
         formData.remarks = [...(val || [])];
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 const crawlTypeOptions = [

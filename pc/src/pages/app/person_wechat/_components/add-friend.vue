@@ -14,7 +14,7 @@
                     :show-add-we-chat="false"
                     :current-wechat="{ wechat_id: wechatId }" />
             </div>
-            <div class="flex-1 flex flex-col border-r border-gray-200">
+            <div class="flex-1 flex flex-col border-r border-gray-200 min-w-0">
                 <div class="flex-shrink-0">
                     <div class="h-[70px] flex items-center justify-end px-4">
                         <ElInput
@@ -59,7 +59,7 @@
                     <pagination v-model="friendPager" @change="getFriendLists" />
                 </div>
             </div>
-            <div class="w-[248px] flex-shrink-0 flex flex-col">
+            <div class="w-[248px] shrink-0 flex flex-col">
                 <div class="flex-shrink-0">
                     <div class="w-full h-[66px] bg-primary flex justify-between items-center px-4">
                         <div class="text-white">已选好友（{{ multipleSelection.length }}）人</div>

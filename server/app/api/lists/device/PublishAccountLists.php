@@ -54,7 +54,7 @@ class PublishAccountLists extends BaseApiDataLists implements ListsSearchInterfa
                 $detial = SvPublishSettingDetail::where('publish_account_id',$item->id)->where('status', 0)->order('id', 'asc')->limit(1)->find();
                 $item['next_publish_time'] = !empty($detial) ? $detial['publish_time'] : '';
                 $item['exec_time'] = !empty($detial) ? date('Y-m-d H:i:s', $item['exec_time']) : '';
-
+                $item['remark'] = $detial['remark'] ?? '';
                 $startDate =strtotime($item['publish_start']);
                 $endDate = strtotime($item['publish_end']);
                 $item['publish_cycle'] = (int)(($endDate - $startDate) / 86400);

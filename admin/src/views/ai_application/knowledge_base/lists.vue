@@ -21,7 +21,30 @@
                         v-model="queryParams.name"
                         placeholder="请输入知识库名称"
                         clearable
-                        @keyup.enter="resetPage" />
+                        @keyup.enter="resetPage"
+                        @clear="resetPage" />
+                </el-form-item>
+                <el-form-item label="所属用户">
+                    <el-input
+                        class="w-[280px]"
+                        v-model="queryParams.user"
+                        placeholder="请输入所属用户"
+                        clearable
+                        @keyup.enter="resetPage"
+                        @clear="resetPage" />
+                </el-form-item>
+                <el-form-item label="后台创建">
+                    <el-select
+                        class="!w-[180px]"
+                        v-model="queryParams.is_bind"
+                        placeholder="请选择是否后台创建"
+                        :empty-values="[null, undefined]"
+                        clearable
+                        @change="resetPage">
+                        <el-option label="全部" value="" />
+                        <el-option label="是" value="1" />
+                        <el-option label="否" value="0" />
+                    </el-select>
                 </el-form-item>
                 <el-form-item label="创建时间">
                     <daterange-picker
@@ -35,7 +58,8 @@
             </el-form>
         </el-card>
         <el-card class="!border-none mt-4" shadow="never">
-            <div class="mb-4">
+            <div class="mb-4 flex items-center justify-between">
+                <el-button type="primary" @click="handleCreate">新建知识库</el-button>
                 <el-button
                     v-perms="['ai_application.interview.record/del']"
                     type="default"
@@ -68,7 +92,8 @@
                 </el-table-column>
                 <el-table-column label="所属用户" min-width="140" show-overflow-tooltip>
                     <template #default="{ row }">
-                        {{ row.nickname || row.create_user }}
+                        <el-tag v-if="row.create_user" type="success">{{ row.create_user }}</el-tag>
+                        <el-tag v-else type="info">后台</el-tag>
                     </template>
                 </el-table-column>
                 <el-table-column prop="file_count" label="文件数量" min-width="100" show-overflow-tooltip>
@@ -92,7 +117,7 @@
                     </template>
                 </el-table-column>
                 <el-table-column label="创建时间" prop="create_time" width="180"></el-table-column>
-                <el-table-column label="操作" width="140" fixed="right">
+                <el-table-column label="操作" width="280" fixed="right">
                     <template #default="{ row }">
                         <el-button type="primary" v-perms="['ai_application.kn/files']" link>
                             <router-link
@@ -101,11 +126,14 @@
                                     query: {
                                         id: row.id,
                                         type: activeTab,
+                                        name: row.name,
                                     },
                                 }">
                                 查看文件
                             </router-link>
                         </el-button>
+                        <el-button type="primary" link @click="handleSearchTest(row)">搜索测试</el-button>
+                        <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
                         <el-button
                             v-perms="['ai_application.kn.lists/del']"
                             type="danger"
@@ -120,6 +148,7 @@
                 <pagination v-model="pager" @change="getLists" />
             </div>
         </el-card>
+        <knowledge-edit ref="editRef" @success="getLists" />
     </div>
 </template>
 <script lang="ts" setup>
@@ -133,6 +162,7 @@ import { usePaging } from "@/hooks/usePaging";
 import feedback from "@/utils/feedback";
 import { getRoutePath } from "@/router";
 import { ElTable } from "element-plus";
+import KnowledgeEdit from "./components/knowledge-edit.vue";
 
 enum KnowledgeType {
     VECTOR = "vector",
@@ -144,6 +174,7 @@ const queryParams = reactive({
     name: "",
     start_time: "",
     end_time: "",
+    user: "",
 });
 
 const { pager, getLists, resetPage, resetParams } = usePaging({
@@ -160,6 +191,8 @@ const { pager, getLists, resetPage, resetParams } = usePaging({
 const activeTab = ref("vector");
 
 const tableRef = ref<InstanceType<typeof ElTable>>();
+const router = useRouter();
+const editRef = shallowRef<InstanceType<typeof KnowledgeEdit>>();
 
 const handleTabClick = (tab: any) => {
     activeTab.value = tab.paneName;
@@ -180,6 +213,26 @@ const handleDelete = async (id: number | number[]) => {
     getLists();
     multipleSelection.value = [];
     tableRef.value?.clearSelection();
+};
+
+const handleCreate = () => {
+    editRef.value?.open("add");
+};
+
+const handleEdit = async (row: any) => {
+    editRef.value?.open("edit");
+    await nextTick();
+    editRef.value?.setFormData(row);
+};
+
+const handleSearchTest = (row: any) => {
+    router.push({
+        path: getRoutePath("ai_application.kn/search_test"),
+        query: {
+            id: row.id,
+            name: row.name,
+        },
+    });
 };
 
 getLists();

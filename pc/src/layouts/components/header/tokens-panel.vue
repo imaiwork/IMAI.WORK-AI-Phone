@@ -7,7 +7,8 @@
                 popper-class="!p-0 !rounded-[20px] !border-none !shadow-light"
                 :show-arrow="false"
                 placement="bottom-end"
-                :offset="12">
+                :offset="12"
+                @show="userStore.refreshTokens()">
                 <template #reference>
                     <div class="flex items-center gap-x-[6px]" ref="tokenInfoRef">
                         <Icon name="local-icon-tokens" color="#D6A670" :size="20"></Icon>
@@ -80,8 +81,6 @@
         </div>
     </div>
 
-    <data-package v-if="showDataPackage" ref="dataPackageRef" @close="showDataPackage = false" />
-
     <popup
         ref="servicePopupRef"
         class="custom-service-popup"
@@ -97,7 +96,7 @@
             <div class="flex flex-col items-center py-6">
                 <div class="flex items-center gap-2 mb-2">
                     <span class="text-lg font-[900] text-[#0F172A]">专属客服全程陪伴</span>
-                    <div class="px-2 py-0.5 bg-primary rounded-md rounded-bl-none shadow-sm shadow-primary/20">
+                    <div class="px-2 py-0.5 bg-primary rounded-md rounded-bl-none">
                         <span class="text-[10px] text-white font-black">官方</span>
                     </div>
                 </div>
@@ -107,7 +106,9 @@
                     <div
                         class="absolute inset-0 bg-primary blur-3xl opacity-10 group-hover:opacity-20 transition-all"></div>
                     <div class="relative p-3 rounded-[24px] bg-white border border-[#F1F5F9] shadow-xl">
-                        <img :src="getCustomerService.wx_image" class="w-[200px] h-[200px] rounded-xl" />
+                        <img
+                            :src="agentUserParentQrcode || getCustomerService.wx_image"
+                            class="w-[200px] h-[200px] rounded-xl" />
                     </div>
                 </div>
 
@@ -115,7 +116,7 @@
                     <ElButton
                         type="primary"
                         class="!h-[52px] !rounded-xl !w-full border-primary bg-primary !text-white !font-black !text-base shadow-lg shadow-primary/20 transition-transform active:scale-95"
-                        @click="downloadFile(getCustomerService.wx_image)">
+                        @click="downloadFile(agentUserParentQrcode || getCustomerService.wx_image)">
                         保存二维码 / 添加微信
                     </ElButton>
 
@@ -141,10 +142,11 @@
 <script setup lang="ts">
 import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
-import { AppKeyEnum } from "@/enums/appEnums";
 
 const userStore = useUserStore();
 const { userTokens, tokensConfig } = toRefs(userStore);
+// 上级代理二维码：全局共享，由 middleware 触发，刷新页面只请求一次
+const agentUserParentQrcode = computed(() => userStore.agentUserParentQrcode);
 
 const appStore = useAppStore();
 const websiteConfig = computed(() => appStore.getWebsiteConfig);
@@ -163,15 +165,25 @@ const getCustomerService = computed(() => {
 });
 
 const tokenInfoRef = ref();
-const dataPackageRef = ref();
-const showDataPackage = ref(false);
 const servicePopupRef = ref();
 
+const onVisibility = () => {
+    if (document.visibilityState === "visible") {
+        userStore.refreshTokens();
+    }
+};
+
+onMounted(() => {
+    // 后台 RPA/自动化消耗后同步右上角:切回页签立即刷,在线时约每 30s 刷一次
+    document.addEventListener("visibilitychange", onVisibility);
+});
+
+onUnmounted(() => {
+    document.removeEventListener("visibilitychange", onVisibility);
+});
+
 const handleRecharge = () => {
-    showDataPackage.value = true;
-    nextTick(() => {
-        dataPackageRef.value?.open();
-    });
+    appStore.openRecharge();
 };
 
 const handleService = () => {

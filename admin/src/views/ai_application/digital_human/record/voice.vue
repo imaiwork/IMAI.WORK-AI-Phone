@@ -12,7 +12,11 @@
                 </el-form-item>
                 <el-form-item label="使用模型">
                     <el-select v-model="queryParams.model_version" class="!w-[180px]" placeholder="请选择使用模型">
-                        <el-option v-for="item in modelChannel" :key="item.id" :label="item.name" :value="item.id" />
+                        <el-option
+                            v-for="item in modelChannel"
+                            :key="item.id"
+                            :label="item.name"
+                            :value="item.model_version" />
                     </el-select>
                 </el-form-item>
                 <el-form-item label="创建时间">
@@ -76,6 +80,7 @@
                     </template>
                 </el-table-column>
                 <el-table-column label="建立时间" prop="create_time" min-width="180" show-overflow-tooltip />
+                <el-table-column label="更新时间" prop="update_time" min-width="180" show-overflow-tooltip />
                 <el-table-column label="操作" width="120" fixed="right">
                     <template #default="{ row }">
                         <el-button type="primary" link @click="handlePlay(row)"> 播放 </el-button>
@@ -93,6 +98,7 @@
 </template>
 <script lang="ts" setup>
 import { getVoiceChatRecord, deleteVoiceChatRecord } from "@/api/ai_application/digital_human/record";
+import { getAiModel as getAiModelApi } from "@/api/ai_setting/model";
 import { usePaging } from "@/hooks/usePaging";
 import feedback from "@/utils/feedback";
 import useAppStore from "@/stores/modules/app";
@@ -100,7 +106,7 @@ import { ElTable } from "element-plus";
 
 const appStore = useAppStore();
 const { config } = toRefs(appStore);
-const modelChannel = computed(() => config.value?.digital_human.channel);
+const modelChannel = ref<any[]>([]);
 
 const queryParams = reactive({
     name: "",
@@ -117,7 +123,7 @@ const { pager, getLists, resetPage, resetParams } = usePaging({
 const tableRef = ref<InstanceType<typeof ElTable>>();
 
 const getModelName = (model_version: string) => {
-    return modelChannel.value.find((item: any) => item.id == model_version)?.name;
+    return modelChannel.value.find((item: any) => item.model_version == model_version)?.name || "-";
 };
 
 const handlePlay = async (row: any) => {
@@ -143,5 +149,11 @@ const handleDelete = async (id: number | number[]) => {
     tableRef.value?.clearSelection();
 };
 
+const getAiModel = async () => {
+    const { humanModels } = await getAiModelApi();
+    modelChannel.value = humanModels;
+};
+
 getLists();
+getAiModel();
 </script>

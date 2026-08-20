@@ -42,9 +42,49 @@
                 </el-table-column>
                 <el-table-column label="昵称" prop="nickname" min-width="140" show-overflow-tooltip />
                 <el-table-column label="设备号" prop="device_code" min-width="180" />
-                <el-table-column label="创建时间" prop="create_time" min-width="180" />
-                <el-table-column label="操作" width="100" fixed="right">
+                <el-table-column label="授权状态" min-width="130">
                     <template #default="{ row }">
+                        <el-tag :type="getDeviceAuthStatusTag(row)" size="small">
+                            {{ getDeviceAuthStatusText(row) }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="CDK类型" min-width="120" show-overflow-tooltip>
+                    <template #default="{ row }">
+                        {{ getDevicePlanName(row) || "-" }}
+                    </template>
+                </el-table-column>
+                <el-table-column label="过期时间" min-width="180" show-overflow-tooltip>
+                    <template #default="{ row }">
+                        {{ getDeviceExpireTimeText(row) }}
+                    </template>
+                </el-table-column>
+                <el-table-column label="创建时间" prop="create_time" min-width="180" />
+                <el-table-column label="操作" width="240" fixed="right">
+                    <template #default="{ row }">
+                        <el-button
+                            v-if="canActivate(row)"
+                            v-perms="['ai_application.device/redeem']"
+                            type="primary"
+                            link
+                            @click="handleActivate(row)">
+                            激活
+                        </el-button>
+                        <el-button
+                            v-if="canRenew(row)"
+                            v-perms="['ai_application.device/redeem']"
+                            type="primary"
+                            link
+                            @click="handleActivate(row)">
+                            续费
+                        </el-button>
+                        <el-button
+                            v-perms="['ai_application.device/deviceTransfer']"
+                            type="primary"
+                            link
+                            @click="handleTransfer(row)">
+                            设备转移用户
+                        </el-button>
                         <el-button
                             v-perms="['ai_application.device/delete']"
                             type="danger"
@@ -59,12 +99,27 @@
                 <pagination v-model="pager" @change="getLists" />
             </div>
         </el-card>
+
+        <activate-popup v-model="activateVisible" :device="currentDevice" @success="getLists" />
+        <transfer-popup v-model="transferVisible" :device="currentDevice" @success="getLists" />
     </div>
 </template>
 <script lang="ts" setup>
 import { usePaging } from "@/hooks/usePaging";
 import { getDeviceLists, deleteDevice } from "@/api/ai_application/device";
+import {
+    getDeviceAuthStatusTag,
+    getDeviceAuthStatusText,
+    getDeviceExpireTimeText,
+    getDevicePlanName,
+    isDeviceActivated,
+    isDeviceExpired,
+    isDevicePermanent,
+} from "@/enums/deviceAuthEnums";
 import feedback from "@/utils/feedback";
+import ActivatePopup from "./components/activate-popup.vue";
+import TransferPopup from "./components/transfer-popup.vue";
+
 const queryParams = reactive({
     device_code: "",
     nickname: "",
@@ -75,11 +130,38 @@ const { pager, getLists, resetPage, resetParams } = usePaging({
     params: queryParams,
 });
 
+const currentDevice = ref<Record<string, any> | null>(null);
+const activateVisible = ref(false);
+const transferVisible = ref(false);
+
+/** 未激活：显示「激活」 */
+const canActivate = (row: Record<string, any>) => !isDeviceActivated(row) && !isDeviceExpired(row);
+
+/** 已激活/已过期且非永久卡：显示「续费」 */
+const canRenew = (row: Record<string, any>) =>
+    (isDeviceActivated(row) || isDeviceExpired(row)) && !isDevicePermanent(row);
+
+const handleActivate = (row: Record<string, any>) => {
+    currentDevice.value = row;
+    activateVisible.value = true;
+};
+
+const handleTransfer = (row: Record<string, any>) => {
+    currentDevice.value = row;
+    transferVisible.value = true;
+};
+
 const handleDelete = async (id: number, device_code: string) => {
     await feedback.confirm("确定要删除该设备吗？");
     await deleteDevice({ id, device_code });
     getLists();
 };
+
+onBeforeUnmount(() => {
+    activateVisible.value = false;
+    transferVisible.value = false;
+    currentDevice.value = null;
+});
 
 getLists();
 </script>

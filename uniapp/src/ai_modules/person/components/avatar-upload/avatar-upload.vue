@@ -1,26 +1,26 @@
 <template>
     <view
-        class="relative bg-white rounded-full"
+        class="relative bg-white rounded-full border border-solid border-[#D6E8FF]"
         :style="{ width: `${size}rpx`, height: `${size}rpx` }"
         @click="uploadAndProcessFiles('image')">
         <view class="w-full h-full overflow-hidden rounded-full">
             <image :src="avatar" class="w-full h-full" mode="aspectFill" />
         </view>
         <view
-            class="absolute bottom-0 right-0 w-[50rpx] h-[50rpx] rounded-full bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.08)] flex items-center justify-center z-[22]"
+            class="absolute bottom-[2rpx] right-[2rpx] rounded-full flex items-center justify-center z-[22]"
             :style="{ width: `${iconSize}rpx`, height: `${iconSize}rpx` }">
             <image
-                src="@/ai_modules/person/static/icons/camera.svg"
-                :style="{ width: `${iconSize / 2}rpx`, height: `${iconSize / 2}rpx` }"></image>
+                src="@/ai_modules/person/static/icons/profile-camera.svg"
+                class="w-full h-full"
+                mode="aspectFit"></image>
         </view>
     </view>
 </template>
 
 <script setup lang="ts">
-import config from "@/config";
 import useUpload from "@/hooks/useUpload";
 
-const props = withDefaults(
+withDefaults(
     defineProps<{
         avatar: string;
         size?: number;
@@ -30,7 +30,7 @@ const props = withDefaults(
         avatar: "",
         size: 180,
         iconSize: 50,
-    }
+    },
 );
 
 const emit = defineEmits<{

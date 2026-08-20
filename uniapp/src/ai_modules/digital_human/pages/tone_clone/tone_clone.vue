@@ -7,17 +7,16 @@
                 :background="{
                     background: 'transparent',
                 }"
-                title="音色克隆"
+                title=""
                 title-bold>
             </u-navbar>
         </view>
         <view class="grow min-h-0 relative z-30">
             <scroll-view scroll-y class="h-full">
                 <view class="px-4 pb-[100rpx]">
-                    <!-- 声音名称 -->
                     <view class="flex items-center gap-1">
                         <text class="text-[#E33C64] text-xl font-medium">*</text>
-                        <text class="text-[30rpx] font-medium">声音名称</text>
+                        <text class="text-[30rpx] font-medium">名称</text>
                     </view>
                     <view class="mt-2">
                         <view class="bg-white rounded-[16rpx] px-[34rpx] py-1">
@@ -29,10 +28,8 @@
                         </view>
                     </view>
 
-                    <!-- 音色性别和使用模型 -->
                     <view class="mt-[40rpx]">
                         <view class="flex flex-col gap-4">
-                            <!-- 使用模型 -->
                             <view class="flex items-center gap-1">
                                 <text class="text-[#E33C64] text-xl font-medium">*</text>
                                 <text class="text-[30rpx] font-medium">使用模型</text>
@@ -45,42 +42,12 @@
                                 </view>
                                 <u-icon name="arrow-right" color="#B2B2B2" :size="20"></u-icon>
                             </view>
-                            <!-- 音色性别 -->
-                            <!-- <view v-if="formData.model_version != DigitalHumanModelVersionEnum.SHANJIAN">
-                                <view class="flex items-center gap-1">
-                                    <text class="text-[#E33C64] text-xl font-medium">*</text>
-                                    <text class="text-[30rpx] font-medium">音色性别</text>
-                                </view>
-                                <view class="flex items-center gap-2 mt-2">
-                                    <view
-                                        class="flex-1 flex items-center justify-center gap-2 border border-solid rounded-lg p-2 h-[80rpx] font-medium bg-white"
-                                        :class="[
-                                            formData.gender === item.value
-                                                ? 'border-[#0065FB] text-primary'
-                                                : 'border-[transparent] text-[#00000080]',
-                                        ]"
-                                        v-for="(item, index) in toneOptions"
-                                        :key="index"
-                                        @click="selectGender(item.value)">
-                                        <image
-                                            v-if="formData.gender === item.value"
-                                            :src="item.activeIcon"
-                                            class="w-[28rpx] h-[28rpx]"></image>
-                                        <image v-else :src="item.icon" class="w-[28rpx] h-[28rpx]"></image>
-                                        <view>
-                                            {{ item.name }}
-                                        </view>
-                                    </view>
-                                </view>
-                            </view> -->
                         </view>
                     </view>
 
-                    <!-- 音频文件 -->
                     <view class="mt-[40rpx]">
                         <view class="text-[30rpx] font-medium mb-[18rpx]">音频文件</view>
                         <view v-if="formData.url">
-                            <!-- 已上传音频显示 -->
                             <view class="bg-white rounded-[16rpx] px-[26rpx] h-[170rpx] flex items-center gap-x-2">
                                 <view class="flex items-center gap-x-3 flex-1">
                                     <image
@@ -103,17 +70,12 @@
                                 </view>
                             </view>
                             <view
-                                class="mt-[50rpx] text-center text-[26rpx] font-medium text-[#00000080]"
-                                @click="
-                                    resetAudio;
-                                    formData.url = '';
-                                    fileName = '';
-                                "
-                                >重新录音</view
-                            >
+                                class="mt-[50rpx] text-center font-medium text-[#00000080]"
+                                @click="handleDeleteAudio">
+                                重新录音
+                            </view>
                         </view>
 
-                        <!-- 上传音频选项 -->
                         <template v-else>
                             <view class="flex items-center gap-x-2">
                                 <view
@@ -130,7 +92,7 @@
                                         点击录制语音，建议录制15-60秒的长度
                                     </view>
                                     <view
-                                        class="mt-[40rpx] w-[200rpx] h-[60rpx] flex items-center justify-center rounded-[14rpx] bg-[#0065fb1a] text-primary text-[26rpx] font-medium">
+                                        class="mt-[40rpx] w-[200rpx] h-[60rpx] flex items-center justify-center rounded-[14rpx] bg-[#0065fb1a] text-primary font-medium">
                                         去录制
                                     </view>
                                 </view>
@@ -148,15 +110,14 @@
                                         选择微信聊天记录里时长30秒以上的音频上传
                                     </view>
                                     <view
-                                        class="mt-[40rpx] w-[200rpx] h-[60rpx] flex items-center justify-center rounded-[14rpx] bg-[#00c08c1a] text-[#00C08E] text-[26rpx] font-medium">
+                                        class="mt-[40rpx] w-[200rpx] h-[60rpx] flex items-center justify-center rounded-[14rpx] bg-[#00c08c1a] text-[#00C08E] font-medium">
                                         去上传
                                     </view>
                                 </view>
                             </view>
 
-                            <!-- 声音克隆要求 -->
                             <view class="mt-5">
-                                <view class="text-[30rpx] font-medium">声音克隆要求</view>
+                                <view class="text-[30rpx] font-medium">要求</view>
                                 <view class="leading-6 mt-2">
                                     <view class="flex gap-x-4">
                                         <view class="font-medium text-[#00000080] py-2">音频时长</view>
@@ -194,17 +155,33 @@
             </scroll-view>
         </view>
 
-        <!-- 开始克隆按钮 -->
         <view class="mt-4 mx-4 p-4">
             <view
-                class="h-[100rpx] w-[90%] mx-auto rounded-md bg-black text-white text-[30rpx] font-medium flex items-center justify-center"
+                class="flex items-center justify-center mb-[24rpx]"
+                @click.stop="isAgreedVoiceprint = !isAgreedVoiceprint">
+                <u-icon
+                    :name="isAgreedVoiceprint ? 'checkmark-circle-fill' : 'checkmark-circle'"
+                    :color="isAgreedVoiceprint ? '#0065FB' : '#B2B2B2'"
+                    :size="32"></u-icon>
+                <text class="text-xs text-[#00000080] ml-1">我已阅读并同意</text>
+                <text class="text-xs text-primary" @click.stop="showVoiceprintAgreement = true">
+                    《{{ voiceprintAgreementTitle }}》
+                </text>
+            </view>
+            <view
+                class="h-[100rpx] w-[90%] mx-auto rounded-[100rpx] bg-primary text-white text-[30rpx] font-medium flex items-center justify-center"
                 @click="startVoiceCloning()">
                 开始克隆<template v-if="tokensRequired">（消耗{{ tokensRequired }}算力）</template>
             </view>
         </view>
     </view>
 
-    <!-- 弹窗组件 -->
+    <agreement
+        v-model="showVoiceprintAgreement"
+        :title="voiceprintAgreementTitle"
+        :content="voiceprintAgreementContent"
+        @agree="agreeVoiceprint"
+        @close="showVoiceprintAgreement = false" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
     <choose-model v-model="showChooseModel" @confirm="handleModelSelection" />
     <popup-bottom
@@ -215,7 +192,7 @@
         height="80%"
         @close="resetAudio">
         <template #content>
-            <view class="flex flex-col h-full">
+            <view class="flex flex-col h-full pt-4">
                 <view class="grow min-h-0">
                     <scroll-view class="h-full" scroll-y>
                         <view class="px-[26rpx]">
@@ -276,20 +253,18 @@
 <script setup lang="ts">
 import { ChooseResult, chooseFile } from "@/components/file-upload/choose-file";
 import { uploadFile } from "@/api/app";
-import { voiceClone, shanjianVoiceClone } from "@/api/digital_human";
+import { voiceClone, shanjianVoiceClone, minimaxAudioUpload, minimaxVoiceClone } from "@/api/digital_human";
 import { useAudio } from "@/hooks/useAudio";
 import { useRecorder } from "@/hooks/useRecorder";
 import { formatAudioTime } from "@/utils/util";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
-import ManIcon from "@/ai_modules/digital_human/static/icons/man.svg";
-import ManActiveIcon from "@/ai_modules/digital_human/static/icons/man_s.svg";
-import WomanIcon from "@/ai_modules/digital_human/static/icons/woman.svg";
-import WomanActiveIcon from "@/ai_modules/digital_human/static/icons/woman_s.svg";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { cratedVoiceCopywriter } from "../../config/copywriter";
+import { voiceprintAgreementTitle, voiceprintAgreementContent } from "../../config/voiceprint-agreement";
 import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
+import Agreement from "@/ai_modules/digital_human/components/agreement/agreement.vue";
 
 // Store
 const appStore = useAppStore();
@@ -298,29 +273,21 @@ const { userTokens } = toRefs(userStore);
 
 // 计算属性
 const getSelectedModelName = computed(() => {
-    const { channel } = appStore.getDigitalHumanConfig;
-    if (channel && channel.length > 0) {
-        return (
-            channel
-                .filter(
-                    (item: any) =>
-                        item.status == 1 &&
-                        [DigitalHumanModelVersionEnum.CHANJING, DigitalHumanModelVersionEnum.SHANJIAN].includes(
-                            parseInt(item.id)
-                        )
-                )
-                .find((item: any) => item.id == formData.model_version)?.name || "请选择"
-        );
-    }
-    return "请选择";
+    const channel = appStore.getAiModelConfig.humanModels;
+    return channel?.find((item: any) => item.model_version == formData.model_version)?.name || "请选择";
 });
 
 const tokensRequired = computed(() => {
     const tokenMap: any = {
-        [DigitalHumanModelVersionEnum.STANDARD]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE)?.score,
         [DigitalHumanModelVersionEnum.CHANJING]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_CHANJING)?.score,
         [DigitalHumanModelVersionEnum.SHANJIAN]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN)?.score,
+        [DigitalHumanModelVersionEnum.MINIMAX_HD]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_MINIMAX_HD)
+            ?.score,
+        [DigitalHumanModelVersionEnum.MINIMAX_TURBO]: userStore.getTokenByScene(
+            TokensSceneEnum.HUMAN_VOICE_MINIMAX_TURBO,
+        )?.score,
     };
+    console.log("tokenMap", tokenMap[formData.model_version]);
     return parseFloat(tokenMap[formData.model_version]);
 });
 
@@ -328,11 +295,13 @@ const tokensRequired = computed(() => {
 const formData = reactive<{
     url: string;
     name: string;
-    model_version: number;
+    model_version: DigitalHumanModelVersionEnum;
+    file_id: string;
 }>({
     url: "",
     name: "",
     model_version: DigitalHumanModelVersionEnum.SHANJIAN,
+    file_id: "",
 });
 
 const fileName = ref("");
@@ -342,15 +311,19 @@ const getUploadAudioFormat = () => {
     return formData.model_version == DigitalHumanModelVersionEnum.SHANJIAN ? ["mp3", "wav"] : ["mp3", "wav", "m4a"];
 };
 
-// 音色选项
-const toneOptions: any[] = [
-    { name: "男声", value: "male", icon: ManIcon, activeIcon: ManActiveIcon },
-    { name: "女声", value: "female", icon: WomanIcon, activeIcon: WomanActiveIcon },
-];
-
 // 弹窗控制
 const showChooseModel = ref(false);
 const showRecorder = ref(false);
+
+// 声纹授权协议
+const showVoiceprintAgreement = ref(false);
+const isAgreedVoiceprint = ref(false);
+
+const agreeVoiceprint = () => {
+    isAgreedVoiceprint.value = true;
+    showVoiceprintAgreement.value = false;
+    startVoiceCloning();
+};
 
 // 录音相关
 const currCopywriterIndex = ref(0);
@@ -358,7 +331,7 @@ const recordDurationTimer = ref<any>(null);
 const recordDuration = ref<number>(0);
 const isCancel = ref(false);
 
-// 音频播放hook
+// 音频播放 hook
 const { setUrl, isPlaying, play, pause, destroy } = useAudio({
     onError: (error) => {
         if (error.type == "error" && error.errMsg.includes("Unable to decode audio data")) {
@@ -367,7 +340,7 @@ const { setUrl, isPlaying, play, pause, destroy } = useAudio({
     },
 });
 
-// 录音hook
+// 录音 hook
 const maxDuration = 120;
 const minDuration = 10;
 const { authorize, isRecording, start, stop, close } = useRecorder(
@@ -379,34 +352,31 @@ const { authorize, isRecording, start, stop, close } = useRecorder(
             if (isCancel.value) return;
             const { tempFilePath, fileSize } = result;
             if (recordDuration.value < minDuration) return;
-            if (!validateAudioSize(fileSize)) {
-                return;
-            }
+            if (!validateAudioSize(fileSize)) return;
             clearInterval(recordDurationTimer.value);
             await uploadAudio(tempFilePath);
             setUrl(tempFilePath);
         },
-        onerror: (error) => {
+        onerror: () => {
             resetRecordDuration();
         },
     },
     {
         duration: 1000 * maxDuration,
-    }
+    },
 );
 
 // 组件引用
 const rechargePopupRef = ref();
 
-// 方法定义
-// const selectGender = (gender: "male" | "female") => {
-//     formData.gender = gender;
-// };
-
-const handleModelSelection = (modelId: any) => {
-    formData.model_version = modelId;
+// 选择模型
+const handleModelSelection = (modelVersion: DigitalHumanModelVersionEnum) => {
+    formData.model_version = modelVersion;
+    // 切换模型时清空已上传的音频，避免 file_id 与模型不匹配
+    handleDeleteAudio();
 };
 
+// 打开录音弹窗
 const openRecorder = () => {
     formData.url = "";
     fileName.value = "";
@@ -417,9 +387,22 @@ const openRecorder = () => {
     destroy();
 };
 
+// 微信上传音频
 const uploadFromWeChat = async () => {
     await handleUploadAudio();
-    setUrl(formData.url);
+    if (formData.url) {
+        setUrl(formData.url);
+    }
+};
+
+// 删除已上传音频
+const handleDeleteAudio = () => {
+    formData.url = "";
+    formData.file_id = "";
+    fileName.value = "";
+    pause();
+    destroy();
+    resetAudio();
 };
 
 // 验证音频大小
@@ -432,7 +415,7 @@ const validateAudioSize = (size: number): boolean => {
     return true;
 };
 
-// 上传音频文件
+// 选择本地文件
 const handleUploadAudio = async () => {
     try {
         const filesResult = await chooseFile({
@@ -451,42 +434,43 @@ const processSelectedFile = async (filesResult: ChooseResult) => {
     const { size, name } = tempFiles[0];
     const fileType = name.split(".").pop()?.toLowerCase();
 
-    // 验证文件类型
     if (!fileType || !getUploadAudioFormat().includes(fileType)) {
         uni.$u.toast(`请上传${getUploadAudioFormat().join("、")}格式的音频文件`);
         return;
     }
-    // 验证文件大小
-    if (!validateAudioSize(size)) {
-        return;
-    }
+    if (!validateAudioSize(size)) return;
 
-    // 上传文件
     await uploadAudio(tempFiles[0].path);
 };
 
-// 上传音频到服务器
+// 上传音频到服务器，MINIMAX 模型额外调用 minimaxAudioUpload 获取 file_id
 const uploadAudio = async (filePath: string) => {
-    uni.showLoading({
-        title: "上传中",
-        mask: true,
-    });
-
+    uni.showLoading({ title: "上传中", mask: true });
     try {
-        const { uri, name }: any = await uploadFile("audio", {
-            filePath: filePath,
-        });
-        uni.hideLoading();
+        const { uri, name }: any = await uploadFile("audio", { filePath });
+
+        if (
+            [DigitalHumanModelVersionEnum.MINIMAX_HD, DigitalHumanModelVersionEnum.MINIMAX_TURBO].includes(
+                formData.model_version,
+            )
+        ) {
+            try {
+                const { file_id } = await minimaxAudioUpload({ audio_url: uri });
+                formData.file_id = file_id;
+            } catch (error) {
+                handleDeleteAudio();
+                uni.$u.toast(error || "上传失败");
+                return;
+            }
+        }
+
         formData.url = uri;
         fileName.value = name;
         showRecorder.value = false;
     } catch (error: any) {
+        uni.$u.toast(error || "上传失败");
+    } finally {
         uni.hideLoading();
-        uni.showToast({
-            title: error || "上传失败",
-            icon: "none",
-            duration: 3000,
-        });
     }
 };
 
@@ -503,12 +487,10 @@ const resetRecordDuration = () => {
     clearInterval(recordDurationTimer.value);
 };
 
-// 录音控制方法
+// 录音控制
 const startRecording = async () => {
     await authorize();
-    if (!isRecording.value) {
-        start();
-    }
+    if (!isRecording.value) start();
 };
 
 const stopRecording = () => {
@@ -538,7 +520,7 @@ const toggleAudioPlayback = async () => {
     }
 };
 
-// 重置音频
+// 重置录音状态
 const resetAudio = () => {
     isRecording.value = false;
     showRecorder.value = false;
@@ -554,69 +536,71 @@ const generateRandomCopywriter = () => {
     currCopywriterIndex.value = Math.floor(Math.random() * cratedVoiceCopywriter.length);
 };
 
-// 开始克隆
+// 开始克隆（对齐 add-pop.vue 的多模型分发逻辑）
 const startVoiceCloning = async () => {
-    // 表单验证
     if (!formData.name.trim()) {
         uni.$u.toast("请输入音色名称");
         return;
     }
-
     if (!formData.url) {
         uni.$u.toast("请先上传音频");
         return;
     }
-
     if (!formData.model_version) {
         uni.$u.toast("请选择使用模型");
         return;
     }
-
-    // 算力检查
+    if (!isAgreedVoiceprint.value) {
+        showVoiceprintAgreement.value = true;
+        return;
+    }
     if (userTokens.value < tokensRequired.value) {
-        uni.$u.toast("算力不足，请充值！");
+        powerInsufficientTip();
         rechargePopupRef.value?.open();
         return;
     }
 
-    // 执行克隆
+    uni.showLoading({ title: "克隆中", mask: true });
     try {
-        uni.showLoading({
-            title: "克隆中",
-            mask: true,
-        });
-
-        if (formData.model_version == DigitalHumanModelVersionEnum.SHANJIAN) {
-            await shanjianVoiceClone({
+        const currModel = appStore.getAiModelConfig.humanModels?.find(
+            (item: any) => item.model_version == formData.model_version,
+        );
+        const callMinimax = () =>
+            minimaxVoiceClone({
                 name: formData.name,
-                audio_url: formData.url,
+                model: currModel?.alias,
+                file_id: formData.file_id,
+                text: cratedVoiceCopywriter[currCopywriterIndex.value],
             });
-        } else {
-            await voiceClone(formData);
-        }
-        uni.hideLoading();
-        userStore.getUser(); // 更新用户信息
-        uni.hideLoading();
-        uni.showToast({
-            title: "克隆成功，请在我的音色中查看",
-            icon: "none",
-            duration: 3000,
-        });
+        const apis: Partial<Record<DigitalHumanModelVersionEnum, () => Promise<any>>> = {
+            [DigitalHumanModelVersionEnum.SHANJIAN]: () =>
+                shanjianVoiceClone({
+                    name: formData.name,
+                    audio_url: formData.url,
+                }),
+            [DigitalHumanModelVersionEnum.CHANJING]: () => voiceClone(formData),
+            [DigitalHumanModelVersionEnum.MINIMAX_HD]: () => callMinimax(),
+            [DigitalHumanModelVersionEnum.MINIMAX_TURBO]: () => callMinimax(),
+        };
 
-        setTimeout(() => {
-            navigateToHome();
-        }, 1500);
+        const apiFn = apis[formData.model_version];
+        if (!apiFn) {
+            uni.$u.toast("不支持的模型版本");
+            return;
+        }
+
+        await apiFn();
+        userStore.getUser();
+        uni.hideLoading();
+        uni.showToast({ title: "克隆成功，请在我的音色中查看", icon: "none", duration: 3000 });
+        setTimeout(() => navigateToHome(), 1500);
     } catch (error: any) {
         uni.hideLoading();
-        uni.showToast({
-            title: error || "克隆失败",
-            icon: "none",
-            duration: 3000,
-        });
+        uni.showToast({ title: error || "克隆失败", icon: "none", duration: 3000 });
     }
 };
 
-// 导航到首页
+// 导航到克隆管理页
 const navigateToHome = () => {
     uni.$u.route({
         url: "/ai_modules/digital_human/pages/clone_manage/clone_manage",
@@ -628,17 +612,17 @@ watch(
     () => appStore.getDigitalHumanConfig.channel,
     (newVal) => {
         if (newVal && newVal.length > 0) {
-            formData.model_version = newVal.find((item: any) => item.id == DigitalHumanModelVersionEnum.SHANJIAN)?.id;
+            formData.model_version =
+                newVal.find((item: any) => item.model_version == DigitalHumanModelVersionEnum.SHANJIAN)
+                    ?.model_version ?? newVal[0].model_version;
         }
     },
-    {
-        immediate: true,
-    }
+    { immediate: true },
 );
 
 onLoad((options: any) => {
     if (options.model_version) {
-        formData.model_version = parseInt(options.model_version);
+        formData.model_version = parseInt(options.model_version) as DigitalHumanModelVersionEnum;
     }
 });
 </script>

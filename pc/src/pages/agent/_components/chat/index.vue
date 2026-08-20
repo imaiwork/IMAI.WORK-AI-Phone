@@ -40,6 +40,7 @@ onMounted(() => {
     initialize();
     chatStore.setAgent({
         id: props.agentId,
+        name: "",
     });
 });
 
@@ -50,7 +51,13 @@ onUnmounted(() => {
 
 // 暴露 startNewChat 方法，供父组件调用
 defineExpose({
-    startNewChat,
+    startNewChat: () => {
+        chatStore.clearChat();
+        chatStore.setAgent({
+            id: props.agentId,
+            name: "",
+        });
+    },
 });
 </script>
 

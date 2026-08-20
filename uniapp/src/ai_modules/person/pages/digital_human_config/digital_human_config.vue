@@ -58,13 +58,13 @@
                     <view class="flex items-center justify-between mb-5">
                         <view class="flex items-baseline gap-1.5">
                             <text class="text-[34rpx] font-extrabold text-[#1A1A1A] tracking-wide">数字人形象</text>
-                            <text class="text-[24rpx] text-[#999999] font-medium">({{ avatars.length }})</text>
+                            <text class="text-xs text-[#999999] font-medium">({{ avatars.length }})</text>
                         </view>
                         <view
                             class="px-3.5 py-1.5 rounded-full bg-[#F0F5FF] text-primary flex items-center gap-1"
                             @click="handleAddAvatar">
                             <u-icon name="plus" size="20" />
-                            <text class="text-[24rpx] font-bold">添加形象</text>
+                            <text class="text-xs font-bold">添加形象</text>
                         </view>
                     </view>
 
@@ -76,12 +76,12 @@
                             <u-icon name="account" color="#93B8FF" size="60" />
                         </view>
                         <text class="text-[28rpx] font-bold text-[#333333] mb-2">暂无出镜形象</text>
-                        <text class="text-[24rpx] text-[#b4b4b4] mb-6">添加形象后，系统将自动匹配出镜人物</text>
+                        <text class="text-xs text-[#b4b4b4] mb-6">添加形象后，系统将自动匹配出镜人物</text>
                         <view
                             class="flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-primary"
                             @click="handleAddAvatar">
                             <u-icon name="plus" color="#ffffff" size="22" />
-                            <text class="text-[26rpx] font-bold text-white">立即添加形象</text>
+                            <text class="font-bold text-white">立即添加形象</text>
                         </view>
                     </view>
 
@@ -125,13 +125,13 @@
                     <view class="flex items-center justify-between mb-5">
                         <view class="flex items-baseline gap-1.5">
                             <text class="text-[34rpx] font-extrabold text-[#1A1A1A] tracking-wide">数字人音色</text>
-                            <text class="text-[24rpx] text-[#999999] font-medium">({{ voices.length }})</text>
+                            <text class="text-xs text-[#999999] font-medium">({{ voices.length }})</text>
                         </view>
                         <view
                             class="px-3.5 py-1.5 rounded-full bg-[#F0F5FF] text-primary flex items-center gap-1"
                             @click="handleAddVoice">
                             <u-icon name="plus" size="20" />
-                            <text class="text-[24rpx] font-bold">添加音色</text>
+                            <text class="text-xs font-bold">添加音色</text>
                         </view>
                     </view>
 
@@ -143,12 +143,12 @@
                             <u-icon name="volume-up" color="#93B8FF" size="60" />
                         </view>
                         <text class="text-[28rpx] font-bold text-[#333333] mb-2">暂无音色配置</text>
-                        <text class="text-[24rpx] text-[#b4b4b4] mb-6">添加音色后，系统将自动为视频匹配声音</text>
+                        <text class="text-xs text-[#b4b4b4] mb-6">添加音色后，系统将自动为视频匹配声音</text>
                         <view
                             class="flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-primary"
                             @click="handleAddVoice">
                             <u-icon name="plus" color="#ffffff" size="22" />
-                            <text class="text-[26rpx] font-bold text-white">立即添加音色</text>
+                            <text class="font-bold text-white">立即添加音色</text>
                         </view>
                     </view>
 
@@ -174,7 +174,7 @@
                                         :name="getPlayIcon(item.voice_id)"
                                         :size="30"
                                         :color="getPlayColor(item.voice_id)" />
-                                    <text class="text-[24rpx] font-medium" :class="getPlayTextClass(item.voice_id)">
+                                    <text class="text-xs font-medium" :class="getPlayTextClass(item.voice_id)">
                                         {{ isCurrentPlaying(item.voice_id) ? "暂停" : "试听" }}
                                     </text>
                                 </view>
@@ -200,7 +200,7 @@
             v-model="showChooseVoice"
             ref="chooseVoiceRef"
             :show-free-tone="false"
-            :model-version="DigitalHumanModelVersionEnum.SHANJIAN"
+            :model-version="PERSONA_MATERIAL_VOICE_MODEL_VERSIONS"
             @select="handleChooseVoice" />
 
         <choose-voice
@@ -226,6 +226,7 @@ import {
 } from "@/api/person";
 import { useAudio } from "@/hooks/useAudio";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
+import { PERSONA_MATERIAL_VOICE_MODEL_VERSIONS } from "@/ai_modules/person/enums";
 import ChooseAnchor from "@/ai_modules/person/components/choose-anchor/choose-anchor.vue";
 import ChooseVoice from "@/ai_modules/person/components/choose-voice/choose-voice.vue";
 
@@ -314,7 +315,7 @@ const confirmRemove = <T extends { is_local?: boolean }>(
     list: ReturnType<typeof ref<T[]>>,
     item: T,
     label: string,
-    apiFn: (() => Promise<void>) | null
+    apiFn: (() => Promise<void>) | null,
 ): void => {
     uni.showModal({
         title: "提示",
@@ -384,7 +385,12 @@ const handleOpenVoiceForAvatar = (item: AvatarItem): void => {
                 // 若已绑定音色，则在选择器中高亮已选项
                 if (item.voice_id) {
                     avatarVoicePickerRef.value?.setChooseLists([
-                        { voice_id: item.voice_id, id: item.voice_id, name: item.voice_name ?? "", url: "" },
+                        {
+                            voice_id: item.voice_id,
+                            id: item.voice_id,
+                            name: item.voice_name ?? "",
+                            url: "",
+                        },
                     ]);
                 }
             }

@@ -1,5 +1,10 @@
 import { getClient } from "@/utils/env";
 
+// 公开:获取注册模式 + 默认邀请来源(决定登录弹窗是否显示邀请码输入框)
+export function getRegisterMode() {
+    return $request.get({ url: "/login/registerMode" });
+}
+
 // 登录
 export function login(params: any) {
     return $request.post({

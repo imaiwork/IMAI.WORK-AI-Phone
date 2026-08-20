@@ -22,8 +22,20 @@ class PublishController extends BaseApiController
             
             // 补充适配矩阵调度的默认参数
             $params['task_type'] = 6;       // 6代表视频复刻
-            $params['media_type'] = 1;      // 1=视频 2=图文
-            $params['scene'] = 1;           // 1代表从创作开始等场景来源
+            $params['scene'] = 1;
+
+            $videoIds = $params['video_ids'] ?? [];
+            if (!is_array($videoIds)) {
+                $videoIds = [];
+            }
+            $mediaTypes = \app\common\model\videoImitation\VideoImitationTask::where('id', 'in', $videoIds)
+                ->where('user_id', $this->userId)
+                ->column('media_type');
+            $mediaTypes = array_values(array_unique(array_map('intval', $mediaTypes)));
+            if (count($mediaTypes) > 1) {
+                return $this->fail('同一发布计划不能混选视频与图文任务');
+            }
+            $params['media_type'] = (int)($mediaTypes[0] ?? 1);
 
             $result = ImitationPublishLogic::add($params);
             if ($result) {

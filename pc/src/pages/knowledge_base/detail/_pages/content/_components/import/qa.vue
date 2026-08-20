@@ -195,6 +195,10 @@ const handleDeleteFile = async (index: any) => {
         message: "确定要删除该段落吗？",
         onConfirm: () => {
             data.value.splice(index, 1);
+            fileList.value.splice(index, 1);
+            if (currIndex.value >= data.value.length) {
+                currIndex.value = Math.max(data.value.length - 1, 0);
+            }
         },
     });
 };

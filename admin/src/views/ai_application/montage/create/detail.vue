@@ -89,6 +89,7 @@
                 </el-table-column>
                 <el-table-column label="消耗算力" prop="video_token" min-width="120" />
                 <el-table-column label="创作时间" prop="create_time" min-width="180" />
+                <el-table-column label="更新时间" prop="update_time" min-width="180" show-overflow-tooltip />
                 <el-table-column label="操作" width="160" fixed="right">
                     <template #default="{ row }">
                         <el-button type="primary" link @click="handlePlay(row)"> 播放 </el-button>

@@ -3,7 +3,9 @@
 
 namespace app\common\model\human;
 
+use app\common\enum\ChatEnum;
 use app\common\model\BaseModel;
+use app\common\model\chat\Models;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
 use think\model\concern\SoftDelete;
@@ -187,35 +189,57 @@ class HumanVoice extends BaseModel
      * @date 2024/12/30 10:18
      * @author dagouzi
      */
-    public static function getModelList()
+    public static function getModelList($voiceType = '0')
     {
         $info =  ConfigService::get('model', 'list', []);
-        $channel = $info['channel'] ?? [];
-        foreach ($channel as $key => $value) {
-            if (trim($value['icon']) != ''){
-                $channel[$key]['icon'] = FileService::getFileUrl($value['icon']);
-            }
-            if ($value['status'] != 1) {
-
-                unset($channel[$key]);
-            }
-
-        }
-        $info['channel'] = array_values($channel);
+        $info['channel'] = self::getHumanModelChannels();
 
         $voice = $info['voice'] ?? [];
 
         foreach ($voice as $key => $value) {
-
+            if (in_array($value['code'], ["10010","10011","10012","10013","10014","10015","10016"])){
+                $voice[$key]['url'] = config('app.app_host') .'/'. $value['url'];
+            }else{
+                $voice[$key]['url'] = config('app.app_host') . '/static/audio/voice/' . $value['code'] . '.wav';
+            }
             if ($value['status'] != 1) {
-
                 unset($voice[$key]);
             }
-            $voice[$key]['url'] = config('app.app_host') . '/static/audio/voice/' . $value['code'] . '.wav';
+            if (isset($value['type']) && $voiceType != '0' && $voiceType != $value['type']){
+                unset($voice[$key]);
+            }
         }
 
         $info['voice'] = array_values($voice);
 
         return $info;
+    }
+
+    private static function getHumanModelChannels(): array
+    {
+        $models = Models::field(['id', 'name', 'logo', 'is_enable', 'model_version'])
+            ->where(['type' => ChatEnum::MODEL_TYPE_HUMAN, 'is_enable' => 1])
+            ->order('sort asc, id desc')
+            ->select()
+            ->toArray();
+
+        $channels = [];
+        foreach ($models as $model) {
+            $modelVersion = (int)($model['model_version'] ?? 0);
+            if ($modelVersion <= 0) {
+                continue;
+            }
+
+            $channels[] = [
+                'id' => (string)$modelVersion,
+                'name' => (string)($model['name'] ?? ''),
+                'described' => '',
+                'icon' => FileService::getFileUrl((string)($model['logo'] ?? '')),
+                'status' => (string)($model['is_enable'] ?? 0),
+                'model_id' => (int)$model['id'],
+            ];
+        }
+
+        return $channels;
     }
 }

@@ -1,7 +1,7 @@
 <template>
     <div class="flex flex-col gap-6">
         <div class="flex items-center gap-3 px-2">
-            <div class="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <div class="w-10 h-10 rounded-2xl bg-[#0065fb]/10 flex items-center justify-center">
                 <img src="@/assets/images/date.png" class="w-6 h-6" />
             </div>
             <div class="flex flex-col">
@@ -80,7 +80,7 @@
                                 class="max-w-[240px] relative rounded-xl overflow-hidden shadow-sm group">
                                 <video :src="content" class="w-full h-full object-cover"></video>
                                 <div
-                                    class="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                    class="absolute inset-0 bg-[#000000]/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                     @click="handlePlayVideo(content)">
                                     <div
                                         class="w-10 h-10 rounded-full bg-[#ffffff]/20 backdrop-blur-md border border-[#ffffff]/40 flex items-center justify-center">

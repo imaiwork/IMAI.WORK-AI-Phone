@@ -55,7 +55,7 @@
                                 resize="none"
                                 class="custom-textarea"></ElInput>
                             <div
-                                class="absolute inset-0 bg-white/40 backdrop-blur-[1px] rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                class="absolute inset-0 bg-[#ffffff]/40 backdrop-blur-[1px] rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                 <span
                                     class="px-3 py-1 bg-white border border-br rounded-lg text-[11px] text-[#94A3B8] font-medium"
                                     >AI 生成结果展示</span
@@ -70,7 +70,7 @@
         <div class="grow relative flex flex-col overflow-hidden">
             <div class="absolute top-8 right-8 z-[888] flex items-center gap-3">
                 <div
-                    class="flex items-center bg-white/80 backdrop-blur-xl p-1.5 rounded-2xl border border-br shadow-xl shadow-black/5">
+                    class="flex items-center bg-[#ffffff]/80 backdrop-blur-xl p-1.5 rounded-2xl border border-br shadow-xl shadow-[#000000]/5">
                     <ElButton
                         class="!h-10 !rounded-xl !border-none !bg-transparent hover:!bg-slate-50 !text-[#64748B] font-black"
                         @click="mindMapFit(formData.reply)">
@@ -105,7 +105,7 @@
                 <div ref="toolbarContainer" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[888]"></div>
 
                 <div
-                    class="absolute inset-0 bg-white/60 backdrop-blur-md z-[88888] flex flex-col items-center justify-center transition-all duration-500"
+                    class="absolute inset-0 bg-[#ffffff]/60 backdrop-blur-md z-[88888] flex flex-col items-center justify-center transition-all duration-500"
                     v-if="isLock">
                     <div class="modern-loader-ring"></div>
                     <div class="mt-8 text-[16px] font-black text-[#1E293B] tracking-tight">
@@ -133,7 +133,7 @@ const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
-const tokensValue = userStore.getTokenByScene(TokensSceneEnum.MIND_MAP)?.score;
+const tokensValue = computed(() => userStore.getTokenByScene(TokensSceneEnum.MIND_MAP)?.score);
 
 const formData = reactive({
     id: "",
@@ -167,7 +167,7 @@ const { lockFn: lockHandleGenerate, isLock } = useLockFn(async () => {
         const data = formData.id
             ? await mindMapEditChat({ id: formData.id, message: formData.ask })
             : await chatPrompt({ message: formData.ask, prompt_id: ScenePromptEnum.AI_MIND_MAP });
-        formData.reply = data.reply;
+        formData.reply = stripMarkdownFence(data.reply);
         formData.id = data.id;
         router.replace({ path: route.path, query: { id: data.id } });
         userStore.getUser();
@@ -178,12 +178,32 @@ const { lockFn: lockHandleGenerate, isLock } = useLockFn(async () => {
     }
 });
 
+function stripMarkdownFence(text) {
+    const trimmed = text.trim();
+
+    // 情况1：整体被围栏包裹（``` 在末尾）
+    let match = trimmed.match(/^```[\w-]*\s*\n([\s\S]*?)\n?```\s*$/);
+    if (match) return match[1].trim();
+
+    // 情况2：围栏后还有附加内容 → 提取块内内容 + 保留后续文字
+    match = trimmed.match(/^```[\w-]*\s*\n([\s\S]*?)\n```\s*\n?([\s\S]*)$/);
+    if (match) {
+        const inner = match[1].trim();
+        const rest = match[2].trim();
+        return rest ? inner + "\n\n" + rest : inner;
+    }
+
+    // 情况3：没有围栏，原样返回
+    return trimmed;
+}
+
 const getDetail = async () => {
     const data = await mindMapDetail({ id: route.query.id });
     Object.keys(formData).forEach((key) => {
         formData[key] = data[key];
     });
-    formData.reply = formData.reply.replace(/```markdown/g, "").replace(/```/g, "");
+    formData.reply = stripMarkdownFence(formData.reply);
+    console.log(formData.reply);
     initMindMap();
 };
 

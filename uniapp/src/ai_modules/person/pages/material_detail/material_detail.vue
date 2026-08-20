@@ -41,67 +41,6 @@
                     <text class="text-[30rpx] font-extrabold text-[#1A1A1A] leading-snug line-clamp-2 break-all">
                         {{ detail.material_name }}
                     </text>
-                    <text class="text-[24rpx] text-[#999999]">
-                        单设备限制使用 <text class="text-primary font-bold">3</text> 次
-                    </text>
-                </view>
-            </view>
-
-            <view class="bg-white rounded-[32rpx] p-5 shadow-[0_8rpx_24rpx_rgba(0,0,0,0.02)]">
-                <view class="flex items-center justify-between mb-4">
-                    <text class="text-[30rpx] font-extrabold text-[#1A1A1A]">各设备使用情况</text>
-                    <view class="text-[24rpx] text-[#666666]">
-                        关联
-                        <text class="text-primary font-bold mx-0.5">{{ devices.length }}</text>
-                        台设备
-                    </view>
-                </view>
-
-                <view v-if="loading" class="flex flex-col gap-3 animate-pulse">
-                    <view v-for="i in 2" :key="i" class="bg-[#F3F4F6] rounded-[24rpx] h-[120rpx]"> </view>
-                </view>
-
-                <view v-else class="flex flex-col gap-3">
-                    <view
-                        v-for="(item, index) in devices"
-                        :key="index"
-                        class="bg-[#F8FAFC] rounded-[24rpx] p-4 border border-solid border-[#f9f9f9]">
-                        <view class="flex items-center justify-between mb-3">
-                            <view class="flex items-center gap-2">
-                                <text class="text-[28rpx] font-bold text-[#1A1A1A]">
-                                    {{ item.device_name }}
-                                </text>
-                                <view
-                                    v-if="item.use_num >= 3 || item.use_status === 2"
-                                    class="px-1.5 py-0.5 rounded-[8rpx] bg-[#FFF0F0] text-[#FF4D4F] text-[20rpx] font-medium">
-                                    停止使用
-                                </view>
-                            </view>
-                            <view class="flex items-center gap-3">
-                                <view class="text-[24rpx] text-[#999999] font-mono">
-                                    <text class="text-primary font-bold text-[28rpx]">{{ item.use_num }}</text>
-                                    / 3
-                                </view>
-                                <view
-                                    class="w-[56rpx] h-[56rpx] bg-white rounded-full shadow-[0_2rpx_8rpx_rgba(0,0,0,0.04)] flex items-center justify-center"
-                                    @click="handleDeviceMore(item)">
-                                    <u-icon name="more-dot-fill" color="#9CA3AF" size="28"></u-icon>
-                                </view>
-                            </view>
-                        </view>
-
-                        <view class="h-[12rpx] bg-[#E5E7EB] rounded-full overflow-hidden">
-                            <view
-                                class="h-full rounded-full transition-all duration-500 ease-out"
-                                :class="item.use_num >= 3 ? 'bg-[#FF4D4F]' : 'bg-[#0065fb]'"
-                                :style="{ width: `${Math.min((item.use_num / 3) * 100, 100)}%` }">
-                            </view>
-                        </view>
-                    </view>
-
-                    <view v-if="devices.length === 0" class="py-8 flex flex-col items-center gap-2">
-                        <text class="text-[26rpx] text-[#999999]">暂无关联设备</text>
-                    </view>
                 </view>
             </view>
 
@@ -173,7 +112,7 @@
                                             <view
                                                 class="absolute inset-0 rounded-full border-[4rpx] border-solid border-[#BFDBFE]" />
                                             <view
-                                                class="absolute inset-0 rounded-full border-[4rpx] border-solid border-transparent animate-spin"
+                                                class="absolute inset-0 rounded-full border-[4rpx] border-solid border-[transparent] animate-spin"
                                                 style="border-top-color: #0065fb" />
                                             <view class="absolute inset-0 flex items-center justify-center">
                                                 <view class="w-[10rpx] h-[10rpx] rounded-full bg-primary" />
@@ -234,15 +173,18 @@
                                                 'text-[#059669]': record.status === 3,
                                             }">
                                             {{
-                                                { 0: "待处理", 1: "视频查询中", 2: "合成失败", 3: "合成成功" }[
-                                                    record.status
-                                                ]
+                                                {
+                                                    0: "待处理",
+                                                    1: "视频查询中",
+                                                    2: "合成失败",
+                                                    3: "合成成功",
+                                                }[record.status]
                                             }}
                                         </text>
                                     </view>
                                 </view>
 
-                                <text class="text-[24rpx] text-[#666666] truncate">
+                                <text class="text-xs text-[#666666] truncate">
                                     {{ record.device_name }} ({{ record.device_code }})
                                 </text>
                                 <text class="text-[22rpx] text-[#B4B4B4]">{{ record.create_time }}</text>
@@ -260,7 +202,7 @@
                     </view>
 
                     <view v-if="records.length === 0" class="py-8 flex flex-col items-center gap-2">
-                        <text class="text-[26rpx] text-[#999999]">暂无生成记录</text>
+                        <text class="text-[#999999]">暂无生成记录</text>
                     </view>
                 </view>
             </view>

@@ -71,6 +71,7 @@
 
 <script lang="ts" setup>
 import { useAudio } from "@/hooks/useAudio";
+import UaMarkdown from "@/ai_modules/interview/components/ua-markdown/ua-markdown.vue";
 
 const props = defineProps({
     content: {
@@ -120,7 +121,7 @@ watch(
         if (val) {
             togglePlay();
         }
-    }
+    },
 );
 
 defineExpose({

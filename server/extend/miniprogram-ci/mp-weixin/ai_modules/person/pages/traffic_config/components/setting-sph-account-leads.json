@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-icon": "../../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "config-card": "./config-card",
+    "tag-list": "./tag-list"
+  }
+}

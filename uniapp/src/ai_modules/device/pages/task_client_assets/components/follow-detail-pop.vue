@@ -47,28 +47,20 @@
 
                                 <view class="flex flex-col gap-y-[20rpx]">
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >执行账号</text
-                                        >
-                                        <text class="text-[#000000cc] text-[26rpx]">{{
-                                            detailData.user_account || "-"
-                                        }}</text>
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">执行账号</text>
+                                        <text class="text-[#000000cc]">{{ detailData.user_account || "-" }}</text>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >提取微信号</text
-                                        >
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">提取微信号</text>
                                         <view class="px-[14rpx] py-[4rpx] bg-[rgba(0,101,251,0.06)] rounded-[10rpx]">
-                                            <text class="text-primary text-[24rpx] font-medium">{{
+                                            <text class="text-primary text-xs font-medium">{{
                                                 detailData.reg_wechat || "-"
                                             }}</text>
                                         </view>
                                     </view>
                                     <!-- 意向状态（行内展示，intention_type <= 0 时也展示占位） -->
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >意向状态</text
-                                        >
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">意向状态</text>
                                         <view
                                             class="flex items-center gap-x-2 px-[14rpx] py-[6rpx] rounded-[12rpx] text-[22rpx] font-medium"
                                             :class="getFollowStatusStyle(detailData.intention_type)">
@@ -79,31 +71,22 @@
                                         </view>
                                     </view>
                                     <view class="flex items-start">
-                                        <text
-                                            class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0 leading-relaxed"
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0 leading-relaxed"
                                             >执行结果</text
                                         >
                                         <text
-                                            class="text-[26rpx] flex-1 leading-relaxed"
+                                            class="flex-1 leading-relaxed"
                                             :class="getResultTextColor(detailData.status)">
                                             {{ detailData.result || "-" }}
                                         </text>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >创建时间</text
-                                        >
-                                        <text class="text-[#000000cc] text-[26rpx]">{{
-                                            detailData.create_time || "-"
-                                        }}</text>
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">创建时间</text>
+                                        <text class="text-[#000000cc]">{{ detailData.create_time || "-" }}</text>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >更新时间</text
-                                        >
-                                        <text class="text-[#000000cc] text-[26rpx]">{{
-                                            detailData.update_time || "-"
-                                        }}</text>
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">更新时间</text>
+                                        <text class="text-[#000000cc]">{{ detailData.update_time || "-" }}</text>
                                     </view>
                                 </view>
                             </view>
@@ -145,7 +128,7 @@
                                 </view>
                                 <view class="h-[2rpx] bg-[#00000005] mb-3"></view>
                                 <view class="bg-[#FAFAFA] rounded-[12rpx] p-4">
-                                    <text class="text-[#000000b3] text-[26rpx] leading-relaxed">{{
+                                    <text class="text-[#000000b3] leading-relaxed">{{
                                         detailData.original_message
                                     }}</text>
                                 </view>
@@ -159,20 +142,18 @@
                                 <view class="h-[2rpx] bg-[#00000005] mb-3"></view>
                                 <view class="flex flex-col gap-y-[20rpx]">
                                     <view class="flex items-start">
-                                        <text
-                                            class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0 leading-relaxed"
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0 leading-relaxed"
                                             >任务名称</text
                                         >
-                                        <text class="text-[#000000cc] text-[26rpx] flex-1 leading-relaxed">{{
+                                        <text class="text-[#000000cc] flex-1 leading-relaxed">{{
                                             detailData.task_name || "-"
                                         }}</text>
                                     </view>
                                     <view class="flex items-start">
-                                        <text
-                                            class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0 leading-relaxed"
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0 leading-relaxed"
                                             >执行说明</text
                                         >
-                                        <text class="text-[#000000cc] text-[26rpx] flex-1 leading-relaxed">{{
+                                        <text class="text-[#000000cc] flex-1 leading-relaxed">{{
                                             detailData.task_detail_described || "-"
                                         }}</text>
                                     </view>
@@ -187,26 +168,16 @@
                                 <view class="h-[2rpx] bg-[#00000005] mb-3"></view>
                                 <view class="flex flex-col gap-y-[20rpx]">
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >设备名称</text
-                                        >
-                                        <text class="text-[#000000cc] text-[26rpx]">{{
-                                            detailData.device_name || "-"
-                                        }}</text>
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">设备名称</text>
+                                        <text class="text-[#000000cc]">{{ detailData.device_name || "-" }}</text>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >设备型号</text
-                                        >
-                                        <text class="text-[#000000cc] text-[26rpx]">{{
-                                            detailData.device_model || "-"
-                                        }}</text>
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">设备型号</text>
+                                        <text class="text-[#000000cc]">{{ detailData.device_model || "-" }}</text>
                                     </view>
                                     <view class="flex items-center">
-                                        <text class="text-[#0000004d] text-[26rpx] w-[160rpx] flex-shrink-0"
-                                            >设备编码</text
-                                        >
-                                        <text class="text-[#00000066] text-[24rpx] font-mono">{{
+                                        <text class="text-[#0000004d] w-[160rpx] flex-shrink-0">设备编码</text>
+                                        <text class="text-[#00000066] text-xs font-mono">{{
                                             detailData.device_code || "-"
                                         }}</text>
                                     </view>

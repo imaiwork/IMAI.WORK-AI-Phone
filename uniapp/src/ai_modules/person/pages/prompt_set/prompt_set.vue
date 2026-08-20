@@ -4,7 +4,7 @@
             class="mx-[32rpx] mt-[32rpx] rounded-[20rpx] bg-[#EEF3FF] px-[32rpx] py-[24rpx] flex items-start gap-[16rpx]">
             <text class="text-[28rpx] mt-[2rpx]">💡</text>
             <view class="flex-1">
-                <text class="text-[26rpx] text-primary leading-[1.6]">
+                <text class="text-primary leading-[1.6]">
                     自定义机器人的评论风格与规则，修改后将影响所有自动评论的内容。
                 </text>
             </view>
@@ -18,7 +18,7 @@
                         <view class="w-[8rpx] h-[32rpx] rounded-full bg-primary"></view>
                         <text class="text-[28rpx] font-medium text-[#1A1A1A]">提示词内容</text>
                     </view>
-                    <text class="text-[24rpx] text-[#BBBBBB]">{{ charCount }} 字</text>
+                    <text class="text-xs text-[#BBBBBB]">{{ charCount }} 字</text>
                 </view>
 
                 <view class="px-[32rpx] py-[24rpx]">

@@ -30,9 +30,6 @@
                                 <Icon name="local-icon-device" :size="24" />
                             </div>
                             <div class="flex flex-col">
-                                <span class="text-[14px] font-black text-tx-primary">{{
-                                    row.device_model || "未知型号"
-                                }}</span>
                                 <span class="text-[11px] text-tx-placeholder font-mono">{{ row.device_code }}</span>
                             </div>
                         </div>
@@ -113,7 +110,7 @@
             custom-class="modern-popup">
             <div class="py-2">
                 <div class="flex items-center gap-x-3 mb-6">
-                    <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                    <div class="w-12 h-12 rounded-2xl bg-[#0065fb]/10 flex items-center justify-center text-primary">
                         <Icon name="el-icon-Cpu" :size="24" />
                     </div>
                     <div>

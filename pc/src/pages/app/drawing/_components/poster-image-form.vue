@@ -104,14 +104,14 @@
 import { useAppStore } from "@/stores/app";
 import { ModelEnum } from "../_enums";
 import ResolutionSelect from "./resolution-select.vue";
-import NumberSelect from "./number-select/index.vue";
+import NumberSelect from "./number-select.vue";
 
 const emit = defineEmits(["update:formData", "generatePrompt"]);
 
 const appStore = useAppStore();
 const getModelChannel = computed(() => {
     return appStore.getHdConfig?.channel
-        .filter((item) => [ModelEnum.GENERAL, ModelEnum.HIDREAMAI, ModelEnum.SEEDREAM].includes(parseInt(item.id)))
+        .filter((item) => [ModelEnum.GENERAL, ModelEnum.SEEDREAM].includes(parseInt(item.id)))
         .map((item) => ({
             ...item,
             id: parseInt(item.id),
@@ -157,7 +157,7 @@ watch(
             formData.model = value[0].id;
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 watchEffect(() => {

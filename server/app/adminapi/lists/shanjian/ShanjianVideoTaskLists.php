@@ -6,14 +6,13 @@ use app\adminapi\lists\BaseAdminDataLists;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\shanjian\ShanjianVideoTask;
-use app\common\model\user\User;
 
 class ShanjianVideoTaskLists extends BaseAdminDataLists implements ListsSearchInterface
 {
     public function setSearch(): array
     {
         return [
-            '=' => ['sj.video_setting_id', 'sj.shanjian_type','sj.persona_id'],
+            '=' => ['sj.video_setting_id', 'sj.shanjian_type','sj.persona_id','sj.is_final'],
             'in' => ['sj.status'],
             '%like%' => ['sj.name', 'u.nickname', 'sa.authorized_url', 'sa.anchor_url', 'sj.video_result_url', 'sj.card_introduced', 'sj.card_name']
         ];
@@ -34,6 +33,7 @@ class ShanjianVideoTaskLists extends BaseAdminDataLists implements ListsSearchIn
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
             ->each(function ($item) {
+               $item->append(['queue_status_text']);
                if ($item->status == 2){
                    $item->video_token = 0;
                }

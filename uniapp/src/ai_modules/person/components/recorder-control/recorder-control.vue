@@ -1,47 +1,49 @@
 <template>
-    <u-popup v-model="showModel" mode="bottom" :mask="true" border-radius="50" height="72%">
-        <view class="recorder-panel bg-white">
-            <view class="flex items-center justify-between px-6 pt-5">
-                <text class="text-[#94A3B8] text-[28rpx]" @click="closePop">取消</text>
-                <view class="flex items-center gap-1.5">
-                    <view class="w-2 h-2 bg-[#FF4D4F] rounded-full animate-pulse shadow-[0_0_8rpx_#FF4D4F]"></view>
-                    <text class="text-[30rpx] font-black text-[#1E293B]">正在聆听...</text>
+    <view>
+        <u-popup v-model="showModel" mode="bottom" :mask="true" border-radius="50" height="72%">
+            <view class="recorder-panel bg-white">
+                <view class="flex items-center justify-between px-6 pt-5">
+                    <text class="text-[#94A3B8] text-[28rpx]" @click="closePop">取消</text>
+                    <view class="flex items-center gap-1.5">
+                        <view class="w-2 h-2 bg-[#FF4D4F] rounded-full animate-pulse shadow-[0_0_8rpx_#FF4D4F]"></view>
+                        <text class="text-[30rpx] font-black text-[#1E293B]">正在聆听...</text>
+                    </view>
+                    <text class="text-primary font-medium text-[28rpx]" @click="confirm">完成</text>
                 </view>
-                <text class="text-primary font-medium text-[28rpx]" @click="confirm">完成</text>
-            </view>
-            <view class="px-6 mt-6">
-                <view class="text-[#64748B] text-[26rpx] mb-3 font-medium">💡 您可以试着这样说：</view>
-                <view class="bg-[#F8FAFC] rounded-[20rpx] p-4 border border-[#E2E8F0]">
-                    <text class="text-[#475569] text-[26rpx] leading-[1.6] block">
-                        我们叫"浮光咖啡"，是精品咖啡店。主理人Lena当IP，她是哥伦比亚咖啡品鉴师，风格专业权威+亲切邻家。目标客户是22-35岁上班族，男女各半。产品特点：自家烘焙豆子、手冲教学、社区活动空间。故事：Lena曾用一杯咖啡帮失恋客人振作起来。内容想做知识分享+幕后记录，不想做搞笑剧情。拿过上海咖啡大赛银奖，店在杭州西湖区。账号目前未启动。
-                    </text>
-                </view>
-            </view>
-
-            <view class="grow flex flex-col items-center justify-center mt-4">
-                <view class="relative w-full h-[140rpx] flex items-center justify-center">
-                    <canvas type="2d" class="audio-canvas w-full h-[120rpx] z-10" :height="100"></canvas>
+                <view class="px-6 mt-6">
+                    <view class="text-[#64748B] mb-3 font-medium">💡 您可以试着这样说：</view>
+                    <view class="bg-[#F8FAFC] rounded-[20rpx] p-4 border border-[#E2E8F0]">
+                        <text class="text-[#475569] leading-[1.6] block">
+                            我们叫"浮光咖啡"，是精品咖啡店。主理人Lena当IP，她是哥伦比亚咖啡品鉴师，风格专业权威+亲切邻家。目标客户是22-35岁上班族，男女各半。产品特点：自家烘焙豆子、手冲教学、社区活动空间。故事：Lena曾用一杯咖啡帮失恋客人振作起来。内容想做知识分享+幕后记录，不想做搞笑剧情。拿过上海咖啡大赛银奖，店在杭州西湖区。账号目前未启动。
+                        </text>
+                    </view>
                 </view>
 
-                <view class="mt-4 px-4 py-1.5 bg-[#F1F5F9] rounded-full">
-                    <text class="text-[#1E293B] font-mono text-[36rpx] font-black tracking-wider">
-                        {{ formatAudioTime(recordTime / 1000) }}
-                    </text>
-                </view>
-            </view>
+                <view class="grow flex flex-col items-center justify-center mt-4">
+                    <view class="relative w-full h-[140rpx] flex items-center justify-center">
+                        <canvas type="2d" class="audio-canvas w-full h-[120rpx] z-10" :height="100"></canvas>
+                    </view>
 
-            <view class="flex flex-col items-center justify-center pb-10">
-                <view
-                    class="w-[100rpx] h-[100rpx] rounded-full bg-white shadow-[0_8rpx_30rpx_rgba(0,0,0,0.08)] border border-[#F1F5F9] flex items-center justify-center active:scale-90 transition-all"
-                    @click="reply">
-                    <u-icon name="reload" color="#64748B" size="36"></u-icon>
+                    <view class="mt-4 px-4 py-1.5 bg-[#F1F5F9] rounded-full">
+                        <text class="text-[#1E293B] font-mono text-[36rpx] font-black tracking-wider">
+                            {{ formatAudioTime(recordTime / 1000) }}
+                        </text>
+                    </view>
                 </view>
-                <view class="w-full text-center mt-2">
-                    <text class="text-[22rpx] text-[#CBD5E0] tracking-[4rpx] uppercase">重录</text>
+
+                <view class="flex flex-col items-center justify-center pb-10">
+                    <view
+                        class="w-[100rpx] h-[100rpx] rounded-full bg-white shadow-[0_8rpx_30rpx_rgba(0,0,0,0.08)] border border-[#F1F5F9] flex items-center justify-center active:scale-90 transition-all"
+                        @click="reply">
+                        <u-icon name="reload" color="#64748B" size="36"></u-icon>
+                    </view>
+                    <view class="w-full text-center mt-2">
+                        <text class="text-[22rpx] text-[#CBD5E0] tracking-[4rpx] uppercase">重录</text>
+                    </view>
                 </view>
             </view>
-        </view>
-    </u-popup>
+        </u-popup>
+    </view>
 </template>
 <script setup lang="ts">
 import { uploadFile } from "@/api/app";
@@ -55,7 +57,7 @@ const props = withDefaults(
     }>(),
     {
         modelValue: false,
-    }
+    },
 );
 
 const emit = defineEmits<{
@@ -110,10 +112,10 @@ const { start, stop, pause, resume, authorize, recordTime } = useRecorder(
                         lineWidth: 3,
                         keep: false,
                     });
-                }
+                },
             );
         },
-    }
+    },
 );
 
 const reply = async () => {

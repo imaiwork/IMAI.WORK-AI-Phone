@@ -95,7 +95,7 @@ class InitializeItem {
         const currentVersion = process.versions.node;
         if (currentVersion < targetVersion) {
             throw new Error(
-                `process.versions.node:你的当前node版本为(${currentVersion})，需要安装目标版本为 ${targetVersion} 以上！！`
+                `process.versions.node:你的当前node版本为(${currentVersion})，需要安装目标版本为 ${targetVersion} 以上！！`,
             );
         }
 

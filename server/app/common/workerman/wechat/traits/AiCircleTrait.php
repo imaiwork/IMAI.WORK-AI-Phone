@@ -5,15 +5,12 @@ declare(strict_types=1);
 namespace app\common\workerman\wechat\traits;
 
 use app\api\logic\ChatLogic;
-use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
-use app\common\logic\AccountLogLogic;
-use app\common\model\kb\KbRobot;
-use app\common\model\user\User;
 use app\common\model\wechat\AiWechatCircleReplyLikeStrategy;
 use app\common\model\wechat\AiWechatDevice;
 use app\common\model\wechat\AiWechatFriendTag;
 use app\common\model\wechat\AiWechatLog;
+use app\common\service\chat\ChatBillingService;
 
 /**
  * 自动微信朋友圈点赞评论
@@ -189,6 +186,22 @@ trait AiCircleTrait
                 ])->log();
                 return '';
             }
+            try {
+                \app\common\service\chat\ChatModelsService::assertChatModelUsable(
+                    (int)$robot->model_id,
+                    (int)$robot->model_sub_id,
+                    $user_id > 0 ? $user_id : null,
+                    (string)($robot->model ?? '')
+                );
+            } catch (\Throwable $e) {
+                $this->withChannel('wechat_socket')->withLevel('notice')->withTitle('createReplyContent')->withContext([
+                    'msg' => '对话模型不可用',
+                    'error' => $e->getMessage(),
+                    'user_id' => $user_id,
+                    'reply_robot_id' => $strategy->reply_robot_id
+                ])->log();
+                return '';
+            }
             $knowledge = [];
             if ($robot->kb_type == 1) { //rag
                 // 检查是否挂载知识库
@@ -309,36 +322,33 @@ trait AiCircleTrait
 
     private function handleResponse(array $response, array $request)
     {
-        $scene = $request['model'] == 'deepseek' ? 'ai_reply_like' : 'openai_chat';
+        $modelAlias = $request['model'] ?? 'gpt-4o';
+        ChatBillingService::checkBalance((int)$request['user_id'], $modelAlias);
 
-        //检查扣费
-        $unit = TokenLogService::checkToken($request['user_id'], $scene);
-        // 获取回复内容
         $reply = $response['data']['message'] ?? '';
+        $usage = $response['data']['usage'] ?? [];
 
-        //计费
-        $tokens = $response['data']['usage']['total_tokens'] ?? 0;
-        if (!$reply || $tokens == 0) {
+        if (!$reply || empty($usage['total_tokens'])) {
             throw new \Exception('获取内容失败');
         }
 
-        $response = [
+        ChatLogic::saveChatResponseLog($request, [
             'reply' => $reply,
-            'usage_tokens' => $response['data']['usage'] ?? [],
-        ];
+            'usage_tokens' => $usage,
+        ]);
 
-        // 保存聊天记录
-        ChatLogic::saveChatResponseLog($request, $response);
+        $logType = $request['model'] == 'deepseek'
+            ? AccountLogEnum::TOKENS_DEC_AI_REPLY_LIKE
+            : AccountLogEnum::TOKENS_DEC_OPENAI_CHAT;
 
-        //计算消耗tokens
-        $points = $unit > 0 ? round($tokens / $unit, 2) : 0;
-        //token扣除
-        User::userTokensChange($request['user_id'], (float)$points);
-
-        $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points, '场景' => '朋友圈评论'];
-        $desc = $request['model'] == 'deepseek' ? AccountLogEnum::TOKENS_DEC_AI_REPLY_LIKE : AccountLogEnum::TOKENS_DEC_OPENAI_CHAT;
-        //扣费记录
-        AccountLogLogic::recordUserTokensLog(true, $request['user_id'], $desc, (float)$points, $request['task_id'], $extra);
+        ChatBillingService::charge(
+            (int)$request['user_id'],
+            $modelAlias,
+            $usage,
+            $logType,
+            (string)$request['task_id'],
+            ['场景' => '朋友圈评论']
+        );
 
         return $reply;
     }

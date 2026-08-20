@@ -1,8 +1,8 @@
 <?php
 return [
     // 系统版本号
-    'version'               => '2.9.0',
-
+    'version'               => 'v2.13.0',
+    'version_number'           => '21300',
     // 官网
     'website'               => [
         'name'        => env('project.web_name', ''), // 网站名称
@@ -186,7 +186,39 @@ return [
     // 后台装修
     'decorate'              => [
         // 底部导航栏样式设置
-        'tabbar_style' => ['default_color' => '#999999', 'selected_color' => '#4173ff'],
+        'tabbar_style' => ['default_color' => '#999999', 'selected_color' => '#0065FB'],
+        // 底部导航默认数据（数据库无数据时返回）
+        // link.type 取值：page=小程序页面链接, webview=web-view链接, miniapp=其他小程序
+        'tabbar_default' => [
+            [
+                'name'       => 'AI手机',
+                'selected'   => 'static/images/mp/tabbs/phone_s.png',
+                'unselected' => 'static/images/mp/tabbs/phone.png',
+                'link'       => ['path' => '/pages/index/index', 'name' => 'AI手机', 'type' => 'page'],
+                'is_show'    => 1,
+            ],
+            [
+                'name'       => 'AI助手',
+                'selected'   => 'static/images/mp/tabbs/chat_s.png',
+                'unselected' => 'static/images/mp/tabbs/chat.png',
+                'link'       => ['path' => '/packages/pages/chat/chat', 'name' => 'AI助手', 'type' => 'page'],
+                'is_show'    => 1,
+            ],
+            [
+                'name'       => 'AI创作',
+                'selected'   => 'static/images/mp/tabbs/creative_s.png',
+                'unselected' => 'static/images/mp/tabbs/creative.png',
+                'link'       => ['path' => '/ai_modules/digital_human/pages/index/index', 'name' => 'AI创作', 'type' => 'page'],
+                'is_show'    => 1,
+            ],
+            [
+                'name'       => '我的',
+                'selected'   => 'static/images/mp/tabbs/me_s.png',
+                'unselected' => 'static/images/mp/tabbs/me.png',
+                'link'       => ['path' => '/packages/pages/user/user', 'name' => '我的', 'type' => 'page'],
+                'is_show'    => 1,
+            ],
+        ],
     ],
 
     // 1:普通聊天 2:画图 3:会议妙计 4:思维导图 5:音乐 6:场景聊天

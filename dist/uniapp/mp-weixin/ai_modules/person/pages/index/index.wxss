@@ -1,1 +1,0 @@
-.ripple-btn.data-v-057f3153{position:relative;animation:pulse-glow-057f3153 2s infinite}@keyframes pulse-glow-057f3153{0%{box-shadow:0 0 rgba(0,101,251,.5)}70%{box-shadow:0 0 0 16rpx rgba(0,101,251,0)}to{box-shadow:0 0 rgba(0,101,251,0)}}

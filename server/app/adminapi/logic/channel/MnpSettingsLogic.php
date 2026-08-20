@@ -4,6 +4,7 @@
 namespace app\adminapi\logic\channel;
 
 use app\common\logic\BaseLogic;
+use app\common\model\decorate\DecorateTabbar;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
 use Exception;
@@ -132,6 +133,28 @@ class MnpSettingsLogic extends BaseLogic
                 }
             }
 
+            // 同步 appid 到小程序项目配置
+            $projectConfigPath = '../extend/miniprogram-ci/mp-weixin/project.config.json';
+            if (!file_exists($projectConfigPath)) {
+                throw new Exception('小程序项目配置文件不存在：project.config.json');
+            }
+            $projectConfigData = file_get_contents($projectConfigPath);
+            $projectConfig = json_decode($projectConfigData, true);
+            if (!is_array($projectConfig)) {
+                throw new Exception('小程序项目配置文件解析失败：project.config.json');
+            }
+            if (($projectConfig['appid'] ?? '') !== $appid) {
+                $projectConfig['appid'] = $appid;
+                $encoded = json_encode($projectConfig, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                if ($encoded === false) {
+                    throw new Exception('小程序项目配置文件写入失败：project.config.json');
+                }
+                file_put_contents($projectConfigPath, $encoded . PHP_EOL);
+            }
+
+            // 同步底部导航跳转小程序 appid 白名单到 app.json
+            $this->syncNavigateToMiniProgramAppIdList();
+
             //上传小程序代码
             $data = [
                 'version' => $params['upload_version'] ?? ConfigService::get('mnp_setting', 'app_version', '2.0.0'),
@@ -143,20 +166,115 @@ class MnpSettingsLogic extends BaseLogic
             $output = null;
             $retval = null;
             exec($command, $output, $retval);
+            $outputText = implode(PHP_EOL, $output ?? []);
 
             if ($retval) {
-                $result = ['code' => 0, 'msg' => $output, 'retval'=>$retval];
+                $result = ['code' => 0, 'msg' => $outputText, 'retval'=>$retval];
             }else{
+                if (!str_contains($outputText, 'UPLOAD_SUCCESS')) {
+                    $result = [
+                        'code'       => 0,
+                        'msg'        => '未检测到微信上传成功标记，请检查上传脚本是否完整执行。' . PHP_EOL . $outputText,
+                        'retval'     => $retval,
+                        'appid'      => $appid,
+                        'version'    => $data['version'],
+                    ];
+                    return $result;
+                }
+
                 if (!empty($params['upload_version'])){
                     ConfigService::set('mnp_setting', 'app_version', $params['upload_version']);
                 }
-                $result = ['code' => 1, 'msg' => '上传成功'];
+                $result = [
+                    'code'       => 1,
+                    'msg'        => '上传成功',
+                    'appid'      => $appid,
+                    'version'    => $data['version'],
+                    'upload_log' => $this->getUploadSummaryLog($output ?? []),
+                ];
             }
             return $result;
         } catch (Exception $e) {
             self::$error = $e->getMessage();
             return false;
         }
+    }
+
+    private function getUploadSummaryLog(array $output): string
+    {
+        $summary = array_values(array_filter($output, static function ($line) {
+            return str_contains($line, '[upload]')
+                || str_contains($line, 'UPLOAD_SUCCESS')
+                || str_contains($line, 'upload by')
+                || str_contains($line, 'request url');
+        }));
+
+        return implode(PHP_EOL, $summary ?: array_slice($output, -30));
+    }
+
+    /**
+     * @notes 从底部导航收集 miniapp 的 appid，写入 app.json 的 navigateToMiniProgramAppIdList
+     * @throws Exception
+     */
+    private function syncNavigateToMiniProgramAppIdList(): void
+    {
+        $appJsonPath = '../extend/miniprogram-ci/mp-weixin/app.json';
+        if (!file_exists($appJsonPath)) {
+            throw new Exception('小程序配置文件不存在：app.json');
+        }
+
+        $appJsonData = file_get_contents($appJsonPath);
+        $appJson = json_decode($appJsonData, true);
+        if (!is_array($appJson)) {
+            throw new Exception('小程序配置文件解析失败：app.json');
+        }
+
+        $miniAppIds = [];
+        $tabbarList = DecorateTabbar::getTabbarLists();
+        foreach ($tabbarList as $item) {
+            $link = $item['link'] ?? [];
+            if (!is_array($link)) {
+                continue;
+            }
+            if (($link['type'] ?? '') !== 'miniapp') {
+                continue;
+            }
+            $targetAppId = trim((string)($link['appid'] ?? ''));
+            if ($targetAppId === '') {
+                continue;
+            }
+            $miniAppIds[] = $targetAppId;
+        }
+
+        // 去重，微信白名单最多 10 个
+        $miniAppIds = array_values(array_unique($miniAppIds));
+        $miniAppIds = array_slice($miniAppIds, 0, 10);
+
+        $appJson['navigateToMiniProgramAppIdList'] = $miniAppIds;
+        // PHP json_decode 会把空对象 {} 变成 []，写回后 miniprogram-ci 校验失败，需强制保持对象
+        $appJson['plugins'] = $this->toJsonObject($appJson['plugins'] ?? []);
+        $appJson['usingComponents'] = $this->toJsonObject($appJson['usingComponents'] ?? []);
+
+        $encoded = json_encode($appJson, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            throw new Exception('小程序配置文件写入失败：app.json');
+        }
+        file_put_contents($appJsonPath, $encoded . PHP_EOL);
+    }
+
+    /**
+     * @notes 将 assoc 数组转为 JSON 对象，避免空数组被编码成 []
+     */
+    private function toJsonObject(mixed $value): object
+    {
+        if (is_object($value)) {
+            return $value;
+        }
+        if (!is_array($value) || $value === []) {
+            return new \stdClass();
+        }
+
+        return (object)$value;
     }
 
     /**

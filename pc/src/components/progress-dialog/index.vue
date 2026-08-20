@@ -99,8 +99,8 @@ const getStatusText = (percentage: number) => {
     if (percentage === 0) return "等待队列中...";
     if (percentage < 30) return "正在建立连接，准备上传...";
     if (percentage < 70) return "正在全力上传，请勿关闭页面...";
-    if (percentage < 100) return "上传已完成，正在同步云端...";
-    return "上传成功，文件处理完毕";
+    if (percentage == 100) return "上传已完成，正在同步云端...";
+    return "上传已完成，正在同步云端...";
 };
 
 const progressGradient = (percentage: number) => {

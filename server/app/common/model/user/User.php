@@ -67,6 +67,22 @@ class User extends BaseModel
 
 
     /**
+     * @notes 搜索器-会员等级
+     * @param $query
+     * @param $value
+     * @param $data
+     * @author 段誉
+     * @date 2022/9/22 16:13
+     */
+    public function searchLevelIdAttr($query, $value, $data)
+    {
+        if ($value !== '' && $value !== null) {
+            $query->where('level_id', '=', $value);
+        }
+    }
+
+
+    /**
      * @notes 搜索器-注册时间
      * @param $query
      * @param $value
@@ -173,6 +189,14 @@ class User extends BaseModel
      */
     public static function userTokensChange(int $userId, float $tokens, string $type = "dec"): bool
     {
+        // 企业空间内「成员消费=消耗团队长算力」统一由 TeamBillingService 接管;
+        // 团队主/散客/个人用户保持原行为(扣/退自己个人算力)。
+        if ($type === 'dec') {
+            return \app\common\service\TeamBillingService::deduct($userId, $tokens);
+        }
+        if ($type === 'inc') {
+            return \app\common\service\TeamBillingService::refund($userId, $tokens);
+        }
         User::where('id', $userId)->$type("tokens", $tokens)->update();
         return true;
     }

@@ -3,18 +3,20 @@
 namespace app\api\logic\wechat;
 
 use app\api\logic\ApiLogic;
+use app\common\enum\user\AccountLogEnum;
+use app\common\model\chat\ModelsCost;
+use app\common\model\ChatPrompt;
 use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatContact;
 use app\common\model\wechat\AiWechatDevice;
+use app\common\model\wechat\AiWechatReplyStrategy;
 use app\common\model\wechat\AiWechatRobot;
 use app\common\model\wechat\AiWechatRobotKeyword;
-use app\common\model\wechat\AiWechatReplyStrategy;
+use app\common\service\chat\ChatBillingService;
 use app\common\service\FileService;
-use app\api\logic\service\TokenLogService;
-use app\common\enum\user\AccountLogEnum;
-use app\common\model\ChatPrompt;
-use think\facade\Queue;
 use app\common\traits\WechatTrait;
+use think\facade\Queue;
+
 /**
  * WechatBaseLogic
  * @desc 微信基础逻辑
@@ -130,8 +132,8 @@ class WechatBaseLogic extends ApiLogic
     protected static function parseAiPrompt(AiWechatRobot $robot, array $request, array $logs): void
     {
 
-        //检查扣费
-        $unit = TokenLogService::checkToken(self::$uid, 'ai_wechat');
+        $modelAlias = ModelsCost::where('id', $robot->model_sub_id ?? 0)->value('alias') ?: 'gpt-4o';
+        ChatBillingService::checkBalance(self::$uid, $modelAlias);
 
         //获取提示词
         $keyword = ChatPrompt::where('id', 12)->value('prompt_text') ?? '';

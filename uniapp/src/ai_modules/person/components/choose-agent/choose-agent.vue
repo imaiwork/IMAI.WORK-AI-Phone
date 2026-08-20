@@ -1,123 +1,119 @@
 <template>
-    <popup-bottom v-model="show" title="选择评论智能体" custom-class="bg-[#F4F7FA]" :is-disabled-touch="true">
-        <template #content>
-            <view class="h-full flex flex-col">
-                <view class="flex items-center justify-between px-[30rpx] mt-3 mb-1" v-if="limit > 1">
-                    <text class="text-[26rpx] text-[#666666] font-medium">请选择评论智能体</text>
-                    <view class="text-[24rpx] text-[#999999]">
-                        已选 <text class="text-primary font-bold mx-0.5">{{ chooseLists.length }}</text> / {{ limit }}
+    <popup-bottom v-model="show" :is-disabled-touch="true" :mask-close-able="false" :z-index="zIndex">
+        <template #header>
+            <view
+                class="header flex justify-between items-center px-6 py-5 border-[0] border-b border-solid border-[#f3f4f6]">
+                <view class="tabs flex bg-[#f8fafc] rounded-xl p-1">
+                    <view
+                        v-for="tab in tabList"
+                        :key="tab.key"
+                        class="tab-item px-5 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer"
+                        :class="activeTab === tab.key ? 'bg-primary text-[#ffffff]' : 'bg-[transparent] text-[#6b7280]'"
+                        @click="handleTabChange(tab.key)">
+                        {{ tab.label }}
                     </view>
                 </view>
-
-                <view class="flex-1 min-h-0 relative">
-                    <z-paging
-                        ref="pagingRef"
-                        v-model="robotList"
-                        :fixed="false"
-                        :safe-area-inset-bottom="true"
-                        @query="queryList">
-                        <view class="px-[30rpx] py-4 flex flex-col gap-y-3.5">
+            </view>
+        </template>
+        <template #content>
+            <view class="h-full flex flex-col">
+                <view class="p-4">
+                    <view class="flex gap-2">
+                        <view
+                            v-for="agent in agentList"
+                            :key="agent.key"
+                            class="flex items-center p-2 rounded-xl text-sm font-medium transition-all cursor-pointer border active:scale-98"
+                            :class="
+                                selectedAgent === agent.key
+                                    ? 'bg-[#1f2937] text-[#ffffff] border-[#1f2937]'
+                                    : 'bg-[#f8fafc] text-[#4b5563] border-[#e5e7eb]'
+                            "
+                            @click="selectedAgent = agent.key">
+                            <text>{{ agent.label }}</text>
+                        </view>
+                    </view>
+                </view>
+                <view v-if="selectedAgent === 1" class="px-4">
+                    <view class="text-sm font-medium text-[#374151] mb-3">选择生成引擎</view>
+                    <view class="flex gap-3">
+                        <view
+                            v-for="engine in engineList"
+                            :key="engine.key"
+                            class="flex-1 flex flex-col p-3 rounded-xl border border-solid cursor-pointer transition-all active:scale-98"
+                            :class="
+                                selectedEngine === engine.key
+                                    ? 'bg-[#eff6ff] border-[#3b82f6]'
+                                    : 'bg-[#f8fafc] border-[#e5e7eb]'
+                            "
+                            @click="handleEngineChange(engine.key)">
+                            <view class="flex items-center justify-between mb-1.5">
+                                <view class="flex items-center gap-1.5">
+                                    <text class="text-base">{{ engine.icon }}</text>
+                                    <text
+                                        class="text-sm font-semibold"
+                                        :class="selectedEngine === engine.key ? 'text-[#1d4ed8]' : 'text-[#1f2937]'">
+                                        {{ engine.label }}
+                                    </text>
+                                </view>
+                                <view
+                                    class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all"
+                                    :class="
+                                        selectedEngine === engine.key
+                                            ? 'border-[#3b82f6] bg-[#3b82f6]'
+                                            : 'border-[#d1d5db] bg-[#ffffff]'
+                                    ">
+                                    <view
+                                        v-if="selectedEngine === engine.key"
+                                        class="w-1.5 h-1.5 rounded-full bg-[#ffffff]" />
+                                </view>
+                            </view>
+                            <text class="text-xs text-[#6b7280] leading-relaxed">{{ engine.desc }}</text>
+                        </view>
+                    </view>
+                </view>
+                <view class="grow min-h-0 mt-4">
+                    <z-paging v-model="robotList" ref="pagingRef" :fixed="false" @query="queryList">
+                        <view class="px-6">
                             <view
                                 v-for="(item, index) in robotList"
                                 :key="index"
-                                class="rounded-[24rpx] p-4 flex items-center gap-x-3.5 relative transition-all duration-300 border-[2rpx] border-solid"
-                                :class="
-                                    isDisabled(item)
-                                        ? 'bg-[#F5F5F5] border-[transparent] shadow-none opacity-60'
-                                        : isChoose(item)
-                                        ? 'bg-[#F5F9FF] border-primary shadow-[0_8rpx_20rpx_rgba(0,101,251,0.12)] active:scale-[0.98]'
-                                        : 'bg-white border-[transparent] shadow-[0_4rpx_16rpx_rgba(0,0,0,0.02)] active:scale-[0.98]'
-                                "
-                                @click="handleSelect(item)">
-                                <view
-                                    class="relative w-[96rpx] h-[96rpx] rounded-full flex-shrink-0 bg-[#F8F9FD] border border-gray-100 overflow-hidden">
-                                    <image :src="item.image" class="w-full h-full object-cover"></image>
+                                class="flex items-center p-4 bg-[#ffffff] border border-solid border-[#e2e8f0] rounded-2xl mb-3 transition-all shadow-sm"
+                                :class="{ 'opacity-60': isAgentUnavailable(item) }"
+                                style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)"
+                                @click="selectItem(item)">
+                                <view class="w-11 h-11 rounded-full flex items-center justify-center shadow-md">
+                                    <image
+                                        :src="item.logo || item.image"
+                                        class="w-full h-full rounded-full"
+                                        mode="aspectFill"
+                                        lazy-load />
                                 </view>
-
-                                <view class="flex-1 min-w-0 flex flex-col justify-center">
-                                    <text
-                                        class="font-extrabold text-[30rpx] truncate mb-1"
-                                        :class="isDisabled(item) ? 'text-[#BBBBBB]' : 'text-[#1A1A1A]'">
-                                        {{ item.name }}
-                                    </text>
-                                    <text
-                                        class="text-[24rpx] truncate mb-1.5"
-                                        :class="isDisabled(item) ? 'text-[#CCCCCC]' : 'text-[#999999]'">
-                                        {{ item.intro || "暂无简介" }}
-                                    </text>
-
-                                    <view class="flex items-center">
-                                        <view
-                                            class="px-2 py-0.5 rounded-md"
-                                            :class="isDisabled(item) ? 'bg-[#F0F0F0]' : 'bg-[#ececec]/80'">
-                                            <text
-                                                class="text-[20rpx]"
-                                                :class="isDisabled(item) ? 'text-[#CCCCCC]' : 'text-[#666666]'">
-                                                {{
-                                                    isDisabled(item)
-                                                        ? "已使用"
-                                                        : `创建人：${item.source_text || "系统"}`
-                                                }}
-                                            </text>
-                                        </view>
+                                <view class="content-info flex-1 ml-3">
+                                    <view class="agent-title-row">
+                                        <text class="agent-title-text">
+                                            {{ item.name }}
+                                        </text>
+                                        <text
+                                            v-if="shouldRenderAgentAccessTag(item)"
+                                            class="agent-access-tag"
+                                            :class="getAgentAccessTagClass(item)">
+                                            {{ getAgentAccessTagText(item) }}
+                                        </text>
+                                    </view>
+                                    <view class="description text-xs text-[#6b7280] leading-relaxed line-clamp-2">
+                                        {{ item.introduced }}
                                     </view>
                                 </view>
-
-                                <view
-                                    class="w-[44rpx] h-[44rpx] rounded-full border-[3rpx] flex items-center justify-center transition-colors duration-300 flex-shrink-0"
-                                    :class="
-                                        isDisabled(item)
-                                            ? 'border-[#E5E7EB] bg-[#F0F0F0]'
-                                            : isChoose(item)
-                                            ? 'border-primary bg-primary'
-                                            : 'border-[#E5E7EB] bg-transparent'
-                                    ">
-                                    <u-icon
-                                        v-if="isChoose(item) && !isDisabled(item)"
-                                        name="checkmark"
-                                        color="#ffffff"
-                                        size="24"></u-icon>
-                                </view>
+                                <view class="arrow ml-3 text-[#d1d5db] text-base"> → </view>
                             </view>
                         </view>
-
                         <template #empty>
-                            <empty />
+                            <view class="text-center py-10 px-5">
+                                <text class="text-5xl mb-4 block">📝</text>
+                                <view class="text-base text-[#6b7280] mb-2">暂无可用模板</view>
+                            </view>
                         </template>
                     </z-paging>
-                </view>
-
-                <view
-                    class="bg-[#ffffff]/90 flex-shrink-0 pt-3 pb-[calc(20rpx+env(safe-area-inset-bottom))] px-5 shadow-[0_-8rpx_30rpx_rgba(0,0,0,0.04)] z-50 flex items-center gap-4">
-                    <view
-                        v-if="limit > 1"
-                        class="flex items-center gap-2 active:opacity-70 transition-opacity py-2 flex-shrink-0"
-                        @click="toggleSelectAll">
-                        <view
-                            class="w-[40rpx] h-[40rpx] rounded-full flex items-center justify-center transition-colors"
-                            :class="isAllSelected ? 'bg-primary' : 'border-[3rpx] border-[#D1D5DB] bg-[#F9FAFB]'">
-                            <u-icon v-if="isAllSelected" name="checkmark" color="#ffffff" size="22"></u-icon>
-                        </view>
-                        <text class="text-[28rpx] text-[#333333] font-medium">全选</text>
-                    </view>
-
-                    <view class="flex-1">
-                        <u-button
-                            type="primary"
-                            shape="circle"
-                            :ripple="true"
-                            :custom-style="{
-                                height: '96rpx',
-                                fontSize: '30rpx',
-                                fontWeight: '900',
-                                backgroundColor: '#0065fb',
-                                border: 'none',
-                                boxShadow: '0 10rpx 30rpx rgba(0, 101, 251, 0.3)',
-                            }"
-                            @click="confirm">
-                            确定保存{{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
-                        </u-button>
-                    </view>
                 </view>
             </view>
         </template>
@@ -125,107 +121,173 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { getAgentList } from "@/api/agent";
+import { getAgentList, getCozeAgentList, getSystemAgentList } from "@/api/agent";
+import { useUserStore } from "@/stores/user";
+import {
+    AGENT_UNAVAILABLE_TIP,
+    canUseAgent,
+    getAgentAccessStatus,
+    getAgentAccessTagText as getAgentPermissionTagText,
+    shouldShowAgentAccessTag,
+} from "@/utils/agentPermission";
 
-const props = withDefaults(
-    defineProps<{
-        modelValue: boolean;
-        limit?: number;
-    }>(),
-    {
-        modelValue: false,
-        limit: 1,
-    }
-);
+const props = defineProps({
+    modelValue: {
+        type: Boolean,
+        default: false,
+    },
+    systemAgentIds: {
+        type: Array,
+        default: () => [0, 1, 3, 4, 5, 6],
+    },
+    isSora: {
+        type: Boolean,
+        default: false,
+    },
+    zIndex: {
+        type: Number,
+        default: 1000,
+    },
+});
 
-const emit = defineEmits<{
-    (e: "confirm", agent: any): void;
-    (e: "update:modelValue", value: boolean): void;
-}>();
+const emit = defineEmits(["update:modelValue", "select", "tabChange", "agentChange", "engineChange"]);
 
 const show = computed({
     get() {
         return props.modelValue;
     },
-    set(value) {
-        emit("update:modelValue", value);
+    set(val) {
+        emit("update:modelValue", val);
     },
 });
 
+const activeTab = ref("generate");
+const selectedAgent = ref(1);
+const selectedEngine = ref<number>(1);
 const robotList = ref<any[]>([]);
-const pagingRef = ref<any>(null);
-const chooseLists = ref<any[]>([]);
-const disabledLists = ref<any[]>([]);
+const pagingRef = shallowRef();
+const userStore = useUserStore();
+const { userInfo } = toRefs(userStore);
 
-const isDisabled = (item: any) => disabledLists.value.some((d) => d.id === item.id);
-const isChoose = (item: any) => chooseLists.value.some((c) => c.id === item.id);
+const tabList = [
+    { key: "generate", label: "文案生成", type: 1 },
+    { key: "rewrite", label: "文案改写", type: 2 },
+];
 
-// 全选仅针对可选项
-const selectableLists = computed(() => robotList.value.filter((item) => !isDisabled(item)));
-const isAllSelected = computed(
-    () => selectableLists.value.length > 0 && chooseLists.value.length === selectableLists.value.length
-);
+// 生成引擎列表
+const engineList: any = [
+    { key: 1, label: "普通版", icon: "⚡", desc: "极速出稿，适合日常铺量" },
+    { key: 2, label: "高级版", icon: "✨", desc: "深度思考，爆款网感文案" },
+];
 
-const handleSelect = (item: any) => {
-    if (isDisabled(item)) {
-        uni.$u.toast("该智能体已被使用，无法选择");
-        return;
-    }
-    const index = chooseLists.value.findIndex((c) => c.id === item.id);
-    if (index > -1) {
-        chooseLists.value.splice(index, 1);
-    } else {
-        if (props.limit === 1) {
-            chooseLists.value = [item];
-        } else {
-            if (chooseLists.value.length >= props.limit) {
-                uni.$u.toast(`最多只能选择 ${props.limit} 个智能体`);
-            } else {
-                chooseLists.value.push(item);
-            }
-        }
-    }
+const agentList = ref([
+    { key: 1, label: "系统内置", api: getSystemAgentList, params: { type: tabList[0].type } },
+    { key: 2, label: "智能体", api: getAgentList, params: {} },
+    { key: 3, label: "coze智能体", api: getCozeAgentList, params: { type: 1 } },
+]);
+
+const shouldCheckAgentAccess = computed(() => selectedAgent.value !== 1);
+
+const canUseCurrentAgent = (item: any) => !shouldCheckAgentAccess.value || canUseAgent(item, userInfo.value);
+
+const isAgentUnavailable = (item: any) => !canUseCurrentAgent(item);
+
+const shouldRenderAgentAccessTag = (item: any) => shouldCheckAgentAccess.value && shouldShowAgentAccessTag(item);
+
+const getAgentAccessTagText = (item: any) => getAgentPermissionTagText(item, userInfo.value);
+
+const getAgentAccessTagClass = (item: any) =>
+    getAgentAccessStatus(item, userInfo.value) === "free" ? "agent-access-tag--free" : "agent-access-tag--member";
+
+const handleEngineChange = (key: number) => {
+    selectedEngine.value = key;
+    emit("engineChange", key);
 };
 
-const toggleSelectAll = () => {
-    if (isAllSelected.value) {
-        chooseLists.value = [];
-    } else {
-        const all = [...selectableLists.value];
-        if (all.length > props.limit) {
-            uni.$u.toast(`最多只能选择 ${props.limit} 个智能体`);
-            chooseLists.value = all.slice(0, props.limit);
-        } else {
-            chooseLists.value = all;
-        }
-    }
+const handleTabChange = (key: string) => {
+    activeTab.value = key;
+    agentList.value[0].params.type = tabList.find((item) => item.key === key)?.type;
 };
 
 const queryList = async (page_no: number, page_size: number) => {
     try {
-        const { lists } = await getAgentList({ page_no, page_size });
-        pagingRef.value.complete(lists);
+        const currAgent = agentList.value.find((item) => item.key === selectedAgent.value);
+        if (props.isSora && selectedAgent.value === 1) {
+            delete currAgent?.params?.type;
+        }
+        const res = await currAgent?.api?.({
+            page_no,
+            page_size,
+            ...currAgent?.params,
+        });
+        if (selectedAgent.value === 1) {
+            pagingRef.value?.complete(
+                res.filter((item: any) =>
+                    props.systemAgentIds.length > 0 ? props.systemAgentIds.includes(item.id) : true,
+                ),
+            );
+        } else {
+            pagingRef.value?.complete(res?.lists);
+        }
     } catch (error) {
-        pagingRef.value.complete([]);
+        pagingRef.value?.complete([]);
     }
 };
 
-const confirm = () => {
-    if (chooseLists.value.length === 0 && disabledLists.value.length === 0) {
-        uni.$u.toast("请选择评论智能体");
+watch(
+    () => props.modelValue,
+    (newVal) => {
+        show.value = newVal;
+    },
+);
+
+watch(
+    () => [selectedAgent.value, activeTab.value],
+    () => {
+        pagingRef.value?.reload();
+    },
+);
+
+const closePopup = () => {
+    show.value = false;
+};
+
+const selectItem = (item: any) => {
+    if (isAgentUnavailable(item)) {
+        uni.$u.toast(AGENT_UNAVAILABLE_TIP);
         return;
     }
-    show.value = false;
-    emit("confirm", props.limit === 1 ? chooseLists.value[0] : chooseLists.value);
+    emit("select", {
+        data: {
+            agentId: item.id,
+            name: item.name,
+            type: activeTab.value,
+            agentType: selectedAgent.value,
+            engine: selectedAgent.value === 1 ? selectedEngine.value : null,
+        },
+    });
+    closePopup();
 };
-
-defineExpose({
-    setChooseLists: (lists: any[]) => {
-        chooseLists.value = JSON.parse(JSON.stringify(lists));
-    },
-    setDisabledLists: (lists: any[]) => {
-        disabledLists.value = JSON.parse(JSON.stringify(lists));
-    },
-});
 </script>
+
+<style lang="scss" scoped>
+.agent-title-row {
+    @apply mb-1 flex min-w-0 items-center gap-x-[8rpx];
+}
+
+.agent-title-text {
+    @apply min-w-0 flex-1 line-clamp-1 text-base font-semibold leading-tight text-[#1f2937];
+}
+
+.agent-access-tag {
+    @apply shrink-0 rounded-full border border-solid px-[12rpx] py-[4rpx] text-[20rpx] font-semibold leading-none;
+}
+
+.agent-access-tag--free {
+    @apply border-[#BBF7D0] bg-[#F0FDF4] text-[#16A34A];
+}
+
+.agent-access-tag--member {
+    @apply border-[#DDD6FE] bg-[#F5F3FF] text-[#8B5CF6];
+}
+</style>

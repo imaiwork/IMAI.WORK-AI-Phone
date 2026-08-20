@@ -38,7 +38,7 @@ const props = withDefaults(
     }>(),
     {
         show: false,
-    }
+    },
 );
 
 const emit = defineEmits<{
@@ -71,7 +71,7 @@ const { start, stop, close, authorize } = useRecorder(
     },
     {
         duration: 5 * 60 * 1000,
-    }
+    },
 );
 const isError = ref(false);
 

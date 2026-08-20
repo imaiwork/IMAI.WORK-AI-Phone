@@ -1,0 +1,17 @@
+.geo-plain-table.el-table {
+    --el-table-border-color: #f1f5f9;
+
+    .el-table__inner-wrapper::before,
+    .el-table__inner-wrapper::after,
+    .el-table__border-bottom-patch {
+        display: none !important;
+    }
+
+    thead th.el-table__cell.is-leaf {
+        border-top: none;
+    }
+
+    .el-table__body tr:last-child td.el-table__cell {
+        border-bottom: none;
+    }
+}

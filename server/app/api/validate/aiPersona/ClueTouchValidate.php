@@ -16,25 +16,25 @@ class ClueTouchValidate extends BaseValidate
     protected $rule = [
         'id' => 'require',
         'persona_id' => 'require',
-        'acquire_keywords' => 'require|array',
-        'intercept_keywords' => 'require|array',
-        'comment_scripts' => 'require|array',
-        'dm_scripts' => 'require|array',
+        // 'acquire_keywords' => 'require|array',
+        // 'intercept_keywords' => 'require|array',
+        // 'comment_scripts' => 'require|array',
+        // 'dm_scripts' => 'require|array',
     ];
 
 
 
     protected $message = [
         'id.require' => '请输入主键ID',
-        'persona_id.require' => '请输入客户ID',
-        'acquire_keywords.require' => '请输入获客线索词',
-        'acquire_keywords.array' => '获客线索词必须是数组',
-        'intercept_keywords.require' => '请输入截流线索词',
-        'intercept_keywords.array' => '截流线索词必须是数组',
-        'comment_scripts.require' => '请输入评论区引流话术',
-        'comment_scripts.array' => '评论区引流话术必须是数组',
-        'dm_scripts.require' => '请输入私信固定话术',
-        'dm_scripts.array' => '私信固定话术必须是数组',
+        'persona_id.require' => '请输入人设ID',
+        // 'acquire_keywords.require' => '请输入获客线索词',
+        // 'acquire_keywords.array' => '获客线索词必须是数组',
+        // 'intercept_keywords.require' => '请输入截流线索词',
+        // 'intercept_keywords.array' => '截流线索词必须是数组',
+        // 'comment_scripts.require' => '请输入评论区引流话术',
+        // 'comment_scripts.array' => '评论区引流话术必须是数组',
+        // 'dm_scripts.require' => '请输入私信固定话术',
+        // 'dm_scripts.array' => '私信固定话术必须是数组',
     ];
 
 
@@ -44,7 +44,7 @@ class ClueTouchValidate extends BaseValidate
      */
     public function sceneAdd()
     {
-        return $this->only([ 'persona_id', 'acquire_keywords', 'intercept_keywords', 'comment_scripts', 'dm_scripts']);
+        return $this->only([ 'persona_id']);
     }
 
     /**
@@ -53,7 +53,7 @@ class ClueTouchValidate extends BaseValidate
      */
     public function sceneUpdate()
     {
-        return $this->only(['persona_id', 'acquire_keywords', 'intercept_keywords', 'comment_scripts', 'dm_scripts']);
+        return $this->only(['persona_id']);
     }
     /**
      * @notes 删除

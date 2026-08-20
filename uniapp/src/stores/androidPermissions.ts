@@ -39,10 +39,7 @@ export const usePermissionsStore = defineStore({
             try {
                 const viewObj = this.nativeObjView(permissionID)
                 viewObj.show()
-                console.log(
-                    'android.permission.' + permissionID,
-                    '当前手机权限'
-                )
+                console.log('android.permission.' + permissionID, '当前手机权限')
 
                 return new Promise(async (resolve, reject) => {
                     // Android权限查询
@@ -52,35 +49,20 @@ export const usePermissionsStore = defineStore({
                                 [permissionID_],
                                 function (resultObj) {
                                     let result = 0
-                                    for (
-                                        let i = 0;
-                                        i < resultObj.granted.length;
-                                        i++
-                                    ) {
+                                    for (let i = 0; i < resultObj.granted.length; i++) {
                                         result = 1
                                     }
-                                    for (
-                                        let i = 0;
-                                        i < resultObj.deniedPresent.length;
-                                        i++
-                                    ) {
+                                    for (let i = 0; i < resultObj.deniedPresent.length; i++) {
                                         result = 0
                                     }
-                                    for (
-                                        let i = 0;
-                                        i < resultObj.deniedAlways.length;
-                                        i++
-                                    ) {
+                                    for (let i = 0; i < resultObj.deniedAlways.length; i++) {
                                         result = -1
                                     }
                                     resolve(result)
                                 },
                                 function (error) {
                                     console.log(
-                                        '申请权限错误：' +
-                                            error.code +
-                                            ' = ' +
-                                            error.message
+                                        '申请权限错误：' + error.code + ' = ' + error.message
                                     )
                                     resolve({
                                         code: error.code,
@@ -119,8 +101,7 @@ export const usePermissionsStore = defineStore({
         nativeObjView(permissionID: string) {
             const systemInfo = uni.getSystemInfoSync()
             const statusBarHeight: number | unknown = systemInfo.statusBarHeight
-            const navigationBarHeight =
-                systemInfo.platform === 'android' ? 48 : 44
+            const navigationBarHeight = systemInfo.platform === 'android' ? 48 : 44
             const totalHeight = (statusBarHeight as number) + navigationBarHeight
             let view = new plus.nativeObj.View('per-modal', {
                 top: '0px',
@@ -187,21 +168,13 @@ export const usePermissionsStore = defineStore({
 
         // 跳转到**应用**的权限页面
         gotoAppPermissionSetting() {
-            const Intent = plus.android.importClass(
-                'android.content.Intent'
-            )
-            const Settings: any = plus.android.importClass(
-                'android.provider.Settings'
-            )
+            const Intent = plus.android.importClass('android.content.Intent')
+            const Settings: any = plus.android.importClass('android.provider.Settings')
             const Uri: any = plus.android.importClass('android.net.Uri')
             const mainActivity = plus.android.runtimeMainActivity()
             const intent: any = new Intent()
             intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-            const uri = Uri.fromParts(
-                'package',
-                mainActivity.getPackageName(),
-                null
-            )
+            const uri = Uri.fromParts('package', mainActivity.getPackageName(), null)
             intent.setData(uri)
             mainActivity.startActivity(intent)
         }

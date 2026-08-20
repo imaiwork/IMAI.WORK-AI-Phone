@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "充值流水详情",
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "empty": "../../../components/empty/empty",
+    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging"
+  }
+}

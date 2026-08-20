@@ -1,21 +1,12 @@
 <template>
     <view class="min-h-screen bg-[#F8FAFC] flex flex-col pb-[150rpx]">
-        <view class="sticky top-0 z-10 bg-[#FFFFFF] px-2 shadow-sm">
-            <u-tabs
-                :list="tabs"
-                :current="current"
-                active-color="#3B82F6"
-                inactive-color="#64748B"
-                bg-color="transparent"
-                @change="handleTabChange"></u-tabs>
-        </view>
         <view class="p-4">
             <view class="grid grid-cols-2 gap-4">
                 <view
                     v-for="(template, index) in currentTemplateList"
                     :key="template.templateID"
                     class="relative flex flex-col bg-[#FFFFFF] rounded-xl shadow-sm border-2 transition-all duration-200 overflow-hidden"
-                    :class="[isSelected(template.templateID) ? 'border-primary' : 'border-transparent']"
+                    :class="[isSelected(template.templateID) ? 'border-primary' : 'border-[transparent]']"
                     @click="toggleSelect(template)">
                     <view class="relative aspect-[3/4] bg-[#F1F5F9]">
                         <image
@@ -44,7 +35,11 @@
                 </view>
             </view>
 
-            <view v-if="currentTemplateList.length === 0" class="flex flex-col items-center justify-center py-32">
+            <view v-if="loading" class="flex flex-col items-center justify-center py-32">
+                <text class="text-[#94A3B8] text-sm">模板加载中...</text>
+            </view>
+
+            <view v-else-if="currentTemplateList.length === 0" class="flex flex-col items-center justify-center py-32">
                 <view class="w-20 h-20 bg-[#F1F5F9] rounded-full flex items-center justify-center mb-4">
                     <text class="text-[40rpx]">📂</text>
                 </view>
@@ -56,7 +51,7 @@
             <view class="flex flex-col">
                 <view class="flex items-baseline">
                     <text class="text-[32rpx] font-medium text-primary">{{ selectedIds.length }}</text>
-                    <text class="ml-1 text-[24rpx] text-[#64748B]">个已选模板</text>
+                    <text class="ml-1 text-xs text-[#64748B]">个已选模板</text>
                 </view>
                 <text class="text-[20rpx] text-[#94A3B8]">可多选批量处理</text>
             </view>
@@ -73,54 +68,29 @@
 </template>
 
 <script setup lang="ts">
-import config from "@/config";
-import { ListenerTypeEnum, MontageStylesChooseType, MontageStylesType } from "@/ai_modules/digital_human/enums";
+import { ListenerTypeEnum, MontageStylesType } from "@/ai_modules/digital_human/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
-import {
-    digitalPersonTemplates,
-    realPersonTemplates,
-    newsTemplates,
-    materialTemplates,
-} from "@/ai_modules/digital_human/config";
+import { getShanjianClipTemplateList } from "@/api/digital_human";
 
 const { emit } = useEventBusManager();
 
-const { baseUrl } = config;
-
-const tabs = [
-    { name: "全部", value: MontageStylesChooseType.ALL },
-    { name: "高级感", value: MontageStylesChooseType.HIGH },
-    { name: "综艺感", value: MontageStylesChooseType.VARIETY },
-    { name: "热门", value: MontageStylesChooseType.HOT },
-    { name: "简约", value: MontageStylesChooseType.SIMPLE },
-    { name: "本地引流", value: MontageStylesChooseType.LOCAL },
-];
-
 // 响应式状态
-const current = ref(0);
 const currentTemp = ref<MontageStylesType>(MontageStylesType.DIGITAL_PERSON);
 const selectedIds = ref<string[]>([]);
+const templateList = ref<any[]>([]);
+const loading = ref(false);
 
 const showVideoPreview = ref(false);
 const videoUrl = ref("");
 const currentTemplateList: Ref<any[]> = computed(() => {
-    const templates = {
-        [MontageStylesType.DIGITAL_PERSON]: digitalPersonTemplates,
-        [MontageStylesType.REAL_PERSON]: realPersonTemplates,
-        [MontageStylesType.NEWS]: newsTemplates,
-        [MontageStylesType.MATERIAL]: materialTemplates,
-    };
-    const currentTemplates = templates[currentTemp.value as keyof typeof templates];
-    const currentCategory = tabs[current.value].value;
-    // 如果是全部的需要把所有的都显示出来
-    if (currentCategory === MontageStylesChooseType.ALL) {
-        return Object.values(currentTemplates).flat();
-    }
-    return currentTemplates[currentCategory as keyof typeof currentTemplates] || [];
+    return templateList.value;
 });
 
-const handleTabChange = (index: number) => {
-    current.value = index;
+const sceneMap: Record<MontageStylesType, string> = {
+    [MontageStylesType.DIGITAL_PERSON]: "virtualman",
+    [MontageStylesType.REAL_PERSON]: "realMan",
+    [MontageStylesType.NEWS]: "newsMixCutting",
+    [MontageStylesType.MATERIAL]: "oralMixCutting",
 };
 
 const toggleSelect = (template: any) => {
@@ -137,16 +107,9 @@ const isSelected = (id: string) => {
     return selectedIds.value.includes(id);
 };
 
-const getImageUrl = (pic: string) => {
-    if (currentTemp.value === MontageStylesType.REAL_PERSON) {
-        return `${baseUrl}static/videos/montage_template/${pic}`;
-    }
-    return `${baseUrl}static/images/montage_template/${pic}`;
-};
+const getImageUrl = (pic: string) => pic;
 
-const getVideoUrl = (link: string) => {
-    return `${baseUrl}static/videos/montage_template/${link}`;
-};
+const getVideoUrl = (link: string) => link;
 
 const previewImage = (pic: string) => {
     uni.previewImage({
@@ -157,7 +120,7 @@ const previewImage = (pic: string) => {
 const previewVideo = (template: any) => {
     const link = template.link;
     const pic = template.pic;
-    if (currentTemp.value === MontageStylesType.REAL_PERSON) {
+    if (link) {
         videoUrl.value = getVideoUrl(link);
         showVideoPreview.value = true;
     } else {
@@ -175,6 +138,31 @@ const confirmSelection = () => {
         data: selectedIds.value,
     });
     uni.navigateBack();
+};
+
+const normalizeTemplate = (item: any) => ({
+    name: item.name,
+    pic: item.cover_url,
+    link: item.demo_url,
+    templateID: item.id,
+});
+
+const fetchTemplateList = async () => {
+    loading.value = true;
+    try {
+        const res: any = await getShanjianClipTemplateList({
+            scene: sceneMap[currentTemp.value],
+            page_no: 1,
+            page_size: 999,
+        });
+        const lists = Array.isArray(res?.lists) ? res.lists : Array.isArray(res) ? res : [];
+        templateList.value = lists.map(normalizeTemplate);
+    } catch (error) {
+        templateList.value = [];
+        uni.$u.toast("风格模板加载失败");
+    } finally {
+        loading.value = false;
+    }
 };
 
 onLoad((options: any) => {
@@ -195,5 +183,7 @@ onLoad((options: any) => {
     uni.setNavigationBarTitle({
         title: titles[currentTemp.value as keyof typeof titles] || "",
     });
+
+    fetchTemplateList();
 });
 </script>

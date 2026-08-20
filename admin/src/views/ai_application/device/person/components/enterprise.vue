@@ -3,7 +3,7 @@
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6]">
             <div class="flex justify-between items-center mb-4 pb-4 border-0 border-b border-solid border-[#F9FAFB]">
                 <div>
-                    <div class="text-[12px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-1">全网扫描对象</div>
+                    <div class="text-[12px] font-bold text-[#9CA3AF] uppercase tracking-wider mb-1">目标客户群体</div>
                     <div
                         class="text-lg font-black"
                         style="
@@ -44,7 +44,6 @@
             </div>
         </div>
 
-        <!-- 目标受众 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6]">
             <div class="flex items-center mb-4">
                 <div class="w-7 h-7 rounded-lg bg-[#ECFDF5] flex items-center justify-center mr-3">
@@ -81,7 +80,6 @@
             </div>
         </div>
 
-        <!-- B端企业获客漏斗模型 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6]">
             <div class="flex items-center justify-between mb-5">
                 <div class="flex items-center">
@@ -152,7 +150,6 @@
             </div>
         </div>
 
-        <!-- AI 24小时任务日历 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6]">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center">
@@ -172,7 +169,6 @@
                 <span class="font-bold text-[#374151]">效果预期</span>。
             </div>
 
-            <!-- 任务类型切换 Tab -->
             <div class="flex overflow-x-auto pb-2 mb-4 gap-2">
                 <div
                     v-for="taskType in taskTypes"
@@ -193,7 +189,6 @@
                 </div>
             </div>
 
-            <!-- 任务列表 -->
             <div class="space-y-4">
                 <div
                     v-for="(task, index) in currentTasks"
@@ -251,7 +246,6 @@
             </div>
         </div>
 
-        <!-- 预期商业回报对比 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6]">
             <span class="text-sm font-bold text-[#1F2937] mb-4 text-center block">预期商业回报对比</span>
             <div class="grid grid-cols-2 gap-3">
@@ -280,7 +274,6 @@
             </div>
         </div>
 
-        <!-- 系统每日执行量 -->
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F3F4F6] text-center">
             <span class="text-xs font-bold text-[#9CA3AF] mb-4 uppercase tracking-widest block">系统每日执行量</span>
             <div class="grid grid-cols-3 gap-2 mb-4">
@@ -314,7 +307,6 @@
             </div>
         </div>
 
-        <!-- 底部 Banner -->
         <div
             class="rounded-2xl p-6 shadow-lg text-white relative overflow-hidden"
             style="background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%)">

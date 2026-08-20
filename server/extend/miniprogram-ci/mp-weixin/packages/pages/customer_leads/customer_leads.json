@@ -1,0 +1,16 @@
+{
+  "navigationBarTitleText": "客资线索",
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../components/empty/empty",
+    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
+    "action-row": "./components/action-row",
+    "customer-leads-skeleton": "./components/customer-leads-skeleton",
+    "detail-popup": "./components/popups/detail-popup",
+    "track-popup": "./components/popups/track-popup",
+    "activity-popup": "./components/popups/activity-popup"
+  }
+}

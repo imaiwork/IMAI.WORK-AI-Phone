@@ -37,6 +37,16 @@ class MaterialController extends BaseAdminController
         return $this->success('删除成功', MaterialLogic::getReturnData());
     }
 
+    public function batchDelete(): Json
+    {
+        $params = $this->request->post();
+        $result = MaterialLogic::batchDelete($params['ids'] ?? []);
+        if ($result === false) {
+            return $this->fail(MaterialLogic::getError());
+        }
+        return $this->success('删除成功', MaterialLogic::getReturnData());
+    }
+
     public function detail(): Json
     {
         $params = $this->request->get();

@@ -28,6 +28,7 @@ class WechatUserService
     protected ?string $nickname = null;
     protected ?string $headimgurl = null;
     protected ?string $mobile = null;
+    protected ?string $inviteCode = null;
     protected User $user;
 
 
@@ -51,28 +52,65 @@ class WechatUserService
         $this->unionid = $response['unionid'] ?? '';
         $this->nickname = $response['nickname'] ?? '';
         $this->headimgurl = $response['headimgurl'] ?? '';
-        $this->mobile = $response['phoneNumber'] ?? '';
+        $this->mobile = $this->normalizeMobile($response['phoneNumber'] ?? '');
+        $this->inviteCode = $response['invite_code'] ?? request()->param('invite_code', '');
+    }
+
+    /**
+     * @notes 规范化手机号（去空格、去 +86/86 前缀）
+     */
+    private function normalizeMobile($mobile): string
+    {
+        $mobile = trim((string)$mobile);
+        if ($mobile === '') {
+            return '';
+        }
+        if (preg_match('/^\+?86(\d{11})$/', $mobile, $matches)) {
+            return $matches[1];
+        }
+        return $mobile;
+    }
+
+    /**
+     * @notes 按手机号查找已有账号（重复时取最早创建的）
+     */
+    private function findUserByMobile()
+    {
+        if (empty($this->mobile)) {
+            return User::where('id', 0)->findOrEmpty();
+        }
+        return User::where('mobile', $this->mobile)
+            ->order('id', 'asc')
+            ->findOrEmpty();
+    }
+
+    /**
+     * @notes 有手机号时优先合并到已占用该号的账号（后台建号 / 其他端）
+     */
+    private function resolveUserByMobile(): void
+    {
+        $mobileUser = $this->findUserByMobile();
+        if ($mobileUser->isEmpty()) {
+            return;
+        }
+        if (!isset($this->user) || $this->user->isEmpty() || (int)$this->user->id !== (int)$mobileUser->id) {
+            $this->user = $mobileUser;
+        }
     }
 
     public function checkPhoneNumber()
     {
-        $user = User::alias('u')
-            ->field('u.id,u.sn,u.mobile,u.nickname,u.avatar,u.mobile,u.is_disable,u.is_new_user')
-            //->join('user_auth au', 'au.user_id = u.id')
-            ->where('u.mobile', '=', $this->mobile)
-            //->where('au.openid', '=', $this->openid)
-            ->findOrEmpty();
-
-        if ($user->isEmpty()) {
+        if (empty($this->mobile)) {
             return false;
-        } else {
-            return true;
         }
+
+        return !$this->findUserByMobile()->isEmpty();
     }
 
 
     /**
-     * @notes 根据opendid或unionid获取系统用户信息
+     * @notes 根据手机号 / openid / unionid 获取系统用户信息
+     * @param bool|string $check true=按手机号；其余按 openid/unionid（含 silent）
      * @return $this
      * @author 段誉
      * @date 2022/9/23 16:09
@@ -86,8 +124,9 @@ class WechatUserService
             ->field('u.id,u.sn,u.mobile,u.nickname,u.avatar,u.mobile,u.is_disable,u.is_new_user')
             ->join('user_auth au', 'au.user_id = u.id', 'left');
 
-        if ($check) {
-            $query->where('u.mobile', '=', $this->mobile);
+        // 必须严格 true：silentLogin 传 'silent' 时不能误走手机号分支
+        if ($check === true) {
+            $query->where('u.mobile', '=', $this->mobile)->order('u.id', 'asc');
         } else {
             $query->where(function ($query) use ($openid, $unionid) {
                 $query->whereOr(['au.openid' => $openid]);
@@ -99,6 +138,36 @@ class WechatUserService
         $user = $query->findOrEmpty();
 
         $this->user = $user;
+        return $this;
+    }
+
+    public function hasUser(): bool
+    {
+        return isset($this->user) && !$this->user->isEmpty();
+    }
+
+    /**
+     * @notes openid 已绑账号 A，但本次授权的是未占用的新手机号 B，且 A 已有不同手机号时：
+     * 视为注册新账号，而非给 A 换绑手机号。
+     * 随后 createUser + bindUserAuth 会把当前 openid 归到 B，并退役 A 上的同 openid。
+     */
+    public function releaseUserForNewMobileRegistration(): self
+    {
+        if (!$this->hasUser() || $this->mobile === '') {
+            return $this;
+        }
+
+        $existingMobile = trim((string)$this->user->mobile);
+        if ($existingMobile === '' || $existingMobile === $this->mobile) {
+            return $this;
+        }
+
+        // 新手机号已被占用时由 resolveUserByMobile 合并到主人账号，这里不建号
+        if (!$this->findUserByMobile()->isEmpty()) {
+            return $this;
+        }
+
+        $this->user = User::where('id', 0)->findOrEmpty();
         return $this;
     }
 
@@ -143,8 +212,20 @@ class WechatUserService
      * @author 段誉
      * @date 2022/9/16 10:06
      */
-    private function createUser(): void
+    private function createUser(int $type = 1): void
     {
+        // 并发/漏检兜底：手机号已被占用则合并，禁止再建号
+        if (!empty($this->mobile)) {
+            $existUser = $this->findUserByMobile();
+            if (!$existUser->isEmpty()) {
+                $this->user = $existUser;
+                $this->updateUser($type);
+                return;
+            }
+        }
+
+        $parentId = \app\api\logic\LoginLogic::checkRegisterPolicy((string)$this->inviteCode);
+
         //设置头像
         if (empty($this->headimgurl)) {
             // 默认头像
@@ -164,6 +245,11 @@ class WechatUserService
         $this->user->mobile = $this->mobile;
         $this->user->is_new_user = YesNoEnum::YES;
         $this->user->tokens = $tokens;
+        $this->user->source = \app\api\logic\LoginLogic::getDefaultInviteSource();
+        // OEM 站点注册:team_id 散客归属 + origin_team_id 锁定站点原生归属
+        $oemTeamId = \app\api\logic\TeamLogic::registerAttributionTeamId();
+        $this->user->team_id = $oemTeamId;
+        $this->user->origin_team_id = $oemTeamId;
 
         if ($this->terminal != UserTerminalEnum::WECHAT_MMP && !empty($this->nickname)) {
             $this->user->nickname = $this->nickname;
@@ -174,34 +260,22 @@ class WechatUserService
 
         //注册赠送算力
         if (!empty($tokens)) {
+            // add(userId, changeType, action, amount, status, sourceSn, remark)
             AccountLogLogic::add(
                 $this->user->id,
                 AccountLogEnum::TOKENS_INC_REGISTER,
                 AccountLogEnum::INC,
                 $tokens,
-                "",
+                1,
+                '',
                 AccountLogEnum::getChangeTypeDesc(AccountLogEnum::TOKENS_INC_REGISTER)
             );
         }
 
         // 分销邀请绑定
-        $inviterId = request()->param('inviter_id', 0);
-        if ($inviterId > 0) {
-            \app\api\logic\LoginLogic::bindInviter($this->user->id, $inviterId);
-        }
+        \app\api\logic\LoginLogic::seedInviteRelation($this->user->id, $parentId);
 
-        $userAuth = UserAuth::where('openid', $this->openid)->findOrEmpty();
-        if (!$userAuth->isEmpty()) {
-            $userAuth->openid = $userAuth->openid . '_' . $userAuth->user_id;
-            $userAuth->save();
-        }
-
-        UserAuth::create([
-            'user_id' => $this->user->id,
-            'openid' => $this->openid,
-            'unionid' => $this->unionid,
-            'terminal' => $this->terminal,
-        ]);
+        $this->bindUserAuth();
     }
 
 
@@ -221,45 +295,104 @@ class WechatUserService
             $this->user->save();
         }
 
-        if ($this->mobile) {
-            $this->user->mobile = $this->mobile;
-            $this->user->save();
-        }
-
-        $find = UserAuth::where('openid', $this->openid)->where('user_id', '<>', $this->user->id)->findOrEmpty();
-        if (!$find->isEmpty()) {
-            $find->openid = $find->openid . '_' . $find->user_id;
-            $find->save();
-        }
-
-        $where['user_id'] = $this->user->id;
-        $where['openid'] = $this->openid;
-        if ($type == 0) {
-            unset($where['openid']);
-        }
-        $userAuth = UserAuth::where($where)
-            ->findOrEmpty();
-        if ($type == 0) {//小程序只能存在一个openid
-            $userAuth->openid = $this->openid;
-            $userAuth->user_id = $this->user->id;
-        }
-
-        // 无该端授权信息，新增一条
-        if ($userAuth->isEmpty()) {
-            $userAuth->user_id = $this->user->id;
-            $userAuth->openid = $this->openid;
-            $userAuth->unionid = $this->unionid;
-            $userAuth->terminal = $this->terminal;
-
-            //$userAuth->save();
-        } else {
-            if (empty($userAuth['unionid']) && !empty($this->unionid)) {
-                $userAuth->unionid = $this->unionid;
-                //$userAuth->save();
+        // 登录流程只允许「首次绑定」空手机号；已有手机号绝不在此覆盖（换号走独立注册）
+        if ($this->mobile !== '' && trim((string)$this->user->mobile) === '') {
+            $conflict = User::where('mobile', $this->mobile)
+                ->where('id', '<>', $this->user->id)
+                ->findOrEmpty();
+            if ($conflict->isEmpty()) {
+                $this->user->mobile = $this->mobile;
+                $this->user->save();
             }
         }
 
-        $userAuth->save();
+        $this->bindUserAuth();
+    }
+
+    /**
+     * 绑定/更新当前端授权：
+     * - 优先复用已有 openid 记录（避免 UNIQUE openid 冲突）
+     * - 否则按 user_id + terminal 更新/创建
+     * - 禁止把小程序 openid 写到公众号等其他端授权行上
+     */
+    private function bindUserAuth(): void
+    {
+        $openid = (string)$this->openid;
+        if ($openid === '') {
+            throw new Exception('微信openid缺失');
+        }
+
+        $userId = (int)$this->user->id;
+
+        // 1) openid 已存在：归并到当前用户
+        $byOpenid = UserAuth::where('openid', $openid)->findOrEmpty();
+        if (!$byOpenid->isEmpty()) {
+            if ((int)$byOpenid->user_id !== $userId) {
+                // 旧绑定释放：改写 openid，保留历史痕迹
+                $byOpenid->openid = $openid . '_' . $byOpenid->user_id . '_' . time();
+                $byOpenid->save();
+            } else {
+                if (empty($byOpenid->unionid) && !empty($this->unionid)) {
+                    $byOpenid->unionid = $this->unionid;
+                }
+                // 纠正终端标记（历史脏数据）
+                if ((int)$byOpenid->terminal !== (int)$this->terminal) {
+                    $byOpenid->terminal = $this->terminal;
+                }
+                $byOpenid->save();
+                // 清理同用户同端的其他脏行，避免支付时按 terminal 查到旧 openid
+                self::retireDuplicateTerminalAuth($userId, (int)$this->terminal, (int)$byOpenid->id);
+                return;
+            }
+        }
+
+        // 2) 当前用户在该端是否已有授权行（取 id 最小的一条作为主记录）
+        $byTerminal = UserAuth::where([
+            'user_id'  => $userId,
+            'terminal' => (int)$this->terminal,
+        ])->order('id', 'asc')->findOrEmpty();
+
+        if (!$byTerminal->isEmpty()) {
+            if ((string)$byTerminal->openid !== $openid) {
+                $byTerminal->openid = $openid;
+            }
+            if (empty($byTerminal->unionid) && !empty($this->unionid)) {
+                $byTerminal->unionid = $this->unionid;
+            }
+            $byTerminal->save();
+            self::retireDuplicateTerminalAuth($userId, (int)$this->terminal, (int)$byTerminal->id);
+            return;
+        }
+
+        // 3) 新建该端授权
+        $created = UserAuth::create([
+            'user_id'  => $userId,
+            'openid'   => $openid,
+            'unionid'  => $this->unionid,
+            'terminal' => (int)$this->terminal,
+        ]);
+        self::retireDuplicateTerminalAuth($userId, (int)$this->terminal, (int)$created->id);
+    }
+
+    /**
+     * 同用户同端只保留一条有效授权，其余改写 openid 退役，避免唯一键与支付校验冲突
+     */
+    private static function retireDuplicateTerminalAuth(int $userId, int $terminal, int $keepId): void
+    {
+        $duplicates = UserAuth::where([
+            'user_id'  => $userId,
+            'terminal' => $terminal,
+        ])->where('id', '<>', $keepId)->select();
+
+        foreach ($duplicates as $row) {
+            $oldOpenid = (string)$row->openid;
+            // 已退役过的不再重复改写
+            if (str_contains($oldOpenid, '_retired_')) {
+                continue;
+            }
+            $row->openid = $oldOpenid . '_retired_' . $row->id . '_' . time();
+            $row->save();
+        }
     }
 
 
@@ -288,8 +421,13 @@ class WechatUserService
      */
     public function authUserLogin($type = 1): self
     {
+        // openid 命中孤儿号、但手机号已属于后台账号时：切到手机号主人再绑定
+        $this->resolveUserByMobile();
+        // openid 命中已有手机号的账号，但本次是未占用的新号：释放旧用户，走建号
+        $this->releaseUserForNewMobileRegistration();
+
         if ($this->user->isEmpty()) {
-            $this->createUser();
+            $this->createUser((int)$type);
         } else {
             $this->updateUser($type);
         }

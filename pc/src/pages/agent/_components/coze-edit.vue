@@ -12,13 +12,13 @@
         :show-close="false">
         <div class="relative overflow-hidden bg-white rounded-[24px]">
             <button
-                class="absolute right-4 top-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 transition-all text-white backdrop-blur-md"
+                class="absolute right-4 top-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-[#000000]/10 hover:bg-[#000000]/20 transition-all text-white backdrop-blur-md"
                 @click="close">
                 <Icon name="el-icon-Close" :size="18" />
             </button>
 
             <div class="header-preview" :style="{ backgroundImage: `url(${formData.bg_image || CozeBg})` }">
-                <div class="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-white"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-[#000000]/20 via-transparent to-white"></div>
 
                 <div class="relative z-10 flex flex-col items-center pt-8">
                     <agent-logo v-model="formData.avatar" />

@@ -1,16 +1,30 @@
 {
   "pages": [
-    "pages/index/index",
-    "pages/chat/chat",
-    "pages/user/user",
-    "pages/login/login",
-    "pages/login/mobile",
-    "uni_modules/vk-uview-ui/components/u-avatar-cropper/u-avatar-cropper"
+    "pages/index/index"
   ],
   "subPackages": [
     {
       "root": "packages",
       "pages": [
+        "pages/home/home",
+        "pages/avatar_cropper/avatar_cropper",
+        "pages/webview/webview",
+        "pages/agent/agent",
+        "pages/create_agent/create_agent",
+        "pages/create_knowledge/create_knowledge",
+        "pages/knowledge_detail/knowledge_detail",
+        "pages/knowledge_setting/knowledge_setting",
+        "pages/knowledge_search_test/knowledge_search_test",
+        "pages/knowledge_upload/knowledge_upload",
+        "pages/knowledge_doc_segments/knowledge_doc_segments",
+        "pages/chat/chat",
+        "pages/user/user",
+        "pages/site_closed/site_closed",
+        "pages/team/team",
+        "pages/team/members",
+        "pages/team/consumption",
+        "pages/login/login",
+        "pages/login/mobile",
         "pages/robot_chat/robot_chat",
         "pages/coze_chat/coze_chat",
         "pages/recharge/recharge",
@@ -24,11 +38,15 @@
         "pages/choose_file/choose_file",
         "pages/creation/creation",
         "pages/material_library/material_library",
-        "pages/agent/agent",
-        "pages/agent_invite_poster/agent_invite_poster",
+        "pages/agency/agency",
+        "pages/agency_recharge/agency_recharge",
+        "pages/agency_invite_poster/agency_invite_poster",
         "pages/operate_case/operate_case",
+        "pages/effect_statistics/effect_statistics",
+        "pages/customer_leads/customer_leads",
         "pages/operate_case_detail/operate_case_detail",
-        "pages/course/course"
+        "pages/tutorial/tutorial",
+        "pages/agent_chat/agent_chat"
       ]
     },
     {
@@ -48,7 +66,7 @@
         "pages/anchor_auth_video/anchor_auth_video",
         "pages/anchor_auth_camera/anchor_auth_camera",
         "pages/montage_copywriter/montage_copywriter",
-        "pages/montage_ai_copywriter/montage_ai_copywriter",
+        "pages/ai_copywriter/ai_copywriter",
         "pages/montage_publish/montage_publish",
         "pages/montage_publish_record/montage_publish_record",
         "pages/montage_publish_video/montage_publish_video",
@@ -68,7 +86,6 @@
         "pages/platform_publish_works/platform_publish_works",
         "pages/platform_publish_video/platform_publish_video",
         "pages/platform_publish_copywriter/platform_publish_copywriter",
-        "pages/platform_publish_ai_copywriter/platform_publish_ai_copywriter",
         "pages/montage_storyboard_create/montage_storyboard_create",
         "pages/montage_storyboard_title/montage_storyboard_title"
       ]
@@ -126,6 +143,7 @@
         "pages/task_calendar/task_calendar",
         "pages/task_calendar_full/task_calendar_full",
         "pages/detail/detail",
+        "pages/running_log/running_log",
         "pages/task_progress/task_progress",
         "pages/platform_detail/platform_detail",
         "pages/choose_task_type/choose_task_type",
@@ -140,7 +158,6 @@
         "pages/create_add_wechat/create_add_wechat",
         "pages/wechat_clue/wechat_clue",
         "pages/device_choose/device_choose",
-        "pages/clue_edit/clue_edit",
         "pages/task_statement/task_statement",
         "pages/task_statement_detail/task_statement_detail",
         "pages/create_closure/create_closure",
@@ -150,7 +167,10 @@
         "pages/rpa_code/rpa_code",
         "pages/create_wechat_private/create_wechat_private",
         "pages/task_client_assets/task_client_assets",
-        "pages/task_tutorial/task_tutorial"
+        "pages/task_tutorial/task_tutorial",
+        "pages/create_group_purchase/create_group_purchase",
+        "pages/create_city_exposure/create_city_exposure",
+        "pages/create_city_intercept/create_city_intercept"
       ]
     },
     {
@@ -168,17 +188,26 @@
       "pages": [
         "pages/index/index",
         "pages/create/create",
+        "pages/employee_setting/employee_setting",
+        "pages/ai_employee/ai_employee",
         "pages/analysis/analysis",
         "pages/detail/detail",
+        "pages/dismissed_viral/dismissed_viral",
         "pages/traffic_config/traffic_config",
+        "pages/traffic_config/traffic_config_setting",
         "pages/interaction_config/interaction_config",
         "pages/prompt_set/prompt_set",
         "pages/agent_config/agent_config",
         "pages/video_record/video_record",
         "pages/material_library/material_library",
+        "pages/video_template_choose/video_template_choose",
+        "pages/publish_ai_copywriter/publish_ai_copywriter",
         "pages/material_detail/material_detail",
         "pages/digital_human_config/digital_human_config",
-        "pages/knowledge_config/knowledge_config"
+        "pages/knowledge_config/knowledge_config",
+        "pages/setting_circle_publish/setting_circle_publish",
+        "pages/task_flow/task_flow",
+        "pages/task_flow_template/task_flow_template"
       ]
     },
     {

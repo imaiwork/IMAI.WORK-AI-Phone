@@ -8,7 +8,9 @@
         @close="close">
         <view
             class="bg-white px-4 pt-4 transition-all duration-200"
-            :style="{ paddingBottom: dynamicHeight > 0 ? dynamicHeight + 'px' : 'env(safe-area-inset-bottom)' }">
+            :style="{
+                paddingBottom: dynamicHeight > 0 ? dynamicHeight + 'px' : 'env(safe-area-inset-bottom)',
+            }">
             <view class="flex items-center justify-between mb-6">
                 <view class="text-[#0000004d]" @click="close">取消</view>
                 <view class="font-medium text-[32rpx]">选择用户年龄</view>
@@ -25,7 +27,7 @@
                         :class="
                             isAgeSelected(item)
                                 ? 'bg-[#EBF5FF] text-primary border-primary'
-                                : 'bg-[#F6F7F9] text-gray-500 border-transparent'
+                                : 'bg-[#F6F7F9] text-gray-500 border-[transparent]'
                         "
                         @click="handleSelectAgePreset(item)">
                         {{ item.label }}

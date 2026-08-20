@@ -192,7 +192,7 @@
                                         <span>开始智能转写</span>
                                         <div
                                             v-if="getTokensValue"
-                                            class="px-2 py-0.5 bg-white/20 rounded-md text-[13px]">
+                                            class="px-2 py-0.5 bg-[#ffffff]/20 rounded-md text-[13px]">
                                             {{ getTokensValue }} 算力
                                         </div>
                                         <Icon name="el-icon-Right" :size="18" />

@@ -81,23 +81,26 @@
                                         <ElImage
                                             v-if="props.type === MaterialTypeEnum.IMAGE"
                                             :src="item.content"
+                                            lazy
                                             class="w-full h-full transition-transform duration-500 group-hover:scale-110"
                                             fit="cover" />
 
                                         <template v-if="props.type === MaterialTypeEnum.VIDEO">
-                                            <img
+                                            <ElImage
                                                 v-if="item.pic"
                                                 :src="item.pic"
-                                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                                lazy
+                                                fit="cover"
+                                                class="w-full h-full transition-transform duration-500 group-hover:scale-110" />
                                             <video
                                                 v-else
                                                 :src="item.content || item.video_result_url"
                                                 class="w-full h-full object-cover" />
 
                                             <div
-                                                class="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-all">
+                                                class="absolute inset-0 flex items-center justify-center bg-[#000000]/10 group-hover:bg-[#000000]/30 transition-all">
                                                 <div
-                                                    class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white scale-90 group-hover:scale-100 transition-all"
+                                                    class="w-10 h-10 rounded-full bg-[#ffffff]/20 backdrop-blur-md flex items-center justify-center text-white scale-90 group-hover:scale-100 transition-all"
                                                     @click.stop="handlePreview(item)">
                                                     <Icon name="el-icon-CaretRight" :size="20"></Icon>
                                                 </div>
@@ -108,8 +111,8 @@
                                             class="absolute top-2 right-2 z-30 w-6 h-6 rounded-full flex items-center justify-center transition-all"
                                             :class="[
                                                 isChoose(item)
-                                                    ? 'bg-primary '
-                                                    : 'bg-black/20 backdrop-blur-sm opacity-0 group-hover:opacity-100',
+                                                    ? 'bg-primary'
+                                                    : 'bg-[#000000]/20 backdrop-blur-sm opacity-0 group-hover:opacity-100',
                                             ]">
                                             <Icon name="el-icon-Check" :size="14" color="#ffffff"></Icon>
                                         </div>
@@ -157,7 +160,6 @@
         </div>
     </popup>
 
-    <!-- 预览组件 -->
     <preview-video ref="previewVideoRef" v-if="showPreview" @close="showPreview = false"></preview-video>
     <ElImageViewer
         v-if="showPreview && props.type === MaterialTypeEnum.IMAGE"

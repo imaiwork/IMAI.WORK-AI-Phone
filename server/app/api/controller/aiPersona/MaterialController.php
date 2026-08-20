@@ -66,6 +66,37 @@ class MaterialController extends BaseApiController
         }
     }
 
+    public function batchDelete()
+    {
+        try {
+            $params = (new MaterialValidate())->post()->goCheck('batchDelete');
+            $result = MaterialLogic::batchDelete($params['ids']);
+            if ($result) {
+                return $this->success('删除成功', MaterialLogic::getReturnData());
+            }
+            return $this->fail(MaterialLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    /**
+     * 一键删除当前人设下所有切割失败的视频素材（use_status=2 & slice_status=4）
+     */
+    public function deleteFailedSlices()
+    {
+        try {
+            $params = (new MaterialValidate())->post()->goCheck('deleteFailedSlices');
+            $result = MaterialLogic::deleteFailedSlices($params);
+            if ($result) {
+                return $this->success('删除成功', MaterialLogic::getReturnData());
+            }
+            return $this->fail(MaterialLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
     public function detail()
     {
         try {

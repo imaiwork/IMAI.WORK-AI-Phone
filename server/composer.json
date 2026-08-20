@@ -39,7 +39,7 @@
         "ext-mbstring": "*",
         "james-heinrich/getid3": "^1.9",
         "topthink/think-queue": "3.0.8",
-        "nesbot/carbon": "2.54.0",
+        "nesbot/carbon": "^2.72",
         "symfony/translation": "4.4.47",
         "symfony/yaml": "^3.4",
         "alibabacloud/client": "^1.5",

@@ -1,7 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "u-row-notice": "../u-row-notice/u-row-notice",
-    "u-column-notice": "../u-column-notice/u-column-notice"
-  }
-}

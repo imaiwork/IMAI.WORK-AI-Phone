@@ -53,7 +53,8 @@ const fileLimit = ref<number>(1);
 const sumImage = ref<number>(0);
 const fileLists = ref<any[]>([]);
 
-const accept = ["html", "xml", "doc", "docx", "txt", "pdf", "csv", "xlsx"];
+/** 默认全量文档格式；页面可传 accept=pdf,doc,docx,txt 按场景收窄（对齐 PC） */
+const accept = ref(["html", "xml", "doc", "docx", "txt", "pdf", "csv", "xlsx"]);
 
 const openFile = async (type: string) => {
     if (fileLists.value.length >= fileLimit.value) {
@@ -67,7 +68,7 @@ const openFile = async (type: string) => {
     if (type === "record") {
         filesResult = await chooseFile({
             type: "file",
-            extension: accept,
+            extension: accept.value,
             count: fileLimit.value - fileLists.value.length,
         });
     } else if (type === "album") {
@@ -132,7 +133,7 @@ const upload = (files: FileData[]): Promise<void> => {
                     },
                     (progress: number) => {
                         fileLists.value[currentIndex].progress = progress;
-                    }
+                    },
                 );
                 fileLists.value[currentIndex].status = "success";
                 fileLists.value[currentIndex].url = uri;
@@ -161,9 +162,16 @@ const close = () => {
     uni.navigateBack();
 };
 
-onLoad(({ limit, sum_image }: any) => {
+onLoad(({ limit, sum_image, accept: acceptParam }: any) => {
     fileLimit.value = Number(limit);
     sumImage.value = Number(sum_image);
+    if (typeof acceptParam === "string" && acceptParam.trim()) {
+        const next = acceptParam
+            .split(",")
+            .map((s) => s.trim().toLowerCase())
+            .filter(Boolean);
+        if (next.length) accept.value = next;
+    }
 });
 </script>
 

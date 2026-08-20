@@ -9,6 +9,7 @@ use app\common\model\coze\AgentCate;
 use app\common\model\kb\KbKnow;
 use app\common\model\kb\KbRobot;
 use app\common\model\user\User;
+use app\common\service\AgentPermissionService;
 use app\common\service\FileService;
 
 /**
@@ -26,22 +27,14 @@ class KbRobotLists extends BaseAdminDataLists implements ListsSearchInterface
      */
     public function lists(): array
     {
-        $user = $this->request->get('nickname');
-        if ($user) {
-            $userIds             = User::where('nickname', 'like', '%' . $user . '%')->column('id');
-            $this->searchWhere[] = ['user_id', 'in', $userIds];
-        }
-        $keyword = $this->request->get('keyword');
-        if ($keyword) {
-            $this->searchWhere[] = ['name', 'like', '%' . $keyword . '%'];
-        }
+        $this->buildUserSourceWhere();
 
         $model = new KbRobot();
         $lists = $model
             ->alias('kr')
             ->field([
                         'kr.id,kr.kb_ids,kr.cate_id,kr.intro,kr.image,kr.bg_image,kr.name,kr.sort,kr.is_enable,kr.is_public',
-                        'kr.create_time,kr.user_id,u.nickname,u.avatar'
+                        'kr.permissions,kr.member_level_ids,kr.create_time,kr.user_id,u.nickname,u.avatar'
                     ])
             ->leftJoin('user u', 'u.id = kr.user_id')
             ->where($this->where())
@@ -63,6 +56,8 @@ class KbRobotLists extends BaseAdminDataLists implements ListsSearchInterface
             $item['cate_name']   = $item['cate_id'] ? AgentCate::where('id', $item['cate_id'])->value('name') : '';
             $item['source']      = $item['user_id'] ? 1 : 0;
             $item['source_text'] = $item['source'] ? '用户' : '后台';
+            $item['permissions_text'] = AgentPermissionService::getPermissionsText((int)($item['permissions'] ?? 0));
+            $item['member_level_ids'] = AgentPermissionService::levelIdsToArray($item['member_level_ids'] ?? '');
             $item['avatar']      = $item['avatar'] ? FileService::getFileUrl($item['avatar']) : '';
             unset($item['kb_ids']);
         }
@@ -78,15 +73,8 @@ class KbRobotLists extends BaseAdminDataLists implements ListsSearchInterface
      */
     public function count(): int
     {
-        $user = $this->request->get('nickname');
-        if ($user) {
-            $userIds             = User::where('nickname', 'like', '%' . $user . '%')->column('id');
-            $this->searchWhere[] = ['user_id', 'in', $userIds];
-        }
-        $keyword = $this->request->get('keyword');
-        if ($keyword) {
-            $this->searchWhere[] = ['name', 'like', '%' . $keyword . '%'];
-        }
+        $this->buildUserSourceWhere();
+
         $model = new KbRobot();
         return $model
             ->alias('kr')
@@ -98,6 +86,46 @@ class KbRobotLists extends BaseAdminDataLists implements ListsSearchInterface
             ->where($this->where())
             ->where($this->searchWhere)
             ->count();
+    }
+
+    /**
+     * @notes 根据 nickname / user_id / source 构建查询条件（列表与统计共用，避免两处逻辑不一致）
+     *        source=0：后台智能体；指定用户时返回该用户 + 后台智能体
+     *        source=1：用户智能体；指定用户时仅返回该用户的智能体
+     * @author kb
+     */
+    protected function buildUserSourceWhere(): void
+    {
+        $user   = $this->request->get('nickname');
+        $userId = $this->request->get('user_id');
+        $source = $this->request->get('source') ?? null;
+
+        if ($user) {
+            $userIds = User::where('nickname', 'like', '%' . $user . '%')->column('id');
+            if ($source === 0 || $source === '0') {
+                $userIds[]           = 0;
+                $this->searchWhere[] = ['kr.user_id', 'in', $userIds];
+            } else if ($source === 1 || $source === '1') {
+                $this->searchWhere[] = ['kr.user_id', 'in', $userIds];
+            }
+        } else if ($userId) {
+            if ($source === 0 || $source === '0') {
+                $this->searchWhere[] = ['kr.user_id', 'in', [$userId, 0]];
+            } else if ($source === 1 || $source === '1') {
+                $this->searchWhere[] = ['kr.user_id', '=', $userId];
+            }
+        } else {
+            if ($source === 1 || $source === '1') {
+                $this->searchWhere[] = ['kr.user_id', '!=', 0];
+            } else if ($source === 0 || $source === '0') {
+                $this->searchWhere[] = ['kr.user_id', '=', 0];
+            }
+        }
+
+        $keyword = $this->request->get('keyword');
+        if ($keyword) {
+            $this->searchWhere[] = ['kr.name', 'like', '%' . $keyword . '%'];
+        }
     }
 
     public function setSearch(): array
@@ -116,11 +144,6 @@ class KbRobotLists extends BaseAdminDataLists implements ListsSearchInterface
         }
         if (isset($this->params['cate_id']) && is_numeric($this->params['cate_id'])) {
             $where[] = ['kr.cate_id', '=', intval($this->params['cate_id'])];
-        }
-        if (isset($this->params['source']) && ($this->params['source'] == 0 || $this->params['source'] == '0')) {
-            $where[] = ['kr.user_id', '=', 0];
-        } else if (isset($this->params['source']) && ($this->params['source'] == 1 || $this->params['source'] == '1')) {
-            $where[] = ['kr.user_id', '>', 0];
         }
 
         return $where;

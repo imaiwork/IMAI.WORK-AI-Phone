@@ -4,15 +4,14 @@
             <view class="px-[32rpx] pt-[30rpx]">
                 <view
                     v-for="(item, index) in modelChannel"
-                    class="flex items-start mb-[16rpx] gap-x-[24rpx] bg-white rounded-[24rpx] p-[32rpx]"
+                    class="flex items-center mb-[16rpx] gap-x-[24rpx] bg-white rounded-[24rpx] p-[32rpx]"
                     :key="index"
-                    @click="chooseModel(item.id)">
+                    @click="chooseModel(item.model_version)">
                     <view class="flex-shrink-0 p-1 leading-[0]">
-                        <image class="w-[72rpx] h-[72rpx]" :src="item.icon"></image>
+                        <image class="w-[72rpx] h-[72rpx]" :src="item.logo"></image>
                     </view>
                     <view>
-                        <view class="text-[26rpx]">{{ item.name }}</view>
-                        <view class="mt-[16rpx] text-[22rpx] text-[#0000004d]"> {{ item.described }} </view>
+                        <view class="">{{ item.name }}</view>
                     </view>
                 </view>
             </view>
@@ -28,8 +27,7 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
-    // 过滤显示的模型id
-    filter: {
+    modelVersion: {
         type: Array,
         default: () => [],
     },
@@ -46,29 +44,19 @@ const show = computed({
 });
 const appStore = useAppStore();
 const modelChannel = computed(() => {
-    const { channel } = appStore.getDigitalHumanConfig;
+    const channel = appStore.getAiModelConfig.humanModels;
     if (channel && channel.length > 0) {
-        const list = channel.filter(
-            (item: any) =>
-                item.status == 1 &&
-                [DigitalHumanModelVersionEnum.CHANJING, DigitalHumanModelVersionEnum.SHANJIAN].includes(
-                    parseInt(item.id)
-                )
-        );
-        if (props.filter.length) {
-            return list.filter((item: any) => !props.filter.includes(parseInt(item.id)));
+        if (props.modelVersion.length) {
+            return channel.filter((item: any) => props.modelVersion.includes(parseInt(item.model_version)));
         }
-        return list;
+        return channel;
     }
     return [];
 });
 
-const currModel = ref();
-
-const chooseModel = (id: string | number) => {
-    currModel.value = id;
+const chooseModel = (modelVersion: string | number) => {
     show.value = false;
-    emit("confirm", id);
+    emit("confirm", modelVersion);
 };
 
 const close = () => {

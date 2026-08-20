@@ -19,30 +19,39 @@
                             <u-icon name="close" size="20" color="#ffffff"></u-icon>
                         </view>
                         <div class="absolute bottom-2 w-full z-[33] flex justify-center">
-                            <view class="dh-version-name" @click.stop="handleReplaceImage(index)"> 替换 </view>
+                            <view
+                                class="px-3 py-1 text-white text-xs rounded-full border border-solid border-[#ffffff]/30"
+                                @click.stop="handleReplaceImage(index)">
+                                替换
+                            </view>
                         </div>
                     </view>
                     <view
                         v-if="imageList.length < limit"
-                        class="bg-white rounded-[20rpx] aspect-[3/4] flex flex-col items-center justify-center"
-                        @click="chooseUploadType">
-                        <view class="w-[32rpx] h-[32rpx] bg-[#00000066] flex items-center justify-center rounded-full">
-                            <u-icon name="plus" size="24" color="#ffffff"></u-icon>
+                        class="bg-white aspect-[3/4] rounded-[20rpx] border-2 border-dashed border-[#0065fb]/30 bg-[#F0F6FF] flex flex-col items-center justify-center gap-[10rpx]"
+                        @click="showUploadCategoryPanel = true">
+                        <view class="w-[56rpx] h-[56rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center">
+                            <u-icon name="plus" color="#0065fb" size="28" />
                         </view>
-                        <text class="mt-3 text-[#00000066]">添加图片</text>
+                        <text class="text-xs text-primary font-semibold">添加图片</text>
                     </view>
                 </view>
             </scroll-view>
         </view>
-        <view class="bg-white flex-shrink-0 pb-5 pt-2 px-4">
-            <u-button
-                type="primary"
-                :custom-style="{ height: '100rpx', borderRadius: '12rpx', fontWeight: 'bold' }"
-                @click="handleConfirm"
-                >确定保存</u-button
-            >
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-t border-solid border-[#F0F2F5] px-6 pt-[20rpx] pb-[40rpx] flex items-center gap-[16rpx]">
+            <view
+                class="flex-1 h-[100rpx] rounded-[24rpx] flex items-center justify-center gap-[10rpx] relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.35)]"
+                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                @click="handleConfirm">
+                <text class="text-[32rpx] font-extrabold text-white tracking-wide">确定保存</text>
+            </view>
         </view>
     </view>
+    <upload-category-panel
+        v-model="showUploadCategoryPanel"
+        :show-categories="[UploadAlbumTypeEnum.Image, UploadCategoryEnum.Library, UploadCategoryEnum.Creation]"
+        @select="handleSelectCategory" />
     <confirm-dialog
         v-model="showUploadTip"
         :content="getTipsContent"
@@ -69,10 +78,11 @@
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import useUpload from "@/hooks/useUpload";
-import ChooseHistory from "@/ai_modules/device/components/choose-history/choose-history.vue";
+import { UploadCategoryEnum, UploadAlbumTypeEnum } from "@/enums/appEnums";
 
 const { emit } = useEventBusManager();
 
+const showUploadCategoryPanel = ref(false);
 // 每组最多图片数
 const limit = 9;
 // 图片上传大小
@@ -122,30 +132,14 @@ const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpl
     },
 });
 
-const chooseUploadType = () => {
-    showUploadTip.value = false;
-    uni.showActionSheet({
-        itemList: ['从"微信聊天"中选择', '从"素材库"中选择', '从"手机相册"中选择', '从"创作历史"中选择'],
-        success: (res) => {
-            if (res.tapIndex == 0 || res.tapIndex == 2) {
-                uploadType.value = res.tapIndex == 0 ? "file" : "image";
-                if (isFirstOpen.value) {
-                    isFirstOpen.value = false;
-                    showUploadTip.value = true;
-                    return;
-                }
-                if (!isFirstOpen.value) {
-                    uploadAndProcessFiles(uploadType.value);
-                }
-            }
-            if (res.tapIndex == 1) {
-                showImgMaterial.value = true;
-            }
-            if (res.tapIndex == 3) {
-                showHistory.value = true;
-            }
-        },
-    });
+const handleSelectCategory = (category: "image" | "video" | "file" | "library" | "creation") => {
+    if (category === "image" || category === "video" || category === "file") {
+        uploadAndProcessFiles(category);
+    } else if (category === "library") {
+        showImgMaterial.value = true;
+    } else if (category === "creation") {
+        showHistory.value = true;
+    }
 };
 
 const handleSelectImgMaterial = async (res: any[]) => {
@@ -160,9 +154,9 @@ const handleSelectImgMaterial = async (res: any[]) => {
 
 const handleSelectHistory = (res: any[]) => {
     if (replaceImageIndex.value !== -1) {
-        imageList.value[replaceImageIndex.value] = res[0].image;
+        imageList.value[replaceImageIndex.value] = res[0].url;
     } else {
-        imageList.value = imageList.value.concat(res.map((item: any) => item.image));
+        imageList.value = imageList.value.concat(res.map((item: any) => item.url));
     }
     replaceImageIndex.value = -1;
 };
@@ -180,7 +174,7 @@ const handleDeleteImage = (index: number) => {
 
 const handleReplaceImage = (index: number) => {
     replaceImageIndex.value = index;
-    chooseUploadType();
+    showUploadCategoryPanel.value = true;
 };
 
 const handleConfirm = () => {

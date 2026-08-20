@@ -90,6 +90,7 @@ class ActiveLogic extends ApiLogic
                         'end_time' => $time['end_time'],
                         'time_config' => $params['time_config'],
                         'sub_task_id' => $row->id,
+                        'task_scene' => DeviceEnum::AUTO_TASK_SCENE_ACTIVE,
                         'source' => DeviceEnum::TASK_SOURCE_ACTIVE, //sv_device_active_account
                         'create_time' => time(),
                     ]);

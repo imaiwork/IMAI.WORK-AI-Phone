@@ -1,0 +1,9 @@
+{
+  "component": true,
+  "usingComponents": {
+    "u-loading": "../../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading",
+    "empty": "../../../../../components/empty/empty",
+    "popup-bottom": "../../../../../components/popup-bottom/popup-bottom",
+    "popup-header": "../popup-header"
+  }
+}

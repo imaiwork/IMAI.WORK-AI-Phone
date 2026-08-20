@@ -137,7 +137,7 @@ function normalizeFileRes(res: ChooseResult, fileType?: BaseOptions["type"]) {
 function chooseFile(
     opts: ChooseOptions = {
         type: "file",
-    }
+    },
 ): Promise<ChooseResult> {
     if (opts.type === "image") {
         return chooseImage(opts as ChooseMediaOption);

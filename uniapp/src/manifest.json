@@ -2,8 +2,8 @@
     "name": "IMAI",
     "appid": "__UNI__837DFBD",
     "description": "",
-    "versionName": "2.9.0",
-    "versionCode": 100,
+    "versionName": "2.13.0",
+    "versionCode": 21201,
     "transformPx": false,
     /* 5+App特有相关 */
     "app-plus": {
@@ -75,12 +75,7 @@
             /* SDK配置 */
             "sdkConfigs": {},
             "icons": {
-                "android": {
-                    "hdpi": "unpackage/res/icons/72x72.png",
-                    "xhdpi": "unpackage/res/icons/96x96.png",
-                    "xxhdpi": "unpackage/res/icons/144x144.png",
-                    "xxxhdpi": "unpackage/res/icons/192x192.png"
-                },
+                "android": {},
                 "ios": {
                     "appstore": "unpackage/res/icons/1024x1024.png",
                     "ipad": {
@@ -115,7 +110,7 @@
     "quickapp": {},
     /* 小程序特有相关 */
     "mp-weixin": {
-        "appid": "wx240aed4afb266747",
+        "appid": "wx001fdea2ed617f56",
         "optimization": {
             "subPackages": true
         },

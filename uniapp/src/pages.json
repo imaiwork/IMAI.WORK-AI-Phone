@@ -10,68 +10,223 @@
 			"meta": {
 				"share": true
 			}
-		},
-		{
-			"path": "pages/chat/chat",
-			"style": {
-				"navigationBarTitleText": "",
-				"enablePullDownRefresh": false,
-				"navigationStyle": "custom",
-				"disableScroll": true
-			},
-			"meta": {
-				"share": true
-			}
-		},
-		{
-			"path": "pages/user/user",
-			"style": {
-				"navigationBarTitleText": "",
-				"enablePullDownRefresh": false,
-				"navigationStyle": "custom",
-				"disableScroll": true
-			},
-			"meta": {
-				"share": true
-			}
-		},
-		{
-			"path": "pages/login/login",
-			"style": {
-				"navigationBarTitleText": "登录",
-				"enablePullDownRefresh": false,
-				"navigationStyle": "custom",
-				"disableScroll": true
-			},
-			"meta": {
-				"white": true,
-				"share": true
-			}
-		},
-		{
-			"path": "pages/login/mobile",
-			"style": {
-				"navigationBarTitleText": "登录",
-				"navigationStyle": "custom",
-				"enablePullDownRefresh": false,
-				"disableScroll": true
-			},
-			"meta": {
-				"share": true
-			}
-		},
-		{
-			"path": "uni_modules/vk-uview-ui/components/u-avatar-cropper/u-avatar-cropper",
-			"style": {
-				"navigationBarTitleText": "头像裁剪",
-				"navigationBarBackgroundColor": "#000000"
-			}
 		}
 	],
 	"subPackages": [
 		{
 			"root": "packages",
 			"pages": [
+				{
+					"path": "pages/home/home",
+					"style": {
+						"navigationBarTitleText": "",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"share": true
+					}
+				},
+				{
+					"path": "pages/avatar_cropper/avatar_cropper",
+					"style": {
+						"navigationBarTitleText": "头像裁剪",
+						"navigationBarBackgroundColor": "#000000"
+					}
+				},
+				{
+					"path": "pages/webview/webview",
+					"style": {
+						"navigationBarTitleText": "",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "pages/agent/agent",
+					"style": {
+						"navigationBarTitleText": "AI智能体",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"share": true
+					}
+				},
+				{
+					"path": "pages/create_agent/create_agent",
+					"style": {
+						"navigationBarTitleText": "新建智能体",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/create_knowledge/create_knowledge",
+					"style": {
+						"navigationBarTitleText": "新建知识库",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/knowledge_detail/knowledge_detail",
+					"style": {
+						"navigationBarTitleText": "知识库详情",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/knowledge_setting/knowledge_setting",
+					"style": {
+						"navigationBarTitleText": "知识库设置",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/knowledge_search_test/knowledge_search_test",
+					"style": {
+						"navigationBarTitleText": "搜索测试",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/knowledge_upload/knowledge_upload",
+					"style": {
+						"navigationBarTitleText": "添加新文件",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/knowledge_doc_segments/knowledge_doc_segments",
+					"style": {
+						"navigationBarTitleText": "分段管理",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/chat/chat",
+					"style": {
+						"navigationBarTitleText": "",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"share": true
+					}
+				},
+				{
+					"path": "pages/user/user",
+					"style": {
+						"navigationBarTitleText": "",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"share": true
+					}
+				},
+				{
+					"path": "pages/site_closed/site_closed",
+					"style": {
+						"navigationBarTitleText": "站点已关闭",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"backgroundColor": "#F8FAFC"
+					}
+				},
+				{
+					"path": "pages/team/team",
+					"style": {
+						"navigationBarTitleText": "团队管理",
+						"enablePullDownRefresh": false,
+						"backgroundColor": "#EDF2FA"
+					},
+					"meta": {
+						"share": true,
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/team/members",
+					"style": {
+						"navigationBarTitleText": "成员管理",
+						"enablePullDownRefresh": false,
+						"disableScroll": true,
+						"backgroundColor": "#EDF2FA"
+					},
+					"meta": {
+						"share": true,
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/team/consumption",
+					"style": {
+						"navigationBarTitleText": "团队消耗明细",
+						"enablePullDownRefresh": false,
+						"disableScroll": true,
+						"backgroundColor": "#F4F6FA"
+					},
+					"meta": {
+						"share": true,
+						"auth": true
+					}
+				},
+
+				{
+					"path": "pages/login/login",
+					"style": {
+						"navigationBarTitleText": "登录",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"white": true,
+						"share": true
+					}
+				},
+				{
+					"path": "pages/login/mobile",
+					"style": {
+						"navigationBarTitleText": "登录",
+						"navigationStyle": "custom",
+						"enablePullDownRefresh": false,
+						"disableScroll": true
+					},
+					"meta": {
+						"share": true
+					}
+				},
 				{
 					"path": "pages/robot_chat/robot_chat",
 					"style": {
@@ -215,7 +370,7 @@
 					}
 				},
 				{
-					"path": "pages/agent/agent",
+					"path": "pages/agency/agency",
 					"style": {
 						"navigationBarTitleText": "代理中心",
 						"navigationStyle": "custom",
@@ -223,7 +378,15 @@
 					}
 				},
 				{
-					"path": "pages/agent_invite_poster/agent_invite_poster",
+					"path": "pages/agency_recharge/agency_recharge",
+					"style": {
+						"navigationBarTitleText": "充值流水详情",
+						"navigationStyle": "custom",
+						"disableScroll": true
+					}
+				},
+				{
+					"path": "pages/agency_invite_poster/agency_invite_poster",
 					"style": {
 						"navigationBarTitleText": "邀请好友海报"
 					}
@@ -237,6 +400,30 @@
 					}
 				},
 				{
+					"path": "pages/effect_statistics/effect_statistics",
+					"style": {
+						"navigationBarTitleText": "效果统计",
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true,
+						"share": true
+					}
+				},
+				{
+					"path": "pages/customer_leads/customer_leads",
+					"style": {
+						"navigationBarTitleText": "客资线索",
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true,
+						"share": true
+					}
+				},
+				{
 					"path": "pages/operate_case_detail/operate_case_detail",
 					"style": {
 						"navigationBarTitleText": "运营案例详情",
@@ -244,10 +431,22 @@
 					}
 				},
 				{
-					"path": "pages/course/course",
+					"path": "pages/tutorial/tutorial",
 					"style": {
 						"navigationBarTitleText": "使用教程",
 						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "pages/agent_chat/agent_chat",
+					"style": {
+						"navigationBarTitleText": "AI智能体",
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true,
+						"share": true
 					}
 				}
 			]
@@ -279,7 +478,7 @@
 				{
 					"path": "pages/tone_clone/tone_clone",
 					"style": {
-						"navigationBarTitleText": "音色克隆",
+						"navigationBarTitleText": "音频克隆",
 						"enablePullDownRefresh": false,
 						"navigationStyle": "custom",
 						"disableScroll": true
@@ -407,7 +606,7 @@
 					}
 				},
 				{
-					"path": "pages/montage_ai_copywriter/montage_ai_copywriter",
+					"path": "pages/ai_copywriter/ai_copywriter",
 					"style": {
 						"navigationBarTitleText": "生成文案",
 						"disableScroll": true
@@ -607,15 +806,6 @@
 						"navigationBarTitleText": "",
 						"disableScroll": true,
 						"navigationStyle": "custom"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/platform_publish_ai_copywriter/platform_publish_ai_copywriter",
-					"style": {
-						"navigationBarTitleText": "AI生成文案"
 					},
 					"meta": {
 						"auth": true
@@ -963,9 +1153,7 @@
 				{
 					"path": "pages/task_calendar/task_calendar",
 					"style": {
-						"navigationBarTitleText": "任务日历",
-						"navigationStyle": "custom",
-						"disableScroll": true
+						"navigationBarTitleText": "任务日历"
 					}
 				},
 				{
@@ -979,8 +1167,16 @@
 				{
 					"path": "pages/detail/detail",
 					"style": {
-						"navigationBarTitleText": "设备详情",
-						"navigationStyle": "custom"
+						"navigationBarTitleText": "设备详情"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/running_log/running_log",
+					"style": {
+						"navigationBarTitleText": "运行日志"
 					},
 					"meta": {
 						"auth": true
@@ -1038,7 +1234,8 @@
 				{
 					"path": "pages/create_private_take/create_private_take",
 					"style": {
-						"navigationBarTitleText": "私聊接管"
+						"navigationBarTitleText": "私聊接管",
+						"navigationStyle": "custom"
 					},
 					"meta": {
 						"auth": true
@@ -1104,15 +1301,6 @@
 					"path": "pages/device_choose/device_choose",
 					"style": {
 						"navigationBarTitleText": "设备选择"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/clue_edit/clue_edit",
-					"style": {
-						"navigationBarTitleText": "编辑线索词组"
 					},
 					"meta": {
 						"auth": true
@@ -1215,6 +1403,36 @@
 					"meta": {
 						"auth": true
 					}
+				},
+				{
+					"path": "pages/create_group_purchase/create_group_purchase",
+					"style": {
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/create_city_exposure/create_city_exposure",
+					"style": {
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/create_city_intercept/create_city_intercept",
+					"style": {
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
 				}
 			]
 		},
@@ -1286,8 +1504,26 @@
 				{
 					"path": "pages/create/create",
 					"style": {
-						"navigationBarTitleText": "新建人设",
+						"navigationBarTitleText": "新建人设"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/employee_setting/employee_setting",
+					"style": {
+						"navigationBarTitleText": "修改人设",
 						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/ai_employee/ai_employee",
+					"style": {
+						"navigationBarTitleText": "AI员工"
 					},
 					"meta": {
 						"auth": true
@@ -1314,7 +1550,27 @@
 					}
 				},
 				{
+					"path": "pages/dismissed_viral/dismissed_viral",
+					"style": {
+						"navigationBarTitleText": "不感兴趣",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
 					"path": "pages/traffic_config/traffic_config",
+					"style": {
+						"navigationBarTitleText": "获客与截流配置",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/traffic_config/traffic_config_setting",
 					"style": {
 						"navigationBarTitleText": "获客与截流配置",
 						"navigationStyle": "custom"
@@ -1372,6 +1628,25 @@
 					}
 				},
 				{
+					"path": "pages/video_template_choose/video_template_choose",
+					"style": {
+						"navigationBarTitleText": "选择视频模板"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/publish_ai_copywriter/publish_ai_copywriter",
+					"style": {
+						"navigationBarTitleText": "AI生成发布文案",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
 					"path": "pages/material_detail/material_detail",
 					"style": {
 						"navigationBarTitleText": "素材详情",
@@ -1395,6 +1670,35 @@
 					"path": "pages/knowledge_config/knowledge_config",
 					"style": {
 						"navigationBarTitleText": "关联知识库",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/setting_circle_publish/setting_circle_publish",
+					"style": {
+						"navigationBarTitleText": "朋友圈发布设置"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/task_flow/task_flow",
+					"style": {
+						"navigationBarTitleText": "24h自动任务流",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/task_flow_template/task_flow_template",
+					"style": {
+						"navigationBarTitleText": "工作流模板",
 						"navigationStyle": "custom"
 					},
 					"meta": {
@@ -1437,7 +1741,11 @@
 	"easycom": {
 		"custom": {
 			"router-navigate": "uniapp-router-next/components/router-navigate/router-navigate.vue",
-			"^(?!z-paging-refresh|z-paging-load-more)z-paging(.*)": "z-paging/components/z-paging$1/z-paging$1.vue"
+			"^(?!z-paging-refresh|z-paging-load-more)z-paging(.*)": "z-paging/components/z-paging$1/z-paging$1.vue",
+			"chat-scroll-view": "@/packages/components/chat-scroll-view/chat-scroll-view.vue",
+			"chat-record-item": "@/packages/components/chat-record-item/chat-record-item.vue",
+			"mp-html": "@/packages/uni_modules/mp-html/components/mp-html/mp-html.vue",
+			"ua-markdown": "@/packages/components/ua-markdown/ua-markdown.vue"
 		}
 	}
 }

@@ -84,7 +84,9 @@
                                         <view class="flex flex-row flex-wrap">
                                             <text class="text-sm font-bold text-[#171717]">未启用数字人：</text>
                                             <text class="text-sm text-[#9b9b9b] leading-relaxed">
-                                                采用 <text class="text-[#3b82f6] font-medium">素材混剪</text> 或
+                                                采用
+                                                <text class="text-[#3b82f6] font-medium">素材混剪</text>
+                                                或
                                                 <text class="text-[#4a8cff] font-medium">新闻体</text>
                                                 形式自动生成并替代视频内容。
                                             </text>

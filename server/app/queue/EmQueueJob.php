@@ -64,10 +64,12 @@ class EmQueueJob
         if (!$modelCost)             { return $this->inputError("模型不存在了", $uuid, $job); }
         if (!$modelCost['channel'])  { return $this->inputError("渠道不存在了", $uuid, $job); }
 
-        // 验证用户
-        $modelUser = new User();
-        $user = $modelUser->where(['id'=>$kbEmbedding->user_id])->findOrEmpty();
-        if ($user->isEmpty())    { return $this->inputError("用户不存在了", $uuid, $job); }
+        // 验证用户 (user_id=0 为后台创建的系统数据,无需校验用户)
+        if ($kbEmbedding->user_id > 0) {
+            $modelUser = new User();
+            $user = $modelUser->where(['id'=>$kbEmbedding->user_id])->findOrEmpty();
+            if ($user->isEmpty())    { return $this->inputError("用户不存在了", $uuid, $job); }
+        }
 
         // 读取密钥
         echo '训练的通道: ' . $modelCost['channel'] . "(" . $modelCost['model_id'] . ")\n";

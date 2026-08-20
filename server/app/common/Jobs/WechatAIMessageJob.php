@@ -2,16 +2,14 @@
 
 namespace app\common\Jobs;
 
-use think\facade\Db;
-use think\queue\Job;
-use app\api\logic\service\TokenLogService;
-use app\common\enum\user\AccountLogEnum;
 use app\api\logic\ChatLogic;
-use app\common\model\user\User;
-use app\common\logic\AccountLogLogic;
+use app\common\enum\user\AccountLogEnum;
 use app\common\model\chat\ChatLog;
-use think\facade\Log;
+use app\common\service\chat\ChatBillingService;
 use app\common\traits\WechatTrait;
+use think\facade\Db;
+use think\facade\Log;
+use think\queue\Job;
 
 class WechatAIMessageJob
 {
@@ -160,37 +158,28 @@ class WechatAIMessageJob
      */
     private function handleResponse(array $response): string
     {
-        //检查扣费
-        $unit = TokenLogService::checkToken($this->uid, 'ai_wechat');
+        $modelAlias = $this->request['model'] ?? 'gpt-4o';
+        ChatBillingService::checkBalance($this->uid, $modelAlias);
 
-        // 获取回复内容
         $reply = $response['data']['message'] ?? '';
+        $usage = $response['data']['usage'] ?? [];
 
-        //计费
-        $tokens = $response['data']['usage']['total_tokens'] ?? 0;
-
-        if (!$reply || $tokens == 0) {
+        if (!$reply || empty($usage['total_tokens'])) {
             throw new \Exception('获取内容失败');
         }
 
-        $response = [
+        ChatLogic::saveChatResponseLog($this->request, [
             'reply' => $reply,
-            'usage_tokens' => $response['data']['usage'] ?? [],
-        ];
+            'usage_tokens' => $usage,
+        ]);
 
-        // 保存聊天记录
-        ChatLogic::saveChatResponseLog($this->request, $response);
-
-        //计算消耗tokens
-        $points = $unit > 0 ? round($tokens / $unit,2) : 0;
-
-        //token扣除
-        User::userTokensChange($this->uid, $points);
-
-        $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points];
-
-        //扣费记录
-        AccountLogLogic::recordUserTokensLog(true, $this->uid, AccountLogEnum::TOKENS_DEC_AI_WECHAT, $points, $this->taskId, $extra);
+        ChatBillingService::charge(
+            $this->uid,
+            $modelAlias,
+            $usage,
+            AccountLogEnum::TOKENS_DEC_AI_WECHAT,
+            $this->taskId
+        );
 
         return $reply;
     }

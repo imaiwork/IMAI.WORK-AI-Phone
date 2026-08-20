@@ -13,7 +13,7 @@ class CozeAgentValidate extends BaseValidate
         'avatar' => 'max:255',
         'name' => 'require|max:255',
         'agent_cate_id' => 'require',
-        'permissions' => 'in:0',
+        'permissions' => 'in:0,1',
         'introduced' => 'max:65535',
         'stream' => 'in:0,1',
         'deduction' => 'in:0,1',
@@ -31,7 +31,7 @@ class CozeAgentValidate extends BaseValidate
         'name.require' => '名称是必填项',
         'name.max' => '名称不能超过255个字符',
         'agent_cate_id.require' => '分类是必填项',
-        'permissions.in' => '权限类型只能是0',
+        'permissions.in' => '权限类型只能是0或1',
         'introduced.max' => '介绍不能超过65535个字符',
         'stream.in' => '输出类型只能是0或1',
         'deduction.in' => '扣费类型只能是0或1',
@@ -43,12 +43,12 @@ class CozeAgentValidate extends BaseValidate
 
     public function sceneAdd()
     {
-        return $this->only(['type', 'bg_image', 'avatar', 'name', 'agent_cate_id', 'permissions', 'introduced', 'stream', 'deduction', 'tokens', 'coze_id']);
+        return $this->only(['type', 'bg_image', 'avatar', 'name', 'agent_cate_id', 'permissions', 'introduced', 'stream', 'deduction', 'tokens', 'coze_id', 'member_level_ids']);
     }
 
     public function sceneUpdate()
     {
-        return $this->only(['id', 'type', 'bg_image', 'avatar', 'name', 'agent_cate_id', 'permissions', 'introduced', 'stream', 'deduction', 'tokens', 'coze_id']);
+        return $this->only(['id', 'type', 'bg_image', 'avatar', 'name', 'agent_cate_id', 'permissions', 'introduced', 'stream', 'deduction', 'tokens', 'coze_id', 'member_level_ids']);
     }
 
     public function sceneDetail()

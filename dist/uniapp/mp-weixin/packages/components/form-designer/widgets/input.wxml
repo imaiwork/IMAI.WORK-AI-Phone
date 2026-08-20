@@ -1,1 +1,0 @@
-<view class="widget-input data-v-2d73368e"><u-input wx:if="{{b}}" class="flex-1 min-w-0 data-v-2d73368e" u-i="2d73368e-0" bind:__l="__l" bindupdateModelValue="{{a}}" u-p="{{b}}"></u-input><view wx:if="{{c}}" class="text-xs text-muted ml-_20rpx_ data-v-2d73368e">{{d}} / {{e}}</view></view>

@@ -1,0 +1,1 @@
+<view class="flex items-center gap-_6rpx_ px-_14rpx_ py-_4rpx_ rounded border" style="{{c}}"><text class="text-_20rpx_" style="{{'color:' + b}}">{{a}}</text></view>

@@ -1,9 +1,15 @@
 {
   "navigationBarTitleText": "私聊接管",
+  "navigationStyle": "custom",
   "usingComponents": {
-    "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "steps": "../../components/steps/steps",
     "base-setting": "../../components/base-setting/base-setting",
-    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog"
+    "keywords-edit": "../../components/keywords-edit/keywords-edit",
+    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog",
+    "choose-agent": "../../components/choose-agent/choose-agent"
   }
 }

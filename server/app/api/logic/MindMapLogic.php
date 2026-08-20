@@ -3,12 +3,10 @@
 
 namespace app\api\logic;
 
-use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
-use app\common\logic\AccountLogLogic;
-use app\common\model\mindMap\MindMap;
-use app\common\model\user\User;
 use app\common\model\ChatPrompt;
+use app\common\model\mindMap\MindMap;
+use app\common\service\chat\ChatBillingService;
 
 /**
  * 文章逻辑
@@ -55,8 +53,8 @@ class MindMapLogic extends ApiLogic
         //设置不超时
         set_time_limit(0);
 
-        //计费单价
-        $unit = TokenLogService::checkToken(self::$uid, 'mind_map');
+        $modelAlias = 'deepseek';
+        ChatBillingService::checkBalance(self::$uid, $modelAlias);
 
         try {
             $mindMapInfo = MindMap::where('user_id', self::$uid)->findOrEmpty($params['id']);
@@ -90,39 +88,31 @@ class MindMapLogic extends ApiLogic
                 'user_id' => self::$uid,
                 'assistant_id' => 0,
                 'chat_type' => AccountLogEnum::TOKENS_DEC_MIND_MAP,
+                'model' => $modelAlias,
                 'now' => time(),
             ];
 
             $response = \app\common\service\ToolsService::Chat()->message($request);
 
             $reply = $response['data']['choices'][0]['message']['content'] ?? '';
+            $usage = $response['data']['usage'] ?? [];
 
-            //计费
-            $tokens = $response['data']['usage']['total_tokens'] ?? 0;
-
-            if (!$reply || $tokens == 0) {
-
+            if (!$reply || empty($usage['total_tokens'])) {
                 throw new \Exception("分析失败");
             }
 
-            $response = [
+            ChatLogic::saveChatResponseLog($request, [
                 'reply' => $reply,
-                'usage_tokens' => $response['data']['usage'] ?? [],
-            ];
+                'usage_tokens' => $usage,
+            ]);
 
-            // 保存聊天记录
-            ChatLogic::saveChatResponseLog($request, $response);
-
-            //计算消耗tokens
-            $points = $unit > 0 ? round($tokens / $unit,2) : 0;
-
-            //token扣除
-            User::userTokensChange(self::$uid, $points);
-
-            $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points];
-
-            //扣费记录
-            AccountLogLogic::recordUserTokensLog(true, self::$uid, AccountLogEnum::TOKENS_DEC_MIND_MAP, $points, $mindMapInfo->task_id, $extra);
+            ChatBillingService::charge(
+                self::$uid,
+                $modelAlias,
+                $usage,
+                AccountLogEnum::TOKENS_DEC_MIND_MAP,
+                $mindMapInfo->task_id
+            );
 
             $mindMapInfo->ask = $request['message'];
             $mindMapInfo->reply = $reply;

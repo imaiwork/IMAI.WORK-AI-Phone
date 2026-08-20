@@ -29,6 +29,9 @@ return [
             'password'   => env('redis.PASSWORD', ''),
             'select'     => env('redis.SELECT', '11'),
             'timeout'    => env('redis.TIMEOUT', 0),
+            // GEO 监测 cell 单次执行可达 120s(中台 web 口径):可见性超时默认 60s 太短,
+            // 多 worker 时会把执行中的 cell 重新取出重复消费(重复扣费/批次计数虚增)
+            'retry_after' => (int)env('redis.RETRY_AFTER', 300),
             'tries'    => env('redis.TRIES', 10),
             'persistent' => false,
             'prefix'     => env('redis.PREFIX', 'ai2024:'), // 使用环境变量

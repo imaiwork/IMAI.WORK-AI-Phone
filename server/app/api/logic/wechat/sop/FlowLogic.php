@@ -5,7 +5,6 @@ namespace app\api\logic\wechat\sop;
 
 use app\api\logic\ApiLogic;
 use app\common\model\wechat\sop\AiWechatSopFlow;
-use app\common\model\wechat\sop\AiWechatSopPush;
 use app\common\model\wechat\sop\AiWechatSopPushMember;
 use app\common\model\wechat\sop\AiWechatSopStageTrigger;
 use app\common\model\wechat\sop\AiWechatSopSubFlowRemind;
@@ -133,6 +132,21 @@ class FlowLogic extends ApiLogic
             if ($result === false) {
                 throw new \Exception('子阶段删除失败');
             }
+
+            // 同步删除所有子阶段触发条件
+            AiWechatSopStageTrigger::where('flow_id', $params['id'])
+                                         ->whereNull('delete_time')
+                                         ->update([
+                                                      'delete_time' => $deleteTime,
+                                                      'update_time' => $deleteTime
+                                                  ]);
+            // 同步删除所有跟近提醒
+            AiWechatSopSubFlowRemind::where('flow_id', $params['id'])
+                                   ->whereNull('delete_time')
+                                   ->update([
+                                                'delete_time' => $deleteTime,
+                                                'update_time' => $deleteTime
+                                            ]);
 
             // 删除流程
             $flow->delete_time = $deleteTime;

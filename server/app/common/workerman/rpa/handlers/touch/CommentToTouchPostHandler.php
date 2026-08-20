@@ -82,7 +82,7 @@ class CommentToTouchPostHandler extends BaseMessageHandler
             }
 
             $hash = hash('sha256', $content['nickName'] . ($content['commentStr'] ?? ''));
-
+            $account = str_replace(WorkerEnum::getAccountTypeDesc($this->payload['appType'] ?? 3) . '号：', '', $content['account'] ?? '');
             $insert = [
                 'user_id'             => $task->user_id,
                 'task_type'           => $taskType,
@@ -91,7 +91,7 @@ class CommentToTouchPostHandler extends BaseMessageHandler
                 'address'             => $content['area'] ?? '',
                 'pusher_timer'         => $content['pusherTimer'] ?? 0,
                 'status'              => 3,
-                'account'             => $content['account'] ?? '',
+                'account'             => $account,
                 'account_name'        => $content['nickName'],
                 'account_type'        => $this->appType,
                 'platform'            => $this->appType,
@@ -100,10 +100,10 @@ class CommentToTouchPostHandler extends BaseMessageHandler
                 'content'             => $content['commentStr'] ?? '',
                 'exec_time'           => time(),
                 'hash'                => $hash,
-                'image'               => $this->saveBase64ToImage($content['image'] ?? '', $hash, 'touch'),
+                'image'               => $this->toolUtil->saveBase64ToImage($content['image'] ?? '', $hash, 'touch'),
                 'likes'               => $content['thumbsUpAndcollect'] ?? 0,
                 'fans'                => $content['numberFans'] ?? 0,
-                'avatar'              => $this->saveBase64ToImage($content['avatar'] ?? '', time() . rand(1000, 9999), 'touch'),
+                'avatar'              => $this->toolUtil->saveBase64ToImage($content['avatar'] ?? '', time() . rand(1000, 9999), 'touch'),
                 'follows'             => $content['numberFollowers'] ?? 0,
                 'industry_keyword'    => $content['industryKeywords'] ?? '',
                 'note_title'          => $content['title'] ?? '',

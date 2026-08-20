@@ -1,6 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "lechart": "../lime-echart/components/l-echart/l-echart"
-  }
-}

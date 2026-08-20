@@ -39,7 +39,7 @@
             <template v-else>
                 <view
                     class="bg-white rounded-[24rpx] p-5 shadow-[0_4rpx_16rpx_rgba(0,0,0,0.02)] border border-solid border-white flex flex-col gap-1.5">
-                    <text class="text-[24rpx] text-[#999999] font-medium">关联设备</text>
+                    <text class="text-xs text-[#999999] font-medium">关联设备</text>
                     <text class="text-[32rpx] font-extrabold text-[#1A1A1A]">{{ deviceName }}</text>
                 </view>
 
@@ -50,7 +50,7 @@
                             class="px-3 py-1.5 rounded-full bg-[#E6F0FF] text-primary flex items-center gap-1"
                             @click="handleMorePerson">
                             <u-icon name="plus" size="20" />
-                            <text class="text-[24rpx] font-bold">更多</text>
+                            <text class="text-xs font-bold">更多</text>
                         </view>
                     </view>
 
@@ -126,7 +126,7 @@
                                 class="w-[64rpx] h-[64rpx] bg-[#DCDFE6] rounded-[16rpx] flex items-center justify-center">
                                 <u-icon name="plus" color="#ffffff" size="32" />
                             </view>
-                            <text class="text-[26rpx] text-[#666666] font-medium">创建人设</text>
+                            <text class="text-[#666666] font-medium">创建人设</text>
                         </view>
                     </view>
                 </view>
@@ -168,11 +168,11 @@
         <view
             class="fixed bottom-0 left-0 right-0 bg-white px-5 pt-3 pb-[calc(20rpx+env(safe-area-inset-bottom))] shadow-[0_-8rpx_30rpx_rgba(0,0,0,0.04)] z-50 flex items-center justify-between gap-x-2">
             <view class="flex flex-col">
-                <text class="text-[22rpx] text-[#999999] mb-0.5">当前人设</text>
+                <text class="text-[22rpx] text-[#999999] mb-0.5">当前绑定人设</text>
                 <text
                     class="text-[30rpx] font-extrabold line-clamp-1"
-                    :class="currentPerson ? 'text-primary' : 'text-[#999999]'">
-                    {{ currentPerson?.persona_name || "暂无人设" }}
+                    :class="deviceDetail.persona_info?.persona_name ? 'text-primary' : 'text-[#999999]'">
+                    {{ deviceDetail.persona_info?.persona_name || "暂无人设" }}
                 </text>
             </view>
             <view class="basis-1/2 shrink-0">
@@ -262,7 +262,7 @@ const imageMaterials = ref<MaterialItem[]>([]);
 const currentPersonId = ref<number | null>(null);
 
 const currentPerson = computed<PersonItem | null>(
-    () => personList.value.find((p) => p.id === currentPersonId.value) ?? null
+    () => personList.value.find((p) => p.id === currentPersonId.value) ?? null,
 );
 
 /** 是否已选中人设，用于模板和保存校验 */
@@ -287,10 +287,12 @@ const handleEditPerson = (id: number): void => {
     uni.navigateTo({ url: `/ai_modules/person/pages/create/create?id=${id}&mode=edit&source=back` });
 };
 
-const handleMorePerson = (): void => {
+const handleMorePerson = async (): Promise<void> => {
     showChoosePerson.value = true;
     const selected = personList.value.filter((item) => item.id === currentPersonId.value);
-    choosePersonRef.value?.setChooseLists(selected);
+    setTimeout(() => {
+        choosePersonRef.value?.setChooseLists(selected);
+    }, 300);
 };
 
 /** 空状态下创建人设，跳转到人设创建页 */
@@ -338,10 +340,10 @@ const handleConfirm = async (): Promise<void> => {
         uni.showToast({ title: "请先选择或创建人设", icon: "none" });
         return;
     }
-    if (videoMaterials.value.length === 0 || digitalMaterials.value.length === 0 || imageMaterials.value.length === 0) {
-        uni.showToast({ title: "请先添加相关素材后再绑定", icon: "none" });
-        return;
-    }
+    // if (videoMaterials.value.length === 0 || digitalMaterials.value.length === 0 || imageMaterials.value.length === 0) {
+    //     uni.showToast({ title: "请先添加相关素材后再绑定", icon: "none" });
+    //     return;
+    // }
     confirming.value = true;
     try {
         uni.showLoading({ title: "绑定中...", mask: true });
@@ -351,8 +353,11 @@ const handleConfirm = async (): Promise<void> => {
         });
         uni.showToast({ title: "绑定成功", icon: "none", duration: 2000 });
         setTimeout(
-            () => uni.redirectTo({ url: `/ai_modules/device/pages/detail/detail?device_code=${deviceCode.value}` }),
-            1500
+            () =>
+                uni.redirectTo({
+                    url: `/ai_modules/device/pages/detail/detail?device_code=${deviceCode.value}`,
+                }),
+            1500,
         );
     } catch (error: unknown) {
         const msg = typeof error === "string" ? error : "绑定失败，请重试";
@@ -381,8 +386,8 @@ const getMaterialLibraryList = async (): Promise<void> => {
         ...item,
         pic: item.thumbnail_url,
     }));
-    videoMaterials.value = mapped.filter((item) => item.material_type === 1);
-    imageMaterials.value = mapped.filter((item) => item.material_type === 2);
+    videoMaterials.value = mapped.filter((item) => item.material_type === 1).slice(0, 3);
+    imageMaterials.value = mapped.filter((item) => item.material_type === 2).slice(0, 3);
 };
 
 const getAvatarList = async (): Promise<void> => {
@@ -390,7 +395,7 @@ const getAvatarList = async (): Promise<void> => {
         persona_id: currentPersonId.value,
         page_size: 25000,
     });
-    digitalMaterials.value = (lists ?? []).map((item: any) => ({
+    digitalMaterials.value = (lists ?? []).slice(0, 3).map((item: any) => ({
         id: item.id,
         file_url: item.video_url,
         pic: item.cover_url,

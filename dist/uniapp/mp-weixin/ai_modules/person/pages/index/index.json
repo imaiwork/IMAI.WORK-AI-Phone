@@ -1,9 +1,0 @@
-{
-  "navigationStyle": "custom",
-  "usingComponents": {
-    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
-    "empty": "../../../../components/empty/empty",
-    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "u-loading": "../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading"
-  }
-}

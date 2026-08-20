@@ -3,6 +3,7 @@
 namespace app\api\logic\storyboard;
 
 use app\api\logic\ApiLogic;
+use app\api\logic\minimax\VoiceLogic;
 use app\api\logic\service\TokenLogService;
 use app\api\logic\WechatLogic;
 use app\common\enum\user\AccountLogEnum;
@@ -98,10 +99,44 @@ class StoryboardVideoSettingLogic extends ApiLogic
         }
 
         if (isset($params['SpeechTextArray'])) {
-            $inputConfig['SpeechTextArray'] = $params['SpeechTextArray'];
-            $editingConfig['SpeechConfig']  = [
-                'Volume' => 1,
-            ];
+            //如果传入minimax音色，则去合成音频，作为背景音乐
+            if (!empty($params['minimax_voice_id'])){
+                $audioParams = ['minimax_voice_id' => $params['minimax_voice_id'] ,'text' => $params['SpeechTextArray'][0]];
+                $audioResult = VoiceLogic::audio($audioParams, self::$uid);
+                if ($audioResult){
+                    $audioUrl = VoiceLogic::getReturnData();
+                    $inputConfig['BackgroundMusicArray'] = [$audioUrl];
+                    //只取第一条文案
+                    $inputConfig['SpeechTextArray'] = [$params['SpeechTextArray'][0]];
+                    $minimaxText = $params['SpeechTextArray'][0];
+                    $editingConfig['SpeechConfig']  = [
+                        'Volume' => 0,
+                    ];
+                    $editingConfig['BackgroundMusicConfig']['Volume'] = 1;
+                    $editingConfig['BackgroundMusicConfig']['LoopMode'] = false;
+                }
+            }else if (!empty($params['system_voice_code'])){
+                //传入分镜混剪系统音色
+                $inputConfig['SpeechTextArray'] = $params['SpeechTextArray'];
+                $voiceSystemLists = ConfigService::get('model', 'list')['voice'];
+                $voiceSystem = 'longcheng_v2';
+                foreach ($voiceSystemLists as $value){
+                    if ($params['system_voice_code'] == $value['code']){
+                        $voiceSystem = $value['voice'];
+                        break;
+                    }
+                }
+                $editingConfig['SpeechConfig']  = [
+                    'Volume' => 1,
+                    'Voice' => $voiceSystem
+                ];
+            }else{
+                //什么音色都没传
+                $inputConfig['SpeechTextArray'] = $params['SpeechTextArray'];
+                $editingConfig['SpeechConfig']  = [
+                    'Volume' => 1,
+                ];
+            }
             $type                           = 1;
         } else {
             $type = 2;
@@ -146,6 +181,9 @@ class StoryboardVideoSettingLogic extends ApiLogic
             if (isset($result['data']['body']['JobId'])) {
                 if ($type == 1) {
                     $msg = $params['SpeechTextArray'][0] ?? '该任务未设置文案，自行补充';
+                    if (isset($minimaxText)){
+                        $msg = $minimaxText;
+                    }
                 } else {
                     foreach ($params['MediaGroupArray'] as $value) {
                         foreach ($value['SpeechTextArray'] as $value1) {
@@ -480,6 +518,10 @@ class StoryboardVideoSettingLogic extends ApiLogic
                 if ($status == 'Failed') {
                     $videoTasks = StoryboardVideoTask::where('video_setting_id', $task['id'])->select();
                     $extend     = json_decode($data['body']['EditingBatchJob']['Extend'], true);
+                    if ($videoTasks->isEmpty()){
+                        $successNum = 0;
+                        $errorNum = $task['video_count'];
+                    }
                     foreach ($videoTasks as $videoTask) {
                         //视频生成失败
                         $videoTask->status = 2;
@@ -490,6 +532,10 @@ class StoryboardVideoSettingLogic extends ApiLogic
                 }
             } else {
                 $videoTasks = StoryboardVideoTask::where('video_setting_id', $task['id'])->select();
+                if ($videoTasks->isEmpty()){
+                    $successNum = 0;
+                    $errorNum = $task['video_count'];
+                }
                 foreach ($videoTasks as $videoTask) {
                     //视频生成失败
                     $videoTask->status = 2;
@@ -517,7 +563,14 @@ class StoryboardVideoSettingLogic extends ApiLogic
                             $points   = ($totalDuration - ceil($task['total_duration'] / 60)) * $unit;
                             $trueCost = $cost + $points;
                             $extra    = ['扣费项目' => '分镜混剪差额补扣', '算力单价' => $unit,'原扣'=> $cost, '实际消耗算力' => $trueCost, '补扣' => $points];
-                            AccountLogLogic::recordUserTokensLog(true, $userId, $typeID, $points, $taskId, $extra);
+                            // 补上实际扣款(旧逻辑只记流水未扣钱);补扣主体按预扣那一次的空间
+                            $settleTeamId = \app\common\service\TeamBillingService::deductByOriginalLog(
+                                (int)$userId,
+                                (float)$points,
+                                (int)$typeID,
+                                (string)$taskId
+                            );
+                            AccountLogLogic::recordUserTokensLog(true, $userId, $typeID, $points, $taskId, $extra, $settleTeamId);
                         } else {
                             $points   = (ceil($task['total_duration'] / 60) - $totalDuration) * $unit;
                             $trueCost = $cost - $points;

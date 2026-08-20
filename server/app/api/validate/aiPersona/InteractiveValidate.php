@@ -19,7 +19,11 @@ class InteractiveValidate extends BaseValidate
         'add_friend_script' => 'require',
         'is_like' => 'require|in:0,1',
         'is_comment' => 'require|in:0,1',
-        'comment_robot_prompt' => 'require',
+        'sales_wechat' => 'array',
+        'is_greeting' => 'require|in:0,1',
+        'is_share_chats' => 'in:0,1',
+        'group_trigger_mode' => 'in:1,2',
+        'group_trigger_keywords' => 'array',
     ];
 
 
@@ -30,7 +34,12 @@ class InteractiveValidate extends BaseValidate
         'add_friend_script.require' => '请输入添加好友话术',
         'is_like.require' => '请输入是否点赞',
         'is_comment.require' => '请输入是否评论',
-        'comment_robot_prompt.require' => '请输入评论机器人提示',
+        'sales_wechat.array' => '销售微信号必须是数组',
+        'is_greeting.require' => '请选择是否自动发送欢迎语',
+        'is_greeting.in' => '是否自动发送欢迎语的有效值只能是0或1',
+        'is_share_chats.in' => '是否发送聊天消息的有效值只能是0或1',
+        'group_trigger_mode.in' => '加群触发模式的有效值只能是1或2',
+        'group_trigger_keywords.array' => '自定义触发关键词必须是数组',
     ];
 
 
@@ -40,7 +49,7 @@ class InteractiveValidate extends BaseValidate
      */
     public function sceneUpdate()
     {
-        return $this->only(['persona_id', 'add_friend_script', 'is_like', 'is_comment', 'comment_robot_prompt']);
+        return $this->only(['persona_id', 'add_friend_script', 'is_like', 'is_comment', 'sales_wechat', 'group_name_template', 'is_greeting', 'greeting_text', 'is_share_chats', 'group_trigger_mode', 'group_trigger_keywords']);
     }
 
     /**
@@ -52,4 +61,3 @@ class InteractiveValidate extends BaseValidate
         return $this->only(['persona_id']);
     }
 }
-

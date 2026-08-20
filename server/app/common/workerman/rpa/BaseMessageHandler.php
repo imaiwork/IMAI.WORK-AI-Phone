@@ -3,20 +3,21 @@
 namespace app\common\workerman\rpa;
 
 use think\facade\Log;
-use think\facade\Config;
 use Workerman\Connection\TcpConnection;
 use app\common\model\sv\SvDevice;
-use Channel\Client as ChannelClient;
+use Workerman\Worker;
+use app\common\workerman\rpa\Tool\ToolUtil;
 
 abstract class BaseMessageHandler
 {
     protected RpaSocketService $service;
-    protected $worker;
+    protected Worker $worker;
     protected int $msgType;
     protected string $uid;
     protected array $payload;
     protected int $userId;
     protected TcpConnection $connection;
+    protected ToolUtil $toolUtil;
 
     protected int $publishPlatform = 0;
 
@@ -43,12 +44,13 @@ abstract class BaseMessageHandler
     public function __construct(RpaSocketService $service)
     {
         $this->service = $service;
+        $this->toolUtil = new ToolUtil();
     }
 
     abstract public function handle(TcpConnection $connection, string $uid, array $payload): void;
 
     // 通用发送方法
-    protected function sendResponse(string $uid, array $payload, $message)
+    protected function sendResponse(string $uid, array $payload, array|string|null $message)
     {
         try {
             $payload['reply'] = $message;
@@ -142,56 +144,8 @@ abstract class BaseMessageHandler
         }
     }
 
-    public function base64ToImage($item)
-    {
-        if (!trim($item['avatar'])) {
-            return '';
-        }
-        // 分离Base64头和数据
-        $data = explode(',', $item['avatar']);
-        // 解码Base64数据
-        $decoded = base64_decode($data[1] ?? $data[0]);
-        $code = $item['xhsId'] ?? $item['authorName'];
-        $output = 'uploads/images/xhs/xhs_' . $code . '.png';
-        $root_path = public_path();
-        // 创建目录（如果不存在）
-        if (!is_dir(dirname($root_path . $output))) {
-            mkdir(dirname($root_path . $output), 0777, true);
-        }
 
-        // 保存文件
-        if (file_put_contents($root_path . $output, $decoded)) {
-            return Config::get('app.app_host') . '/' . $output;
-        }
-        return '';
-    }
-
-    public function saveBase64ToImage($content, $code, $type = 'ai')
-    {
-        if (!trim($content)) {
-            return '';
-        }
-        // 分离Base64头和数据
-        $data = explode(',', $content);
-        // 解码Base64数据
-        $decoded = base64_decode($data[1] ?? $data[0]);
-        $date = date('Ymd');
-        $output = 'uploads/images/' . $type . '/' . $date . '/' . $code . '.png';
-        $root_path = public_path();
-        // 创建目录（如果不存在）
-        if (!is_dir(dirname($root_path . $output))) {
-            mkdir(dirname($root_path . $output), 0777, true);
-        }
-
-        // 保存文件
-        if (file_put_contents($root_path . $output, $decoded)) {
-            return '/' . $output;
-        }
-        return '';
-    }
-
-
-    public function setLog($content, $level = 'info')
+    public function setLog(array|string $content, $level = 'info')
     {
         if ($this->service->isWriteLog() === true) {
             try {
@@ -216,15 +170,6 @@ abstract class BaseMessageHandler
      */
     public function registerChannelListener(TcpConnection $connection, string $deviceId, string $type = 'device'): void
     {
-        ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
-        // 注册进程消息监听
-        ChannelClient::on("{$type}.{$deviceId}.message", function ($data) use ($connection, $type) {
-
-            $message = $data['data'];
-            $this->setLog(json_decode($message, true), 'channel');
-
-            $connection->send($message);
-        });
-        $this->setLog('Channel listener registered: ' . $deviceId, 'device');
+        $this->service->registerChannelListener($connection, $deviceId, $type);
     }
 }

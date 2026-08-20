@@ -148,16 +148,16 @@ const uploadInfo = reactive({
 const { lockFn, isLock } = useLockFn(async () => {
     feedback.loading("正在上传中...");
     try {
-        const { code } = await uploadMnp(formData);
+        const { code, msg } = await uploadMnp(formData);
         uploadInfo.status = code;
         if (code === 1) {
             uploadInfo.msg = "请前往小程序后台提交审核！";
         } else {
-            uploadInfo.msg = "请重新上传";
+            uploadInfo.msg = msg || "请重新上传";
         }
     } catch (error) {
         uploadInfo.status = 0;
-        uploadInfo.msg = "请重新上传";
+        uploadInfo.msg = typeof error === "string" ? error : "请重新上传";
     } finally {
         uploadInfo.time = timeFormat(Date.now(), "yyyy-mm-dd hh:MM:ss");
         cache.set(cacheKey, uploadInfo, (24 * 3600).toString());

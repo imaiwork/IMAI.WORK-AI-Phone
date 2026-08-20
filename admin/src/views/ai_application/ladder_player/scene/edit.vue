@@ -160,9 +160,9 @@
 						placeholder="请选择陪练者音色">
 						<el-option
 							v-for="item in config.voice"
-							:key="item.code"
+							:key="item.voice"
 							:label="item.name"
-							:value="item.code" />
+							:value="item.voice" />
 					</el-select>
 				</el-form-item>
 				<!-- 练习者扮演人设 -->

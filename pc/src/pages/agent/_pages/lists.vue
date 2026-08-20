@@ -74,9 +74,21 @@
                                 </div>
 
                                 <div class="p-5 pt-10 flex flex-col items-center text-center">
-                                    <div
-                                        class="text-[15px] font-[900] text-[#1E293B] mb-2 group-hover:text-primary transition-colors">
-                                        {{ item.name }}
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <div
+                                            class="text-[15px] font-[900] text-[#1E293B] group-hover:text-primary transition-colors">
+                                            {{ item.name }}
+                                        </div>
+                                        <span
+                                            v-if="shouldShowAgentAccessTag(item)"
+                                            class="shrink-0 rounded-full border px-[8px] py-[2px] text-[10px] font-bold leading-none"
+                                            :class="
+                                                canUseAgent(item, userInfo)
+                                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                                                    : 'border-violet-200 bg-violet-50 text-violet-600'
+                                            ">
+                                            {{ getAgentAccessTagText(item, userInfo) }}
+                                        </span>
                                     </div>
                                     <div class="text-xs font-medium text-[#94A3B8] leading-relaxed line-clamp-2 h-9">
                                         {{ item.intro || item.introduced || "暂无描述信息" }}
@@ -96,7 +108,7 @@
                                         </div>
 
                                         <div
-                                            v-if="item.source == 1"
+                                            v-if="isAgentOwner(item)"
                                             @click.stop
                                             class="hover:scale-110 transition-transform">
                                             <handle-menu :data="item" :menu-list="handleMenuList" :horizontal="true" />
@@ -128,17 +140,26 @@
 </template>
 
 <script setup lang="ts">
+import { storeToRefs } from "pinia";
 import { getAgentList, deleteAgent, addAgent, getCozeAgentList, cozeAgentDelete, cozeConfigDetail } from "@/api/agent";
 import { ToolEnumMap, ToolEnum } from "@/enums/appEnums";
 import { KnbTypeEnum } from "@/pages/knowledge_base/_enums";
 import { agentExamplePrompt } from "@/config/common";
 import { HandleMenuType } from "@/components/handle-menu/typings";
+import { useUserStore } from "@/stores/user";
+import {
+    AGENT_UNAVAILABLE_TIP,
+    canUseAgent,
+    getAgentAccessTagText,
+    shouldShowAgentAccessTag,
+} from "@/utils/agentPermission";
 import AgentBg from "@/assets/images/agent_bg.png";
 import { AgentTypeEnum } from "../_enums";
 import CozeSetting from "../_components/coze-setting.vue";
 import CozeEdit from "../_components/coze-edit.vue";
 import CozeFlowEdit from "../_components/coze-flow-edit.vue";
-import feedback from "@/utils/feedback";
+
+const { userInfo } = storeToRefs(useUserStore());
 
 /**
  * @description 智能体列表页面
@@ -155,6 +176,8 @@ interface AgentItem {
     avatar?: string;
     bg_image?: string;
     coze_id?: number;
+    source?: number;
+    is_owner?: number;
 }
 
 // 定义Tab项接口
@@ -236,6 +259,14 @@ const deleteApis: Record<AgentTypeEnum, (params: { id: number }) => Promise<any>
 // 处理创建操作
 const handleCreate = (type: AgentTypeEnum) => {
     editHandlers[type]?.();
+};
+
+/** 标准智能体看 is_owner;Coze 仍按用户自建(source=1) */
+const isAgentOwner = (item: AgentItem) => {
+    if (currentTab.value === AgentTypeEnum.AGENT) {
+        return Number(item.is_owner) === 1;
+    }
+    return Number(item.source) === 1;
 };
 
 // 处理编辑操作
@@ -346,6 +377,10 @@ const handleTabClick = (tab: any) => {
 
 // 进入聊天页面
 const handleAgentChatting = (row: AgentItem) => {
+    if (!canUseAgent(row, userInfo.value)) {
+        feedback.msgWarning(AGENT_UNAVAILABLE_TIP);
+        return;
+    }
     router.push({
         path: "/agent/chatting",
         query: {

@@ -1,57 +1,111 @@
 <template>
     <popup-bottom v-model="show" title="算力消耗说明" height="70%">
         <template #content>
-            <view class="h-full pt-4">
+            <view class="h-full flex flex-col">
                 <scroll-view class="h-full" scroll-y>
-                    <view class="shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.05)] p-4 rounded-[32rpx] mx-4">
-                        <view class="flex items-center gap-x-3">
-                            <image
-                                src="@/ai_modules/digital_human/static/images/common/icon.png"
-                                class="w-[72rpx] h-[72rpx]"></image>
-                            <view>
-                                <view>{{ getScene.title }}</view>
-                                <view class="text-[#0000004d]">{{ getScene.desc }}</view>
-                            </view>
-                        </view>
-                        <view class="rounded-[32rpx] mt-4 px-4 bg-[#F6F6F6]">
+                    <view class="px-[24rpx] pt-[16rpx] pb-[40rpx] flex flex-col gap-[16rpx]">
+                        <view class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06)]">
                             <view
-                                v-if="type === 1"
-                                class="h-[100rpx] flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#0000000d] text-[26rpx]">
-                                <text class="text-[#00000080]">声音克隆费用</text>
-                                <text
-                                    >{{ getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN).score
-                                    }}{{ getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN).unit }}</text
-                                >
-                            </view>
-                            <view
-                                v-if="type === 1"
-                                class="h-[100rpx] flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#0000000d] text-[26rpx]">
-                                <text class="text-[#00000080]">形象克隆费用</text>
-                                <text
-                                    >{{ getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN).score
-                                    }}{{ getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN).unit }}</text
-                                >
-                            </view>
-                            <view
-                                class="h-[100rpx] flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#0000000d] text-[26rpx]"
-                                v-if="!Array.isArray(getScene.key)">
-                                <text class="text-[#00000080]">视频合成费用</text>
-                                <text
-                                    >{{ getTokenByScene(getScene.key).score
-                                    }}{{ getTokenByScene(getScene.key).unit }}</text
-                                >
-                            </view>
-                            <view v-if="Array.isArray(getScene.key)">
+                                class="flex items-center gap-[20rpx] px-[28rpx] py-[28rpx] border-[0] border-b border-solid border-[#F0F2F5]">
                                 <view
-                                    v-for="(item, index) in getScene.key"
-                                    :key="index"
-                                    class="h-[100rpx] flex items-center justify-between border-[0] border-b-[1rpx] border-solid border-[#0000000d] text-[26rpx]">
-                                    <text class="text-[#00000080]">视频合成费用({{ item.name }})</text>
-                                    <text
-                                        >{{ getTokenByScene(item.key).score }}{{ getTokenByScene(item.key).unit }}</text
-                                    >
+                                    class="w-[80rpx] h-[80rpx] rounded-[20rpx] overflow-hidden flex-shrink-0 shadow-[0_4rpx_12rpx_rgba(0,0,0,0.10)]">
+                                    <image
+                                        src="@/ai_modules/digital_human/static/images/common/icon.png"
+                                        class="w-full h-full"
+                                        mode="aspectFill" />
+                                </view>
+                                <view class="flex-1 min-w-0">
+                                    <text class="text-[30rpx] font-extrabold text-[#0D1117] block">{{
+                                        getScene.title
+                                    }}</text>
+                                    <text class="text-xs text-[#9CA3AF] mt-[6rpx] block">{{ getScene.desc }}</text>
                                 </view>
                             </view>
+
+                            <view class="px-[28rpx]">
+                                <view
+                                    v-if="type === 1"
+                                    class="flex items-center justify-between h-[96rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                    <view class="flex items-center gap-[12rpx]">
+                                        <view class="w-[8rpx] h-[8rpx] rounded-full bg-[#0EA5E9]" />
+                                        <text class="text-[#4B5563]">声音克隆费用</text>
+                                    </view>
+                                    <view class="flex items-center gap-[6rpx]">
+                                        <text class="text-[28rpx] font-extrabold text-primary">
+                                            {{ getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN).score }}
+                                        </text>
+                                        <text class="text-[22rpx] text-[#9CA3AF]">
+                                            {{ getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN).unit }}
+                                        </text>
+                                    </view>
+                                </view>
+
+                                <view
+                                    v-if="type === 1"
+                                    class="flex items-center justify-between h-[96rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                    <view class="flex items-center gap-[12rpx]">
+                                        <view class="w-[8rpx] h-[8rpx] rounded-full bg-[#8B5CF6]" />
+                                        <text class="text-[#4B5563]">形象克隆费用</text>
+                                    </view>
+                                    <view class="flex items-center gap-[6rpx]">
+                                        <text class="text-[28rpx] font-extrabold text-primary">
+                                            {{ getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN).score }}
+                                        </text>
+                                        <text class="text-[22rpx] text-[#9CA3AF]">
+                                            {{ getTokenByScene(TokensSceneEnum.HUMAN_AVATAR_SHANJIAN).unit }}
+                                        </text>
+                                    </view>
+                                </view>
+
+                                <view
+                                    v-if="!Array.isArray(getScene.key)"
+                                    class="flex items-center justify-between h-[96rpx]">
+                                    <view class="flex items-center gap-[12rpx]">
+                                        <view class="w-[8rpx] h-[8rpx] rounded-full bg-primary" />
+                                        <text class="text-[#4B5563]">视频合成费用</text>
+                                    </view>
+                                    <view class="flex items-center gap-[6rpx]">
+                                        <text class="text-[28rpx] font-extrabold text-primary">
+                                            {{ getTokenByScene(getScene.key).score }}
+                                        </text>
+                                        <text class="text-[22rpx] text-[#9CA3AF]">
+                                            {{ getTokenByScene(getScene.key).unit }}
+                                        </text>
+                                    </view>
+                                </view>
+
+                                <view v-if="Array.isArray(getScene.key)">
+                                    <view
+                                        v-for="(item, index) in getScene.key"
+                                        :key="index"
+                                        class="flex items-center justify-between h-[96rpx]"
+                                        :class="
+                                            index < getScene.key.length - 1
+                                                ? 'border-[0] border-b border-solid border-[#F0F2F5]'
+                                                : ''
+                                        ">
+                                        <view class="flex items-center gap-[12rpx]">
+                                            <view class="w-[8rpx] h-[8rpx] rounded-full bg-primary" />
+                                            <text class="text-[#4B5563]">{{ item.name }}</text>
+                                        </view>
+                                        <view class="flex items-center gap-[6rpx]">
+                                            <text class="text-[28rpx] font-extrabold text-primary">
+                                                {{ getTokenByScene(item.key).score }}
+                                            </text>
+                                            <text class="text-[22rpx] text-[#9CA3AF]">
+                                                {{ getTokenByScene(item.key).unit }}
+                                            </text>
+                                        </view>
+                                    </view>
+                                </view>
+                            </view>
+                        </view>
+
+                        <view class="flex items-start gap-[12rpx] bg-[#EBF2FF] rounded-[20rpx] px-[24rpx] py-[20rpx]">
+                            <u-icon name="info-circle" color="#0065fb" size="28" class="flex-shrink-0 mt-[2rpx]" />
+                            <text class="text-xs text-[#4B5563] leading-relaxed flex-1">
+                                以上为单次任务消耗算力，实际扣费以任务完成时为准。算力不足时请前往充值中心补充。
+                            </text>
                         </view>
                     </view>
                 </scroll-view>
@@ -61,6 +115,7 @@
 </template>
 
 <script setup lang="ts">
+// script 完全不变
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { MontageTypeEnum } from "@/ai_modules/digital_human/enums";
@@ -68,12 +123,12 @@ import { MontageTypeEnum } from "@/ai_modules/digital_human/enums";
 const props = withDefaults(
     defineProps<{
         modelValue: boolean;
-        type: MontageTypeEnum; // 1: 数字人口播混剪, 2: 真人口播智剪, 3: 素材混剪, 4: 新闻体视频, 5: 一句话生成视频,
+        type: MontageTypeEnum;
     }>(),
     {
         type: 1,
         modelVersion: false,
-    }
+    },
 );
 
 const emit = defineEmits(["update:modelValue"]);
@@ -88,7 +143,6 @@ const show = computed({
 
 const userStore = useUserStore();
 
-// 获取对应扣费场景
 const getScene = computed(() => {
     const descriptions: Record<number, { title: string; desc: string; key: string | { name: string; key: string }[] }> =
         {
@@ -116,8 +170,10 @@ const getScene = computed(() => {
                 title: "一句话生成视频",
                 desc: "一段话或根据场景生成视频",
                 key: [
-                    { name: "普通版", key: TokensSceneEnum.SORA_VIDEO },
-                    { name: "PRO版", key: TokensSceneEnum.SORA_PRO_VIDEO },
+                    { name: "480P图片转视频版", key: TokensSceneEnum.SEEDANCE2_480P_IMAGE2VIDEO },
+                    { name: "480P视频转视频版", key: TokensSceneEnum.SEEDANCE2_480P_VIDEO2VIDEO },
+                    { name: "720P图片转视频版", key: TokensSceneEnum.SEEDANCE2_720P_IMAGE2VIDEO },
+                    { name: "720P视频转视频版", key: TokensSceneEnum.SEEDANCE2_720P_VIDEO2VIDEO },
                 ],
             },
             [MontageTypeEnum.STORYBOARD_MIX]: {

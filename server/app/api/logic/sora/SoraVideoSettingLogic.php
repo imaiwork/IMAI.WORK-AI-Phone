@@ -26,38 +26,67 @@ class SoraVideoSettingLogic extends ApiLogic
     const SORA_PRO_VIDEO_CREATE = 'sora_pro_video_create';
     const SORA_COPYWRITING_CREATE = 'sora_copywriting_create';
     const SORA_VIDEO_STATUS = 'sora_video_status';
+    const SEEDANCE2_480P_IMAGE2VIDEO_CREATE = 'seedance2_480p_image2video_create';
+    const SEEDANCE2_480P_VIDEO2VIDEO_CREATE = 'seedance2_480p_video2video_create';
+    const SEEDANCE2_720P_IMAGE2VIDEO_CREATE = 'seedance2_720p_image2video_create';
+    const SEEDANCE2_720P_VIDEO2VIDEO_CREATE = 'seedance2_720p_video2video_create';
+    const SEEDANCE2_VIDEO_STATUS = 'seedance2_video_status';
+
 
     public static function add(array $params): bool
     {
-        if (empty($params['content'])) {
-            message('请输入提示词');
-        }
         $successNum   = 0;
         $errorNum     = 0;
-        $name         = $params['name'] ?? '';
-        $theme        = $params['theme'] ?? '';
-        $content      = $params['content'] ?? '无';
+        $errorMsg     = '';
+        $content      = $params['content'] ?? '';
         $gender       = $params['gender'] ?? '无';
         $image_urls   = $params['image_urls'] ?? [];
-        $frequency    = $params['frequency'] ?? '';                             //镜头切换频率
-        $aspect_ratio = $params['aspect_ratio'] == '9:16' ? '9:16' : '16:9';    //输出比例
+        $video_urls   = $params['video_urls'] ?? [];
+        if (!empty($content)){
+            $title = mb_substr($content, 0, 10);
+        }
+
+        if (!empty($video_urls)){
+            $inDuration = 0;
+            foreach ($video_urls as $video_url){
+                $inDuration += $video_url['duration'];
+            }
+            if ($inDuration > 15){
+                message('参考视频总时长不能超过15秒');
+            }
+        }
+        $aspect_ratio = $params['aspect_ratio'];    //输出比例
         $proportion   = explode(':', $aspect_ratio);
         $width        = $proportion[0];
         $height       = $proportion[1];
         $duration     = !empty($params['duration']) ? $params['duration'] : 4;  //输出时长
-        $style        = $params['style'] ?? '';                                 //视频风格
         $number       = $params['number'] ?? 1;                                 //生成视频数量
         $taskId       = generate_unique_task_id();
         $ai_type      = $params['ai_type'] ?? 0;
-        $model        = $params['model'] == 'sora-2-pro' ? 2 : 1;
+        if ($params['model'] == 'sora-2'){
+            $model = 1;
+            $name  = $params['name'] ?? '一句话视频-(sora2)'.date('Y-m-d H:i:s', time()).round(1000,9999);
+        } else if ($params['model'] == 'sora2-pro'){
+            $model = 2;
+            $name  = $params['name'] ?? '一句话视频-(sora2-pro)'.date('Y-m-d H:i:s', time()).round(1000,9999);
+        } else if ($params['model'] == 'seedance2.0' && $params['first_last_frame'] == 0 && $params['resolution'] == '480p'){
+            $model = empty($video_urls)? 3 : 4;
+            $scene = $model == 3 ? self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE : self::SEEDANCE2_480P_VIDEO2VIDEO_CREATE;
+            $name  = $title ?? '一句话视频-SD2.0(480p)'.date('Y-m-d H:i:s', time()).round(1000,9999);
+        } else if ($params['model'] == 'seedance2.0' && $params['first_last_frame'] == 0 && $params['resolution'] == '720p'){
+            $model = empty($video_urls)? 5 : 6;
+            $scene = $model == 5 ? self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE : self::SEEDANCE2_720P_VIDEO2VIDEO_CREATE;
+            $name  = $title ?? '一句话视频-SD2.0(720p)'.date('Y-m-d H:i:s', time()).round(1000,9999);
+        } else if ($params['model'] == 'seedance2.0' && $params['first_last_frame'] == 1){
+            $model = $params['resolution'] == '480p' ? 3 : 5;
+            $scene = $model == 3 ? self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE : self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE;
+            $name  = $model == 3 ? ($title??'一句话视频-SD2.0(480p)'.date('Y-m-d H:i:s', time()).round(1000,9999)) : ($title ??'一句话视频-SD2.0(720p)'.date('Y-m-d H:i:s', time()).round(1000,9999));
+        }else{
+            message('模型参数错误');
+        }
+
         $anchor_ids   = $params['anchor_ids'] ?? [];
-        //        $keywords = '视频类型：【' . $theme . '】
-//        视频细节：【' . $content . '】
-//        人物性别：【' . $gender . '】
-//        视频风格：【' . $style . '】
-//        镜头切换频率：【' . $frequency . '】
-//        输出比例：【' . $aspect_ratio . '】
-//        输出时长：【' . $duration . 's】';
+
         $keywords = $content;
         if (!empty($anchor_ids)) {
             foreach ($anchor_ids as $anchor_id) {
@@ -73,11 +102,11 @@ class SoraVideoSettingLogic extends ApiLogic
             message('参数错误');
         }
 
-        // AI 优化文案
-//        if ($ai_type == 1){
-//            $message = self::copywriting(['keywords' => $keywords, 'number' => 1]);
-//            $keywords = !empty($message) ? $message : $keywords;
-//        }
+        if ($params['first_last_frame'] == 1){
+            if (empty($image_urls) || count($image_urls)!=2){
+                message('请上传首尾帧图片');
+            }
+        }
 
         try {
             Db::startTrans();
@@ -94,70 +123,174 @@ class SoraVideoSettingLogic extends ApiLogic
             ];
             $setting = SoraVideoSetting::create($insert);
 
-            for ($i = 0; $i < $number; $i++) {
-                $request = [
-                    // TODO 测试sora
-                    'test_sora'    => 1,
-                    'prompt'       => $keywords,
-                    'aspect_ratio' => $aspect_ratio,
-                    'duration'     => $duration,
-                    'model'        => $model,
-                ];
-                if ($request['duration'] == 15) {
-                    $request['quality'] = 'high';
-                } else {
-                    $request['quality'] = 'standard';
-                }
-
-                // 素材图片不为空
-                if (!empty($image_urls)) {
-                    // 生成的视频选择素材图片，按顺序只可选择一张
-                    if (count($image_urls) == 1) {
-                        $key = 0;
+            // sora创建视频任务
+            if (in_array($model, [1, 2])){
+                for ($i = 0; $i < $number; $i++) {
+                    $request = [
+                        'test_sora'    => 1,
+                        'prompt'       => !empty($keywords) ? $keywords : '无',
+                        'aspect_ratio' => $aspect_ratio,
+                        'duration'     => $duration,
+                        'model'        => $model,
+                    ];
+                    if ($request['duration'] == 15) {
+                        $request['quality'] = 'high';
                     } else {
-                        if ($i > count($image_urls)) {
-                            $key = $i % count($image_urls);
+                        $request['quality'] = 'standard';
+                    }
+
+                    // 素材图片不为空
+                    if (!empty($image_urls)) {
+                        // 生成的视频选择素材图片，按顺序只可选择一张
+                        if (count($image_urls) == 1) {
+                            $key = 0;
                         } else {
-                            $key = $i;
+                            if ($i > count($image_urls)) {
+                                $key = $i % count($image_urls);
+                            } else {
+                                $key = $i;
+                            }
+                        }
+                        $request['image_urls'][] = $image_urls[$key];
+                    }
+
+                    $scene       = $model == 2 ? self::SORA_PRO_VIDEO_CREATE : self::SORA_VIDEO_CREATE;
+                    $videoTaskId = generate_unique_task_id();
+                    $insertTask  = [
+                        'user_id'          => self::$uid,
+                        'video_setting_id' => $setting->id,
+                        'name'             => $name . '_' . ($i + 1),
+                        'task_id'          => $videoTaskId,
+                        'pic'              => 'static/images/creationRecord.jpg',
+                        'status'           => 0,
+                        'gender'           => $gender,
+                        'ai_type'          => $ai_type,
+                        'duration'         => $duration,
+                        'msg'              => $keywords,
+                        'create_time'      => time(),
+                        'update_time'      => time(),
+                        'model_version'    => $model,
+                        'width'            => $width,
+                        'height'           => $height,
+                    ];
+                    $result      = self::requestUrl($request, $scene, self::$uid, $videoTaskId);
+                    if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
+                        self::$returnData['id'][] = $result['data']['id'] ?? '';
+                        $insertTask['extra']      = json_encode([
+                                                                    'copywriting' => $keywords,
+                                                                    'image_urls'  => $image_urls,
+                                                                    'video_id'    => $result['data']['id'] ?? '',
+                                                                    'anchor_ids'  => $anchor_ids,
+                                                                ], JSON_UNESCAPED_UNICODE);
+                        SoraVideoTask::create($insertTask);
+                    } else {
+                        $errorNum += 1;
+                    }
+                    usleep(100000);
+                }
+            }else{
+                // seedance2.0
+                $contents = [];
+                // 首尾帧生成视频参数
+                if ($params['first_last_frame'] == 1){
+                    if (!empty($keywords)) {
+                        $contents[] = [
+                            "type" => "text",
+                            "text" => $keywords,
+                        ];
+                    }
+                    $contents[] = [
+                        "type"      => "image_url",
+                        "image_url" => [
+                            "url" => $image_urls[0],
+                        ],
+                        "role" => "first_frame",
+                    ];
+                    $contents[] = [
+                        "type"      => "image_url",
+                        "image_url" => [
+                            "url" => $image_urls[1],
+                        ],
+                        "role" => "last_frame",
+                    ];
+                }else{
+                    // 常规生成视频参数
+                    if (!empty($keywords)) {
+                        $contents[] = [
+                            "type" => "text",
+                            "text" => $keywords,
+                        ];
+                    }
+                    if (!empty($image_urls)) {
+                        foreach ($image_urls as $image_url){
+                            $contents[] = [
+                                "type"      => "image_url",
+                                "image_url" => [
+                                    "url" => $image_url,
+                                ],
+                                "role" => "reference_image",
+                            ];
                         }
                     }
-                    $request['image_urls'][] = $image_urls[$key];
+                    if (!empty($video_urls)) {
+                        foreach ($video_urls as $video_url){
+                            $contents[] = [
+                                "type"      => "video_url",
+                                "video_url" => [
+                                    "url" => $video_url['url'],
+                                ],
+                                "role" => "reference_video",
+                            ];
+                        }
+                    }
                 }
 
-                $scene       = $model == 2 ? self::SORA_PRO_VIDEO_CREATE : self::SORA_VIDEO_CREATE;
-                $videoTaskId = generate_unique_task_id();
-                $insertTask  = [
-                    'user_id'          => self::$uid,
-                    'video_setting_id' => $setting->id,
-                    'name'             => $name . '_' . ($i + 1),
-                    'task_id'          => $videoTaskId,
-                    'pic'              => 'static/images/creationRecord.jpg',
-                    'status'           => 0,
-                    'gender'           => $gender,
-                    'ai_type'          => $ai_type,
-                    'duration'         => $duration,
-                    'msg'              => $keywords,
-                    'create_time'      => time(),
-                    'update_time'      => time(),
-                    'model_version'    => $model,
-                    'width'            => $width,
-                    'height'           => $height,
-                ];
-                $result      = self::requestUrl($request, $scene, self::$uid, $videoTaskId);
-                if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
-                    self::$returnData['id'][] = $result['data']['id'] ?? '';
-                    $insertTask['extra']      = json_encode([
-                                                                'copywriting' => $keywords,
-                                                                'image_urls'  => $image_urls,
-                                                                'video_id'    => $result['data']['id'] ?? '',
-                                                                'anchor_ids'  => $anchor_ids,
-                                                            ], JSON_UNESCAPED_UNICODE);
-                    SoraVideoTask::create($insertTask);
-                } else {
-                    $errorNum += 1;
+                for ($i = 0; $i < $number; $i++) {
+                    $request = [
+                        'model'          => 'doubao-seedance-2-0-260128',
+                        'content'        => $contents,
+                        'generate_audio' => True,
+                        'ratio'          => $aspect_ratio,
+                        'duration'       => (int)$duration,
+                        'resolution'     => $params['resolution'] == '720p' ? '720p' : '480p',
+                        'model_version'  => $model,
+                    ];
+                    $videoTaskId = generate_unique_task_id();
+                    $insertTask  = [
+                        'user_id'          => self::$uid,
+                        'video_setting_id' => $setting->id,
+                        'name'             => $i == 0 ? $name : $name . '_' . ($i + 1),
+                        'task_id'          => $videoTaskId,
+                        'pic'              => 'static/images/creationRecord.jpg',
+                        'status'           => 0,
+                        'gender'           => $gender,
+                        'ai_type'          => $ai_type,
+                        'duration'         => $duration,
+                        'msg'              => $keywords,
+                        'create_time'      => time(),
+                        'update_time'      => time(),
+                        'model_version'    => $model,
+                        'width'            => $width,
+                        'height'           => $height,
+                    ];
+                    $result      = self::requestUrl($request, $scene, self::$uid, $videoTaskId);
+                    if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
+                        self::$returnData['id'][] = $result['data']['id'] ?? '';
+                        $insertTask['extra']      = json_encode([
+                                                                    'copywriting' => $keywords,
+                                                                    'image_urls'  => $image_urls,
+                                                                    'video_urls'  => $video_urls,
+                                                                    'video_id'    => $result['data']['id'] ?? '',
+                                                                ], JSON_UNESCAPED_UNICODE);
+                        SoraVideoTask::create($insertTask);
+                    } else {
+                        $errorMsg .= $result['message'] ?? '生成失败，请更换素材或提示词重试' . ' ';
+                        $errorNum += 1;
+                    }
+                    usleep(100000);
                 }
-                usleep(100000);
             }
+
             self::$returnData                = $setting->toArray();
             self::$returnData['success_num'] = $successNum;
             self::$returnData['error_num']   = $errorNum;
@@ -172,6 +305,10 @@ class SoraVideoSettingLogic extends ApiLogic
                 'error_num'   => $errorNum
             ];
             SoraVideoSetting::update($update, ['id' => $setting->id]);
+            if ($update['status'] == 4){
+                self::setError($errorMsg);
+                return false;
+            }
 
             $mnpMessage = [
                 'openid'   => UserAuth::where('user_id', self::$uid)->order('id', 'desc')->value('openid'),
@@ -326,6 +463,10 @@ class SoraVideoSettingLogic extends ApiLogic
                 self::SORA_COPYWRITING_CREATE => ['sora_copywriting_create', AccountLogEnum::TOKENS_DEC_SORA_COPYWRITING],
                 self::SORA_VIDEO_CREATE       => ['sora_video_create', AccountLogEnum::TOKENS_DEC_SORA_VIDEO],
                 self::SORA_PRO_VIDEO_CREATE   => ['sora_pro_video_create', AccountLogEnum::TOKENS_DEC_SORA_PRO_VIDEO],
+                self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE   => ['seedance2_480p_image2video_create', AccountLogEnum::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_480P],
+                self::SEEDANCE2_480P_VIDEO2VIDEO_CREATE   => ['seedance2_480p_video2video_create', AccountLogEnum::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_480P],
+                self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE   => ['seedance2_720p_image2video_create', AccountLogEnum::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_720P],
+                self::SEEDANCE2_720P_VIDEO2VIDEO_CREATE   => ['seedance2_720p_video2video_create', AccountLogEnum::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_720P],
             };
             $duration           = $request['duration'] ?? 4;
             $unit               = TokenLogService::checkToken($userId, $tokenScene, $duration);
@@ -342,6 +483,12 @@ class SoraVideoSettingLogic extends ApiLogic
                     break;
                 case self::SORA_PRO_VIDEO_CREATE:
                     $response = $response->proCreate($request);
+                    break;
+                case self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE:
+                case self::SEEDANCE2_480P_VIDEO2VIDEO_CREATE:
+                case self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE:
+                case self::SEEDANCE2_720P_VIDEO2VIDEO_CREATE:
+                    $response = $response->seedanceCreate($request);
                     break;
                 default:
             }
@@ -366,6 +513,18 @@ class SoraVideoSettingLogic extends ApiLogic
                             break;
                         case self::SORA_PRO_VIDEO_CREATE:
                             $extra = ['扣费项目' => '一句话生成视频(pro)', '算力单价' => $unit, '实际消耗算力' => $points];
+                            break;
+                        case self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE:
+                            $extra = ['扣费项目' => '一句话生成视频(seedance2.0，不含参考视频480p)', '算力单价' => $unit, '实际消耗算力' => $points];
+                            break;
+                        case self::SEEDANCE2_480P_VIDEO2VIDEO_CREATE:
+                            $extra = ['扣费项目' => '一句话生成视频(seedance2.0，含参考视频480p)', '算力单价' => $unit, '实际消耗算力' => $points];
+                            break;
+                        case self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE:
+                            $extra = ['扣费项目' => '一句话生成视频(seedance2.0，不含参考视频720p)', '算力单价' => $unit, '实际消耗算力' => $points];
+                            break;
+                        case self::SEEDANCE2_720P_VIDEO2VIDEO_CREATE:
+                            $extra = ['扣费项目' => '一句话生成视频(seedance2.0，含参考视频720p)', '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         default:
                     }

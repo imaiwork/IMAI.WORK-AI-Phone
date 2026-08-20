@@ -14,7 +14,8 @@ class CopywritingValidate extends BaseValidate
     protected $rule = [
         'url' => 'require',
         'id'  => 'integer|min:0',
-        'persona_id' => 'require|integer'
+        'persona_id' => 'require|integer',
+        'visual_material_source' => 'in:1,2,3',
     ];
 
     protected $message = [
@@ -26,6 +27,11 @@ class CopywritingValidate extends BaseValidate
     ];
 
     public function sceneVideo2text()
+    {
+        return $this->only(['url', 'id', 'persona_id', 'visual_material_source']);
+    }
+
+    public function sceneImage2text()
     {
         return $this->only(['url', 'id', 'persona_id']);
     }

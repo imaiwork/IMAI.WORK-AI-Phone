@@ -3,8 +3,9 @@
 namespace app\common\model\shanjian;
 
 use app\common\model\BaseModel;
-use think\model\concern\SoftDelete;
 use app\common\service\FileService;
+use app\common\service\ShanjianQueueService;
+use think\model\concern\SoftDelete;
 
 /**
  * 闪剪视频任务模型
@@ -22,6 +23,12 @@ class ShanjianVideoTask extends BaseModel
     const STATUS_PROCESSING = 1;     // 视频查询中
     const STATUS_FAILED = 2;         // 视频合成失败
     const STATUS_SUCCESS = 3;        // 视频合成成功
+
+    // 成片下载状态
+    const DOWNLOAD_PENDING = 0;      // 待下载
+    const DOWNLOAD_DOWNLOADING = 1;  // 下载中
+    const DOWNLOAD_SUCCESS = 2;      // 下载成功
+    const DOWNLOAD_FAILED = 3;       // 下载失败
     
     // 音频类型常量
     const AUDIO_TYPE_SCRIPT = 1;     // 文案驱动
@@ -41,6 +48,21 @@ class ShanjianVideoTask extends BaseModel
             self::STATUS_SUCCESS => '成功',
         ];
         
+        return $statusMap[$status] ?? '未知';
+    }
+
+    /**
+     * 获取成片下载状态文本
+     */
+    public static function getDownloadStatusText(int $status): string
+    {
+        $statusMap = [
+            self::DOWNLOAD_PENDING => '待下载',
+            self::DOWNLOAD_DOWNLOADING => '下载中',
+            self::DOWNLOAD_SUCCESS => '下载成功',
+            self::DOWNLOAD_FAILED => '下载失败',
+        ];
+
         return $statusMap[$status] ?? '未知';
     }
     
@@ -73,12 +95,16 @@ class ShanjianVideoTask extends BaseModel
      * @param string $value
      * @return array
      */
-    public function getMaterialAttr(string $value): array
+    public function getMaterialAttr($value): array
     {
-        if (empty($value)) {
+        if (is_array($value)) {
+            return $value;
+        }
+        if ($value === null || $value === '') {
             return [];
         }
-        return json_decode($value, true) ?: [];
+        $decoded = json_decode((string)$value, true);
+        return is_array($decoded) ? $decoded : [];
     }
     
     /**
@@ -101,10 +127,14 @@ class ShanjianVideoTask extends BaseModel
      */
     public function getExtraAttr($value)
     {
-        if (empty($value)) {
+        if (is_array($value)) {
+            return $value;
+        }
+        if ($value === null || $value === '') {
             return [];
         }
-        return json_decode($value, true) ?: [];
+        $decoded = json_decode((string)$value, true);
+        return is_array($decoded) ? $decoded : [];
     }
     
     /**
@@ -142,6 +172,37 @@ class ShanjianVideoTask extends BaseModel
     {
         return self::getAudioTypeText($value);
     }
+
+    public function getQueueStatusTextAttr($value, array $data): string
+    {
+        return ShanjianQueueService::statusText(
+            (string)($data['queue_status'] ?? ''),
+            (int)($data['queue_position'] ?? 0)
+        );
+    }
+
+    public function getDownloadStatusTextAttr($value, array $data): string
+    {
+        return self::getDownloadStatusText((int)($data['download_status'] ?? 0));
+    }
+
+    public function getVideoSourceUrlAttr($value)
+    {
+        return $value ? FileService::getFileUrl((string)$value) : '';
+    }
+
+    public function setVideoSourceUrlAttr($value)
+    {
+        $value = trim((string)$value);
+        if ($value === '') {
+            return '';
+        }
+        // 远端原链接原样保存，本地路径走统一去域处理
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+        return FileService::setFileUrl($value);
+    }
     
     /**
      * 获取器：处理创建时间
@@ -174,7 +235,7 @@ class ShanjianVideoTask extends BaseModel
 
     public function setMusicUrlAttr($value)
     {
-        return $value ? FileService::setFileUrl($value) : '';
+        return $value ? FileService::getFileUrl($value) : '';
     }
 
 
@@ -187,6 +248,13 @@ class ShanjianVideoTask extends BaseModel
 
     public function setVideoResultUrlAttr($value)
     {
-        return $value ? FileService::setFileUrl($value) : '';
+        $value = trim((string)$value);
+        if ($value === '') {
+            return '';
+        }
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+        return FileService::setFileUrl($value);
     }
 }

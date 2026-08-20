@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../common/vendor.js");exports.usePersona=function({formData:r}){const n=e.ref(!1),o=e.ref(!1);return{showCharacter:n,isCharacter:o,handleSelectCharacter:e=>{r.person_name=e.name,r.person_introduction=e.introduced,o.value=!0,n.value=!1}}};

@@ -24,7 +24,7 @@ class ShanjianVideoTaskValidate extends BaseValidate
         'card_name' => 'max:255',
         'card_introduced' => 'max:5000',
         'title' => 'max:200',
-        'msg' => 'max:2000',
+        'msg' => 'max:1800',
         'material' => 'array',
         'music_url' => 'max:255',
         'video_token' => 'max:10',
@@ -50,7 +50,7 @@ class ShanjianVideoTaskValidate extends BaseValidate
         'card_name.max' => '人设名字长度不能超过255个字符',
         'card_introduced.max' => '人设介绍长度不能超过5000个字符',
         'title.max' => '标题长度不能超过200个字符',
-        'msg.max' => '文字长度不能超过2000个字符',
+        'msg.max' => '文字长度不能超过1800个字符',
         'material.array' => '素材必须是数组格式',
         'music_url.max' => '音乐地址长度不能超过255个字符',
         'video_token.max' => '视频扣费长度不能超过10个字符',
@@ -115,6 +115,12 @@ class ShanjianVideoTaskValidate extends BaseValidate
 
     // 重试场景
     public function sceneRetry()
+    {
+        return $this->only(['id']);
+    }
+
+    // 手动下载成片
+    public function sceneDownload()
     {
         return $this->only(['id']);
     }

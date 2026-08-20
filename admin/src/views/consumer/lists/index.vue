@@ -20,6 +20,20 @@
                         <el-option v-for="(item, key) in ClientMap" :key="key" :label="item" :value="key" />
                     </el-select>
                 </el-form-item>
+                <el-form-item label="用户类型">
+                    <el-select
+                        class="!w-[180px]"
+                        v-model="queryParams.level_id"
+                        clearable
+                        :empty-values="[null, undefined]">
+                        <el-option label="全部" value="" />
+                        <el-option
+                            v-for="(item, index) in userLevelList"
+                            :key="index"
+                            :label="item.level_name"
+                            :value="item.id" />
+                    </el-select>
+                </el-form-item>
                 <el-form-item>
                     <el-button type="primary" @click="resetPage">查询</el-button>
                     <el-button @click="resetParams">重置</el-button>
@@ -47,8 +61,8 @@
                 <el-table-column label="手机号码" prop="mobile" min-width="100" show-overflow-tooltip />
                 <el-table-column label="类型" min-width="100" show-overflow-tooltip>
                     <template #default="{ row }">
-                        <el-tag size="small" :type="row.user_type == 0 ? 'success' : 'warning'">
-                            {{ row.user_type == 0 ? "个人" : "企业" }}
+                        <el-tag size="small" :type="row.level_id == 0 ? 'success' : 'warning'">
+                            {{ row.level_name || "默认" }}
                         </el-tag>
                     </template>
                 </el-table-column>
@@ -101,7 +115,7 @@
 <script lang="ts" setup name="consumerLists">
 import { usePaging } from "@/hooks/usePaging";
 import { getRoutePath } from "@/router";
-import { getUserList } from "@/api/consumer";
+import { getUserList, getUserLevelList } from "@/api/consumer";
 import { ClientMap } from "@/enums/appEnums";
 import AddUserPop from "../components/add-user-pop.vue";
 import ImportUserPop from "./import.vue";
@@ -112,14 +126,23 @@ const popShow = ref(false);
 const queryParams = reactive({
     keyword: "",
     channel: "",
+    level_id: "",
     create_time_start: "",
     create_time_end: "",
 });
+const userLevelList = ref<any[]>([]);
 
 const { pager, getLists, resetPage, resetParams } = usePaging({
     fetchFun: getUserList,
     params: queryParams,
 });
+
+const getUserLevels = async () => {
+    const { lists } = await getUserLevelList({ page: 1, size: 1000 });
+    userLevelList.value = lists || [];
+};
+
+getUserLevels();
 
 //打开创建用户弹框
 const addUser = async () => {

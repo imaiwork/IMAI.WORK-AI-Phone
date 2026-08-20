@@ -146,7 +146,8 @@ class LeadScrapingLogic extends SvBaseLogic
                     ]);
                 }
                 $times = [];
-                foreach (json_decode($result['task_date'], true) as $date) {
+                foreach ($result['task_date'] as $date) {
+                    $date = date('Y-m-d', strtotime($date));
                     foreach (json_decode($result['time_config'], true) as $time) {
                         $time      = explode('-', $time);
                         $startTime = $date . ' ' . $time[0] . ':00';
@@ -221,7 +222,7 @@ class LeadScrapingLogic extends SvBaseLogic
             $result['content']     = !empty($result['content']) ? json_decode($result['content'], true) : [];
             $result['accounts']    = !empty($result['accounts']) ? json_decode($result['accounts'], true) : [];
             $result['time_config'] = !empty($result['time_config']) ? json_decode($result['time_config'], true) : [];
-            $result['task_date']   = !empty($result['task_date']) ? json_decode($result['task_date'], true) : [];
+            $result['task_date']   = !empty($result['task_date']) ? $result['task_date'] : [];
             self::$returnData = $result;
             return true;
         } catch (\Exception $e) {
@@ -399,7 +400,7 @@ class LeadScrapingLogic extends SvBaseLogic
             ->where('user_id', self::$uid)
             ->where('task_type', $params['task_type'])
             ->limit($offset, $limit)
-            ->order('id', 'desc')
+            ->order('create_time', 'desc')
             ->select();
         $count  = SvLeadScrapingIndustryLog::where('user_id', self::$uid)->where('task_type', $params['task_type'])->count();
         if ($logs->isEmpty()) {

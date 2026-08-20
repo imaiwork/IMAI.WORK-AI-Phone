@@ -67,6 +67,14 @@ import { getPublicAnchorList } from "@/api/digital_human";
 import Popup from "@/components/popup/index.vue";
 import AnchorVideo from "@/pages/app/_components/anchor-video.vue";
 import { ThemeEnum } from "@/enums/appEnums";
+import { CloneModeEnum, cloneModeToIsPro } from "@/pages/app/digital_human/_enums";
+
+const props = defineProps({
+    cloneMode: {
+        type: Number,
+        default: CloneModeEnum.FAST,
+    },
+});
 
 const emit = defineEmits(["close", "confirm"]);
 
@@ -75,6 +83,7 @@ const popupRef = ref<InstanceType<typeof Popup>>();
 const queryParams = reactive({
     page_no: 1,
     page_size: 20,
+    is_pro: cloneModeToIsPro(props.cloneMode as CloneModeEnum),
 });
 
 const { pager, getLists, resetPage } = usePaging({
@@ -82,6 +91,15 @@ const { pager, getLists, resetPage } = usePaging({
     params: queryParams,
     isScroll: true,
 });
+
+watch(
+    () => props.cloneMode,
+    (mode) => {
+        queryParams.is_pro = cloneModeToIsPro(mode as CloneModeEnum);
+        // 同步筛选条件；弹窗打开时立即重拉，避免档位切换后仍展示旧列表
+        resetPage();
+    },
+);
 
 const currAnchor = ref<any>({});
 

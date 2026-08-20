@@ -4,23 +4,18 @@ declare(strict_types=1);
 
 namespace app\common\traits;
 
-use think\facade\Log;
-use Channel\Client as ChannelClient;
+use app\common\enum\DeviceEnum;
+use app\common\enum\user\AccountLogEnum;
+use app\common\model\ChatPrompt;
 use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvCrawlingTaskDeviceBind;
-use app\common\model\ChatPrompt;
-use app\common\enum\user\AccountLogEnum;
-use app\api\logic\service\TokenLogService;
-use app\common\logic\AccountLogLogic;
-use app\common\model\user\User;
 use app\common\model\sv\SvDeviceRpa;
 use app\common\model\sv\SvDeviceTask;
-use app\common\enum\DeviceEnum;
-
-
-
-use Predis\Client as redisClient;
+use app\common\service\chat\ChatBillingService;
+use Channel\Client as ChannelClient;
 use think\cache\driver\Redis;
+use think\facade\Log;
+
 
 trait SphTaskTrait
 {
@@ -130,7 +125,7 @@ trait SphTaskTrait
                 'appType' => 1,
                 'content' => json_encode($task, JSON_UNESCAPED_UNICODE),
                 'deviceId' => $row['device_code'],
-                'appVersion' => '2.1.1',
+                'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                 'messageId' => 0,
             );
             self::setLog($data);
@@ -140,7 +135,7 @@ trait SphTaskTrait
                     'appType' => 4,
                     'content' => json_encode($task, JSON_UNESCAPED_UNICODE),
                     'deviceId' => $row['device_code'],
-                    'appVersion' => '2.1.1',
+                    'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                     'messageId' => 0,
                 );
                 self::setLog($data);
@@ -231,7 +226,7 @@ trait SphTaskTrait
                 'appType' => 1,
                 'content' => json_encode($task, JSON_UNESCAPED_UNICODE),
                 'deviceId' => $find['device_code'],
-                'appVersion' => '2.1.1',
+                'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                 'messageId' => 0,
             );
             self::setLog($data);
@@ -252,7 +247,7 @@ trait SphTaskTrait
             ], JSON_UNESCAPED_UNICODE));
     }
 
-    private static function sendAppExec($find, $appType)
+    private static function sendAppExec(array $find, int $appType)
     {
         $app = SvDeviceRpa::where('device_code', $find['device_code'])->where('app_type', $appType)->findOrEmpty();
         if ($app->isEmpty()) {
@@ -269,7 +264,7 @@ trait SphTaskTrait
                 'task_id' => $app->id
             ], JSON_UNESCAPED_UNICODE),
             "deviceId" => $find['device_code'],
-            "appVersion" => "2.1.2"
+            "appVersion" => \app\common\enum\DeviceEnum::APP_VERSION,
         ];
 
         $channel = "device.{$find['device_code']}.message";
@@ -306,7 +301,7 @@ trait SphTaskTrait
                     'msg' => '任务暂停'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $_deviceId,
-                'appVersion' => '2.1.1',
+                'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                 'messageId' => 0,
             );
 
@@ -339,7 +334,7 @@ trait SphTaskTrait
                     'msg' => '任务恢复'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $_deviceId,
-                'appVersion' => '2.1.1',
+                'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                 'messageId' => 0,
             );
 
@@ -375,7 +370,7 @@ trait SphTaskTrait
 
                     ), JSON_UNESCAPED_UNICODE),
                     'deviceId' => $_deviceId,
-                    'appVersion' => '2.1.1',
+                    'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                     'messageId' => 0,
                 );
 
@@ -449,31 +444,23 @@ trait SphTaskTrait
     private static function handleResponse(array $response, string $model, string $task_id, int $user_id)
     {
         try {
-            $scene = 'openai_chat';
-            //检查扣费
-            $unit = TokenLogService::checkToken($user_id, $scene);
-            // 获取回复内容
+            ChatBillingService::checkBalance($user_id, $model);
+
             $reply = $response['data']['message'] ?? '';
-            //计费
-            $tokens = $response['data']['usage']['total_tokens'] ?? 0;
-            if (!$reply || $tokens == 0) {
+            $usage = $response['data']['usage'] ?? [];
+
+            if (!$reply || empty($usage['total_tokens'])) {
                 throw new \Exception('获取内容失败');
             }
 
-            $response = [
-                'reply' => $reply,
-                'usage_tokens' => $response['data']['usage'] ?? [],
-            ];
-            //计算消耗tokens
-            $points = $unit > 0 ? round($tokens / $unit, 2) : 0;
-            //token扣除
-            User::userTokensChange($user_id, $points);
-
-            $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points, '场景' => '视频号获客私信打招呼内容'];
-            $desc = AccountLogEnum::TOKENS_DEC_OPENAI_CHAT;
-            //扣费记录
-            AccountLogLogic::recordUserTokensLog(true, $user_id, $desc, $points, $task_id, $extra);
-
+            ChatBillingService::charge(
+                $user_id,
+                $model,
+                $usage,
+                AccountLogEnum::TOKENS_DEC_OPENAI_CHAT,
+                $task_id,
+                ['场景' => '视频号获客私信打招呼内容']
+            );
 
             return $reply;
         } catch (\Exception $e) {
@@ -489,14 +476,14 @@ trait SphTaskTrait
             'host'        => env('redis.HOST', '127.0.0.1'),
             'port'        => env('redis.PORT', 6379),
             'password'    => env('redis.PASSWORD', '123456'),
-            'select'      => env('redis.WS_SELECT', 9),
+            'select'      => env('redis.WS_SELECT', 8),
             'timeout'     => 0,
             'persistent'  => true,
         ]);
     }
 
 
-    private static function setLog($content, $type = 'sph')
+    private static function setLog(array|string $content, string $type = 'sph'): void
     {
         if (is_array($content)) {
             $content = json_encode($content, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

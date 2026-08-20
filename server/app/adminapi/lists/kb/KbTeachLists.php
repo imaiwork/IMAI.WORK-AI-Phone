@@ -57,6 +57,8 @@ class KbTeachLists extends BaseAdminDataLists implements ListsExtendInterface
             if ($users) {
                 $where[] = ['user_id', 'in', $users];
             }
+        }else{
+            $where[] = ['user_id', '=', 0];
         }
 
         return $where;

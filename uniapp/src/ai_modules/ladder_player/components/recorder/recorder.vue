@@ -53,7 +53,7 @@ const props = withDefaults(
     }>(),
     {
         show: false,
-    }
+    },
 );
 
 const emit = defineEmits<{
@@ -108,10 +108,10 @@ const { start, stop, pause, resume, authorize, recordTime } = useRecorder(
                         lineWidth: 3,
                         keep: false,
                     });
-                }
+                },
             );
         },
-    }
+    },
 );
 
 const reply = async () => {

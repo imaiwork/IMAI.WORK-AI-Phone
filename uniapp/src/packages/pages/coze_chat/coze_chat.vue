@@ -9,7 +9,7 @@
                     background: 'transparent',
                 }">
                 <template #custom-back-icon>
-                    <view @click="handleBack">
+                    <view>
                         <u-icon name="/static/images/icons/back_black.svg" size="32"></u-icon>
                     </view>
                 </template>
@@ -110,7 +110,7 @@
                             <view
                                 v-if="
                                     [FormFieldTypeEnum.VIDEO, FormFieldTypeEnum.IMAGE, FormFieldTypeEnum.FILE].includes(
-                                        item.type
+                                        item.type,
                                     )
                                 ">
                                 <file-upload
@@ -143,7 +143,7 @@
                                     <template
                                         v-if="
                                             [FormFieldTypeEnum.VIDEO, FormFieldTypeEnum.IMAGE].includes(
-                                                getOutputParams[key]?.type
+                                                getOutputParams[key]?.type,
                                             )
                                         ">
                                         <video
@@ -215,7 +215,7 @@
                                 class="bg-white rounded-[24rpx] p-[24rpx]"
                                 :key="index"
                                 @click="handleRecord(item)">
-                                <view class="text-[26rpx] break-all">
+                                <view class="break-all">
                                     {{ item.content }}
                                 </view>
                                 <view class="my-3">
@@ -280,7 +280,11 @@
                         <u-button
                             type="primary"
                             :disabled="isSendDisabled"
-                            :custom-style="{ height: '90rpx', fontWeight: 'bold', borderRadius: '20rpx' }"
+                            :custom-style="{
+                                height: '90rpx',
+                                fontWeight: 'bold',
+                                borderRadius: '20rpx',
+                            }"
                             @click="handleSaveCommand"
                             >直接发送</u-button
                         >
@@ -601,13 +605,6 @@ const handleFileUpload = (event: { url: string }[] | null, fields: string) => {
 };
 
 /**
- * 返回上一页
- */
-const handleBack = () => {
-    uni.navigateBack();
-};
-
-/**
  * 获取聊天记录
  */
 const getChatList = async () => {
@@ -629,7 +626,7 @@ const getChatList = async () => {
                       consume_tokens: {
                           total_tokens: item.token_total,
                       },
-                  }
+                  },
         );
 
         await scrollToBottom();
@@ -690,7 +687,7 @@ const closeCommand = () => {
  */
 const handleSaveCommand = () => {
     let { id, components, query_template } = getShortcutCommands.value;
-    let parameters: Record<string, string> = {};
+    const parameters: Record<string, string> = {};
     components.forEach((item: any) => {
         if (item.type === "file") {
             query_template = query_template.replace(`{{${item.name}}}`, commandFile.value[item.name].url);
@@ -715,11 +712,11 @@ const handleSaveCommand = () => {
 const contentPost = async (userInput?: string) => {
     // 权限检查
     if (!isLogin.value) {
-        uni.$u.route({ url: "/pages/login/login" });
+        uni.$u.route({ url: "/packages/pages/login/login" });
         return;
     }
     if (userTokens.value <= 1) {
-        uni.$u.toast("算力不足，请充值！");
+        powerInsufficientTip();
         rechargePopupRef.value?.open();
         return;
     }
@@ -777,7 +774,7 @@ const handleStreamResponse = async (userInput: string | undefined, result: BaseM
                     resetChat();
                     scrollToBottom();
                 },
-            }
+            },
         );
     } catch (error: any) {
         handleChatError(error, result);

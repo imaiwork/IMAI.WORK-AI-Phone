@@ -27,7 +27,7 @@ class CardCodeLists extends BaseAdminDataLists implements ListsExcelInterface
     {
         $lists = CardCode::alias('CC')
             ->leftJoin('user U', 'CC.user_id = U.id')
-            ->field('CC.id,CC.sn,CC.type,CC.balance,CC.card_num,CC.used_num,CC.user_id,CC.relation_id,CC.valid_start_time,CC.valid_end_time,CC.create_time,CC.remark,U.nickname')
+            ->field('CC.id,CC.sn,CC.type,CC.balance,CC.member_level_id,CC.member_days,CC.card_num,CC.used_num,CC.user_id,CC.relation_id,CC.valid_start_time,CC.valid_end_time,CC.create_time,CC.remark,U.nickname')
             ->limit($this->limitOffset, $this->limitLength)
             ->where($this->setSearch())
             ->order('CC.id desc')
@@ -43,6 +43,12 @@ class CardCodeLists extends BaseAdminDataLists implements ListsExcelInterface
             ->select()->toarray();
         $recordList = array_column($recordList, 'num', 'card_id');
 
+        // 批量取会员等级名，避免列表 N+1(与兑换端 MemberService::grant 同用 iw_user_level)
+        $levelIds = array_values(array_unique(array_filter(array_map('intval', array_column($lists, 'member_level_id')))));
+        $levelNames = $levelIds
+            ? \app\common\model\user\UserLevel::whereIn('id', $levelIds)->column('level_name', 'id')
+            : [];
+
         foreach ($lists as $key => $list) {
             $content = '';
             switch ($list['type']) {
@@ -51,6 +57,10 @@ class CardCodeLists extends BaseAdminDataLists implements ListsExcelInterface
                     break;
                 case CardCodeEnum::TYPE_DISTRIBUTION_TOKENS:
                     $content = '1条';
+                    break;
+                case CardCodeEnum::TYPE_MEMBER:
+                    $levelName = $levelNames[$list['member_level_id'] ?? 0] ?? '';
+                    $content = ($levelName !== '' ? $levelName : '?') . ' ' . (int)($list['member_days'] ?? 0) . '天';
                     break;
             }
             $lists[$key]['content'] = $content;

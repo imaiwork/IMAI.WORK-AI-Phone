@@ -151,6 +151,11 @@ export const getShanjianAnchorList = (params: Record<string, any>) => {
     return $request.get({ url: "/shanjian.shanjianAnchor/lists", params });
 };
 
+// 闪剪风格模板列表
+export const getShanjianClipTemplateList = (params: Record<string, any>) => {
+    return $request.get({ url: "/shanjian.shanjianClipTemplate/lists", params });
+};
+
 // 新闻体文案生成
 export const generateNewsBodyPrompt = (params: Record<string, any>) => {
     return $request.post({ url: "/shanjian.tools/getNewsMixcutTittle", params });
@@ -166,7 +171,32 @@ export const retrySoraTask = (params: Record<string, any>) => {
     return $request.post({ url: "/sora.soraVideoSetting/retry", params });
 };
 
+// 闪剪成片重新下载/转存
+export const downloadShanjianVideoTask = (params: { id: number }) => {
+    return $request.post({ url: "/shanjian.shanjianVideoTask/download", params });
+};
+
 // 闪剪形象授权列表
 export const shanjianAnchorAuthorizedList = (params: Record<string, any>) => {
     return $request.get({ url: "/shanjian.shanjianAnchor/authorizedList", params });
+};
+
+// minimax 音频上传
+export const minimaxAudioUpload = (params: Record<string, any>) => {
+    return $request.post({ url: "/minimax.voice/upload", params });
+};
+
+// minimax 音频克隆
+export const minimaxVoiceClone = (params: Record<string, any>) => {
+    return $request.post({ url: "/minimax.voice/add", params });
+};
+
+// sora视频创建
+export const createSoraVideo = (params: Record<string, any>) => {
+    return $request.post({ url: "/sora.soraVideoSetting/add", params });
+};
+
+// 分镜混剪创建
+export const createMontageStoryboard = (params: Record<string, any>) => {
+    return $request.post({ url: "/storyboard.StoryboardVideoSetting/add", params });
 };

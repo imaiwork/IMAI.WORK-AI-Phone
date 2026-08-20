@@ -10,6 +10,12 @@ namespace app\common\enum;
  */
 class DeviceEnum
 {
+    const APP_VERSION = '2.9.03';
+    const APP_WECHAT = "微信"; // 微信/视频号
+    const APP_XHS = "小红书"; // 小红书
+    const APP_DY = "抖音"; // 抖音
+    const APP_KS = "快手"; // 快手
+
     const TASK_TYPE_PUBLISH = 1; // 发布图文/视频
     const TASK_TYPE_TAKEOVER = 2; // 私信接管
     const TASK_TYPE_ACTIVE = 3; // 自动养号
@@ -20,6 +26,12 @@ class DeviceEnum
     const TASK_TYPE_WECHAT_CIRCLE_THUMB_COMMENT = 8; // 朋友圈点赞评论
     const TASK_TYPE_CLUES_WECHAT = 9; // 视频号获客加微任务
     const TASK_TYPE_WECHAT_RPA = 10; // 个微rpa任务
+    const TASK_TYPE_SAME_CITY_EXPOSURE = 12; //同城曝光任务
+    const TASK_TYPE_SAME_CITY_CUTOFF = 13; //同城截流任务
+    const TASK_TYPE_GROUP_BUY = 14; // 团购任务
+    const TASK_TYPE_SPH_THUMB = 15; // 视频号点赞
+    const TASK_TYPE_VIRAL_REWRITER = 16; // 爆款仿写任务
+    const TASK_TYPE_PRECISE_CLUES = 17; // 精准获客任务
 
     # 自动化任务类型
     const AUTO_TYPE_CLUES = 21; // 获客
@@ -66,6 +78,12 @@ class DeviceEnum
     const TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT = 8; // 朋友圈点赞评论
     const TASK_SOURCE_CLUES_WECHAT = 9; // 视频号获客加微任务
     const TASK_SOURCE_WECHAT_RPA = 10; // 个微rpa任务
+    const TASK_SOURCE_SAME_CITY_EXPOSURE = 12; //同城曝光任务
+    const TASK_SOURCE_SAME_CITY_CUTOFF = 13; //同城截流任务
+    const TASK_SOURCE_GROUP_BUY = 14; // 团购截流任务
+    const TASK_SOURCE_SPH_THUMB = 15; // 视频号点赞
+    const TASK_SOURCE_VIRAL_REWRITER = 16; // 爆款仿写任务
+    const TASK_SOURCE_PRECISE_CLUES = 17; // 精准获客任务
 
 
 
@@ -73,6 +91,7 @@ class DeviceEnum
     const DY_TAKE_OVER = 31; // 抖音接管
     const KS_TAKE_OVER = 32; // 快手接管
     const WX_TAKE_OVER = 33; // 微信接管
+    const SPH_TAKE_THUMB = 34; // 视频号点赞
 
     const XHS_MAINTENANCE_ACCOUNT = 40; // 小红书维护账号
     const DY_MAINTENANCE_ACCOUNT = 41; // 抖音维护账号
@@ -85,6 +104,13 @@ class DeviceEnum
     const TASK_COMMENT_TO_COMMENT = 101; // 评论区评论
     const TASK_COMMENT_TO_MSG = 102; // 评论区私信
     const TASK_COMMENT_TO_MARK_CLUE = 103; // 评论区留痕获客
+
+    const TASK_SAME_CITY_EXPOSURE = 1001; //同城曝光任务
+    const TASK_SAME_CITY_CUTOFF = 1002; //同城截流任务
+    const TASK_GROUP_BUY = 1003; // 团购任务
+    const TASK_VIRAL_REWRITER = 1004; // 爆款仿写任务
+    const TASK_PRECISE_CLUES = 1006; // 精准获客任务
+
 
 
     const TASK_TOKEN_NOTIFY = 1000; // 算力不足通知
@@ -110,15 +136,24 @@ class DeviceEnum
     # 自动化任务场景
     const AUTO_TASK_SCENE_COMMENT_COMMENT = 1; // 评论区评论
     const AUTO_TASK_SCENE_COMMENT_MSG = 2; // 评论区私信
-    const AUTO_TASK_SCENE_MARK_CLUE= 3; // 留痕获客
+    const AUTO_TASK_SCENE_MARK_CLUE = 3; // 留痕获客
     const AUTO_TASK_SCENE_SPH_CLUE = 4; // 视频号获客
     const AUTO_TASK_SCENE_CONTENT_PUBLISH = 5; // 内容发布
     const AUTO_TASK_SCENE_TAKE_OVER = 6; // 私信接管
     const AUTO_TASK_SCENE_WECHAT_CIRCLE_PUBLISH = 7; // 朋友圈发布
     const AUTO_TASK_SCENE_WECHAT_CIRCLE_THUMB_COMMENT = 8; // 朋友圈点赞评论
+    const AUTO_TASK_SCENE_FRIENDS = 9; // 自动加好友
+    const AUTO_TASK_SCENE_ACTIVE = 10; // 自动养号
+    const AUTO_TASK_SCENE_COMMENT_TAKE_OVER = 11; // 评论接管
+    const AUTO_TASK_SCENE_SAME_CITY_EXPOSURE = 12; //同城曝光任务
+    const AUTO_TASK_SCENE_SAME_CITY_CUTOFF = 13; //同城截流任务
+    const AUTO_TASK_SCENE_GROUP_BUY = 14; // 团购任务
+    const AUTO_TASK_SCENE_COMMENT_LIKE = 15; // 评论点赞
+    const AUTO_TASK_SCENE_VIRAL_REWRITER = 16; // 爆款仿写任务  
+    const AUTO_TASK_SCENE_PRECISE_CLUES = 17; // 精准获客任务
 
-    
-    
+
+
     const AUTO_DEMO_PUBLISH_IMAGE = 1; // 发布图文
     const AUTO_DEMO_PUBLISH_VIDEO = 2; // 发布视频
     const AUTO_DEMO_CLUES = 3; // 视频号获客
@@ -129,6 +164,13 @@ class DeviceEnum
     const AUTO_DEMO_ACTIVE = 8; // 自动养号
     const AUTO_DEMO_PUBLISH_CIRCLE = 9; // 朋友圈发布
     const AUTO_DEMO_WECHAT_CIRCLE_THUMB_COMMENT = 10; // 朋友圈点赞评论
+    const AUTO_DEMO_COMMENT_TAKE_OVER = 11; // 评论接管
+    const AUTO_DEMO_SAME_CITY_EXPOSURE = 12; //同城曝光任务
+    const AUTO_DEMO_SAME_CITY_CUTOFF = 13; //同城截流任务
+    const AUTO_DEMO_GROUP_BUY = 14; // 团购任务
+    const AUTO_DEMO_SPH_THUMB = 15; // 视频号点赞
+    const AUTO_DEMO_VIRAL_REWRITER = 16; // 爆款仿写任务  
+    const AUTO_DEMO_PRECISE_CLUES = 17; // 精准获客任务
 
 
 
@@ -180,6 +222,12 @@ class DeviceEnum
             7 => '朋友圈发布',
             8 => '朋友圈点赞评论',
             9 => '获客加微任务',
+            12 => '同城曝光任务',
+            13 => '同城截流任务',
+            14 => '团购任务',
+            15 => '评论点赞',
+            16 => '爆款仿写任务',
+            17 => '精准获客',
 
             21 => '获客',
             22 => '发布',
@@ -217,15 +265,23 @@ class DeviceEnum
     public static function getTaskSceneDesc($type, $flag = false)
     {
         $desc = [
-            1 => '评论区评论',
-            2 => '评论区私信',
+            1 => '截流评论',
+            2 => '截流私信',
             3 => '留痕获客',
             4 => '视频号获客',
-            5 => '加好友',
+            5 => '视频发布',
             6 => '私信接管',
             7 => '朋友圈发布',
-            8 => '朋友圈点赞评论',
-            9 => '视频号获客加微任务',
+            8 => '朋友圈互动',
+            9 => '自动加好友',
+            10 => '自动养号',
+            11 => '评论接管',
+            12 => '同城曝光',
+            13 => '同城截流',
+            14 => '团购任务',
+            15 => '评论点赞',
+            16 => '爆款仿写',
+            17 => '精准获客',
             25 => '微信加v',
         ];
         if ($flag) {
@@ -234,7 +290,8 @@ class DeviceEnum
         return $desc[$type] ?? '';
     }
 
-    public static function getTaskTypeByAuto(int $type){
+    public static function getTaskTypeByAuto(int $type)
+    {
         $maps = [
             self::AUTO_TYPE_CLUES => self::TASK_SOURCE_CLUES, //获客
             self::AUTO_TYPE_PUBLISH => self::TASK_TYPE_PUBLISH, //发布
@@ -245,5 +302,58 @@ class DeviceEnum
             self::AUTO_TYPE_TAKE_OVER => self::TASK_TYPE_TAKEOVER, //私信接管
         ];
         return $maps[$type] ?? $type;
+    }
+
+    public static function getDefaultScheduleScene(int $personaId = 0): array
+    {
+        $maps = [
+            [
+                'id' => 0,
+                'persona_id' => $personaId,
+                'platform' => [
+                    [
+                        'order' => 1,
+                        'account_type' => self::ACCOUNT_TYPE_DY,
+                    ],
+                    [
+                        'order' => 2,
+                        'account_type' => self::ACCOUNT_TYPE_XHS,
+                    ],
+                ],
+                'template_id' => 0,
+                'scene' => self::AUTO_TASK_SCENE_VIRAL_REWRITER,
+                'task_category' => '爆款仿写',
+                'start_time' => '00:00',
+                'end_time' => '03:00',
+                'status' => 1,
+                'is_default' => 1,
+                'remark' => '默认计划任务',
+            ],
+            [
+                'id' => 0,
+                'persona_id' => $personaId,
+                'platform' => [
+                    [
+                        'order' => 1,
+                        'account_type' => self::ACCOUNT_TYPE_DY,
+                        'clue_field' => 'account',
+                    ],
+                    [
+                        'order' => 2,
+                        'account_type' => self::ACCOUNT_TYPE_XHS,
+                        'clue_field' => 'account_name',
+                    ]
+                ],
+                'template_id' => 0,
+                'scene' => self::AUTO_TASK_SCENE_PRECISE_CLUES,
+                'task_category' => '精准获客',
+                'start_time' => '03:00',
+                'end_time' => '06:00',
+                'status' => 1,
+                'is_default' => 1,
+                'remark' => '默认计划任务',
+            ]
+        ];
+        return $maps;
     }
 }

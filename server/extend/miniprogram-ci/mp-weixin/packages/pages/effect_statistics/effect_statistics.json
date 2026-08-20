@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "效果统计",
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-loading": "../../../uni_modules/vk-uview-ui/components/u-loading/u-loading",
+    "effect-statistics-skeleton": "./components/effect-statistics-skeleton",
+    "guard-row": "./components/guard-row",
+    "lead-tile": "./components/lead-tile",
+    "metric-tile": "./components/metric-tile",
+    "section-card": "./components/section-card"
+  }
+}

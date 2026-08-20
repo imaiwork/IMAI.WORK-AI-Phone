@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "不感兴趣",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon"
+  }
+}

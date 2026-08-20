@@ -12,9 +12,7 @@
                     :auto-height="false"
                     :maxlength="1000" />
             </view>
-            <view class="text-[26rpx] text-right mt-[14rpx]">
-                {{ formData[currentGreetingContentSettingType].length }}/1000
-            </view>
+            <view class="text-right mt-[14rpx]"> {{ formData[currentGreetingContentSettingType].length }}/1000 </view>
         </view>
         <view class="text-end text-primary mt-2" @click="handleDefaultPrompt"> 一键填写默认数据 </view>
         <view class="flex gap-x-[24rpx] mt-[36rpx] w-full">
@@ -52,7 +50,7 @@ const formData = reactive<any>({
 });
 
 const currentGreetingContentSettingType = ref<GreetingContentSettingTypeEnum>(
-    GreetingContentSettingTypeEnum.PRIVATE_CHAT
+    GreetingContentSettingTypeEnum.PRIVATE_CHAT,
 );
 
 const handleDefaultPrompt = () => {

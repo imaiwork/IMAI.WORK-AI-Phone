@@ -61,6 +61,7 @@ class WechatLogic extends BaseLogic
 
     /**
      * 获取小程序码
+     *   OEM 站点必须用该团队独立小程序凭证出码，扫码才会进入 OEM 小程序而不是主站小程序。
      * @param array $postData
      * @return bool
      * @author L
@@ -68,18 +69,19 @@ class WechatLogic extends BaseLogic
      */
     public static function getMnpCodeUrl(array $postData)
     {
+        $teamId = 0;
         try {
+            $teamId = TeamLogic::currentRequestSiteTeamId();
+            $wechatMnpService = new WeChatMnpService($teamId);
 
-            $wechatMnpService = new WeChatMnpService();
-
-            $path = public_path() . 'uploads/images/' . md5($postData['path']) . '.png';
+            $path = public_path() . 'uploads/images/' . md5($postData['path'] . ':t' . $teamId) . '.png';
             $params = [];
             $authKey = '';
 
-            if (isset($postData['mnp_auth'])){
+            if (isset($postData['mnp_auth'])) {
                 $authKey = Str::random(16);
                 $params = ['auth_key' => $authKey];
-                $path = public_path() . 'uploads/images/mnpqrcode/' . md5(time().$authKey) . '.png';
+                $path = public_path() . 'uploads/images/mnpqrcode/' . md5(time() . $authKey . ':t' . $teamId) . '.png';
             }
 
             if (!is_dir(dirname($path))) {
@@ -91,10 +93,14 @@ class WechatLogic extends BaseLogic
                 $wechatMnpService->getMnpCodeUrl($postData['path'], 430, $path, $params);
             }
 
-            self::$returnData = ['url' => FileService::getFileUrl(str_replace(public_path(), '', $path)),'auth_key' => $authKey];
+            self::$returnData = ['url' => FileService::getFileUrl(str_replace(public_path(), '', $path)), 'auth_key' => $authKey];
             return true;
         } catch (\Exception $exception) {
-            self::setError($exception->getMessage());
+            $message = $exception->getMessage();
+            if ($teamId > 0 && str_contains($message, '请先设置小程序配置')) {
+                $message = '当前站点尚未配置专属小程序，请先在企业品牌管理中完成小程序配置并发布';
+            }
+            self::setError($message);
             return false;
         }
     }
@@ -106,6 +112,7 @@ class WechatLogic extends BaseLogic
      * @throws \Exception
      * @author L
      * @data 2024/7/1 15:30
+     * $page 跳转小程序页面
      * 401 RPA相关任务 参数
      * $params['openid']     = 'oOLMR0agq2XV1vcy932jbjRtgIOw';
      * $params['scene_id']   = 401;
@@ -136,12 +143,17 @@ class WechatLogic extends BaseLogic
             }
             $mnpNotice   = $mnpNoticeSetting->mnp_notice;
             $template_id = $mnpNotice['template_id'];
-            $page        = 'pages/index/index';
-            $len         = mb_strlen($params['name']);
-            if ($len > 20) {
-//                $params['name'] = trim(preg_replace('/\d+/', '', $params['name']));
-                $params['name'] = mb_substr($params['name'], 0, 18) . '..';
+            $page        = $params['page'] ?? 'pages/index/index';
+
+            if (isset($params['name'])) {
+                $len         = mb_strlen($params['name']);
+                if ($len > 20) {
+                    //params['name'] = trim(preg_replace('/\d+/', '', $params['name']));
+                    $params['name'] = mb_substr($params['name'], 0, 18) . '..';
+                }
             }
+
+
             if ($params['scene_id'] == 401) {
                 $data = [
                     'thing1'  => [
@@ -162,10 +174,64 @@ class WechatLogic extends BaseLogic
                     'thing1'  => [
                         'value' => $params['name']
                     ],
+                    'time2'  => [
+                        'value' => $params['time']
+                    ],
                     'time3'  => [
                         'value' => $params['time']
                     ],
                     'phrase4' => [
+                        'value' => $params['status']
+                    ]
+                ];
+            } else if ($params['scene_id'] == 403) {
+                $data = [
+                    'thing1'  => [
+                        'value' => $params['name']
+                    ],
+                    'time5'  => [
+                        'value' => date('Y年m月d日 H:i', time())
+                    ],
+                    'thing2' => [
+                        'value' => $params['status']
+                    ]
+                ];
+            } else if ($params['scene_id'] == 404) {
+                $data = [
+                    'thing1'  => [
+                        'value' => $params['name']
+                    ],
+                    'time4'   => [
+                        'value' => $params['start_time']
+                    ],
+                    'time5'   => [
+                        'value' => $params['end_time']
+                    ],
+                    'phrase2' => [
+                        'value' => $params['status']
+                    ]
+                ];
+            } else if ($params['scene_id'] == 405) {
+                $data = [
+                    'number1'  => [
+                        'value' => $params['count']
+                    ],
+                    'time2'  => [
+                        'value' => date('Y年m月d日', time())
+                    ],
+                    'phone_number3' => [
+                        'value' => $params['phone_number']
+                    ]
+                ];
+            } else if ($params['scene_id'] == 406) {
+                $data = [
+                    'thing3'  => [
+                        'value' => $params['name']
+                    ],
+                    'time4'  => [
+                        'value' => date('Y年m月d日 H:i:s', time())
+                    ],
+                    'thing5' => [
                         'value' => $params['status']
                     ]
                 ];
@@ -174,7 +240,7 @@ class WechatLogic extends BaseLogic
             }
 
             $result = $wechatMnpService->sendTemplateMessage($openid, $template_id, $page, $data);
-            //\think\facade\Log::channel('notice')->write('任务:'.$params['name'].'推送结果:'.$result);
+            //\think\facade\Log::channel('notice')->write('推送结果:' . $result);
             $result = json_decode($result, true);
             if ($result['errcode'] === 0) {
                 $insert = [
@@ -206,6 +272,7 @@ class WechatLogic extends BaseLogic
             NoticeRecord::create($insert);
             throw new \Exception($result['errmsg']);
         } catch (\Exception $e) {
+            //\think\facade\Log::channel('notice')->write($e->__toString());
             return false;
         }
     }

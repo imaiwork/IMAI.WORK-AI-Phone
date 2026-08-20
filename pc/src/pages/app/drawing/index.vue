@@ -34,12 +34,12 @@ sidebar.value = [
         type: SidebarEnum.IMAGE_GENERATION,
         components: markRaw(GenerationImage),
     },
-    {
-        icon: "menu_goods",
-        name: "商品图",
-        type: SidebarEnum.GOODS_IMAGE,
-        components: markRaw(GoodsImage),
-    },
+    // {
+    //     icon: "menu_goods",
+    //     name: "商品图",
+    //     type: SidebarEnum.GOODS_IMAGE,
+    //     components: markRaw(GoodsImage),
+    // },
     {
         icon: "menu_fashion",
         name: "服饰图",

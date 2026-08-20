@@ -1,6 +1,6 @@
-import { useNavigationBarTitleStore } from "@/stores/navigationBarTitle";
-import { isObject } from "@vue/shared";
-import { cloneDeep } from "lodash-es";
+import { useNavigationBarTitleStore } from '@/stores/navigationBarTitle'
+import { isObject } from '@vue/shared'
+import { cloneDeep } from 'lodash-es'
 
 /**
  * @description 获取元素节点信息（在组件中的元素必须要传ctx）
@@ -10,72 +10,72 @@ import { cloneDeep } from "lodash-es";
  */
 export const getRect = (selector: string, all = false, context?: any) => {
     return new Promise((resolve, reject) => {
-        let qurey = uni.createSelectorQuery();
+        let qurey = uni.createSelectorQuery()
         if (context) {
-            qurey = uni.createSelectorQuery().in(context);
+            qurey = uni.createSelectorQuery().in(context)
         }
-        qurey[all ? "selectAll" : "select"](selector)
+        qurey[all ? 'selectAll' : 'select'](selector)
             .boundingClientRect(function (rect) {
                 if (all && Array.isArray(rect) && rect.length) {
-                    return resolve(rect);
+                    return resolve(rect)
                 }
                 if (!all && rect) {
-                    return resolve(rect);
+                    return resolve(rect)
                 }
-                reject("找不到元素");
+                reject('找不到元素')
             })
-            .exec();
-    });
-};
+            .exec()
+    })
+}
 
 /**
  * @description 获取当前页面实例
  */
 export function getCurrentPage() {
-    const pages = getCurrentPages();
-    const currentPage = pages[pages.length - 1];
-    return currentPage || {};
+    const pages = getCurrentPages()
+    const currentPage = pages[pages.length - 1]
+    return currentPage || {}
 }
 
 /**
  * @description 后台选择链接专用跳转
  */
 interface Link {
-    path: string;
-    name?: string;
-    type: string;
-    isTab: boolean;
-    query?: Record<string, any>;
+    path: string
+    name?: string
+    type: string
+    isTab: boolean
+    query?: Record<string, any>
 }
 
 export enum LinkTypeEnum {
-    "SHOP_PAGES" = "shop",
-    "CUSTOM_LINK" = "custom",
+    'SHOP_PAGES' = 'shop',
+    'CUSTOM_LINK' = 'custom'
 }
 
 export function navigateTo(
     link: Link,
     takeName = false,
-    navigateType: "switchTab" | "navigateTo" | "reLaunch" = "navigateTo"
+    navigateType: 'switchTab' | 'navigateTo' | 'reLaunch' = 'navigateTo'
 ) {
-    const url = link.query ? `${link.path}?${objectToQuery(link.query)}` : link.path;
-    const navigationBarTitleStore = useNavigationBarTitleStore();
+    const url = link.query ? `${link.path}?${objectToQuery(link.query)}` : link.path
+    const navigationBarTitleStore = useNavigationBarTitleStore()
     navigationBarTitleStore.add({
         path: link.path,
-        title: link.name as string,
-    });
-    navigateType == "navigateTo" &&
+        title: link.name as string
+    })
+    navigateType == 'navigateTo' &&
         uni.navigateTo({
-            url,
-        });
-    navigateType == "reLaunch" &&
+            url
+        })
+    navigateType == 'reLaunch' &&
         uni.reLaunch({
-            url,
-        });
-    navigateType == "switchTab" &&
+            url
+        })
+    navigateType == 'switchTab' &&
         uni.switchTab({
-            url,
-        });
+            url
+        })
 }
 
 /**
@@ -84,8 +84,8 @@ export function navigateTo(
  * @return {Boolean}
  */
 export const isEmpty = (value: unknown) => {
-    return value == null || typeof value == "undefined";
-};
+    return value == null || typeof value == 'undefined'
+}
 
 /**
  * @description 对象格式化为Query语法
@@ -93,14 +93,14 @@ export const isEmpty = (value: unknown) => {
  * @return {string} Query语法
  */
 export function objectToQuery(params: Record<string, any>): string {
-    let query = "";
+    let query = ''
     for (const props of Object.keys(params)) {
-        const value = params[props];
+        const value = params[props]
         if (!isEmpty(value)) {
-            query += props + "=" + value + "&";
+            query += props + '=' + value + '&'
         }
     }
-    return query.slice(0, -1);
+    return query.slice(0, -1)
 }
 
 /**
@@ -108,9 +108,9 @@ export function objectToQuery(params: Record<string, any>): string {
  * @param {String | Number} value 值 100
  * @param {String} unit 单位 px em rem
  */
-export const addUnit = (value: string | number, unit = "rpx") => {
-    return !Object.is(Number(value), NaN) ? `${value}${unit}` : value;
-};
+export const addUnit = (value: string | number, unit = 'rpx') => {
+    return !Object.is(Number(value), NaN) ? `${value}${unit}` : value
+}
 
 /**
  * @description 格式化输出价格
@@ -118,23 +118,23 @@ export const addUnit = (value: string | number, unit = "rpx") => {
  * @param  { string } take 小数点操作
  * @param  { string } prec 小数位补
  */
-export function formatPrice({ price, take = "all", prec = undefined }: any) {
-    let [integer, decimals = ""] = (price + "").split(".");
+export function formatPrice({ price, take = 'all', prec = undefined }: any) {
+    let [integer, decimals = ''] = (price + '').split('.')
 
     // 小数位补
     if (prec !== undefined) {
-        const LEN = decimals.length;
-        for (let i = prec - LEN; i > 0; --i) decimals += "0";
-        decimals = decimals.substr(0, prec);
+        const LEN = decimals.length
+        for (let i = prec - LEN; i > 0; --i) decimals += '0'
+        decimals = decimals.substr(0, prec)
     }
 
     switch (take) {
-        case "int":
-            return integer;
-        case "dec":
-            return decimals;
-        case "all":
-            return integer + "." + decimals;
+        case 'int':
+            return integer
+        case 'dec':
+            return decimals
+        case 'all':
+            return integer + '.' + decimals
     }
 }
 
@@ -146,27 +146,27 @@ export function formatPrice({ price, take = "all", prec = undefined }: any) {
 export function series(...task: Array<(_arg: any) => any>) {
     return function (_arg?: any): Promise<any> {
         return new Promise((resolve, reject) => {
-            const iteratorTask = task.values();
+            const iteratorTask = task.values()
             const next = (res?: any) => {
-                const nextTask = iteratorTask.next();
+                const nextTask = iteratorTask.next()
                 if (nextTask.done) {
-                    resolve(res);
+                    resolve(res)
                 } else {
-                    Promise.resolve(nextTask.value(res)).then(next).catch(reject);
+                    Promise.resolve(nextTask.value(res)).then(next).catch(reject)
                 }
-            };
-            next(_arg);
-        });
-    };
+            }
+            next(_arg)
+        })
+    }
 }
 
 export function strToParams(str: string) {
-    if (str === "" || str === "?") return {};
-    const newparams: any = {};
-    for (const item of str.split("&")) {
-        newparams[item.split("=")[0]] = item.split("=")[1];
+    if (str === '' || str === '?') return {}
+    const newparams: any = {}
+    for (const item of str.split('&')) {
+        newparams[item.split('=')[0]] = item.split('=')[1]
     }
-    return newparams;
+    return newparams
 }
 
 /**
@@ -175,15 +175,15 @@ export function strToParams(str: string) {
  * @returns
  */
 export function paramsToStr(params: Record<string, string>) {
-    let p = "";
+    let p = ''
     if (isObject(params)) {
-        p = "?";
+        p = '?'
         for (const props in params) {
-            p += `${props}=${params[props]}&`;
+            p += `${props}=${params[props]}&`
         }
-        p = p.slice(0, -1);
+        p = p.slice(0, -1)
     }
-    return p;
+    return p
 }
 
 /**
@@ -192,23 +192,26 @@ export function paramsToStr(params: Record<string, string>) {
  * @param {Object} props `{ parent: 'pid', children: 'children' }`
  */
 
-export const arrayToTree = (data: any[], props = { id: "id", parentId: "pid", children: "children" }) => {
-    data = cloneDeep(data);
-    const { id, parentId, children } = props;
-    const result: any[] = [];
-    const map = new Map();
+export const arrayToTree = (
+    data: any[],
+    props = { id: 'id', parentId: 'pid', children: 'children' }
+) => {
+    data = cloneDeep(data)
+    const { id, parentId, children } = props
+    const result: any[] = []
+    const map = new Map()
     data.forEach((item) => {
-        map.set(item[id], item);
-        const parent = map.get(item[parentId]);
+        map.set(item[id], item)
+        const parent = map.get(item[parentId])
         if (parent) {
-            parent[children] = parent[children] || [];
-            parent[children].push(item);
+            parent[children] = parent[children] || []
+            parent[children].push(item)
         } else {
-            result.push(item);
+            result.push(item)
         }
-    });
-    return result;
-};
+    })
+    return result
+}
 
 /**
  * @description 树转数组，队列实现广度优先遍历
@@ -216,35 +219,35 @@ export const arrayToTree = (data: any[], props = { id: "id", parentId: "pid", ch
  * @param {Object} props `{ children: 'children' }`
  */
 
-export const treeToArray = (data: any[], props = { children: "children" }) => {
-    data = cloneDeep(data);
-    const { children } = props;
-    const newData = [];
-    const queue: any[] = [];
-    data.forEach((child: any) => queue.push(child));
+export const treeToArray = (data: any[], props = { children: 'children' }) => {
+    data = cloneDeep(data)
+    const { children } = props
+    const newData = []
+    const queue: any[] = []
+    data.forEach((child: any) => queue.push(child))
     while (queue.length) {
-        const item: any = queue.shift();
+        const item: any = queue.shift()
         if (item[children]) {
-            item[children].forEach((child: any) => queue.push(child));
-            delete item[children];
+            item[children].forEach((child: any) => queue.push(child))
+            delete item[children]
         }
-        newData.push(item);
+        newData.push(item)
     }
-    return newData;
-};
+    return newData
+}
 
 /**
  * @description 域名删除http/https
  */
 export const splitDomain = (domain: string) => {
-    if (domain.includes("https://")) {
-        return domain.replace(/^https?:\/\//, "");
+    if (domain.includes('https://')) {
+        return domain.replace(/^https?:\/\//, '')
     }
-    if (domain.includes("http://")) {
-        return domain.replace(/^http?:\/\//, "");
+    if (domain.includes('http://')) {
+        return domain.replace(/^http?:\/\//, '')
     }
-    return domain;
-};
+    return domain
+}
 
 /**
  * 将秒数格式化为 HH:MM:SS 的时间字符串
@@ -253,17 +256,21 @@ export const splitDomain = (domain: string) => {
  * @returns 格式化后的时间字符串（格式为 HH:MM:SS）
  */
 export function formatAudioTime(seconds: number, isShowHours = false): string {
-    if (!seconds) return isShowHours ? "00:00:00" : "00:00";
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
+    if (!seconds) return isShowHours ? '00:00:00' : '00:00'
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = Math.floor(seconds % 60)
     // 判断seconds 是不是大于3600
     if (seconds > 3600) {
         return isShowHours
-            ? `${hours < 10 ? "0" : ""}${hours}:${minutes < 10 ? "0" : ""}${minutes}:${secs < 10 ? "0" : ""}${secs}`
-            : `${hours < 10 ? "0" : ""}${hours}:${minutes < 10 ? "0" : ""}${minutes}:${secs < 10 ? "0" : ""}${secs}`;
+            ? `${hours < 10 ? '0' : ''}${hours}:${minutes < 10 ? '0' : ''}${minutes}:${
+                  secs < 10 ? '0' : ''
+              }${secs}`
+            : `${hours < 10 ? '0' : ''}${hours}:${minutes < 10 ? '0' : ''}${minutes}:${
+                  secs < 10 ? '0' : ''
+              }${secs}`
     }
-    return `${minutes < 10 ? "0" : ""}${minutes}:${secs < 10 ? "0" : ""}${secs}`;
+    return `${minutes < 10 ? '0' : ''}${minutes}:${secs < 10 ? '0' : ''}${secs}`
 }
 /**
  *
@@ -271,8 +278,8 @@ export function formatAudioTime(seconds: number, isShowHours = false): string {
  * @returns {boolean}
  */
 export const isImageUrl = (url: string) => {
-    return url.match(/\.(jpeg|jpg|gif|png|bmp|svg|webp)$/i) !== null;
-};
+    return url.match(/\.(jpeg|jpg|gif|png|bmp|svg|webp)$/i) !== null
+}
 
 /**
  * 将字节大小转换为适当的文件大小单位（B, KB, MB, GB）, 保留两位小数,可以传参, 如果小于1KB则显示B
@@ -282,17 +289,17 @@ export const isImageUrl = (url: string) => {
  * @returns 格式化后的文件大小字符串，包含适当的单位
  */
 export const formatFileSize = (sizeInBytes: any, precision = 2): string => {
-    const units = ["B", "KB", "MB", "GB"];
-    let unitIndex = 0;
+    const units = ['B', 'KB', 'MB', 'GB']
+    let unitIndex = 0
 
     while (sizeInBytes >= 1024 && unitIndex < units.length - 1) {
-        sizeInBytes /= 1024;
-        unitIndex++;
+        sizeInBytes /= 1024
+        unitIndex++
     }
     return unitIndex === 0
         ? `${sizeInBytes.toFixed(precision)}B`
-        : `${sizeInBytes.toFixed(precision)}${units[unitIndex]}`;
-};
+        : `${sizeInBytes.toFixed(precision)}${units[unitIndex]}`
+}
 
 /**
  * 设置表单数据
@@ -302,10 +309,10 @@ export const formatFileSize = (sizeInBytes: any, precision = 2): string => {
 export const setFormData = (data: Record<any, any>, sourceData: Record<any, any>) => {
     for (const key in sourceData) {
         if (data[key] != null && data[key] != undefined) {
-            sourceData[key] = data[key];
+            sourceData[key] = data[key]
         }
     }
-};
+}
 
 /**
  * @description 是否是JSON
@@ -314,12 +321,12 @@ export const setFormData = (data: Record<any, any>, sourceData: Record<any, any>
  */
 export const isJson = (value: string) => {
     try {
-        JSON.parse(value);
-        return true;
+        JSON.parse(value)
+        return true
     } catch (error) {
-        return false;
+        return false
     }
-};
+}
 
 /**
  * 格式化数字
@@ -335,11 +342,11 @@ export const isJson = (value: string) => {
  * @returns 格式化后的数字
  */
 export const formatNumberToWanOrYi = (num: number) => {
-    if (num < 10000) return num;
-    if (num < 100000000) return `${(num / 10000).toFixed(1)}万`;
-    if (num < 10000000000) return `${(num / 100000000).toFixed(1)}亿`;
-    if (num < 1000000000000) return `${(num / 10000000000).toFixed(1)}亿`;
-    if (num < 100000000000000) return `${(num / 1000000000000).toFixed(1)}亿`;
-    if (num < 10000000000000000) return `${(num / 100000000000000).toFixed(1)}亿`;
-    return `${(num / 10000000000000000).toFixed(1)}亿`;
-};
+    if (num < 10000) return num
+    if (num < 100000000) return `${(num / 10000).toFixed(1)}万`
+    if (num < 10000000000) return `${(num / 100000000).toFixed(1)}亿`
+    if (num < 1000000000000) return `${(num / 10000000000).toFixed(1)}亿`
+    if (num < 100000000000000) return `${(num / 1000000000000).toFixed(1)}亿`
+    if (num < 10000000000000000) return `${(num / 100000000000000).toFixed(1)}亿`
+    return `${(num / 10000000000000000).toFixed(1)}亿`
+}

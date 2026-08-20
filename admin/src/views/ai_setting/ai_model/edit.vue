@@ -19,11 +19,13 @@ const type = route.query.type as string;
 const id = route.query.id as string;
 const tabsStore = useTabsStore();
 const formRef = shallowRef();
-const formData = reactive({
+const formData = reactive<any>({
     id: "",
     name: "",
     logo: "",
     is_enable: 1,
+    model_sub_id: "",
+    models: [],
 });
 
 const handleSave = async () => {
@@ -42,6 +44,16 @@ const getDetails = async () => {
         id: id,
     });
     setFormData(res, formData);
+    // 价格字段后端以字符串返回，转为数字供 el-input-number 使用
+    formData.models = (formData.models || []).map((item: any) => ({
+        ...item,
+        quota_type: Number(item.quota_type) || 0,
+        price: item.price != null && item.price !== "" ? Number(item.price) : undefined,
+        cost_price:
+            item.cost_price != null && item.cost_price !== "" ? Number(item.cost_price) : undefined,
+        sell_price:
+            item.sell_price != null && item.sell_price !== "" ? Number(item.sell_price) : undefined,
+    }));
 };
 getDetails();
 </script>

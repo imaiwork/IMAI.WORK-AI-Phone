@@ -90,6 +90,37 @@
                                             <image src="/static/images/icons/play.svg" class="w-full h-full"></image>
                                         </view>
                                     </view>
+                                    <view
+                                        v-if="showDownloadStatusUi(res)"
+                                        class="absolute inset-0 bg-[#0000005E] flex flex-col items-center justify-center gap-2 z-10 px-2"
+                                        @click.stop>
+                                        <template v-if="isDownloadFailed(res)">
+                                            <view
+                                                class="w-6 h-6 flex items-center justify-center rounded-full bg-error">
+                                                <image
+                                                    src="@/ai_modules/digital_human/static/icons/video2.svg"
+                                                    class="w-[28rpx] h-[28rpx]"></image>
+                                            </view>
+                                            <view class="text-center text-white text-[22rpx]">下载失败</view>
+                                            <view class="text-[#ffffff80] text-center text-[20rpx]">
+                                                成片转存失败，请重试
+                                            </view>
+                                            <view
+                                                class="mt-1 px-[20rpx] py-[8rpx] rounded-full bg-primary active:opacity-80"
+                                                @click.stop="handleRedownload(res)">
+                                                <text class="text-[20rpx] text-white font-medium">
+                                                    {{
+                                                        redownloadId === res.id ? "重新下载中..." : "重新下载"
+                                                    }}
+                                                </text>
+                                            </view>
+                                        </template>
+                                        <template v-else>
+                                            <text class="rotation"></text>
+                                            <text class="text-xs text-[#ffffff80]">下载中...</text>
+                                            <text class="text-[20rpx] text-[#ffffff80]">成片转存中，请稍候</text>
+                                        </template>
+                                    </view>
                                 </template>
                                 <template v-else>
                                     <view
@@ -195,11 +226,23 @@
 </template>
 
 <script setup lang="ts">
-import { getShanjianTaskRecord, deleteShanjianTaskRecord, updateShanjianTaskName } from "@/api/digital_human";
+import {
+    getShanjianTaskRecord,
+    deleteShanjianTaskRecord,
+    updateShanjianTaskName,
+    downloadShanjianVideoTask,
+} from "@/api/digital_human";
+import { VideoDownloadStatusEnum } from "@/ai_modules/digital_human/enums";
 
 const dataLists = ref<any[]>([]);
 const dataCount = ref(0);
 const searchValue = ref("");
+const redownloadId = ref<number | null>(null);
+
+const getDownloadStatus = (item: any) => Number(item?.download_status ?? VideoDownloadStatusEnum.SUCCESS);
+const isDownloadFailed = (item: any) => getDownloadStatus(item) === VideoDownloadStatusEnum.FAILED;
+const isDownloading = (item: any) => getDownloadStatus(item) === VideoDownloadStatusEnum.DOWNLOADING;
+const showDownloadStatusUi = (item: any) => isDownloadFailed(item) || isDownloading(item);
 
 // 是否是选择类型
 const isChoose = ref(false);
@@ -238,10 +281,35 @@ const playItem = reactive<any>({
     pic: "",
 });
 const handlePlay = (item: any) => {
+    if (showDownloadStatusUi(item)) return;
     const { video_result_url, pic } = item;
     playItem.url = video_result_url;
     playItem.pic = pic;
     showVideoPreview.value = true;
+};
+
+const handleRedownload = async (item: any) => {
+    if (!item?.id || redownloadId.value === item.id) return;
+    redownloadId.value = item.id;
+    item.download_status = VideoDownloadStatusEnum.DOWNLOADING;
+    try {
+        const res = await downloadShanjianVideoTask({ id: item.id });
+        item.download_status = Number(res?.download_status ?? VideoDownloadStatusEnum.SUCCESS);
+        if (res?.video_result_url) {
+            item.video_result_url = res.video_result_url;
+        }
+        if (item.download_status === VideoDownloadStatusEnum.SUCCESS) {
+            uni.$u.toast("下载成功");
+        }
+    } catch (error: any) {
+        const msg = String(error || "");
+        if (!msg.includes("正在下载中")) {
+            item.download_status = VideoDownloadStatusEnum.FAILED;
+        }
+        uni.$u.toast(error || "重新下载失败");
+    } finally {
+        redownloadId.value = null;
+    }
 };
 
 const handleDelete = async (id?: number) => {

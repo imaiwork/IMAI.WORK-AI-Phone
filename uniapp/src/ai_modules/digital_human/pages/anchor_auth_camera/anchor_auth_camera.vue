@@ -49,8 +49,8 @@ const shanjianAuth = computed(() => appStore.getDigitalHumanConfig.shanjian_auth
 const loading = ref(true);
 const duration = ref(0);
 const maxDuration = ref(3 * 60); // 分钟
-let timer = ref();
-let cameraContext = ref<any>();
+const timer = ref();
+const cameraContext = ref<any>();
 const showCamera = ref(true);
 const handleUploadAuthCamera = () => {
     loading.value = false;

@@ -48,9 +48,9 @@
                     :max-size="imageSize"
                     @success="handleUploadSuccess">
                     <div class="h-[111px] rounded-md flex flex-col items-center justify-center relative leading-5">
-                        <template v-if="formData.cover || KnDefaultCover">
-                            <img :src="formData.cover || KnDefaultCover" class="h-full object-cover" />
-                            <ElTooltip content="删除" placement="right">
+                        <template v-if="formData.cover || defaultCover">
+                            <img :src="formData.cover || defaultCover" class="h-full object-cover" />
+                            <ElTooltip v-if="formData.cover" content="删除" placement="right">
                                 <div
                                     class="absolute top-1 right-1 cursor-pointer w-6 h-6"
                                     @click.stop="formData.cover = ''">
@@ -82,7 +82,7 @@
 import { ElForm } from "element-plus";
 import type { CreateFormData } from "./type";
 import { KnTypeEnum } from "../_enums";
-import KnDefaultCover from "@/assets/images/kn_default_cover.png";
+import { useAppStore } from "@/stores/app";
 
 const props = withDefaults(
     defineProps<{
@@ -101,6 +101,10 @@ const props = withDefaults(
 const emit = defineEmits<{
     (e: "update:modelValue", value: CreateFormData): void;
 }>();
+
+const appStore = useAppStore();
+// 用户未选封面时，预览网站配置的 shop_logo（与 uniapp 一致）
+const defaultCover = computed(() => appStore.getWebsiteConfig?.shop_logo || "");
 
 const formData = computed({
     get() {

@@ -1,1 +1,1 @@
-"use strict";let t="https://test.imai.work/";const e={version:"2.9.0",baseUrl:t,urlPrefix:"api",timeout:3e5};exports.config=e;
+"use strict";require("../common/vendor.js");let e="https://test.imai.work/";const t={version:"2.13.0",baseUrl:e,urlPrefix:"api",timeout:3e5};exports.config=t;

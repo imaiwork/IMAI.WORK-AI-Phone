@@ -72,7 +72,7 @@ const handleDelete = (index: number) => {
 const handleConfirm = () => {
     emit("confirm", {
         type: ListenerTypeEnum.MONTAGE_TOP_TITLE,
-        data: lists.value,
+        data: lists.value.filter((item) => item.trim().length > 0),
     });
     uni.navigateBack();
 };

@@ -18,7 +18,7 @@
                                 placeholder="点击此输入您想生成的主题，如：北京旅游"
                                 placeholder-style="color: #7C7E80; "
                                 :maxlength="contentMaxLength" />
-                            <view class="text-[#B2B2B2] text-[26rpx] text-end">
+                            <view class="text-[#B2B2B2] text-end">
                                 {{ contentVal.length }} / {{ contentMaxLength }}
                             </view>
                         </view>
@@ -159,7 +159,7 @@ const contentPost = async (userInput: string) => {
     }
     if (!isGenerated.value) return;
     if (userTokens.value < getToken.value) {
-        uni.$u.toast("算力不足，请充值！");
+        powerInsufficientTip();
         return;
     }
 
@@ -222,7 +222,7 @@ const useContent = () => {
 <style scoped lang="scss">
 .prompt-length-item,
 .prompt-num-item {
-    @apply w-[84rpx] h-[72rpx] flex items-center justify-center  bg-white text-[26rpx]  relative rounded-[16rpx];
+    @apply w-[84rpx] h-[72rpx] flex items-center justify-center  bg-white   relative rounded-[16rpx];
     &.active {
         @apply font-medium text-black shadow-[0rpx_0rpx_0rpx_2rpx_#0065FB];
     }

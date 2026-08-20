@@ -1,0 +1,22 @@
+{
+  "navigationBarTitleText": "",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "tabbar": "../../../components/tabbar/tabbar",
+    "chat-social-popup": "./components/chat-social-popup",
+    "chat-comment-popup": "./components/chat-comment-popup",
+    "chat-wechat-popup": "./components/chat-wechat-popup",
+    "script-popup": "./components/popups/script-popup",
+    "publish-popup": "./components/popups/publish-popup",
+    "simple-popup": "./components/popups/simple-popup",
+    "hot-popup": "./components/popups/hot-popup",
+    "rival-internet-popup": "./components/popups/rival-internet-popup",
+    "store-target-popup": "./components/popups/store-target-popup",
+    "create-popup": "./components/popups/create-popup",
+    "rival-local-popup": "./components/popups/rival-local-popup",
+    "weixin-video-lead-popup": "./components/popups/wx-video-lead-popup",
+    "chat-moments-popup": "./components/chat-moments-popup"
+  }
+}

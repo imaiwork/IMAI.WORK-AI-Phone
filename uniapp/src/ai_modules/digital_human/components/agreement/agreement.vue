@@ -2,7 +2,7 @@
     <u-mask :show="show">
         <view class="h-full flex flex-col justify-center items-center">
             <view class="flex flex-col gap-2 rounded-lg h-[70vh] bg-white w-[80%]">
-                <view class="text-xl font-medium text-center pt-4"> 克隆协议 </view>
+                <view class="text-xl font-medium text-center pt-4"> {{ title }} </view>
                 <view class="grow min-h-0">
                     <scroll-view scroll-y class="h-full">
                         <view class="px-4 text-xs whitespace-pre-wrap">
@@ -31,9 +31,17 @@
 <script setup lang="ts">
 import { useAppStore } from "@/stores/app";
 
-const props = defineProps<{
-    modelValue: boolean;
-}>();
+const props = withDefaults(
+    defineProps<{
+        modelValue: boolean;
+        title?: string;
+        content?: string;
+    }>(),
+    {
+        title: "克隆协议",
+        content: "",
+    },
+);
 
 const emit = defineEmits<{
     (event: "agree"): void;
@@ -53,7 +61,7 @@ const show = computed({
 const appStore = useAppStore();
 
 const getPrivacy = computed(() => {
-    return appStore.getDigitalHumanConfig?.privacy;
+    return props.content || appStore.getDigitalHumanConfig?.privacy;
 });
 
 const closeAgreement = () => {

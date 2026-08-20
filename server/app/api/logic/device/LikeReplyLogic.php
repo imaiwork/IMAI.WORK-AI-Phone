@@ -96,6 +96,7 @@ class LikeReplyLogic extends ApiLogic
                         'end_time' => $time['end_time'],
                         'sub_task_id' => $task->id,
                         'sub_data_id' => $row->id,
+                        'task_scene' => DeviceEnum::AUTO_TASK_SCENE_WECHAT_CIRCLE_THUMB_COMMENT,
                         'source' => DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_THUMB_COMMENT, //sv_device_take_over_task_account
                         'create_time' => time(),
                     ]);

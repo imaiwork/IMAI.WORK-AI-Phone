@@ -43,10 +43,39 @@
                 </div>
             </div>
 
+            <div v-if="showOriginalTone" class="px-6 pt-4 shrink-0">
+                <div
+                    :class="[
+                        'flex items-center gap-3 px-5 py-3.5 rounded-2xl border-2 transition-all cursor-pointer group',
+                        originalSelected
+                            ? 'border-solid border-[#16A34A] bg-[#F0FDF4] shadow-[0_0_0_2px_rgba(22,163,74,0.15)]'
+                            : 'border-dashed border-[#16A34A]/30 bg-[#F0FDF4]/50 hover:border-[#16A34A]/60 hover:bg-[#F0FDF4]',
+                    ]"
+                    @click="handleSelectOriginal">
+                    <div
+                        class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white"
+                        style="background: linear-gradient(135deg, #4ade80 0%, #16a34a 100%)">
+                        <Icon name="el-icon-Microphone" :size="18" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-[1000] text-[#16A34A]">{{ originalToneTitle }}</div>
+                        <div class="text-[11px] mt-0.5" :class="originalSelected ? 'text-[#16A34A]' : 'text-[#4ADE80]'">
+                            {{ originalSelected ? "当前使用中" : originalToneDesc }}
+                        </div>
+                    </div>
+                    <div
+                        v-if="originalSelected"
+                        class="w-5 h-5 rounded-full bg-[#16A34A] flex items-center justify-center shrink-0">
+                        <Icon name="el-icon-Check" color="#fff" :size="11" />
+                    </div>
+                    <Icon v-else name="el-icon-ArrowRight" color="#4ADE80" :size="16" />
+                </div>
+            </div>
+
             <div class="px-6 pt-4 shrink-0">
                 <router-link
                     :to="`/app/digital_human?type=${SidebarTypeEnum.VOICE_CLONE}`"
-                    class="flex items-center gap-3 px-5 py-3.5 rounded-2xl border-2 border-dashed border-slate-100 bg-slate-50/50 hover:border-[#0065fb]/30 hover:bg-[#0065fb]/5 transition-all cursor-pointer group">
+                    class="flex items-center gap-3 px-5 py-3.5 rounded-2xl border-2 border-dashed border-slate-100 bg-[#f8fafc]/50 hover:border-[#0065fb]/30 hover:bg-[#0065fb]/5 transition-all cursor-pointer group">
                     <div
                         class="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center group-hover:border-[#0065fb]/20 group-hover:text-primary transition-all text-slate-400 shrink-0">
                         <Icon name="el-icon-Plus" :size="18" />
@@ -59,7 +88,7 @@
 
             <div class="flex-1 min-h-0 overflow-hidden pt-4">
                 <div v-if="pager.loading && pager.lists.length === 0" class="flex flex-col gap-2.5 px-6">
-                    <div v-for="i in 6" :key="i" class="h-[68px] rounded-2xl bg-slate-100 animate-pulse" />
+                    <div v-for="i in 4" :key="i" class="h-[68px] rounded-2xl bg-slate-100 animate-pulse" />
                 </div>
 
                 <div
@@ -90,7 +119,7 @@
                                 :class="[
                                     'w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all',
                                     isSelected(item.voice_id)
-                                        ? 'bg-primary/10 text-primary'
+                                        ? 'bg-[#0065fb]/10 text-primary'
                                         : 'bg-slate-50 text-slate-400 group-hover:bg-[#0065fb]/5 group-hover:text-primary',
                                 ]">
                                 <Icon :name="item.type === 0 ? 'el-icon-User' : 'el-icon-Service'" :size="20" />
@@ -166,95 +195,124 @@
 
 <script setup lang="ts">
 import { getVoiceList } from "@/api/digital_human";
-import { SidebarTypeEnum } from "@/pages/app/digital_human/_enums";
+import { SidebarTypeEnum, DigitalHumanModelVersionEnum } from "@/pages/app/digital_human/_enums";
+
+// ─── Props & Emits ────────────────────────────────────────────────────────────
 
 const props = withDefaults(
     defineProps<{
         modelVersion?: string | number;
         activeTone?: any;
         showOriginalTone?: boolean;
+        originalToneTitle?: string;
+        originalToneDesc?: string;
+        originalSelected?: boolean;
         showFreeTone?: boolean;
+        showUserTone?: boolean;
         limit?: number;
+        type?: number;
     }>(),
     {
         modelVersion: "",
         activeTone: null,
         showOriginalTone: false,
+        originalToneTitle: "使用形象原声",
+        originalToneDesc: "使用当前形象的原始声音",
+        originalSelected: false,
         showFreeTone: true,
+        showUserTone: true,
         limit: 1,
-    }
+        type: 1,
+    },
 );
 
 const emit = defineEmits<{
     (e: "confirm", value: any): void;
+    (e: "original"): void;
     (e: "close"): void;
 }>();
 
-const isMultiple = computed(() => props.limit > 1);
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const ALL_TABS = [
+    { name: "系统音色", value: 0 },
+    { name: "用户音色", value: 1 },
+];
+
+// ─── Refs & State ─────────────────────────────────────────────────────────────
 
 const popupRef = shallowRef();
 const current = ref(0);
-
 const chooseToneItems = ref<any[]>([]);
-
 const currVoiceId = ref<string | null>(null);
 
-const initSelected = () => {
-    if (!props.activeTone) {
-        chooseToneItems.value = [];
-        return;
-    }
-    chooseToneItems.value = Array.isArray(props.activeTone)
-        ? [...props.activeTone]
-        : props.activeTone?.voice_id
-        ? [props.activeTone]
-        : [];
-};
+// ─── Computed ─────────────────────────────────────────────────────────────────
+
+const isMultiple = computed(() => props.limit > 1);
 
 const isAtLimit = computed(() => isMultiple.value && chooseToneItems.value.length >= props.limit);
+
+const getTabsList = computed(() => {
+    if (!props.showFreeTone && !props.showUserTone) return [];
+    if (!props.showFreeTone) return ALL_TABS.filter((item) => item.value !== 0);
+    if (!props.showUserTone) return ALL_TABS.filter((item) => item.value !== 1);
+    return ALL_TABS;
+});
+
+// ─── Audio ────────────────────────────────────────────────────────────────────
 
 const { isPlaying, play, pause, pauseAll, destroy } = useAudio();
 
 const isPlayingItem = (voice_id: string) => isPlaying.value && currVoiceId.value === voice_id;
 
+const getToneAudioUrl = (item: any) => {
+    const url = item?.builtin === 1 ? item?.voice_urls : item?.url;
+    return typeof url === "string" ? url.trim() : "";
+};
+
 const toggleAudioPlayback = (item: any) => {
-    if (isPlaying.value && currVoiceId.value !== item.voice_id) {
-        pauseAll();
-    }
-    if (isPlaying.value && currVoiceId.value === item.voice_id) {
+    const isSameItem = currVoiceId.value === item.voice_id;
+
+    if (isPlaying.value && isSameItem) {
         pause();
         return;
     }
-    play(item.builtin === 1 ? item.voice_urls : item.url);
+
+    const audioUrl = getToneAudioUrl(item);
+    if (!audioUrl) {
+        // 无音频时必须停掉上一条，避免继续播旧源
+        pauseAll();
+        currVoiceId.value = null;
+        feedback.msgWarning("暂无试听音频");
+        return;
+    }
+
+    if (isPlaying.value && !isSameItem) pauseAll();
+    play(audioUrl);
     currVoiceId.value = item.voice_id;
 };
 
-const tabsList = [
-    { name: "系统音色", value: 0 },
-    { name: "用户音色", value: 1 },
-];
-
-const getTabsList = computed(() => (props.showFreeTone ? tabsList : tabsList.filter((t) => t.value === 0)));
-
-const handleChange = (index: number) => {
-    current.value = index;
-    resetPage();
-};
+// ─── Paging & Fetch ───────────────────────────────────────────────────────────
 
 const commonParams = reactive({ page_no: 1, page_size: 15 });
 
-const fetchFun = (params: any) =>
-    getVoiceList({
+const fetchFun = (params: any) => {
+    const isSystemTab = props.showFreeTone && current.value === 0;
+    const type = current.value === 1 || props.type == 0 ? "" : props.type;
+
+    return getVoiceList({
         ...params,
-        model_version: props.modelVersion,
+        model_version: props.modelVersion || "",
         status: 1,
-        builtin: props.showFreeTone && current.value === 0 ? 0 : 1,
+        builtin: isSystemTab ? 0 : 1,
+        type,
     }).then(({ lists }) => {
-        if (props.showFreeTone && current.value === 0) {
+        if (isSystemTab) {
             lists.forEach((item: any) => (item.voice_id = item.code));
         }
         return { lists };
     });
+};
 
 const { getLists, pager, resetPage } = usePaging({
     fetchFun,
@@ -269,7 +327,22 @@ const loadMore = (e: string) => {
     }
 };
 
+// ─── Selection ────────────────────────────────────────────────────────────────
+
 const isSelected = (voice_id: string) => chooseToneItems.value.some((t) => t.voice_id === voice_id);
+
+const initSelected = () => {
+    current.value = getTabsList.value[0].value;
+    if (!props.activeTone) {
+        chooseToneItems.value = [];
+        return;
+    }
+    chooseToneItems.value = Array.isArray(props.activeTone)
+        ? [...props.activeTone]
+        : props.activeTone?.voice_id
+        ? [props.activeTone]
+        : [];
+};
 
 const chooseTone = (item: any) => {
     const idx = chooseToneItems.value.findIndex((t) => t.voice_id === item.voice_id);
@@ -278,18 +351,29 @@ const chooseTone = (item: any) => {
         chooseToneItems.value.splice(idx, 1);
         return;
     }
-
     if (!isMultiple.value) {
         chooseToneItems.value = [item];
         return;
     }
-
     if (isAtLimit.value) {
         feedback.msgWarning(`最多选择 ${props.limit} 个音色`);
         return;
     }
 
     chooseToneItems.value.push(item);
+};
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
+const handleChange = (index: number) => {
+    current.value = index;
+    resetPage();
+};
+
+const handleSelectOriginal = () => {
+    destroy();
+    emit("original");
+    close();
 };
 
 const handleConfirm = () => {
@@ -299,16 +383,18 @@ const handleConfirm = () => {
     close();
 };
 
-const close = () => {
-    destroy();
-    emit("close");
-};
-
 const open = () => {
     initSelected();
     popupRef.value?.open();
     getLists();
 };
+
+const close = () => {
+    destroy();
+    emit("close");
+};
+
+// ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 onUnmounted(() => {
     pauseAll();

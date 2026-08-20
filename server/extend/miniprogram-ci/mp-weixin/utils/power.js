@@ -1,0 +1,1 @@
+"use strict";const e=require("../common/vendor.js"),s=require("../stores/user.js"),r=require("../stores/app.js");exports.powerInsufficientTip=function(){const t=s.useUserStore().userInfo||{},o=Number(t.team_id)>0&&[1,3].includes(Number(t.team_role));r.useAppStore().isOemSite?e.index.$u.toast("算力不足，请联系管理员或兑换卡密"):e.index.$u.toast(o?"当前团队算力不足，请联系团队主":"算力不足，请充值！")};

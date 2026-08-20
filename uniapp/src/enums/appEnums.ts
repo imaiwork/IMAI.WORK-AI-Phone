@@ -103,9 +103,12 @@ export enum TokensSceneEnum {
     HUMAN_AUDIO_CHANJING = "human_audio_chanjing",
     HUMAN_VOICE_CHANJING = "human_voice_chanjing",
     HUMAN_AVATAR_SHANJIAN = "human_avatar_shanjian",
+    HUMAN_AVATAR_SHANJIAN_PRO = "human_avatar_shanjian_pro",
     HUMAN_VIDEO_SHANJIAN = "human_video_shanjian",
     HUMAN_VOICE_SHANJIAN = "human_voice_shanjian",
     HUMAN_COPYWRITING_CREATE = "human_copywriting",
+    HUMAN_VOICE_MINIMAX_HD = "human_voice_minimax_hd",
+    HUMAN_VOICE_MINIMAX_TURBO = "human_voice_minimax_turbo",
     AI_LADDER_PLAYER = "lianlian",
     SHANJIAN_COPYWRITING_CREATE = "shanjian_copywriting_create",
     SHANJIAN_CLIP_VIDEO = "shanjian_realman_broadcast",
@@ -115,21 +118,25 @@ export enum TokensSceneEnum {
     SPH_LOCAL_OCR = "sph_local_ocr",
     MATRIX_COPYWRITER = "matrix_copywriting",
     SPH_AI_CLUE = "sph_search_terms",
-    SORA_VIDEO = "sora_video_create",
     NEWS_MIX_CUT_TITLE = "news_mixcut_title",
     PUZZLE_AI_COPYWRITER = "combined_picture_title",
-    SORA_PRO_VIDEO = "sora_pro_video_create",
-    SORA_COPYWRITING = "sora_copywriting_create",
-    SORA_ROLE = "human_avatar_sora",
-    SORA_DRAW_AVATAR = "sora_draw_avatar",
+    PUZZLE_CREATE = "combined_picture",
     AI_SHANJIAN_AUTHORIZED_VIDEO = "ai_shanjian_authorized_video",
     COZE_COPYWRITING = "coze_copywriting",
+    COZE_COPYWRITING_SENIOR = "coze_copywriting_senior",
     PUBLISH_DOUYIN = "douyin_js",
     STORYBOARD_MIX = "storyboard_video_create",
     PERSONA_REPORT_ANALYSIS = "automation_account_ip_analysis",
     AI_PERSONA_ANALYSIS = "ai_persona_analysis",
     AI_PERSONA_REPORT = "ai_persona_report",
-    HOT_WRITE = "video_copywriting_imitation",
+    HOT_WRITE = "video_imitation_copywriting_parse",
+    SEEDANCE2_480P_IMAGE2VIDEO = "seedance2_480p_image2video_create",
+    SEEDANCE2_480P_VIDEO2VIDEO = "seedance2_480p_video2video_create",
+    SEEDANCE2_720P_IMAGE2VIDEO = "seedance2_720p_image2video_create",
+    SEEDANCE2_720P_VIDEO2VIDEO = "seedance2_720p_video2video_create",
+    GRAB_VIDEO = "grab_video",
+    MATERIAL_SLICE_OSS = "c",
+    MATERIAL_SLICE_LOCAL = "material_slice_local",
 }
 
 export enum KnbTypeEnum {
@@ -245,25 +252,17 @@ export const DeviceWsMessage = {
 };
 
 export enum DigitalHumanModelVersionEnum {
-    // 标准版
-    STANDARD = 1,
-    // 极速版
-    SUPER = 2,
-    // 高级版
-    ADVANCED = 4,
-    // 尊享版
-    ELITE = 6,
     // 畅镜版
     CHANJING = 7,
     // 闪剪
     SHANJIAN = 8,
+    // minimax HD版
+    MINIMAX_HD = 10,
+    // minimax版
+    MINIMAX_TURBO = 11,
 }
 
 export const DigitalHumanModelVersionEnumMap = {
-    [DigitalHumanModelVersionEnum.STANDARD]: "标准",
-    [DigitalHumanModelVersionEnum.SUPER]: "极速",
-    [DigitalHumanModelVersionEnum.ADVANCED]: "高级",
-    [DigitalHumanModelVersionEnum.ELITE]: "尊享",
     [DigitalHumanModelVersionEnum.CHANJING]: "蝉镜",
     [DigitalHumanModelVersionEnum.SHANJIAN]: "闪剪",
 };
@@ -279,3 +278,16 @@ export const PersonTypeMap = {
     [PersonTypeEnum.BUSINESS_SERVICE]: "企业服务",
     [PersonTypeEnum.LOCAL_BUSINESS]: "本地商家",
 };
+
+export enum UploadCategoryEnum {
+    Album = "album",
+    Library = "library",
+    Group = "group",
+    Creation = "creation",
+}
+
+export enum UploadAlbumTypeEnum {
+    Image = "image",
+    Video = "video",
+    File = "file",
+}

@@ -37,7 +37,7 @@ const props = withDefaults(
     }>(),
     {
         max: 9999999999,
-    }
+    },
 );
 
 const emit = defineEmits<{

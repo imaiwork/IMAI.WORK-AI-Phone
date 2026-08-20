@@ -211,35 +211,6 @@
                                     <div class="form-tips">表示如果数据重排后，分数没有达到该值则会过滤掉。</div>
                                 </el-form-item>
                             </div>
-                            <div class="mt-4">
-                                <el-divider content-position="left">问题优化</el-divider>
-                            </div>
-                            <div>
-                                <el-form-item label="优化开关">
-                                    <div class="flex justify-between w-full gap-x-4">
-                                        <div class="form-tips">
-                                            综合历史记录和问题, 多维度的生成相似问题, 可增加知识库检索时的精准度。
-                                        </div>
-                                        <el-switch
-                                            v-model="formData.optimize_ask"
-                                            :active-value="1"
-                                            :inactive-value="0"></el-switch>
-                                    </div>
-                                </el-form-item>
-                                <el-form-item label="优化模型" prop="optimize_m_id" v-if="formData.optimize_ask == 1">
-                                    <el-select
-                                        v-model="formData.optimize_m_id"
-                                        class="!h-11 !w-[390px]"
-                                        placeholder="请选择优化模型"
-                                        @change="handleKnChange">
-                                        <ElOption
-                                            v-for="item in aiModelChannel"
-                                            :key="item.id"
-                                            :label="item.name"
-                                            :value="parseInt(item.id)" />
-                                    </el-select>
-                                </el-form-item>
-                            </div>
                             <el-form-item label="空搜索回复">
                                 <div>
                                     <div>
@@ -270,8 +241,7 @@
 </template>
 
 <script setup lang="ts">
-import { knowKnowledgeList, knowKnowledgeVectorList } from "@/api/ai_application/knowledge_base/lists";
-import useAppStore from "@/stores/modules/app";
+import { knowKnowledgeVectorList } from "@/api/ai_application/knowledge_base/lists";
 import { KnbTypeEnum } from "@/enums/appEnums";
 import { type FormInstance } from "element-plus";
 import type { Agent } from "../enums";
@@ -291,9 +261,6 @@ const emit = defineEmits<{
     (event: "update:modelValue", value: Agent): void;
 }>();
 
-const appStore = useAppStore();
-const aiModelChannel = computed(() => appStore.config.ai_model?.channel || []);
-
 const formRef = ref<FormInstance>();
 const formData = computed({
     get() {
@@ -311,8 +278,6 @@ const formRules = {
     search_similar: [{ required: true, message: "请输入最低相似度" }],
     ranking_status: [{ required: true, message: "请选择重排开关" }],
     ranking_score: [{ required: true, message: "请输入重排分数" }],
-    optimize_ask: [{ required: true, message: "请选择优化开关" }],
-    optimize_m_id: [{ required: true, message: "请选择优化模型" }],
 };
 
 const searchOptions = [

@@ -33,7 +33,7 @@
                         class="w-8 h-8 rounded-xl flex items-center justify-center transition-colors duration-300 mr-3"
                         :class="
                             currSidebar.key === item.key
-                                ? 'bg-primary/10 text-primary'
+                                ? 'bg-[#0065fb]/10 text-primary'
                                 : 'bg-slate-200/60 text-slate-400 group-hover:bg-slate-200'
                         ">
                         <Icon :name="`local-icon-${item.icon}`" :size="18"></Icon>
@@ -79,7 +79,7 @@
                         <div class="flex-1 flex flex-col items-center justify-center px-12 pt-10">
                             <div class="relative mb-8 group">
                                 <div
-                                    class="absolute -inset-4 bg-primary/5 rounded-[40px] blur-2xl group-hover:bg-primary/10 transition-all duration-700"></div>
+                                    class="absolute -inset-4 bg-[#0065fb]/5 rounded-[40px] blur-2xl group-hover:bg-[#0065fb]/10 transition-all duration-700"></div>
                                 <img
                                     :src="webSiteConfig.shop_logo"
                                     class="relative w-[90px] h-[90px] rounded-[28px] shadow-2xl border-4 border-white object-cover" />

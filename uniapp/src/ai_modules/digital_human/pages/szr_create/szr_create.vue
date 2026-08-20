@@ -1,267 +1,499 @@
 <template>
-    <view class="h-screen flex flex-col" v-if="!loading">
+    <view v-if="loading" class="h-screen flex flex-col bg-[#F4F6F9]">
         <view class="grow min-h-0">
             <scroll-view class="h-full" scroll-y>
-                <view class="pb-[32rpx] h-full flex flex-col">
-                    <view
-                        class="bg-white px-[44rpx]"
-                        :class="{
-                            'grow min-h-0 flex flex-col': anchorLists.length == 0,
-                        }">
-                        <view class="h-[100rpx] flex items-center justify-between">
-                            <view class="font-medium text-[32rpx]">选择数字人</view>
-                            <view class="flex items-center justify-center gap-x-2 p-1" @click="showChooseAnchor = true">
-                                <image
-                                    src="@/ai_modules/digital_human/static/icons/add.svg"
-                                    class="w-[28rpx] h-[28rpx]"></image>
-                                <text class="text-[#000000cc] text-[26rpx]">选择形象</text>
+                <view class="px-4 pt-4 pb-[32rpx] flex flex-col gap-[20rpx]">
+                    <view class="bg-white rounded-[32rpx] p-[28rpx] shadow-[0_4rpx_20rpx_rgba(0,0,0,0.03)]">
+                        <view class="flex justify-between items-center mb-[24rpx]">
+                            <view class="skeleton h-[40rpx] w-[200rpx] rounded-full" />
+                            <view class="skeleton h-[56rpx] w-[160rpx] rounded-full" />
+                        </view>
+                        <view class="flex gap-[16rpx] mb-[24rpx]">
+                            <view
+                                v-for="i in 3"
+                                :key="i"
+                                class="skeleton flex-shrink-0 w-[164rpx] h-[224rpx] rounded-[24rpx]" />
+                        </view>
+                        <view class="space-y-[24rpx]">
+                            <view v-for="i in 3" :key="i" class="flex justify-between items-center">
+                                <view class="skeleton h-[32rpx] w-[140rpx] rounded-full" />
+                                <view class="skeleton h-[48rpx] w-[180rpx] rounded-full" />
                             </view>
                         </view>
+                    </view>
+                    <view class="bg-white rounded-[32rpx] p-[28rpx] shadow-[0_4rpx_20rpx_rgba(0,0,0,0.03)]">
+                        <view class="flex gap-[16rpx] mb-[24rpx]">
+                            <view class="skeleton flex-1 h-[80rpx] rounded-[20rpx]" />
+                            <view class="skeleton flex-1 h-[80rpx] rounded-[20rpx]" />
+                            <view class="skeleton flex-1 h-[80rpx] rounded-[20rpx]" />
+                        </view>
+                        <view class="skeleton h-[240rpx] w-full rounded-[24rpx]" />
+                    </view>
+                </view>
+            </scroll-view>
+        </view>
+        <view
+            class="flex-shrink-0 bg-white px-6 pt-[20rpx] pb-[40rpx] flex items-center gap-[24rpx] shadow-[0_-4rpx_20rpx_rgba(0,0,0,0.02)]">
+            <view class="skeleton w-[80rpx] h-[80rpx] rounded-full" />
+            <view class="flex-1 skeleton h-[100rpx] rounded-[28rpx]" />
+        </view>
+    </view>
+
+    <view class="h-screen flex flex-col bg-[#F4F6F9]" v-else>
+        <view class="grow min-h-0">
+            <scroll-view class="h-full" scroll-y>
+                <view class="px-4 pt-4 pb-[32rpx] flex flex-col gap-[20rpx]">
+                    <!-- 模型档位页签：文件夹式，与下方卡片粘连 -->
+                    <view class="flex items-end gap-[10rpx] -mb-[20rpx] relative z-10">
                         <view
-                            class="py-4"
-                            :class="[
-                                anchorLists.length == 0
-                                    ? 'grow min-h-0 flex flex-col items-center justify-center'
-                                    : 'border-[0rpx] border-t-[1rpx] border-b-[1rpx] border-solid border-[#E5E5E5]',
-                            ]">
-                            <view v-if="anchorLists.length > 0">
+                            v-for="item in cloneModeTabs"
+                            :key="item.value"
+                            class="tier-tab flex items-center gap-[12rpx] flex-shrink-0"
+                            :class="currCloneMode === item.value ? 'tier-tab--on' : ''"
+                            @click="handleSelectCloneMode(item.value)">
+                            <text>{{ item.name }}</text>
+                        </view>
+                    </view>
+
+                    <view
+                        class="bg-white rounded-[32rpx] rounded-tl-none overflow-hidden shadow-[0_4rpx_24rpx_rgba(0,0,0,0.02)] border border-solid border-white">
+                        <view class="flex items-center justify-between px-[28rpx] pt-[28rpx] pb-[20rpx]">
+                            <view class="flex items-center gap-[12rpx]">
+                                <view
+                                    class="w-[48rpx] h-[48rpx] rounded-full flex items-center justify-center shadow-inner"
+                                    style="background: linear-gradient(to right, #ebf2ff, #d6e4ff)">
+                                    <u-icon name="account-fill" color="#0065fb" size="18" />
+                                </view>
+                                <text class="text-[32rpx] font-extrabold text-[#111827]">出镜形象</text>
+                            </view>
+                            <view
+                                class="flex items-center gap-[6rpx] rounded-full px-[24rpx] py-[12rpx] shadow-[0_4rpx_12rpx_rgba(0,101,251,0.2)] active:scale-95 transition-transform"
+                                style="background: linear-gradient(to right, #0065fb, #3b82f6)"
+                                @click="showChooseAnchor = true">
+                                <u-icon name="plus" size="14" color="#ffffff" />
+                                <text class="text-xs font-bold text-white">选择形象</text>
+                            </view>
+                        </view>
+
+                        <view class="px-[28rpx] pb-[24rpx]">
+                            <view v-if="anchorListLoading">
                                 <scroll-view scroll-x>
-                                    <view class="flex gap-x-2 whitespace-nowrap">
+                                    <view class="flex gap-[20rpx] p-[8rpx] pb-[12rpx]">
+                                        <view
+                                            v-for="i in 3"
+                                            :key="i"
+                                            class="skeleton flex-shrink-0 w-[164rpx] h-[224rpx] rounded-[24rpx]" />
+                                    </view>
+                                </scroll-view>
+                            </view>
+
+                            <view v-else-if="anchorLists.length > 0">
+                                <scroll-view scroll-x>
+                                    <view class="flex gap-[20rpx] p-[8rpx] pb-[12rpx]">
                                         <view
                                             v-for="(item, index) in anchorLists"
-                                            class="flex-shrink-0 w-[164rpx] h-[224rpx] rounded-[24rpx] relative overflow-hidden card-gradient"
                                             :key="item.anchor_id || index"
+                                            class="flex-shrink-0 w-[164rpx] h-[224rpx] rounded-[24rpx] relative overflow-hidden transition-all duration-300"
+                                            :class="
+                                                currAnchorIndex === index
+                                                    ? 'shadow-[0_0_0_2rpx_rgba(0,101,251,0.35)] scale-105 z-10'
+                                                    : 'shadow-sm'
+                                            "
                                             @click="chooseAnchor(index)">
-                                            <image :src="item.pic" class="w-full h-full" mode="aspectFill"></image>
+                                            <image :src="item.pic" class="w-full h-full" mode="aspectFill" />
                                             <view
-                                                class="absolute top-2 right-2 z-[223]"
-                                                v-if="currAnchorIndex == index">
-                                                <image
-                                                    src="/static/images/icons/success.svg"
-                                                    class="w-[28rpx] h-[28rpx]"></image>
-                                            </view>
-                                            <view
-                                                class="absolute bottom-1 right-0 z-[224]"
+                                                class="absolute bottom-[16rpx] right-[16rpx] w-[44rpx] h-[44rpx] rounded-full bg-[#ffffff]/20 flex items-center justify-center border border-solid border-[#ffffff]/40"
                                                 @click.stop="previewVideo(item.result_url)">
-                                                <image
-                                                    src="@/ai_modules/digital_human/static/icons/play.svg"
-                                                    class="w-[48rpx] h-[48rpx]"></image>
+                                                <u-icon
+                                                    name="play-right-fill"
+                                                    color="#ffffff"
+                                                    size="20"
+                                                    class="ml-0.5" />
                                             </view>
+
+                                            <view
+                                                v-if="currAnchorIndex === index"
+                                                class="absolute inset-0 rounded-[24rpx] border-[4rpx] border-solid border-primary pointer-events-none" />
+
+                                            <view
+                                                class="absolute top-[12rpx] right-[12rpx] w-[40rpx] h-[40rpx] rounded-full flex items-center justify-center transition-all duration-300"
+                                                :class="
+                                                    currAnchorIndex === index
+                                                        ? 'bg-primary'
+                                                        : 'bg-[#000000]/30 border-[2rpx] border-solid border-[#ffffff]/50'
+                                                ">
+                                                <u-icon
+                                                    v-if="currAnchorIndex === index"
+                                                    name="checkmark"
+                                                    color="#fff"
+                                                    size="14"
+                                                    font-weight="bold" />
+                                            </view>
+
                                             <view
                                                 v-if="getAnchorStatus(item.status, item.source_type) == 0"
-                                                class="z-[222] absolute top-0 left-0 w-full h-full flex items-center justify-center bg-[#00000080]">
-                                                <view
-                                                    class="bg-primary text-xs font-medium text-white rounded-[10rpx] px-2 py-1">
-                                                    克隆中</view
+                                                class="absolute inset-0 bg-[#ffffff]/60 flex flex-col items-center justify-center gap-[12rpx]">
+                                                <u-icon name="clock" color="#fff" size="24" />
+                                                <text class="text-[22rpx] text-white font-medium tracking-wide"
+                                                    >克隆中</text
                                                 >
                                             </view>
                                         </view>
                                     </view>
                                 </scroll-view>
                             </view>
-                            <view class="h-[468rpx] flex flex-col items-center justify-center" v-else>
-                                <image
-                                    src="@/ai_modules/digital_human/static/images/common/avatar.png"
-                                    class="w-[120rpx] h-[136rpx] mx-auto"></image>
-                                <view class="text-[26rpx] text-[#828282] mt-[32rpx] text-center">
-                                    您还没有数字人，快去定制一个吧~
-                                </view>
+
+                            <view
+                                v-else
+                                class="flex flex-col items-center justify-center py-[50rpx] bg-[#F8FAFC] rounded-[24rpx] border border-dashed border-[#CBD5E1]">
                                 <view
-                                    class="mt-[28rpx] mx-auto w-[202rpx] h-[68rpx] flex items-center justify-center rounded-[12rpx] text-white bg-black"
+                                    class="w-[100rpx] h-[100rpx] rounded-full bg-white flex items-center justify-center mb-[16rpx]">
+                                    <image
+                                        src="@/ai_modules/digital_human/static/images/common/avatar.png"
+                                        class="w-[60rpx] h-[68rpx]" />
+                                </view>
+                                <text class="text-[28rpx] font-bold text-[#1E293B] mb-[8rpx]">定制专属数字人</text>
+                                <text class="text-xs text-[#64748B] mb-[24rpx]">1:1 还原真人形象与声音</text>
+                                <view
+                                    class="px-[40rpx] py-[16rpx] rounded-full bg-[#1E293B] shadow-md active:scale-95 transition-transform"
                                     @click="openModel()">
-                                    定制数字人
+                                    <text class="font-bold text-white">立即定制 ✨</text>
                                 </view>
                             </view>
                         </view>
-                        <view class="mb-2">
-                            <view class="flex items-center justify-between h-[80rpx] gap-x-2">
-                                <text class="font-medium flex-shrink-0">选择模型</text>
-                                <view class="flex items-center gap-x-2" @click="openChooseModel()">
-                                    <text
-                                        class="text-xs font-medium line-clamp-1"
-                                        :class="[formData.model_version ? 'text-primary' : 'text-[#0000004d]']"
-                                        >{{ modelVersionMap[formData.model_version] || "请选择" }}</text
-                                    >
-                                    <u-icon name="arrow-right" color="#00000020" size="22"></u-icon>
+                        <view v-if="showDriveModel" class="px-[28rpx] pb-[12rpx]">
+                            <view
+                                class="flex items-center justify-between py-[24rpx] border-[0] border-t border-solid border-[#F1F5F9]"
+                                @click="openChooseModel()">
+                                <text class="text-[28rpx] font-bold text-[#334155]">驱动模型</text>
+                                <view class="flex items-center gap-[12rpx]">
+                                    <view
+                                        class="px-[20rpx] py-[8rpx] rounded-full"
+                                        :class="
+                                            formData.model_version
+                                                ? 'bg-[#F0F5FF] border border-solid border-[#D6E4FF]'
+                                                : 'bg-[#F1F5F9]'
+                                        ">
+                                        <text
+                                            class="text-xs font-bold"
+                                            :class="formData.model_version ? 'text-primary' : 'text-[#94A3B8]'">
+                                            {{ modelVersionMap[formData.model_version] || "未选择" }}
+                                        </text>
+                                    </view>
+                                    <u-icon name="arrow-right" color="#CBD5E1" size="20" />
                                 </view>
                             </view>
-                            <view class="flex items-center justify-between h-[80rpx] gap-x-2">
-                                <text class="font-medium flex-shrink-0">选择声音</text>
-                                <view class="flex items-center gap-x-2" @click="openChooseTone()">
-                                    <text
-                                        v-if="isOriginalTone"
-                                        class="text-[20rpx] text-primary bg-[#DDF3FF] rounded font-medium p-1">
-                                        视频原音
-                                    </text>
-                                    <text
-                                        v-else
-                                        class="text-xs font-medium line-clamp-1"
-                                        :class="[formData.voice_name ? 'text-primary' : 'text-[#0000004d]']"
-                                        >{{ formData.voice_name || "无" }}</text
-                                    >
-                                    <u-icon name="arrow-right" color="#00000020" size="22"></u-icon>
+                        </view>
+                        <view class="px-[28rpx] pb-[12rpx]">
+                            <view
+                                class="flex items-center justify-between py-[24rpx] border-[0] border-t border-solid border-[#F1F5F9]"
+                                @click="openChooseTone()">
+                                <text class="text-[28rpx] font-bold text-[#334155]">配音音色</text>
+                                <view class="flex items-center gap-[12rpx]">
+                                    <view
+                                        class="flex items-center gap-[6rpx] px-[20rpx] py-[8rpx] rounded-full"
+                                        :class="
+                                            isOriginalToneSelected
+                                                ? 'bg-[#F0FDF4] border border-solid border-[#BBF7D0]'
+                                                : formData.voice_name
+                                                ? 'bg-[#F5F3FF] border border-solid border-[#EDE9FE]'
+                                                : 'bg-[#F1F5F9]'
+                                        ">
+                                        <u-icon v-if="isOriginalToneSelected" name="mic" color="#16A34A" size="16" />
+                                        <text
+                                            class="text-xs font-bold"
+                                            :class="
+                                                isOriginalToneSelected
+                                                    ? 'text-[#16A34A]'
+                                                    : formData.voice_name
+                                                    ? 'text-[#8B5CF6]'
+                                                    : 'text-[#94A3B8]'
+                                            ">
+                                            {{ isChanjingOriginalTone ? "视频原音" : formData.voice_name || "未选择" }}
+                                        </text>
+                                    </view>
+                                    <u-icon name="arrow-right" color="#CBD5E1" size="20" />
                                 </view>
                             </view>
-                            <view v-if="clipConfig.is_open">
-                                <view class="flex items-center justify-between h-[80rpx] gap-x-2">
-                                    <text class="font-medium flex-shrink-0">Ai智剪</text>
-                                    <view class="flex items-center gap-x-1">
-                                        <u-switch
-                                            v-model="formData.automatic_clip"
-                                            size="36"
-                                            :active-value="1"
-                                            :inactive-value="0"></u-switch>
+
+                            <view
+                                v-if="clipConfig.is_open"
+                                class="flex items-center justify-between py-[24rpx] border-[0] border-t border-solid border-[#F1F5F9]">
+                                <view class="flex items-center gap-[12rpx]">
+                                    <text class="text-[28rpx] font-bold text-[#334155]">视频包装</text>
+                                </view>
+                                <u-switch
+                                    v-model="formData.ai_clip_enabled"
+                                    size="36"
+                                    active-color="#0065fb"
+                                    :active-value="1"
+                                    :inactive-value="0" />
+                            </view>
+
+                            <view class="py-[24rpx] border-[0] border-t border-solid border-[#F1F5F9]">
+                                <view class="flex items-center justify-between mb-[18rpx]">
+                                    <view class="flex items-center gap-[12rpx]">
+                                        <view
+                                            class="w-[44rpx] h-[44rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center">
+                                            <u-icon name="volume" color="#0065fb" size="18" />
+                                        </view>
+                                        <view class="flex flex-col gap-[4rpx]">
+                                            <text class="text-[28rpx] font-bold text-[#334155]">声音音量</text>
+                                            <text class="text-[22rpx] text-[#94A3B8]">调节合成配音音量</text>
+                                        </view>
+                                    </view>
+                                    <view class="flex items-center gap-[12rpx]">
+                                        <text class="text-[24rpx] font-bold text-primary">
+                                            {{ formatVolume(formData.extra.volume) }}
+                                        </text>
                                     </view>
                                 </view>
-                                <view class="flex items-center justify-between h-[80rpx] gap-x-2" v-if="false">
-                                    <text class="text-[#333333] flex-shrink-0">背景音乐</text>
-                                    <navigator
-                                        class="flex items-center gap-x-1"
-                                        url="/ai_modules/digital_human/pages/audio_choose/audio_choose"
-                                        hover-class="none">
-                                        <text class="text-[#00000080] line-clamp-1">{{
-                                            formData.voice_name || "选择背景音乐"
-                                        }}</text>
-                                        <u-icon name="arrow-right" color="#00000020" size="22"></u-icon>
-                                    </navigator>
-                                </view>
-                                <view class="flex items-center justify-between h-[80rpx] gap-x-2" v-if="false">
-                                    <text class="text-[#333333] flex-shrink-0">剪辑风格选择</text>
-                                    <navigator
-                                        class="flex items-center gap-x-1"
-                                        url="/ai_modules/digital_human/pages/styles_choose/styles_choose"
-                                        hover-class="none">
-                                        <text class="text-[#00000080] line-clamp-1">{{
-                                            formData.voice_name || "选择剪辑风格"
-                                        }}</text>
-                                        <u-icon name="arrow-right" color="#00000020" size="22"></u-icon>
-                                    </navigator>
+                                <view class="flex items-center gap-[16rpx]">
+                                    <u-icon name="volume-off" color="#94A3B8" size="20" />
+                                    <view class="flex-1">
+                                        <slider
+                                            :value="volumePercent"
+                                            :min="10"
+                                            :max="100"
+                                            :step="10"
+                                            active-color="#0065fb"
+                                            background-color="#E5E7EB"
+                                            block-size="18"
+                                            @change="handleVolumeChange"
+                                            @changing="handleVolumeChange" />
+                                    </view>
+                                    <u-icon name="volume" color="#0065fb" size="20" />
                                 </view>
                             </view>
                         </view>
                     </view>
-                    <view class="bg-white px-[44rpx] pb-[40rpx] mt-[16rpx]">
-                        <view class="flex items-center -mx-[24rpx] gap-x-2 py-[8rpx]">
-                            <view class="util-item" @click="randomCopywriter()">
-                                <view class="w-[30rpx] h-[30rpx]">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/icons/random.svg"
-                                        class="w-full h-full"></image>
-                                </view>
-                                <text class="text-xs font-medium">随机文案</text>
+
+                    <view
+                        class="bg-white rounded-[32rpx] overflow-hidden shadow-[0_4rpx_24rpx_rgba(0,0,0,0.02)] border border-solid border-white">
+                        <view class="px-[28rpx] pt-[28rpx] pb-[20rpx] flex items-center gap-[12rpx]">
+                            <view
+                                class="w-[48rpx] h-[48rpx] rounded-full flex items-center justify-center shadow-inner"
+                                style="background: linear-gradient(to right, #f5f3ff, #ede9fe)">
+                                <u-icon name="edit-pen-fill" color="#8B5CF6" size="18" />
                             </view>
-                            <view class="h-[20rpx] w-[1rpx] bg-[#EDEDED]"></view>
-                            <view class="util-item" @click="showChooseAgent = true">
-                                <view class="w-[30rpx] h-[30rpx]">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/icons/copywriter.svg"
-                                        class="w-full h-full"></image>
-                                </view>
-                                <text class="text-xs font-medium">智能文案</text>
+                            <text class="text-[32rpx] font-extrabold text-[#111827]">口播内容</text>
+                        </view>
+
+                        <view class="flex items-center gap-[16rpx] px-[28rpx] pb-[20rpx]">
+                            <view
+                                class="flex-1 flex items-center justify-center gap-[8rpx] h-[76rpx] rounded-[20rpx] bg-[#FFF7ED] border border-solid border-[#FFEDD5] active:scale-95 transition-transform"
+                                @click="randomCopywriter()">
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/random.svg"
+                                    class="w-[28rpx] h-[28rpx]" />
+                                <text class="font-bold text-[#EA580C]">随机灵感</text>
                             </view>
-                            <view class="h-[20rpx] w-[1rpx] bg-[#EDEDED]"></view>
-                            <view class="util-item" @click="showAudioType = true">
-                                <view class="w-[30rpx] h-[30rpx]">
-                                    <image
-                                        src="@/ai_modules/digital_human/static/icons/sound.svg"
-                                        class="w-full h-full"></image>
-                                </view>
-                                <text class="text-xs font-medium">使用音频</text>
+
+                            <view
+                                class="flex-1 flex items-center justify-center gap-[8rpx] h-[76rpx] rounded-[20rpx] border border-solid border-[#BFDBFE] shadow-[0_4rpx_12rpx_rgba(0,101,251,0.1)] active:scale-95 transition-transform relative overflow-hidden"
+                                style="background: linear-gradient(to right, #f0f5ff, #ebf2ff)"
+                                @click="showChooseAgent = true">
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/copywriter.svg"
+                                    class="w-[28rpx] h-[28rpx]" />
+                                <text class="font-bold text-primary">智能文案</text>
+                            </view>
+
+                            <view
+                                class="flex-1 flex items-center justify-center gap-[8rpx] h-[76rpx] rounded-[20rpx] bg-[#F0FDF4] border border-solid border-[#DCFCE7] active:scale-95 transition-transform"
+                                @click="showAudioType = true">
+                                <image
+                                    src="@/ai_modules/digital_human/static/icons/sound.svg"
+                                    class="w-[28rpx] h-[28rpx]" />
+                                <text class="font-bold text-[#16A34A]">录音/音频</text>
                             </view>
                         </view>
-                        <navigator
-                            v-if="formData.audio_type == CreateTypeEnum.TEXT"
-                            :url="`/ai_modules/digital_human/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
-                            hover-class="none"
-                            class="border-[1rpx] border-solid border-[#E5E5E5] border-l-0 border-r-0 border-b-0 py-[32rpx] relative">
-                            <view class="min-h-[364rpx]" :class="formData.msg ? 'text-black' : 'text-[#00000033]'">
-                                {{ formData.msg || "请输入您的文案..." }}
-                            </view>
-                            <view class="text-right text-[22rpx] text-[#999] mt-2">
-                                {{ formData.msg.length }}/{{ textLimit }}
-                            </view>
-                        </navigator>
-                        <view class="bg-[#F6F7FA] rounded-[20rpx] p-[32rpx] relative" v-else>
+
+                        <view class="px-[28rpx] pb-[28rpx]">
+                            <navigator
+                                v-if="formData.audio_type == CreateTypeEnum.TEXT"
+                                :url="`/ai_modules/digital_human/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
+                                hover-class="none"
+                                class="bg-[#F8FAFC] rounded-[24rpx] p-[24rpx] border border-solid border-[#F1F5F9] relative">
+                                <view
+                                    class="min-h-[280rpx] text-[28rpx] leading-relaxed"
+                                    :class="formData.msg ? 'text-[#334155]' : 'text-[#94A3B8]'">
+                                    {{ formData.msg || "点击输入您的口播文案，或使用上方 AI 工具生成..." }}
+                                </view>
+
+                                <view
+                                    class="flex items-center justify-between mt-[20rpx] pt-[20rpx] border-[0] border-t border-dashed border-[#E2E8F0]">
+                                    <view
+                                        v-if="formData.msg?.length > textLimit"
+                                        class="flex items-center gap-[8rpx] bg-[#FEF2F2] px-[16rpx] py-[6rpx] rounded-full">
+                                        <u-icon name="info-circle-fill" color="#EF4444" size="14" />
+                                        <text class="text-[22rpx] font-bold text-[#EF4444]"
+                                            >超出 {{ textLimit }} 字，请删减</text
+                                        >
+                                    </view>
+                                    <view v-else />
+                                    <view
+                                        class="bg-white px-[16rpx] py-[6rpx] rounded-full shadow-sm border border-solid border-[#F1F5F9]">
+                                        <text
+                                            class="text-[22rpx] font-bold"
+                                            :class="
+                                                formData.msg?.length > textLimit ? 'text-[#EF4444]' : 'text-[#94A3B8]'
+                                            ">
+                                            {{ formData.msg?.length || 0 }}
+                                            <text class="text-[#CBD5E1] mx-1">/</text>
+                                            {{ textLimit }}
+                                        </text>
+                                    </view>
+                                </view>
+                            </navigator>
+
                             <view
-                                class="absolute top-[24rpx] right-[20rpx] w-[40rpx] h-[40rpx] rounded-full bg-[#E9EAED] flex items-center justify-center"
-                                @click="clearAudioData()">
-                                <u-icon name="close" size="20"></u-icon>
+                                v-else
+                                class="bg-[#F8FAFC] rounded-[24rpx] border border-solid border-[#F1F5F9] p-[24rpx] relative overflow-hidden">
+                                <view
+                                    v-if="!audioLoading"
+                                    class="absolute top-[24rpx] right-[24rpx] w-[48rpx] h-[48rpx] rounded-full bg-white shadow-sm flex items-center justify-center z-10"
+                                    @click="clearAudioData()">
+                                    <u-icon name="close" size="16" color="#94A3B8" />
+                                </view>
+
+                                <template v-if="audioLoading">
+                                    <view class="flex flex-col items-center justify-center py-[60rpx] gap-[16rpx]">
+                                        <view class="relative w-[80rpx] h-[80rpx] flex items-center justify-center">
+                                            <view
+                                                class="absolute inset-0 border-[6rpx] border-solid border-[#EBF2FF] rounded-full" />
+                                            <view
+                                                class="absolute inset-0 border-[6rpx] border-solid border-primary rounded-full border-t-transparent rotate-anim" />
+                                            <u-icon name="mic" color="#0065fb" size="24" />
+                                        </view>
+                                        <text class="text-[28rpx] font-bold text-[#1E293B]"
+                                            >AI 正在提取音频文案...</text
+                                        >
+                                        <text class="text-[22rpx] text-[#64748B]">请勿熄屏或切换应用</text>
+                                    </view>
+                                </template>
+
+                                <template v-else-if="audioError">
+                                    <view class="flex flex-col items-center justify-center py-[48rpx] gap-[20rpx]">
+                                        <view
+                                            class="w-[96rpx] h-[96rpx] rounded-full bg-[#FEF2F2] flex items-center justify-center">
+                                            <u-icon name="close-circle-fill" color="#EF4444" size="40" />
+                                        </view>
+                                        <view class="flex flex-col items-center gap-[10rpx]">
+                                            <text class="text-[30rpx] font-bold text-[#1E293B]">音频转写失败</text>
+                                            <text
+                                                class="text-[24rpx] text-[#EF4444] text-center px-[40rpx] leading-relaxed">
+                                                {{ audioErrorMsg }}
+                                            </text>
+                                        </view>
+                                        <view class="flex gap-[24rpx] mt-[8rpx]">
+                                            <view
+                                                class="px-[48rpx] py-[18rpx] rounded-full border border-solid border-[#E2E8F0] bg-white active:scale-95 transition-transform"
+                                                @click="clearAudioData()">
+                                                <text class="text-[26rpx] font-bold text-[#64748B]">取消</text>
+                                            </view>
+                                            <view
+                                                class="px-[48rpx] py-[18rpx] rounded-full bg-[#EF4444] shadow-[0_4rpx_12rpx_rgba(239,68,68,0.25)] active:scale-95 transition-transform"
+                                                @click="retryAudioTranscribe()">
+                                                <text class="text-[26rpx] font-bold text-white">重新转写</text>
+                                            </view>
+                                        </view>
+                                    </view>
+                                </template>
+
+                                <template v-else>
+                                    <view class="flex items-center gap-[20rpx] mb-[24rpx]">
+                                        <view
+                                            class="w-[88rpx] h-[88rpx] rounded-full flex items-center justify-center shadow-[0_8rpx_16rpx_rgba(0,101,251,0.2)] transition-all duration-300"
+                                            :class="
+                                                isPlaying
+                                                    ? 'bg-gradient-to-br from-[#0065fb] to-[#3b82f6] scale-95'
+                                                    : 'bg-white'
+                                            "
+                                            @click="handlePlayAudio">
+                                            <u-icon
+                                                :name="isPlaying ? 'pause' : 'play-right-fill'"
+                                                :color="isPlaying ? '#fff' : '#0065fb'"
+                                                size="32"
+                                                :class="isPlaying ? '' : 'ml-1'" />
+                                        </view>
+                                        <view class="flex flex-col justify-center">
+                                            <text class="text-[28rpx] font-bold text-[#1E293B] mb-[4rpx]"
+                                                >已录制音频</text
+                                            >
+                                            <view class="flex items-center gap-[12rpx]">
+                                                <view class="flex gap-[4rpx] items-center h-[24rpx]">
+                                                    <view
+                                                        v-for="i in 4"
+                                                        :key="i"
+                                                        class="w-[4rpx] bg-primary rounded-full"
+                                                        :class="isPlaying ? 'wave-anim' : 'h-[8rpx]'"
+                                                        :style="{ animationDelay: `${i * 0.15}s` }" />
+                                                </view>
+                                                <text class="text-xs font-bold text-primary">
+                                                    {{ formatAudioTime(currDuration) }}
+                                                    <text class="text-[#94A3B8] font-normal"
+                                                        >/ {{ formatAudioTime(formData.audio_duration) }}</text
+                                                    >
+                                                </text>
+                                            </view>
+                                        </view>
+                                    </view>
+                                    <navigator
+                                        :url="`/ai_modules/digital_human/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
+                                        hover-class="none"
+                                        class="bg-white rounded-[16rpx] p-[20rpx] shadow-sm border border-solid border-[#F1F5F9]">
+                                        <text class="text-[#475569] leading-relaxed">{{ formData.msg }}</text>
+                                    </navigator>
+                                </template>
                             </view>
-                            <template v-if="audioLoading">
-                                <view class="font-medium text-[30rpx]">录制的音频</view>
-                                <view class="flex flex-col items-center justify-center mt-4">
-                                    <view class="rotate">
-                                        <u-icon name="reload" color="#ACACAF" size="40"></u-icon>
-                                    </view>
-                                    <text class="mt-2 text-[30rpx] font-medium">正在提取中...</text>
-                                    <text class="text-xs font-medium text-[#000000]/30">请勿熄屏或切换应用</text>
-                                </view>
-                            </template>
-                            <template v-else>
-                                <view class="flex items-center gap-x-2">
-                                    <view @click="handlePlayAudio">
-                                        <u-icon
-                                            :name="isPlaying ? 'pause-circle' : 'play-circle'"
-                                            color="#0065fb"
-                                            size="50"></u-icon>
-                                    </view>
-                                    <text class="font-medium text-[30rpx]">录制的音频</text>
-                                    <text class="text-[#000000]50"
-                                        >{{ formatAudioTime(currDuration) }}/{{
-                                            formatAudioTime(formData.audio_duration)
-                                        }}</text
-                                    >
-                                </view>
-                                <navigator
-                                    class="mt-[40rpx] pb-3"
-                                    :url="`/ai_modules/digital_human/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
-                                    hover-class="none">
-                                    {{ formData.msg }}
-                                </navigator>
-                            </template>
                         </view>
                     </view>
                 </view>
             </scroll-view>
         </view>
-        <view class="bg-white px-4 pt-2 pb-[64rpx] flex items-center justify-between gap-x-[40rpx]">
-            <view>
-                <view class="flex flex-col items-center gap-y-2" @click="openModelRule()">
-                    <image src="@/ai_modules/digital_human/static/icons/star.svg" class="w-[36rpx] h-[36rpx]"></image>
-                    <text class="text-[#8C8C8C] text-[22rpx]">算力消耗</text>
-                </view>
+
+        <view
+            class="flex-shrink-0 bg-[#ffffff]/80 border-[0] border-t border-solid border-[#F1F5F9] px-6 pt-[20rpx] pb-[40rpx] flex items-center gap-[24rpx]">
+            <view class="flex flex-col items-center gap-[8rpx]" @click="openModelRule()">
+                <image src="@/ai_modules/digital_human/static/icons/star.svg" class="w-[36rpx] h-[36rpx]" />
+                <text class="text-[20rpx] font-bold text-[#94A3B8]">算力说明</text>
             </view>
-            <view class="flex-1">
-                <view
-                    class="rounded-full h-[100rpx] bg-black text-white font-medium flex items-center justify-center"
-                    @click="startCreate()">
-                    生成视频
-                </view>
+
+            <view
+                class="flex-1 h-[100rpx] rounded-[32rpx] flex items-center justify-center gap-[12rpx] relative overflow-hidden shadow-[0_12rpx_32rpx_rgba(0,101,251,0.35)] active:scale-[0.98] transition-all"
+                style="background: linear-gradient(135deg, #0065fb 0%, #3b82f6 50%, #0ea5e9 100%)"
+                @click="startCreate()">
+                <text class="text-[32rpx] font-extrabold text-white tracking-wide">生成数字人视频</text>
             </view>
         </view>
     </view>
+
     <video-preview
         v-model="showVideoPreview"
         title="视频预览"
         :video-url="previewVideoUrl"
         @confirm="showVideoPreview = false" />
-    <select-anchor v-model="showChooseAnchor" @confirm="handleChooseAnchor" />
-    <choose-tone
-        v-if="showChooseTone"
-        v-model="showChooseTone"
-        :model-version="formData.model_version"
-        :active-tone="formData.voice_id"
-        :show-original-tone="showOriginalTone"
-        @confirm="handleChooseTone" />
+    <select-anchor v-model="showChooseAnchor" :clone-mode="currCloneMode" @select="handleChooseAnchor" />
     <choose-model
         v-model="showChooseModel"
-        :filter="[DigitalHumanModelVersionEnum.SHANJIAN]"
+        :model-version="[DigitalHumanModelVersionEnum.CHANJING, DigitalHumanModelVersionEnum.SHANJIAN]"
         @confirm="handleChooseModel" />
+    <choose-tone
+        v-if="showChooseTone"
+        ref="chooseToneRef"
+        v-model="showChooseTone"
+        :show-original-tone="showOriginalTone"
+        :model-version="toneListModelVersion"
+        :limit="1"
+        :show-free-tone="false"
+        :original-selected="isOriginalToneSelected"
+        @select="handleChooseTone"
+        @original="handleChooseOriginalTone" />
+
     <choose-agent v-if="showChooseAgent" v-model="showChooseAgent" @select="handleSelectAgent" />
     <model-rule v-model="showModelRule" :model-version="formData.model_version" />
-    <create-panel ref="createPanelRef" :formData="formData" @success="confirmCreate" @recharge="recharge" />
     <agreement v-model="showAgreement" @agree="agreeCreate" @close="showAgreement = false" />
-    <recharge-popup ref="rechargePopupRef"></recharge-popup>
     <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <recorder-control
         v-if="showRecorder"
@@ -284,30 +516,38 @@
 <script setup lang="ts">
 import Cache from "@/utils/cache";
 import WechatOA from "@/utils/wechat";
-import { createTask, getPublicAnchorList } from "@/api/digital_human";
+import { createShanjianTask, getPublicAnchorList } from "@/api/digital_human";
 import { getClipConfig } from "@/api/app";
 import { lpSceneSpeechToText } from "@/api/ladder_player";
-import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
+import { useAppStore } from "@/stores/app";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
-import { ModeTypeEnum, CreateTypeEnum, ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
-import { ClipStyleEnum } from "@/ai_modules/digital_human/enums";
+import {
+    ModeTypeEnum,
+    CreateTypeEnum,
+    ListenerTypeEnum,
+    CloneModeEnum,
+    ClipStyleEnum,
+    SpeechEngineTypeEnum,
+    cloneModeToIsPro,
+} from "@/ai_modules/digital_human/enums";
 import useUpload from "@/hooks/useUpload";
 import { useAudio } from "@/hooks/useAudio";
 import usePolling from "@/hooks/usePolling";
 import { formatAudioTime } from "@/utils/util";
 import { createVideoCopywriter } from "@/ai_modules/digital_human/config/copywriter";
 import SelectAnchor from "@/ai_modules/digital_human/components/choose-anchor/choose-anchor.vue";
-import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
 import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
+import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
 import ChooseAgent from "@/ai_modules/digital_human/components/choose-agent/choose-agent.vue";
 import ModelRule from "@/ai_modules/digital_human/components/model-rule/model-rule.vue";
 import Agreement from "@/ai_modules/digital_human/components/agreement/agreement.vue";
-import CreatePanel from "@/ai_modules/digital_human/components/create-panel/create-panel.vue";
 import RecorderControl from "@/ai_modules/digital_human/components/recorder-control/recorder-control.vue";
 import ChooseAudioType from "@/ai_modules/digital_human/components/choose-audio-type/choose-audio-type.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
+
+const DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE = 5;
 
 // 定义锚点数据接口
 interface AnchorItem {
@@ -318,6 +558,7 @@ interface AnchorItem {
     anchor_ids: {
         chanjing_anchor_id: string;
         weiju_anchor_id: string;
+        shanjian_anchor_id: string;
     };
     result_url: string;
     pic: string;
@@ -328,13 +569,14 @@ interface AnchorItem {
     extra_info: {
         width: number;
         height: number;
+        shanjian_voice_id?: string;
     };
 }
 
 const { on } = useEventBusManager();
 
-const appStore = useAppStore();
 const userStore = useUserStore();
+const appStore = useAppStore();
 
 const loading = ref(true);
 
@@ -353,23 +595,34 @@ const formData = reactive<any>({
     model_version: "" as unknown as DigitalHumanModelVersionEnum,
     audio_type: CreateTypeEnum.TEXT,
     audio_url: "",
-    voice_id: "-1",
+    voice_id: "",
     voice_type: 1,
     voice_name: "",
     msg: "",
     video_url: "",
+    ai_clip_enabled: 1,
     automatic_clip: 0,
     clip_type: ClipStyleEnum.AI_RECOMMEND,
     music_url: "",
     music_name: "",
     music_type: 1,
+    extra: {
+        video_count: 1,
+        volume: 0.3,
+    },
 });
 
-// 状态变量
+// 状态变量：标准版→is_pro=1，优质版→is_pro=2（创建仍用 clone_mode 2/3）
+const cloneModeTabs = [
+    { value: CloneModeEnum.FAST, name: "标准版", sub: "1500字", max: 1500 },
+    { value: CloneModeEnum.PRO, name: "优质版", sub: "1000字", max: 1000 },
+] as const;
+const currCloneMode = ref<CloneModeEnum>(CloneModeEnum.FAST);
+const anchorListLoading = ref(false);
 const anchorLists = ref<AnchorItem[]>([]);
+const showChooseModel = ref(false);
 const currAnchorIndex = ref(-1);
 const showChooseAnchor = ref(false);
-const showChooseModel = ref(false);
 const previewVideoUrl = ref<string>("");
 const showVideoPreview = ref(false);
 const showChooseTone = ref(false);
@@ -379,25 +632,14 @@ const showChooseAgent = ref(false);
 const showAgreement = ref(false);
 const showAudioType = ref(false);
 const audioLoading = ref(false);
+const audioError = ref(false);
+const audioErrorMsg = ref("");
 const showRecorder = ref(false);
 const showCreateSuccess = ref(false);
-const createPanelRef = shallowRef<InstanceType<typeof CreatePanel>>();
-const rechargePopupRef = ref();
 const recorderRef = shallowRef<InstanceType<typeof RecorderControl>>();
-// 计算属性
-const textLimit = computed(() => {
-    const limits: Record<DigitalHumanModelVersionEnum, number> | any = {
-        [DigitalHumanModelVersionEnum.STANDARD]: 150,
-        [DigitalHumanModelVersionEnum.SUPER]: 300,
-        [DigitalHumanModelVersionEnum.ADVANCED]: 1000,
-        [DigitalHumanModelVersionEnum.ELITE]: 1000,
-        [DigitalHumanModelVersionEnum.CHANJING]: 4000,
-    };
-    //@ts-ignore
-    return limits[formData.model_version] || 150;
-});
+const chooseToneRef = shallowRef<InstanceType<typeof ChooseTone>>();
 
-const modelChannel = computed(() => appStore.getDigitalHumanConfig?.channel || []);
+const modelChannel = computed(() => appStore.getAiModelConfig.humanModels || []);
 
 const isPublicAnchor = computed(() => {
     if (anchorLists.value.length === 0) return false;
@@ -405,39 +647,94 @@ const isPublicAnchor = computed(() => {
     return model_version === 0;
 });
 
+// 优质版固定闪剪，不展示驱动模型选择
+const showDriveModel = computed(() => currCloneMode.value !== CloneModeEnum.PRO);
+
 const modelVersionMap = computed(() => {
     return modelChannel.value.reduce((acc: Record<string, any>, item: any) => {
-        acc[item.id] = item.name;
+        acc[item.model_version] = item.name;
         return acc;
     }, {});
 });
 
-const canCreate = computed(() => {
-    return (formData.voice_type == 1 || !!formData.voice_id) && formData.msg?.length > 0;
+// 文案字数：蝉镜 4000；闪剪按标准/优质档位 1500/1000
+const textLimit = computed(() => {
+    if (formData.model_version == DigitalHumanModelVersionEnum.CHANJING) {
+        return 4000;
+    }
+    return cloneModeTabs.find((item) => item.value === currCloneMode.value)?.max ?? 1500;
 });
 
-const isOriginalTone = computed(() => {
-    return formData.voice_id == -1;
+const trimMsgByLimit = () => {
+    if (formData.msg?.length > textLimit.value) {
+        formData.msg = formData.msg.slice(0, textLimit.value);
+    }
+};
+
+const isAudioCreate = computed(() => formData.audio_type == CreateTypeEnum.AUDIO);
+
+const hasCreateContent = computed(() => {
+    if (isAudioCreate.value) {
+        return !!formData.audio_url && !audioLoading.value && !audioError.value;
+    }
+    return formData.msg?.length > 0;
 });
 
+const isChanjingOriginalTone = computed(() => {
+    return (
+        formData.model_version == DigitalHumanModelVersionEnum.CHANJING &&
+        (formData.voice_id == -1 || formData.voice_id == "-1")
+    );
+});
+
+// 蝉镜：视频原音；闪剪：形象原声
 const showOriginalTone = computed(() => {
-    return formData.model_version == DigitalHumanModelVersionEnum.CHANJING || isOriginalTone.value;
+    return (
+        formData.model_version == DigitalHumanModelVersionEnum.CHANJING ||
+        formData.model_version == DigitalHumanModelVersionEnum.SHANJIAN
+    );
+});
+
+// 驱动模型音色 + MiniMax（蝉镜/闪剪均支持）
+const toneListModelVersion = computed(() => {
+    if (!formData.model_version) return "";
+    return [
+        formData.model_version,
+        DigitalHumanModelVersionEnum.MINIMAX_HD,
+        DigitalHumanModelVersionEnum.MINIMAX_TURBO,
+    ].join(",");
+});
+
+const canCreate = computed(() => {
+    // 音频驱动时直接使用上传音频，不强制选择音色；蝉镜原音 voice_id=-1 也算已选
+    const hasVoice = isAudioCreate.value || isChanjingOriginalTone.value || !!formData.voice_id;
+    return currAnchorIndex.value !== -1 && !!formData.model_version && hasVoice && hasCreateContent.value;
+});
+
+const volumePercent = computed(() => {
+    return Math.round(Number(formData.extra.volume || 0) * 100);
 });
 
 const clipConfig = reactive({
     is_open: false,
 });
+
 const getClipConfigData = async () => {
     const { code } = await getClipConfig();
     clipConfig.is_open = code == 10000;
 };
 
-const openChooseModel = () => {
-    if (isPublicAnchor.value) {
-        showChooseModel.value = true;
-    } else {
-        uni.$u.toast("该形象无法更改模型哦~");
-    }
+const formatVolume = (volume: number) => {
+    return Math.round(volume * 100) + "%";
+};
+
+const normalizeVolume = (volume: number) => {
+    return Number(Number(volume || 0).toFixed(1));
+};
+
+const handleVolumeChange = (e: any) => {
+    const { value } = e.detail;
+    formData.extra.volume = normalizeVolume(value / 100);
 };
 
 const getAnchorStatus = (status: number, source_type: string) => {
@@ -454,8 +751,32 @@ const getAnchorStatus = (status: number, source_type: string) => {
             default: 0,
         },
     };
-    return anchorStatusMapping[source_type][status] || anchorStatusMapping[source_type]?.["default"];
+    return anchorStatusMapping?.[source_type]?.[status] ?? anchorStatusMapping?.[source_type]?.["default"];
 };
+
+// 是否使用形象原声（默认原声，手动选音色后关闭，切换形象时原声跟随更新）
+const isOriginalVoice = ref(true);
+
+const handleSelectCloneMode = async (mode: CloneModeEnum) => {
+    if (currCloneMode.value === mode || anchorListLoading.value) return;
+    currCloneMode.value = mode;
+    anchorListLoading.value = true;
+    anchorLists.value = [];
+    currAnchorIndex.value = -1;
+    // 优质版固定闪剪驱动模型
+    if (mode === CloneModeEnum.PRO) {
+        formData.model_version = DigitalHumanModelVersionEnum.SHANJIAN;
+    }
+    if (isOriginalVoice.value) {
+        formData.voice_id = "";
+        formData.voice_name = "";
+    }
+    trimMsgByLimit();
+
+    await getModelLists();
+    start();
+};
+
 // 形象相关方法
 const chooseAnchor = (index: number) => {
     const { status, source_type, model_version } = anchorLists.value[index];
@@ -465,20 +786,33 @@ const chooseAnchor = (index: number) => {
         return;
     }
 
-    if (formData.model_version !== model_version) {
-        formData.voice_id = "-1";
-        formData.voice_name = "";
-    }
-    if (model_version === 0) {
-        formData.model_version = DigitalHumanModelVersionEnum.CHANJING;
+    const prevModel = formData.model_version;
+    if (currCloneMode.value === CloneModeEnum.PRO) {
+        // 优质版固定闪剪
+        formData.model_version = DigitalHumanModelVersionEnum.SHANJIAN;
+    } else if (model_version === 0) {
+        // 公共形象可切换驱动模型，未选时默认闪剪
+        if (
+            formData.model_version !== DigitalHumanModelVersionEnum.CHANJING &&
+            formData.model_version !== DigitalHumanModelVersionEnum.SHANJIAN
+        ) {
+            formData.model_version = DigitalHumanModelVersionEnum.SHANJIAN;
+        }
     } else {
         formData.model_version = model_version;
     }
     currAnchorIndex.value = index;
+
+    // 模型变化或默认原声时，按当前模型重置音色
+    if (prevModel !== formData.model_version || isOriginalVoice.value) {
+        resetToneByModel();
+    }
+    if (prevModel !== formData.model_version) {
+        trimMsgByLimit();
+    }
 };
 
 const handleChooseAnchor = (data: AnchorItem) => {
-    // 检查是否已存在相同anchor_id的项目
     const exists = anchorLists.value.findIndex((item) => item.id === data.id);
     if (exists === -1) {
         anchorLists.value = [data, ...anchorLists.value];
@@ -497,16 +831,47 @@ const handleChooseAnchor = (data: AnchorItem) => {
 // 模型相关方法
 const openModel = () => {
     uni.$u.route({
-        url: `/ai_modules/digital_human/pages/anchor_create/anchor_create?source=${DigitalHumanModelVersionEnum.CHANJING}&type=${ModeTypeEnum.ANCHOR}`,
+        url: `/ai_modules/digital_human/pages/anchor_create/anchor_create?source=${DigitalHumanModelVersionEnum.SHANJIAN}&type=${ModeTypeEnum.ANCHOR}`,
     });
 };
 
-const handleChooseModel = (id: string) => {
-    if (formData.model_version == id) return;
-    formData.model_version = id;
-    formData.voice_id = "-1";
+const openChooseModel = () => {
+    if (!showDriveModel.value) return;
+    if (currAnchorIndex.value === -1) {
+        uni.$u.toast("请先选择形象");
+        showChooseAnchor.value = true;
+        return;
+    }
+    if (isPublicAnchor.value) {
+        showChooseModel.value = true;
+    } else {
+        uni.$u.toast("该形象无法更改模型哦~");
+    }
+};
+
+const resetToneByModel = () => {
+    isOriginalVoice.value = true;
+    chooseToneRef.value?.setChooseLists([]);
+    if (formData.model_version == DigitalHumanModelVersionEnum.CHANJING) {
+        formData.voice_id = "-1";
+        formData.voice_name = "";
+        formData.voice_type = 1;
+        return;
+    }
+    if (formData.model_version == DigitalHumanModelVersionEnum.SHANJIAN) {
+        applyOriginalTone(anchorLists.value[currAnchorIndex.value]);
+        return;
+    }
+    formData.voice_id = "";
     formData.voice_name = "";
     formData.voice_type = 1;
+};
+
+const handleChooseModel = (modelVersion: string | number) => {
+    if (formData.model_version == modelVersion) return;
+    formData.model_version = modelVersion;
+    resetToneByModel();
+    trimMsgByLimit();
 };
 
 // 视频预览相关方法
@@ -517,14 +882,38 @@ const previewVideo = (url: string) => {
 };
 
 // 音色相关方法
+
+const isOriginalToneSelected = computed(() => {
+    if (isChanjingOriginalTone.value) return true;
+    return isOriginalVoice.value && !!formData.voice_id;
+});
+
 const openChooseTone = () => {
+    if (!formData.model_version) {
+        uni.$u.toast("请先选择驱动模型");
+        openChooseModel();
+        return;
+    }
     showChooseTone.value = true;
 };
 
+const applyOriginalTone = (anchor?: AnchorItem) => {
+    const voiceId = anchor?.extra_info?.shanjian_voice_id;
+    if (voiceId) {
+        formData.voice_id = voiceId;
+        formData.voice_name = "形象原声";
+    } else {
+        formData.voice_id = "";
+        formData.voice_name = "";
+    }
+    formData.voice_type = 1;
+    return !!voiceId;
+};
+
 const handleChooseTone = (data: any) => {
-    const { voice_id, name, builtin } = data;
-    if (!data.voice_id) {
-        formData.voice_id = "-1";
+    const { voice_id, name, builtin } = data || {};
+    if (!voice_id) {
+        formData.voice_id = "";
         formData.voice_name = "";
         formData.voice_type = 1;
     } else {
@@ -535,8 +924,34 @@ const handleChooseTone = (data: any) => {
         }
         formData.voice_id = voice_id;
         formData.voice_name = name;
+        isOriginalVoice.value = false;
     }
     showChooseTone.value = false;
+};
+
+const handleChooseOriginalTone = () => {
+    const anchor = anchorLists.value[currAnchorIndex.value];
+    if (!anchor) {
+        uni.$u.toast("请先选择形象");
+        return;
+    }
+    // 蝉镜：视频原音
+    if (formData.model_version == DigitalHumanModelVersionEnum.CHANJING) {
+        isOriginalVoice.value = true;
+        formData.voice_id = "-1";
+        formData.voice_name = "";
+        formData.voice_type = 1;
+        chooseToneRef.value?.setChooseLists([]);
+        return;
+    }
+    // 闪剪：形象原声
+    if (!anchor.extra_info?.shanjian_voice_id) {
+        uni.$u.toast("当前形象暂无原声，请选择其他音色");
+        return;
+    }
+    isOriginalVoice.value = true;
+    applyOriginalTone(anchor);
+    chooseToneRef.value?.setChooseLists([]);
 };
 
 const handleSelectAgent = (res: any) => {
@@ -558,6 +973,27 @@ const randomCopywriter = () => {
     formData.audio_type = CreateTypeEnum.TEXT;
 };
 
+const retryAudioTranscribe = async () => {
+    if (!formData.audio_url) return;
+    audioError.value = false;
+    audioErrorMsg.value = "";
+    audioLoading.value = true;
+    formData.audio_type = CreateTypeEnum.AUDIO;
+    try {
+        const { message, audio_duration } = await lpSceneSpeechToText({
+            audio: formData.audio_url,
+        });
+        formData.msg = message;
+        formData.audio_duration = audio_duration;
+    } catch (error: any) {
+        audioError.value = true;
+        audioErrorMsg.value = typeof error === "string" ? error : "转写失败，请检查网络后重试";
+        formData.audio_type = CreateTypeEnum.AUDIO;
+    } finally {
+        audioLoading.value = false;
+    }
+};
+
 const { uploadAndProcessFiles, showUploadProgress, uploadMaterialList } = useUpload({
     count: 1,
     fileAccept: ["mp3", "wav", "m4a", "MP3", "WAV", "M4A"],
@@ -567,6 +1003,8 @@ const { uploadAndProcessFiles, showUploadProgress, uploadMaterialList } = useUpl
         formData.audio_type = CreateTypeEnum.AUDIO;
         showAudioType.value = false;
         audioLoading.value = true;
+        audioError.value = false;
+        audioErrorMsg.value = "";
         try {
             const { message, audio_duration } = await lpSceneSpeechToText({
                 audio: url,
@@ -575,11 +1013,9 @@ const { uploadAndProcessFiles, showUploadProgress, uploadMaterialList } = useUpl
             formData.audio_url = url;
             formData.audio_duration = audio_duration;
         } catch (error: any) {
-            uni.showToast({
-                title: error,
-                icon: "none",
-                duration: 3000,
-            });
+            formData.audio_url = url;
+            audioError.value = true;
+            audioErrorMsg.value = typeof error === "string" ? error : "转写失败，请检查网络后重试";
         } finally {
             audioLoading.value = false;
         }
@@ -620,6 +1056,8 @@ const clearAudioData = () => {
                 formData.msg = "";
                 formData.audio_url = "";
                 formData.audio_type = CreateTypeEnum.TEXT;
+                audioError.value = false;
+                audioErrorMsg.value = "";
                 destroy();
             }
         },
@@ -637,38 +1075,39 @@ const agreeCreate = () => {
     confirmCreate();
 };
 
-// 充值相关方法
-const recharge = () => {
-    rechargePopupRef.value?.open();
-};
-
 // 创建视频相关方法
 const startCreate = () => {
     if (!canCreate.value) {
-        if (!formData.model_version) {
-            openModel();
-        } else if (formData.voice_type != 1 && !formData.voice_id) {
+        if (currAnchorIndex.value === -1) {
+            uni.$u.toast("请先选择形象");
+            showChooseAnchor.value = true;
+        } else if (!formData.model_version) {
+            uni.$u.toast("请先选择驱动模型");
+            openChooseModel();
+        } else if (!isAudioCreate.value && !formData.voice_id && !isChanjingOriginalTone.value) {
             uni.$u.toast("请先选择音色");
             openChooseTone();
+        } else if (isAudioCreate.value && audioLoading.value) {
+            uni.$u.toast("音频正在转写，请稍后");
+        } else if (isAudioCreate.value && audioError.value) {
+            uni.$u.toast("音频转写失败，请重新处理");
+        } else if (isAudioCreate.value && !formData.audio_url) {
+            uni.$u.toast("请先上传音频");
         } else if (!formData.msg) {
             uni.$u.toast("请先输入视频文案");
         }
-        // else if (formData.automatic_clip == 1 && !formData.music_url) {
-        //     uni.$u.toast("请先选择音乐");
-        //     return;
-        // }
         return;
     }
-    createPanelRef.value?.confirm();
+    confirmCreate();
 };
+
 const confirmCreate = async () => {
     const closeAgreement = Cache.get(DH_CREATE_AGREEMENT_KEY);
     if (!closeAgreement) {
         showAgreement.value = true;
         return;
     }
-    // 判断文案是否超出限制
-    if (formData.msg?.length > textLimit.value) {
+    if (!isAudioCreate.value && formData.msg?.length > textLimit.value) {
         uni.$u.toast("文案超出限制，请重新编辑文案");
         return;
     }
@@ -679,48 +1118,13 @@ const confirmCreate = async () => {
             title: "正在生成",
             mask: true,
         });
-        const voice_id = formData.voice_id == "-1" ? undefined : formData.voice_id;
-        const {
-            name,
-            width,
-            height,
-            model_version,
-            anchor_id,
-            anchor_ids: { chanjing_anchor_id, weiju_anchor_id },
-            pic,
-            result_url,
-        } = anchorLists.value[currAnchorIndex.value];
 
-        let anchorId = anchor_id;
-        if (model_version === 0) {
-            if (formData.model_version == DigitalHumanModelVersionEnum.CHANJING) {
-                anchorId = chanjing_anchor_id;
-            }
-            if (formData.model_version == DigitalHumanModelVersionEnum.STANDARD) {
-                anchorId = weiju_anchor_id;
-            }
-        }
-        await createTask({
-            name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "数字人口播",
-            width,
-            height,
-            pic,
-            voice_id,
-            anchor_id: anchorId,
-            msg: formData.msg,
-            video_url: result_url,
-            anchor_name: name,
-            voice_name: formData.voice_name,
-            voice_type: formData.voice_type,
-            audio_type: formData.audio_type,
-            audio_url: formData.audio_url,
-            model_version: formData.model_version,
-            automatic_clip: formData.automatic_clip,
-            clip_type: formData.clip_type,
-            music_url: formData.music_url,
-            music_type: formData.music_type,
-        });
-        createPanelRef.value?.close();
+        const engineType =
+            formData.model_version == DigitalHumanModelVersionEnum.CHANJING
+                ? SpeechEngineTypeEnum.CHANJING
+                : SpeechEngineTypeEnum.SHANJIAN;
+        await createShanjianSpeechTask(engineType);
+
         userStore.getUser();
         uni.hideLoading();
         showCreateSuccess.value = true;
@@ -735,35 +1139,131 @@ const confirmCreate = async () => {
     }
 };
 
+/** 蝉镜视频原音传空 voice，由服务端从形象视频克隆原音 */
+const createShanjianSpeechTask = async (engineType: SpeechEngineTypeEnum = SpeechEngineTypeEnum.SHANJIAN) => {
+    const {
+        model_version,
+        anchor_id,
+        width,
+        height,
+        pic,
+        anchor_ids: { shanjian_anchor_id, chanjing_anchor_id } = {} as any,
+    } = anchorLists.value[currAnchorIndex.value];
+
+    let anchorId = anchor_id;
+    if (model_version === 0) {
+        anchorId =
+            engineType === SpeechEngineTypeEnum.CHANJING ? chanjing_anchor_id : shanjian_anchor_id;
+    }
+    const contentParams = isAudioCreate.value
+        ? {
+              audio: [
+                  {
+                      url: formData.audio_url,
+                  },
+              ],
+          }
+        : {
+              copywriting: [
+                  {
+                      content: formData.msg,
+                  },
+              ],
+          };
+    const voiceId =
+        formData.voice_id == "-1" || formData.voice_id == -1 ? "" : formData.voice_id;
+    const extra: Record<string, any> = {
+        video_count: formData.extra.video_count,
+        volume: formData.extra.volume,
+    };
+    // 蝉镜引擎要求宽高
+    if (engineType === SpeechEngineTypeEnum.CHANJING) {
+        extra.width = width || formData.width;
+        extra.height = height || formData.height;
+    }
+    await createShanjianTask({
+        name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "数字人口播",
+        shanjian_type: DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE,
+        engine_type: engineType,
+        ai_clip_enabled: clipConfig.is_open ? formData.ai_clip_enabled : 0,
+        pic: pic || formData.pic,
+        ...contentParams,
+        anchor: [
+            {
+                anchor_id: anchorId,
+            },
+        ],
+        voice: voiceId
+            ? [
+                  {
+                      voice_id: voiceId,
+                  },
+              ]
+            : [],
+        extra,
+    });
+};
+
 const getModelLists = async () => {
+    const requestMode = currCloneMode.value;
+    const isSwitchLoading = anchorListLoading.value;
     try {
         const { lists } = await getPublicAnchorList({
             page_size: 10,
             page_no: 1,
             status: 1,
             filter: 2,
+            is_pro: cloneModeToIsPro(requestMode),
         });
+
+        // 切换档位过程中丢弃旧请求结果，避免列表抖动/错乱
+        if (requestMode !== currCloneMode.value) {
+            return;
+        }
+
         if (lists && lists.length) {
-            anchorLists.value = lists;
+            const merged = isSwitchLoading ? [] : [...anchorLists.value];
+
+            for (const newItem of lists) {
+                const existIndex = merged.findIndex((item) => item.id === newItem.id);
+                if (existIndex !== -1) {
+                    merged[existIndex] = { ...merged[existIndex], ...newItem };
+                } else {
+                    merged.push(newItem);
+                }
+            }
+
+            anchorLists.value = merged;
 
             if (currAnchorIndex.value === -1) {
-                const index = lists.findIndex((item: any) => getAnchorStatus(item.status, item.source_type) == 1);
-                if (index != -1) {
+                const index = merged.findIndex((item) => getAnchorStatus(item.status, item.source_type) == 1);
+                if (index !== -1) {
                     chooseAnchor(index);
                 } else {
                     chooseAnchor(0);
                 }
+            } else {
+                const currentItem = anchorLists.value[currAnchorIndex.value];
+                // 默认原声但此前未取到原声 id 时，数据更新后重新应用
+                if (currentItem && isOriginalVoice.value && !formData.voice_id) {
+                    applyOriginalTone(currentItem);
+                }
             }
 
-            // 判断是不是有生成中的形象
-            const generatingAnchor = lists.find((item: any) => getAnchorStatus(item.status, item.source_type) == 0);
-
+            const generatingAnchor = anchorLists.value.find(
+                (item) => getAnchorStatus(item.status, item.source_type) == 0,
+            );
             if (!generatingAnchor) {
                 end();
             }
+        } else if (isSwitchLoading) {
+            anchorLists.value = [];
         }
     } finally {
         loading.value = false;
+        if (requestMode === currCloneMode.value) {
+            anchorListLoading.value = false;
+        }
     }
 };
 
@@ -795,7 +1295,6 @@ onShow(() => {
     start();
 });
 
-// 生命周期钩子
 onLoad(async (options: any) => {
     on("confirm", (result: any) => {
         const { type, data } = result;
@@ -829,22 +1328,49 @@ onUnload(() => {
 </script>
 
 <style scoped lang="scss">
-.util-item {
-    @apply flex items-center gap-x-1 py-1 px-2 rounded transition-all duration-300 h-[80rpx];
+.tier-tab {
+    @apply px-[28rpx] py-[18rpx] rounded-t-[26rpx] text-[27rpx] font-bold text-[#8A94A6] bg-[#E4E9F1];
 }
 
-.rotate {
-    animation: rotate 1s linear infinite;
+.tier-tab--on {
+    @apply bg-white text-[#2680F7] pt-[22rpx];
 }
 
-// 转圈动画
-@keyframes rotate {
+.skeleton {
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 400% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.rotate-anim {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
     from {
         transform: rotate(0deg);
     }
-
     to {
         transform: rotate(360deg);
+    }
+}
+
+.wave-anim {
+    animation: wave 1s ease-in-out infinite alternate;
+}
+@keyframes wave {
+    0% {
+        height: 8rpx;
+    }
+    100% {
+        height: 24rpx;
     }
 }
 </style>

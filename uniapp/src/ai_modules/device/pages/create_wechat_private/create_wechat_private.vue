@@ -1,219 +1,429 @@
 <template>
-    <view class="h-screen device-bg flex flex-col">
+    <view class="flex flex-col h-screen bg-[#F7F9FC]">
         <u-navbar
             title-bold
             title="个微接管"
             :border-bottom="false"
             :is-fixed="false"
-            :background="{
-                background: 'transparent',
-            }">
-        </u-navbar>
-        <view class="flex-shrink-0 h-[150rpx] flex items-center">
-            <view class="grid grid-cols-2 w-full px-4">
-                <view
-                    v-for="item in steps"
-                    :key="item.step"
-                    class="common-step-item"
-                    :class="{ active: step == item.step }"
-                    @click="handleStep(item.step)">
-                    <view v-if="step > item.step" class="common-step-item-success-icon">
-                        <u-icon name="checkmark" color="#ffffff" size="14"></u-icon>
-                    </view>
-                    <view class="common-step-item-icon" v-else> </view>
-                    <text class="common-step-item-title">{{ item.title }}</text>
-                    <view
-                        v-if="item.step !== steps.length"
-                        class="common-step-item-line"
-                        :class="{ '!border-primary': step > item.step }"></view>
-                </view>
-            </view>
+            :background="{ background: '#ffffff' }" />
+
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-b border-solid border-[#F0F2F5] px-6 pt-[24rpx] pb-[20rpx]">
+            <steps :steps="STEPS" :step="currentStep" @step="handleStep" />
         </view>
-        <view class="grow min-h-0 mt-[24rpx]">
-            <scroll-view scroll-y v-show="step === 1" class="h-full">
-                <view class="px-4 pb-[200rpx] space-y-4">
-                    <view class="bg-white rounded-[20rpx] px-[40rpx] py-[30rpx]" v-if="false">
-                        <view class="border-[0] border-b-[1rpx] border-solid border-[#E5E5E5] pb-[38rpx]">
-                            <view class="flex items-center justify-between">
-                                <view class="text-[30rpx] font-medium">互动动作</view>
-                                <u-switch
-                                    v-model="formData.interaction_action_switch"
-                                    :active-value="1"
-                                    :inactive-value="0"
-                                    :size="36" />
+
+        <view class="grow min-h-0 mt-[16rpx]">
+            <scroll-view scroll-y v-show="currentStep === 1" class="h-full">
+                <view class="px-4 pb-[200rpx] flex flex-col gap-[16rpx]">
+                    <view
+                        class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                        <view
+                            class="flex items-center justify-between px-[28rpx] py-[24rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                            <view class="flex items-center gap-[10rpx]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[28rpx] font-extrabold text-[#0D1117]">分段回复</text>
                             </view>
+                            <u-switch
+                                v-model="formData.stage_reply_switch"
+                                :active-value="1"
+                                :inactive-value="0"
+                                :size="36" />
                         </view>
-                        <view class="mt-[38rpx]">
-                            <view class="text-[30rpx] font-medium mb-3">新好友打招呼设置</view>
-                            <u-radio-group v-model="formData.interaction_action" class="w-full">
-                                <view class="flex flex-wrap justify-between w-full">
-                                    <u-radio
-                                        v-for="item in [
-                                            { value: 0, label: '不打招呼' },
-                                            { value: 1, label: '对方先打招呼后，不再回复' },
-                                            { value: 2, label: '任何情况都固定打招呼' },
-                                        ]"
-                                        label-size="26"
-                                        :size="28"
-                                        :key="item.value"
-                                        :name="item.value"
-                                        >{{ item.label }}</u-radio
-                                    >
-                                </view>
-                            </u-radio-group>
-                            <view v-if="formData.interaction_action == 2">
-                                <view class="mt-[26rpx]">
-                                    <view class="font-medium text-primary">打招呼内容：</view>
-                                    <view class="bg-[#F3F3F3] rounded-[16rpx] px-[26rpx] py-1 mt-[16rpx]">
-                                        <u-input
-                                            v-model="formData.interaction_content"
-                                            placeholder="请输入固定打招呼内容"
-                                            maxlength="200"
-                                            type="textarea" />
-                                    </view>
-                                </view>
-                            </view>
-                        </view>
-                    </view>
-                    <view class="bg-white rounded-[20rpx] px-[40rpx] py-[30rpx]">
-                        <view class="border-[0] border-b-[1rpx] border-solid border-[#E5E5E5] pb-[38rpx]">
-                            <view class="flex items-center justify-between">
-                                <view class="text-[30rpx] font-medium">分段回复</view>
-                                <u-switch
-                                    v-model="formData.stage_reply_switch"
-                                    :active-value="1"
-                                    :inactive-value="0"
-                                    :size="36" />
-                            </view>
-                        </view>
-                        <view class="mt-[38rpx] border-[0] border-b-[1rpx] border-solid border-[#E5E5E5] pb-[38rpx]">
-                            <view class="text-[30rpx] font-medium mb-3">多条消息回复设置</view>
+
+                        <view class="px-[28rpx] py-[24rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                            <text class="text-[#9CA3AF] block mb-[20rpx]">多条消息回复设置</text>
                             <u-radio-group v-model="formData.multi_message_type" class="w-full">
-                                <view class="flex flex-wrap justify-between w-full">
-                                    <u-radio
+                                <view class="flex flex-wrap gap-[16rpx]">
+                                    <view
                                         v-for="item in [
                                             { value: 0, label: '逐条回复' },
                                             { value: 1, label: '合并回复' },
                                             { value: 2, label: '只回复最后一条' },
                                         ]"
-                                        label-size="26"
-                                        :size="28"
                                         :key="item.value"
-                                        :name="item.value"
-                                        >{{ item.label }}</u-radio
-                                    >
+                                        class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                        :class="
+                                            formData.multi_message_type === item.value
+                                                ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                : 'bg-[#F0F2F5]'
+                                        "
+                                        @click="formData.multi_message_type = item.value as 0 | 1 | 2">
+                                        <text
+                                            class="font-bold"
+                                            :class="
+                                                formData.multi_message_type === item.value
+                                                    ? 'text-primary'
+                                                    : 'text-[#9CA3AF]'
+                                            ">
+                                            {{ item.label }}
+                                        </text>
+                                    </view>
                                 </view>
                             </u-radio-group>
-                            <view v-if="formData.interaction_action == 2">
-                                <view class="mt-[26rpx]">
-                                    <view class="font-medium text-primary">打招呼内容：</view>
-                                    <view class="bg-[#F3F3F3] rounded-[16rpx] px-[26rpx] py-1 mt-[16rpx]">
-                                        <u-input
-                                            v-model="formData.interaction_content"
-                                            placeholder="请输入固定打招呼内容"
-                                            maxlength="200"
-                                            type="textarea" />
-                                    </view>
+                        </view>
+
+                        <view class="px-[28rpx] py-[24rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                            <text class="text-[#9CA3AF] block mb-[20rpx]">图片回复设置</text>
+                            <view class="flex flex-wrap gap-[16rpx]">
+                                <view
+                                    v-for="item in [
+                                        { value: 1, label: '固定回复' },
+                                        { value: 2, label: 'AI识别回复' },
+                                        { value: 3, label: '不回复' },
+                                    ]"
+                                    :key="item.value"
+                                    class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                    :class="
+                                        formData.image_reply_type === item.value
+                                            ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                            : 'bg-[#F0F2F5]'
+                                    "
+                                    @click="formData.image_reply_type = item.value as 1 | 2 | 3">
+                                    <text
+                                        class="font-bold"
+                                        :class="
+                                            formData.image_reply_type === item.value ? 'text-primary' : 'text-[#9CA3AF]'
+                                        ">
+                                        {{ item.label }}
+                                    </text>
+                                </view>
+                            </view>
+                            <view v-if="formData.image_reply_type == 1" class="mt-[20rpx]">
+                                <text class="text-xs text-primary font-semibold block mb-[12rpx]">固定回复内容</text>
+                                <view
+                                    class="bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0]">
+                                    <u-input
+                                        v-model="formData.image_reply_content"
+                                        placeholder="请输入固定回复内容"
+                                        placeholder-style="font-size:26rpx;color:#C0C4CC"
+                                        maxlength="200"
+                                        type="textarea" />
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-[38rpx] border-[0] border-b-[1rpx] border-solid border-[#E5E5E5] pb-[38rpx]">
-                            <view class="text-[30rpx] font-medium">图片回复设置</view>
-                            <u-radio-group v-model="formData.image_reply_type" class="w-full mt-3">
-                                <view class="flex flex-wrap justify-between w-full">
-                                    <u-radio
-                                        v-for="item in [
-                                            { value: 1, label: '固定回复' },
-                                            { value: 2, label: 'AI识别回复' },
-                                            { value: 3, label: '不回复' },
-                                        ]"
-                                        label-size="26"
-                                        :size="28"
-                                        :key="item.value"
-                                        :name="item.value"
-                                        >{{ item.label }}</u-radio
-                                    >
+
+                        <view class="px-[28rpx] py-[24rpx]">
+                            <view class="flex items-center justify-between mb-[20rpx]">
+                                <view class="flex items-center gap-[10rpx]">
+                                    <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                    <text class="text-[28rpx] font-extrabold text-[#0D1117]">敏感词停止回复</text>
                                 </view>
-                            </u-radio-group>
-                            <view v-if="formData.image_reply_type == 1">
-                                <view class="mt-[26rpx]">
-                                    <view class="font-medium text-primary">固定回复内容：</view>
-                                    <view class="bg-[#F3F3F3] rounded-[16rpx] px-[26rpx] py-1 mt-[16rpx]">
-                                        <u-input
-                                            v-model="formData.image_reply_content"
-                                            placeholder="请输入固定回复内容"
-                                            maxlength="200"
-                                            type="textarea" />
-                                    </view>
-                                </view>
-                            </view>
-                        </view>
-                        <view class="mt-[38rpx] border-[0] border-b-[1rpx] border-solid border-[#E5E5E5] pb-[38rpx]">
-                            <view class="flex items-center justify-between">
-                                <view class="text-[30rpx] font-medium">敏感词停止回复</view>
                                 <u-switch
                                     v-model="formData.sensitive_word_switch"
                                     :active-value="1"
                                     :inactive-value="0"
                                     :size="36" />
                             </view>
-                            <view class="flex flex-wrap gap-2 mt-[36rpx]" v-if="formData.sensitive_word_switch == 1">
+                            <view v-if="formData.sensitive_word_switch == 1" class="flex flex-wrap gap-[12rpx]">
                                 <view
                                     v-for="(item, index) in formData.sensitive_word"
-                                    class="border border-solid border-[#E5E5E5] rounded-[20rpx] px-2 py-[12rpx] flex items-center gap-x-2"
+                                    :key="index"
+                                    class="flex items-center gap-[10rpx] bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[6rpx] border border-solid border-[#E5E9F0]"
                                     @click="handleSensitiveWordEdit(index)">
-                                    {{ item }}
+                                    <text class="text-xs text-[#0D1117]">{{ item }}</text>
                                     <view
-                                        class="flex-shrink-0 rounded-full flex item-center justify-center w-4 h-4 bg-[#0000004C]"
+                                        class="w-[32rpx] h-[32rpx] rounded-full bg-[#F0F2F5] flex items-center justify-center"
                                         @click.stop="handleSensitiveWordDelete(index)">
-                                        <u-icon name="close" color="#ffffff" size="16"></u-icon>
+                                        <u-icon name="close" size="14" color="#9CA3AF" />
                                     </view>
                                 </view>
                                 <view
-                                    class="border border-solid border-[#0065FB] rounded-[20rpx] px-[28rpx] h-[60rpx] flex items-center justify-center"
+                                    class="flex items-center gap-[6rpx] h-[60rpx] px-[24rpx] rounded-[16rpx] border border-dashed border-[#BFDBFE] bg-[#F0F6FF]"
                                     @click="handleSensitiveWordEdit(-1)">
-                                    <u-icon name="plus" color="#0065FB" size="20"></u-icon>
-                                    <text class="text-primary font-medium ml-1">添加</text>
+                                    <u-icon name="plus" color="#0065fb" size="18" />
+                                    <text class="text-xs text-primary font-semibold">添加</text>
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-[38rpx]" v-if="false">
-                            <view class="text-[30rpx] font-medium mb-3">语音消息回复设置</view>
-                            <u-radio-group v-model="formData.voice_reply_type" class="w-full">
-                                <view class="flex flex-wrap justify-between w-full">
-                                    <u-radio
-                                        v-for="item in [
-                                            { value: 1, label: '不回复' },
-                                            { value: 2, label: '转文字后回复' },
-                                            { value: 3, label: '固定回复' },
-                                        ]"
-                                        label-size="26"
-                                        :size="28"
-                                        :key="item.value"
-                                        :name="item.value"
-                                        >{{ item.label }}</u-radio
+                    </view>
+
+                    <view
+                        class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                        <view
+                            class="flex items-center justify-between px-[28rpx] py-[24rpx]"
+                            :class="
+                                formData.is_auto_group == 1 ? 'border-[0] border-b border-solid border-[#F0F2F5]' : ''
+                            ">
+                            <view>
+                                <view class="flex items-center gap-[10rpx]">
+                                    <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                    <view>
+                                        <text class="text-[28rpx] font-extrabold text-[#0D1117] block">自动加群</text>
+                                    </view>
+                                </view>
+                                <text class="text-[22rpx] text-[#9CA3AF] mt-[6rpx] block"
+                                    >在执行微信平台任务时将对新好友进行拉群</text
+                                >
+                            </view>
+                            <u-switch
+                                v-model="formData.is_auto_group"
+                                :active-value="1"
+                                :inactive-value="0"
+                                :size="36" />
+                        </view>
+
+                        <view
+                            v-if="formData.is_auto_group == 1"
+                            class="px-[28rpx] pb-[24rpx] flex flex-col gap-[24rpx]">
+                            <view class="pt-[20rpx]">
+                                <text class="font-semibold text-[#0D1117] block mb-[16rpx]">加群触发模式</text>
+                                <view class="flex bg-[#F3F4F6] rounded-[20rpx] p-[6rpx] gap-[6rpx]">
+                                    <view
+                                        class="flex-1 h-[64rpx] rounded-[16rpx] flex items-center justify-center"
+                                        :class="
+                                            formData.group_trigger_mode === 1
+                                                ? 'bg-white shadow-[0_2rpx_8rpx_rgba(0,0,0,0.08)]'
+                                                : ''
+                                        "
+                                        @click="setGroupTriggerMode(1)">
+                                        <text
+                                            class="text-[24rpx] font-bold"
+                                            :class="
+                                                formData.group_trigger_mode === 1 ? 'text-primary' : 'text-[#9CA3AF]'
+                                            ">
+                                            AI 意图识别
+                                        </text>
+                                    </view>
+                                    <view
+                                        class="flex-1 h-[64rpx] rounded-[16rpx] flex items-center justify-center"
+                                        :class="
+                                            formData.group_trigger_mode === 2
+                                                ? 'bg-white shadow-[0_2rpx_8rpx_rgba(0,0,0,0.08)]'
+                                                : ''
+                                        "
+                                        @click="setGroupTriggerMode(2)">
+                                        <text
+                                            class="text-[24rpx] font-bold"
+                                            :class="
+                                                formData.group_trigger_mode === 2 ? 'text-primary' : 'text-[#9CA3AF]'
+                                            ">
+                                            自定义触发词
+                                        </text>
+                                    </view>
+                                </view>
+                                <view
+                                    v-if="formData.group_trigger_mode === 1"
+                                    class="mt-[20rpx] bg-[#EFF6FF] border border-solid border-[#BFDBFE] rounded-[20rpx] px-[24rpx] py-[20rpx] flex items-start gap-[12rpx]">
+                                    <u-icon name="info-circle" color="#2563EB" size="24" />
+                                    <text class="flex-1 text-[24rpx] text-[#1E40AF] leading-relaxed">
+                                        AI 自动识别客户对话中的拉群意图，无需关键词配置。
+                                    </text>
+                                </view>
+                                <view v-else class="mt-[20rpx]">
+                                    <view
+                                        v-if="formData.group_trigger_keywords.length > 0"
+                                        class="flex items-center justify-end mb-[16rpx]">
+                                        <view
+                                            class="flex items-center gap-[6rpx] px-[20rpx] py-[8rpx] rounded-full bg-[#FEF2F2] border border-solid border-[#FECACA]"
+                                            @click="handleClearAllGroupTriggerKeywords">
+                                            <u-icon name="trash" size="22" color="#EF4444" />
+                                            <text class="text-xs font-semibold text-[#EF4444]">一键清空</text>
+                                        </view>
+                                    </view>
+                                    <view class="flex flex-wrap gap-[14rpx]">
+                                        <view
+                                            v-if="!formData.group_trigger_keywords.length"
+                                            class="w-full min-h-[88rpx] rounded-[24rpx] bg-white border border-dashed border-[#DDE6F5] flex items-center justify-center"
+                                            @click="handleGroupTriggerKeywordEdit(-1)">
+                                            <text class="text-[24rpx] text-[#9CA3AF]">暂无触发词，点击添加</text>
+                                        </view>
+                                        <view
+                                            v-for="(word, index) in visibleGroupTriggerKeywords"
+                                            :key="`${word}-${index}`"
+                                            class="inline-flex items-center gap-[10rpx] min-h-[56rpx] max-w-full rounded-full bg-[#F8FAFF] border border-solid border-[#E7EEFC] py-[10rpx] pl-[22rpx] pr-[14rpx]"
+                                            @click="handleGroupTriggerKeywordEdit(index)">
+                                            <text class="min-w-0 break-all text-[24rpx] font-medium text-[#1D2129]">
+                                                {{ word }}
+                                            </text>
+                                            <view
+                                                class="w-[28rpx] h-[28rpx] rounded-full bg-[#EEF2F8] flex items-center justify-center"
+                                                @click.stop="handleRemoveGroupTriggerKeyword(index)">
+                                                <u-icon name="close" color="#9CA3AF" size="14" />
+                                            </view>
+                                        </view>
+                                        <view
+                                            class="inline-flex items-center gap-[8rpx] min-h-[56rpx] rounded-full bg-white border border-dashed border-[#BAD4FF] py-[10rpx] px-[24rpx]"
+                                            @click="handleGroupTriggerKeywordEdit(-1)">
+                                            <u-icon name="plus" color="#0065fb" size="16" />
+                                            <text class="text-[24rpx] font-medium text-primary">添加</text>
+                                        </view>
+                                        <view
+                                            v-if="hiddenGroupTriggerKeywordCount && !showGroupTriggerKeywordsMore"
+                                            class="inline-flex items-center gap-[8rpx] min-h-[56rpx] rounded-full bg-[#F3F4F6] border border-solid border-[#E5E7EB] py-[10rpx] px-[24rpx]"
+                                            @click="showGroupTriggerKeywordsMore = true">
+                                            <text class="text-[24rpx] font-medium text-[#6B7280]">
+                                                +{{ hiddenGroupTriggerKeywordCount }} 个
+                                            </text>
+                                            <u-icon name="arrow-down" color="#6B7280" size="18" />
+                                        </view>
+                                        <view
+                                            v-if="
+                                                showGroupTriggerKeywordsMore &&
+                                                formData.group_trigger_keywords.length >
+                                                    GROUP_TRIGGER_KEYWORD_VISIBLE_LIMIT
+                                            "
+                                            class="inline-flex items-center gap-[8rpx] min-h-[56rpx] rounded-full bg-[#F3F4F6] border border-solid border-[#E5E7EB] py-[10rpx] px-[24rpx]"
+                                            @click="showGroupTriggerKeywordsMore = false">
+                                            <text class="text-[24rpx] font-medium text-[#6B7280]">收起</text>
+                                            <u-icon name="arrow-up" color="#6B7280" size="18" />
+                                        </view>
+                                    </view>
+                                    <text class="block text-[24rpx] text-[#9CA3AF] mt-[20rpx]">
+                                        客户聊天中命中以下任一关键词时触发自动拉群
+                                    </text>
+                                </view>
+                            </view>
+
+                            <view class="pt-[20rpx]">
+                                <view class="flex items-center justify-between mb-[12rpx]">
+                                    <view class="flex items-center gap-[10rpx]">
+                                        <view
+                                            class="w-[36rpx] h-[36rpx] rounded-full bg-[#FFF3E0] flex items-center justify-center">
+                                            <u-icon name="account" color="#FF8C00" size="20" />
+                                        </view>
+                                        <text class="font-semibold text-[#0D1117]">指定拉入的销售微信（真人）</text>
+                                    </view>
+                                    <text class="text-[22rpx] text-[#9CA3AF]"
+                                        >{{ formData.sales_wechat.length }} / 5</text
                                     >
                                 </view>
-                            </u-radio-group>
-                            <view v-if="formData.voice_reply_type == 3">
-                                <view class="mt-[26rpx]">
-                                    <view class="font-medium text-primary">固定回复内容：</view>
-                                    <view class="bg-[#F3F3F3] rounded-[16rpx] px-[26rpx] py-1 mt-[16rpx]">
+                                <text class="text-[22rpx] text-[#9CA3AF] block mb-[16rpx]"
+                                    >机器人建群后，会自动将其拉入群聊中作为主理人。</text
+                                >
+                                <view
+                                    class="bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] h-[80rpx] flex items-center border border-solid border-[#E5E9F0]">
+                                    <view class="flex-1">
                                         <u-input
-                                            v-model="formData.voice_reply_content"
-                                            placeholder="请输入固定回复内容"
-                                            maxlength="200"
-                                            type="textarea" />
+                                            v-model="groupSalesInput"
+                                            placeholder="请输入微信号并按确认键添加"
+                                            placeholder-style="color:#C0C4CC;font-size:26rpx;"
+                                            :border="false"
+                                            maxlength="50"
+                                            confirm-type="done"
+                                            @confirm="handleAddGroupSales" />
                                     </view>
+                                    <view @click="handleAddGroupSales">
+                                        <u-icon name="plus" color="#0065fb" size="18" />
+                                        <text class="text-[22rpx] text-primary font-semibold">添加</text>
+                                    </view>
+                                </view>
+                                <view
+                                    class="flex flex-wrap gap-[12rpx] mt-[16rpx]"
+                                    v-if="formData.sales_wechat.length > 0">
+                                    <view
+                                        v-for="(item, index) in formData.sales_wechat"
+                                        :key="index"
+                                        class="flex items-center gap-[10rpx] bg-[#EBF2FF] rounded-[16rpx] px-[20rpx] py-[10rpx] border border-solid border-[#BFDBFE]">
+                                        <text class="text-xs text-primary font-semibold">{{ item }}</text>
+                                        <view
+                                            class="w-[28rpx] h-[28rpx] rounded-full bg-[#DBEAFE] flex items-center justify-center"
+                                            @click="handleRemoveGroupSales(index)">
+                                            <u-icon name="close" color="#0065fb" size="14" />
+                                        </view>
+                                    </view>
+                                </view>
+                                <view
+                                    class="mt-[16rpx] bg-[#FFF8F0] rounded-[16rpx] px-[20rpx] py-[16rpx] flex items-start gap-[10rpx] border border-solid border-[#FFE4C4]">
+                                    <u-icon name="info-circle" color="#F59E0B" size="24" />
+                                    <text class="text-[22rpx] text-[#B45309] leading-relaxed flex-1">
+                                        强烈建议输入【微信号】或在机器人端统一设置好【备注名】，避免因昵称包含特殊符号导致拉人失败。
+                                    </text>
+                                </view>
+                            </view>
+
+                            <view class="border-[0] border-t border-solid border-[#F0F2F5] pt-[20rpx]">
+                                <view class="flex items-center justify-between mb-[12rpx]">
+                                    <text class="font-semibold text-[#0D1117]">群名称模板</text>
+                                    <text class="text-[22rpx] text-[#9CA3AF]"
+                                        >{{ formData.group_name_template.length }} / 32</text
+                                    >
+                                </view>
+                                <view
+                                    class="bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0]">
+                                    <u-input
+                                        v-model="formData.group_name_template"
+                                        placeholder="请输入群名称模板"
+                                        placeholder-style="color:#C0C4CC;font-size:26rpx;"
+                                        :border="false"
+                                        maxlength="32"
+                                        type="textarea"
+                                        :auto-height="true" />
+                                </view>
+                                <view class="flex flex-wrap gap-[12rpx] mt-[16rpx]">
+                                    <view
+                                        v-for="tpl in ['{客户名}', '{销售名}', '{日期}']"
+                                        :key="tpl"
+                                        class="flex items-center gap-[6rpx] h-[56rpx] px-[20rpx] bg-[#EBF2FF] rounded-[14rpx] border border-solid border-[#BFDBFE]"
+                                        @click="insertGroupNameTemplate(tpl)">
+                                        <u-icon name="plus" color="#0065fb" size="18" />
+                                        <text class="text-[22rpx] text-primary font-semibold"
+                                            >插入{{ tpl.replace(/[{}]/g, "") }}</text
+                                        >
+                                    </view>
+                                </view>
+                            </view>
+
+                            <view class="border-[0] border-t border-solid border-[#F0F2F5] pt-[20rpx]">
+                                <view class="flex items-center justify-between mb-[16rpx]">
+                                    <text class="font-semibold text-[#0D1117]">建群后自动发送欢迎语</text>
+                                    <u-switch
+                                        v-model="formData.is_greeting"
+                                        :active-value="1"
+                                        :inactive-value="0"
+                                        :size="36" />
+                                </view>
+                                <view v-if="formData.is_greeting == 1">
+                                    <view
+                                        class="bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0]">
+                                        <u-input
+                                            v-model="formData.greeting_text"
+                                            placeholder="请输入建群欢迎语"
+                                            placeholder-style="color:#C0C4CC;font-size:26rpx;"
+                                            :border="false"
+                                            maxlength="500"
+                                            type="textarea"
+                                            :auto-height="true" />
+                                    </view>
+                                    <view class="flex flex-wrap gap-[12rpx] mt-[16rpx]">
+                                        <view
+                                            class="flex items-center gap-[6rpx] h-[56rpx] px-[20rpx] bg-[#EBF2FF] rounded-[14rpx] border border-solid border-[#BFDBFE]"
+                                            @click="insertWelcomeContent('{客户名}')">
+                                            <u-icon name="plus" color="#0065fb" size="18" />
+                                            <text class="text-[22rpx] text-primary font-semibold">插入客户名</text>
+                                        </view>
+                                        <view
+                                            class="flex items-center gap-[6rpx] h-[56rpx] px-[20rpx] bg-[#EBF2FF] rounded-[14rpx] border border-solid border-[#BFDBFE]"
+                                            @click="insertWelcomeContent('@{客户}')">
+                                            <u-icon name="plus" color="#0065fb" size="18" />
+                                            <text class="text-[22rpx] text-primary font-semibold">@客户</text>
+                                        </view>
+                                    </view>
+                                </view>
+                            </view>
+
+                            <view class="border-[0] border-t border-solid border-[#F0F2F5] pt-[20rpx]">
+                                <view class="flex items-center justify-between">
+                                    <view class="flex-1 pr-[24rpx]">
+                                        <text class="font-semibold text-[#0D1117] block">携带历史聊天记录</text>
+                                        <text class="text-[22rpx] text-[#9CA3AF] mt-[8rpx] block leading-relaxed">
+                                            建群后，自动将拉群前的单聊历史记录同步转发至新群聊中
+                                        </text>
+                                    </view>
+                                    <u-switch
+                                        v-model="formData.is_share_chats"
+                                        :active-value="1"
+                                        :inactive-value="0"
+                                        :size="36" />
                                 </view>
                             </view>
                         </view>
                     </view>
                 </view>
             </scroll-view>
-            <view v-show="step === 2" class="h-full">
+
+            <view v-show="currentStep === 2" class="h-full">
                 <scroll-view scroll-y class="h-full">
-                    <view class="px-4 pb-[100rpx]">
+                    <view class="px-4 pb-[120rpx] flex flex-col gap-[16rpx]">
                         <base-setting
                             v-model="formData"
                             :show-device="false"
@@ -223,46 +433,62 @@
                             :multiple="1"
                             is-wechat-private
                             @change-frequency="currentFrequency = $event" />
-                        <view v-if="taskErrorMsg" class="mt-5">
-                            <view>任务冲突</view>
-                            <view class="text-[#FF2442] mt-[20rpx] text-xs">
-                                {{ taskErrorMsg }}
+
+                        <view
+                            v-if="taskErrorMsg"
+                            class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center gap-[10rpx] px-[28rpx] py-[20rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="w-[6rpx] h-[32rpx] bg-[#EF4444] rounded-full" />
+                                <u-icon name="warning-fill" size="24" color="#EF4444" />
+                                <text class="text-[28rpx] font-bold text-[#EF4444]">任务冲突</text>
+                            </view>
+                            <view class="px-[28rpx] py-[20rpx]">
+                                <text class="text-[#EF4444] leading-relaxed">{{ taskErrorMsg }}</text>
                             </view>
                         </view>
                     </view>
                 </scroll-view>
             </view>
         </view>
-        <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 pb-5">
-            <view class="flex items-center px-4 h-[140rpx]" :class="[step == 1 ? 'justify-end' : 'justify-between']">
-                <template v-if="step != steps.length">
-                    <view
-                        v-if="step != 1"
-                        class="px-[48rpx] py-[20rpx] rounded-md border border-solid border-[#F1F2F5] text-[#878787]"
-                        @click="handleStep(step, 'prev')">
-                        上一步
-                    </view>
-                    <view
-                        class="px-[48rpx] py-[20rpx] rounded-md text-white"
-                        :class="[canNext ? 'bg-black' : 'bg-[#787878CC]']"
-                        @click="handleStep(step, 'next')">
-                        下一步
-                    </view>
-                </template>
-                <template v-else>
-                    <view
-                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-black text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
-                        @click="handleCreateTask">
-                        创建任务
-                    </view>
-                </template>
-            </view>
+
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-t border-solid border-[#F0F2F5] px-4 pt-[20rpx] pb-[40rpx] flex items-center gap-[16rpx]">
+            <template v-if="currentStep != STEPS.length">
+                <view
+                    v-if="currentStep != 1"
+                    class="h-[96rpx] px-[40rpx] rounded-[24rpx] flex items-center border border-solid border-[#E5E9F0] bg-white"
+                    @click="handleStep(currentStep, 'prev')">
+                    <text class="text-[28rpx] font-semibold text-[#4B5563]">上一步</text>
+                </view>
+                <view
+                    class="flex-1 h-[96rpx] rounded-[24rpx] flex items-center justify-center transition-all duration-300"
+                    :class="canNext ? 'shadow-[0_8rpx_24rpx_rgba(28,111,235,0.30)]' : ''"
+                    :style="
+                        canNext
+                            ? 'background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)'
+                            : 'background: #C0C4CC'
+                    "
+                    @click="handleStep(currentStep, 'next')">
+                    <text class="text-[30rpx] font-bold text-white">下一步</text>
+                </view>
+            </template>
+            <template v-else>
+                <view
+                    class="flex-1 h-[96rpx] rounded-[24rpx] flex items-center justify-center relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.35)]"
+                    style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                    @click="handleCreateTask">
+                    <text class="text-[32rpx] font-extrabold text-white tracking-wide">创建任务</text>
+                </view>
+            </template>
         </view>
     </view>
+
     <keywords-edit
         ref="keywordsEditRef"
         v-model="showKeywordsEdit"
-        title="敏感词设置"
+        :title="keywordEditTitle"
+        :maxlength="keywordEditMaxlength"
         @confirm="handleKeywordsConfirm" />
     <confirm-dialog
         v-model="showCreateTaskSuccessDialog"
@@ -281,286 +507,78 @@
 </template>
 
 <script setup lang="ts">
-import WechatOA from "@/utils/wechat";
-import { createWechatPrivateTask, checkTaskPublishTime } from "@/api/device";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
+import Steps from "@/ai_modules/device/components/steps/steps.vue";
 import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
 import KeywordsEdit from "@/ai_modules/device/components/keywords-edit/keywords-edit.vue";
 import TaskConflictDialog from "@/ai_modules/device/components/task-conflict-dialog/task-conflict-dialog.vue";
 
+import { STEPS, DEFAULT_FORM_DATA } from "./hooks/types";
+import { useStep } from "./hooks/useStep";
+import { useReplySettings } from "./hooks/useReplySettings";
+import { useCreateTask } from "./hooks/useCreateTask";
+
+// ── 共享表单数据 ──────────────────────────────────────────────────
+const formData = reactive(DEFAULT_FORM_DATA());
+
+// ── Hook 组合 ─────────────────────────────────────────────────────
+const { step: currentStep, canNext, handleStep } = useStep(formData);
+const currentFrequency = ref(0);
+const {
+    showKeywordsEdit,
+    keywordsEditRef,
+    keywordEditTitle,
+    keywordEditMaxlength,
+    handleSensitiveWordEdit,
+    handleSensitiveWordDelete,
+    handleKeywordsConfirm,
+    groupSalesInput,
+    GROUP_TRIGGER_KEYWORD_VISIBLE_LIMIT,
+    showGroupTriggerKeywordsMore,
+    visibleGroupTriggerKeywords,
+    hiddenGroupTriggerKeywordCount,
+    setGroupTriggerMode,
+    queryGroupTriggerKeywords,
+    handleGroupTriggerKeywordEdit,
+    handleRemoveGroupTriggerKeyword,
+    handleClearAllGroupTriggerKeywords,
+    handleAddGroupSales,
+    handleRemoveGroupSales,
+    insertGroupNameTemplate,
+    insertWelcomeContent,
+} = useReplySettings(formData);
+const {
+    taskErrorMsg,
+    showCreateTaskSuccessDialog,
+    showTaskMsgPop,
+    taskMsgPopContent,
+    handleCreateTask,
+    handleTaskMsgPopConfirm,
+    handleCreateTaskSuccess,
+} = useCreateTask(formData, currentFrequency);
+
+// ── EventBus ──────────────────────────────────────────────────────
 const { on } = useEventBusManager();
 
-const steps = ref([
-    { step: 1, title: "回复设置" },
-    { step: 2, title: "设定时间" },
-]);
-const step = ref(1);
-
-const formData = reactive<{
-    name: string;
-    interaction_action_switch: 0 | 1;
-    interaction_action: 0 | 1 | 2;
-    interaction_content: string;
-    stage_reply_switch: 0 | 1;
-    multi_message_type: 0 | 1 | 2;
-    image_reply_type: 1 | 2 | 3;
-    image_reply_content: string;
-    sensitive_word_switch: 0 | 1;
-    sensitive_word: string[];
-    voice_reply_type: 1 | 2 | 3;
-    voice_reply_content: string;
-    accounts: any[];
-    task_frep: number;
-    time_type: 0 | 1;
-    time_config: string[];
-    custom_date: string[];
-    task_exec_type: number;
-    minutes: number;
-    task_ids: string[];
-}>({
-    name: `个微接管任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`,
-    interaction_action_switch: 1,
-    interaction_action: 0,
-    interaction_content: "",
-    stage_reply_switch: 1,
-    multi_message_type: 0,
-    image_reply_type: 1,
-    image_reply_content: "",
-    sensitive_word_switch: 1,
-    sensitive_word: [],
-    voice_reply_type: 1,
-    voice_reply_content: "",
-    accounts: [],
-    task_frep: 1,
-    time_type: 0,
-    time_config: ["09:00", "09:30"],
-    custom_date: [],
-    task_exec_type: 1,
-    minutes: 30,
-    task_ids: [],
-});
-
-const editSensitiveWordIndex = ref(-1);
-const showKeywordsEdit = ref(false);
-const keywordsEditRef = ref<InstanceType<typeof KeywordsEdit>>();
-const currentFrequency = ref(0);
-const taskErrorMsg = ref<string>("");
-const showCreateTaskSuccessDialog = ref(false);
-const showTaskMsgPop = ref(false);
-const taskMsgPopContent = ref<string[]>([]);
-
-const canNext = computed(() => canStepProceed(step.value));
-
-const canStepProceed = (stepNumber: number) => {
-    switch (stepNumber) {
-        case 1:
-            const flag =
-                (formData.interaction_action == 2 ? formData.interaction_content : true) &&
-                (formData.image_reply_type == 1 ? formData.image_reply_content : true) &&
-                (formData.voice_reply_type == 3 ? formData.voice_reply_content : true) &&
-                (formData.sensitive_word_switch == 1 ? formData.sensitive_word.length > 0 : true);
-            return flag;
-        case 2:
-            return true;
-
-        default:
-            return false;
-    }
-};
-
-const handleStep = (targetStep: number, type?: "next" | "prev") => {
-    if (type === "prev") {
-        step.value--;
-        return;
-    }
-    if (type === "next") {
-        if (canNext.value) {
-            step.value++;
-        } else {
-            const messages: { [key: number]: () => string } = {
-                1: () => {
-                    if (formData.interaction_action == 2 && !formData.interaction_content) {
-                        return "请输入固定打招呼内容";
-                    }
-                    if (formData.image_reply_type == 1 && !formData.image_reply_content) {
-                        return "请输入图片固定回复内容";
-                    }
-                    if (formData.sensitive_word_switch == 1 && formData.sensitive_word.length == 0) {
-                        return "请输入敏感词";
-                    }
-                    if (formData.voice_reply_type == 3 && !formData.voice_reply_content) {
-                        return "请输入语音固定回复内容";
-                    }
-                    return "";
-                },
-            };
-            uni.$u.toast(messages[step.value]?.() || "请完成当前步骤");
-        }
-        return;
-    }
-    if (targetStep === step.value) return;
-    if (targetStep < step.value) {
-        step.value = targetStep;
-    } else {
-        for (let i = 1; i < targetStep; i++) {
-            if (!canStepProceed(i)) {
-                uni.$u.toast("请按顺序完成步骤");
-                return;
-            }
-        }
-        step.value = targetStep;
-    }
-};
-
-const handleSensitiveWordDelete = (index: number) => {
-    formData.sensitive_word.splice(index, 1);
-};
-
-const handleSensitiveWordEdit = (index: number) => {
-    editSensitiveWordIndex.value = index;
-    showKeywordsEdit.value = true;
-    keywordsEditRef.value?.setFormData(formData.sensitive_word[index]);
-};
-
-const handleKeywordsConfirm = (data: string) => {
-    if (editSensitiveWordIndex.value >= 0) {
-        formData.sensitive_word[editSensitiveWordIndex.value] = data;
-    } else {
-        formData.sensitive_word.push(data);
-    }
-    showKeywordsEdit.value = false;
-    editSensitiveWordIndex.value = -1;
-};
-const executeCreateTask = async () => {
-    uni.showLoading({
-        title: "创建中...",
-        mask: true,
-    });
-    try {
-        await createWechatPrivateTask({
-            task_name: formData.name,
-            accounts: formData.accounts,
-            task_frep: formData.task_frep,
-            time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
-            custom_date: formData.custom_date,
-            is_manual_agree: formData.interaction_action_switch,
-            greet_strategy: formData.interaction_action,
-            greet_content: formData.interaction_content,
-            paragraph_enable: formData.stage_reply_switch,
-            multiple_type: formData.multi_message_type,
-            voice_reply_type: formData.voice_reply_type,
-            voice_reply: formData.voice_reply_content,
-            image_reply_type: formData.image_reply_type,
-            image_reply: formData.image_reply_content,
-            stop_enable: formData.sensitive_word_switch,
-            stop_keywords: formData.sensitive_word,
-            is_free_time: formData.time_type,
-            task_exec_type: formData.task_exec_type,
-            minutes: formData.minutes,
-            task_ids: formData.task_ids,
-        });
-        uni.hideLoading();
-        showCreateTaskSuccessDialog.value = true;
-        WechatOA.notify();
-    } catch (error: any) {
-        uni.hideLoading();
-        if (error.indexOf("24小时自动执行任务") > -1) {
-            uni.showModal({
-                title: "提示",
-                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
-                success: (res) => {
-                    if (res.confirm) {
-                        uni.$u.route({
-                            url: "/ai_modules/device/pages/index/index",
-                        });
-                    }
-                },
-            });
-        } else {
-            taskErrorMsg.value = error;
-            uni.showToast({
-                title: error,
-                icon: "none",
-                duration: 3000,
-            });
-        }
-    }
-};
-
-const handleCreateTask = async () => {
-    // --- 基础校验逻辑 ---
-    if (!formData.name) {
-        uni.$u.toast("请输入任务名称");
-        return;
-    }
-    if (!formData.accounts.length) {
-        uni.$u.toast("请选择发布账号");
-        return;
-    }
-    if (currentFrequency.value === 5 && !formData.custom_date.length) {
-        uni.$u.toast("请选择任务日期");
-        return;
-    }
-    if (!formData.time_config[0] || !formData.time_config[1]) {
-        uni.$u.toast("请选择任务时间");
-        return;
-    }
-    if (formData.task_exec_type == 1) {
-        if (formData.minutes < 1) return uni.$u.toast("执行时间不能小于1分钟");
-        if (formData.minutes > 9999) return uni.$u.toast("执行时间不能超过9999分钟");
-    }
-
-    if (formData.task_exec_type === 1) {
-        uni.showLoading({ title: "检测冲突中...", mask: true });
-        try {
-            const { messages, task_ids } = await checkTaskPublishTime({
-                accounts: formData.accounts,
-                minutes: formData.minutes,
-            });
-
-            uni.hideLoading();
-
-            if (messages && messages.length > 0) {
-                taskMsgPopContent.value = messages;
-                formData.task_ids = task_ids;
-                showTaskMsgPop.value = true;
-                return;
-            }
-
-            await executeCreateTask();
-        } catch (error: any) {
-            uni.hideLoading();
-            taskErrorMsg.value = error;
-            uni.$u.toast(error);
-        }
-    } else {
-        await executeCreateTask();
-    }
-};
-
-const handleTaskMsgPopConfirm = async () => {
-    await executeCreateTask();
-};
-
-const handleCreateTaskSuccess = () => {
-    uni.$u.route({
-        url: "/ai_modules/device/pages/index/index",
-        type: "reLaunch",
-    });
-    showCreateTaskSuccessDialog.value = false;
-};
-
 onLoad(() => {
+    queryGroupTriggerKeywords();
     on("confirm", (e: any) => {
         const { type, data } = e;
         if (type === ListenerTypeEnum.CHOOSE_ACCOUNT) {
-            if (data.length === 0) return;
-            formData.accounts = data.map((item: any) => ({ id: item.id, account: item.account, type: item.type }));
+            if (!data.length) {
+                formData.accounts = [];
+                return;
+            }
+            formData.accounts = data.map((item: any) => ({
+                id: item.id,
+                account: item.account,
+                type: item.type,
+            }));
         }
         if (type === ListenerTypeEnum.CHOOSE_DATE) {
-            if (data.length === 0) {
+            if (!data.length) {
                 currentFrequency.value = 0;
                 formData.custom_date = [];
                 return;
@@ -571,5 +589,3 @@ onLoad(() => {
     });
 });
 </script>
-
-<style scoped></style>

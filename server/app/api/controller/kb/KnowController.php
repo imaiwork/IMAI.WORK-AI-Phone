@@ -8,6 +8,7 @@ use app\api\lists\kb\KbFilesLists;
 use app\api\lists\kb\KbKnowLists;
 use app\api\logic\kb\KbKnowLogic;
 use app\api\validate\kb\KbKnowValidate;
+use app\common\service\MemberService;
 use Exception;
 use think\db\exception\DbException;
 use think\response\Json;
@@ -64,6 +65,11 @@ class KnowController extends BaseApiController
     public function add(): Json
     {
 //        $params = (new KbKnowValidate())->post()->goCheck('add');
+        $existing = MemberService::countQuotaKnowledges($this->userId);
+        $reason = '';
+        if (!MemberService::canCreate($this->userId, 'knowledge', $existing, $reason)) {
+            return $this->fail($reason . ',请升级会员');
+        }
         $params = $this->request->post();
         $results = KbKnowLogic::add($params, $this->userId);
         if ($results === false) {

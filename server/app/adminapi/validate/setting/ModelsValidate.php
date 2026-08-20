@@ -10,27 +10,30 @@ use app\common\validate\BaseValidate;
 class ModelsValidate extends BaseValidate
 {
     protected $rule = [
-        'id'       => 'require|number',
-        'type'     => 'require|in:1,2,11',
-        'channel'  => 'require|max:100',
-        'name'     => 'require|max:100',
-        'configs'  => 'array',
-        'models'   => 'require|array|checkModels',
-        'orders'   => 'require|array|checkOrders',
+        'id'        => 'require|number',
+        'type'      => 'require|in:1,2,11',
+        'channel'   => 'require|max:100',
+        'name'      => 'require|max:100',
+        'configs'   => 'array',
+        'models'    => 'require|array|checkModels',
+        'orders'    => 'require|array|checkOrders',
+        'is_enable' => 'require|in:0,1',
     ];
 
     protected $message = [
-        'id.require'      => 'id参数缺失',
-        'id.number'       => 'id参数必须为数字',
-        'type.require'    => '请指定模型的类型: [对话模型(1)/向量模型(2)]',
-        'channel.require' => '请选择模型的通道',
-        'channel.max'     => '模型通道选择异常',
-        'name.require'    => '请填写模型的名称',
-        'name.max'        => '模型名称不能超出100个字符',
-        'configs.require' => '请正确配置模型的参数',
-        'configs.array'   => '模型配置参数必须是数组',
-        'models.require'  => '请正确配置模型或子模型',
-        'models.array'    => '模型或子模型必须是数组'
+        'id.require'         => 'id参数缺失',
+        'id.number'          => 'id参数必须为数字',
+        'type.require'       => '请指定模型的类型: [对话模型(1)/向量模型(2)]',
+        'channel.require'    => '请选择模型的通道',
+        'channel.max'        => '模型通道选择异常',
+        'name.require'       => '请填写模型的名称',
+        'name.max'           => '模型名称不能超出100个字符',
+        'configs.require'    => '请正确配置模型的参数',
+        'configs.array'      => '模型配置参数必须是数组',
+        'models.require'     => '请正确配置模型或子模型',
+        'models.array'       => '模型或子模型必须是数组',
+        'is_enable.require'  => 'is_enable参数缺失',
+        'is_enable.in'       => 'is_enable参数只能为0或1',
     ];
 
     public function sceneId(): ModelsValidate
@@ -52,6 +55,11 @@ class ModelsValidate extends BaseValidate
     public function sceneSort(): ModelsValidate
     {
         return $this->only(['orders']);
+    }
+
+    public function sceneSwitchChatModels(): ModelsValidate
+    {
+        return $this->only(['is_enable']);
     }
 
     public function checkModels($value): bool|string

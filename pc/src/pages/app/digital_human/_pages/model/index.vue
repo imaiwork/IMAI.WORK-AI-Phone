@@ -89,7 +89,7 @@
                                     }"
                                     @delete="handleDelete(item.id, item.source_type)" />
                                 <div
-                                    class="absolute top-0 right-0 z-[1000] w-full h-full bg-black/5 flex justify-end p-2 rounded-xl"
+                                    class="absolute top-0 right-0 z-[1000] w-full h-full bg-[#000000]/5 flex justify-end p-2 rounded-xl"
                                     v-if="isDelete">
                                     <div class="w-6 h-6 rounded-full">
                                         <Icon

@@ -142,6 +142,13 @@ class SvAddWechatRecordLogic extends SvBaseLogic
         foreach ($tasks as $task) {
             try {
                 $params = ['task_id' => $task->task_id, 'keywords' => $task->original_message, 'user_id' => $task->user_id];
+
+                if(empty($task->original_message) || is_null($task->original_message)){
+                    $task->intention_type = 0;
+                    $task->update_time = time();
+                    $task->save();
+                    continue;
+                }
                 $response = \app\common\service\ToolsService::Coze()->intention($params);
                 // continue;
                 if($response['code'] == 10000 && isset($response['data']['content'])){

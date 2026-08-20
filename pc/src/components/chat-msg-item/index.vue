@@ -2,8 +2,8 @@
     <div class="chat-message-item flex gap-x-2">
         <!-- My message -->
         <div v-if="type == 1" class="ml-auto flex flex-col">
-            <div class="flex flex-col gap-2 items-end" v-if="fileLists.length > 0">
-                <div v-for="(file, index) in fileLists" class="relative group">
+            <div class="flex flex-col gap-2 items-end" v-if="safeFileLists.length > 0">
+                <div v-for="(file, index) in safeFileLists" class="relative group">
                     <file-card :uid="file.uid || index" :name="file.name" :size="file.size" :url="file.url" />
                     <div
                         class="rounded-lg absolute top-0 left-0 w-full h-full group-hover:visible invisible bg-[rgba(0,0,0,0.4)] cursor-pointer flex items-center justify-center">
@@ -202,7 +202,7 @@ const props = defineProps({
     },
     fileLists: {
         type: Array<{ uid?: string; name: string; type: string; size: number | string; url: string }>,
-        default: [],
+        default: () => [],
     },
     consumeTokens: {
         type: Object,
@@ -223,6 +223,7 @@ const showMyContent = ref(false);
 const showCopyPopover = ref(false);
 const showMyCopyPopover = ref(false);
 const isCopying = ref<"my" | "his" | null>(null);
+const safeFileLists = computed(() => (Array.isArray(props.fileLists) ? props.fileLists : []));
 
 const handleCopy = (type: "my" | "his", format?: "markdown" | "text") => {
     if (isCopying.value) return;

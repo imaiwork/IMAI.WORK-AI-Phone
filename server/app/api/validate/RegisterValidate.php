@@ -4,6 +4,8 @@ namespace app\api\validate;
 
 
 use app\common\model\user\User;
+use app\common\enum\notice\NoticeEnum;
+use app\common\service\sms\SmsDriver;
 use app\common\validate\BaseValidate;
 
 /**
@@ -41,4 +43,34 @@ class RegisterValidate extends BaseValidate
         'password_confirm.confirm' => '两次输入的密码不一致',
         //        'group.group'              => '部门未选择'
     ];
+
+    public function sceneRegister()
+    {
+        $this->rule = [
+            'account' => 'require|checkMobile',
+            'code' => 'require|checkCode',
+        ];
+        $this->message = [
+            'account.require' => '请输入手机号',
+            'code.require' => '请输入手机验证码',
+        ];
+        return $this->only(['account', 'code']);
+    }
+
+    public function checkMobile($mobile)
+    {
+        if (!preg_match('/^1[3-9]\d{9}$/', (string)$mobile)) {
+            return '请输入正确的手机号';
+        }
+        return true;
+    }
+
+    public function checkCode($code, $rule, $data)
+    {
+        $smsDriver = new SmsDriver();
+        if ($smsDriver->verify($data['account'], $code, NoticeEnum::LOGIN_CAPTCHA)) {
+            return true;
+        }
+        return '验证码错误';
+    }
 }

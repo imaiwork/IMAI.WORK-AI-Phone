@@ -48,10 +48,31 @@ class ShanjianVideoSettingController extends BaseApiController
                case 4://新闻体
                     $result = ShanjianVideoSettingLogic::addType4($params);
                     break;
+                case 5://数字人口播无包装
+                    $result = ShanjianVideoSettingLogic::addType5($params);
+                    break;
                 default:
-                    return $this->fail('不支持的闪剪类型');
+                    return $this->fail('不支持的壹传媒类型');
             }
 
+            if ($result) {
+                return $this->data(ShanjianVideoSettingLogic::getReturnData());
+            }
+            return $this->fail(ShanjianVideoSettingLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    /**
+     * 新增数字人口播视频(无包装, shanjian_type=5)
+     * 独立创建入口: AI智剪关闭时 type=5 即最终视频; 开启时成功后自动派生 type=2 包装
+     */
+    public function addType5()
+    {
+        try {
+            $params = (new ShanjianVideoSettingValidate())->post()->goCheck('add');
+            $result = ShanjianVideoSettingLogic::addType5($params);
             if ($result) {
                 return $this->data(ShanjianVideoSettingLogic::getReturnData());
             }

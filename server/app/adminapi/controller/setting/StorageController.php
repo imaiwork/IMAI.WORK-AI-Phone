@@ -56,7 +56,11 @@ class StorageController extends BaseAdminController
         if (true === $result) {
             return $this->success('配置成功', [], 1, 1);
         }
-        return $this->success($result, [], 1, 1);
+        // 本地关闭时的提示仍按成功返回；其余非 true 视为配置失败
+        if ($result === '默认开启本地存储') {
+            return $this->success($result, [], 1, 1);
+        }
+        return $this->fail((string)$result);
     }
 
 

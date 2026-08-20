@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../common/vendor.js");exports.useStableTextareaAutoHeight=function(t,u=40){const a=e.ref(!1),r=e.computed((()=>a.value||!!String(t.value||"").length)),o=e.computed((()=>r.value?{}:{height:`${u}rpx`}));return{autoHeight:r,textareaStyle:o,onTextareaFocus:()=>{a.value=!0},onTextareaBlur:()=>{a.value=!1}}};

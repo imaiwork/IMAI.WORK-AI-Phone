@@ -1,69 +1,157 @@
 <template>
-    <view class="h-screen flex flex-col">
-        <view class="p-4">
-            <view class="flex items-center gap-1 font-medium">
-                <text class="text-[#FF3C26]">*</text>
-                <text>请说说您的想法</text>
-            </view>
-            <view class="mt-4 p-4 bg-white rounded-[16rpx]">
-                <textarea
-                    class="w-full"
-                    v-model="contentVal"
-                    type="textarea"
-                    height="160"
-                    placeholder="请输入或粘贴您的文案 ..."
-                    placeholder-style="color: #7C7E80;font-size: 26rpx; "
-                    :maxlength="contentMaxLength" />
-                <view class="text-[#B2B2B2] text-[26rpx] text-end">
-                    {{ contentVal.length }} / {{ contentMaxLength }}
-                </view>
-            </view>
-        </view>
+    <view class="h-screen flex flex-col bg-[#F7F9FC]">
         <view class="grow min-h-0">
-            <scroll-view class="h-full" scroll-y>
-                <view class="px-4 flex flex-col gap-2 pb-[100rpx] content-box">
+            <scroll-view scroll-y class="h-full">
+                <view class="px-4 pt-4 pb-[32rpx] flex flex-col gap-[16rpx]">
                     <view
-                        v-for="item in chatContentList"
-                        :key="item.id"
-                        class="border border-solid border-[#ededed] rounded-lg p-4 bg-white">
-                        <template v-if="item.status === 'pending'">
-                            <view class="flex items-center gap-1">
-                                <image
-                                    src="@/ai_modules/digital_human/static/icons/star2.svg"
-                                    class="w-[24rpx] h-[24rpx]"></image>
+                        class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                        <view
+                            class="flex items-center px-[28rpx] h-[96rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                            <view class="flex items-center gap-[10rpx]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[30rpx] font-bold text-[#0D1117]">请说说您的想法</text>
+                                <text class="text-[22rpx] text-[#EF4444] font-bold">*</text>
+                            </view>
+                        </view>
+                        <view class="px-[28rpx] pt-[20rpx] pb-[8rpx]">
+                            <textarea
+                                class="w-full text-[28rpx] text-[#0D1117] leading-relaxed"
+                                v-model="contentVal"
+                                :style="{ height: '320rpx' }"
+                                placeholder="请输入或粘贴您的文案 ..."
+                                placeholder-style="color:#C0C4CC;font-size:26rpx;"
+                                :maxlength="contentMaxLength" />
+                        </view>
+                        <view class="flex justify-end px-[28rpx] pb-[20rpx]">
+                            <text
+                                class="text-[22rpx]"
+                                :class="
+                                    contentVal.length >= contentMaxLength
+                                        ? 'text-[#EF4444] font-bold'
+                                        : 'text-[#C0C4CC]'
+                                ">
+                                {{ contentVal.length }} / {{ contentMaxLength }}
+                            </text>
+                        </view>
+                        <view
+                            class="bg-white rounded-[28rpx] px-[28rpx] py-[24rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view class="flex items-center gap-[8rpx] mb-[20rpx]">
+                                <text class="font-bold text-[#0D1117]">口播字数</text>
+                                <text class="text-[22rpx] text-[#EF4444] font-bold">*</text>
+                            </view>
+                            <view class="flex items-center gap-[16rpx]">
+                                <view
+                                    v-for="item in PROMPT_OPTIONS"
+                                    :key="item.id"
+                                    class="flex-1 h-[76rpx] flex flex-col items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                    :class="
+                                        currentPrompt?.id === item.id
+                                            ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                            : 'bg-[#F0F2F5]'
+                                    "
+                                    @click="currentPrompt = item">
+                                    <text
+                                        class="font-bold"
+                                        :class="currentPrompt?.id === item.id ? 'text-primary' : 'text-[#9CA3AF]'">
+                                        {{ item.name }}
+                                    </text>
+                                    <text
+                                        class="text-[20rpx] mt-[2rpx]"
+                                        :class="currentPrompt?.id === item.id ? 'text-[#0065fb]/60' : 'text-[#C0C4CC]'">
+                                        {{ item.length }}字
+                                    </text>
+                                </view>
+                            </view>
+                        </view>
+                    </view>
 
-                                <text class="font-medium">文案生成中</text>
-                            </view>
-                            <view class="mt-4">
-                                <view class="flex flex-col gap-3">
-                                    <view class="w-full h-[28rpx] bg-[#F7F8FC] rounded-[8rpx]"></view>
-                                    <view class="w-[70%] h-[28rpx] bg-[#F7F8FC] rounded-[8rpx]"></view>
-                                    <view class="w-[50%] h-[28rpx] bg-[#F7F8FC] rounded-[8rpx]"></view>
+                    <view
+                        v-for="(item, index) in chatContentList"
+                        :key="item.id ?? index"
+                        class="bg-white rounded-[24rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                        <view v-if="item.status === 'pending'" class="flex">
+                            <view class="w-[6rpx] flex-shrink-0 bg-[#E5E9F0] rounded-l-[24rpx] skeleton-bar" />
+                            <view class="flex-1 px-[24rpx] pt-[22rpx] pb-[24rpx]">
+                                <view class="flex items-center gap-[10rpx] mb-[20rpx]">
+                                    <view class="skeleton w-[40rpx] h-[40rpx] rounded-full" />
+                                    <view class="skeleton h-[24rpx] w-[120rpx] rounded-full" />
                                 </view>
-                                <view class="flex flex-col gap-3 mt-6">
-                                    <view class="w-full h-[28rpx] bg-[#F7F8FC] rounded-[8rpx]"></view>
-                                    <view class="w-[70%] h-[28rpx] bg-[#F7F8FC] rounded-[8rpx]"></view>
-                                    <view class="w-[50%] h-[28rpx] bg-[#F7F8FC] rounded-[8rpx]"></view>
-                                    <view class="w-[70%] h-[28rpx] bg-[#F7F8FC] rounded-[8rpx]"></view>
+                                <view class="flex flex-col gap-[12rpx]">
+                                    <view class="skeleton h-[26rpx] w-full rounded-full" />
+                                    <view class="skeleton h-[26rpx] w-[88%] rounded-full" />
+                                    <view class="skeleton h-[26rpx] w-[72%] rounded-full" />
+                                    <view class="skeleton h-[26rpx] w-[80%] rounded-full" />
+                                    <view class="skeleton h-[26rpx] w-[60%] rounded-full" />
                                 </view>
                             </view>
-                        </template>
-                        <template v-else>
-                            <view class="text-[#323232] leading-[1.5]">{{ item.content }}</view>
-                            <view class="justify-end flex mt-2">
-                                <u-button type="primary" size="mini" @click="useContent(item)">使用文案</u-button>
+                        </view>
+
+                        <view v-else class="flex">
+                            <view class="w-[6rpx] flex-shrink-0 bg-primary rounded-l-[24rpx]" />
+                            <view class="flex-1 px-[24rpx] pt-[22rpx] pb-[18rpx]">
+                                <view class="flex items-center justify-between mb-[16rpx]">
+                                    <view class="flex items-center gap-[10rpx]">
+                                        <view
+                                            class="w-[40rpx] h-[40rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center flex-shrink-0">
+                                            <text class="text-[22rpx] font-bold text-primary">
+                                                {{ chatContentList.length - index }}
+                                            </text>
+                                        </view>
+                                        <text class="text-xs text-[#9CA3AF]">AI 生成文案</text>
+                                    </view>
+                                    <view
+                                        class="w-[44rpx] h-[44rpx] rounded-full bg-[#F3F4F6] flex items-center justify-center"
+                                        @click="handleDeleteItem(index)">
+                                        <u-icon name="close" color="#9CA3AF" size="16" />
+                                    </view>
+                                </view>
+
+                                <view
+                                    class="bg-[#F8FAFC] rounded-[16rpx] px-[20rpx] py-[14rpx] border border-solid border-[#F0F2F5]">
+                                    <u-input
+                                        v-model="item.content"
+                                        type="textarea"
+                                        placeholder="请输入文案内容"
+                                        placeholder-style="color:#C0C4CC;font-size:26rpx;"
+                                        :maxlength="500"
+                                        :auto-height="false" />
+                                    <view class="mt-[12rpx] flex justify-between items-center">
+                                        <text class="text-[22rpx] text-[#C0C4CC]">
+                                            {{ item.content.length }} / 500
+                                        </text>
+                                        <view
+                                            class="flex items-center gap-[6rpx] px-[20rpx] py-[8rpx] rounded-full"
+                                            style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                                            @click="useContent(item)">
+                                            <u-icon name="checkmark" color="#fff" size="14" />
+                                            <text class="text-[22rpx] font-bold text-white">使用文案</text>
+                                        </view>
+                                    </view>
+                                </view>
                             </view>
-                        </template>
+                        </view>
                     </view>
                 </view>
             </scroll-view>
         </view>
-        <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 pb-5 pt-4 px-4">
+
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-t border-solid border-[#F0F2F5] px-4 pt-[20rpx] pb-[50rpx]">
             <view
-                class="flex-1 flex items-center justify-center text-white rounded-[8rpx] h-[100rpx]"
-                :class="[contentVal.length > 0 && !isGenerating ? 'bg-black' : 'bg-[#787878CC]']"
-                @click="contentPost()">
-                生成文案<template v-if="isSystem">（消耗{{ getToken }}算力）</template>
+                class="h-[96rpx] rounded-[24rpx] flex items-center justify-center gap-[10rpx] relative overflow-hidden transition-all duration-200"
+                :class="canGenerate ? 'shadow-[0_10rpx_30rpx_rgba(28,111,235,0.30)]' : 'opacity-60'"
+                :style="
+                    canGenerate
+                        ? 'background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)'
+                        : 'background: #C0C4CC'
+                "
+                @click="contentPost">
+                <text class="text-[30rpx] font-extrabold text-white tracking-wide">生成文案</text>
+                <view
+                    v-if="isSystem"
+                    class="flex items-center gap-[4rpx] bg-[#ffffff]/20 rounded-full px-[16rpx] py-[6rpx]">
+                    <text class="text-[22rpx] text-white font-medium">消耗 {{ getToken }} 算力</text>
+                </view>
             </view>
         </view>
     </view>
@@ -76,6 +164,12 @@ import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import useAgent from "@/ai_modules/digital_human/hooks/useAgent";
 
+const PROMPT_OPTIONS = [
+    { id: 1, name: "长", length: 500 },
+    { id: 2, name: "中", length: 300 },
+    { id: 3, name: "短", length: 150 },
+] as const;
+
 const { emit } = useEventBusManager();
 
 const userStore = useUserStore();
@@ -86,27 +180,44 @@ const agentData = ref<{
     genType: number;
     agentType: number;
     agentId: number;
+    engine: number;
+    persona_id: number | null;
 }>({
     type: "",
     genType: 0,
     agentType: 0,
     agentId: -1,
+    engine: 1,
+    persona_id: null,
 });
 
 const contentVal = ref<string>("");
 const contentMaxLength = 500;
 const chatContentList = ref<any[]>([]);
 
-// 是否正在生成
 const isGenerating = ref<boolean>(false);
 
 const isSystem = computed(() => agentData.value.agentType == 1);
 
-// 获取消耗的算力
+/** 按钮是否可点击 */
+const canGenerate = computed(() => contentVal.value.length > 0 && !isGenerating.value);
+
 const getToken = computed(() => {
-    const token = userStore.getTokenByScene(TokensSceneEnum.COZE_COPYWRITING)?.score;
+    const token =
+        agentData.value.engine == 1
+            ? userStore.getTokenByScene(TokensSceneEnum.COZE_COPYWRITING)?.score
+            : userStore.getTokenByScene(TokensSceneEnum.COZE_COPYWRITING_SENIOR)?.score;
     return parseFloat(token);
 });
+
+const { currentPrompt, currentPromptNum } = usePromptConfig();
+
+function usePromptConfig() {
+    const currentPrompt = ref<(typeof PROMPT_OPTIONS)[number]>(PROMPT_OPTIONS[0]);
+    const currentPromptNum = ref<number>(1);
+
+    return { currentPrompt, currentPromptNum };
+}
 
 const { result, getDetail, handleGenerate, systemChat } = useAgent({
     onfinish: () => {
@@ -127,11 +238,7 @@ const { result, getDetail, handleGenerate, systemChat } = useAgent({
         }
         isGenerating.value = false;
         uni.hideLoading();
-        uni.showToast({
-            title: error || "生成失败，请重试",
-            icon: "none",
-            duration: 3000,
-        });
+        uni.$u.toast(error || "生成失败，请重试");
     },
 });
 
@@ -144,23 +251,23 @@ const contentPost = async () => {
         uni.$u.toast("文案在生成中...");
         return;
     }
-    if (userTokens.value < (isSystem.value ? 0 : getToken.value)) {
-        uni.$u.toast("算力不足，请充值！");
+    if (isSystem.value && userTokens.value < getToken.value) {
+        powerInsufficientTip();
         return;
     }
-    const chatContent = reactive({
-        content: "",
-        status: "pending",
-    });
+    const chatContent = reactive({ content: "", status: "pending" });
     isGenerating.value = true;
     chatContentList.value.unshift(chatContent);
+
     if (isSystem.value) {
         try {
             const { content } = await systemChat({
                 sn: agentData.value.agentId,
                 keywords: contentVal.value,
                 number: 1,
-                length: 200,
+                length: currentPrompt.value.length,
+                type: agentData.value.engine,
+                persona_id: agentData.value.persona_id,
             });
             if (content && content.length > 0) {
                 chatContent.content = content[0];
@@ -170,27 +277,34 @@ const contentPost = async () => {
             }
         } catch (err: any) {
             isGenerating.value = false;
-            chatContentList.value = [];
-            uni.showToast({
-                title: err || "生成失败，请重试",
-                icon: "none",
-                duration: 3000,
-            });
+            chatContentList.value.shift();
+            uni.$u.toast(err || "生成失败，请重试");
         }
     } else {
-        await handleGenerate(contentVal.value, agentData.value.agentType);
+        try {
+            await handleGenerate(contentVal.value, agentData.value.agentType);
+        } catch (err: any) {
+            isGenerating.value = false;
+            chatContentList.value.shift();
+            uni.hideLoading();
+            uni.$u.toast(err || "生成失败，请重试");
+        }
     }
 };
 
+/** 删除单条结果 */
+const handleDeleteItem = (index: number) => {
+    chatContentList.value.splice(index, 1);
+};
+
 const useContent = (item: any) => {
-    const { status, content } = item;
-    if (status === "pending") {
+    if (item.status === "pending") {
         uni.$u.toast("文案在生成中...");
         return;
     }
     emit("confirm", {
         type: ListenerTypeEnum.SORA_AI_COPYWRITER,
-        data: content,
+        data: item.content,
     });
     uni.navigateBack();
 };
@@ -210,7 +324,33 @@ onLoad(async (options: any) => {
 </script>
 
 <style scoped lang="scss">
-.send-btn {
-    @apply w-[50rpx] h-[50rpx] rounded-full flex items-center justify-center;
+.skeleton {
+    background: linear-gradient(90deg, #f0f2f5 25%, #e8eaed 50%, #f0f2f5 75%);
+    background-size: 400% 100%;
+    animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+.skeleton-bar {
+    background: linear-gradient(180deg, #f0f2f5 25%, #e8eaed 50%, #f0f2f5 75%);
+    background-size: 100% 400%;
+    animation: skeleton-shimmer-v 1.4s ease infinite;
+}
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes skeleton-shimmer-v {
+    0% {
+        background-position: 50% 100%;
+    }
+    100% {
+        background-position: 50% 0%;
+    }
 }
 </style>

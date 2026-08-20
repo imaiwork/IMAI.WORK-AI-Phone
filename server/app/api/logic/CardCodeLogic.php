@@ -7,8 +7,12 @@ use app\common\logic\AccountLogLogic;
 use app\common\logic\BaseLogic;
 use app\common\model\cardcode\CardCode;
 use app\common\model\cardcode\CardCodeRecord;
+use app\common\model\user\UserLevel;
+use app\common\model\member\MemberUser;
 use app\common\model\recharge\RechangeCardCodeLog;
 use app\common\model\user\User;
+use app\common\service\MemberService;
+use app\common\service\TeamBillingService;
 use think\Exception;
 use think\facade\Cache;
 use think\facade\Db;
@@ -25,15 +29,17 @@ class CardCodeLogic extends BaseLogic
     /**
      * @notes 获取卡密
      * @param string $sn
-     * @param string $userId
+     * @param int $userId
+     * @param string $scene tokens=仅算力卡(OEM获取算力等入口)
      * @return array|string
      * @author kb
      * @date 2023/7/11 16:29
      */
-    public function checkCard(string $sn, int $userId)
+    public function checkCard(string $sn, int $userId, string $scene = '')
     {
         try {
             $cardCode = $this->checkSn($sn)['card_code'];
+            $this->assertSceneAllowsType($scene, (int)$cardCode->type);
             $content = '';
             $validTime = '';
             $now = time();
@@ -41,6 +47,10 @@ class CardCodeLogic extends BaseLogic
                 case CardCodeEnum::TYPE_TOKENS:
                 case CardCodeEnum::TYPE_DISTRIBUTION_TOKENS:
                     $content = $cardCode->balance;
+                    break;
+                case CardCodeEnum::TYPE_MEMBER:
+                    $levelName = UserLevel::where('id', $cardCode->member_level_id)->value('level_name');
+                    $content = ($levelName ?: '?') . ' ' . (int)$cardCode->member_days . ' 天';
                     break;
             }
             return [
@@ -62,10 +72,12 @@ class CardCodeLogic extends BaseLogic
     /**
      * @notes 卡密兑换
      * @param $sn
+     * @param int $userId
+     * @param string $scene tokens=仅算力卡
      * @author kb
      * @date 2023/7/11 17:11
      */
-    public function useCard($sn, $userId)
+    public function useCard($sn, $userId, string $scene = '')
     {
         try {
 
@@ -78,17 +90,39 @@ class CardCodeLogic extends BaseLogic
             Db::startTrans();
             $cardData = $this->checkSn($sn);
             $cardCode = $cardData['card_code'];
+            $this->assertSceneAllowsType($scene, (int)$cardCode->type);
             $user = User::findOrEmpty($userId);
 
 
+            if ($cardCode->type == CardCodeEnum::TYPE_MEMBER) {
+                $levelId = (int)($cardCode->member_level_id ?? 0);
+                $days = (int)($cardCode->member_days ?? 0);
+                if ($levelId <= 0 || $days <= 0) {
+                    throw new Exception('该会员兑换码配置无效');
+                }
+                MemberService::grant(
+                    $userId, $levelId, $days,
+                    MemberUser::SOURCE_CARDCODE,
+                    '卡密兑换:' . $sn
+                );
+                MemberService::thawWithinQuota($userId);
+            }
+
             //兑换算力值
             if (in_array($cardCode->type, [CardCodeEnum::TYPE_TOKENS, CardCodeEnum::TYPE_DISTRIBUTION_TOKENS])) {
-                $balance = $cardCode['balance'] ?? 0;
+                $balance = (float)($cardCode['balance'] ?? 0);
                 if ($balance > 0) {
-                    //用户添加次数
-                    $user->tokens += $balance;
-                    $user->save();
-                    //记录流水
+                    // 企业卡密:成员/管理员入企业钱包;团队主入个人算力(与划拨/消费口径一致)
+                    // 个人卡密:始终入个人算力;显式 team_id=0,避免成员兑换时流水误挂企业且 left_tokens=0
+                    $cardTeamId = (int)($cardCode->team_id ?? 0);
+                    $creditedToTeam = false;
+                    if ($cardTeamId > 0) {
+                        $creditedToTeam = TeamBillingService::creditTeamWallet((int)$userId, $balance, $cardTeamId);
+                    }
+                    if (!$creditedToTeam) {
+                        $user->tokens = bcadd((string)$user->tokens, (string)$balance, 2);
+                        $user->save();
+                    }
                     $extra = ['变动来源' => "卡密兑换增加算力", '变动详情' => $sn];
                     AccountLogLogic::add(
                         $userId,
@@ -98,7 +132,8 @@ class CardCodeLogic extends BaseLogic
                         1,
                         $sn,
                         AccountLogEnum::getChangeTypeDesc(AccountLogEnum::TOKENS_INC_CARDCODE_GIVE),
-                        $extra
+                        $extra,
+                        $cardTeamId > 0 ? $cardTeamId : 0
                     );
                 }
             }
@@ -131,6 +166,20 @@ class CardCodeLogic extends BaseLogic
             return $e->getMessage();
         }
 
+    }
+
+    /**
+     * @notes 按兑换入口校验卡密类型
+     * @param string $scene tokens=仅允许算力卡/代理算力卡
+     */
+    private function assertSceneAllowsType(string $scene, int $type): void
+    {
+        if ($scene !== 'tokens') {
+            return;
+        }
+        if (!in_array($type, [CardCodeEnum::TYPE_TOKENS, CardCodeEnum::TYPE_DISTRIBUTION_TOKENS], true)) {
+            throw new Exception('此处仅支持兑换算力卡密，会员兑换码请在会员中心兑换');
+        }
     }
 
     /**

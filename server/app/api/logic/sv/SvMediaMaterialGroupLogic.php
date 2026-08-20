@@ -55,11 +55,22 @@ class SvMediaMaterialGroupLogic extends SvBaseLogic
     {
         // 删除素材分组逻辑
         try {
-            if (is_string($id)) {
-                SvMediaMaterialGroup::destroy(['id' => $id, 'user_id' => self::$uid]);
-            } else {
-                SvMediaMaterialGroup::whereIn('id', $id)->where('user_id', self::$uid)->select()->delete();
+            $ids = is_array($id) ? $id : [$id];
+            $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+            if (empty($ids)) {
+                self::setError('请选择要删除的素材分组');
+                return false;
             }
+
+            $groups = SvMediaMaterialGroup::whereIn('id', $ids)
+                ->where('user_id', self::$uid)
+                ->select();
+            if ($groups->isEmpty()) {
+                self::setError('素材分组不存在');
+                return false;
+            }
+
+            $groups->delete();
             return true;
         } catch (\Exception $e) {
             self::setError($e->getMessage());

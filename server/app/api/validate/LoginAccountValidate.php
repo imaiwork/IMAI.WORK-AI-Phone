@@ -142,9 +142,17 @@ class LoginAccountValidate extends BaseValidate
     {
         $smsDriver = new SmsDriver();
         $result = $smsDriver->verify($data['account'], $code, NoticeEnum::LOGIN_CAPTCHA);
-        if ($result) {
-            return true;
+        if (!$result) {
+            return '验证码错误';
         }
-        return '验证码错误';
+
+        $userInfo = User::where(['mobile' => $data['account']])
+            ->field(['id', 'is_disable'])
+            ->findOrEmpty();
+        if (!$userInfo->isEmpty() && $userInfo['is_disable'] === YesNoEnum::YES) {
+            return '用户已禁用';
+        }
+
+        return true;
     }
 }

@@ -39,6 +39,35 @@ class KnowController extends BaseAdminController
     }
 
     /**
+     * @notes 知识库创建
+     * @return Json
+     */
+    public function add(): Json
+    {
+        $params = $this->request->post();
+        $results = KbKnowLogic::add($params, 0);
+        if ($results === false) {
+            return $this->fail(KbKnowLogic::getError());
+        }
+        return $this->success('创建成功', $results);
+    }
+
+    /**
+     * @notes 知识库编辑
+     * @return Json
+     * @author kb
+     */
+    public function edit(): Json
+    {
+        $params = $this->request->post();
+        $results = KbKnowLogic::edit($params, 0);
+        if ($results === false) {
+            return $this->fail(KbKnowLogic::getError());
+        }
+        return $this->success('编辑成功');
+    }
+
+    /**
      * @notes 知识库删除
      * @return Json
      * @author kb
@@ -102,6 +131,21 @@ class KnowController extends BaseAdminController
         $get = $this->request->get();
         $result = KbKnowLogic::files($get);
         return $this->data($result);
+    }
+
+    /**
+     * @notes 文件命名
+     * @return Json
+     * @author kb
+     */
+    public function fileRename(): Json
+    {
+        $params = $this->request->post();
+        $results = KbKnowLogic::fileRename(intval($params['fd_id']), $params['name'], 0);
+        if ($results === false) {
+            return $this->fail(KbKnowLogic::getError());
+        }
+        return $this->success('命名成功');
     }
 
     /**

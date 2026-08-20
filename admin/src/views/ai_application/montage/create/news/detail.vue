@@ -37,20 +37,16 @@
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
                 <el-table-column label="ID" prop="id" min-width="80" />
                 <el-table-column label="任务ID" prop="task_id" width="160" show-overflow-tooltip />
+                <el-table-column label="回调ID" prop="result_id" width="160" show-overflow-tooltip />
                 <el-table-column label="素材组" prop="name" min-width="300">
                     <template #default="{ row }">
                         <div class="grid grid-cols-4 gap-2">
-                            <div v-for="item in row.material" :key="item.id" class="w-[60px] h-[60px]">
-                                <image-contain
-                                    v-if="item.type === 'image'"
-                                    :src="item.fileUrl"
-                                    width="60"
-                                    height="60"
-                                    fit="cover"
-                                    :preview-src-list="[item.fileUrl]"
-                                    preview-teleported></image-contain>
-                                <video v-else :src="item.fileUrl" class="w-full h-full object-cover" />
-                            </div>
+                            <material-thumb
+                                v-for="item in row.material"
+                                :key="item.id"
+                                :src="item.fileUrl"
+                                :type="item.type"
+                                @play="handlePlay" />
                         </div>
                     </template>
                 </el-table-column>
@@ -62,9 +58,10 @@
                 <el-table-column label="消耗算力" prop="video_token" min-width="120" />
                 <el-table-column label="备注" prop="remark" min-width="120" />
                 <el-table-column label="创作时间" prop="create_time" min-width="180" />
+                <el-table-column label="更新时间" prop="update_time" min-width="180" show-overflow-tooltip />
                 <el-table-column label="操作" width="160" fixed="right">
                     <template #default="{ row }">
-                        <el-button type="primary" link @click="handlePlay(row)"> 播放 </el-button>
+                        <el-button type="primary" link @click="handlePlay(row.video_result_url)"> 播放 </el-button>
                         <el-button type="primary" link @click="handleDownload(row)"> 下载 </el-button>
                         <el-button
                             v-perms="['ai_application.montage.create.news.detail/delete']"
@@ -94,6 +91,7 @@ import { usePaging } from "@/hooks/usePaging";
 import feedback from "@/utils/feedback";
 import { downloadFile } from "@/utils/util";
 import { ElTable } from "element-plus";
+import MaterialThumb from "../components/material-thumb.vue";
 
 const route = useRoute();
 
@@ -143,14 +141,13 @@ const handleDownload = async (row: any) => {
     downloadFile(video_result_url);
 };
 
-const handlePlay = async (row: any) => {
-    const { video_result_url } = row;
-    if (!video_result_url) {
+const handlePlay = async (url: string) => {
+    if (!url) {
         feedback.msgError("视频地址为空");
         return;
     }
     showVideo.value = true;
-    videoUrl.value = video_result_url;
+    videoUrl.value = url;
 };
 
 const handleDelete = async (id: number | number[]) => {

@@ -11,8 +11,12 @@ use app\common\model\article\ArticleCate;
 use app\common\model\article\ArticleCollect;
 use app\common\model\decorate\DecoratePage;
 use app\common\model\human\HumanVoice;
+use app\common\service\chat\ChatModelsService;
 use app\common\service\ConfigService;
+use app\common\service\draw\MediaModelsService;
 use app\common\service\FileService;
+use app\common\service\transcoding\OssMediaProcessService;
+use app\common\service\UserDisplaySanitizer;
 
 
 /**
@@ -155,32 +159,28 @@ class PcLogic extends BaseLogic
 
             'shop_title' => ConfigService::get('website', 'shop_title', 'AI时代，企业化AI工具的新星'),
             'client_download'                 => [
-                'windows' =>  ConfigService::get('client_download','windows',''),
-                'mac_intel' =>  ConfigService::get('client_download','mac_intel',''),
-                'mac_apple' =>  ConfigService::get('client_download','mac_apple',''),
-                'android' =>  ConfigService::get('client_download','android',''),
-                'mini_programs' =>  ConfigService::get('client_download','mini_programs',''),
-                'h5' =>  ConfigService::get('client_download','h5',''),
+                'windows' =>  ConfigService::get('client_download', 'windows', ''),
+                'mac_intel' =>  ConfigService::get('client_download', 'mac_intel', ''),
+                'mac_apple' =>  ConfigService::get('client_download', 'mac_apple', ''),
+                'android' =>  ConfigService::get('client_download', 'android', ''),
+                'mini_programs' =>  ConfigService::get('client_download', 'mini_programs', ''),
+                'h5' =>  ConfigService::get('client_download', 'h5', ''),
             ],
         ];
 
         //模型
         $modelList =  HumanVoice::getModelList();
-        $hdList = ConfigService::get('hd', 'list', []);
-        // 隐藏即梦
-        foreach ($hdList['channel'] as $val) {
-            if ($val['id'] == '2'){
-                continue;
-            }else{
-                $hdmodel['channel'][] = $val;
-            }
-        }
+        $drawModels = MediaModelsService::getChannelList();
 
         //模型
         $indexConfig =  ConfigService::get('index', 'config', []);
 
-        // 备案信息
+        // 备案信息；团队 OEM 站点用品牌管理的备案号/企业名称覆盖平台 copyright
         $copyright = ConfigService::get('copyright', 'config', []);
+        $oemCopyright = \app\api\logic\TeamLogic::siteCopyright();
+        if ($oemCopyright !== null) {
+            $copyright = $oemCopyright;
+        }
 
         // 公众号二维码
         $oaQrCode = ConfigService::get('oa_setting', 'qr_code', '');
@@ -199,55 +199,25 @@ class PcLogic extends BaseLogic
         $lianlian = self::getLianlianConfig();
 
         //大语言模型
-        $chatModels = ConfigService::get('chat', 'ai_model', []);
-        foreach ($chatModels['channel'] as $key=>$value){
-            $chatModels['channel'][$key]['logo'] = isset($value['logo']) ? FileService::getFileUrl($value['logo']) : '';
-        }
-
+        $chatModels = ChatModelsService::getChannelList();
         //视频案例
         $videoCases = ConfigService::get('digital_human', 'video_case', []);
-        foreach ($videoCases as $key=> $videoCase){
+        foreach ($videoCases as $key => $videoCase) {
             $videoCases[$key]['image'] = FileService::getFileUrl($videoCase['image']);
             $videoCases[$key]['video_case_url'] = FileService::getFileUrl($videoCase['video_case_url']);
         }
 
         $banner =  config('app.app_host') . '/static/images/human/banner.png';
-        $transcoding = true;
-        $config = [
-            'default' => ConfigService::get('storage', 'default', 'local'),
-            'engine' => ConfigService::get('storage') ?? ['local' => []],
-        ];
-
-        switch ($config['default']) {
-            case 'aliyun':
-                $aliyun = $config['engine']['aliyun'];
-                if (!isset($aliyun['PipelineId']) || !isset($aliyun['Location']) || !isset($aliyun['TemplateId'])) {
-                    $transcoding = false;
-                }
-                if (empty($aliyun['PipelineId']) || empty($aliyun['Location']) || empty($aliyun['TemplateId'])) {
-                    $transcoding = false;
-                }
-                break;
-            case 'qcloud':
-                $qcloud = $config['engine']['qcloud'];
-                if (!isset($qcloud['TemplateId'])) {
-                    $transcoding = false;
-                }
-                if (empty($qcloud['TemplateId'])) {
-                    $transcoding = false;
-                }
-                break;
-            default:
-                $transcoding = false;
-                break;
-        }
+        $siteClosed = \app\api\logic\TeamLogic::currentRequestSiteClosed() ? 1 : 0;
         return [
-//            'domain' => FileService::getFileUrl(),
-            'is_robot_show' => ConfigService::get('assistants', 'is_robot_show',0),
+            //            'domain' => FileService::getFileUrl(),
+            'is_robot_show' => ConfigService::get('assistants', 'is_robot_show', 0),
             'domain' => config('app.app_host') . '/',
+            'site_closed' => $siteClosed,
             'login' => $loginConfig,
             'website' => $website,
-            'is_oss_transcode' => $transcoding,
+            // 与后台「媒体处理」一致：仅阿里云 + OSS 切割/转码(MPS) 且配置完整时为 true
+            'is_oss_transcode' => OssMediaProcessService::isEnabled(),
             'version' => $version,
             'copyright' => $copyright,
             'admin_url' => request()->domain() . '/admin',
@@ -262,24 +232,22 @@ class PcLogic extends BaseLogic
                 'privacy' => ConfigService::get('digital_human', 'privacy', []),
                 'channel' => $modelList['channel'] ?? [],
                 'voice' => $modelList['voice'] ?? [],
-                'shanjian_auth' => ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI'),
+                'shanjian_auth' => UserDisplaySanitizer::digitalHumanAuthName(ConfigService::get('digital_human', 'shanjian_auth', '数字人')),
                 'banner' =>  FileService::getFileUrl(ConfigService::get('digital_human', 'banner', $banner)),
                 'video_case' => $videoCases,
                 'video_case_open' => (int)ConfigService::get('digital_human', 'video_case_open', 0),
             ],
             'card_code'                 => [
-                'is_open'   => ConfigService::get('card_code','is_open',0),
+                'is_open'   => ConfigService::get('card_code', 'is_open', 0),
             ],
             'recharge'                 => [
-                'is_ios_open'   => ConfigService::get('recharge','is_ios_open',0),
-                'is_and_open'   => ConfigService::get('recharge','is_and_open',0),
+                'is_ios_open'   => ConfigService::get('recharge', 'is_ios_open', 0),
+                'is_and_open'   => ConfigService::get('recharge', 'is_and_open', 0),
             ],
-            'draw' => [
-                'channel' => $hdmodel['channel'] ?? [],
-            ],
+            'draw_model' => $drawModels,
             'app_config' => ConfigService::get('app_config', 'redbook', []),
             'ai_live' =>  ConfigService::get('ai_live', 'config', []),
-            'by_name'=>  self::getByName(),
+            'by_name' =>  self::getByName(),
             'ai_model' =>  $chatModels,
             'wechat_remarks' => ConfigService::get('add_remark', 'wechat', []),
             'comment_screening' => ConfigService::get('touch_clue', 'comment_screening', []),
@@ -377,6 +345,18 @@ class PcLogic extends BaseLogic
             $info['fs_image'] = FileService::getFileUrl($info['fs_image']);
         }
 
+        // 团队 OEM 站点(按请求域名解析):联系客服统一用 OEM 设置的管理员联系二维码
+        try {
+            $tenant = \app\api\logic\TeamLogic::resolveTenant((string)\think\facade\Request::domain(), '');
+            $adminQr = (string)($tenant['admin_qr'] ?? '');
+            if ((int)($tenant['team_id'] ?? 0) > 0 && $adminQr !== '') {
+                $info['image'] = $adminQr;
+                $info['wx_image'] = $adminQr;
+                $info['fs_image'] = $adminQr;
+            }
+        } catch (\Throwable $e) {
+        }
+
         return $info;
     }
 
@@ -449,14 +429,16 @@ class PcLogic extends BaseLogic
 
             foreach ($info['voice'] as $key => $value) {
 
-                if ($value['status'] != 1) {
+                if ($value['status'] != 1 || !isset($value['type']) || $value['type'] != 3) {
 
                     unset($info['voice'][$key]);
 
                     continue;
                 }
 
-                $info['voice'][$key]['logo']    = FileService::getFileUrl($value['logo']);
+
+                $info['voice'][$key]['logo']    = FileService::getFileUrl($value['logo'] ?? '');
+                $info['voice'][$key]['url']    = FileService::getFileUrl($value['url'] ?? '');
             }
             $info['voice'] = array_values($info['voice']);
         }

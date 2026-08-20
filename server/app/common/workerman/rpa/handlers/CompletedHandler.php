@@ -28,54 +28,16 @@ class CompletedHandler extends BaseMessageHandler
                 throw new \Exception('设备未连接');
             }
             $worker->uidConnections[$uid]->initial = 1;
-            // $worker->uidConnections[$uid]->crontabId = Timer::add(90, function () use ($uid, $payload, $worker) {
-            //     $uid = $this->service->getRedis()->get("xhs:device:{$payload['deviceId']}") ?? $uid;
-            //     if (!isset($worker->uidConnections[$uid])) {
-            //         $msg = '设备不在线';
-            //         $this->setLog('设备绑定定时器, 设备号:' . $payload['deviceId'] . ', uid:' . $uid . '  msg:' . $msg, 'device');
-            //         return;
-            //     }
-            //     if ($worker->uidConnections[$uid]->isMsgRunning == 0) {
-            //         try {
-            //             $handler = new CrontabHandler($this->service);
-            //             //$this->setLog('设备绑定定时器, 设备号:'. $payload['deviceId']. ', uid:'. $uid. ', name:'. $worker->uidConnections[$uid]->name, 'device');
-            //             return $handler->runing($worker->uidConnections[$uid]);
-            //         } catch (\Exception $e) {
-            //             $this->setLog($e, 'error');
-            //         }
-            //     } else {
-            //         $msg = '设备正在回复消息中, 请稍后再试';
-            //         $this->setLog('设备绑定定时器, 设备号:' . $payload['deviceId'] . ', uid:' . $uid . ', name:' . $worker->uidConnections[$uid]->name . '  msg:' . $msg, 'device');
-            //     }
-            // });
-
-            //示例数据定时任务
-            // $worker->uidConnections[$uid]->testCrontabId = Timer::add(3, function () use ($uid, $payload, $worker) {
-            //     $find = SvPublishSettingDetail::where('data_type', 1)->where('status', 0)->limit(1)->findOrEmpty();
-            //     if (!$find->isEmpty()) {
-            //         $uid = $this->service->getRedis()->get("xhs:device:{$payload['deviceId']}") ?? $uid;
-            //         if (!isset($worker->uidConnections[$uid])) {
-            //             $msg = '设备不在线';
-            //             // $this->setLog('设备绑定定时器, 设备号:'. $payload['deviceId']. ', uid:'. $uid . '  msg:' . $msg, 'device');
-            //             return;
-            //         }
-
-            //         if ($worker->uidConnections[$uid]->isMsgRunning == 0) {
-            //             try {
-            //                 $handler = new CrontabHandler($this->service);
-            //                 return $handler->runing($worker->uidConnections[$uid], 1);
-            //             } catch (\Exception $e) {
-            //                 $this->setLog($e, 'error');
-            //             }
-            //         } else {
-            //             $msg = '设备正在回复消息中, 请稍后再试1';
-            //             $this->setLog('设备绑定定时器, 设备号:' . $payload['deviceId'] . ', uid:' . $uid . ', name:' . $worker->uidConnections[$uid]->name . ' msg:' . $msg, 'device');
-            //         }
-            //     }
-            // });
-
-            $this->service->getRedis()->set("xhs:init:{$payload['deviceId']}", date('Y-m-d H:i:s', time()));
-            $this->service->getRedis()->set("xhs:device:{$payload['deviceId']}:status", 'online');
+            
+            $deviceId = trim((string)$payload['deviceId']);
+            $payload['deviceId'] = $deviceId;
+            $this->service->getRedis()->set("xhs:init:{$deviceId}", date('Y-m-d H:i:s', time()));
+            $this->service->getRepository()->markDeviceOnline(
+                $deviceId,
+                $uid,
+                (int)$this->service->getWorker()->id,
+                (string)($connection->appversion ?? '')
+            );
             $payload['reply'] = '初始化完成';
             //获取设备对应用户的回复策略
             $device = SvDevice::where('device_code', $payload['deviceId'])->limit(1)->findOrEmpty();
@@ -99,7 +61,7 @@ class CompletedHandler extends BaseMessageHandler
             $this->sendWeb([
                 'type' => WorkerEnum::WEB_DEVICE_INIT_OK_TEXT,
                 'deviceId' => $payload['deviceId'],
-                'code' => WorkerEnum::DEVICE_INIT_OK,
+                'code' => WorkerEnum::SUCCESS_CODE,
                 'msg' => '设备初始化完成'
             ]);
 
@@ -115,7 +77,7 @@ class CompletedHandler extends BaseMessageHandler
         }
     }
 
-    private function sendWeb($content)
+    private function sendWeb(array $content)
     {
 
         try {

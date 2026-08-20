@@ -31,8 +31,11 @@
             </template>
         </ElTooltip>
         <div class="text-[#0000004d] text-[11px] mt-2 mx-3">
-            <div v-for="(item, index) in getCopyright" :key="index">
-                <a :href="item.value" target="_blank" class="hover:underline">{{ item.key }}</a>
+            <div v-for="(item, index) in copyrightList" :key="index">
+                <a v-if="item.value" :href="item.value" target="_blank" class="hover:underline break-all">{{
+                    item.key
+                }}</a>
+                <span v-else class="break-all">{{ item.key }}</span>
             </div>
             <div>{{ getByName }}</div>
             <div>Version：{{ getVersionName }}</div>
@@ -49,12 +52,15 @@ import DownLoadAndImg from "@/assets/images/down_and_icon.png";
 import DownLoadMiniImg from "@/assets/images/down_mini_icon.png";
 
 const appStore = useAppStore();
-const { getCopyright, getVersion, getByName } = toRefs(appStore);
+const { getVersion, getByName } = toRefs(appStore);
+const copyrightList = computed(() => {
+    const list = appStore.getCopyRightConfig;
+    return Array.isArray(list) ? list : [];
+});
 
 const getVersionName = computed(() => {
-    const { version_number } = getVersion.value;
-    if (!version_number) return;
-    return `v${version_number.split("").join(".")}`;
+    const { version_name } = getVersion.value;
+    return version_name;
 });
 
 const websiteConfig = computed(() => appStore.getWebsiteConfig);

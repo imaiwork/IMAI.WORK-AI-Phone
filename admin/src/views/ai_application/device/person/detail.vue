@@ -6,139 +6,54 @@
 
         <el-card class="!border-none !rounded-2xl mt-5" shadow="never">
             <div class="flex items-center gap-2 mb-6">
-                <div class="w-1 h-5 rounded-sm" style="background: linear-gradient(135deg, #667eea, #764ba2)" />
-                <span class="text-base font-semibold" style="color: #1e1e2e">IP 人设管理</span>
+                <div class="w-1 h-5 rounded-sm bg-gradient-to-b from-[#667eea] to-[#764ba2]" />
+                <span class="text-base font-semibold text-[#1e1e2e]">人设信息</span>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-3">
+                <!-- ① 基础信息 -->
                 <div
-                    class="col-span-2 flex items-center gap-4 p-5 rounded-2xl border transition-all duration-200 hover:shadow-lg cursor-default"
-                    style="background: linear-gradient(135deg, #f5f3ff, #eef2ff); border-color: #e0e7ff">
+                    class="flex items-center gap-3.5 px-5 py-[18px] rounded-2xl border border-[#ddd6fe] bg-gradient-to-br from-[#f5f3ff] to-[#eef2ff] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] cursor-default">
                     <div
-                        class="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                        style="background: #ede9fe">
+                        class="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 bg-[#ede9fe]">
                         🧑‍🎨
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="text-xs mb-2 font-medium" style="color: #a5b4fc">IP 信息</div>
-                        <div class="flex items-center gap-2">
+                        <div class="text-[11px] font-bold tracking-wider uppercase text-[#8b5cf6]">基础信息</div>
+                        <div class="flex items-center gap-2 mt-1">
                             <el-avatar
-                                :size="34"
+                                :size="28"
                                 :src="detail.avatar_url"
-                                style="
-                                    background: linear-gradient(135deg, #667eea, #764ba2);
-                                    color: #fff;
-                                    font-size: 13px;
-                                    flex-shrink: 0;
-                                ">
+                                class="!bg-gradient-to-br !from-[#667eea] !to-[#764ba2] !text-white !text-xs flex-shrink-0">
                                 {{ detail.persona_name?.charAt(0) }}
                             </el-avatar>
-                            <span class="text-sm font-semibold" style="color: #3730a3">{{ detail.persona_name }}</span>
+                            <span class="text-sm font-bold truncate text-[#3730a3]">{{ detail.persona_name }}</span>
                         </div>
                     </div>
-                    <el-button
-                        size="small"
-                        class="!rounded-xl !font-medium"
-                        style="color: #6366f1; border-color: #c7d2fe; background: #fff"
-                        @click="handleEditInfo">
-                        <Icon name="el-icon-edit" class="mr-1" />编辑
-                    </el-button>
-                </div>
-
-                <div
-                    class="flex items-center gap-4 p-5 rounded-2xl border transition-all duration-200 hover:shadow-lg cursor-default"
-                    style="background: linear-gradient(135deg, #faf5ff, #f3e8ff); border-color: #e9d5ff">
-                    <div
-                        class="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                        style="background: #f3e8ff">
-                        🏷️
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-xs mb-2 font-medium" style="color: #c084fc">IP 类型</div>
-                        <el-tag effect="light" round style="background: #f3e8ff; color: #7e22ce; border-color: #d8b4fe">
-                            {{ getPersonaType(detail.persona_type) }}
-                        </el-tag>
-                    </div>
-                    <el-button
-                        size="small"
-                        class="!rounded-xl !font-medium"
-                        style="color: #6366f1; border-color: #c7d2fe; background: #fff"
-                        @click="handleEditType">
-                        <Icon name="el-icon-edit" class="mr-1" />编辑
-                    </el-button>
-                </div>
-
-                <div
-                    class="flex items-center gap-4 p-5 rounded-2xl border transition-all duration-200 hover:shadow-lg cursor-default"
-                    style="background: linear-gradient(135deg, #fff7ed, #ffedd5); border-color: #fed7aa">
-                    <div
-                        class="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                        style="background: #ffedd5">
-                        🎯
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-xs mb-1 font-medium" style="color: #fb923c">截流获客配置</div>
-                        <div class="text-xs" style="color: #d1d5db">点击编辑进行配置</div>
-                    </div>
-                    <el-button
-                        size="small"
-                        class="!rounded-xl !font-medium"
-                        style="color: #6366f1; border-color: #c7d2fe; background: #fff"
-                        @click="handleEditTraffic">
-                        <Icon name="el-icon-edit" class="mr-1" />编辑
-                    </el-button>
-                </div>
-
-                <div
-                    class="flex items-center gap-4 p-5 rounded-2xl border transition-all duration-200 hover:shadow-lg cursor-default"
-                    style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #bbf7d0">
-                    <div
-                        class="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                        style="background: #dcfce7">
-                        📚
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-xs mb-1 font-medium" style="color: #4ade80">知识库配置</div>
-                        <div class="text-xs" style="color: #d1d5db">点击编辑进行配置</div>
-                    </div>
-                    <el-button
-                        size="small"
-                        class="!rounded-xl !font-medium"
-                        style="color: #6366f1; border-color: #c7d2fe; background: #fff"
-                        @click="handleEditKn">
-                        <Icon name="el-icon-edit" class="mr-1" />编辑
-                    </el-button>
-                </div>
-
-                <div
-                    class="flex items-center gap-4 p-5 rounded-2xl border transition-all duration-200 hover:shadow-lg cursor-default"
-                    style="background: linear-gradient(135deg, #ecfeff, #cffafe); border-color: #a5f3fc">
-                    <div
-                        class="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                        style="background: #cffafe">
-                        🤖
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-xs mb-1 font-medium" style="color: #22d3ee">智能体配置</div>
-                        <div class="text-xs" style="color: #d1d5db">点击编辑进行配置</div>
-                    </div>
-                    <el-button
-                        size="small"
-                        class="!rounded-xl !font-medium"
-                        style="color: #6366f1; border-color: #c7d2fe; background: #fff"
-                        @click="handleEditAgent">
-                        <Icon name="el-icon-edit" class="mr-1" />编辑
-                    </el-button>
+                    <button
+                        class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-[10px] text-xs font-semibold text-[#6366f1] bg-white border border-[#c7d2fe] cursor-pointer transition-all duration-150 hover:bg-[#eef2ff] hover:shadow-[0_2px_8px_rgba(99,102,241,0.15)] hover:scale-105 whitespace-nowrap"
+                        @click="handleEdit">
+                        <svg
+                            class="w-3 h-3 stroke-[#6366f1] fill-none stroke-2"
+                            viewBox="0 0 24 24"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                        编辑
+                    </button>
                 </div>
             </div>
         </el-card>
 
+        <ai-employee-section class="mt-5" :detail="detail" @refresh="getDetail" />
+
         <el-card class="!border-none !rounded-2xl mt-5" shadow="never">
             <div class="flex items-center gap-2 mb-5">
-                <div class="w-1 h-5 rounded-sm" style="background: linear-gradient(135deg, #667eea, #764ba2)" />
+                <div class="w-1 h-5 rounded-sm bg-gradient-to-b from-[#667eea] to-[#764ba2]" />
                 <span class="text-base font-semibold text-gray-800">IP 创作记录</span>
             </div>
-
             <el-table
                 ref="tableRef"
                 size="large"
@@ -150,7 +65,7 @@
                 <el-table-column label="ID" prop="id" min-width="80" />
                 <el-table-column label="任务ID" prop="task_id" width="180" show-overflow-tooltip>
                     <template #default="{ row }">
-                        <span class="font-mono text-sm" style="color: #6366f1">{{ row.task_id }}</span>
+                        <span class="font-mono text-sm text-[#6366f1]">{{ row.task_id }}</span>
                     </template>
                 </el-table-column>
                 <el-table-column label="创建用户" prop="nickname" min-width="140" show-overflow-tooltip>
@@ -158,12 +73,7 @@
                         <div class="flex items-center gap-2">
                             <el-avatar
                                 :size="28"
-                                style="
-                                    background: linear-gradient(135deg, #667eea, #764ba2);
-                                    color: #fff;
-                                    font-size: 12px;
-                                    flex-shrink: 0;
-                                ">
+                                class="!bg-gradient-to-br !from-[#667eea] !to-[#764ba2] !text-white !text-xs flex-shrink-0">
                                 {{ row.nickname?.charAt(0) }}
                             </el-avatar>
                             <span>{{ row.nickname }}</span>
@@ -183,18 +93,25 @@
                 </el-table-column>
                 <el-table-column label="消耗算力" prop="video_token" min-width="120">
                     <template #default="{ row }">
-                        <span class="font-semibold" style="color: #6366f1">{{ row.video_token }}</span>
+                        <span class="font-semibold text-[#6366f1]">{{ row.video_token }}</span>
                     </template>
                 </el-table-column>
                 <el-table-column label="创作时间" prop="create_time" min-width="180">
                     <template #default="{ row }">
-                        <span class="text-sm" style="color: #9ca3af">{{ row.create_time }}</span>
+                        <span class="text-sm text-[#9ca3af]">{{ row.create_time }}</span>
                     </template>
                 </el-table-column>
-                <el-table-column label="操作" width="160" fixed="right">
+                <el-table-column label="操作" width="220" fixed="right">
                     <template #default="{ row }">
-                        <el-button type="primary" link @click="handlePlay(row.video_result_url)"> 播放 </el-button>
-                        <el-button type="primary" link @click="handleDownload(row)"> 下载 </el-button>
+                        <el-button
+                            v-if="row.status == 2"
+                            type="danger"
+                            link
+                            @click="handleViewFailReason(row)"
+                            >查看原因</el-button
+                        >
+                        <el-button type="primary" link @click="handlePlay(row.video_result_url)">播放</el-button>
+                        <el-button type="primary" link @click="handleDownload(row)">下载</el-button>
                         <el-button
                             type="danger"
                             link
@@ -206,7 +123,6 @@
                     </template>
                 </el-table-column>
             </el-table>
-
             <div class="flex justify-end mt-4">
                 <pagination v-model="pager" @change="getLists" />
             </div>
@@ -214,7 +130,7 @@
 
         <el-card class="!border-none !rounded-2xl mt-5" shadow="never">
             <div class="flex items-center gap-2 mb-5">
-                <div class="w-1 h-5 rounded-sm" style="background: linear-gradient(135deg, #667eea, #764ba2)" />
+                <div class="w-1 h-5 rounded-sm bg-gradient-to-b from-[#667eea] to-[#764ba2]" />
                 <span class="text-base font-semibold text-gray-800">素材管理</span>
             </div>
             <div>
@@ -241,8 +157,8 @@
                 <el-table-column label="素材名称" prop="material_name" min-width="180" show-overflow-tooltip />
                 <el-table-column label="使用次数" prop="use_count" min-width="120">
                     <template #default="{ row }">
-                        <span class="font-semibold" style="color: #6366f1">{{ row.use_num }}</span>
-                        <span class="text-xs ml-1" style="color: #9ca3af">次</span>
+                        <span class="font-semibold text-[#6366f1]">{{ row.use_num }}</span>
+                        <span class="text-xs ml-1 text-[#9ca3af]">次</span>
                     </template>
                 </el-table-column>
                 <el-table-column label="使用状态" min-width="120">
@@ -254,20 +170,11 @@
                 </el-table-column>
                 <el-table-column label="上传时间" prop="create_time" min-width="180">
                     <template #default="{ row }">
-                        <span class="text-sm" style="color: #9ca3af">{{ row.create_time }}</span>
+                        <span class="text-sm text-[#9ca3af]">{{ row.create_time }}</span>
                     </template>
                 </el-table-column>
-                <el-table-column label="操作" width="140" fixed="right">
+                <el-table-column label="操作" width="120" fixed="right">
                     <template #default="{ row }">
-                        <el-button
-                            type="warning"
-                            link
-                            size="small"
-                            v-perms="['ai_application.device.person.detail/edit']"
-                            @click.stop="toggleMaterial(row)"
-                            >{{ row.use_status == 2 ? "启用" : "禁用" }}</el-button
-                        >
-                        <el-divider direction="vertical" />
                         <el-button
                             type="danger"
                             link
@@ -279,17 +186,13 @@
                     </template>
                 </el-table-column>
             </el-table>
-
             <div class="flex justify-end mt-4">
                 <pagination v-model="materialPager" @change="getMaterialLists" />
             </div>
         </el-card>
     </div>
-    <info-pop v-if="showInfoPop" ref="infoPopRef" @success="getDetail" @close="showInfoPop = false" />
-    <type-pop v-if="showTypePop" ref="typePopRef" @success="getDetail" @close="showTypePop = false" />
-    <traffic-pop v-if="showTrafficPop" ref="trafficPopRef" @success="getDetail" @close="showTrafficPop = false" />
-    <kn-pop v-if="showKnPop" ref="knPopRef" @success="getDetail" @close="showKnPop = false" />
-    <agent-pop v-if="showAgentPop" ref="agentPopRef" @success="getDetail" @close="showAgentPop = false" />
+
+    <edit-pop v-if="showEditPop" ref="editPopRef" @success="getDetail" @close="showEditPop = false" />
     <el-image-viewer
         v-if="showPreviewImage"
         :url-list="[previewUrl]"
@@ -308,13 +211,11 @@ import {
     deleteMontageCreateVideoRecord,
 } from "@/api/ai_application/digital_human/montage";
 import { usePaging } from "@/hooks/usePaging";
-import InfoPop from "./components/info-pop.vue";
-import TypePop from "./components/type-pop.vue";
-import TrafficPop from "./components/traffic-pop.vue";
-import KnPop from "./components/kn-pop.vue";
-import AgentPop from "./components/agent-pop.vue";
+import EditPop from "./components/edit-pop.vue";
+import AiEmployeeSection from "./components/ai-employee-section.vue";
 import feedback from "@/utils/feedback";
 import { downloadFile } from "@/utils/util";
+
 const route = useRoute();
 const id = route.query.id;
 const detail = ref<any>({});
@@ -323,21 +224,12 @@ const materialTab = ref<number>(1);
 const showPreviewImage = ref(false);
 const showPreviewVideo = ref(false);
 const previewUrl = ref<string>("");
-const showInfoPop = ref(false);
-const infoPopRef = ref<InstanceType<typeof InfoPop>>();
-const showTypePop = ref(false);
-const typePopRef = ref<InstanceType<typeof TypePop>>();
-const showTrafficPop = ref(false);
-const trafficPopRef = ref<InstanceType<typeof TrafficPop>>();
-const showKnPop = ref(false);
-const knPopRef = ref<InstanceType<typeof KnPop>>();
-const showAgentPop = ref(false);
-const agentPopRef = ref<InstanceType<typeof AgentPop>>();
+const showEditPop = ref(false);
+const editPopRef = ref<InstanceType<typeof EditPop>>();
+
 const { pager, getLists } = usePaging({
     fetchFun: getMontageCreateVideoRecord,
-    params: {
-        persona_id: id,
-    },
+    params: { persona_id: id },
     size: 5,
 });
 
@@ -363,56 +255,11 @@ const getDetail = async () => {
     detail.value = res;
 };
 
-const getPersonaType = (type: number) => {
-    return {
-        1: "个人IP",
-        2: "企业服务",
-        3: "本地商家",
-    }[type];
-};
-
-const handleEditInfo = async () => {
-    showInfoPop.value = true;
+const handleEdit = async () => {
+    showEditPop.value = true;
     await nextTick();
-    infoPopRef.value?.open();
-    infoPopRef.value?.setFormData(detail.value);
-};
-
-const handleEditType = async () => {
-    showTypePop.value = true;
-    await nextTick();
-    typePopRef.value?.open();
-    const keys = {
-        1: "individual",
-        2: "enterprise",
-        3: "local",
-    };
-    typePopRef.value?.setFormData({
-        // @ts-ignore
-        ...detail.value[keys[detail.value.persona_type]],
-        id: detail.value.id,
-        persona_name: detail.value.persona_name,
-        persona_type: detail.value.persona_type,
-    });
-};
-
-const handleEditTraffic = async () => {
-    showTrafficPop.value = true;
-    await nextTick();
-    trafficPopRef.value?.open(detail.value.id);
-};
-
-const handleEditKn = async () => {
-    showKnPop.value = true;
-    await nextTick();
-    knPopRef.value?.open(detail.value.id);
-    knPopRef.value?.setFormData(detail.value);
-};
-
-const handleEditAgent = async () => {
-    showAgentPop.value = true;
-    await nextTick();
-    agentPopRef.value?.open(detail.value.id);
+    editPopRef.value?.open();
+    editPopRef.value?.setFormData(detail.value);
 };
 
 const toggleMaterial = async (row: any) => {
@@ -459,6 +306,11 @@ const handlePlay = async (url: string) => {
     previewUrl.value = url;
 };
 
+const handleViewFailReason = (row: any) => {
+    const reason = String(row?.remark || "").trim() || "暂无失败原因";
+    feedback.alert(reason, "失败原因");
+};
+
 onMounted(() => {
     getDetail();
     getLists();
@@ -470,11 +322,9 @@ onMounted(() => {
 :deep(.el-card__body) {
     padding: 24px 28px;
 }
-
 :deep(.el-table__row:hover > td) {
     background-color: #fafbff !important;
 }
-
 :deep(.el-progress-bar__inner) {
     background: linear-gradient(90deg, #667eea, #764ba2);
 }

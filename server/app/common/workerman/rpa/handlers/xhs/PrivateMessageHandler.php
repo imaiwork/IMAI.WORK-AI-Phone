@@ -42,7 +42,7 @@ class PrivateMessageHandler extends BaseMessageHandler
         }
     }
 
-    private function _getPrivateMesssage($content)
+    private function _getPrivateMesssage(array $content)
     {
         try {
 
@@ -72,11 +72,11 @@ class PrivateMessageHandler extends BaseMessageHandler
                 $message = array(
                     'messageId' => $uid,
                     'deviceId' => $device,
-                    'type' => WorkerEnum::TO_RAP_PRIVATE_MESSAGE_LIST,
+                    'type' => WorkerEnum::TO_RPA_PRIVATE_MESSAGE_LIST,
                     'appVersion' => WorkerEnum::APP_VERSION,
                     'appType' => 3,
                     'reply' => [
-                        'type' => WorkerEnum::TO_RAP_PRIVATE_MESSAGE_LIST,
+                        'type' => WorkerEnum::TO_RPA_PRIVATE_MESSAGE_LIST,
                         'msg' => '获取账号私信列表',
                         'deviceId' => $device
                     ]
@@ -91,7 +91,7 @@ class PrivateMessageHandler extends BaseMessageHandler
         }
     }
 
-    private function _updatePrivateMessage($content)
+    private function _updatePrivateMessage(array $content)
     {
         try {
 
@@ -111,7 +111,7 @@ class PrivateMessageHandler extends BaseMessageHandler
                         'type' => 3,
                         'friend_id' => $friendId,
                         'replay_type' => $_item['replyObject'] ?? '',
-                        'avatar' => $this->base64ToImage($_item),
+                        'avatar' => $this->toolUtil->base64ToImage($_item),
                         'author_name' => $_item['authorName'] ?? '',
                         'message_content' => $_item['messageContent'] ?? '',
                         'message_timer' => $_item['messagetTimer'] ?? time(),
@@ -143,7 +143,7 @@ class PrivateMessageHandler extends BaseMessageHandler
         }
     }
 
-    private function _sendWeb($content)
+    private function _sendWeb(array $content)
     {
         try {
 

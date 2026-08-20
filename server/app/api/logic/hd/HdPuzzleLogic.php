@@ -313,7 +313,7 @@ class HdPuzzleLogic extends ApiLogic
                         'userId' => $task->user_id,
                         'content' => $task->name,
                         'status' => $statusmsg
-                    ], 'video');
+                    ], 402);
                 }
 
                if ($setPublish && $task->auto_type == 1){

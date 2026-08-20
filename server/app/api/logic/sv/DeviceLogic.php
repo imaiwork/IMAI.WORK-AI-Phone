@@ -2,15 +2,16 @@
 
 namespace app\api\logic\sv;
 
+use app\common\enum\deviceauth\DeviceAuthCodeEnum;
+use app\common\model\sv\SvAccount;
+use app\common\model\sv\SvAccountContact;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceRpa;
-
-use app\common\model\sv\SvAccount;
+use app\common\model\sv\SvDeviceUsed;
 use app\common\model\sv\SvSetting;
-use app\common\model\sv\SvAccountContact;
-use app\common\model\sv\SvCrawlingTask;
-use app\common\model\sv\SvCrawlingTaskDeviceBind;
+use app\common\service\ToolsService;
 use Channel\Client as ChannelClient;
+use think\facade\Db;
 
 /**
  * DeviceLogic
@@ -34,6 +35,7 @@ class DeviceLogic extends SvBaseLogic
     public static function addDevice(array $params)
     {
 
+        $transStarted = false;
         try {
             // 获取设备信息
             $device = self::deviceInfo($params['device_code'], false);
@@ -51,8 +53,14 @@ class DeviceLogic extends SvBaseLogic
             }
 
             $params['is_first'] = 1;
+            $params = self::applyMiddleDeviceAuthFields($params);
+            Db::startTrans();
+            $transStarted = true;
             // 添加设备  
             $device = SvDevice::create($params);
+            SvDeviceUsed::saveRecord((int)self::$uid, (string)$params['device_code'], (int)$device->id, 1);
+            Db::commit();
+            $transStarted = false;
 
             // 返回设备信息 
             $data = $device->toArray();
@@ -63,9 +71,84 @@ class DeviceLogic extends SvBaseLogic
             self::$returnData = $data;
             return true;
         } catch (\Exception $e) {
+            if ($transStarted) {
+                Db::rollback();
+            }
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    public static function applyMiddleDeviceAuthFields(array $params): array
+    {
+        $params['auth_status'] = DeviceAuthCodeEnum::DEVICE_AUTH_INACTIVE;
+        $params['auth_start_time'] = 0;
+        $params['auth_expire_time'] = 0;
+
+        $deviceCode = trim((string)($params['device_code'] ?? ''));
+        if ($deviceCode === '') {
+            return $params;
+        }
+
+        try {
+            $response = ToolsService::DataCenter()->deviceAuthCodeDeviceAuth([
+                'device_code' => $deviceCode,
+            ]);
+        } catch (\Throwable) {
+            return $params;
+        }
+
+        if ((int)($response['code'] ?? 0) !== 10000) {
+            return $params;
+        }
+
+        $data = $response['data'] ?? [];
+        if (!is_array($data)) {
+            return $params;
+        }
+
+        $remoteDomain = self::normalizeDeviceAuthDomain((string)($data['domain'] ?? $data['site'] ?? ''));
+        $localDomain = self::normalizeDeviceAuthDomain(self::getCurrentStationDomain());
+        if ($remoteDomain === '' || $localDomain === '' || $remoteDomain !== $localDomain) {
+            $params['error'] = '设备授权域名不匹配';
+            return $params;
+        }
+
+        $authStatus = (int)($data['auth_status'] ?? 0);
+        $activatedTime = (int)($data['activated_time'] ?? 0);
+        $expiredTime = (int)($data['expired_time'] ?? 0);
+        if ($authStatus !== DeviceAuthCodeEnum::DEVICE_AUTH_ACTIVE || $expiredTime === 0) {
+            return $params;
+        }
+
+        $params['auth_status'] = DeviceAuthCodeEnum::DEVICE_AUTH_ACTIVE;
+        if ($activatedTime > 0) {
+            $params['auth_start_time'] = $activatedTime;
+        }
+        $params['auth_expire_time'] = $expiredTime < 0 ? 0 : $expiredTime;
+        return $params;
+    }
+
+    private static function getCurrentStationDomain(): string
+    {
+        $host = trim((string)(env('app.host') ?: config('app.app_host')));
+        if ($host === '') {
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+        }
+        return $host;
+    }
+
+    private static function normalizeDeviceAuthDomain(string $domain): string
+    {
+        $domain = strtolower(trim($domain));
+        if ($domain === '') {
+            return '';
+        }
+        $host = parse_url($domain, PHP_URL_HOST);
+        if (!$host) {
+            $host = parse_url('http://' . ltrim($domain, '/'), PHP_URL_HOST);
+        }
+        return strtolower(trim((string)$host));
     }
 
     private static function addDeviceRpa(array $data)
@@ -264,7 +347,7 @@ class DeviceLogic extends SvBaseLogic
                 'task_id' => $appinfo->id
             ], JSON_UNESCAPED_UNICODE),
             "deviceId" => $appinfo->device_code,
-            "appVersion" => "2.1.2"
+            "appVersion" => \app\common\enum\DeviceEnum::APP_VERSION,
         ];
         print_r($payload);
 

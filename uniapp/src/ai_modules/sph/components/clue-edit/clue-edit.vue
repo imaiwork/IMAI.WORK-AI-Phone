@@ -1,7 +1,7 @@
 <template>
     <u-popup v-model="show" mode="center" width="90%" border-radius="64" :closeable="false" @close="close">
         <view class="flex flex-col p-[32rpx]">
-            <view class="text-[26rpx] text-center mt-[14rpx]">请输入线索词</view>
+            <view class="text-center mt-[14rpx]">请输入线索词</view>
             <view class="h-[100rpx] rounded-xl bg-[#00000005] flex items-center px-[18rpx] mt-[46rpx]">
                 <input
                     v-model="editValue"

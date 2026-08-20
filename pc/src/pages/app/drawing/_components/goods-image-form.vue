@@ -67,10 +67,10 @@
                                                     <Icon name="el-icon-Check" :size="10" color="white"></Icon>
                                                 </div>
                                                 <div
-                                                    class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    class="absolute inset-0 bg-[#000000]/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <div
                                                         @click.stop="previewRefImage(0, item.img)"
-                                                        class="w-8 h-8 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-white">
+                                                        class="w-8 h-8 rounded-full bg-[#ffffff]/20 backdrop-blur flex items-center justify-center text-white">
                                                         <Icon name="el-icon-ZoomIn" :size="16"></Icon>
                                                     </div>
                                                 </div>
@@ -167,8 +167,8 @@ import { goodsResolutionOptions as resolutionOptions } from "../_enums";
 import { CopywritingTypeEnum } from "../../_enums/chatEnum";
 import ImageUpload from "./image-upload.vue";
 import CaseImageV2 from "./case-image-v2.vue";
-import CaseBtn from "./case-btn/index.vue";
-import NumberSelect from "./number-select/index.vue";
+import CaseBtn from "./case-btn.vue";
+import NumberSelect from "./number-select.vue";
 
 const emit = defineEmits(["update:formData", "generatePrompt"]);
 

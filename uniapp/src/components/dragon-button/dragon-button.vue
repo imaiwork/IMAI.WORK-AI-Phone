@@ -8,54 +8,53 @@
             top: `${top}px`,
             width: `${size}rpx`,
             height: `${size}rpx`,
-            zIndex: zIndex
+            zIndex: zIndex,
         }"
         @touchend="touchend"
-        @touchmove.stop.prevent="touchmove"
-    >
+        @touchmove.stop.prevent="touchmove">
         <slot />
     </view>
 </template>
 
 <script>
 export default {
-    name: 'DragButton',
+    name: "DragButton",
     props: {
         /**
          * 按钮大小
          */
         size: {
             type: Number,
-            default: 200
+            default: 200,
         },
         /**
          * 层级
          */
         zIndex: {
             type: Number,
-            default: 999
+            default: 999,
         },
         /**
          * x轴边界限制
          */
         xEdge: {
             type: Number,
-            default: 0
+            default: 0,
         },
         /**
          * y轴边界限制
          */
         yEdge: {
             type: Number,
-            default: 50
+            default: 50,
         },
         /**
          * 自动停靠
          */
         autoDocking: {
             type: Boolean,
-            default: true
-        }
+            default: true,
+        },
     },
     data() {
         return {
@@ -63,76 +62,75 @@ export default {
             left: 300,
             width: 0,
             height: 0,
-            moving: true
-        }
+            moving: true,
+        };
     },
     mounted() {
-        this.init()
+        this.init();
     },
     methods: {
         init() {
             // 获取窗口尺寸
-            const { windowWidth, windowHeight, windowTop } =
-                uni.getSystemInfoSync()
-            this._windowWidth = windowWidth
-            this._windowHeight = windowHeight
+            const { windowWidth, windowHeight, windowTop } = uni.getSystemInfoSync();
+            this._windowWidth = windowWidth;
+            this._windowHeight = windowHeight;
             if (windowTop) {
-                this._windowHeight += windowTop
+                this._windowHeight += windowTop;
             }
             // 计算按钮初始位置
-            const query = uni.createSelectorQuery().in(this)
+            const query = uni.createSelectorQuery().in(this);
             query
-                .select('#drag-button')
+                .select("#drag-button")
                 .boundingClientRect((data) => {
-                    if (!data) return
-                    const { width, height } = data
-                    this.width = width
-                    this.height = height
-                    this._offsetWidth = width / 2
-                    this._offsetHeight = height / 2
-                    this.left = this._windowWidth - this.width - this.xEdge
-                    this.top = this._windowHeight - this.height - this.yEdge
+                    if (!data) return;
+                    const { width, height } = data;
+                    this.width = width;
+                    this.height = height;
+                    this._offsetWidth = width / 2;
+                    this._offsetHeight = height / 2;
+                    this.left = this._windowWidth - this.width - this.xEdge;
+                    this.top = this._windowHeight - this.height - this.yEdge;
                 })
-                .exec()
+                .exec();
         },
 
         // 拖动
         touchmove({ touches }) {
-            if (touches.length !== 1) return false
+            if (touches.length !== 1) return false;
 
-            this.moving = true
-            const { clientX, clientY } = touches[0]
-            this.left = clientX - this._offsetWidth
+            this.moving = true;
+            const { clientX, clientY } = touches[0];
+            this.left = clientX - this._offsetWidth;
 
-            const _clientY = clientY - this._offsetHeight
+            const _clientY = clientY - this._offsetHeight;
 
-            this.top = _clientY
+            this.top = _clientY;
         },
 
         // 松手
         touchend() {
             // 左右边界，松手自动停靠
             if (this.autoDocking) {
-                const rigthEdge = this._windowWidth - this.width - this.xEdge
+                const rigthEdge = this._windowWidth - this.width - this.xEdge;
                 if (this.left < this._windowWidth / 2 - this._offsetWidth) {
-                    this.left = this.xEdge
+                    this.left = this.xEdge;
                 } else {
-                    this.left = rigthEdge
+                    this.left = rigthEdge;
                 }
             }
 
             // 上下边界
-            const bottomEdge = this._windowHeight - this.height - this.yEdge
+            const bottomEdge = this._windowHeight - this.height - this.yEdge;
             if (this.top < 50) {
-                this.top = 50
+                this.top = 50;
             } else if (this.top > bottomEdge) {
-                this.top = bottomEdge
+                this.top = bottomEdge;
             }
 
-            this.moving = false
-        }
-    }
-}
+            this.moving = false;
+        },
+    },
+};
 </script>
 
 <style lang="scss" scoped>

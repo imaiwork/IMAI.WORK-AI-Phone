@@ -59,6 +59,8 @@ export interface Agent {
     cate_id: string | number; // 类目ID
     threshold: number; // 技能阈值
     mode_type: ModeTypeEnum; // 1=自定义,2=平衡模式,3=精准模式,4=创意模式
+    permissions: number; // 权限 (0: 全部人可用, 1: 仅会员可用)
+    member_level_ids: number[]; // 会员等级ID列表
 }
 
 export enum ModeTypeEnum {

@@ -57,26 +57,27 @@ return [
         ],
         'socket' => [
             'type'           => 'File',
-            'path'           => app()->getRootPath() . '/runtime/log/socket/' . date('Ymd'),
+            'path'           => app()->getRootPath() . '/runtime/log/socket/',
             'json'           => false,
             'single'         => false,
             'time_format'    => 'Y-m-d H:i:s',
             'format'         => '[%s][%s] %s',
             'apart_level'   =>  [
-                'error', 'info', 'send', 'device', 'user', 'msg', 'msg_list', 'card', 'cron', 'bind', 'init', 'note', 'post',
-                'task_delete', 'task_paused', 'task_recovery', 'task_send', 'task_record','channel', 'ws', 'heart'
+                'error', 'info', 'send', 'device', 'user', 'msg', 'msg_list', 'card', 'cron', 'bind', 'init', 'note', 'post','thumb',
+                'task_delete', 'task_paused', 'task_recovery', 'task_send', 'task_record','channel', 'ws', 'heart', 'run','viral_rewrite',
+                'precise_clues','add_wechat', 'group_buy'
             ],
         ],
         'wechat_socket' => [
             'type'           => 'File',
-            'path'           => app()->getRootPath() . '/runtime/log/wechat_socket/' . date('Ymd'),
+            'path'           => app()->getRootPath() . '/runtime/log/wechat_socket/',
             'json'           => false,
             'single'         => false,
             'time_format'    => 'Y-m-d H:i:s',
             'format'         => '[%s][%s] %s',
             'apart_level'   =>  ['error', 'info', 'send', 'device', 'user', 'msg', 'msg_list', 'notice', 'cron', 'bind', 'init', 'note', 'post'],
         ],
-        'sv' => [
+        'sv' => [//矩阵视频合成日志
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/sv/',
             'json'           => false,
@@ -102,15 +103,21 @@ return [
             'json'           => false,
             'time_format'    => 'Y-m-d H:i:s',
             'format'         => '[%s][%s] %s',
-            'apart_level'   =>  ['error', 'info', 'warning', 'publish', 'clues', 'add_wechat', 'active', 'take_over', 'verify_wechat'],
+            'apart_level'   =>  ['error', 'info', 'warning', 'publish', 'clues', 'add_wechat', 'active', 'take_over', 'verify_wechat', 'remove', 'unbind', 'update'],
         ],
-        'clip' => [
+        'map' => [//地图日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/map/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'clip' => [//ai智剪视频剪辑日志
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/clip/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
-        'shanjian' => [
+        'shanjian' => [//闪剪合成回调的日志,用于记录闪剪合成回调的参数
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/shanjian/',
             'json'           => false,
@@ -139,11 +146,36 @@ return [
             'path'           => app()->getRootPath() . '/runtime/log/auto/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
-            'apart_level'   =>  ['publish'],
+            'apart_level'   =>  ['publish', 'create','viral_bottom', 'clue', 'active','add_wechat', 'like_reply', 'take_over', 'touch', 'claw', 'clip','img2'],
         ],
-        'ffmpeg' => [
+        'viral_manual' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/viral_manual/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'ffmpeg' => [//ffmpeg转码日志
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/ffmpeg/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'video_slice' => [//视频切片日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/video_slice/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+            'realtime_write' => true,
+        ],
+        'upload_video' => [//视频上传参数日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/upload_video/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'upload_image' => [//图片上传参数日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/upload_image/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
@@ -159,19 +191,19 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
-        'douyin' => [
+        'douyin' => [//抖音js发布日志
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/douyin/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
-        'automedia' => [
+        'automedia' => [//自动媒体日志
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/automedia/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
-         'automediaSetting' => [
+         'automediaSetting' => [//自动媒体设置日志
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/automediaSetting/',
             'json'           => false,
@@ -183,13 +215,26 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
-         'shanjiannotice' => [
+         'shanjiannotice' => [//闪剪合成回调的日志,用于记录闪剪合成回调的参数
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/shanjiannotice/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
+            'realtime_write' => true,
         ],
-         'wechatCircle' => [
+        'shanjianQueue' => [//闪剪队列日志
+           'type'           => 'File',
+           'path'           => app()->getRootPath() . '/runtime/log/shanjianQueue/',
+           'json'           => false,
+           'format'         => '[%s][%s] %s',
+        ],
+        'shanjianClipTemplate' => [//闪剪视频风格模版删除日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/shanjianClipTemplate/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+         'wechatCircle' => [//微信朋友圈日志
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/wechatCircle/',
             'json'           => false,
@@ -201,7 +246,7 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
-         'ipVideoSynthesis' => [
+         'ipVideoSynthesis' => [//ip人设视频合成日志
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/ipVideoSynthesis/',
             'json'           => false,
@@ -210,6 +255,66 @@ return [
         'ipPersona' => [
             'type'           => 'File',
             'path'           => app()->getRootPath() . '/runtime/log/ipPersona/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'seedance' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/seedance/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'wechatVideoSynthesis' => [//微信朋友圈视频合成日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/wechatVideoSynthesis/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'minimax' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/minimax/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'glm' => [
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/glm/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'explosionVideoSynthesis' => [//爆款仿写文案视频合成日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/explosionVideoSynthesis/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'personaLog' => [//新增人设ai合成规则配置日志,用于之前新增人设，没有ai合成规则默认的配置
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/personaLog/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'grabMaterial' => [//文案仿写日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/grabMaterial/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'member' => [//会员到期检查日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/member/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'voiceAsr' => [// Minimax TTS 后闪剪 ASR 提交/回调日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/voiceAsr/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
+        'manual_2img' => [//手动-爆款复刻小红书图文图片改写日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/manual_2img/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],

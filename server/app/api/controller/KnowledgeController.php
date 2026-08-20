@@ -5,6 +5,8 @@ namespace app\api\controller;
 
 
 use app\api\logic\KnowledgeLogic;
+use app\common\service\MemberService;
+use think\facade\Db;
 /**
  * index
  * Class KnowledgeController
@@ -35,6 +37,11 @@ class KnowledgeController extends BaseApiController
      * 知识库创建
      */
     public function add(){
+        $existing = MemberService::countQuotaKnowledges($this->userId);
+        $reason = '';
+        if (!MemberService::canCreate($this->userId, 'knowledge', $existing, $reason)) {
+            return $this->fail($reason . ',请升级会员');
+        }
         $data = $this->request->post();
         $result = KnowledgeLogic::add($data);
         if ($result) {

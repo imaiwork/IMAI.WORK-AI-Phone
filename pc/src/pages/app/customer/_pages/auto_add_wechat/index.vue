@@ -41,6 +41,9 @@
                         <ElSelect v-model="queryParams.channel" class="custom-select" placeholder="所有渠道" clearable>
                             <ElOption label="小红书" :value="AppTypeEnum.XHS"></ElOption>
                             <ElOption label="视频号" :value="AppTypeEnum.SPH"></ElOption>
+                            <ElOption label="微信" :value="2"></ElOption>
+                            <ElOption label="抖音" :value="AppTypeEnum.DOUYIN"></ElOption>
+                            <ElOption label="快手" :value="AppTypeEnum.KUAISHOU"></ElOption>
                         </ElSelect>
                     </div>
 
@@ -98,11 +101,7 @@
 
                 <ElTableColumn label="添加渠道" width="120">
                     <template #default="{ row }">
-                        <span
-                            class="px-2 py-0.5 rounded text-xs font-medium"
-                            :class="
-                                row.channel == AppTypeEnum.XHS ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
-                            ">
+                        <span class="px-2 py-0.5 rounded text-xs font-medium" :class="getAppTypeClass(row.channel)">
                             {{ getAppTypeName(row.channel) }}
                         </span>
                     </template>
@@ -207,6 +206,7 @@ const queryParams = reactive({
 const { pager, getLists, resetParams } = usePaging({
     fetchFun: getAutoAddWechatRecord,
     params: queryParams,
+    size: queryParams.page_size,
 });
 
 const { optionsData } = useDictOptions<{
@@ -232,7 +232,10 @@ const { optionsData } = useDictOptions<{
 const getAppTypeName = (account_type: number) => {
     const types = {
         [AppTypeEnum.SPH]: "视频号",
+        2: "微信",
         [AppTypeEnum.XHS]: "小红书",
+        [AppTypeEnum.DOUYIN]: "抖音",
+        [AppTypeEnum.KUAISHOU]: "快手",
     };
     return types[account_type] || "-";
 };
@@ -241,6 +244,14 @@ const getStatusColor = (status: number | string) => {
     if (status == 1) return "text-green-600";
     if (status == 0) return "text-red-500";
     return "text-blue-500";
+};
+
+const getAppTypeClass = (channel: number) => {
+    if (channel == AppTypeEnum.SPH) return "bg-blue-50 text-blue-600";
+    if (channel == AppTypeEnum.XHS) return "bg-red-50 text-red-600";
+    if (channel == AppTypeEnum.DOUYIN) return "bg-black text-white";
+    if (channel == AppTypeEnum.KUAISHOU) return "bg-yellow-50 text-yellow-600";
+    if (channel == 2) return "bg-green-50 text-green-600";
 };
 
 const handleRetry = (id: string) => {

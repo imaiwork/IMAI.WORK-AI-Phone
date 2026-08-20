@@ -10,6 +10,7 @@ use app\common\model\wechat\AiWechatContact;
 use app\common\model\wechat\sop\AiWechatSopFlow;
 use app\common\model\wechat\sop\AiWechatSopPushMember;
 use app\common\model\wechat\sop\AiWechatSopStageTrigger;
+use app\common\model\wechat\sop\AiWechatSopSubFlowRemind;
 use app\common\model\wechat\sop\AiWechatSopSubStage;
 
 class StageLogic extends ApiLogic
@@ -109,6 +110,22 @@ class StageLogic extends ApiLogic
                 self::setError('关键阶段和警示阶段不能删除');
                 return false;
             }
+            $deleteTime = time();
+
+            // 同步删除所有子阶段触发条件
+            AiWechatSopStageTrigger::where('stage_id', $params['id'])
+                                   ->whereNull('delete_time')
+                                   ->update([
+                                                'delete_time' => $deleteTime,
+                                                'update_time' => $deleteTime
+                                            ]);
+            // 同步删除所有跟近提醒
+            AiWechatSopSubFlowRemind::where('stage_id', $params['id'])
+                                    ->whereNull('delete_time')
+                                    ->update([
+                                                 'delete_time' => $deleteTime,
+                                                 'update_time' => $deleteTime
+                                             ]);
 
             $subStage->delete_time = time();
             $subStage->save();
@@ -271,12 +288,22 @@ class StageLogic extends ApiLogic
                 ->where('user_id', $user_id)
                 ->where('chat_match_object', $chat_match_object)
                 ->select();
+            $keywords = explode(';', $params['content']);
             if ($stages) {
                 $stages = $stages->toArray();
+                $found = false;
                 foreach ($stages as $stage) {
-                    if (str_contains($params['content'], $stage['chat_keywords'])) {
-                        $member_flow = $stage['flow_id'];
-                        $member_stage = $stage['stage_id'];
+                    // 关键词用;隔开
+                    foreach ($keywords as $keyword){
+                        if (str_contains($keyword, $stage['chat_keywords'])) {
+                            $member_flow = $stage['flow_id'];
+                            $member_stage = $stage['stage_id'];
+                            $found = true;
+                            break;
+                        }
+                    }
+                    if ($found){
+                        break;
                     }
                 }
             }
@@ -287,7 +314,7 @@ class StageLogic extends ApiLogic
                 ->where('status', 1) //状态 0-禁用 1-启用
                 ->where('user_id', $user_id)
                 ->where('chat_match_object', $chat_match_object)
-                ->where('chat_keywords', $params['content'])
+                ->whereIn('chat_keywords', $keywords)
                 ->findOrEmpty();
             if (!$true_stage->isEmpty()) {
                 $member_flow = $true_stage['flow_id'];

@@ -11,7 +11,7 @@
                 </view>
             </view>
             <navigator
-                url="/ai_modules/device/pages/task_calendar_full/task_calendar_full"
+                :url="`/ai_modules/device/pages/task_calendar_full/task_calendar_full?device_code=${deviceCode || ''}`"
                 hover-class="none"
                 class="flex items-center gap-x-1">
                 <text class="text-primary font-medium">完整日历</text>
@@ -65,6 +65,7 @@ interface Day {
 
 const props = defineProps<{
     modelValue: string;
+    deviceCode?: string;
 }>();
 
 const emit = defineEmits<{

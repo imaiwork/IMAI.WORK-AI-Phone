@@ -1,35 +1,15 @@
 <template>
     <view class="min-h-screen bg-[#F4F6F8] pb-[300rpx]">
         <u-navbar
-            fixed
+            :fixed="!isNewReport"
             :border-bottom="false"
-            :background="{ background: 'transparent' }"
+            :background="{ background: isNewReport ? '#ffffff' : 'transparent' }"
             title="IP人设分析"
             title-bold
-            title-color="#ffffff"
-            back-icon-color="#ffffff"
+            :title-color="isNewReport ? '#000000' : '#ffffff'"
+            :back-icon-color="isNewReport ? '#000000' : '#ffffff'"
             :custom-back="back">
         </u-navbar>
-
-        <view class="fixed w-full top-0 pt-24 pb-6 px-6 z-[888]" :style="{ background: getGradientBackground() }">
-            <view class="relative z-10">
-                <view class="flex justify-between items-start">
-                    <view>
-                        <view
-                            class="inline-block bg-[#ffffff]/20 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full mb-2 tracking-widest uppercase">
-                            Customized AI Strategy
-                        </view>
-                        <view
-                            class="text-2xl font-black text-white leading-tight tracking-wide"
-                            v-html="getHeaderTitle()">
-                        </view>
-                    </view>
-                    <view class="bg-[#ffffff]/20 p-2.5 rounded-2xl border border-solid border-[#ffffff]/20 shadow-lg">
-                        <image :src="getHeaderIcon()" class="w-6 h-6" />
-                    </view>
-                </view>
-            </view>
-        </view>
 
         <view v-if="mode === 'add' && loading" class="fixed inset-0 z-[9999]">
             <view
@@ -116,45 +96,79 @@
                 </view>
             </view>
         </view>
-
-        <view class="px-[30rpx] pt-4 mt-[200rpx]">
-            <template v-if="loading && mode === 'edit'">
-                <skeleton />
-            </template>
-            <template v-else-if="!loading">
-                <individual v-if="personaType === 1" :report-data="reportData" />
-                <enterprise v-if="personaType === 2" :report-data="reportData" />
-                <local v-if="personaType === 3" :report-data="reportData" />
-            </template>
-        </view>
-
-        <view
-            v-if="!loading && mode === 'add'"
-            class="flex items-center justify-between gap-4 fixed bg-white bottom-0 left-0 right-0 px-4 pt-3 shadow-[0_-4rpx_20rpx_rgba(0,0,0,0.05)] z-50"
-            style="padding-bottom: calc(12px + env(safe-area-inset-bottom))">
-            <view class="flex items-center gap-x-1" @click="back">
-                <text>返回</text>
+        <template v-else-if="loading && mode === 'edit'">
+            <skeleton />
+        </template>
+        <template v-else>
+            <view
+                class="fixed w-full top-0 pt-24 pb-6 px-6 z-[888]"
+                :style="{ background: getGradientBackground() }"
+                v-if="!isNewReport">
+                <view class="relative z-10">
+                    <view class="flex justify-between items-start">
+                        <view>
+                            <view
+                                class="inline-block bg-[#ffffff]/20 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full mb-2 tracking-widest uppercase">
+                                Customized AI Strategy
+                            </view>
+                            <view
+                                class="text-2xl font-black text-white leading-tight tracking-wide"
+                                v-html="getHeaderTitle()">
+                            </view>
+                        </view>
+                        <view
+                            class="bg-[#ffffff]/20 p-2.5 rounded-2xl border border-solid border-[#ffffff]/20 shadow-lg">
+                            <image :src="getHeaderIcon()" class="w-6 h-6" />
+                        </view>
+                    </view>
+                </view>
             </view>
-            <view class="flex-1">
-                <u-button
-                    type="primary"
-                    shape="circle"
-                    :ripple="true"
-                    :custom-style="getButtonStyle()"
-                    @click="handleConfirm">
-                    确定无误，前往上传素材
-                </u-button>
+
+            <view class="px-[30rpx] pt-4" :class="{ 'mt-[200rpx]': !isNewReport }">
+                <template v-if="isNewReport">
+                    <individual-v2 v-if="personaType === 1" :report-data="reportData" :template-data="templateData" />
+                    <enterprise-v2 v-if="personaType === 2" :report-data="reportData" :template-data="templateData" />
+                    <local-v2 v-if="personaType === 3" :report-data="reportData" :template-data="templateData" />
+                </template>
+                <template v-else>
+                    <individual v-if="personaType === 1" :report-data="reportData" />
+                    <enterprise v-if="personaType === 2" :report-data="reportData" />
+                    <local v-if="personaType === 3" :report-data="reportData" />
+                </template>
             </view>
-        </view>
+
+            <view
+                v-if="!loading && mode === 'add'"
+                class="flex items-center justify-between gap-4 fixed bg-white bottom-0 left-0 right-0 px-4 pt-3 shadow-[0_-4rpx_20rpx_rgba(0,0,0,0.05)] z-50"
+                style="padding-bottom: calc(12px + env(safe-area-inset-bottom))">
+                <view class="flex items-center gap-x-1" @click="back">
+                    <text>返回</text>
+                </view>
+                <view class="flex-1">
+                    <u-button
+                        type="primary"
+                        shape="circle"
+                        :ripple="true"
+                        :custom-style="getButtonStyle()"
+                        @click="handleConfirm">
+                        确定无误，前往上传素材
+                    </u-button>
+                </view>
+            </view>
+        </template>
     </view>
 </template>
 
 <script setup lang="ts">
 import { getPersonDetail } from "@/api/person";
 import usePolling from "@/hooks/usePolling";
+import { getPersonaUsedTaskWorkTemplateDetail } from "@/api/person";
 import IndividualIcon from "@/ai_modules/person/static/icons/badge.svg";
 import EnterpriseIcon from "@/ai_modules/person/static/icons/bag.svg";
 import LocalIcon from "@/ai_modules/person/static/icons/store.svg";
+import EnterpriseV2 from "./components/enterprise-v2.vue";
+import IndividualV2 from "./components/individual-v2.vue";
+import LocalV2 from "./components/local-v2.vue";
 import Enterprise from "./components/enterprise.vue";
 import Local from "./components/local.vue";
 import Individual from "./components/individual.vue";
@@ -166,7 +180,8 @@ const personId = ref<string>("");
 const personaType = ref<number>(0);
 const loading = ref(true);
 const reportData = ref<any>(null);
-
+const templateData = ref<any>(null);
+const isNewReport = ref(false);
 // 分析动画相关状态
 const progressWidth = ref(0);
 const currentStep = ref(0);
@@ -223,7 +238,7 @@ const getButtonStyle = () => {
         fontSize: "30rpx",
         fontWeight: "900",
         border: "none",
-        background: gradient,
+        background: isNewReport.value ? "#0065fb" : gradient,
     };
 };
 
@@ -261,9 +276,8 @@ const startAnalysisAnimation = () => {
     // 进度条动画：最多到 99，等接口回来才到 100
     const progressInterval = setInterval(() => {
         if (progressWidth.value < 99) {
-            // ✅ 改这里：< 99
             progressWidth.value += 100 / (totalDuration / 100);
-            if (progressWidth.value > 99) progressWidth.value = 99; // ✅ 兜底截断
+            if (progressWidth.value > 99) progressWidth.value = 99;
         }
     }, 100);
 
@@ -287,7 +301,7 @@ const stopAnalysisAnimation = (success = false) => {
         analysisTimer.value = null;
     }
     if (success) {
-        progressWidth.value = 100; // ✅ 接口成功才打到 100
+        progressWidth.value = 100;
     }
 };
 
@@ -318,13 +332,19 @@ const back = () => {
 const getDetail = async () => {
     try {
         const res = await getPersonDetail({ id: personId.value });
+        isNewReport.value = res.report_new_version == 1;
         if (res.report_status == 2) {
             const { individual, enterprise, local } = res.report_content;
             reportData.value = individual || enterprise || local || {};
+            isNewReport.value = res.report_new_version == 1;
             stopAnalysisAnimation(true);
             loading.value = false;
             end();
         }
+        const templateRes = await getPersonaUsedTaskWorkTemplateDetail({
+            persona_id: personId.value,
+        });
+        templateData.value = templateRes.schedule || [];
     } catch (error) {
         stopAnalysisAnimation(false);
         loading.value = false;
@@ -359,7 +379,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 只保留无法用Tailwind表达的自定义动画 */
 @keyframes float {
     0%,
     100% {

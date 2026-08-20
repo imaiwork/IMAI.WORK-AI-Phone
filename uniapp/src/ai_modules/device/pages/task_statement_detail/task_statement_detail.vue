@@ -203,7 +203,7 @@ const queryList = async (page_no: number, page_size: number) => {
                         ...item,
                         ...setting_info,
                         marker_method: setting_info?.marker_method.map((item: any) => parseInt(item)),
-                    }))
+                    })),
                 );
                 return;
             case TaskTypeEnum.CIRCLE:

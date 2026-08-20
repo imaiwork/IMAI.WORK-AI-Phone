@@ -18,9 +18,11 @@
                 </view>
 
                 <view class="flex items-center justify-between px-[32rpx] mt-3 mb-1" v-if="limit > 1">
-                    <text class="text-[26rpx] text-[#666666] font-medium">请选择音色</text>
-                    <view class="text-[24rpx] text-[#999999]">
-                        已选 <text class="text-primary font-bold mx-0.5">{{ chooseLists.length }}</text> / {{ limit }}
+                    <text class="text-[#666666] font-medium">请选择音色</text>
+                    <view class="text-xs text-[#999999]">
+                        已选
+                        <text class="text-primary font-bold mx-0.5">{{ chooseLists.length }}</text>
+                        / {{ limit }}
                     </view>
                 </view>
 
@@ -115,7 +117,7 @@
                                                 : '#0065fb'
                                         " />
                                     <text
-                                        class="text-[24rpx] font-medium"
+                                        class="text-xs font-medium"
                                         :class="
                                             isDisabled(item)
                                                 ? 'text-[#BBBBBB]'
@@ -157,7 +159,11 @@
                             type="primary"
                             shape="circle"
                             ripple
-                            :custom-style="{ fontSize: '28rpx', fontWeight: 'bold', height: '88rpx' }"
+                            :custom-style="{
+                                fontSize: '28rpx',
+                                fontWeight: 'bold',
+                                height: '88rpx',
+                            }"
                             @click="handleConfirm">
                             确定选择{{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
                         </u-button>
@@ -217,7 +223,7 @@ const isDisabled = (item: any) => disabledLists.value.some((d) => d.voice_id ===
 // ── 全选相关（排除禁用项）
 const selectableLists = computed(() => dataLists.value.filter((item) => !isDisabled(item)));
 const isAllSelected = computed(
-    () => selectableLists.value.length > 0 && chooseLists.value.length === selectableLists.value.length
+    () => selectableLists.value.length > 0 && chooseLists.value.length === selectableLists.value.length,
 );
 
 const toggleSelectAll = () => {
@@ -321,7 +327,7 @@ watch(
     (val) => {
         if (val) chooseLists.value = [{ voice_id: val }];
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 onUnmounted(() => {

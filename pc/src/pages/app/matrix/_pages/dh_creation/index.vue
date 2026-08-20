@@ -89,7 +89,7 @@
                                     </ElImage>
                                     <div v-else class="w-full h-full"><PlaceholderStyle /></div>
                                     <div
-                                        class="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                        class="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[#000000]/60 to-[transparent]"></div>
                                     <div
                                         v-if="item.automatic_clip == 1"
                                         class="absolute bottom-3 left-3 px-2 py-0.5 rounded-lg bg-[#0065fb]/90 text-white text-[10px] backdrop-blur-sm">
@@ -109,7 +109,7 @@
                                                 color: getStatusHex(item.status),
                                                 backgroundColor: getStatusHex(item.status) + '15',
                                             }"
-                                            class="px-3 py-1 rounded-xl text-xs font-medium border border-transparent">
+                                            class="px-3 py-1 rounded-xl text-xs font-medium border border-[transparent]">
                                             {{ statusMap[item.status] }}
                                         </span>
                                         <span class="text-[#9CA3AF] text-xs font-medium italic"
@@ -225,9 +225,9 @@ const PlaceholderStyle = defineComponent({
                 h(
                     "span",
                     { class: "text-[11px] font-medium text-[#94A3B8] tracking-widest uppercase relative z-10" },
-                    "No Preview"
+                    "No Preview",
                 ),
-            ]
+            ],
         );
     },
 });

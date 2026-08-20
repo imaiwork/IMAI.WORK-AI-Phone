@@ -9,12 +9,16 @@
     "z-paging": "../../../../node-modules/z-paging/components/z-paging/z-paging",
     "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "upload-category-panel": "../../../../components/upload-category-panel/upload-category-panel",
     "choose-material": "../../../../components/choose-material/choose-material",
+    "choose-history": "../../../../components/choose-history/choose-history",
     "upload-progress": "../../../../components/upload-progress/upload-progress",
     "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
+    "steps": "../../components/steps/steps",
+    "material-duration-bar": "../../components/material-duration-bar/material-duration-bar",
+    "material-container": "../../components/material-container/material-container",
     "upload-rule-pop": "../../components/upload-rule-pop/upload-rule-pop",
     "choose-character": "../../components/choose-character/choose-character",
-    "choose-history": "../../components/choose-history/choose-history",
     "create-success-pop": "../../components/create-success-pop/create-success-pop",
     "video-preview": "../../../../components/video-preview/video-preview",
     "tokens-cost": "../../components/tokens-cost/tokens-cost",
@@ -22,7 +26,7 @@
     "choose-audio-type": "../../components/choose-audio-type/choose-audio-type",
     "choose-agent": "../../components/choose-agent/choose-agent",
     "recorder-control": "../../components/recorder-control/recorder-control",
-    "material-duration-bar": "../../components/material-duration-bar/material-duration-bar",
-    "material-container": "../../components/material-container/material-container"
+    "copywriter-empty": "../../components/copywriter-empty/copywriter-empty",
+    "video-cover-upload": "../../components/video-cover-upload/video-cover-upload"
   }
 }

@@ -70,6 +70,7 @@ class UserTokenCache extends BaseCache
             'avatar' => $user->avatar,
             'terminal' => $userSession->terminal,
             'expire_time' => $userSession->expire_time,
+            'is_disable' => (int)$user->is_disable,
         ];
 
         $ttl = new \DateTime(Date('Y-m-d H:i:s', $userSession->expire_time));

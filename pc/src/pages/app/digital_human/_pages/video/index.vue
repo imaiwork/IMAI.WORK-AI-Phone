@@ -22,7 +22,7 @@
                     @clear="reset()"
                     @change="reset()">
                     <ElOption label="全部类型" value="" />
-                    <ElOption label="数字人" :value="CreateVideoTypeEnum.DIGITAL_HUMAN" />
+                    <ElOption label="数字人" :value="DIGITAL_HUMAN_TYPES" />
                     <ElOption label="口播" :value="CreateVideoTypeEnum.ORAL_MIX" />
                     <ElOption label="真人" :value="CreateVideoTypeEnum.REAL_PERSON_MIXING" />
                     <ElOption label="素材" :value="CreateVideoTypeEnum.MATERIAL_MIX" />
@@ -66,10 +66,13 @@ import { retrySoraTask } from "@/api/digital_human";
 import { CreateVideoTypeEnum } from "@/pages/app/digital_human/_enums";
 import VideoItem from "@/pages/app/digital_human/_components/video-item.vue";
 
+/** 数字人口播：蝉镜(1) + 闪剪纯口播(9) */
+const DIGITAL_HUMAN_TYPES = `${CreateVideoTypeEnum.DIGITAL_HUMAN},${CreateVideoTypeEnum.DIGITAL_HUMAN_SHANJIAN}`;
+
 const queryParams = reactive({
     page_no: 1,
     page_size: 20,
-    type: "",
+    type: "" as string | number,
 });
 const loading = ref(false);
 const loadingText = ref("加载中...");

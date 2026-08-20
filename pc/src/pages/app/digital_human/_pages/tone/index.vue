@@ -46,17 +46,6 @@
                             <span class="text-[14px] font-[900] text-[#1E293B]">{{ row.name }}</span>
                         </template>
                     </ElTableColumn>
-                    <ElTableColumn label="使用模型" min-width="140">
-                        <template #default="{ row }">
-                            <div class="flex items-center justify-center">
-                                <span
-                                    class="px-2 py-1 bg-[#F1F5F9] text-[#64748B] text-[11px] font-black rounded-md border border-[#E2E8F0]">
-                                    {{ getModelType(row.model_version) }}
-                                </span>
-                            </div>
-                        </template>
-                    </ElTableColumn>
-
                     <ElTableColumn label="状态" min-width="140">
                         <template #default="{ row }">
                             <div class="flex items-center justify-center gap-2">
@@ -137,7 +126,7 @@ const modelChannel = computed(() => {
                     DigitalHumanModelVersionEnum.CHANJING,
                     DigitalHumanModelVersionEnum.STANDARD,
                     DigitalHumanModelVersionEnum.SHANJIAN,
-                ].includes(parseInt(item.id))
+                ].includes(parseInt(item.id)),
         );
     }
     return [];
@@ -148,7 +137,7 @@ const addPopRef = shallowRef<InstanceType<typeof AddPop>>();
 
 const queryParams = reactive({
     name: "",
-    model_version: `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.STANDARD},${DigitalHumanModelVersionEnum.SHANJIAN}`,
+    model_version: `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.STANDARD},${DigitalHumanModelVersionEnum.SHANJIAN},${DigitalHumanModelVersionEnum.MINIMAX_HD},${DigitalHumanModelVersionEnum.MINIMAX_TURBO}`,
     builtin: ToneTypeEnum.USER,
 });
 

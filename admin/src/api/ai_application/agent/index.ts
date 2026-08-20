@@ -35,6 +35,11 @@ export function deleteAgentChatRecord(params: any) {
     return request.post({ url: "/kb.robot/deleteChatLog", params });
 }
 
+// 智能体权限编辑
+export function editAgentPermission(params: any) {
+    return request.post({ url: "/kb.robot/changePermissions", params });
+}
+
 // 关键词话术列表
 export function robotKeywordsLists(params: any) {
     return request.get({ url: "/sv.robotKeyword/lists", params });

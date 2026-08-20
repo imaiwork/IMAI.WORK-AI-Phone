@@ -121,7 +121,7 @@ class CrontabHandler extends BaseMessageHandler
     
 
 
-    private function _setPublishStatus($publish)
+    private function _setPublishStatus(array $publish)
     {
         try {
 

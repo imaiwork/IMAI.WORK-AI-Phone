@@ -11,7 +11,7 @@
             <slot></slot>
         </template>
 
-        <el-form :model="productForm" ref="productFormRef" :inline="true" label-width="auto">
+        <el-form :model="productForm" ref="productFormRef" :inline="true" label-width="auto" @submit.prevent>
             <el-input class="mr-2 ls-input" v-model="productForm.keyword" placeholder="请输入名称/编号" />
             <el-button type="primary" @click="getLists">搜索</el-button>
             <el-button @click="resetParams">重置</el-button>
@@ -83,6 +83,7 @@ import { withDefaults, watchEffect, ref, reactive } from "vue";
 interface productFormObj {
     keyword?: string;
     status?: number | string;
+    [key: string]: any;
 }
 type FormInstance = InstanceType<typeof ElForm>;
 const popupRef = shallowRef();
@@ -96,6 +97,7 @@ const props = withDefaults(
         title?: string;
         disabled: boolean;
         maxNum?: number;
+        params?: Record<string, any>;
     }>(),
     {
         modelValue: [],
@@ -106,7 +108,8 @@ const props = withDefaults(
         disabled: false,
         // 最大选择数量
         maxNum: 10,
-    }
+        params: () => ({}),
+    },
 );
 
 const emit = defineEmits(["update:modelValue", "open", "close"]);
@@ -115,6 +118,7 @@ const selectData = ref<Array<object> | any>(props.modelValue);
 const productForm = reactive<productFormObj>({
     keyword: "",
     status: "",
+    ...props.params,
 });
 
 const { pager, getLists, resetParams } = usePaging({
@@ -128,7 +132,7 @@ watch(
     (val) => {
         selectData.value = cloneDeep(val);
     },
-    { deep: true, immediate: true }
+    { deep: true, immediate: true },
 );
 
 const selectAll = computed({

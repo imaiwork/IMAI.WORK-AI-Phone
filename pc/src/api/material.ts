@@ -42,6 +42,11 @@ export function batchUpdateMaterialToGroup(params: any) {
     return $request.post({ url: "/sv.mediaMaterial/batchUpdate", params });
 }
 
+// 批量更新素材
+export function batchUpdateMaterialDate(params: any) {
+    return $request.post({ url: "/sv.mediaMaterial/batchUpdateDate", params });
+}
+
 // 添加素材组
 export function addMaterialLibraryGroup(params: any) {
     return $request.post({ url: "/sv.mediaMaterialGroup/add", params });

@@ -6,6 +6,7 @@ namespace app\adminapi\logic\kb;
 use app\common\enum\kb\KnowEnum;
 use app\common\logic\BaseLogic;
 use app\common\model\chat\Models;
+use app\common\model\chat\ModelsCost;
 use app\common\model\kb\KbKnow;
 use app\common\model\kb\KbKnowFiles;
 use app\common\model\kb\KbKnowQa;
@@ -35,6 +36,96 @@ class KbKnowLogic extends BaseLogic
             ->findOrEmpty()
             ->toArray();
     }
+
+    /**
+     * @notes 知识库新增
+     * @param array $post
+     * @param int $userId
+     * @return bool|array
+     * @author kb
+     */
+    public static function add(array $post, int $userId): bool|array
+    {
+        $model = new KbKnow();
+        $model->startTrans();
+        try {
+
+            // 主向量模型
+            $mainEmbModel = (new Models())->where(['id'=>intval($post['embedding_model_id'])])->findOrEmpty();
+            if ($mainEmbModel->isEmpty() || !$mainEmbModel['is_enable']) {
+                throw new Exception('向量模型已被下架!');
+            }
+
+            // 子向量模型
+            $subEmbModel = (new ModelsCost())->where(['model_id'=>intval($mainEmbModel['id'])])->findOrEmpty();
+            if (!$subEmbModel) {
+                throw new Exception('向量模型已被下架');
+            }
+
+            $know = KbKnow::create([
+                                       'user_id'                => $userId,
+                                       'create_uid'             => $userId,
+                                       'image'                  => FileService::setFileUrl($post['image']??''),
+                                       'name'                   => $post['name'],
+                                       'intro'                  => $post['intro']??'',
+                                       'documents_model_id'     => $post['documents_model_id'],
+                                       'documents_model_sub_id' => $post['documents_model_sub_id'],
+                                       'embedding_model_id'     => $post['embedding_model_id'],
+                                       'embedding_model_sub_id' => $subEmbModel['id']
+                                   ]);
+
+            $model->commit();
+            return ['id'=>$know['id']];
+        } catch (Exception $e) {
+            $model->rollback();
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+
+    /**
+     * @notes 知识库编辑
+     * @param array $post
+     * @param int $userId
+     * @return bool
+     * @author kb
+     */
+    public static function edit(array $post, int $userId): bool
+    {
+        try {
+
+            $modelKbKnow = new KbKnow();
+            $know = $modelKbKnow
+                ->field(['id,user_id,name,is_enable'])
+                ->where(['id'=>intval($post['id'])])
+                ->where(['user_id'=>$userId])
+                ->findOrEmpty()
+                ->toArray();
+
+            if (!$know) {
+                throw new Exception('知识库不存在了!');
+            }
+
+            if (!$know['is_enable']) {
+                throw new Exception('知识库被禁用了!');
+            }
+
+            KbKnow::update([
+                               'image'                  => FileService::setFileUrl($post['image']??''),
+                               'name'                   => $post['name'],
+                               'intro'                  => $post['intro']??'',
+                               'documents_model_id'     => $post['documents_model_id']??0,
+                               'documents_model_sub_id' => $post['documents_model_sub_id']??0,
+                           ], ['id'=>intval($post['id'])]);
+
+            return true;
+        } catch (Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
 
     /**
      * @notes 知识库删除
@@ -291,9 +382,11 @@ class KbKnowLogic extends BaseLogic
                     'sn'       => $item['sn'],
                     'nickname' => $item['nickname'],
                     'mobile'   => $item['mobile'],
-                    'avatar'   => FileService::getFileUrl($item['avatar']),
+                    'avatar'   => FileService::getFileUrl($item['avatar']??''),
                 ];
             }
+
+            $item['kb_id'] = $item['know_id'];
 
             unset($item['user_id']);
             unset($item['sn']);
@@ -309,6 +402,41 @@ class KbKnowLogic extends BaseLogic
             'count'     => $lists['total'],
             'lists'     => $lists['data']
         ] ?? [];
+    }
+
+
+    /**
+     * @notes 文件重命名
+     * @param int $fid
+     * @param string $name
+     * @param int $userId
+     * @return bool
+     */
+    public static function fileRename(int $fid, string $name, int $userId): bool
+    {
+        try {
+            $model = new KbKnowFiles();
+            $files = $model->where(['id'=>$fid])->where('user_id',0)->findOrEmpty()->toArray();
+
+            if (!$files) {
+                throw new Exception('文件已不存在!');
+            }
+
+            // 权限验证
+            if ($files['user_id'] !== $userId) {
+                throw new Exception('您仅可编辑后台创建的数据');
+            }
+
+            KbKnowFiles::update([
+                                    'name'        => $name,
+                                    'update_time' => time()
+                                ], ['id'=>$fid]);
+
+            return true;
+        } catch (Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -395,17 +523,17 @@ class KbKnowLogic extends BaseLogic
 
             $files = [];
             foreach ($annex['files']??[] as $file) {
-                $files[] = ['url'=>FileService::getFileUrl($file['url']), 'name'=>$file['name']];
+                $files[] = ['url'=>FileService::getFileUrl($file['url']??''), 'name'=>$file['name']];
             }
 
             $images = [];
             foreach ($annex['images']??[] as $img) {
-                $images[] = ['url'=>FileService::getFileUrl($img['url']), 'name'=>$img['name']];
+                $images[] = ['url'=>FileService::getFileUrl($img['url']??''), 'name'=>$img['name']];
             }
 
             $video = [];
             foreach ($annex['video']??[] as $v) {
-                $video[] = ['url'=>FileService::getFileUrl($v['url']), 'name'=>$v['name']];
+                $video[] = ['url'=>FileService::getFileUrl($v['url']??''), 'name'=>$v['name']];
             }
 
             $item['images'] = $images;

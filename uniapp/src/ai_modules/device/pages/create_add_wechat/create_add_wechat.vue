@@ -1,83 +1,95 @@
 <template>
-    <view class="h-screen device-bg flex flex-col">
+    <view class="flex flex-col h-screen bg-[#F7F9FC]">
         <u-navbar
             title-bold
             title="自动加好友"
             :border-bottom="false"
             :is-fixed="false"
-            :background="{
-                background: 'transparent',
-            }">
-        </u-navbar>
-        <view class="flex-shrink-0 h-[150rpx] flex items-center">
-            <view class="grid grid-cols-3 w-full px-4">
-                <view
-                    v-for="item in steps"
-                    :key="item.step"
-                    class="common-step-item"
-                    :class="{ active: step == item.step }"
-                    @click="handleStep(item.step)">
-                    <view v-if="step > item.step" class="common-step-item-success-icon">
-                        <u-icon name="checkmark" color="#ffffff" size="14"></u-icon>
-                    </view>
-                    <view class="common-step-item-icon" v-else> </view>
-                    <text class="common-step-item-title">{{ item.title }}</text>
-                    <view
-                        v-if="item.step !== steps.length"
-                        class="common-step-item-line"
-                        :class="{ '!border-primary': step > item.step }"></view>
-                </view>
-            </view>
+            :background="{ background: '#ffffff' }" />
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-b border-solid border-[#F0F2F5] px-6 pt-[24rpx] pb-[20rpx]">
+            <steps :steps="STEPS" :step="currentStep" @step="handleStep" />
         </view>
-        <view class="grow min-h-0 mt-[24rpx]">
-            <view v-show="step === 1" class="flex flex-col h-full">
+
+        <view class="grow min-h-0 mt-[16rpx]">
+            <view v-show="currentStep === 1" class="flex flex-col h-full">
                 <view class="px-4">
                     <view
-                        class="flex items-center justify-center gap-x-2 bg-primary h-[100rpx] rounded-[10rpx]"
+                        class="flex items-center justify-center gap-[10rpx] h-[100rpx] rounded-[24rpx] relative overflow-hidden shadow-[0_8rpx_24rpx_rgba(0,101,251,0.25)]"
+                        style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
                         @click="handleAddTask">
-                        <image
-                            src="@/ai_modules/device/static/images/common/add_circle_white.png"
-                            class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="text-white font-medium text-[32rpx]">添加任务</text>
+                        <u-icon name="plus-circle-fill" color="#fff" size="32" />
+                        <text class="text-white font-extrabold text-[30rpx]">添加任务</text>
                     </view>
                 </view>
-                <view class="px-4 font-medium text-[30rpx] mt-[40rpx]"> 任务列表({{ taskList.length }}) </view>
-                <view class="px-4 mt-1 text-xs text-[#0000004d]">
-                    注意：开启此任务请确保当前网络是常用安全网络，加资账号为常态化老号</view
-                >
-                <view class="grow min-h-0 mt-2">
+
+                <view class="px-4 mt-[24rpx]">
+                    <view class="flex items-center gap-[10rpx] mb-[8rpx]">
+                        <view class="w-[6rpx] h-[28rpx] bg-primary rounded-full" />
+                        <text class="text-[28rpx] font-extrabold text-[#0D1117]">任务列表</text>
+                        <view class="flex items-center gap-[4rpx] bg-[#EBF2FF] rounded-full px-[14rpx] py-[6rpx]">
+                            <text class="text-[22rpx] font-semibold text-primary">{{ taskList.length }}</text>
+                        </view>
+                    </view>
+                    <view class="flex items-start gap-[8rpx]">
+                        <view class="flex-shrink-0 mt-[2rpx]">
+                            <u-icon name="info-circle" color="#F59E0B" size="22" />
+                        </view>
+                        <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed">
+                            开启此任务请确保当前网络是常用安全网络，加资账号为常态化老号
+                        </text>
+                    </view>
+                </view>
+
+                <view class="grow min-h-0 mt-[16rpx]">
                     <scroll-view class="h-full" scroll-y v-if="taskList.length">
-                        <view class="px-4 pb-[100rpx] flex flex-col gap-y-2">
+                        <view class="px-4 pb-[120rpx] flex flex-col gap-[12rpx]">
                             <view class="relative" v-for="(item, index) in taskList" :key="index">
                                 <view
-                                    class="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center bg-[#0000004d] z-[22]"
+                                    class="absolute top-[12rpx] right-[12rpx] w-[44rpx] h-[44rpx] rounded-full flex items-center justify-center bg-[#00000040] z-[22]"
                                     @click="handleDeleteTask(index)">
-                                    <u-icon name="close" size="20" color="#ffffff"></u-icon>
+                                    <u-icon name="close" size="18" color="#ffffff" />
                                 </view>
                                 <clue-card :data="item" :type="item.file_type" />
                             </view>
                         </view>
                     </scroll-view>
-                    <view v-else class="mt-[100rpx]">
-                        <empty :size="260" text="您还没有添加任务哦" />
+                    <view v-else class="flex flex-col items-center justify-center mt-[80rpx]">
+                        <view
+                            class="w-[200rpx] h-[200rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center mb-[28rpx]">
+                            <view
+                                class="w-[120rpx] h-[120rpx] rounded-[28rpx] flex items-center justify-center shadow-[0_6rpx_20rpx_rgba(0,101,251,0.25)]"
+                                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)">
+                                <u-icon name="list" color="#fff" size="44" />
+                            </view>
+                        </view>
+                        <text class="text-[28rpx] font-extrabold text-[#0D1117] mb-[10rpx]">您还没有添加任务哦</text>
+                        <text class="text-xs text-[#9CA3AF]">点击上方按钮添加线索任务</text>
                     </view>
                 </view>
             </view>
-            <view v-show="step === 2" class="h-full">
+
+            <view v-show="currentStep === 2" class="h-full">
                 <scroll-view class="h-full" scroll-y>
-                    <view class="px-4 pb-[100rpx]">
-                        <view>
-                            <view class="text-[30rpx] font-medium">加微设置</view>
-                            <view class="mt-[24rpx] rounded-[24rpx] bg-white px-5 py-[24rpx]">
+                    <view class="px-4 pb-[120rpx] flex flex-col gap-[16rpx]">
+                        <view
+                            class="bg-white rounded-[28rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center gap-[10rpx] px-[28rpx] h-[88rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[28rpx] font-extrabold text-[#0D1117]">加微设置</text>
+                            </view>
+                            <view class="px-[28rpx] py-[20rpx] flex flex-col gap-[20rpx]">
                                 <view>
-                                    <view class="text-xs text-[#0000004d] mb-3">加微微信</view>
+                                    <text class="text-[22rpx] text-[#9CA3AF] block mb-[12rpx]">加微微信</text>
                                     <data-select
                                         v-model="formData.wechat_id"
                                         multiple
-                                        :localdata="optionsData.wechatLists"></data-select>
+                                        :localdata="optionsData.wechatLists" />
                                 </view>
-                                <view class="mt-[32rpx]">
-                                    <view class="text-xs text-[#0000004d] mb-3">加微规则</view>
+                                <view class="h-[1rpx] bg-[#F0F2F5]" />
+                                <view>
+                                    <text class="text-[22rpx] text-[#9CA3AF] block mb-[12rpx]">加微规则</text>
                                     <data-select
                                         v-model="formData.wechat_reg_type"
                                         :clear="false"
@@ -85,86 +97,134 @@
                                             { text: '全部', value: 0 },
                                             { text: '微信号', value: 1 },
                                             { text: '手机号', value: 2 },
-                                        ]"></data-select>
+                                        ]" />
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-[32rpx]">
-                            <view class="text-[30rpx] font-medium">频率设置</view>
-                            <view class="mt-[24rpx] rounded-[24rpx] bg-white px-5 py-[24rpx]">
+
+                        <view
+                            class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center gap-[10rpx] px-[28rpx] h-[88rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[28rpx] font-extrabold text-[#0D1117]">频率设置</text>
+                            </view>
+                            <view class="px-[28rpx] py-[20rpx] flex flex-col gap-[20rpx]">
                                 <view>
-                                    <view class="text-xs text-[#0000004d]">每日添加线索数量</view>
-                                    <view class="grid grid-cols-5 gap-x-2 mt-[20rpx]">
+                                    <text class="text-[22rpx] text-[#9CA3AF] block mb-[14rpx]">每日添加线索数量</text>
+                                    <view class="flex flex-wrap gap-[12rpx]">
                                         <view
                                             v-for="(item, index) in dayNumList"
                                             :key="index"
-                                            class="day-num-item"
-                                            :class="{ active: formData.add_number == item }"
+                                            class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                            :class="
+                                                formData.add_number == item
+                                                    ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                    : 'bg-[#F0F2F5]'
+                                            "
                                             @click="handleDayNum(item)">
-                                            {{ item }}条
+                                            <text
+                                                class="font-bold"
+                                                :class="
+                                                    formData.add_number == item ? 'text-primary' : 'text-[#9CA3AF]'
+                                                ">
+                                                {{ item }}条
+                                            </text>
                                         </view>
                                     </view>
                                 </view>
-                                <view class="h-[2rpx] bg-[#00000008] my-4"></view>
+
+                                <view class="h-[1rpx] bg-[#F0F2F5]" />
+
                                 <view>
-                                    <view class="text-xs text-[#0000004d]">每个账号添加时间间隔</view>
-                                    <view class="grid grid-cols-4 gap-2 mt-[20rpx]">
+                                    <text class="text-[22rpx] text-[#9CA3AF] block mb-[14rpx]"
+                                        >每个账号添加时间间隔</text
+                                    >
+                                    <view class="flex flex-wrap gap-[12rpx]">
                                         <view
                                             v-for="(item, index) in timeIntervalList"
                                             :key="index"
-                                            class="time-interval-item"
-                                            :class="{ active: timeIntervalIndex == index }"
+                                            class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                            :class="
+                                                timeIntervalIndex == index
+                                                    ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                    : 'bg-[#F0F2F5]'
+                                            "
                                             @click="handleTimeInterval(item, index)">
-                                            {{ item }}分钟
+                                            <text
+                                                class="font-bold"
+                                                :class="timeIntervalIndex == index ? 'text-primary' : 'text-[#9CA3AF]'">
+                                                {{ item }}分钟
+                                            </text>
                                         </view>
-                                    </view>
-                                    <view class="flex mt-2">
+
                                         <view
-                                            class="bg-[#F6F6F6] flex items-center px-4 py-2 rounded-[16rpx] border border-solid text-xs border-[#F1F2F5]"
-                                            :class="{
-                                                ' border-primary bg-white text-primary font-medium':
-                                                    timeIntervalIndex == 4,
-                                            }"
+                                            class="h-[68rpx] px-[20rpx] flex items-center gap-[8rpx] rounded-[20rpx] transition-all duration-200"
+                                            :class="
+                                                timeIntervalIndex == 4
+                                                    ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                    : 'bg-[#F0F2F5]'
+                                            "
                                             @click="timeIntervalIndex = 4">
-                                            <text>自定义</text>
+                                            <text
+                                                class="font-bold"
+                                                :class="timeIntervalIndex == 4 ? 'text-primary' : 'text-[#9CA3AF]'">
+                                                自定义
+                                            </text>
                                             <template v-if="timeIntervalIndex == 4">
-                                                <view class="px-2 w-[120rpx]">
+                                                <view class="w-[100rpx]">
                                                     <u-input
                                                         v-model="timeInterval"
                                                         type="digit"
                                                         height="20"
                                                         placeholder="请输入"
-                                                        placeholder-style="color: #00000080;font-size: 24rpx;"
+                                                        placeholder-style="color:#C0C4CC;font-size:24rpx;"
                                                         @focus="timeIntervalIndex = 4" />
                                                 </view>
-                                                <text>分钟</text>
+                                                <text class="font-bold text-primary">分钟</text>
                                             </template>
                                         </view>
                                     </view>
                                 </view>
                             </view>
                         </view>
-                        <view class="mt-5">
-                            <view class="flex items-center justify-between gap-x-2">
-                                <view class="font-medium text-[30rpx]">加好友备注设置</view>
-                                <view class="flex items-center gap-x-2" @click="handleEditRemark(-1)">
-                                    <image
-                                        src="@/ai_modules/device/static/images/common/add_circle.png"
-                                        class="w-[32rpx] h-[32rpx]"></image>
-                                    <text class="font-medium">新增</text>
+
+                        <view
+                            class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center justify-between px-[28rpx] h-[88rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                <view class="flex items-center gap-[10rpx]">
+                                    <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                    <text class="text-[28rpx] font-extrabold text-[#0D1117]">加好友备注设置</text>
+                                </view>
+                                <view
+                                    class="flex items-center gap-[6rpx] h-[56rpx] px-[20rpx] rounded-[14rpx] bg-[#EBF2FF] border border-solid border-[#BFDBFE]"
+                                    @click="handleEditRemark(-1)">
+                                    <u-icon name="plus" color="#0065fb" size="20" />
+                                    <text class="text-xs font-semibold text-primary">新增</text>
                                 </view>
                             </view>
-                            <view class="mt-5 flex flex-wrap gap-2">
-                                <view
-                                    v-for="(item, index) in formData.remarks"
-                                    :key="index"
-                                    class="remark-item"
-                                    @click="handleEditRemark(index)">
-                                    {{ item }}
+                            <view class="px-[28rpx] py-[20rpx]">
+                                <view v-if="formData.remarks.length > 0" class="flex flex-wrap gap-[12rpx]">
                                     <view
-                                        class="absolute top-[-10rpx] right-[-10rpx] w-[32rpx] h-[32rpx] rounded-full bg-[#0000004d] flex items-center justify-center"
-                                        @click.stop="handleDeleteRemark(index)">
-                                        <u-icon name="close" size="16" color="#ffffff"></u-icon>
+                                        v-for="(item, index) in formData.remarks"
+                                        :key="index"
+                                        class="relative flex items-center gap-[8rpx] bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[12rpx] border border-solid border-[#E5E9F0]"
+                                        @click="handleEditRemark(index)">
+                                        <text class="text-xs text-[#4B5563]">{{ item }}</text>
+                                        <view
+                                            class="w-[28rpx] h-[28rpx] rounded-full bg-[#F0F2F5] flex items-center justify-center"
+                                            @click.stop="handleDeleteRemark(index)">
+                                            <u-icon name="close" size="14" color="#9CA3AF" />
+                                        </view>
+                                    </view>
+                                </view>
+                                <view v-else class="flex justify-center py-[20rpx]">
+                                    <view
+                                        class="flex items-center gap-[8rpx] h-[80rpx] px-[40rpx] rounded-[20rpx] border border-dashed border-[#BFDBFE] bg-[#F0F6FF]"
+                                        @click="handleEditRemark(-1)">
+                                        <u-icon name="plus" color="#0065fb" size="20" />
+                                        <text class="text-primary font-semibold">添加备注内容</text>
                                     </view>
                                 </view>
                             </view>
@@ -172,8 +232,9 @@
                     </view>
                 </scroll-view>
             </view>
-            <scroll-view v-show="step === 3" scroll-y class="h-full">
-                <view class="px-4 pb-[100rpx]">
+
+            <scroll-view v-show="currentStep === 3" scroll-y class="h-full">
+                <view class="px-4 pb-[120rpx]">
                     <base-setting
                         v-model="formData"
                         :current-frequency="currentFrequency"
@@ -181,65 +242,86 @@
                 </view>
             </scroll-view>
         </view>
-        <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 pb-5">
-            <view class="flex items-center justify-between px-4 h-[140rpx]">
-                <template v-if="step != steps.length">
-                    <view
-                        v-if="step === 1"
-                        class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
-                        :class="[taskList.length > 0 ? 'bg-primary' : 'bg-[#787878CC]']">
-                        <text class="font-medium text-[32rpx]">{{ taskList.length }}</text>
-                        <text class="text-xs mt-1">已选</text>
-                    </view>
-                    <view v-else>
-                        <view
-                            class="px-[48rpx] py-[20rpx] rounded-md border border-solid border-[#F1F2F5] text-[#878787]"
-                            @click="handleStep(step, 'prev')">
-                            上一步
-                        </view>
-                    </view>
-                    <view
-                        class="px-[48rpx] py-[20rpx] rounded-md text-white"
-                        :class="[canNext ? 'bg-primary' : 'bg-[#787878CC]']"
-                        @click="handleStep(step, 'next')">
-                        下一步
-                    </view>
-                </template>
-                <template v-else>
-                    <view
-                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-medium flex items-center justify-center"
-                        @click="handleCreateTask">
-                        创建任务
-                    </view>
-                </template>
+
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-t border-solid border-[#F0F2F5] px-4 pt-[20rpx] pb-[40rpx] flex items-center gap-[16rpx]"
+            :class="currentStep === 1 ? 'justify-end' : 'justify-between'">
+            <view
+                v-if="currentStep !== 1"
+                class="h-[96rpx] px-[40rpx] rounded-[24rpx] flex items-center border border-solid border-[#E5E9F0] bg-white"
+                @click="handleStep(currentStep, 'prev')">
+                <text class="text-[28rpx] font-semibold text-[#4B5563]">上一步</text>
             </view>
+            <template v-if="currentStep != STEPS.length">
+                <view
+                    v-if="currentStep === 1"
+                    class="w-[96rpx] h-[96rpx] rounded-[24rpx] flex flex-col items-center justify-center"
+                    :class="taskList.length > 0 ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]' : 'bg-[#F0F2F5]'">
+                    <text
+                        class="text-[32rpx] font-extrabold"
+                        :class="taskList.length > 0 ? 'text-primary' : 'text-[#C0C4CC]'">
+                        {{ taskList.length }}
+                    </text>
+                    <text
+                        class="text-[20rpx] font-semibold"
+                        :class="taskList.length > 0 ? 'text-primary' : 'text-[#C0C4CC]'">
+                        已选
+                    </text>
+                </view>
+
+                <view
+                    class="flex-1 h-[96rpx] rounded-[24rpx] flex items-center justify-center transition-all duration-300"
+                    :class="canNext ? 'shadow-[0_8rpx_24rpx_rgba(28,111,235,0.30)]' : ''"
+                    :style="
+                        canNext
+                            ? 'background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)'
+                            : 'background: #C0C4CC'
+                    "
+                    @click="handleStep(currentStep, 'next')">
+                    <text class="text-[30rpx] font-bold text-white">下一步</text>
+                </view>
+            </template>
+
+            <template v-else>
+                <view
+                    class="flex-1 h-[96rpx] rounded-[24rpx] flex items-center justify-center relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.35)]"
+                    style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                    @click="handleCreateTask">
+                    <text class="text-[32rpx] font-extrabold text-white tracking-wide">创建任务</text>
+                </view>
+            </template>
         </view>
     </view>
+
     <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
+
     <u-popup v-model="showRemarkPopup" mode="center" width="90%" :border-radius="20">
-        <view class="p-4 bg-white rounded-[20rpx]">
-            <view class="text-[30rpx] font-medium text-center mt-2">输入加好友备注</view>
-            <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
+        <view class="p-[32rpx] bg-white rounded-[28rpx]">
+            <text class="text-[30rpx] font-extrabold text-[#0D1117] text-center block mb-[28rpx]">输入加好友备注</text>
+            <view
+                class="bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[14rpx] border border-solid border-[#E5E9F0] mb-[28rpx]">
                 <u-input
                     v-model="newRemark"
                     placeholder="请输入备注内容"
                     maxlength="100"
-                    placeholder-style="color: #0000004d; font-size: 26rpx;" />
+                    placeholder-style="color:#C0C4CC;font-size:26rpx;" />
             </view>
-            <view class="flex items-center gap-x-5 mt-[56rpx]">
+            <view class="flex items-center gap-[16rpx]">
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[20rpx] bg-[#F0F2F5]"
                     @click="closeRemarkPopup">
-                    取消
+                    <text class="text-[28rpx] font-semibold text-[#4B5563]">取消</text>
                 </view>
                 <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
-                    @click="handleRemarkConfirm"
-                    >确定</view
-                >
+                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[20rpx] shadow-[0_6rpx_16rpx_rgba(0,101,251,0.25)]"
+                    style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                    @click="handleRemarkConfirm">
+                    <text class="text-[28rpx] font-bold text-white">确定</text>
+                </view>
             </view>
         </view>
     </u-popup>
+
     <confirm-dialog
         v-model="showCreateTaskSuccessDialog"
         center
@@ -248,6 +330,7 @@
         :show-close="false"
         @close="handleCreateTaskSuccess"
         @confirm="handleCreateTaskSuccess" />
+
     <task-conflict-dialog
         v-if="showTaskMsgPop"
         v-model="showTaskMsgPop"
@@ -257,408 +340,94 @@
 </template>
 
 <script setup lang="ts">
-import config from "@/config";
-import WechatOA from "@/utils/wechat";
-import { createManualAddWechat, getPublishAccountList, checkTaskPublishTime } from "@/api/device";
-import { ListenerTypeEnum } from "@/ai_modules/device/enums";
-import { chooseFile } from "@/components/file-upload/choose-file";
-import { uploadFile } from "@/api/app";
+import { getPublishAccountList } from "@/api/device";
 import { useAppStore } from "@/stores/app";
 import { useDictOptions } from "@/hooks/useDictOptions";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
-import { useCopy } from "@/hooks/useCopy";
+import { ListenerTypeEnum } from "@/ai_modules/device/enums";
+import Steps from "@/ai_modules/device/components/steps/steps.vue";
 import ClueCard from "@/ai_modules/device/components/clue-card/clue-card.vue";
 import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
 import TaskConflictDialog from "@/ai_modules/device/components/task-conflict-dialog/task-conflict-dialog.vue";
 
-const { on } = useEventBusManager();
+import { STEPS, createDefaultFormData } from "./hooks/types";
+import { useStep } from "./hooks/useStep";
+import { useTaskList } from "./hooks/useTaskList";
+import { useFrequencySetting } from "./hooks/useFrequencySetting";
+import { useCreateTask } from "./hooks/useCreateTask";
 
+const { on } = useEventBusManager();
 const appStore = useAppStore();
 
-const { copy } = useCopy();
+// ── formData ──────────────────────────────────────────────────────────────────
+const formData = reactive(createDefaultFormData(appStore.config.wechat_remarks || []));
 
-// 步骤
-const steps = ref([
-    { step: 1, title: "选择线索" },
-    { step: 2, title: "调设置" },
-    { step: 3, title: "设定时间" },
-]);
-const step = ref(1);
-
-const getWechatRemarks = computed(() => {
-    return appStore.config.wechat_remarks || [];
-});
-
-const formData = reactive<{
-    name: string;
-    source: 1 | 2;
-    fileurl: string;
-    crawling_task_ids: string[];
-    add_type: "0" | "1";
-    add_number: number;
-    add_interval_time: number;
-    add_friends_prompt: string;
-    add_remark_enable: 0 | 1;
-    remarks: string[];
-    wechat_id: string[];
-    wechat_reg_type: 0 | 1 | 2;
-    time_config: string[];
-    task_frep: number;
-    device_codes: string[];
-    custom_date: string[];
-    task_exec_type: number;
-    minutes: number;
-    task_ids: string[];
-}>({
-    name: `自动加好友任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`,
-    crawling_task_ids: [],
-    add_number: 1,
-    add_interval_time: 5,
-    remarks: getWechatRemarks.value || [],
-    add_remark_enable: 1,
-    add_friends_prompt: "",
-    source: 1,
-    fileurl: "",
-    add_type: "1",
-    wechat_id: [],
-    wechat_reg_type: 0,
-    time_config: [
-        uni.$u.timeFormat(new Date(), "hh:MM"),
-        uni.$u.timeFormat(new Date(new Date().getTime() + 30 * 60 * 1000), "hh:MM"),
-    ],
-    task_frep: 1,
-    device_codes: [],
-    custom_date: [],
-    task_exec_type: 1,
-    minutes: 30,
-    task_ids: [],
-});
-
-const taskList = ref<any[]>([]);
-
-const uploadMaterialList = ref<any[]>([]);
-const showUploadProgress = ref(false);
-
-const dayNumList = [1, 3, 5, 10, 15];
-// 时间间隔
-const timeIntervalList = [5, 10, 15, 20];
-const timeIntervalIndex = ref(0);
-const timeInterval = ref();
-
-const showRemarkPopup = ref(false);
-const newRemark = ref("");
-const editRemarkIndex = ref(-1);
-
-const currentFrequency = ref(0);
-const taskErrorMsg = ref("");
-const showTaskMsgPop = ref(false);
-const taskMsgPopContent = ref<string[]>([]);
-const showCreateTaskSuccessDialog = ref(false);
-
-const { optionsData } = useDictOptions<{
-    wechatLists: any[];
-}>({
-    wechatLists: {
-        api: getPublishAccountList,
-        params: { page_size: 9999, type: 1 },
-        transformData: (res: any) =>
-            res.lists?.map((item: any) => ({
-                text: item.nickname,
-                value: item.account,
-            })),
-    },
-});
-
-// 计算当前步骤是否可以点击“下一步”
-const canNext = computed(() => canStepProceed(step.value));
-
-//判断是否可以下一步
-const canStepProceed = (stepNumber: number) => {
-    switch (stepNumber) {
-        case 1:
-            return taskList.value.length > 0;
-        case 2:
-            if (formData.wechat_id.length == 0) {
-                return false;
-            }
-            if (timeIntervalIndex.value == 4 && !timeInterval.value) {
-                return false;
-            }
-            formData.add_remark_enable = formData.remarks.length == 0 ? 0 : 1;
-            return true;
-        case 3:
-            return true;
-        default:
-            return false;
-    }
-};
-
-const handleStep = (targetStep: number, type?: "next" | "prev") => {
-    // 点击“上一步”
-    if (type === "prev") {
-        step.value--;
-        return;
-    }
-
-    // 点击“下一步”
-    if (type === "next") {
-        if (canNext.value) {
-            step.value++;
-        } else {
-            const messages: { [key: number]: string } = {
-                1: "请至少添加一个线索",
-                3: "请设定时间",
-            };
-            uni.$u.toast(messages[step.value] || "请完成当前步骤");
-        }
-        return;
-    }
-
-    // 直接点击步骤条进行跳转
-    if (targetStep === step.value) return;
-
-    if (targetStep < step.value) {
-        step.value = targetStep;
-    } else {
-        for (let i = 1; i < targetStep; i++) {
-            if (!canStepProceed(i)) {
-                uni.$u.toast("请按顺序完成步骤");
-                return;
-            }
-        }
-        step.value = targetStep;
-    }
-};
-
-const progressCallback = (progress: number, options: { tempFilePath: string }) => {
-    const targetIndex = uploadMaterialList.value.findIndex(
-        (material) => material.tempFilePath === options.tempFilePath
-    );
-    if (targetIndex !== -1) {
-        uploadMaterialList.value[targetIndex] = {
-            ...uploadMaterialList.value[targetIndex],
-            progress: progress,
-        };
-    }
-};
-
-const handleDeleteTask = (index: number) => {
-    taskList.value.splice(index, 1);
-};
-
-const handleDayNum = (item: number) => {
-    formData.add_number = item;
-};
-
-const handleTimeInterval = (item: number, index: number) => {
-    timeIntervalIndex.value = index;
-    formData.add_interval_time = item;
-};
-
-const handleAddTask = () => {
-    uni.showActionSheet({
-        itemList: ["复制模版链接", "从聊天记录中选择文件（需要符合模板）", "从获客任务中选择线索"],
-        success: async (res) => {
-            if (res.tapIndex === 0) {
-                copy(config.baseUrl + "static/file/template/wechatidcsv.csv");
-            } else if (res.tapIndex === 1) {
-                try {
-                    uploadMaterialList.value = [];
-                    const { tempFiles } = await chooseFile({
-                        type: "file",
-                        extension: ["csv", "xlsx"],
-                        count: 1,
-                    });
-                    const fileList = [];
-                    for (const file of tempFiles) {
-                        if (file.size > 20 * 1024 * 1024) {
-                            uni.$u.toast(`文件大小不能超过20M`);
-                            continue;
-                        }
-                        fileList.push(file);
-                    }
-                    if (fileList.length === 0) return;
-                    uploadMaterialList.value = fileList;
-                    showUploadProgress.value = true;
-                    for (const item of uploadMaterialList.value) {
-                        const fileRes: any = await uploadFile("file", { filePath: item.path }, (progress) =>
-                            progressCallback(progress, item)
-                        );
-                        if (formData.source == 2) {
-                            formData.source = 1;
-                        }
-                        taskList.value.length = 0;
-                        taskList.value.push({
-                            url: fileRes.uri,
-                            name: item.name,
-                            size: item.size,
-                            file_type: 1,
-                        });
-                    }
-                    if (uploadMaterialList.value.every((item) => item.progress === 100)) {
-                        showUploadProgress.value = false;
-                    }
-                } catch (error) {
-                    uni.$u.toast(error);
-                    uploadMaterialList.value = [];
-                    showUploadProgress.value = false;
-                }
-            } else if (res.tapIndex === 2) {
-                uni.navigateTo({
-                    url: "/ai_modules/device/pages/wechat_clue/wechat_clue",
-                });
-            }
-        },
-        fail: (err) => {
-            console.log(err);
-        },
-    });
-};
-
-const handleEditRemark = (index: number) => {
-    showRemarkPopup.value = true;
-    editRemarkIndex.value = index ?? -1;
-
-    if (index > -1) {
-        newRemark.value = formData.remarks[index];
-    }
-};
-
-const handleRemarkConfirm = () => {
-    if (editRemarkIndex.value == -1) {
-        formData.remarks.push(newRemark.value);
-    } else {
-        formData.remarks[editRemarkIndex.value] = newRemark.value;
-    }
-    editRemarkIndex.value = -1;
-    showRemarkPopup.value = false;
-};
-
-const closeRemarkPopup = () => {
-    showRemarkPopup.value = false;
-    newRemark.value = "";
-    editRemarkIndex.value = -1;
-};
-
-const handleDeleteRemark = (index: number) => {
-    formData.remarks.splice(index, 1);
-};
-
-const handleCreateTaskSuccess = () => {
-    showCreateTaskSuccessDialog.value = false;
-    uni.$u.route({
-        url: "/ai_modules/device/pages/index/index",
-        type: "reLaunch",
-    });
-};
-
-const handleCreateTask = async () => {
-    if (!formData.name) {
-        uni.$u.toast("请输入任务名称");
-        return false;
-    }
-    if (formData.device_codes.length == 0) {
-        uni.$u.toast("请选择设备");
-        return false;
-    }
-    if (currentFrequency.value === 5 && !formData.custom_date.length) {
-        uni.$u.toast("请选择任务日期");
-        return;
-    }
-    if (!formData.time_config[0] || !formData.time_config[1]) {
-        uni.$u.toast("请选择时间");
-        return false;
-    }
-    if (formData.task_exec_type == 1) {
-        if (formData.minutes < 1) return uni.$u.toast("执行时间不能小于1分钟");
-        if (formData.minutes > 9999) return uni.$u.toast("执行时间不能超过9999分钟");
-    }
-    if (formData.task_exec_type === 1) {
-        uni.showLoading({ title: "检测冲突中...", mask: true });
-        try {
-            const { messages, task_ids } = await checkTaskPublishTime({
-                device_codes: formData.device_codes,
-                minutes: formData.minutes,
-            });
-
-            uni.hideLoading();
-
-            if (messages && messages.length > 0) {
-                taskMsgPopContent.value = messages;
-                formData.task_ids = task_ids;
-                showTaskMsgPop.value = true;
-                return;
-            }
-
-            await executeCreateTask();
-        } catch (error: any) {
-            uni.hideLoading();
-            taskErrorMsg.value = error;
-            uni.$u.toast(error);
-        }
-    } else {
-        await executeCreateTask();
-    }
-};
-
-const executeCreateTask = async () => {
-    uni.showLoading({
-        title: "创建中...",
-        mask: true,
-    });
-    try {
-        await createManualAddWechat({
-            ...formData,
-            crawling_task_ids: formData.source == 2 ? taskList.value.map((item) => item.id) : [],
-            fileurl: formData.source == 1 ? taskList.value[0].url : "",
-            time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
-            add_interval_time: timeIntervalIndex.value == 4 ? timeInterval.value : formData.add_interval_time,
-        });
-        uni.hideLoading();
-        showCreateTaskSuccessDialog.value = true;
-        WechatOA.notify();
-    } catch (error: any) {
-        uni.hideLoading();
-        if (error.indexOf("24小时自动执行任务") > -1) {
-            uni.showModal({
-                title: "提示",
-                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
-                success: (res) => {
-                    if (res.confirm) {
-                        uni.$u.route({
-                            url: "/ai_modules/device/pages/index/index",
-                        });
-                    }
-                },
-            });
-        } else {
-            taskErrorMsg.value = error;
-            uni.showToast({
-                title: error,
-                icon: "none",
-                duration: 3000,
-            });
-        }
-    }
-};
-
-const handleTaskMsgPopConfirm = async () => {
-    await executeCreateTask();
-};
-
+// 同步 store 中的 wechat_remarks 变化
 watch(
     () => appStore.config.wechat_remarks,
     (newVal) => {
         formData.remarks = newVal || [];
-    }
+    },
 );
 
+const currentFrequency = ref(0);
+
+// ── Hooks ─────────────────────────────────────────────────────────────────────
+const { taskList, uploadMaterialList, showUploadProgress, handleAddTask, handleDeleteTask } = useTaskList(formData);
+
+const {
+    dayNumList,
+    timeIntervalList,
+    timeIntervalIndex,
+    timeInterval,
+    showRemarkPopup,
+    newRemark,
+    editRemarkIndex,
+    handleDayNum,
+    handleTimeInterval,
+    handleEditRemark,
+    handleRemarkConfirm,
+    closeRemarkPopup,
+    handleDeleteRemark,
+} = useFrequencySetting(formData);
+
+const {
+    step: currentStep,
+    canNext,
+    handleStep,
+} = useStep({
+    formData,
+    taskList,
+    timeIntervalIndex,
+    timeInterval,
+});
+
+const {
+    taskErrorMsg,
+    showCreateTaskSuccessDialog,
+    showTaskMsgPop,
+    taskMsgPopContent,
+    handleCreateTask,
+    handleTaskMsgPopConfirm,
+    handleCreateTaskSuccess,
+} = useCreateTask({ formData, taskList, currentFrequency, timeIntervalIndex, timeInterval });
+
+// ── 账号列表 ──────────────────────────────────────────────────────────────────
+const { optionsData } = useDictOptions<{ wechatLists: any[] }>({
+    wechatLists: {
+        api: getPublishAccountList,
+        params: { page_size: 9999, type: 1 },
+        transformData: (res: any) => res.lists?.map((item: any) => ({ text: item.nickname, value: item.account })),
+    },
+});
+
+// ── onLoad EventBus ───────────────────────────────────────────────────────────
 onLoad(() => {
     on("confirm", (res: any) => {
         const { type, data } = res;
         if (type === ListenerTypeEnum.WECHAT_CLUE) {
             if (data && data.length > 0) {
-                if (formData.source == 1) {
+                if (formData.source === 1) {
                     taskList.value = [];
                     formData.fileurl = "";
                     formData.source = 2;
@@ -676,22 +445,12 @@ onLoad(() => {
             currentFrequency.value = 5;
         }
         if (type === ListenerTypeEnum.CHOOSE_DEVICE) {
-            if (data.length === 0) return;
+            if (data.length === 0) {
+                formData.device_codes = [];
+                return;
+            }
             formData.device_codes = data;
         }
     });
 });
 </script>
-
-<style scoped lang="scss">
-.day-num-item,
-.time-interval-item {
-    @apply bg-[#F6F6F6] rounded-[16rpx]  py-2 text-center text-xs text-[#00000080] border border-solid border-[#F6F6F6];
-    &.active {
-        @apply bg-white border-primary text-primary font-medium;
-    }
-}
-.remark-item {
-    @apply bg-white rounded-[10rpx] text-[#000000b3] px-[28rpx] py-[16rpx] text-xs relative;
-}
-</style>

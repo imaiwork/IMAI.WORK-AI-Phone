@@ -22,7 +22,11 @@ ThinkPHPV6.0版本由[亿速云](https://www.yisu.com/)独家赞助发布。
 * 对IDE更加友好
 * 统一和精简大量用法
 
+
 ## 安装
+
+
+
 
 ~~~
 composer create-project topthink/think tp 6.0.*

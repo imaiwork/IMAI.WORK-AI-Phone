@@ -40,6 +40,28 @@ class SvWechatStrategy extends BaseModel {
         return $value ? json_decode($value, true) : [];
     }
 
+    public function setSalesWechatAttr($value)
+    {
+        return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
+    }
+
+    public function getSalesWechatAttr($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    public function setGroupTriggerKeywordsAttr($value)
+    {
+        return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
+    }
+
+    public function getGroupTriggerKeywordsAttr($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+
+
      /**
      * @notes 公共处理图片,补全路径
      * @param $value

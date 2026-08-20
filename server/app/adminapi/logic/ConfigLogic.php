@@ -5,9 +5,13 @@ namespace app\adminapi\logic;
 
 
 use app\common\model\dict\DictData;
+use app\common\model\human\HumanVoice;
 use app\common\model\ModelConfig;
 use app\common\model\pay\PayConfig;
 use app\common\service\{ConfigService, FileService};
+use app\common\service\chat\ChatModelsService;
+use app\common\service\DigitalHumanModelConfigService;
+use app\common\service\UserDisplaySanitizer;
 
 /**
  * 配置类逻辑层
@@ -25,15 +29,12 @@ class ConfigLogic
     public static function getConfig(): array
     {
 
-        $modelList = ConfigService::get('model', 'list', []);
+        $modelList = HumanVoice::getModelList();
         $hdList = ConfigService::get('hd', 'list', []);
         $default = ConfigService::get('storage', 'default', 'local');
         $storage = ConfigService::get('storage', $default);
         $ossDomain = $storage ?  $storage['domain'] . '/' : (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://' . $_SERVER['HTTP_HOST'] : 'http://' . $_SERVER['HTTP_HOST']) . '/';
-        $chatModels = ConfigService::get('chat', 'ai_model', []);
-        foreach ($chatModels['channel'] as $key => $value) {
-            $chatModels['channel'][$key]['logo'] = isset($value['logo']) ? FileService::getFileUrl($value['logo']) : '';
-        }
+        $chatModels = ChatModelsService::getChannelList(false);
         //视频案例
         $videoCases = ConfigService::get('digital_human', 'video_case', []);
         foreach ($videoCases as $key => $videoCase) {
@@ -69,6 +70,9 @@ class ConfigLogic
             // 调查问卷
             'survey' => ConfigService::get('website', 'survey', []),
 
+            // 用户注册方式配置(开放 / 邀请码 / 关闭 + 默认邀请来源)
+            'register' => self::getRegisterConfig(),
+
             // banner
             'banner' => FileService::getFileUrl(ConfigService::get('website', 'banner')),
 
@@ -87,7 +91,7 @@ class ConfigLogic
                 'privacy' => ConfigService::get('digital_human', 'privacy', []),
                 'channel' => $modelList['channel'] ?? [],
                 'voice' => $modelList['voice'] ?? [],
-                'shanjian_auth' => ConfigService::get('digital_human', 'shanjian_auth', '闪剪AI'),
+                'shanjian_auth' => UserDisplaySanitizer::digitalHumanAuthName(ConfigService::get('digital_human', 'shanjian_auth', '数字人')),
                 'banner' =>  FileService::getFileUrl(ConfigService::get('digital_human', 'banner', $banner)),
                 'video_case' => $videoCases,
                 'video_case_open' => (int)ConfigService::get('digital_human', 'video_case_open', 0),
@@ -100,6 +104,35 @@ class ConfigLogic
             'by_name' =>  self::getByName(),
             'ai_model' =>  $chatModels,
             'wechat_remarks' => ConfigService::get('add_remark', 'wechat', []),
+            'demo_switch' =>  intval(ConfigService::get('rpa', 'demo_switch', 0)),
+        ];
+    }
+
+    private static function getRegisterConfig(): array
+    {
+        $registerConfig = ConfigService::get('user', 'register', [
+            'register_mode' => 1,
+            'default_invite_source' => '',
+        ]);
+        if (is_string($registerConfig)) {
+            $decoded = json_decode($registerConfig, true);
+            $registerConfig = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($registerConfig)) {
+            $registerConfig = [];
+        }
+
+        $mode = (int)($registerConfig['register_mode'] ?? 1);
+        if ($mode === 3) {
+            $mode = 2;
+        }
+        if (!in_array($mode, [1, 2, 4], true)) {
+            $mode = 1;
+        }
+
+        return [
+            'register_mode' => $mode,
+            'default_invite_source' => (string)($registerConfig['default_invite_source'] ?? ''),
         ];
     }
 
@@ -173,6 +206,20 @@ class ConfigLogic
             }
         }
 
+        if ($type == 'user' && $name == 'register' && is_array($params)) {
+            $mode = (int)($params['register_mode'] ?? 1);
+            if ($mode === 3) {
+                $mode = 2;
+            }
+            if (!in_array($mode, [1, 2, 4], true)) {
+                $mode = 1;
+            }
+            $params = [
+                'register_mode' => $mode,
+                'default_invite_source' => (string)($params['default_invite_source'] ?? ''),
+            ];
+        }
+
         ConfigService::set($type, $name, json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         return true;
@@ -220,10 +267,18 @@ class ConfigLogic
      */
     public static function getModelConfig(): array
     {
+        DigitalHumanModelConfigService::syncV1ModelConfigNames();
 
-        $response = \app\common\service\ToolsService::DataCenter()->tokensLists();
+        try {
+            $response = \app\common\service\ToolsService::DataCenter()->tokensLists();
+        } catch (\Throwable) {
+            $response = [];
+        }
 
         $castLists = $response['data']['cast_list'] ?? [];
+        if (empty($castLists)) {
+            return ModelConfig::order('code', 'asc')->select()->toArray();
+        }
 
         $result = [];
         foreach ($castLists as $key => $value) {
@@ -238,29 +293,15 @@ class ConfigLogic
                 unset($castLists[$key]);
                 continue;
             }
-            $info->cast_price = $value['cast_price'];
+            $info->cast_price = in_array($value['api_id'],[168,169]) ? (string) round($value['cast_price'] / 100 ,2) : $value['cast_price'];
             $info->cast_unit  = $value['cast_unit'];
             $info->description = $value['description'];
             $result[$key] = $info->toArray();
         }
+        $key = array_column($result, 'code');
+        array_multisort($key, SORT_ASC, $result);
+        return empty($result) ? ModelConfig::order('code', 'asc')->select()->toArray() : array_values($result);
 
-        array_multisort(array_column($result, 'code'), SORT_ASC, $result);
-        return array_values($result);
-
-        return ModelConfig::select()
-            ->each(function ($item) use ($castLists) {
-
-                foreach ($castLists as $key => $value) {
-
-                    if ($value['code'] == $item['scene']) {
-
-                        $item['cast_price'] = $value['cast_price'];
-                        $item['cast_unit']  = $value['cast_unit'];
-                        $item['description'] = $value['description'];
-                    }
-                }
-            })
-            ->toArray();
     }
 
     /**
@@ -381,6 +422,13 @@ class ConfigLogic
         if (isset($info['voice'])) {
 
             foreach ($info['voice'] as $key => $value) {
+
+                if ($value['status'] != 1 || !isset($value['type']) || $value['type'] != 3) {
+
+                    unset($info['voice'][$key]);
+
+                    continue;
+                }
 
                 $info['voice'][$key]['logo']    = FileService::getFileUrl($value['logo']);
             }

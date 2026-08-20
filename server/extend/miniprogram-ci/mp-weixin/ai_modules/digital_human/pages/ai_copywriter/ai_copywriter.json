@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "生成文案",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-input": "../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "choose-person": "../../../../components/choose-person/choose-person"
+  }
+}

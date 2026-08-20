@@ -17,7 +17,7 @@ use think\response\Json;
 class SoraVideoTaskController extends BaseApiController
 {
 
-    public array $notNeedLogin = ['list', 'notify', 'notifyNew'];
+    public array $notNeedLogin = ['list', 'notify', 'notifyNew', 'notifySeedance'];
 
     public function notify(): Json
     {
@@ -67,6 +67,29 @@ class SoraVideoTaskController extends BaseApiController
             return $this->success('ok');
         } catch (\Exception $e) {
             Log::channel('sora')->write('sora回调失败' . $e->getMessage());
+            return $this->success('fail');
+        }
+    }
+
+    public function notifySeedance(): Json
+    {
+        try {
+            $data = $this->request->all();
+            Log::channel('seedance')->write('接收seedance参数' . json_encode($data));
+            $key = md5(json_encode($data));
+            $val = cache($key);
+            if ($val) {
+                Log::channel('seedance')->write('重复请求');
+                return $this->fail('重复请求');
+            }
+            cache($key, 1, 20);
+            $result = SoraVideoTaskLogic::seedanceNotify($data);
+            if (!$result) {
+                return $this->fail(SoraVideoTaskLogic::getError());
+            }
+            return $this->success('ok');
+        } catch (\Exception $e) {
+            Log::channel('seedance')->write('sora回调失败' . $e->getMessage());
             return $this->success('fail');
         }
     }

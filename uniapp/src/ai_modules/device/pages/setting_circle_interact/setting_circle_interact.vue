@@ -1,45 +1,63 @@
 <template>
-    <view class="min-h-screen bg-[#F4F5F9]">
-        <view class="p-4 pb-[200rpx] flex flex-col gap-y-[32rpx]">
-            <view class="section-card">
-                <view class="section-title">朋友圈文字内容</view>
-                <view class="mt-[20rpx] relative">
+    <view class="flex flex-col min-h-screen bg-[#F7F9FC]">
+        <view class="p-4 pb-[200rpx] flex flex-col gap-y-[24rpx]">
+            <view
+                class="bg-white rounded-[28rpx] p-[32rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                <view class="flex items-center gap-[10rpx] mb-[24rpx]">
+                    <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                    <text class="text-[30rpx] font-extrabold text-[#0D1117]">朋友圈文字内容</text>
+                </view>
+                <view class="bg-[#F7F9FC] rounded-[20rpx] px-[24rpx] py-[20rpx]">
                     <u-input
                         v-model="formData.content"
                         placeholder="粘贴或输入内容..."
-                        placeholder-style="color:#ccc;font-size:26rpx;"
+                        placeholder-style="color:#C0C4CC;font-size:26rpx;"
                         height="200"
                         maxlength="500"
                         type="textarea"
-                        :custom-style="{ fontSize: '26rpx', lineHeight: '1.7' }" />
-                    <view class="text-right text-[#ccc] text-[22rpx] mt-[12rpx]">
-                        {{ formData.content.length }}/500
-                    </view>
+                        :auto-height="false"
+                        :custom-style="{ fontSize: '26rpx', lineHeight: '1.8', color: '#0D1117' }" />
+                </view>
+                <view class="flex items-center justify-end mt-[12rpx]">
+                    <text
+                        class="text-[22rpx]"
+                        :class="formData.content.length >= 500 ? 'text-[#EF4444] font-bold' : 'text-[#C0C4CC]'">
+                        {{ formData.content.length }} / 500
+                    </text>
                 </view>
             </view>
+            <view
+                class="bg-white rounded-[28rpx] p-[32rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                <view class="flex items-center gap-[10rpx] mb-[24rpx]">
+                    <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                    <text class="text-[30rpx] font-extrabold text-[#0D1117]">发布内容</text>
+                </view>
 
-            <view class="section-card">
-                <view class="section-title">发布内容</view>
-
-                <view class="mt-[20rpx] flex gap-x-[24rpx]">
+                <view class="flex bg-[#F0F2F5] rounded-[20rpx] p-[6rpx] mb-[28rpx]">
                     <view
                         v-for="opt in attachmentTypeOptions"
                         :key="opt.value"
-                        class="attachment-type-btn"
-                        :class="{ active: formData.attachment_type === opt.value }"
+                        class="flex-1 h-[72rpx] rounded-[16rpx] flex items-center justify-center font-semibold transition-all duration-200"
+                        :class="
+                            formData.attachment_type === opt.value
+                                ? 'bg-white text-primary shadow-[0_2rpx_8rpx_rgba(0,0,0,0.08)]'
+                                : 'text-[#9CA3AF]'
+                        "
                         @click="handleAttachmentTypeChange(opt.value as 1 | 2)">
-                        <text>{{ opt.label }}</text>
+                        {{ opt.label }}
                     </view>
                 </view>
 
-                <view class="mt-[28rpx] grid grid-cols-4 gap-[16rpx]">
+                <view class="grid grid-cols-4 gap-[16rpx]">
                     <view
                         v-if="formData.attachment_content.length < (isVideo ? 1 : 9)"
-                        class="upload-add-btn"
-                        @click="chooseUploadType">
-                        <u-icon name="plus" size="28" color="#bbb"></u-icon>
-                        <text class="text-[22rpx] text-[#bbb] mt-[6rpx]">添加</text>
-                        <text class="text-[18rpx] text-[#ddd]">最多{{ isVideo ? "1个" : "9张" }}</text>
+                        class="aspect-[1/1] border border-dashed border-[#BFDBFE] rounded-[20rpx] flex flex-col items-center justify-center bg-[#F7F9FC]"
+                        @click="showUploadCategoryPanel = true">
+                        <view
+                            class="w-[56rpx] h-[56rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center mb-[8rpx]">
+                            <u-icon name="plus" size="24" color="#0065fb" />
+                        </view>
+                        <text class="text-[20rpx] text-[#9CA3AF]">最多{{ isVideo ? "1个" : "9张" }}</text>
                     </view>
                     <view
                         v-for="(item, idx) in formData.attachment_content"
@@ -48,186 +66,215 @@
                         <video
                             v-if="isVideo || !item.pic"
                             :src="item.url"
-                            class="w-full h-full rounded-[16rpx]"
+                            class="w-full h-full rounded-[20rpx]"
                             :autoplay="false"
                             :controls="false"
                             :show-fullscreen-btn="false"
                             :show-center-play-btn="false"
                             :show-play-btn="false"
                             mode="aspectFill" />
-                        <image v-else :src="item.pic" class="w-full h-full rounded-[16rpx]" mode="aspectFill" />
+                        <image v-else :src="item.pic" class="w-full h-full rounded-[20rpx]" mode="aspectFill" />
                         <view
-                            class="absolute -top-[12rpx] -right-[12rpx] w-[36rpx] h-[36rpx] bg-[#00000066] rounded-full flex items-center justify-center"
+                            class="absolute -top-[12rpx] -right-[12rpx] w-[40rpx] h-[40rpx] bg-[#0D1117]/50 rounded-full flex items-center justify-center"
                             @click="handleDeleteAttachment(idx)">
-                            <u-icon name="close" size="18" color="#fff"></u-icon>
+                            <u-icon name="close" size="16" color="#fff" />
                         </view>
                         <view
                             v-if="isVideo"
-                            class="absolute bottom-[8rpx] left-[8rpx] bg-[#00000066] rounded-[6rpx] px-[8rpx] py-[4rpx]">
-                            <text class="text-[18rpx] text-white">视频</text>
+                            class="absolute bottom-[10rpx] left-[10rpx] bg-[#000000]/40 rounded-[8rpx] px-[10rpx] py-[4rpx]">
+                            <text class="text-[18rpx] text-white font-medium">视频</text>
                         </view>
                     </view>
                 </view>
             </view>
 
-            <view class="section-card">
-                <view class="section-title">发布时间</view>
-                <view class="mt-[20rpx] bg-[#F4F5F9] rounded-[16rpx] p-[6rpx] flex gap-2" v-if="canShowExecTypeToggle">
+            <view
+                class="bg-white rounded-[28rpx] p-[32rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                <view class="flex items-center gap-[10rpx] mb-[24rpx]">
+                    <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                    <text class="text-[30rpx] font-extrabold text-[#0D1117]">发布时间</text>
+                </view>
+
+                <view v-if="canShowExecTypeToggle" class="flex bg-[#F0F2F5] rounded-[20rpx] p-[6rpx] mb-[24rpx]">
                     <view
                         v-for="item in taskExecTypeOptions"
                         :key="item.value"
-                        class="flex-1 flex items-center justify-center gap-x-[8rpx] h-[72rpx] rounded-[12rpx] text-[28rpx] transition-all"
+                        class="flex-1 flex items-center justify-center gap-x-[8rpx] h-[72rpx] rounded-[16rpx] font-semibold transition-all duration-200"
                         :class="
                             formData.task_exec_type === item.value
-                                ? 'bg-white text-primary font-medium shadow-[0_2rpx_8rpx_rgba(0,0,0,0.06)]'
-                                : 'text-[#00000066]'
+                                ? 'bg-white text-primary shadow-[0_2rpx_8rpx_rgba(0,0,0,0.08)]'
+                                : 'text-[#9CA3AF]'
                         "
                         @click="formData.task_exec_type = item.value">
                         <u-icon
                             :name="item.icon"
-                            size="30"
-                            :color="formData.task_exec_type === item.value ? '#2979ff' : '#00000066'" />
+                            size="28"
+                            :color="formData.task_exec_type === item.value ? '#0065fb' : '#9CA3AF'" />
                         <text>{{ item.text }}</text>
                     </view>
                 </view>
 
                 <view
                     v-if="formData.task_exec_type === 1 && canShowExecTypeToggle && showImmediateExecution"
-                    class="mt-[28rpx] form-row border-[0] border-b border-solid border-[#F4F5F9]">
+                    class="flex items-center justify-between py-[24rpx] border-[0] border-b border-solid border-[#F0F2F5] mb-[8rpx]">
                     <view>
-                        <view class="form-row-label">任务执行时间</view>
-                        <view class="text-[#00000066] text-[22rpx] mt-[6rpx] leading-[1.6]">
-                            当内容执行完成后，任务会根据<br />设定时间提前结束
-                        </view>
+                        <text class="text-[28rpx] font-semibold text-[#0D1117] block mb-[8rpx]">任务执行时间</text>
+                        <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed"
+                            >当内容执行完成后，任务会根据设定时间提前结束</text
+                        >
                     </view>
-                    <view class="flex items-center gap-x-[16rpx]">
-                        <view class="minute-btn" @click="handleExecuteMinuteChange(-1)">
-                            <text class="text-[36rpx] text-[#333] leading-none">−</text>
+                    <view class="flex items-center gap-[12rpx] flex-shrink-0 ml-[16rpx]">
+                        <view
+                            class="w-[56rpx] h-[56rpx] rounded-[16rpx] border border-solid border-[#E5E9F0] bg-white flex items-center justify-center"
+                            @click="handleExecuteMinuteChange(-1)">
+                            <text class="text-[32rpx] text-primary font-bold leading-none">−</text>
                         </view>
-                        <view class="max-w-[130rpx] flex items-center justify-center">
+                        <view
+                            class="w-[100rpx] h-[56rpx] bg-[#EBF2FF] rounded-[14rpx] flex items-center justify-center">
                             <u-input
-                                class="flex-1 font-bold"
                                 v-model="formData.minutes"
                                 type="digit"
                                 placeholder=""
-                                :custom-style="{ textAlign: 'center' }" />
-                            <text class="text-[#00000066] text-[26rpx]"> 分钟</text>
+                                :custom-style="{
+                                    color: '#0065fb',
+                                    fontWeight: '800',
+                                    fontSize: '28rpx',
+                                    textAlign: 'center',
+                                }"
+                                input-align="center" />
                         </view>
-                        <view class="minute-btn" @click="handleExecuteMinuteChange(1)">
-                            <text class="text-[36rpx] text-[#333] leading-none">+</text>
+                        <text class="text-xs text-[#9CA3AF]">分钟</text>
+                        <view
+                            class="w-[56rpx] h-[56rpx] rounded-[16rpx] border border-solid border-[#E5E9F0] bg-white flex items-center justify-center"
+                            @click="handleExecuteMinuteChange(1)">
+                            <text class="text-[32rpx] text-primary font-bold leading-none">＋</text>
                         </view>
                     </view>
                 </view>
 
-                <view class="form-row border-b border-[#F4F5F9]" @click="handleChooseAccount">
+                <view
+                    class="flex items-center justify-between py-[24rpx] border-[0] border-b border-solid border-[#F0F2F5]"
+                    @click="handleChooseAccount">
                     <view>
-                        <view class="form-row-label">发布账号</view>
-                        <view class="mt-[6rpx]">
-                            <text
-                                :class="
-                                    formData.wechat_ids.length
-                                        ? 'text-primary font-medium text-[28rpx]'
-                                        : 'text-[#ccc] text-[26rpx]'
-                                ">
-                                {{
-                                    formData.wechat_ids.length
-                                        ? `已选 ${formData.wechat_ids.length} 个账号`
-                                        : "点击选择账号"
-                                }}
-                            </text>
-                        </view>
+                        <text class="text-xs text-[#9CA3AF] block mb-[8rpx]">发布账号</text>
+                        <text
+                            class="text-[28rpx] font-semibold"
+                            :class="formData.wechat_ids.length ? 'text-primary' : 'text-[#C0C4CC]'">
+                            {{
+                                formData.wechat_ids.length
+                                    ? `已选 ${formData.wechat_ids.length} 个账号`
+                                    : "点击选择账号"
+                            }}
+                        </text>
                     </view>
-                    <u-icon name="arrow-right" size="24" color="#ccc" />
+                    <u-icon name="arrow-right" size="22" color="#C0C4CC" />
                 </view>
 
-                <view class="form-row border-b border-[#F4F5F9]">
-                    <view class="form-row-label">发布日期</view>
+                <view
+                    class="flex items-center justify-between py-[24rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                    <text class="text-xs text-[#9CA3AF]">发布日期</text>
                     <picker mode="date" @change="handleDateChange">
-                        <view class="flex items-center gap-x-[8rpx]">
+                        <view class="flex items-center gap-[8rpx]">
                             <text
-                                :class="
-                                    formData.date ? 'text-primary font-medium text-[28rpx]' : 'text-[#ccc] text-[26rpx]'
-                                ">
+                                class="text-[28rpx] font-semibold"
+                                :class="formData.date ? 'text-primary' : 'text-[#C0C4CC]'">
                                 {{ formData.date ? formatDate(formData.date) : "点击选择日期" }}
                             </text>
-                            <u-icon name="arrow-right" size="24" color="#ccc" />
+                            <u-icon name="arrow-right" size="22" color="#C0C4CC" />
                         </view>
                     </picker>
                 </view>
 
-                <view class="pt-[28rpx]">
-                    <view class="form-row-label">发布时间段</view>
-                    <view class="mt-[16rpx]">
+                <view class="pt-[24rpx]">
+                    <text class="text-xs text-[#9CA3AF] block mb-[16rpx]">发布时间段</text>
+                    <view
+                        v-if="formData.task_exec_type === 1 && showImmediateExecution && canShowExecTypeToggle"
+                        class="inline-flex items-center gap-[8rpx] px-[24rpx] py-[14rpx] rounded-full bg-[#EBF2FF]">
+                        <u-icon name="arrow-upward" size="24" color="#0065fb" />
+                        <text class="text-primary font-semibold">立即执行</text>
+                    </view>
+                    <view v-else class="flex items-center gap-[16rpx]">
                         <view
-                            v-if="formData.task_exec_type === 1 && showImmediateExecution && canShowExecTypeToggle"
-                            class="immediate-badge">
-                            <u-icon name="arrow-upward" size="26" color="#2979ff" />
-                            <text class="text-primary font-medium text-[26rpx]">立即执行</text>
+                            class="flex-1 bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0]">
+                            <picker mode="time" :value="formData.time_config[0]" @change="handleStartTimeChange">
+                                <view class="flex items-center justify-between">
+                                    <text
+                                        class="font-semibold"
+                                        :class="formData.time_config[0] ? 'text-primary' : 'text-[#C0C4CC]'">
+                                        {{ formData.time_config[0] || "开始时间" }}
+                                    </text>
+                                    <u-icon name="arrow-down" size="20" color="#C0C4CC" />
+                                </view>
+                            </picker>
                         </view>
-                        <view v-else class="flex items-center gap-x-[16rpx]">
-                            <view class="time-picker-wrap flex-1">
-                                <picker mode="time" :value="formData.time_config[0]" @change="handleStartTimeChange">
-                                    <view class="flex items-center justify-between">
-                                        <text
-                                            :class="
-                                                formData.time_config[0] ? 'text-primary font-medium' : 'text-[#ccc]'
-                                            ">
-                                            {{ formData.time_config[0] || "开始时间" }}
-                                        </text>
-                                        <u-icon name="arrow-down" size="22" color="#ccc" />
-                                    </view>
-                                </picker>
-                            </view>
-                            <view class="flex-shrink-0 text-[#ccc] text-[26rpx]">至</view>
-                            <view class="time-picker-wrap flex-1">
-                                <picker
-                                    mode="time"
-                                    :value="formData.time_config[1]"
-                                    :disabled="!formData.time_config[0]"
-                                    @click="handleEndTimeClick"
-                                    @change="handleEndTimeChange">
-                                    <view class="flex items-center justify-between">
-                                        <text
-                                            :class="
-                                                formData.time_config[1] ? 'text-primary font-medium' : 'text-[#ccc]'
-                                            ">
-                                            {{ formData.time_config[1] || "结束时间" }}
-                                        </text>
-                                        <u-icon name="arrow-down" size="22" color="#ccc" />
-                                    </view>
-                                </picker>
-                            </view>
+                        <text class="text-xs text-[#9CA3AF] flex-shrink-0">至</text>
+                        <view
+                            class="flex-1 bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0]">
+                            <picker
+                                mode="time"
+                                :value="formData.time_config[1]"
+                                :disabled="!formData.time_config[0]"
+                                @click="handleEndTimeClick"
+                                @change="handleEndTimeChange">
+                                <view class="flex items-center justify-between">
+                                    <text
+                                        class="font-semibold"
+                                        :class="formData.time_config[1] ? 'text-primary' : 'text-[#C0C4CC]'">
+                                        {{ formData.time_config[1] || "结束时间" }}
+                                    </text>
+                                    <u-icon name="arrow-down" size="20" color="#C0C4CC" />
+                                </view>
+                            </picker>
                         </view>
                     </view>
                 </view>
             </view>
 
-            <view v-if="taskErrorMsg" class="error-card">
-                <view class="flex items-center gap-x-[10rpx] mb-[12rpx]">
-                    <u-icon name="warning-fill" size="28" color="#FF2442" />
-                    <text class="font-medium text-[28rpx] text-[#FF2442]">任务冲突</text>
+            <view
+                v-if="taskErrorMsg"
+                class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                <view
+                    class="flex items-center gap-[10rpx] px-[28rpx] py-[20rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                    <view class="w-[6rpx] h-[32rpx] bg-[#EF4444] rounded-full" />
+                    <u-icon name="warning-fill" size="26" color="#EF4444" />
+                    <text class="text-[28rpx] font-bold text-[#EF4444]">任务冲突</text>
                 </view>
-                <text class="text-[#FF2442] text-[24rpx] leading-relaxed">{{ taskErrorMsg }}</text>
+                <view class="px-[28rpx] py-[20rpx]">
+                    <text class="text-[#EF4444] leading-relaxed">{{ taskErrorMsg }}</text>
+                </view>
             </view>
         </view>
 
         <view
             class="fixed bottom-0 left-0 right-0 bg-white px-4 pt-[20rpx] pb-[calc(20rpx+env(safe-area-inset-bottom))] shadow-[0_-4rpx_16rpx_rgba(0,0,0,0.06)]">
-            <u-button
-                type="primary"
-                :custom-style="{ height: '96rpx', fontWeight: 'bold', borderRadius: '16rpx', fontSize: '30rpx' }"
+            <view
+                class="h-[96rpx] rounded-[24rpx] flex items-center justify-center relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.35)]"
+                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
                 @click="handleSubmit">
-                确定保存
-            </u-button>
+                <text class="text-[30rpx] font-extrabold text-white tracking-wide">确定保存</text>
+            </view>
         </view>
     </view>
 
+    <upload-category-panel
+        v-model="showUploadCategoryPanel"
+        :show-categories="[
+            isVideo ? UploadAlbumTypeEnum.Video : UploadAlbumTypeEnum.Image,
+            UploadCategoryEnum.Library,
+            UploadCategoryEnum.Creation,
+        ]"
+        @select="handleSelectCategory" />
     <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <choose-material
         v-model="showChooseMaterial"
         :type="isVideo ? 'video' : 'image'"
         :limit="isVideo ? 1 : 9 - formData.attachment_content.length"
         @select="handleChooseMaterial" />
+    <choose-history
+        v-model="showHistory"
+        :type="isVideo ? 'video' : 'image'"
+        :limit="isVideo ? 1 : 9 - formData.attachment_content.length"
+        @select="handleSelectHistory" />
     <task-conflict-dialog
         v-if="showTaskMsgPop"
         v-model="showTaskMsgPop"
@@ -235,10 +282,9 @@
         @close="showTaskMsgPop = false"
         @confirm="handleTaskMsgPopConfirm" />
 </template>
-
 <script setup lang="ts">
 import { checkCirclePublishTime, checkTaskPublishTime } from "@/api/device";
-import { AppTypeEnum } from "@/enums/appEnums";
+import { AppTypeEnum, UploadCategoryEnum, UploadAlbumTypeEnum } from "@/enums/appEnums";
 import { setFormData } from "@/utils/util";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
@@ -274,12 +320,15 @@ const formData = reactive<{
     task_ids: [],
 });
 
+const showUploadCategoryPanel = ref(false);
+
 const circleList = ref<any[]>([]);
 const taskErrorMsg = ref("");
 const showTaskMsgPop = ref(false);
 const taskMsgPopContent = ref<string[]>([]);
 const showChooseMaterial = ref(false);
 const editIndexInList = ref(-1);
+const showHistory = ref(false);
 
 const taskExecTypeOptions = [
     { icon: "arrow-upward", text: "即时执行", value: 1 },
@@ -314,6 +363,7 @@ const { showUploadProgress, uploadAndProcessFiles, uploadMaterialList } = useUpl
     count: 9,
     imageAccept: ["jpg", "png", "jpeg", "webp", "gif"],
     imageSize: 20,
+    imageResolution: [99999, 99999],
     videoAccept: ["mp4", "mov", "m4a"],
     videoSize: 200,
     onSuccess: (materials: any[]) => {
@@ -327,20 +377,33 @@ const { showUploadProgress, uploadAndProcessFiles, uploadMaterialList } = useUpl
                 pic: item.pic || item.url,
                 size: item.size,
                 type: formData.attachment_type,
-            }))
+            })),
         );
     },
 });
 
-const chooseUploadType = () => {
-    uni.showActionSheet({
-        itemList: ['从"微信聊天"中选择', '从"素材库"中选择', '从"手机相册"中选择'],
-        success: (res) => {
-            if (res.tapIndex === 0) uploadAndProcessFiles("file");
-            else if (res.tapIndex === 1) showChooseMaterial.value = true;
-            else uploadAndProcessFiles(formData.attachment_type === 1 ? "image" : "video");
-        },
-    });
+const handleSelectCategory = (category: UploadAlbumTypeEnum | UploadCategoryEnum) => {
+    if (category === UploadAlbumTypeEnum.Image || category === UploadAlbumTypeEnum.Video) {
+        uploadAndProcessFiles(category);
+    } else if (category === UploadCategoryEnum.Library) {
+        showChooseMaterial.value = true;
+    } else if (category === UploadCategoryEnum.Creation) {
+        showHistory.value = true;
+    }
+};
+
+const handleSelectHistory = (history: any[]) => {
+    const validHistory = history.map((item: any) => ({
+        url: item.url,
+        pic: item.pic,
+        size: item.size,
+        type: formData.attachment_type,
+    }));
+    if (isVideo.value) {
+        formData.attachment_content = [validHistory[0]];
+    } else {
+        formData.attachment_content.push(...validHistory);
+    }
 };
 
 const handleAttachmentTypeChange = (val: 1 | 2) => {
@@ -355,7 +418,7 @@ const handleChooseMaterial = (materials: any[]) => {
             pic: item.pic,
             size: item.size,
             type: formData.attachment_type,
-        }))
+        })),
     );
 };
 
@@ -400,7 +463,7 @@ const formatDate = (date: string) => uni.$u.timeFormat(new Date(date), "yyyy年m
 const handleChooseAccount = () => {
     uni.navigateTo({
         url: `/ai_modules/device/pages/account_choose/account_choose?accounts=${JSON.stringify(
-            formData.wechat_ids
+            formData.wechat_ids,
         )}&platformTypes=${JSON.stringify([AppTypeEnum.WECHAT])}`,
     });
 };
@@ -483,7 +546,7 @@ watch(
         if (newDate !== today && formData.task_exec_type === 1) {
             formData.task_exec_type = 0;
         }
-    }
+    },
 );
 
 onLoad((options: any) => {
@@ -500,7 +563,11 @@ onLoad((options: any) => {
 
     on("confirm", (res) => {
         const { type, data } = res;
-        if (type === ListenerTypeEnum.CHOOSE_ACCOUNT && data.length > 0) {
+        if (type === ListenerTypeEnum.CHOOSE_ACCOUNT) {
+            if (data.length === 0) {
+                formData.wechat_ids = [];
+                return;
+            }
             formData.wechat_ids = data.map((item: any) => ({
                 id: item.id,
                 account: item.account,
@@ -522,7 +589,7 @@ onLoad((options: any) => {
 }
 
 .attachment-type-btn {
-    @apply flex items-center gap-x-[10rpx] px-[28rpx] py-[14rpx] rounded-[12rpx] text-[26rpx] text-[#999] bg-[#F4F5F9];
+    @apply flex items-center gap-x-[10rpx] px-[28rpx] py-[14rpx] rounded-[12rpx]  text-[#999] bg-[#F4F5F9];
     transition: all 0.2s;
 
     &.active {
@@ -541,7 +608,7 @@ onLoad((options: any) => {
 }
 
 .form-row-label {
-    @apply text-[24rpx] text-[#999];
+    @apply text-xs text-[#999];
 }
 
 .minute-btn {

@@ -10,9 +10,7 @@ use Workerman\Connection\TcpConnection;
 class DeviceAppStartExecHandler extends BaseMessageHandler
 
 {
-    protected $deviceList;
-    protected $deviceInfo;
-    protected $content;
+    protected array $content;
     public function handle(TcpConnection $connection, string $uid, array $payload): void
     {
         $content = !is_array($payload['content']) ? json_decode($payload['content'], true) : $payload['content'];
@@ -42,7 +40,7 @@ class DeviceAppStartExecHandler extends BaseMessageHandler
         }
     }
 
-    private function appExecReport($content)
+    private function appExecReport(array $content)
     {
         try {
             $find = SvDeviceRpa::where('id', $content['task_id'])->findOrEmpty();

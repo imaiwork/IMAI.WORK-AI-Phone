@@ -7,7 +7,7 @@
                     alt=""
                     class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div
-                    class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none"></div>
+                    class="absolute inset-0 bg-gradient-to-t from-b lack/80 via-[transparent] to-[#000000]/30 pointer-events-none"></div>
             </div>
 
             <div class="absolute top-3 left-3 z-[22] pointer-events-none" v-if="item.clip_status != 0">
@@ -98,7 +98,7 @@
                             </div>
                             <div class="flex flex-col items-center">
                                 <span class="text-white font-black text-sm">{{ item.remark || "生成失败" }}</span>
-                                <span class="text-white/40 text-[10px] mt-1 text-center font-medium">
+                                <span class="text-[#ffffff]/40 text-[10px] mt-1 text-center font-medium">
                                     请检查训练文件
                                 </span>
                             </div>
@@ -126,7 +126,7 @@
                     {{ item.name || "未命名视频" }}
                 </div>
                 <div
-                    class="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] text-slate-400 font-medium">
+                    class="px-2 py-0.5 rounded-md bg-[#ffffff]/5 border border-[#ffffff]/10 text-[10px] text-slate-400 font-medium">
                     {{ getTypeName(item.type) }}
                 </div>
             </div>
@@ -153,7 +153,7 @@ const props = withDefaults(
         item: () => ({}),
         showVersion: true,
         isCreate: false,
-    }
+    },
 );
 
 const emit = defineEmits(["edit", "delete", "retry"]);
@@ -195,6 +195,7 @@ const getStatus = (item: any) => {
 const getTypeName = (type: number) => {
     return [
         { name: "数字人口播", key: CreateVideoTypeEnum.DIGITAL_HUMAN },
+        { name: "数字人口播", key: CreateVideoTypeEnum.DIGITAL_HUMAN_SHANJIAN },
         { name: "口播混剪", key: CreateVideoTypeEnum.ORAL_MIX },
         { name: "真人口播", key: CreateVideoTypeEnum.REAL_PERSON_MIXING },
         { name: "素材混剪", key: CreateVideoTypeEnum.MATERIAL_MIX },

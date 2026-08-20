@@ -13,7 +13,10 @@
                         修改知识库的基本属性、可见权限以及底层检索参数配置。
                     </div>
                 </div>
-                <ElButton type="primary" class="save-btn" :loading="isLock" @click="lockFn"> 保存设置 </ElButton>
+                <ElButton v-if="kbCanManage" type="primary" class="save-btn" :loading="isLock" @click="lockFn">
+                    保存设置
+                </ElButton>
+                <span v-else class="text-[13px] font-medium text-[#94A3B8]">仅创建者可修改设置</span>
             </div>
 
             <div class="grow min-h-0">
@@ -24,7 +27,7 @@
                                 <div class="w-1 h-4 bg-primary rounded-full"></div>
                                 <span class="text-[15px] font-[900] text-[#1E293B]">基础信息</span>
                             </div>
-                            <div class="bg-white rounded-2xl border border-br p-6">
+                            <div class="bg-white rounded-2xl border border-br p-6" :class="{ 'pointer-events-none opacity-60': !kbCanManage }">
                                 <base-form ref="formRef" v-model="formData" :is-edit="true" />
                             </div>
                         </div>
@@ -109,6 +112,7 @@ import BaseForm from "@/pages/knowledge_base/_components/base-form.vue";
 const route = useRoute();
 const knId = computed(() => route.params.id);
 const isRag = computed(() => route.query.kn_type == KnTypeEnum.RAG);
+const kbCanManage = inject<Ref<boolean>>("kbCanManage", ref(true));
 
 const formRef = shallowRef<InstanceType<typeof BaseForm>>();
 const formData = reactive<CreateFormData>({
@@ -123,6 +127,10 @@ const top_k = ref<number>(2);
 const rerank_min_score = ref<number>(2);
 
 const { lockFn, isLock } = useLockFn(async () => {
+    if (!kbCanManage.value) {
+        feedback.msgWarning("仅创建者可修改设置");
+        return;
+    }
     await formRef.value?.validateForm();
     try {
         if (isRag.value) {

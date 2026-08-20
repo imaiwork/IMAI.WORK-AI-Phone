@@ -11,7 +11,7 @@
 
         <view class="bg-[#FAFAFA] rounded-[12rpx] px-[24rpx] py-[20rpx] mb-[20rpx]">
             <text class="text-[22rpx] font-medium text-[#AAAAAA] block mb-[8rpx]">添加备注</text>
-            <text class="text-[26rpx] text-[#444444] leading-relaxed">
+            <text class="text-[#444444] leading-relaxed">
                 {{ item.remark || "-" }}
             </text>
         </view>

@@ -100,6 +100,10 @@ class BaseCommonAdminController extends BaseController
         }
         $action = $this->request->action();
 
+        if (in_array('*', $notNeedLogin)) {
+            return true;
+        }
+
         if (!in_array(trim($action), $notNeedLogin)) {
             return false;
         }

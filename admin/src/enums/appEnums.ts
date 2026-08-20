@@ -76,3 +76,12 @@ export enum KnbTypeEnum {
     RAG = 1,
     VECTOR = 2,
 }
+
+// 1微信视频号 3小红书 4抖音 5快手
+export enum AppTypeEnum {
+    SPH = 1,
+    WECHAT = 1,
+    XHS = 3,
+    DOUYIN = 4,
+    KUAISHOU = 5,
+}

@@ -7,6 +7,7 @@ use app\adminapi\lists\oem\OemLists;
 use think\exception\HttpResponseException;
 use app\adminapi\validate\oem\OemValidate;
 use app\adminapi\logic\oem\OemLogic;
+use app\adminapi\logic\team\TeamLogic;
 
 /**
  * oem列表
@@ -96,5 +97,22 @@ class OemController extends BaseAdminController
             return $this->success('修改成功', [], 1, 1);
         }
         return $this->fail(OemLogic::getError());
+    }
+
+    /**
+     * @notes OEM收费配置读取
+     */
+    public function oemPricing()
+    {
+        return $this->data(TeamLogic::oemPricing());
+    }
+
+    /**
+     * @notes OEM收费配置保存
+     */
+    public function saveOemPricing()
+    {
+        $res = TeamLogic::saveOemPricing($this->request->post());
+        return $res ? $this->success('保存成功', [], 1, 0) : $this->fail(TeamLogic::getError());
     }
 }

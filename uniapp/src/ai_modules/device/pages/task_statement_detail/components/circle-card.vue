@@ -34,7 +34,7 @@
                         class="w-[32rpx] h-[32rpx] rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF5C5C] flex items-center justify-center">
                         <text class="text-[20rpx] text-white">✓</text>
                     </view>
-                    <text class="text-[24rpx] font-medium text-[#FF8C42]">已点赞了Ta</text>
+                    <text class="text-xs font-medium text-[#FF8C42]">已点赞了Ta</text>
                 </view>
             </view>
 

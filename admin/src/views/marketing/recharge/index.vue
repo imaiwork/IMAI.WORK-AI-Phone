@@ -43,6 +43,9 @@
                 </el-table-column>
                 <el-table-column label="套餐名称" prop="name" min-width="120"></el-table-column>
                 <el-table-column label="算力值" prop="package_info.tokens" min-width="120"> </el-table-column>
+                <el-table-column label="虚拟支付产品ID" min-width="160" show-overflow-tooltip>
+                    <template #default="{ row }">{{ row.product_id || "-" }}</template>
+                </el-table-column>
                 <el-table-column label="排序" prop="sort"> </el-table-column>
                 <el-table-column label="操作" width="120" fixed="right">
                     <template #default="{ row }">

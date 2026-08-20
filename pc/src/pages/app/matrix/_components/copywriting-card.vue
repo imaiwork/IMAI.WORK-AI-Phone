@@ -11,7 +11,6 @@
                         共 <span class="text-[#111827] font-medium">{{ valueList.length }}</span> 个素材，已配置
                         <span class="text-[#10B981] font-medium">{{ count }}</span> 个
                     </span>
-
                     <ElTooltip v-if="publishTypeName" placement="top" popper-class="custom-tooltip" :show-arrow="false">
                         <div
                             class="w-4 h-4 rounded-full flex items-center justify-center bg-[#F3F4F6] cursor-pointer hover:bg-[#E5E7EB] transition-colors">
@@ -37,33 +36,70 @@
         <div class="grow min-h-0 mt-4">
             <ElScrollbar>
                 <div class="flex flex-col gap-y-4 px-4 pb-6">
+                    <!-- type == 1：标题列表 -->
                     <template v-if="type == 1">
                         <div
                             v-for="(item, index) in valueList"
                             :key="index"
-                            class="group flex items-center gap-x-4 p-3 bg-white border border-[#F3F4F6] rounded-2xl hover:border-[#0065fb]/30 hover: transition-all">
+                            class="group flex items-center gap-x-3 p-3 bg-white border border-[#F3F4F6] rounded-2xl hover:border-[#0065fb]/30 transition-all"
+                            :class="{ 'opacity-60': item.is_title_show === 0 }">
+                            <!-- 序号 -->
                             <div
                                 class="w-10 h-10 flex-shrink-0 rounded-xl font-black text-sm transition-colors flex items-center justify-center"
                                 :class="[item.content ? 'bg-[#10B981] text-white' : 'bg-[#F3F4F6] text-[#9CA3AF]']">
                                 {{ index + 1 }}
                             </div>
 
-                            <div class="flex-1">
+                            <!-- 输入框：关闭时禁用 -->
+                            <div class="flex-1" :class="{ 'pointer-events-none': item.is_title_show === 0 }">
                                 <ElInput
                                     v-model="item.content"
                                     class="custom-title-input"
                                     maxlength="20"
                                     show-word-limit
-                                    placeholder="输入吸引人的标题..."
+                                    :placeholder="item.is_title_show === 0 ? '标题已隐藏' : '输入吸引人的标题...'"
                                     @blur="handleBlur(index)" />
                             </div>
 
-                            <div class="w-8 h-8 opacity-0 group-hover:opacity-100" @click="handleDelete(index)">
+                            <!-- 标题显示开关 -->
+                            <div
+                                class="flex items-center gap-1.5 px-2.5 h-8 rounded-lg border cursor-pointer transition-all select-none flex-shrink-0"
+                                :class="
+                                    item.is_title_show === 1
+                                        ? 'bg-[#EBF2FF] border-[#0065fb]/30'
+                                        : 'bg-[#F9FAFB] border-[#E5E7EB]'
+                                "
+                                @click="toggleTitleShow(index)">
+                                <!-- 轨道 -->
+                                <div
+                                    class="relative w-[30px] h-[16px] rounded-full flex-shrink-0 transition-all duration-300"
+                                    :style="{
+                                        background:
+                                            item.is_title_show === 1
+                                                ? 'linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)'
+                                                : '#D1D5DB',
+                                    }">
+                                    <div
+                                        class="absolute top-[2px] w-[12px] h-[12px] bg-white rounded-full shadow-sm transition-all duration-300"
+                                        :style="{ left: item.is_title_show === 1 ? '16px' : '2px' }" />
+                                </div>
+                                <span
+                                    class="text-[11px] font-semibold whitespace-nowrap transition-colors"
+                                    :class="item.is_title_show === 1 ? 'text-primary' : 'text-[#9CA3AF]'">
+                                    {{ item.is_title_show === 1 ? "显示" : "隐藏" }}
+                                </span>
+                            </div>
+
+                            <!-- 删除按钮 -->
+                            <div
+                                class="w-8 h-8 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                                @click="handleDelete(index)">
                                 <close-btn></close-btn>
                             </div>
                         </div>
                     </template>
 
+                    <!-- type == 2 | 3：正文/口播 -->
                     <template v-if="type == 2 || type == 3">
                         <div
                             v-for="(item, index) in valueList"
@@ -117,7 +153,6 @@
                                         <Icon name="local-icon-close" :size="8"></Icon>
                                     </div>
                                 </div>
-
                                 <button
                                     v-if="item.topic?.length < 5"
                                     class="px-3 py-1 rounded-lg border border-dashed border-[#CBD5E1] text-[#94A3B8] text-[11px] hover:border-[#6366F1] hover:text-[#6366F1] transition-all"
@@ -164,9 +199,19 @@ const typeName = computed(() => {
 const handleAdd = () => {
     if (props.type == 2) {
         valueList.value.push({ content: "", topic: [] });
+    } else if (props.type == 1) {
+        // 标题新增时带上 is_title_show 默认值
+        valueList.value.push({ content: "", is_title_show: 1 });
     } else {
         valueList.value.push({ content: "" });
     }
+    emit("update:modelValue", valueList.value);
+};
+
+/** 切换单条标题的显示开关 */
+const toggleTitleShow = (index: number) => {
+    const item = valueList.value[index];
+    item.is_title_show = item.is_title_show === 1 ? 0 : 1;
     emit("update:modelValue", valueList.value);
 };
 
@@ -201,9 +246,6 @@ const handleTopicBlur = (index: number, t_index: number) => {
 </script>
 
 <style scoped lang="scss">
-/* --- ElInput 精细化重塑 --- */
-
-/* 标题样式：轻盈下划线 */
 :deep(.custom-title-input) {
     .el-input__wrapper {
         background-color: transparent;
@@ -253,7 +295,6 @@ const handleTopicBlur = (index: number, t_index: number) => {
     }
 }
 
-/* 话题微型 Input */
 :deep(.custom-topic-input) {
     .el-input__wrapper {
         background-color: #ffffff;
@@ -272,7 +313,6 @@ const handleTopicBlur = (index: number, t_index: number) => {
     }
 }
 
-/* Tooltip 样式自定义 */
 :global(.custom-tooltip) {
     background-color: #111827 !important;
     border: none !important;
@@ -281,7 +321,6 @@ const handleTopicBlur = (index: number, t_index: number) => {
     line-height: 1.6 !important;
 }
 
-/* 滚动条 */
 :deep(.el-scrollbar__thumb) {
     background-color: #e5e7eb !important;
 }

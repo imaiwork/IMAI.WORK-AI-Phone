@@ -16,7 +16,7 @@
 
         <view class="flex-1 min-w-0 py-[24rpx] pr-[24rpx]">
             <view class="flex items-center justify-between mb-[8rpx]">
-                <text class="text-[24rpx] text-[#9CA3AF]">{{ item.start_time }} - {{ item.end_time }}</text>
+                <text class="text-xs text-[#9CA3AF]">{{ item.start_time }} - {{ item.end_time }}</text>
                 <view class="rounded-full px-[18rpx] py-[6rpx]" :class="cardStyle.tagBg">
                     <text class="text-xs font-semibold" :class="cardStyle.tagText">{{ statusText }}</text>
                 </view>
@@ -31,7 +31,7 @@
                 </view>
             </view>
 
-            <text class="text-[24rpx] text-[#9CA3AF]">{{ item.task_category }}</text>
+            <text class="text-xs text-[#9CA3AF]">{{ item.task_category }}</text>
 
             <view v-if="[3, 4].includes(item.status)" class="flex items-center gap-[8rpx] mt-[12rpx]">
                 <u-icon name="info-circle" :color="cardStyle.iconColor" size="24" />

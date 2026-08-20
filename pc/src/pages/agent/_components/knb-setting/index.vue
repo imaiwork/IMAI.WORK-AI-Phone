@@ -159,33 +159,6 @@
                                     </div>
                                 </div>
 
-                                <div class="switch-card">
-                                    <div class="flex items-center justify-between mb-[12px]">
-                                        <span class="text-[14px] font-[900] text-[#0F172A]">问题优化 (Rewrite)</span>
-                                        <ElSwitch
-                                            v-model="formData.optimize_ask"
-                                            :active-value="1"
-                                            :inactive-value="0" />
-                                    </div>
-                                    <p class="text-xs text-[#94A3B8] leading-[1.6] mb-[16px]">
-                                        结合历史多维度生成相似问题，提升检索精准度。
-                                    </p>
-                                    <div
-                                        v-if="formData.optimize_ask == 1"
-                                        class="pt-[12px] border-t-[1px] border-[#F1F5F9] border-[transparent]">
-                                        <ElSelect
-                                            v-model="formData.optimize_m_id"
-                                            class="custom-select"
-                                            :show-arrow="false"
-                                            placeholder="选择重写模型">
-                                            <ElOption
-                                                v-for="item in aiModelChannel"
-                                                :key="item.id"
-                                                :label="item.name"
-                                                :value="parseInt(item.id)" />
-                                        </ElSelect>
-                                    </div>
-                                </div>
                             </div>
 
                             <section class="config-group mt-[32px]">
@@ -215,10 +188,9 @@
     </div>
 </template>
 <script setup lang="ts">
-import { knowledgeBaseLists, vectorKnowledgeBaseLists } from "@/api/knowledge_base";
+import { vectorKnowledgeBaseLists } from "@/api/knowledge_base";
 import { searchOptions } from "@/pages/knowledge_base/_config";
 import { KnbTypeEnum } from "@/pages/knowledge_base/_enums";
-import { useAppStore } from "@/stores/app";
 import { type FormInstance } from "element-plus";
 import { Agent } from "../../_enums";
 
@@ -229,12 +201,8 @@ const props = withDefaults(
     }>(),
     {
         modelValue: () => ({} as Agent),
-    }
+    },
 );
-
-// store
-const appStore = useAppStore();
-const aiModelChannel = computed(() => appStore.getAiModelConfig.channel || []);
 
 // 表单ref和数据模型
 const formRef = ref<FormInstance>();
@@ -248,8 +216,6 @@ const formRules = {
     search_similar: [{ required: true, message: "请输入最低相似度" }],
     ranking_status: [{ required: true, message: "请选择重排开关" }],
     ranking_score: [{ required: true, message: "请输入重排分数" }],
-    optimize_ask: [{ required: true, message: "请选择优化开关" }],
-    optimize_m_id: [{ required: true, message: "请选择优化模型" }],
 };
 
 // 知识库列表
@@ -285,7 +251,7 @@ watch(
     },
     {
         immediate: true, // 立即执行一次
-    }
+    },
 );
 
 // 暴露validate方法给父组件

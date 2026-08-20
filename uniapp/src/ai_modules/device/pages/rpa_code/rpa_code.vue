@@ -43,14 +43,11 @@ const { start, end } = usePolling(
                 icon: "none",
                 duration: 3000,
             });
-            setTimeout(() => {
-                deviceStore.startGetAccounts(deviceCode.value, true);
-            }, 3000);
         }
     },
     {
         time: 4500,
-    }
+    },
 );
 
 const getRpaQrcodeData = async () => {

@@ -2,7 +2,7 @@
     <div>
         <el-card class="!border-none" shadow="never">
             <div class="flex justify-between items-center">
-                <el-page-header @back="$router.back()" />
+                <el-page-header @back="$router.back()" :content="formData.name" />
             </div>
         </el-card>
         <el-card class="!border-none mt-4" shadow="never">
@@ -13,7 +13,7 @@
                 <component ref="formRef" :is="currentComponent" v-model="formData" :agent-id="agentId" />
             </div>
         </el-card>
-        <footer-btns v-if="![TabName.Skill, TabName.Publish, TabName.Call].includes(currentTab)">
+        <footer-btns v-if="![TabName.Skill, TabName.Publish, TabName.Call, TabName.Permission].includes(currentTab)">
             <el-button type="primary" :loading="isLock" @click="lockFn">保存</el-button>
         </footer-btns>
     </div>
@@ -27,6 +27,7 @@ import HumanizeSetting from "./components/humanize-setting/index.vue";
 import InterfaceSetting from "./components/interface-setting/index.vue";
 import SkillSetting from "./components/skill-setting/index.vue";
 import ReplySetting from "./components/reply-setting/index.vue";
+import PermSetting from "./components/perm-setting/index.vue";
 import { useLockFn } from "@/hooks/useLockFn";
 import { setFormData } from "@/utils/util";
 import { ModeTypeEnum, type Agent } from "./components/enums";
@@ -40,6 +41,7 @@ enum TabName {
     Publish = "publish",
     Skill = "skill",
     Call = "call",
+    Permission = "permission",
 }
 
 const route = useRoute();
@@ -47,7 +49,9 @@ const route = useRoute();
 const agentId = ref(route.query.id as string);
 
 const currentTab = ref(TabName.Base);
-const tabs = ref([
+
+// 基础 tabs 配置（不含权限 tab）
+const baseTabs = [
     {
         label: "人设",
         name: TabName.Base,
@@ -68,7 +72,6 @@ const tabs = ref([
         name: TabName.Interface,
         component: shallowRef(InterfaceSetting),
     },
-
     {
         label: "技能",
         name: TabName.Skill,
@@ -79,9 +82,18 @@ const tabs = ref([
         name: TabName.Call,
         component: shallowRef(ReplySetting),
     },
-]);
+];
 
-const currentComponent = computed(() => tabs.value.find((tab) => tab.name === currentTab.value)?.component);
+// 权限 tab 配置
+const permTab = {
+    label: "权限",
+    name: TabName.Permission,
+    component: shallowRef(PermSetting),
+};
+
+const tabs = ref<any>([...baseTabs]);
+
+const currentComponent = computed(() => tabs.value.find((tab: any) => tab.name === currentTab.value)?.component);
 
 // 智能体表单数据
 const formData = reactive<Agent>({
@@ -129,8 +141,22 @@ const formData = reactive<Agent>({
     threshold: 0.5,
     mode_type: ModeTypeEnum.CUSTOM,
     max_tokens: 4096,
+    permissions: 0,
+    member_level_ids: [],
 });
 const formRef = ref();
+
+const handlePermTab = (userId: number) => {
+    const hasPermTab = tabs.value.some((tab: any) => tab.name === TabName.Permission);
+    if (userId === 0 && !hasPermTab) {
+        tabs.value = [...tabs.value, permTab];
+    } else if (userId !== 0 && hasPermTab) {
+        tabs.value = tabs.value.filter((tab: any) => tab.name !== TabName.Permission);
+        if (currentTab.value === TabName.Permission) {
+            currentTab.value = TabName.Base;
+        }
+    }
+};
 
 /**
  * @description 获取智能体详情
@@ -148,10 +174,9 @@ const getDetail = async () => {
         formData.frequency_penalty = Number(formData.frequency_penalty);
         formData.top_p = Number(formData.top_p);
         formData.temperature = Number(formData.temperature);
-        // if (formData.kb_type == KnbTypeEnum.VECTOR) {
-        //     // @ts-ignore
-        //     formData.kb_ids = formData.kb_ids.map((item: string) => parseInt(item));
-        // }
+
+        // 根据 user_id 动态控制权限 Tab
+        handlePermTab(data.user_id);
     } catch (error) {
         console.error("获取智能体详情失败:", error);
     }
@@ -159,7 +184,6 @@ const getDetail = async () => {
 
 /**
  * @description 提交保存智能体数据
- * @param isAutoSave - 是否为自动保存，用于区分手动和自动，以决定是否显示提示
  */
 const handleSubmit = async () => {
     await formRef.value?.validate?.();

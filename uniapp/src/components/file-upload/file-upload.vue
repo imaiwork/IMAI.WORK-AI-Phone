@@ -21,7 +21,8 @@
                         v-if="fileType == 'image'"
                         :src="item.path || item.url"
                         class="w-[32rpx] h-[32rpx]"
-                        mode="aspectFill" />
+                        mode="aspectFill"
+                    />
                     <u-icon v-if="fileType == 'video'" :size="30" name="camera" color="#ffffff" />
                 </view>
                 <view class="flex-1 min-w-0 mr-[20rpx] w-0">
@@ -32,7 +33,8 @@
                 <view
                     v-if="!disabled"
                     @click.stop="removeFile(item.url!)"
-                    class="w-4 h-4 flex items-center justify-center rounded-full bg-primary">
+                    class="w-4 h-4 flex items-center justify-center rounded-full bg-primary"
+                >
                     <u-icon name="close" :size="16" color="#ffffff" />
                 </view>
                 <view
@@ -42,17 +44,20 @@
                         && item.progress! >= 0 
                         && item.progress 
                         && item.status !== 'success'
-                    ">
+                    "
+                >
                     <u-line-progress
                         class="w-full h-auto"
                         height="6"
                         :show-percent="false"
                         active-color="#0065FB"
-                        :percent="item.progress"></u-line-progress>
+                        :percent="item.progress"
+                    ></u-line-progress>
                 </view>
                 <view
                     v-if="item.status === 'error'"
-                    class="absolute inset-0 bg-[rgba(0,0,0,0.4)] flex items-center justify-center text-white">
+                    class="absolute inset-0 bg-[rgba(0,0,0,0.4)] flex items-center justify-center text-white"
+                >
                     <view @click="retry(item)"> 点击重试 </view>
                 </view>
             </view>
@@ -60,130 +65,137 @@
     </view>
 </template>
 <script lang="ts" setup>
-import { PropType, computed, ref, watch } from "vue";
-import { ChooseResult, FileData, chooseFile, getFileName, getFilesByExtname, normalizeFileData } from "./choose-file";
-import { uploadFile } from "@/api/app";
-import { useAppStore } from "@/stores/app";
+import { PropType, computed, ref, watch } from 'vue'
+import {
+    ChooseResult,
+    FileData,
+    chooseFile,
+    getFileName,
+    getFilesByExtname,
+    normalizeFileData
+} from './choose-file'
+import { uploadFile } from '@/api/app'
+import { useAppStore } from '@/stores/app'
 const props = defineProps({
     modelValue: {
         type: [Array, Object],
         default() {
-            return [];
-        },
+            return []
+        }
     },
     limit: {
         type: Number,
-        default: 10,
+        default: 10
     },
     disabled: {
         type: Boolean,
-        default: false,
+        default: false
     },
     // 文件类型
     fileType: {
-        type: String as PropType<"image" | "video" | "file" | "all">,
-        default: "file",
+        type: String as PropType<'image' | 'video' | 'file' | 'all'>,
+        default: 'file',
         validator: (value: string) => {
-            return ["image", "video", "file", "all"].includes(value);
-        },
+            return ['image', 'video', 'file', 'all'].includes(value)
+        }
     },
     returnType: {
-        type: String as PropType<"object" | "array">,
-        default: "array",
+        type: String as PropType<'object' | 'array'>,
+        default: 'array'
     },
     // 文件类型筛选
     fileExtname: {
         type: Array as PropType<string[]>,
         default() {
-            return [];
-        },
+            return []
+        }
     },
     data: {
         type: Object,
         default() {
-            return {};
-        },
+            return {}
+        }
     },
     header: {
         type: Object,
         default() {
-            return {};
-        },
+            return {}
+        }
     },
     sizeType: {
         type: Array as PropType<string[]>,
         default() {
-            return ["original", "compressed"];
-        },
+            return ['original', 'compressed']
+        }
     },
     sourceType: {
         type: Array as PropType<string[]>,
         default() {
-            return ["album", "camera"];
-        },
+            return ['album', 'camera']
+        }
     },
     showProgress: {
         type: Boolean,
-        default: true,
+        default: true
     },
     //最大上传量
     maxCount: {
         type: Number,
-        default: 2,
+        default: 2
     },
     isGpt: {
         type: Boolean,
-        default: false,
+        default: false
     },
     // 单个文件大小限制，单位字节，0表示不限制
     fileSizeLimit: {
         type: Number,
-        default: 0, // 0 means no limit
-    },
-});
+        default: 0 // 0 means no limit
+    }
+})
 const emit = defineEmits<{
-    (event: "update:modelValue", value: any): void;
-}>();
+    (event: 'update:modelValue', value: any): void
+}>()
 
-const appStore = useAppStore();
-const { uploadAssistantId } = toRefs(appStore);
+const appStore = useAppStore()
+const { uploadAssistantId } = toRefs(appStore)
 
-const filesLists = ref<Partial<FileData>[]>([]);
+const filesLists = ref<Partial<FileData>[]>([])
 const limitLength = computed(() => {
-    if (props.returnType === "object") {
-        return 1;
+    if (props.returnType === 'object') {
+        return 1
     }
     // If props.limit is 0, it means no limit, so we return a very large number
     // to effectively disable the limit check for the count.
     if (props.limit === 0) {
-        return Number.MAX_SAFE_INTEGER;
+        return Number.MAX_SAFE_INTEGER
     }
-    return props.limit;
-});
+    return props.limit
+})
 
-const fileType = ref<"image" | "video" | "file" | "all">(props.fileType);
+const fileType = ref<'image' | 'video' | 'file' | 'all'>(props.fileType)
 
 // Helper function to format file size
 const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-};
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
 
 const choose = async () => {
-    if (props.disabled) return;
+    if (props.disabled) return
 
     // 检查文件数量限制
-    const remainingCount = limitLength.value - filesLists.value.length;
+    const remainingCount = limitLength.value - filesLists.value.length
 
     if (props.limit > 0 && remainingCount <= 0) {
         uni.showToast({
             title: `您最多选择 ${props.limit} 个文件`,
-            icon: "none",
-        });
-        return;
+            icon: 'none'
+        })
+        return
     }
 
     // 通用的文件选择配置
@@ -192,196 +204,198 @@ const choose = async () => {
         sizeType: props.sizeType,
         sourceType: props.sourceType,
         extension: props.fileExtname.length ? props.fileExtname : undefined,
-        count: remainingCount,
-    };
+        count: remainingCount
+    }
 
     // 处理所有文件类型的情况
-    if (props.fileType === "all") {
+    if (props.fileType === 'all') {
         const FILE_TYPE_MAP = {
-            0: "image",
-            1: "video",
-            2: "file",
-        };
+            0: 'image',
+            1: 'video',
+            2: 'file'
+        }
 
         uni.showActionSheet({
-            itemList: ["选择图片", "选择视频", "选择文件"],
+            itemList: ['选择图片', '选择视频', '选择文件'],
             success: async (res) => {
                 fileType.value = FILE_TYPE_MAP[res.tapIndex as keyof typeof FILE_TYPE_MAP] as
-                    | "image"
-                    | "video"
-                    | "file";
+                    | 'image'
+                    | 'video'
+                    | 'file'
                 const filesResult = await chooseFile({
                     type: fileType.value,
-                    ...fileChooseConfig,
-                });
-                chooseFileCallback(filesResult);
-            },
-        });
-        return;
+                    ...fileChooseConfig
+                })
+                chooseFileCallback(filesResult)
+            }
+        })
+        return
     }
 
     // 处理单一文件类型的情况
     const filesResult = await chooseFile({
-        type: fileType.value as "image" | "video" | "file",
-        ...fileChooseConfig,
-    });
-    chooseFileCallback(filesResult);
-};
+        type: fileType.value as 'image' | 'video' | 'file',
+        ...fileChooseConfig
+    })
+    chooseFileCallback(filesResult)
+}
 
 const chooseFileCallback = async (filesResult: ChooseResult) => {
-    const isOne = Number(limitLength.value) === 1;
+    const isOne = Number(limitLength.value) === 1
     if (isOne) {
-        filesLists.value = [];
+        filesLists.value = []
     }
-    const { files } = getFilesByExtname(filesResult, props.fileExtname);
-    const currentData = [];
+    const { files } = getFilesByExtname(filesResult, props.fileExtname)
+    const currentData = []
     for (let i = 0; i < files.length; i++) {
-        if (limitLength.value - filesLists.value.length <= 0) break;
-        const filedata = normalizeFileData(files[i]);
+        if (limitLength.value - filesLists.value.length <= 0) break
+        const filedata = normalizeFileData(files[i])
 
         if (props.fileSizeLimit > 0 && filedata.size && filedata.size > props.fileSizeLimit) {
             uni.showToast({
-                title: `文件 "${filedata.name}" 大小超出限制 (${formatFileSize(props.fileSizeLimit)})`,
-                icon: "none",
-                duration: 3000,
-            });
-            continue;
+                title: `文件 "${filedata.name}" 大小超出限制 (${formatFileSize(
+                    props.fileSizeLimit
+                )})`,
+                icon: 'none',
+                duration: 3000
+            })
+            continue
         }
 
-        filesLists.value.push(filedata);
-        currentData.push(filedata);
+        filesLists.value.push(filedata)
+        currentData.push(filedata)
     }
-    await upload(currentData);
-    emitUpdateValue();
-};
+    await upload(currentData)
+    emitUpdateValue()
+}
 
 const emitUpdateValue = () => {
-    let value: any = {};
-    if (props.returnType === "object") {
-        const [item] = filesLists.value;
-        if (item.status === "success") {
+    let value: any = {}
+    if (props.returnType === 'object') {
+        const [item] = filesLists.value
+        if (item.status === 'success') {
             value = {
                 url: item.url,
-                name: item.name,
-            };
+                name: item.name
+            }
         }
     } else {
-        const data = filesLists.value.filter((item) => item.status === "success");
+        const data = filesLists.value.filter((item) => item.status === 'success')
         value = data.map((item) => ({
             url: item.url,
             name: item.name,
-            id: item.id,
-        }));
+            id: item.id
+        }))
     }
-    emit("update:modelValue", value);
-};
+    emit('update:modelValue', value)
+}
 
 //上传，并处理并发问题
 const upload = (files: FileData[]): Promise<void> => {
-    const len = files.length;
-    let index = 0;
-    let count = 0;
+    const len = files.length
+    let index = 0
+    let count = 0
     return new Promise((resolve) => {
         const run = async () => {
-            const cur = index++;
-            const fileItem = files[cur];
-            const currentIndex = filesLists.value.findIndex((item) => item.path === fileItem.path);
+            const cur = index++
+            const fileItem = files[cur]
+            const currentIndex = filesLists.value.findIndex((item) => item.path === fileItem.path)
             try {
                 const { uri, id }: any = await uploadFile(
-                    fileType.value as "image" | "video" | "file",
+                    fileType.value as 'image' | 'video' | 'file',
                     {
                         filePath: fileItem.url,
                         formData: props.data,
-                        header: props.header,
+                        header: props.header
                     },
                     (progress) => {
-                        filesLists.value[currentIndex].progress = progress;
+                        filesLists.value[currentIndex].progress = progress
                     }
-                );
+                )
 
-                filesLists.value[currentIndex].status = "success";
-                filesLists.value[currentIndex].url = uri;
-                filesLists.value[currentIndex].id = id;
+                filesLists.value[currentIndex].status = 'success'
+                filesLists.value[currentIndex].url = uri
+                filesLists.value[currentIndex].id = id
             } catch (error) {
-                filesLists.value[currentIndex].errMsg = error as string;
-                filesLists.value[currentIndex].status = "error";
+                filesLists.value[currentIndex].errMsg = error as string
+                filesLists.value[currentIndex].status = 'error'
             }
-            count++;
+            count++
             if (count === len) {
-                resolve();
-                return;
+                resolve()
+                return
             }
             if (index < len) {
-                run();
+                run()
             }
-        };
-        for (let i = 0; i < Math.min(len, props.maxCount); i++) {
-            run();
         }
-    });
-};
+        for (let i = 0; i < Math.min(len, props.maxCount); i++) {
+            run()
+        }
+    })
+}
 
 const removeFile = (url: string) => {
-    const index = filesLists.value.findIndex((item) => item.url === url);
+    const index = filesLists.value.findIndex((item) => item.url === url)
     if (index > -1) {
-        filesLists.value.splice(index, 1);
-        emitUpdateValue();
+        filesLists.value.splice(index, 1)
+        emitUpdateValue()
     }
-};
+}
 
 const retry = async (item: any) => {
-    item.status = "ready";
-    item.progress = 0;
-    await upload([{ ...item }]);
-};
+    item.status = 'ready'
+    item.progress = 0
+    await upload([{ ...item }])
+}
 
 const getBtnText = computed(() => {
     switch (props.fileType) {
-        case "image":
-            return "上传图片";
-        case "video":
-            return "上传视频";
+        case 'image':
+            return '上传图片'
+        case 'video':
+            return '上传视频'
         default:
-            return "上传文件";
+            return '上传文件'
     }
-});
+})
 const setValueItem = (item: any) => {
-    if (!item.url) return;
-    const isInFiles = filesLists.value.some((file) => file.url == item.url);
+    if (!item.url) return
+    const isInFiles = filesLists.value.some((file) => file.url == item.url)
     if (!isInFiles) {
         if (!item.name) {
-            item.name = getFileName(item.url);
+            item.name = getFileName(item.url)
         }
-        item.status = "success";
-        filesLists.value.push({ ...item });
+        item.status = 'success'
+        filesLists.value.push({ ...item })
     }
-};
+}
 watch(
     () => props.modelValue,
     (newVal) => {
         if (Array.isArray(newVal)) {
             newVal.forEach((item: any) => {
-                setValueItem(item);
-            });
+                setValueItem(item)
+            })
         } else {
             if (!newVal.url) {
-                filesLists.value = [];
+                filesLists.value = []
             }
-            setValueItem(newVal);
+            setValueItem(newVal)
         }
     },
     {
-        immediate: true,
+        immediate: true
     }
-);
+)
 
 const clear = () => {
-    filesLists.value = [];
-};
+    filesLists.value = []
+}
 
 defineExpose({
-    clear,
-});
+    clear
+})
 </script>
 
 <style lang="scss">

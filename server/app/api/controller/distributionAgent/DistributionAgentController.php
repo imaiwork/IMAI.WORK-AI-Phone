@@ -2,6 +2,7 @@
 namespace app\api\controller\distributionAgent;
 
 use app\api\controller\BaseApiController;
+use app\api\lists\distributionAgent\DistributionAgentRechargeLists;
 use app\api\lists\distributionAgent\DistributionAgentSubLists;
 use app\api\logic\distributionAgent\DistributionAgentLogic;
 use app\api\validate\distributionAgent\DistributionAgentValidate;
@@ -24,12 +25,53 @@ class DistributionAgentController extends BaseApiController
     }
 
     /**
-     * @notes 下级列表
+     * @notes 直属下级列表
      * @return \think\response\Json
      */
     public function subLists()
     {
         return $this->dataLists(new DistributionAgentSubLists());
+    }
+
+    /**
+     * @notes 下级充值流水明细
+     * @return \think\response\Json
+     */
+    public function rechargeLists()
+    {
+        try {
+            $this->checkViewable();
+        } catch (\Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+        return $this->dataLists(new DistributionAgentRechargeLists());
+    }
+
+    /**
+     * @notes 下级概要：基本信息 + 本人充值业绩，用于充值流水明细页头部
+     * @return \think\response\Json
+     */
+    public function subSummary()
+    {
+        try {
+            $targetUserId = $this->checkViewable();
+        } catch (\Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+        return $this->success('', DistributionAgentLogic::subSummary($targetUserId, $this->userId));
+    }
+
+    /**
+     * @notes 校验 user_id 是否可查看，返回实际查询的用户 ID
+     * @return int
+     * @throws \Exception
+     */
+    private function checkViewable(): int
+    {
+        return DistributionAgentLogic::checkViewableUserId(
+            $this->userId,
+            (int)$this->request->get('user_id', 0)
+        );
     }
 
     /**

@@ -231,7 +231,7 @@ watch(
             getTagDom();
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 watch(
@@ -242,7 +242,7 @@ watch(
                 item.name = val[index];
             }
         });
-    }
+    },
 );
 
 onMounted(() => {

@@ -12,13 +12,13 @@
                     <view
                         v-for="(tab, index) in tabs"
                         :key="index"
-                        class="flex-shrink-0 px-[28rpx] py-[10rpx] rounded-full text-[26rpx] font-medium"
+                        class="flex-shrink-0 px-[28rpx] py-[10rpx] rounded-full font-medium"
                         :style="
                             currentTab === tab.key
                                 ? 'background:#0066FF; color:#fff;'
                                 : 'background:#fff; color:#374151; border:1px solid #E5E7EB'
                         "
-                        @click="currentTab = tab.key">
+                        @click="changeTab(tab.key)">
                         {{ tab.label }}
                     </view>
                 </view>
@@ -26,14 +26,10 @@
         </view>
 
         <view class="grow min-h-0 pt-2">
-            <scroll-view scroll-y class="h-full">
-                <view v-if="filteredList.length === 0" class="flex flex-col items-center py-24 gap-3">
-                    <text class="text-[#C0C4CC] text-[24rpx]">暂无相关案例</text>
-                </view>
-
+            <z-paging ref="pagingRef" :fixed="false" v-model="templateList" @query="queryList">
                 <view class="px-4 pb-8">
                     <view
-                        v-for="item in filteredList"
+                        v-for="item in templateList"
                         :key="item.id"
                         class="bg-white rounded-[24rpx] mb-[20rpx] px-[28rpx] pt-[28rpx] pb-[24rpx]"
                         style="box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05)">
@@ -41,7 +37,7 @@
                             <view class="flex items-center gap-[12rpx] flex-wrap flex-1 mr-3">
                                 <view
                                     class="px-[16rpx] py-[4rpx] rounded-full bg-[#F1F5F9] text-[#64748B] text-[22rpx]">
-                                    {{ item.category }}
+                                    {{ item.category_type_text }}
                                 </view>
                                 <view
                                     class="flex items-center gap-[6rpx] px-[16rpx] py-[4rpx] rounded-full bg-[#EFF6FF] text-primary text-[22rpx]">
@@ -61,7 +57,7 @@
                             {{ item.title }}
                         </text>
 
-                        <text class="text-[24rpx] text-[#6B7280] leading-[40rpx] block mb-[24rpx]">
+                        <text class="text-xs text-[#6B7280] leading-[40rpx] block mb-[24rpx]">
                             {{ item.intro }}
                         </text>
 
@@ -77,54 +73,58 @@
                                 </view>
                             </view>
                             <view
-                                class="px-[32rpx] py-[16rpx] rounded-[16rpx] bg-primary text-white text-[26rpx] font-semibold"
+                                class="px-[32rpx] py-[16rpx] rounded-[16rpx] bg-primary text-white font-semibold"
                                 @click="handleUse(item)">
                                 查看案例
                             </view>
                         </view>
                     </view>
                 </view>
-            </scroll-view>
+                <template #empty>
+                    <empty text="暂无案例数据" />
+                </template>
+            </z-paging>
         </view>
     </view>
 </template>
 
 <script setup lang="ts">
-import config from "@/config";
+import { getOperateCaseList } from "@/api/app";
 
-const currentTab = ref("all");
+const currentTab = ref(0);
 
 const tabs = [
-    { key: "all", label: "全部" },
-    { key: "企业服务", label: "企业服务" },
-    { key: "个人IP", label: "个人IP" },
-    { key: "本地生活", label: "本地生活" },
+    { key: 0, label: "全部" },
+    { key: 1, label: "本地生活" },
+    { key: 2, label: "个人IP" },
+    { key: 3, label: "企业服务" },
 ];
 
 const templateList = ref<any[]>([]);
+const pagingRef = shallowRef();
 
-const getTemplateList = () => {
-    uni.request({
-        url: `${config.baseUrl}static/case/templates/case.json`,
-        method: "GET",
-        success: (res: any) => {
-            templateList.value = res.data.list;
-        },
-    });
+const queryList = async (page_no: number, page_size: number) => {
+    try {
+        const { lists } = await getOperateCaseList({
+            page_no,
+            page_size,
+            category_type: currentTab.value === 0 ? "" : currentTab.value,
+        });
+        pagingRef.value?.complete(lists);
+    } catch (error: any) {
+        pagingRef.value?.complete([]);
+    }
 };
-
-getTemplateList();
-
-const filteredList = computed(() =>
-    currentTab.value === "all"
-        ? templateList.value
-        : templateList.value.filter((item) => item.level1 == currentTab.value)
-);
 
 const handleUse = (item: any) => {
     uni.navigateTo({
         url: `/packages/pages/operate_case_detail/operate_case_detail?id=${item.id}`,
     });
+};
+
+const changeTab = (key: number) => {
+    currentTab.value = key;
+    pagingRef.value?.reload();
 };
 </script>
 

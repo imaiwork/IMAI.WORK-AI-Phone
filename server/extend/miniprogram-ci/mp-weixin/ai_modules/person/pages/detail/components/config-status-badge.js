@@ -1,1 +1,0 @@
-"use strict";const e=require("../../../../../common/vendor.js"),o=e.defineComponent({__name:"config-status-badge",props:{configured:{type:Boolean}},setup:o=>(n,t)=>e.e({a:o.configured},(o.configured,{}))});wx.createComponent(o);

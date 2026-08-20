@@ -18,6 +18,7 @@ use app\common\model\knowledge\KnowledgeRetrieve;
 use app\common\model\knowledge\KnowledgeRetrieveSlice;
 use app\common\model\knowledge\KnowledgeUseSceneRecord;
 use app\common\model\user\User;
+use app\common\service\chat\ChatBillingService;
 use app\common\service\FileService;
 use app\common\service\UploadService;
 use app\common\service\WordsService;
@@ -36,18 +37,58 @@ class KnowledgeLogic extends ApiLogic
     const RERANK_MIN_SCORE = 0.2; //知识库检索最小分数
     const OPENAI_CHAT = 'openai_chat'; //openai聊天
     const GEMINI_CHAT = 'gemini_chat'; //gemini聊天
+
+    /**
+     * 指定用户当前空间可读的 RAG 知识库(企业空间:同 team 且创建者仍在团;个人空间仅自己)
+     */
+    private static function findReadableKnowledgeForUser(int $uid, array $where)
+    {
+        $query = Knowledge::where($where);
+        $query = \app\common\service\TeamContextService::applyReadableScope($query, $uid);
+        return $query->limit(1)->find();
+    }
+
+    /**
+     * 当前登录用户可读
+     */
+    private static function findReadableKnowledge(array $where)
+    {
+        return self::findReadableKnowledgeForUser((int)self::$uid, $where);
+    }
+
+    /**
+     * @throws \Exception
+     */
+    private static function assertReadableKnowledge(array $where)
+    {
+        $find = self::findReadableKnowledge($where);
+        if (empty($find)) {
+            message('知识库不存在');
+        }
+        return $find;
+    }
+
     const GPT_MODELS = [
         'gpt-4',
         'gpt-4o',
         'gpt-4o-mini',
         'gpt-4o-2024-08-06',
         'gpt-3.5-turbo',
+        'gpt-5.4',
+        'gpt-5.4-mini',
+        'gpt-5',
+        'gpt-5-mini',
+        'claude-sonnet-4-5',
+        'claude-sonnet-4-6',
+        'claude-sonnet-4-6-think'
     ];
     const GEMINI_MODELS = [
         'gemini-2.5-pro',
         'gemini-2.5-flash',
         'gemini-2.0-flash',
         'gemma-3-4b-it',
+        'gemini-3.1-pro-preview',
+        'gemma-4-31b-it'
     ];
     /**
      * 知识库列表
@@ -60,7 +101,23 @@ class KnowledgeLogic extends ApiLogic
         $page = $params['page_no'] ?? 1;
         $size = $params['page_size'] ?? 10;
         $params['name'] = $params['name'] ?? '';
-        $result = Knowledge::where(['user_id' => self::$uid])
+        // 资源跟人:企业空间→本企业全体有效成员创建的 + 本人全部;个人空间→本人全部
+        $teamId = \app\common\service\TeamContextService::currentTeamId((int)self::$uid);
+        $memberIds = $teamId > 0
+            ? \app\common\service\TeamBillingService::activeMemberUserIds($teamId)
+            : [];
+        $applyScope = static function ($query) use ($teamId, $memberIds) {
+            if ($teamId > 0) {
+                $query->where(function ($q) use ($memberIds) {
+                    $q->whereIn('user_id', $memberIds ?: [-1])
+                        ->whereOr('user_id', '=', (int)self::$uid);
+                });
+            } else {
+                $query->where('user_id', self::$uid);
+            }
+            return $query;
+        };
+        $result = $applyScope(Knowledge::where([]))
             ->when($params['name'], function ($query) use ($params) {
                 $query->where('name', 'like', '%' . $params['name'] . '%');
             })
@@ -71,12 +128,15 @@ class KnowledgeLogic extends ApiLogic
                 $item->file_counts = $item->file_count;
                 $item->token_counts = KnowledgeUseSceneRecord::where(['index_id' => $item['index_id']])->sum('tokens');
                 $item->request_counts = KnowledgeUseSceneRecord::where(['index_id' => $item['index_id']])->count();
+                // 团队共享可见,仅创建者可编辑/删除
+                $item->is_owner = (int)$item['user_id'] === (int)self::$uid ? 1 : 0;
+                $item->is_super = $item->is_owner;
             })
             ->toArray();
 
         $data = [
             'lists' => $result,
-            'count' => Knowledge::where(['user_id' => self::$uid])
+            'count' => $applyScope(Knowledge::where([]))
                 ->when($params['name'], function ($query) use ($params) {
                     $query->where('name', 'like', '%' . $params['name'] . '%');
                 })->count(),
@@ -149,6 +209,8 @@ class KnowledgeLogic extends ApiLogic
 
                 $addData = $params;
                 $addData['user_id'] =  self::$uid;
+                // 企业空间内创建→归属当前企业,团队全员共享;个人空间→0
+                $addData['team_id'] = \app\common\service\TeamContextService::currentTeamId((int)self::$uid);
                 $addData['index_id'] = $indexRes['Id'];
                 $addData['category_id'] = $cateRes['data']['CategoryId'];
                 $addData['create_time'] = time();
@@ -310,23 +372,21 @@ class KnowledgeLogic extends ApiLogic
 
     public static function detail(array $param)
     {
-        $find = Knowledge::where('id', $param['id'])->limit(1)->find();
-        if (empty($find)) {
-            message('知识库不存在');
-        }
+        // 企业空间:全员可读同 team_id 知识库;文件按知识库归属拉取(勿按当前 user_id 过滤,否则成员看到空文档)
+        $find = self::assertReadableKnowledge(['id' => $param['id']]);
 
-        $files = KnowledgeFile::field('*')->where(['user_id' => self::$uid])->where('kid', $find['id'])->select()
-            ->toArray();
+        $files = KnowledgeFile::field('*')->where('kid', $find['id'])->select()->toArray();
 
         if (!empty($files)) {
-
-
             $find->is_bind = 1;
             $find->update_time = time();
             $find->save();
         }
         $result = $find->toArray();
         $result['documents'] = $files;
+        // 团队共享可读可用;编辑/删除仅创建者
+        $result['is_owner'] = (int)($result['user_id'] ?? 0) === (int)self::$uid ? 1 : 0;
+        $result['is_super'] = $result['is_owner'];
         return $result;
     }
 
@@ -417,9 +477,7 @@ class KnowledgeLogic extends ApiLogic
 
     private static function __insertRetrieveData(array $params, array $data)
     {
-        $knowledge = Knowledge::where('index_id', $params['indexid'])->where('user_id', self::$uid)->fetchSql(false)->limit(1)->find();
-
-
+        $knowledge = self::findReadableKnowledge(['index_id' => $params['indexid']]);
         if (empty($knowledge)) {
             message('知识库不存在');
         }
@@ -552,21 +610,15 @@ class KnowledgeLogic extends ApiLogic
      */
     public static function indexFileList(array $param)
     {
+        $find = self::assertReadableKnowledge(['id' => $param['id']]);
 
-        $find = Knowledge::where('id', $param['id'])->limit(1)->find();
-
-        if (empty($find)) {
-            message('知识库不存在');
-        }
-
-        $result = KnowledgeFile::where(['user_id' => self::$uid])->where('index_id', $find['index_id'])->select()
-            ->toArray();
+        $result = KnowledgeFile::where('index_id', $find['index_id'])->select()->toArray();
 
         $data = [
             'lists' => $result,
-            'count' => KnowledgeFile::where(['user_id' => self::$uid])->where('index_id', $find['index_id'])->count(),
-            'page_no' => $params['page_no'] ?? 1,
-            'page_size' => $params['page_size'] ?? 10,
+            'count' => KnowledgeFile::where('index_id', $find['index_id'])->count(),
+            'page_no' => $param['page_no'] ?? 1,
+            'page_size' => $param['page_size'] ?? 10,
         ];
 
         return $data;
@@ -688,7 +740,6 @@ class KnowledgeLogic extends ApiLogic
 
     public static function fileLists(array $params)
     {
-
         $pageNo = ($params['page_no'] - 1) * $params['page_size'];
         $pageSize = $params['page_size'];
 
@@ -699,29 +750,24 @@ class KnowledgeLogic extends ApiLogic
             1 => 'PARSE_SUCCESS',
             2 => 'PARSE_FAILED'
         );
-        $status = $modes[$takeover_mode] ?? ''; // 默认为0，即未完成的任务，你可以根据需要修改这个值
+        $status = $modes[$takeover_mode] ?? '';
 
-        $result = KnowledgeFile::where(['user_id' => self::$uid])
-            ->where('category_id', $params['category_id'])
-            ->when($name, function ($query) use ($name) {
-                $query->where('name', 'like', '%' . $name . '%');
-            })
-            ->when($status, function ($query) use ($status) {
-                $query->where('status', '=', $status);
-            })
-            ->limit($pageNo, $pageSize)
-            ->select()
-            ->toArray();
-        $data = [
-            'lists' => $result,
-            'count' => KnowledgeFile::where(['user_id' => self::$uid])
+        // 先确认知识库在当前空间可读,再按知识库拉文件(团队成员可见创建者上传的文档)
+        self::assertReadableKnowledge(['category_id' => $params['category_id']]);
+
+        $build = function () use ($params, $name, $status) {
+            return KnowledgeFile::where('category_id', $params['category_id'])
                 ->when($name, function ($query) use ($name) {
                     $query->where('name', 'like', '%' . $name . '%');
                 })
                 ->when($status, function ($query) use ($status) {
                     $query->where('status', '=', $status);
-                })
-                ->where('category_id', $params['category_id'])->count(),
+                });
+        };
+
+        $data = [
+            'lists' => $build()->limit($pageNo, $pageSize)->select()->toArray(),
+            'count' => $build()->count(),
             'page_no' => $params['page_no'],
             'page_size' => $params['page_size'],
         ];
@@ -1094,7 +1140,7 @@ class KnowledgeLogic extends ApiLogic
         if (!isset($params['ids']) || empty($params['ids'])) {
             message('请选择需要上传的记录');
         }
-        $knowledge = Knowledge::where('index_id', $params['indexid'])->where('user_id', self::$uid)->limit(1)->find();
+        $knowledge = self::findReadableKnowledge(['index_id' => $params['indexid']]);
         if (empty($knowledge)) {
             message('知识库不存在');
         }
@@ -1202,8 +1248,15 @@ class KnowledgeLogic extends ApiLogic
             self::GEMINI_CHAT => ['gemini_chat', AccountLogEnum::TOKENS_DEC_GEMINI_CHAT],
         };
 
-        //计费
-        $unit = TokenLogService::checkToken($userId, $tokenScene);
+        $isChatScene = in_array($scene, [self::KNOELEDGE_CHAT, self::OPENAI_CHAT, self::GEMINI_CHAT], true);
+        $modelAlias = $request['model'] ?? 'deepseek';
+
+        if ($isChatScene) {
+            // 分享智能体公开使用:只校验算力,不校验团队到期/停用
+            ChatBillingService::checkBalance($userId, $modelAlias, !empty($request['skip_team_check']));
+        } else {
+            TokenLogService::checkToken($userId, $tokenScene);
+        }
 
         switch ($scene) {
             case self::KNOELEDGE_CREATE:
@@ -1215,7 +1268,6 @@ class KnowledgeLogic extends ApiLogic
             case self::KNOELEDGE_CHAT:
                 if (isset($request['qf']) && $request['qf'] == 'knowledge') {
                     $tokenCode =  AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN;
-                    $unit = TokenLogService::checkToken($userId, 'automation_social_media_obtain');
                     $response = \app\common\service\ToolsService::Automation()->socialMediaObtain($request);
                 }else{
                     $response = $requestService->promptChat($request);
@@ -1224,7 +1276,6 @@ class KnowledgeLogic extends ApiLogic
             case self::OPENAI_CHAT:
                 if (isset($request['qf']) && $request['qf'] == 'openai') {
                     $tokenCode =  AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN;
-                    $unit = TokenLogService::checkToken($userId, 'automation_social_media_obtain');
                     $response = \app\common\service\ToolsService::Automation()->socialMediaObtain($request);
                 }else{
                     $response = $requestService->openaiChat($request);
@@ -1234,7 +1285,6 @@ class KnowledgeLogic extends ApiLogic
             case self::GEMINI_CHAT:
                 if (isset($request['qf']) && $request['qf'] == 'gemini') {
                     $tokenCode =  AccountLogEnum::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_OBTAIN;
-                    $unit = TokenLogService::checkToken($userId, 'automation_social_media_obtain');
                     $response = \app\common\service\ToolsService::Automation()->socialMediaObtain($request);
                 }else{
                     $response = $requestService->geminiChat($request);
@@ -1254,29 +1304,37 @@ class KnowledgeLogic extends ApiLogic
         if (isset($response['code']) && $response['code'] == 10000) {
 
             if ($scene === self::KNOELEDGE_CREATE) {
-                $tokens = $unit;
+                $unit = TokenLogService::getTypeScore($tokenScene);
                 $points = $unit;
-                $knowlwdge_tokens = $points;
+                if ($points > 0) {
+                    $extra = ['总消耗tokens数' => $points, '算力单价' => $unit, '实际消耗算力' => $points];
+                    User::userTokensChange($userId, $points);
+                    AccountLogLogic::recordUserTokensLog(true, $userId, $tokenCode, $points, $request['task_id'], $extra);
+                    self::saveKnowledgeRecord($request, $response['data']);
+                }
+            } elseif ($isChatScene) {
+                $usage = $response['data']['usage'] ?? [];
+                $points = ChatBillingService::charge(
+                    $userId,
+                    $modelAlias,
+                    $usage,
+                    $tokenCode,
+                    (string)$request['task_id']
+                );
+                if ($points > 0) {
+                    self::saveKnowledgeRecord($request, $response['data']);
+                }
             } else {
-                $usage = $response['data']['usage'];
-                $tokens = $usage['total_tokens'] + $request['knowledge_tokens'];
-                //计算消耗tokens
+                $unit = TokenLogService::getTypeScore($tokenScene);
+                $usage = $response['data']['usage'] ?? [];
+                $tokens = (int)($usage['total_tokens'] ?? 0);
                 $points = $unit > 0 ? round($tokens / $unit, 2) : 0;
-                $knowlwdge_tokens = $request['knowledge_tokens'];
-            }
-
-            //clogger($points.'|'.$userId);
-
-            if ($points > 0) {
-
-                $extra = ['总消耗tokens数' => $tokens, '知识库消耗tokens数' => $knowlwdge_tokens,  '算力单价' => $unit, '实际消耗算力' => $points];
-                //clogger('extra: '. json_encode($extra, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-                //token扣除
-                User::userTokensChange($userId, $points);
-                //记录日志
-                AccountLogLogic::recordUserTokensLog(true, $userId, $tokenCode, $points, $request['task_id'], $extra);
-
-                self::saveKnowledgeRecord($request, $response['data']);
+                if ($points > 0) {
+                    $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points];
+                    User::userTokensChange($userId, $points);
+                    AccountLogLogic::recordUserTokensLog(true, $userId, $tokenCode, $points, $request['task_id'], $extra);
+                    self::saveKnowledgeRecord($request, $response['data']);
+                }
             }
         }
 
@@ -1304,9 +1362,14 @@ class KnowledgeLogic extends ApiLogic
             $record['create_time'] = time();
             $res = (new KnowledgeUseSceneRecord())->save($record);
 
-            $knowlwdge = Knowledge::where('index_id', $request['indexid'])->where('user_id', $request['user_id'])->fetchSql(false)->limit(1)->find();
+            $knowlwdge = self::findReadableKnowledgeForUser((int)$request['user_id'], ['index_id' => $request['indexid']]);
+            if (empty($knowlwdge)) {
+                $knowlwdge = Knowledge::where('index_id', $request['indexid'])->limit(1)->find();
+            }
             //请求成功知识库调用+1
-            $knowlwdge->inc('request_count', 1)->inc('tokens', $record['retrieve_tokens'])->save();
+            if (!empty($knowlwdge)) {
+                $knowlwdge->inc('request_count', 1)->inc('tokens', $record['retrieve_tokens'])->save();
+            }
         } catch (\Throwable $th) {
             //clogger($th);
 
@@ -1501,6 +1564,9 @@ class KnowledgeLogic extends ApiLogic
             $request['identity']  = $params['identity'];
             $request['share_id']  = $params['share_id'];
             $request['question']  = $params['question'];
+        }
+        if (!empty($params['skip_team_check'])) {
+            $request['skip_team_check'] = true;
         }
 
         self::__getRequestData($request, $params);
@@ -1719,10 +1785,14 @@ class KnowledgeLogic extends ApiLogic
             $logs = [];
             if (!isset($params['unique_id'])) {
                 if (isset($params['task_id']) && $params['task_id']) {
-                    // 对话记录
-                    $logs = \app\api\logic\ChatLogic::chatLog($params['task_id'], $params['assistant_id'], self::$uid, $params['context_num']);
-                    if (!$logs) {
-                        message('对话记录ID错误');
+                    // 对话记录 $params['context_num']在智能体里设置为0时，此处会报错
+                    if ($params['context_num'] > 0){
+                        $logs = \app\api\logic\ChatLogic::chatLog($params['task_id'], $params['assistant_id'] ?? 0, self::$uid, $params['context_num']);
+                        if (!$logs) {
+                            // TODO 此处经常触发，之后再触发可能需要和前端联调
+                            $logs = [];
+//                        message('对话记录ID错误');
+                        }
                     }
                 } else {
                     $params['task_id'] = generate_unique_task_id();
@@ -1792,6 +1862,9 @@ class KnowledgeLogic extends ApiLogic
                 $request['share_id']  = $params['share_id'];
                 $request['question']  = $params['question'];
             }
+            if (!empty($params['skip_team_check'])) {
+                $request['skip_team_check'] = true;
+            }
             $uid    = self::$uid;
             if ($uid == 0 && isset($params['unique_id'])) {
                 $uid = KbRobot::where('id', $params['robot_id'])->value('user_id');
@@ -1826,9 +1899,9 @@ class KnowledgeLogic extends ApiLogic
             }
 
 
-            $uid = $params['user_id'] ?? self::$uid;
+            $uid = (int)($params['user_id'] ?? self::$uid);
             if ($params['indexid'] != '') {
-                $knowlwdge = Knowledge::where('index_id', $params['indexid'])->where('user_id', $uid)->fetchSql(false)->limit(1)->find();
+                $knowlwdge = self::findReadableKnowledgeForUser($uid, ['index_id' => $params['indexid']]);
                 if (empty($knowlwdge)) {
                     return [false, '知识库不存在'];
                 }
@@ -1989,8 +2062,8 @@ class KnowledgeLogic extends ApiLogic
             message('助手不存在');
         }
 
-        $uid = $params['user_id'] ?? self::$uid;
-        $knowlwdge = Knowledge::where('index_id', $params['indexid'])->where('user_id', $uid)->fetchSql(false)->limit(1)->find();
+        $uid = (int)($params['user_id'] ?? self::$uid);
+        $knowlwdge = self::findReadableKnowledgeForUser($uid, ['index_id' => $params['indexid']]);
         if (empty($knowlwdge)) {
             message('知识库不存在');
         }
@@ -2162,8 +2235,8 @@ class KnowledgeLogic extends ApiLogic
         }
 
 
-        $uid = $params['user_id'] ?? self::$uid;
-        $knowlwdge = Knowledge::where('index_id', $params['indexid'])->where('user_id', $uid)->fetchSql(false)->limit(1)->find();
+        $uid = (int)($params['user_id'] ?? self::$uid);
+        $knowlwdge = self::findReadableKnowledgeForUser($uid, ['index_id' => $params['indexid']]);
         if (empty($knowlwdge)) {
             message('知识库不存在');
         }

@@ -1001,7 +1001,7 @@ class MatrixPublishLogic extends SvBaseLogic
                         'messageId' => 0,
                         'type' => 5,
                         'deviceId' => $publish['device_code'],
-                        'appVersion' => '2.1.2',
+                        'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                         'code' => 200,
                         'action' => 'send',
                         'content' => json_encode(array(
@@ -1051,7 +1051,7 @@ class MatrixPublishLogic extends SvBaseLogic
                     'task_id' => $app->id
                 ], JSON_UNESCAPED_UNICODE),
                 "deviceId" => $deviceid,
-                "appVersion" => "2.1.2"
+                "appVersion" => \app\common\enum\DeviceEnum::APP_VERSION,
             ];
 
             $channel = "device.{$deviceid}.message";

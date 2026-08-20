@@ -349,6 +349,17 @@ function generate_unique_task_id(): string
     return md5(date('YmdHis') . uniqid() . mt_rand(1000000, 9999999));
 }
 
+/**
+ * 格式化时间（兼容 int 时间戳与已格式化的字符串）
+ */
+function format_datetime(mixed $value): string
+{
+    if ($value === null || $value === '' || $value === 0 || $value === '0') {
+        return '';
+    }
+    return is_numeric($value) ? date('Y-m-d H:i:s', (int)$value) : (string)$value;
+}
+
 
 /**
  * 面试ai 获取 评分
@@ -436,6 +447,43 @@ function format_amount_zero($value): string
 }
 
 /**
+ * 根据模型售价计算消耗算力
+ * @param string $type chat|emb
+ * @param mixed $modelSubId 子模型ID，兼容部分旧逻辑传主模型ID或名称
+ * @param int $strLength 文本长度，按每1000 tokens近似计费
+ * @return float
+ */
+function tokens_price(string $type, mixed $modelSubId, int $strLength): float
+{
+    $typeMap = [
+        'chat' => \app\common\enum\ChatEnum::MODEL_TYPE_CHAT,
+        'emb'  => \app\common\enum\ChatEnum::MODEL_TYPE_EMB,
+    ];
+    $modelType = $typeMap[$type] ?? 0;
+    if ($modelType <= 0 || $strLength <= 0) {
+        return 0;
+    }
+
+    $query = \app\common\model\chat\ModelsCost::where(['type' => $modelType]);
+    if (is_numeric($modelSubId)) {
+        $modelSubId = intval($modelSubId);
+        $price = (clone $query)->where(['id' => $modelSubId])->value('price');
+        if ($price === null) {
+            $price = (clone $query)->where(['model_id' => $modelSubId])->order('sort asc, id desc')->value('price');
+        }
+    } else {
+        $price = (clone $query)->where(['name' => (string)$modelSubId])->value('price');
+    }
+
+    $price = (float)($price ?? 0);
+    if ($price <= 0) {
+        return 0;
+    }
+
+    return round($price * $strLength / 1000, 2);
+}
+
+/**
  * @notes 生成随机字符串
  * @param $length
  * @return string
@@ -453,6 +501,33 @@ function generate_random_str($length): string
     }
 
     return $str;
+}
+
+/**
+ * @notes 生成设备CDK串码
+ */
+function device_auth_sn(int $ruleType = 2): string
+{
+    $prefix = \app\common\service\ConfigService::get('device_auth', 'code_prefix', 'CARD');
+    $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    $part1 = '';
+    $part2 = '';
+    for ($i = 0; $i < 8; $i++) {
+        if ($ruleType == 1) {
+            $letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            $part1 .= $letters[rand(0, strlen($letters) - 1)];
+        } else {
+            $part1 .= rand(0, 9);
+        }
+    }
+    for ($i = 0; $i < 4; $i++) {
+        $part2 .= $chars[rand(0, strlen($chars) - 1)];
+    }
+    $code = $prefix . '-' . $part1 . '-' . $part2;
+    if (app()->make(\app\common\model\deviceauth\DeviceCdkCode::class)->where('code', $code)->find()) {
+        return device_auth_sn($ruleType);
+    }
+    return $code;
 }
 
 function extractAllImageUrls(string $content): array

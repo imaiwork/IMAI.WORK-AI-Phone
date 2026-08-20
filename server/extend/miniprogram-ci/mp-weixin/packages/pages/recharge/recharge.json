@@ -5,10 +5,10 @@
   "disableScroll": true,
   "usingComponents": {
     "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
-    "u-button": "../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "u-checkbox": "../../../uni_modules/vk-uview-ui/components/u-checkbox/u-checkbox",
-    "empty": "../../../components/empty/empty",
-    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
-    "popup-bottom": "../../../components/popup-bottom/popup-bottom"
+    "u-button": "../../../uni_modules/vk-uview-ui/components/u-button/u-button",
+    "popup-bottom": "../../../components/popup-bottom/popup-bottom",
+    "oem-recharge-panel": "../../../components/oem-recharge-panel/oem-recharge-panel"
   }
 }

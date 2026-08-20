@@ -1,0 +1,13 @@
+{
+  "navigationBarTitleText": "团队管理",
+  "enablePullDownRefresh": false,
+  "backgroundColor": "#EDF2FA",
+  "usingComponents": {
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-input": "../../../uni_modules/vk-uview-ui/components/u-input/u-input",
+    "u-popup": "../../../uni_modules/vk-uview-ui/components/u-popup/u-popup",
+    "member-invite-popup": "./components/member-invite-popup",
+    "team-benefits-popup": "./components/team-benefits-popup",
+    "team-skeleton": "./components/team-skeleton"
+  }
+}

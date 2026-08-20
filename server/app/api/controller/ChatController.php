@@ -69,10 +69,7 @@ class ChatController extends BaseApiController
         $params = $this->request->post();
         $params['scene'] = '通用聊天';
         $params['stream'] = true;
-        if (isset($params['indexid']) && !empty($params['indexid'])) {
-            $params['scene'] = 'RAG知识库聊天';
-            return KnowledgeLogic::sceneChat($params) ? $this->data(KnowledgeLogic::getReturnData()) : $this->fail(KnowledgeLogic::getError());
-        } else if (isset($params['kb_id']) && !empty($params['kb_id'])) {
+        if (isset($params['kb_id']) && !empty($params['kb_id'])) {
             $params['scene'] = '向量知识库聊天';
             return KnowledgeLogic::sceneVectorChat($params) ? $this->data(KnowledgeLogic::getReturnData()) : $this->fail(KnowledgeLogic::getError());
         } else {

@@ -4,18 +4,20 @@
 namespace app\api\lists\device;
 
 use app\api\lists\BaseApiDataLists;
-use app\common\lists\ListsSearchInterface;
 use app\common\lists\ListsExtendInterface;
-use app\common\model\sv\SvDevice;
-use app\common\model\sv\SvAccount;
-use app\common\model\sv\SvDeviceTask;
-use app\common\model\sv\SvDeviceRpa;
-use app\common\model\wechat\AiWechat;
-use think\facade\Cache;
-
+use app\common\lists\ListsSearchInterface;
 use app\common\model\auto\AutoDeviceConfig;
-
+use app\common\model\deviceauth\DeviceCdkCode;
 use app\common\model\kb\KbRobot;
+use app\common\model\sv\SvAccount;
+use app\common\model\sv\SvCrawlingRecord;
+use app\common\model\sv\SvDevice;
+use app\common\model\sv\SvDeviceTask;
+use app\common\model\sv\SvDeviceUsed;
+use app\common\model\sv\SvLeadScrapingRecord;
+use app\common\model\sv\SvPublishSettingDetail;
+use app\common\model\wechat\AiWechatCircleTask;
+use think\facade\Cache;
 
 
 /**
@@ -29,7 +31,8 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
     public function setSearch(): array
     {
         return [
-            '%like%' => ['device_name', 'device_code']
+            '%like%' => ['device_name', 'device_code'],
+              '=' => ['dt.persona_id', 'dt.auth_status'],
         ];
     }
 
@@ -54,6 +57,11 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
                     $item->wechat_device_code = $wechatCode;
                     $item->save();
                 }
+
+                Cache::store('redis')->handler()->select(env('redis.WS_SELECT', 8));
+                $status = Cache::store('redis')->handler()->get("xhs:device:{$item['device_code']}:status");
+                $item['status'] = unserialize($status) === 'online' ? ((int)$item['status'] === 2 ? $item['status'] : 1) : 0;
+                $item->save();
 
                 $item['accounts'] =  SvAccount::alias('w')
                     ->field('w.user_id,w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,w.update_time,w.extra,w.type,
@@ -82,7 +90,7 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
                         foreach ($extraArray  as $key => $v) {
                             $item[$key] = $v;
                         }
-
+                        $item->account_type = $item->type;
                         return $item;
                     })
                     ->toArray();
@@ -140,14 +148,32 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
                     $item['is_auto_setting'] = $is_config;
                 }
 
-                if ($item['status'] !== 2) {
-                    Cache::store('redis')->handler()->select(env('redis.WS_SELECT', 8));
-                    $status = Cache::store('redis')->handler()->get("xhs:device:{$item['device_code']}:status");
-                    $item['status'] = unserialize($status) === 'online' ? 1 : 0;
-                    $item->save();
-                }
+                
+
 
                 $item['is_empty'] =  \app\common\model\auto\AutoDeviceConfig::where('user_id', $item->user_id)->where('device_code', $item['device_code'])->findOrEmpty()->isEmpty() ? 1 : 0;
+                // 累计触达
+                $item['touch_number'] = SvLeadScrapingRecord::alias('r')
+                                                          ->field('r.id')
+                                                          ->join('sv_lead_scraping_setting s', 's.id = r.scraping_id and s.user_id = r.user_id')
+                                                          ->where('r.user_id', $item->user_id)
+                                                          ->where('r.device_code', $item['device_code'])
+                                                          ->where('s.industry_type', 0)
+                                                          ->count();
+                // 累计线索
+                $item['crawling_number'] = SvCrawlingRecord::where('user_id', $item->user_id)->where('device_code', $item['device_code'])->count();
+                // 累计发布
+                $item['publish_number'] = SvPublishSettingDetail::where('user_id', $item->user_id)->where('device_code', $item['device_code'])->where('status', 1)->count();
+                $item['publish_number'] += AiWechatCircleTask::where('user_id', $item->user_id)->where('device_code', $item['device_code'])->where('send_status',2)->count();
+                $item['persona'] = \app\common\model\aiPersona\AiPersona::field('id, persona_name, persona_type,persona_desc,avatar_url')->where('id', $item->persona_id)->limit(1)->find();
+                $lastCdk = !empty($item['last_cdk_code_id']) ? DeviceCdkCode::findOrEmpty((int)$item['last_cdk_code_id']) : null;
+                $item['auth_type_name'] = ($lastCdk && !$lastCdk->isEmpty()) ? self::authTypeFormat($lastCdk->type) : '';
+                $item['cdk_type_name'] = $item['auth_type_name'];
+                $item['auth_start_time'] = !empty($item['auth_start_time']) && $item['auth_start_time'] > 0 ? date('Y-m-d H:i:s', $item['auth_start_time']) : '';
+                $item['auth_expire_time'] = !empty($item['auth_expire_time']) && $item['auth_expire_time'] > 0 ? date('Y-m-d H:i:s', $item['auth_expire_time']) : '永久';
+                $item['auth_code'] = ($lastCdk && !$lastCdk->isEmpty()) ? (string)$lastCdk->code : '';
+                $item['is_used'] = SvDeviceUsed::where('user_id', $item->user_id)->where('device_code', $item['device_code'])->value('is_used');
+                unset($item['last_auth_code_id'], $item['last_cdk_code_id']);
                 return $item;
             })
             ->toArray();
@@ -276,5 +302,20 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
             }
         }
         return $is_config;
+    }
+
+    private static function authTypeFormat($type)
+    {
+        $map = [
+            '0' => '无',
+            '1' => '永久卡',
+            '2' => '周卡',
+            '3' => '月卡',
+            '4' => '季卡',
+            '5' => '半年卡',
+            '6' => '年卡',
+        ];
+
+        return $map[(string)$type] ?? '其它';
     }
 }

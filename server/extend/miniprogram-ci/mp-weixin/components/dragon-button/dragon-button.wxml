@@ -1,1 +1,1 @@
-<view id="drag-button" class="{{['drag-container', 'data-v-e035b828', a && 'transition']}}" style="{{'left:' + b + ';' + ('top:' + c) + ';' + ('width:' + d) + ';' + ('height:' + e) + ';' + ('z-index:' + f)}}" bindtouchend="{{g}}" catchtouchmove="{{h}}"><slot/></view>
+<view id="drag-button" class="{{['drag-container', 'data-v-68ba05f7', a && 'transition']}}" style="{{'left:' + b + ';' + ('top:' + c) + ';' + ('width:' + d) + ';' + ('height:' + e) + ';' + ('z-index:' + f)}}" bindtouchend="{{g}}" catchtouchmove="{{h}}"><slot/></view>

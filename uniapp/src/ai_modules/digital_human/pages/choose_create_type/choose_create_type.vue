@@ -1,54 +1,60 @@
 <template>
-    <view class="h-screen dh-bg flex flex-col">
+    <view class="flex flex-col h-screen bg-[#F7F9FC]">
         <u-navbar
             :border-bottom="false"
             :is-fixed="false"
-            :background="{
-                background: 'transparent',
-            }"
+            :background="{ background: 'transparent' }"
             title="选择视频类型"
-            title-bold>
-        </u-navbar>
-        <view class="grow min-h-0 mt-4">
+            title-bold />
+
+        <view class="grow min-h-0">
             <scroll-view class="h-full" scroll-y>
-                <view class="px-[26rpx] pb-[100rpx]">
-                    <view class="flex flex-col gap-y-4">
+                <view class="px-4 pt-[16rpx] pb-[40rpx] flex flex-col gap-[16rpx]">
+                    <view
+                        v-for="(item, index) in typeList"
+                        :key="index"
+                        class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)] flex items-stretch active:scale-[0.99] transition-all duration-150"
+                        @click="handleClick(item)">
                         <view
-                            v-for="(item, index) in typeList"
-                            :key="index"
-                            class="px-[32rpx] py-[30rpx] bg-white rounded-[16rpx] flex gap-x-5"
-                            @click="handleClick(item)">
-                            <view class="w-[180rpx] h-[240rpx] flex-shrink-0 relative bg-[#F3F4FB] rounded-[12rpx]">
-                                <view
+                            class="w-[180rpx] flex-shrink-0 relative bg-[#F0F2F5] m-[16rpx] rounded-[16rpx] overflow-hidden">
+                            <view
+                                class="w-full h-full"
+                                style="aspect-ratio: 9/12"
+                                @click.stop="handlePlay(videoCaseLists[index]?.video_case_url)">
+                                <image
+                                    :src="videoCaseLists[index]?.image || CommonBg"
                                     class="w-full h-full"
-                                    @click.stop="handlePlay(videoCaseLists[index]?.video_case_url)">
-                                    <image
-                                        :src="videoCaseLists[index]?.image || CommonBg"
-                                        class="w-full h-full rounded-[12rpx]"
-                                        mode="aspectFill"></image>
-                                    <view
-                                        v-if="isShowVideoCase"
-                                        class="absolute top-[50%] left-[50%] z-[888]"
-                                        style="transform: translate(-50%, -50%)">
-                                        <view
-                                            class="rounded-full bg-[#ffffff33] w-[48rpx] h-[48rpx]"
-                                            style="backdrop-filter: blur(5px)">
-                                            <image src="/static/images/icons/play.svg" class="w-full h-full"></image>
-                                        </view>
-                                    </view>
-                                    <view
-                                        class="absolute right-0 top-0 w-[68rpx] h-[30rpx] flex items-center justify-center rounded-tr-[12rpx] rounded-bl-[12rpx] bg-[#00000080]">
-                                        <text class="text-white text-[20rpx]"> 示例 </text>
-                                    </view>
+                                    mode="aspectFill" />
+
+                                <view v-if="isShowVideoCase" class="absolute inset-0 flex items-center justify-center">
+                                    <image src="/static/images/icons/play.svg" class="w-[56rpx] h-[56rpx]" />
+                                </view>
+
+                                <view
+                                    class="absolute right-0 top-0 px-[12rpx] h-[32rpx] flex items-center justify-center rounded-tr-[16rpx] rounded-bl-[14rpx]"
+                                    style="background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px)">
+                                    <text class="text-white text-[18rpx] font-medium">示例</text>
                                 </view>
                             </view>
-                            <view class="flex-1 mt-[28rpx]">
-                                <view class="flex items-center gap-x-2">
-                                    <view class="text-[30rpx] font-medium">{{ item.title }}</view>
-                                    <view v-if="item.is_dh" class="dh-badge" style="">含数字人</view>
+                        </view>
+
+                        <view class="flex-1 min-w-0 py-[24rpx] pr-[24rpx] flex flex-col justify-between">
+                            <view>
+                                <view class="flex items-center gap-[10rpx] flex-wrap mb-[10rpx]">
+                                    <text class="text-[28rpx] font-extrabold text-[#0D1117]">{{ item.title }}</text>
+                                    <view v-if="item.is_dh" class="dh-badge flex-shrink-0"> 含数字人 </view>
                                 </view>
-                                <view class="mt-[12rpx] text-xs text-[#00000066]">
-                                    {{ item.desc }}
+                                <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed line-clamp-3">{{
+                                    item.desc
+                                }}</text>
+                            </view>
+
+                            <view class="flex items-center justify-end mt-[16rpx]">
+                                <view
+                                    class="flex items-center gap-[6rpx] h-[52rpx] px-[20rpx] rounded-[14rpx]"
+                                    style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)">
+                                    <text class="text-[22rpx] font-bold text-white"> 立即使用 </text>
+                                    <u-icon name="arrow-right" color="#ffffff" size="16" />
                                 </view>
                             </view>
                         </view>
@@ -57,6 +63,7 @@
             </scroll-view>
         </view>
     </view>
+
     <video-preview v-model="showVideoPreview" title="视频预览" :video-url="videoUrl" />
 </template>
 
@@ -105,7 +112,7 @@ const typeList = [
     },
     {
         title: "一句话生成视频",
-        desc: "全新Sora2创作大模型，一句话即可生成视频，影视级创作效果",
+        desc: "聚合多款顶尖AI创作大模型，一句话即可生成视频，轻松呈现影视级创作效果。",
         path: "/ai_modules/digital_human/pages/sora_create/sora_create",
     },
     {

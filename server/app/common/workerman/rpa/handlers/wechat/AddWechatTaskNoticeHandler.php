@@ -29,7 +29,7 @@ class AddWechatTaskNoticeHandler extends BaseMessageHandler
 
             //$this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
         } catch (\Exception $e) {
-            $this->setLog('异常信息' . $e, 'error');
+            $this->setLog('异常信息' . $e, 'add_wechat');
 
             $this->payload['reply'] = $e->getMessage();
             $this->payload['code'] =  WorkerEnum::DEVICE_ERROR_CODE;
@@ -61,12 +61,15 @@ class AddWechatTaskNoticeHandler extends BaseMessageHandler
                 4 => '添加请求当前账号存在安全风险，暂时无法添加朋友',
             );
 
-            $record->image = $this->saveBase64ToImage($content['image'] ?? '', generate_unique_task_id(), 'wechat');
+            $record->image = $this->toolUtil->saveBase64ToImage($content['image'] ?? '', generate_unique_task_id(), 'wechat');
             $record->status = (int)$content['status'] === 0 ? 1 : 0;
             $record->result = $maps[$content['status']] ?? '未知状态：' . $content['status'];
             $record->update = time();
+            $record->add_time = time();
             $record->save();
 
+            
+            $this->setLog('记录:' .json_encode($record->toArray(), JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT), 'add_wechat');
             $wechat = AiWechat::where('wechat_id', '=', $record->wechat_no)->limit(1)->findOrEmpty();
             if (!$wechat->isEmpty()) {
                 $wechat->update_time = time();
@@ -82,9 +85,10 @@ class AddWechatTaskNoticeHandler extends BaseMessageHandler
                     'create_time' => time()
                 ]);
             }
+            $this->setLog('添加微信好友记录状态更新成功', 'add_wechat');
             return '添加微信记录状态更新成功';
         } catch (\Throwable $th) {
-            $this->setLog('异常信息' . $th->__toString());
+            $this->setLog('异常信息' . $th->__toString(), 'add_wechat');
             throw new \Exception($th->getMessage(), $th->getCode());
         }
         return '添加微信记录状态更新失败';

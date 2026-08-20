@@ -48,50 +48,78 @@
                         <ElOption
                             v-for="item in modelChannel"
                             :key="item.id"
-                            :value="item.id"
-                            :label="item.name"></ElOption>
+                            :value="item.model_version"
+                            :label="item.name">
+                            <div class="flex items-center gap-2">
+                                <img :src="item.logo" class="w-4 h-4" />
+                                <span class="font-medium">{{ item.name }}</span>
+                            </div>
+                        </ElOption>
+                        <template #label="{ label, value }">
+                            <div class="flex items-center gap-2">
+                                <img
+                                    :src="modelChannel.find((item) => item.model_version == value)?.logo"
+                                    class="w-4 h-4" />
+                                <span class="font-medium">{{ label }}</span>
+                            </div>
+                        </template>
                     </ElSelect>
                 </ElFormItem>
-                <!-- <ElFormItem
-                    label="性别"
-                    prop="gender"
-                    v-if="formData.model_version != DigitalHumanModelVersionEnum.SHANJIAN">
-                    <ElSelect
-                        v-model="formData.gender"
-                        class="!h-11"
-                        placeholder="请选择性别"
-                        popper-class="dark-select-popper"
-                        :show-arrow="false">
-                        <ElOption value="male" label="男"></ElOption>
-                        <ElOption value="female" label="女"></ElOption>
-                    </ElSelect>
-                </ElFormItem> -->
+
                 <ElFormItem label="上传音频" prop="url">
                     <upload
+                        ref="uploadRef"
                         class="w-full"
                         drag
                         type="audio"
-                        list-type="text"
+                        show-progress
+                        :show-file-list="false"
                         :limit="1"
                         :max-size="maxSize"
                         :accept="getAccept"
                         @success="handleFileSuccess">
-                        <div class="h-[166px] bg-[#f8fafc] rounded-lg flex flex-col justify-center items-center">
+                        <template v-if="!fileInfo">
                             <div
-                                class="w-12 h-12 rounded-xl flex items-center justify-center border border-dashed border-[#0000001a] hover:border-[#00000033] cursor-pointer mt-5 flex-shrink-0">
-                                <Icon name="el-icon-Plus"></Icon>
+                                class="h-[166px] bg-[#f8fafc] rounded-lg flex flex-col justify-center items-center border border-dashed border-[#0000001a] hover:border-[#0065fb33] transition-colors cursor-pointer">
+                                <div
+                                    class="w-12 h-12 rounded-xl flex items-center justify-center border border-dashed border-[#0000001a] hover:border-[#00000033] flex-shrink-0">
+                                    <Icon name="el-icon-Plus"></Icon>
+                                </div>
+                                <div class="text-xs text-[#00000080] text-center mt-4">
+                                    文件不超过{{ maxSize }}MB，支持 .mp3 / .m4a / .wav
+                                </div>
                             </div>
-                            <div class="text-xs text-[#00000080] text-center mt-4">
-                                文件不超过{{ maxSize }}MB,不支持gif/avif等音频格式以外的文件
+                        </template>
+
+                        <template v-else>
+                            <div class="bg-[#f8fafc] p-3 flex flex-col gap-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm font-medium text-[#1a1a1a] truncate text-left">
+                                            {{ fileInfo.name }}
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="w-7 h-7 rounded-full bg-white border border-[#e4e9f0] flex items-center justify-center cursor-pointer hover:bg-[#fff0f0] hover:border-[#ffb3b3] transition-colors flex-shrink-0"
+                                        title="删除文件"
+                                        @click.stop="handleDeleteFile">
+                                        <Icon name="el-icon-Delete" color="#f56c6c" :size="14"></Icon>
+                                    </div>
+                                </div>
+                                <div
+                                    class="flex items-center justify-center gap-1.5 h-8 rounded-lg border border-dashed border-[#0065fb55] bg-[#f0f6ff] text-[#0065fb] text-xs font-medium cursor-pointer hover:bg-[#e0eeff] hover:border-[#0065fb] transition-colors">
+                                    重新上传（覆盖当前文件）
+                                </div>
                             </div>
-                        </div>
+                        </template>
                     </upload>
                 </ElFormItem>
             </ElForm>
 
             <div class="px-[35px] mt-[18px]">
-                <ElButton type="primary" class="w-full !h-[50px] !rounded-full" :loading="isLock" @click="lockSubmit"
-                    >开始转写
+                <ElButton type="primary" class="w-full !h-[50px] !rounded-full" :loading="isLock" @click="lockSubmit">
+                    开始转写
                     <template v-if="tokensValue">（消耗{{ tokensValue }}算力）</template>
                 </ElButton>
             </div>
@@ -101,7 +129,7 @@
 
 <script setup lang="ts">
 import Popup from "@/components/popup/index.vue";
-import { voiceClone, shanjianVoiceClone } from "@/api/digital_human";
+import { voiceClone, shanjianVoiceClone, minimaxAudioUpload, minimaxVoiceClone } from "@/api/digital_human";
 import type { FormInstance } from "element-plus";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
@@ -117,38 +145,40 @@ const appStore = useAppStore();
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
 const modelChannel = computed(() => {
-    const { channel } = appStore.getDigitalHumanConfig;
-    if (channel && channel.length > 0) {
-        const modelChannel = channel.filter((item) => {
-            item.id = parseInt(item.id);
-            if (
-                item.status == 1 &&
-                (DigitalHumanModelVersionEnum.SHANJIAN == item.id || DigitalHumanModelVersionEnum.CHANJING == item.id)
-            ) {
-                return item;
-            }
-        });
-        return modelChannel;
-    }
-    return [];
+    const models = appStore.getAiModels.humanModels;
+    return models;
 });
 
 const tokensValue = computed(() => {
     return {
-        [DigitalHumanModelVersionEnum.STANDARD]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE)?.score,
         [DigitalHumanModelVersionEnum.CHANJING]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_CHANJING)?.score,
         [DigitalHumanModelVersionEnum.SHANJIAN]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN)?.score,
+        [DigitalHumanModelVersionEnum.MINIMAX_HD]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_MINIMAX_HD)
+            ?.score,
+        [DigitalHumanModelVersionEnum.MINIMAX_TURBO]: userStore.getTokenByScene(
+            TokensSceneEnum.HUMAN_VOICE_MINIMAX_TURBO,
+        )?.score,
     }[formData.model_version];
 });
 
 const popupRef = shallowRef<InstanceType<typeof Popup>>();
 const formRef = ref<FormInstance>();
+const uploadRef = shallowRef();
 const formData = reactive({
     url: "",
     name: "",
     gender: "male" as "male" | "female",
-    model_version: DigitalHumanModelVersionEnum.STANDARD,
+    model_version: DigitalHumanModelVersionEnum.CHANJING,
+    file_id: "",
 });
+
+const fileInfo = ref<{ name: string; size: string } | null>(null);
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
 
 const formRules = {
     name: [{ required: true, message: "请输入音色名称" }],
@@ -157,16 +187,43 @@ const formRules = {
 };
 
 const maxSize = 10;
-
 const getAccept = computed(() => {
-    return ".mp3,.m4a,.wav";
+    return formData.model_version == DigitalHumanModelVersionEnum.SHANJIAN ? ".mp3,.wav" : ".mp3,.m4a,.wav";
 });
 
-const handleFileSuccess = (result: any) => {
-    const {
-        data: { uri },
-    } = result;
+const handleFileSuccess = async (result: any) => {
+    const uri = result?.data?.uri;
+    const file = result?.file;
+    if (!uri) return;
     formData.url = uri;
+
+    fileInfo.value = {
+        name: file?.name ?? uri.split("/").pop() ?? "audio",
+        size: file?.size ? formatFileSize(file.size) : "",
+    };
+
+    if (
+        [DigitalHumanModelVersionEnum.MINIMAX_HD, DigitalHumanModelVersionEnum.MINIMAX_TURBO].includes(
+            formData.model_version,
+        )
+    ) {
+        try {
+            const { file_id } = await minimaxAudioUpload({
+                audio_url: formData.url,
+            });
+            formData.file_id = file_id;
+        } catch (error) {
+            handleDeleteFile();
+            feedback.msgError(error || "上传失败");
+            return;
+        }
+    }
+};
+
+const handleDeleteFile = () => {
+    formData.url = "";
+    formData.file_id = "";
+    fileInfo.value = null;
 };
 
 const open = () => {
@@ -180,12 +237,33 @@ const handleSubmit = async () => {
     }
     await formRef.value.validate();
     try {
-        (await formData.model_version) == DigitalHumanModelVersionEnum.SHANJIAN
-            ? await shanjianVoiceClone({
-                  name: formData.name,
-                  audio_url: formData.url,
-              })
-            : await voiceClone(formData);
+        const currModel = modelChannel.value.find((item) => item.model_version == formData.model_version);
+        const callMinimax = () =>
+            minimaxVoiceClone({
+                name: formData.name,
+                model: currModel?.alias,
+                file_id: formData.file_id,
+                text: "亲爱的顾客朋友们，注意啦！本周末我们将迎来年度最大的促销活动。全场商品低至五折起，更有神秘大奖等你来拿！记得带上你的亲朋好友，一起享受这场购物盛宴。错过今天，再等一年！快来加入我们，让这个周末充满惊喜和欢乐",
+            });
+
+        const apis: Partial<Record<DigitalHumanModelVersionEnum, () => Promise<any>>> = {
+            [DigitalHumanModelVersionEnum.SHANJIAN]: () =>
+                shanjianVoiceClone({
+                    name: formData.name,
+                    audio_url: formData.url,
+                }),
+            [DigitalHumanModelVersionEnum.CHANJING]: () => voiceClone(formData),
+            [DigitalHumanModelVersionEnum.MINIMAX_HD]: () => callMinimax(),
+            [DigitalHumanModelVersionEnum.MINIMAX_TURBO]: () => callMinimax(),
+        };
+
+        const apiFn = apis[formData.model_version];
+        if (!apiFn) {
+            feedback.msgError("不支持的模型版本");
+            return;
+        }
+        await apiFn();
+
         popupRef.value?.close();
         userStore.getUser();
         emit("success");
@@ -199,18 +277,6 @@ const close = () => {
 };
 
 const { lockFn: lockSubmit, isLock } = useLockFn(handleSubmit);
-
-watch(
-    () => modelChannel.value,
-    (newVal) => {
-        if (newVal && newVal.length > 0) {
-            formData.model_version = newVal[0].id;
-        }
-    },
-    {
-        immediate: true,
-    }
-);
 
 defineExpose({
     open,

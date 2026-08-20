@@ -20,6 +20,7 @@ class GiftPackageValidate extends BaseValidate
         'type'          => 'require|in:1,2',
         'price'         => 'require',
         'package_info'  => 'require',
+        'product_id'    => 'max:64',
     ];
 
 
@@ -32,33 +33,30 @@ class GiftPackageValidate extends BaseValidate
         'package_info.require'  => '礼包信息参数缺失',
         'type.require'          => '礼包类型参数缺失',
         'type.in'               => '礼包类型参数错误',
+        'product_id.max'        => '虚拟支付产品ID不能超过64个字符',
     ];
     protected $scene = [
         'add'          => [
-//            "name",
-//            "desc",
-//            "selling_price",
-"type",
-"price",
-"package_info",
+            'type',
+            'price',
+            'package_info',
+            'product_id',
         ],
         'delete'       => [
-            "id",
+            'id',
         ],
         'detail'       => [
-            "id",
+            'id',
         ],
         'edit'         => [
-            "id",
-            //            "name",
-            //            "desc",
-            //            "selling_price",
-            "type",
-            "price",
-            "package_info",
+            'id',
+            'type',
+            'price',
+            'package_info',
+            'product_id',
         ],
         'changeStatus' => [
-            "id",
+            'id',
         ],
     ];
 }

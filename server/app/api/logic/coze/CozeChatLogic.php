@@ -4,6 +4,7 @@ namespace app\api\logic\coze;
 
 use app\common\model\coze\CozeAgent;
 use app\common\model\coze\CozeLog;
+use app\common\service\AgentPermissionService;
 
 class CozeChatLogic extends CozeLogic
 {
@@ -26,6 +27,9 @@ class CozeChatLogic extends CozeLogic
 
         if (empty($agent)) {
             throw new \Exception('智能体不存在');
+        }
+        if ((int)($agent['source'] ?? CozeAgent::SOURCE_ADMIN) === CozeAgent::SOURCE_ADMIN) {
+            AgentPermissionService::assertCanAccess($agent, self::$uid,$agent['name']);
         }
         return $agent;
     }

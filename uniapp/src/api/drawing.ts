@@ -47,7 +47,7 @@ export function generatePuzzlePrompt(data: any) {
         },
         {
             ignoreCancel: true,
-        }
+        },
     );
 }
 

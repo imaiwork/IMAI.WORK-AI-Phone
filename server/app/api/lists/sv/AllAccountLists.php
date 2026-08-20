@@ -36,15 +36,17 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
         if ($this->userId > 0) {
             $this->searchWhere[] = ['w.user_id', '=', $this->userId];
         }
+        
 
         $svAccount = SvAccount::alias('w')
             ->field('w.user_id,w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,w.update_time,w.extra,w.type,
                     s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id, d.device_name,d.device_model, "sv" as source')
-            ->join('sv_device d', 'd.device_code = w.device_code', 'left')
-            ->leftJoin('sv_setting s', 's.account = w.account')
+            ->join('sv_device d', 'd.device_code = w.device_code and d.user_id = w.user_id')
+            ->join('sv_setting s', 's.account = w.account and s.user_id = w.user_id')
             ->where($this->searchWhere)
             ->order('w.id', 'desc')
             ->limit($this->limitOffset, $this->limitLength)
+            ->group('w.type, w.account')
             ->select()
             ->each(function ($item) {
                 $item['device_name'] = is_null($item['device_name']) ? $item['device_model'] : $item['device_name'];
@@ -78,7 +80,9 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
             ->join('ai_wechat_setting s', 's.wechat_id = w.wechat_id')
             ->where('w.user_id', $this->userId)
             ->where('w.wechat_id', 'not in', $account)
+            ->where('w.wechat_no', 'not in', $account)
             ->order(['s.sort' => 'desc', 'w.id' => 'desc'])
+            ->group('w.wechat_id')
             ->select()
             ->each(function ($item) {
                 if (empty($item['takeover_mode'])) {
@@ -97,7 +101,26 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
             ->toArray();
             $svAccount = array_merge($svAccount, $wechatAccount);
         }
-        return $svAccount;
+
+        return $this->uniqueByTypeAccount($svAccount);
+    }
+
+    /**
+     * @notes 同一 type 下按 account 去重，保留先出现的记录（已按 id desc，即最新）
+     */
+    private function uniqueByTypeAccount(array $list): array
+    {
+        $seen = [];
+        $result = [];
+        foreach ($list as $item) {
+            $key = ($item['type'] ?? '') . '_' . ($item['account'] ?? '');
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $result[] = $item;
+        }
+        return $result;
     }
 
 
@@ -112,7 +135,8 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
             ->field('w.user_id,w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,w.update_time,w.extra,w.type,
                     s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id')
             ->join('sv_device d', 'd.device_code = w.device_code', 'left')
-            ->leftJoin('sv_setting s', 's.account = w.account')
+            ->join('sv_setting s', 's.account = w.account')
+            ->group('w.type, w.account')
             ->where($this->searchWhere)->count();
     }
 }

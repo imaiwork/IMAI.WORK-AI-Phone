@@ -13,6 +13,7 @@ use app\common\model\wechat\sop\AiWechatSopPushTime;
 use app\common\model\wechat\sop\AiWechatSopSubFlowRemind;
 use app\common\service\FileService;
 use app\common\traits\WechatTrait;
+use DateTime;
 use think\facade\Log;
 
 class PushContentLogic extends ApiLogic
@@ -227,6 +228,7 @@ class PushContentLogic extends ApiLogic
                     }
                 }
                 AiWechatSopPushLog::where('id', $log['id'])->update(['status' => $status, 'update_time' => time()]);
+                usleep(800000);
             }
             return true;
         } catch (\think\exception\HttpResponseException $e) {
@@ -247,11 +249,11 @@ class PushContentLogic extends ApiLogic
             $contents = AiWechatSopPushContent::alias('c')
                                               ->join('ai_wechat_sop_push_time t', 'c.push_time_id = t.id')
                                               ->join('ai_wechat_sop_push p', 't.push_id = p.id')
-                                              ->where('t.push_real_day', $date)
+//                                              ->where('t.push_real_day', $date)
                                               ->where('t.push_time', $startTime)
                                               ->where('p.status', 2)
                                               ->where('p.push_type', 1)
-                                              ->field('c.id as content_id,c.content,c.user_id,c.push_id,c.push_time_id,t.push_real_day,t.push_time,p.type,p.flow_id,p.stage_id')
+                                              ->field('c.id as content_id,c.content,c.user_id,c.push_id,c.push_time_id,t.order_day,t.push_day,t.push_real_day,t.push_time,p.type,p.flow_id,p.stage_id')
                                               ->select();
 
             if ($contents->isEmpty()) {
@@ -278,8 +280,24 @@ class PushContentLogic extends ApiLogic
                         if ($content['type'] == 3){
                             $birthday = AiWechatContact::where('wechat_id', $member['wechat_id'])
                                                        ->where('friend_id', $member['friend_id'])
-                                                       ->value('birth_date');
+                                                       ->value('birth_date','1970-0-0');
                             if (!str_contains($birthday, date('m-d'))){
+                                continue;
+                            }
+                        }
+                        if ($content['type'] == 1){
+                            $createDate = new DateTime(date('Y-m-d', time()));
+                            $joinDate   = new DateTime(date('Y-m-d', $member['join_flow_time']));
+                            $days = $joinDate->diff($createDate)->days;
+                            if ($days != $content['order_day']){
+                                continue;
+                            }
+                        }
+                        if ($content['type'] == 2){
+                            $createDate = new DateTime(date('Y-m-d', time()));
+                            $joinDate   = new DateTime(date('Y-m-d', $member['join_stage_time']));
+                            $days = $joinDate->diff($createDate)->days;
+                            if ($days != $content['order_day']){
                                 continue;
                             }
                         }
@@ -322,6 +340,7 @@ class PushContentLogic extends ApiLogic
                                 'create_time'    => time()
                             ];
                             AiWechatSopPushLog::create($data);
+                            usleep(800000);
                         }
 
                     }
@@ -425,28 +444,29 @@ class PushContentLogic extends ApiLogic
                                                                                       ->value('device_code'),
                                                             'opt_type'     => 'sop'
                                                         ]);
+                            //TODO 跟进提醒这里有bug，
                             //微信消息响应结果
-                            if ($response['code'] == 10000) {
-                                $status = 1;
-                            } else {
-                                $status = 2;
-                            }
+//                            if ($response['code'] == 10000) {
+//                                $status = 1;
+//                            } else {
+//                                $status = 2;
+//                            }
 
                             //记录该成员本次成功的推送记录
-                            if ($status == 1) {
-                                $data = [
-                                    'member_id'      => $member['id'],
-                                    'user_id'        => $member['user_id'],
-                                    'push_id'        => 0,
-                                    'content_id'     => 0,
-                                    'content'        => $remind['content'],
-                                    'push_real_day'  => date('Y-m-d'),
-                                    'push_real_time' => date('H:i:s'),
-                                    'status'         => 1,
-                                    'create_time'    => time()
-                                ];
-                                AiWechatSopPushLog::create($data);
-                            }
+//                            if ($status == 1) {
+//                                $data = [
+//                                    'member_id'      => $member['id'],
+//                                    'user_id'        => $member['user_id'],
+//                                    'push_id'        => 0,
+//                                    'content_id'     => 0,
+//                                    'content'        => json_encode($remind['content'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+//                                    'push_real_day'  => date('Y-m-d',time()),
+//                                    'push_real_time' => date('H:i:s',time()),
+//                                    'status'         => 1,
+//                                    'create_time'    => time(),
+//                                ];
+//                                AiWechatSopPushLog::create($data);
+//                            }
                         }
 
                     }

@@ -39,12 +39,38 @@ class SvMatrixMediaSettingLogic extends ApiLogic
                 if (!empty($params[$field])) {
                     // 如果已经是数组，则直接使用
                     if (is_array($params[$field])) {
+                        // 处理copywriting字段的特殊逻辑
+                        if ($field === 'copywriting') {
+                            foreach ($params[$field] as &$item) {
+                                // 如果is_title_show不存在，默认is_title_show=1
+                                if (!isset($item['is_title_show'])) {
+                                    $item['is_title_show'] = '1';
+                                }
+                                // 如果is_title_show=0，那么title要变为空
+                                if ($item['is_title_show'] === '0') {
+                                    $item['title'] = '';
+                                }
+                            }
+                        }
                         $params[$field] = json_encode($params[$field], JSON_UNESCAPED_UNICODE);
                     } else {
                         // 尝试解析JSON字符串
                         $decoded = json_decode($params[$field], true);
                         if (json_last_error() === JSON_ERROR_NONE) {
-                            // JSON格式正确，保持原样
+                            // 处理copywriting字段的特殊逻辑
+                            if ($field === 'copywriting') {
+                                foreach ($decoded as &$item) {
+                                    // 如果is_title_show不存在，默认is_title_show=1
+                                    if (!isset($item['is_title_show'])) {
+                                        $item['is_title_show'] = '1';
+                                    }
+                                    // 如果is_title_show=0，那么title要变为空
+                                    if ($item['is_title_show'] === '0') {
+                                        $item['title'] = '';
+                                    }
+                                }
+                                $params[$field] = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+                            }
                         } else {
                             self::setError("字段 {$field} 的JSON格式无效");
                             return false;
@@ -99,7 +125,39 @@ class SvMatrixMediaSettingLogic extends ApiLogic
             foreach ($jsonFields as $field) {
                 if (isset($params[$field])) {
                     if (is_array($params[$field])) {
+                        // 处理copywriting字段的特殊逻辑
+                        if ($field === 'copywriting') {
+                            foreach ($params[$field] as &$item) {
+                                // 如果is_title_show不存在，默认is_title_show=1
+                                if (!isset($item['is_title_show'])) {
+                                    $item['is_title_show'] = '1';
+                                }
+                                // 如果is_title_show=0，那么title要变为空
+                                if ($item['is_title_show'] === '0') {
+                                    $item['title'] = '';
+                                }
+                            }
+                        }
                         $params[$field] = json_encode($params[$field], JSON_UNESCAPED_UNICODE);
+                    } else {
+                        // 尝试解析JSON字符串
+                        $decoded = json_decode($params[$field], true);
+                        if (json_last_error() === JSON_ERROR_NONE) {
+                            // 处理copywriting字段的特殊逻辑
+                            if ($field === 'copywriting') {
+                                foreach ($decoded as &$item) {
+                                    // 如果is_title_show不存在，默认is_title_show=1
+                                    if (!isset($item['is_title_show'])) {
+                                        $item['is_title_show'] = '1';
+                                    }
+                                    // 如果is_title_show=0，那么title要变为空
+                                    if ($item['is_title_show'] === '0') {
+                                        $item['title'] = '';
+                                    }
+                                }
+                                $params[$field] = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+                            }
+                        }
                     }
                 }
             }

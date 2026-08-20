@@ -11,6 +11,7 @@ use app\common\model\sv\SvDeviceCircleLikeReply;
 use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
 use app\common\model\auto\AutoDeviceConfig;
 use app\common\model\auto\AutoDeviceCircleLikeReplyConfig;
+use app\common\service\sv\CircleInteractionActionService;
 use think\facade\Db;
 
 use app\api\logic\sv\ToolsLogic;
@@ -76,14 +77,19 @@ class LikeReplyLogic extends ApiLogic
     public static function update($params)
     {
         try {
+            $flags = CircleInteractionActionService::normalizeFlags($params['is_like'] ?? 0, $params['is_comment'] ?? 0);
+            if ($flags['is_like'] === 0 && $flags['is_comment'] === 0) {
+                self::setError('请至少开启点赞或评论其中一项');
+                return false;
+            }
             $find = AutoDeviceCircleLikeReplyConfig::where('user_id', self::$uid)->where('device_code', $params['device_code'])->findOrEmpty();
             if (!$find->isEmpty()) {
                 if ($find->status == DeviceEnum::AUTO_CONFIG_STATUS_RUNNING) {
                     self::setError('点赞评论任务任务正在执行，不可修改，稍后再试');
                     return false;
                 }
-                $find->is_like = $params['is_like'] ?? 0;
-                $find->is_comment = $params['is_comment'] ?? 0;
+                $find->is_like = $flags['is_like'];
+                $find->is_comment = $flags['is_comment'];
                 $find->comment_method = $params['comment_method'] ?? 1;
                 $find->comment_robot_prompt = $params['comment_robot_prompt'] ?? AutoDeviceCircleLikeReplyConfig::getCommentRobotPrompt();
                 $find->number = $params['number'] ?? 15;
@@ -93,6 +99,10 @@ class LikeReplyLogic extends ApiLogic
                     $find->exec_date = date('Y-m-d', strtotime('+1 day'));
                 }
                 $find->save();
+                CircleInteractionActionService::syncPendingTaskAction(
+                    (int)$find->id,
+                    CircleInteractionActionService::resolveAction($flags['is_like'], $flags['is_comment'])
+                );
             } else {
                 self::setError('该设备点赞评论任务任务配置不存在');
                 return false;
@@ -139,6 +149,14 @@ class LikeReplyLogic extends ApiLogic
 
     private static function createAutoLikeReplyTask(AutoDeviceCircleLikeReplyConfig $item)
     {
+        $action = CircleInteractionActionService::resolveAction($item->is_like, $item->is_comment);
+        if ($action === CircleInteractionActionService::ACTION_NONE) {
+            \think\facade\Log::channel('auto')->write(
+                $item->device_code . '朋友圈点赞评论未开启任何动作，跳过任务生成',
+                'like_reply'
+            );
+            return;
+        }
         $item->status = DeviceEnum::AUTO_CONFIG_STATUS_RUNNING;
         $item->save();
         Db::startTrans();
@@ -153,7 +171,7 @@ class LikeReplyLogic extends ApiLogic
                 'task_name' => '自动化朋友圈点赞评论任务' . date('mdHis', time()),
                 'accounts' => $accounts->toArray(),
                 'time_config' => $item->exec_time,
-                'action' => ($item->is_like === 1 && $item->is_comment === 1) ? 3 : ($item->is_like === 1 ? 1 : ($item->is_comment === 1 ? 2 : 0)),
+                'action' => $action,
                 'number' => $item->number,
                 'interval' => 2,
                 'range' => 0,

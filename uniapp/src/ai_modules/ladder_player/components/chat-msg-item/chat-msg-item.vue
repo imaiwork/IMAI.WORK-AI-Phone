@@ -152,7 +152,7 @@ watch(
         if (val) {
             togglePlay();
         }
-    }
+    },
 );
 
 defineExpose({

@@ -1,0 +1,55 @@
+// 消耗/算力弹窗外壳样式:ElDialog teleport 到 body,故为全局(非 scoped),
+// 作用域限定 .consume-detail-dialog,由 index.vue 全局引入。
+
+.el-dialog.consume-detail-dialog {
+    border-radius: 20px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.28);
+}
+.consume-detail-dialog .el-dialog__header {
+    padding: 0;
+    margin: 0;
+}
+.consume-detail-dialog .el-dialog__body {
+    padding: 24px;
+    position: relative;
+}
+.consume-detail-dialog .cd-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 1;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: #94a3b8;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.consume-detail-dialog .cd-close:hover {
+    background: rgba(15, 23, 42, 0.06);
+    color: #475569;
+}
+/* 明细表格 */
+.consume-detail-dialog .consume-table {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #f1f5f9;
+}
+.consume-detail-dialog .consume-table::before {
+    display: none;
+}
+.consume-detail-dialog .consume-table th.el-table__cell {
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 700;
+    border-bottom: 1px solid #eef2f7;
+}
+.consume-detail-dialog .consume-table td.el-table__cell {
+    border-bottom: 1px solid #f6f8fb;
+}
+.consume-detail-dialog .consume-table .el-table__row:hover td.el-table__cell {
+    background: #f8faff;
+}

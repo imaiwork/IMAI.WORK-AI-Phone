@@ -7,6 +7,7 @@ use app\api\lists\coze\CozeAgentLists;
 use app\api\logic\coze\CozeAgentLogic;
 use app\api\logic\coze\CozeChatLogic;
 use app\api\validate\coze\CozeAgentValidate;
+use app\common\service\MemberService;
 use think\exception\HttpResponseException;
 
 class CozeAgentController extends BaseApiController
@@ -17,6 +18,14 @@ class CozeAgentController extends BaseApiController
     {
         try {
             $params = (new CozeAgentValidate())->post()->goCheck('add');
+
+            // 智能体配额统一口径：KB 普通智能体 + 扣子智能体 + 扣子工作流
+            $existing = MemberService::countQuotaSmartAgents($this->userId);
+            $reason = '';
+            if (!MemberService::canCreate($this->userId, 'robot', $existing, $reason)) {
+                return $this->fail($reason . ',请升级会员');
+            }
+
             $result = CozeAgentLogic::add($params);
             if ($result) {
                 return $this->success(data: CozeAgentLogic::getReturnData());

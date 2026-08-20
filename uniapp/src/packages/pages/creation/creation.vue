@@ -1,34 +1,29 @@
 <template>
-    <view class="h-screen flex flex-col bg-white">
-        <view class="px-4 flex justify-center my-2">
-            <u-tabs
-                :list="tabs"
-                :current="currentTab"
-                :bar-width="66"
-                :font-size="26"
-                @change="handleTabChange"></u-tabs>
+    <view class="h-screen flex flex-col bg-[#F4F6FB]">
+        <view class="bg-white px-[32rpx] flex justify-center border-b border-solid border-[#F4F6FB]">
+            <u-tabs :list="tabs" :current="currentTab" :bar-width="66" :font-size="26" @change="handleTabChange" />
         </view>
-        <view class="px-4">
+
+        <view class="bg-white px-[32rpx] pb-[16rpx]">
             <scroll-view id="type-scroll-view" scroll-x scroll-with-animation :scroll-left="scrollLeft">
-                <view class="flex gap-x-1 py-1">
+                <view class="flex gap-x-[8rpx] py-[8rpx]">
                     <view
                         v-for="(item, index) in typeList"
                         :id="`type${index}`"
                         :key="index"
-                        class="px-1"
+                        class="px-[8rpx]"
                         @click="handleType(item.key, index)">
                         <view
-                            class="px-[24rpx] py-[10rpx] rounded-[10rpx] whitespace-nowrap"
-                            :class="[
-                                currentType == item.key ? 'bg-black text-white' : 'shadow-[0_0_0_2rpx_rgba(0,0,0,0.1)]',
-                            ]">
+                            class="px-[24rpx] py-[10rpx] rounded-full whitespace-nowrap text-[26rpx] font-medium transition-all"
+                            :class="currentType == item.key ? 'bg-primary text-white' : 'bg-[#F4F6FB] text-[#676767]'">
                             {{ item.name }}
                         </view>
                     </view>
                 </view>
             </scroll-view>
         </view>
-        <view class="grow min-h-0 mt-[48rpx]">
+
+        <view class="grow min-h-0 mt-[8rpx]">
             <z-paging
                 ref="pagingRef"
                 v-model="dataLists"
@@ -37,90 +32,143 @@
                 :safe-area-inset-bottom="true"
                 :default-page-size="20"
                 @query="queryList">
-                <view class="px-4">
-                    <view v-if="currentTab == 0" class="grid grid-cols-2 gap-3">
-                        <view class="" v-for="(item, index) in dataLists" :key="index">
-                            <view class="h-[388rpx] rounded-lg overflow-hidden relative">
-                                <image :src="item.pic" class="h-full w-full" mode="aspectFill"></image>
-                                <view class="absolute bottom-1 px-2 text-[22rpx] text-white font-medium z-[33]">
-                                    {{ item.create_time }}
-                                </view>
+                <view class="px-[32rpx] pb-[32rpx]">
+                    <view v-if="currentTab == 0" class="grid grid-cols-2 gap-[20rpx]">
+                        <view v-for="(item, index) in dataLists" :key="index">
+                            <view class="h-[388rpx] rounded-[24rpx] overflow-hidden relative shadow-sm">
+                                <image :src="item.pic" class="h-full w-full" mode="aspectFill" lazy-load />
+
                                 <view
-                                    class="text-[20rpx] text-white absolute top-2 left-2"
+                                    class="absolute bottom-[12rpx] left-[12rpx] bg-[#000000]/30 px-[12rpx] py-[4rpx] rounded-full z-[33]">
+                                    <text class="text-[20rpx] text-white">{{ item.create_time }}</text>
+                                </view>
+
+                                <view
                                     v-if="item.automatic_clip == '1'"
-                                    >AI剪辑</view
-                                >
+                                    class="absolute top-[12rpx] left-[12rpx] bg-primary px-[12rpx] py-[4rpx] rounded-full z-[33]">
+                                    <text class="text-[18rpx] text-white font-medium">AI剪辑</text>
+                                </view>
+
                                 <view
                                     v-if="getStatus(item) == 1"
                                     class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center z-[22]"
                                     @click="handlePlayCheck(item)">
-                                    <image src="/static/images/icons/play.svg" class="w-[58rpx] h-[58rpx]"></image>
+                                    <image src="/static/images/icons/play.svg" class="w-[72rpx] h-[72rpx]" />
                                     <view
-                                        class="text-white text-center text-[22rpx] mt-[16rpx]"
-                                        v-if="item.automatic_clip == '1'">
+                                        v-if="item.automatic_clip == '1'"
+                                        class="mt-[12rpx] px-[16rpx] py-[6rpx] bg-[#000000]/30 rounded-full">
                                         <template v-if="item.clip_status == 1 || item.clip_status == 2">
-                                            AI智能剪辑中...
+                                            <text class="text-[20rpx] text-white">AI智能剪辑中...</text>
                                         </template>
-                                        <template v-if="item.clip_status == 3">AI智能剪辑完成</template>
-                                        <template v-if="item.clip_status == 4">AI智能剪辑失败</template>
+                                        <template v-if="item.clip_status == 3">
+                                            <text class="text-[20rpx] text-white">AI智能剪辑完成</text>
+                                        </template>
+                                        <template v-if="item.clip_status == 4">
+                                            <text class="text-[20rpx] text-white">AI智能剪辑失败</text>
+                                        </template>
+                                    </view>
+
+                                    <!-- 成片下载中 / 下载失败（成功不展示） -->
+                                    <view
+                                        v-if="showDownloadStatusUi(item)"
+                                        class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center bg-[#000000]/50 z-[23]"
+                                        @click.stop>
+                                        <template v-if="isDownloadFailed(item)">
+                                            <view class="bg-[#EF4444] px-[20rpx] py-[8rpx] rounded-full mb-[12rpx]">
+                                                <text class="text-[22rpx] text-white font-medium">下载失败</text>
+                                            </view>
+                                            <text class="text-[20rpx] text-[#ffffff]/70 text-center px-[24rpx]">
+                                                成片转存失败，请重试
+                                            </text>
+                                            <view
+                                                class="mt-[16rpx] px-[28rpx] py-[10rpx] rounded-full bg-primary active:opacity-80"
+                                                @click.stop="handleRedownload(item)">
+                                                <text class="text-[22rpx] text-white font-medium">
+                                                    {{ redownloadId === item.id ? "重新下载中..." : "重新下载" }}
+                                                </text>
+                                            </view>
+                                        </template>
+                                        <template v-else>
+                                            <text class="rotation mb-[8rpx]"></text>
+                                            <text class="text-[22rpx] text-[#ffffff]/80">下载中...</text>
+                                            <text class="text-[20rpx] text-[#ffffff]/60 mt-[4rpx]"
+                                                >成片转存中，请稍候</text
+                                            >
+                                        </template>
                                     </view>
                                 </view>
+
                                 <view
                                     v-else
-                                    class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center bg-[#0000004d] z-[22]">
+                                    class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center bg-[#000000]/50 z-[22]">
                                     <template v-if="getStatus(item) == 2">
-                                        <view
-                                            class="text-white bg-[#FF2442] text-[22rpx] font-medium rounded-[10rpx] w-[120rpx] h-[50rpx] flex items-center justify-center mx-auto"
-                                            >生成失败</view
-                                        >
-                                        <view class="mt-[16rpx] text-center text-[22rpx] text-white px-2 line-clamp-6">
+                                        <view class="bg-[#EF4444] px-[20rpx] py-[8rpx] rounded-full mb-[12rpx]">
+                                            <text class="text-[22rpx] text-white font-medium">生成失败</text>
+                                        </view>
+                                        <text
+                                            class="text-[20rpx] text-[#ffffff]/70 text-center px-[24rpx] line-clamp-3">
                                             {{ item.remark }}
+                                        </text>
+                                    </template>
+                                    <template v-else-if="isQueueWaiting(item)">
+                                        <view class="queue-waiting-card">
+                                            <view class="queue-waiting-pill">
+                                                <view class="queue-waiting-dot"></view>
+                                                <text class="text-[22rpx] text-[#92400E] font-semibold">排队中...</text>
+                                            </view>
+                                            <text class="queue-waiting-pos"> 当前第 {{ item.queue_position }} 位 </text>
                                         </view>
                                     </template>
                                     <template v-else>
-                                        <text class="rotation"></text>
-                                        <text class="text-xs text-[#ffffff80]">正在生成中</text>
-                                        <text class="text-[20rpx] text-[#ffffff80]">几分钟即可生成视频</text>
+                                        <text class="rotation mb-[8rpx]"></text>
+                                        <text class="text-[22rpx] text-[#ffffff]/80">正在生成中</text>
+                                        <text class="text-[20rpx] text-[#ffffff]/60 mt-[4rpx]">几分钟即可生成视频</text>
                                     </template>
                                 </view>
+
                                 <view
                                     v-if="isHandle"
-                                    class="absolute top-0 left-0 w-full h-full z-[44]"
-                                    :class="{ 'bg-[#0000004d]': isSelect(index) }"
+                                    class="absolute top-0 left-0 w-full h-full z-[44] rounded-[24rpx]"
+                                    :class="{ 'bg-[#0065FB]/30': isSelect(index) }"
                                     @click="handleSelect(index)">
-                                    <view class="absolute top-2 right-2 z-[22] w-[32rpx] h-[32rpx]">
-                                        <image
-                                            v-if="isSelect(index)"
-                                            src="/static/images/icons/success.svg"
-                                            class="w-full h-full"></image>
+                                    <view class="absolute top-[12rpx] right-[12rpx]">
                                         <view
-                                            class="w-full h-full rounded-full shadow-[0_0_0_2rpx_rgba(0,0,0,0.2)]"
-                                            v-else>
+                                            class="w-[44rpx] h-[44rpx] rounded-full border-2 border-solid flex items-center justify-center transition-all duration-200"
+                                            :class="
+                                                isSelect(index)
+                                                    ? 'bg-primary border-primary'
+                                                    : 'border-white bg-[#ffffff]/20'
+                                            ">
+                                            <u-icon v-if="isSelect(index)" name="checkmark" color="#fff" size="22" />
                                         </view>
                                     </view>
                                 </view>
                             </view>
-                            <view class="flex items-center justify-between gap-x-2 mt-1">
-                                <view class="line-clamp-1 break-all">
-                                    {{ item.name }}
-                                </view>
-                                <view class="p-1" @click="handleMore(item, index)">
-                                    <u-icon name="more-dot-fill" color="#7F7F7F"></u-icon>
+
+                            <view class="flex items-center justify-between gap-x-[8rpx] mt-[12rpx] px-[4rpx]">
+                                <text class="text-[26rpx] font-medium text-[#212121] line-clamp-1 break-all flex-1">{{
+                                    item.name
+                                }}</text>
+                                <view
+                                    class="w-[48rpx] h-[48rpx] rounded-full bg-[#F4F6FB] flex items-center justify-center active:opacity-70"
+                                    @click="handleMore(item, index)">
+                                    <u-icon name="more-dot-fill" color="#676767" size="22" />
                                 </view>
                             </view>
-                            <view class="text-[#0000004d] text-[22rpx]"> {{ getTypeName(item.type) }} </view>
+                            <text class="text-[22rpx] text-[#676767] px-[4rpx]">{{ getTypeName(item.type) }}</text>
                         </view>
                     </view>
-                    <view v-if="currentTab == 1" class="grid grid-cols-2 gap-3">
-                        <view class="" v-for="(item, index) in dataLists" :key="index">
-                            <view class="h-[400rpx] relative rounded-[20rpx] overflow-hidden">
+
+                    <view v-if="currentTab == 1" class="grid grid-cols-2 gap-[20rpx]">
+                        <view v-for="(item, index) in dataLists" :key="index">
+                            <view class="h-[400rpx] relative rounded-[24rpx] overflow-hidden shadow-sm">
                                 <view class="w-full h-full relative" @click="handlePreview(item)">
                                     <image
+                                        v-if="item.draw_type != 6"
                                         :src="item.image"
                                         lazy-load
                                         class="w-full h-full"
-                                        mode="aspectFill"
-                                        v-if="item.draw_type != 6"></image>
+                                        mode="aspectFill" />
                                     <video
                                         v-else
                                         :src="item.video_url"
@@ -131,277 +179,185 @@
                                         :controls="false"
                                         :show-fullscreen-btn="false"
                                         :show-center-play-btn="false"
-                                        :show-play-btn="false"></video>
+                                        :show-play-btn="false" />
                                     <view
-                                        class="absolute bottom-0 left-0 w-full h-full flex items-center justify-center"
-                                        v-if="item.draw_type == 6">
-                                        <image src="/static/images/icons/play.svg" class="w-[58rpx] h-[58rpx]"></image>
+                                        v-if="item.draw_type == 6"
+                                        class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                                        <view
+                                            class="w-[72rpx] h-[72rpx] rounded-full bg-[#000000]/30 border border-solid border-[#ffffff]/40 flex items-center justify-center">
+                                            <image src="/static/images/icons/play.svg" class="w-[32rpx] h-[32rpx]" />
+                                        </view>
                                     </view>
                                 </view>
+
                                 <view
                                     v-if="isHandle"
-                                    class="absolute top-0 left-0 w-full h-full z-[44]"
-                                    :class="{ 'bg-[#0000004d]': isSelect(index) }"
+                                    class="absolute top-0 left-0 w-full h-full z-[44] rounded-[24rpx]"
+                                    :class="{ 'bg-[#0065FB]/30': isSelect(index) }"
                                     @click="handleSelect(index)">
-                                    <view class="absolute top-2 right-2 z-[22] w-[32rpx] h-[32rpx]">
-                                        <image
-                                            v-if="isSelect(index)"
-                                            src="/static/images/icons/success.svg"
-                                            class="w-full h-full"
-                                            lazy></image>
+                                    <view class="absolute top-[12rpx] right-[12rpx]">
                                         <view
-                                            class="w-full h-full rounded-full shadow-[0_0_0_2rpx_rgba(0,0,0,0.2)]"
-                                            v-else>
+                                            class="w-[44rpx] h-[44rpx] rounded-full border-2 border-solid flex items-center justify-center transition-all duration-200"
+                                            :class="
+                                                isSelect(index)
+                                                    ? 'bg-primary border-primary'
+                                                    : 'border-white bg-[#ffffff]/20'
+                                            ">
+                                            <u-icon v-if="isSelect(index)" name="checkmark" color="#fff" size="22" />
                                         </view>
                                     </view>
                                 </view>
                             </view>
 
-                            <view class="mt-[4rpx] flex justify-between">
+                            <view class="mt-[12rpx] flex justify-between items-start px-[4rpx]">
                                 <view>
-                                    <view class="text-xs mt-[14rpx] break-all">
-                                        {{ formatTime(item.create_time) }}
-                                    </view>
-                                    <view class="text-[22rpx] text-[#0000004d] mt-[4rpx]">
-                                        {{ getDrawType(item.draw_type) }}
-                                    </view>
+                                    <text class="text-[24rpx] font-medium text-[#212121] block">{{
+                                        formatTime(item.create_time)
+                                    }}</text>
+                                    <text class="text-[22rpx] text-[#676767] mt-[4rpx] block">{{
+                                        getDrawType(item.draw_type)
+                                    }}</text>
                                 </view>
-                                <view class="p-1 mt-[4rpx]" @click="handleMore(item, index)">
-                                    <u-icon name="more-dot-fill" color="#7F7F7F"></u-icon>
+                                <view
+                                    class="w-[48rpx] h-[48rpx] rounded-full bg-[#F4F6FB] flex items-center justify-center active:opacity-70 mt-[4rpx]"
+                                    @click="handleMore(item, index)">
+                                    <u-icon name="more-dot-fill" color="#676767" size="22" />
                                 </view>
                             </view>
                         </view>
                     </view>
-                    <view v-if="currentTab == 2" class="flex flex-col gap-y-3">
+
+                    <view v-if="currentTab == 2" class="flex flex-col gap-[16rpx]">
                         <view
-                            class="bg-white rounded-[20rpx] border-[0] border-b-[1rpx] border-solid border-[#F7F7F7] pb-2"
+                            class="bg-white rounded-[24rpx] overflow-hidden shadow-sm border border-solid border-[#E5E7EB] px-[16rpx] py-[20rpx]"
                             v-for="(item, index) in dataLists"
                             :key="index">
-                            <puzzle-card :key="index" :item="item" @delete="reload"></puzzle-card>
+                            <puzzle-card :key="index" :item="item" @delete="reload" />
                         </view>
                     </view>
                 </view>
+
                 <template #empty>
                     <empty />
                 </template>
             </z-paging>
         </view>
-        <view class="bg-white pb-4 px-4 pt-2">
+
+        <view class="bg-white border-t border-solid border-[#F4F6FB] px-[32rpx] pt-[20rpx] pb-[50rpx]">
             <template v-if="currentTab == 0">
                 <view
                     v-if="!isHandle"
-                    class="bg-black rounded-[16rpx] h-[90rpx] flex items-center justify-center text-white font-medium"
-                    @click="isHandle = true"
-                    >创建发布任务</view
-                >
-                <view v-else class="flex items-center justify-between gap-x-2">
+                    class="w-full h-[96rpx] rounded-full bg-primary flex items-center justify-center shadow-md active:opacity-90"
+                    @click="isHandle = true">
+                    <text class="text-[30rpx] font-bold text-white">创建发布任务</text>
+                </view>
+                <view v-else class="flex items-center justify-between gap-[16rpx]">
                     <view
-                        class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
-                        :class="[handleList.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
-                        <text class="font-medium text-[32rpx]">{{ handleList.length }}</text>
-                        <text class="text-xs mt-1">已选</text>
+                        class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-[24rpx]"
+                        :class="handleList.length > 0 ? 'bg-primary' : 'bg-[#E5E7EB]'">
+                        <text class="font-bold text-[32rpx] text-white">{{ handleList.length }}</text>
+                        <text class="text-[20rpx] text-white mt-[4rpx]">已选</text>
                     </view>
-                    <view class="flex items-center gap-x-2">
+                    <view class="flex items-center gap-[12rpx] flex-1 justify-end">
                         <view
-                            class="bg-[#F3F3F3] px-[58rpx] h-[90rpx] flex items-center rounded-[16rpx]"
+                            class="h-[88rpx] px-[40rpx] flex items-center rounded-full bg-[#F4F6FB] active:opacity-70"
                             @click="
                                 isHandle = false;
                                 handleList = [];
-                            "
-                            >取消</view
-                        >
+                            ">
+                            <text class="text-[28rpx] font-semibold text-[#676767]">取消</text>
+                        </view>
                         <view
-                            class="px-[58rpx] h-[90rpx] flex items-center rounded-[16rpx] text-white font-medium"
-                            :class="[handleList.length > 0 ? 'bg-black' : 'bg-[#787878CC]']"
-                            @click="toPublish"
-                            >去发布</view
-                        >
+                            class="h-[88rpx] px-[40rpx] flex items-center rounded-full active:opacity-90"
+                            :class="handleList.length > 0 ? 'bg-primary' : 'bg-[#E5E7EB]'"
+                            @click="toPublish">
+                            <text class="text-[28rpx] font-bold text-white">去发布</text>
+                        </view>
                     </view>
                 </view>
             </template>
+
             <view
                 v-if="currentTab == 1 && dataLists.length > 0"
                 class="flex items-center"
-                :class="[isHandle ? 'justify-between' : 'justify-end']">
-                <view v-if="isHandle" class="flex items-center gap-x-4">
+                :class="isHandle ? 'justify-between' : 'justify-end'">
+                <view v-if="isHandle" class="flex items-center gap-[16rpx]">
                     <view
-                        class="bg-primary text-white w-[144rpx] h-[70rpx] flex items-center justify-center rounded-[10rpx]"
+                        class="h-[80rpx] px-[32rpx] flex items-center rounded-full bg-[#EEF4FF] active:opacity-70"
                         @click="
                             isHandle = false;
                             handleList = [];
-                        "
-                        >取消</view
-                    >
-                    <view class="flex items-center gap-x-2" @click="handleSelect(-1)">
-                        <image
-                            src="/static/images/icons/success.svg"
-                            class="w-[32rpx] h-[32rpx]"
-                            v-if="handleList.length > 0 && handleList.length == dataLists.length"></image>
+                        ">
+                        <text class="text-[26rpx] font-semibold text-primary">取消</text>
+                    </view>
+                    <view class="flex items-center gap-[10rpx]" @click="handleSelect(-1)">
                         <view
-                            v-else
-                            class="rounded-full w-[32rpx] h-[32rpx] shadow-[0_0_0_2rpx_rgba(0,0,0,0.2)]"></view>
-                        全选
+                            class="w-[36rpx] h-[36rpx] rounded-full border-2 border-solid flex items-center justify-center transition-all"
+                            :class="
+                                handleList.length > 0 && handleList.length == dataLists.length
+                                    ? 'bg-primary border-primary'
+                                    : 'border-[#E5E7EB]'
+                            ">
+                            <u-icon
+                                v-if="handleList.length > 0 && handleList.length == dataLists.length"
+                                name="checkmark"
+                                color="#fff"
+                                size="20" />
+                        </view>
+                        <text class="text-[26rpx] text-[#676767]">全选</text>
                     </view>
                 </view>
                 <view>
                     <view
                         v-if="isHandle"
-                        class="text-white w-[170rpx] h-[70rpx] bg-[#FF2442] flex items-center justify-center rounded-[10rpx]"
+                        class="h-[80rpx] px-[32rpx] flex items-center rounded-full bg-[#FEF2F2] active:opacity-70"
                         @click="handleDelete(handleList)">
-                        删除({{ handleList.length }})
+                        <text class="text-[26rpx] font-bold text-[#EF4444]">删除({{ handleList.length }})</text>
                     </view>
                     <view
                         v-else
-                        class="text-white w-[144rpx] h-[70rpx] bg-black flex items-center justify-center rounded-[10rpx]"
+                        class="h-[80rpx] px-[32rpx] flex items-center rounded-full bg-[#F4F6FB] active:opacity-70"
                         @click="isHandle = true">
-                        管理
+                        <text class="text-[26rpx] font-semibold text-gray-600">管理</text>
                     </view>
                 </view>
             </view>
         </view>
     </view>
+
     <video-preview-v2
         v-model:show="showVideoPreview"
         :is-bar="false"
         :video-url="playData.url"
         :poster="playData.pic"
-        @update:show="showVideoPreview = false"></video-preview-v2>
-    <u-popup v-model="showEditPopup" mode="center" width="90%" :border-radius="20">
-        <view class="p-4 bg-white rounded-[20rpx]">
-            <view class="text-[30rpx] font-medium text-center mt-2">编辑名称</view>
-            <view class="mt-[48rpx] bg-[#F3F3F3] px-4 py-2 rounded-[16rpx]">
-                <u-input
-                    v-model="newName"
-                    placeholder="请输入名称"
-                    maxlength="30"
-                    clearable
-                    placeholder-style="color: #0000004d; font-size: 26rpx;" />
-            </view>
-            <view class="flex items-center gap-x-5 mt-[56rpx]">
-                <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-[#F3F3F3] font-medium text-[#000000b3]"
-                    @click="showEditPopup = false">
-                    取消
-                </view>
-                <view
-                    class="flex-1 h-[90rpx] flex items-center justify-center rounded-[12rpx] bg-black font-medium text-white"
-                    @click="handleEditConfirm"
-                    >确定</view
-                >
-            </view>
-        </view>
-    </u-popup>
-    <u-popup v-model="showDownload" mode="center" width="90%" :border-radius="20">
-        <view class="relative overflow-hidden bg-white w-full shadow-xl shadow-[#e2e8f0]/50">
-            <view class="p-6">
-                <view class="flex flex-col items-center gap-1 mb-6">
-                    <view class="text-[32rpx] font-medium text-[#0f172a] tracking-wide">选择下载版本</view>
-                    <view class="text-[24rpx] text-[#64748b]">请选择您需要保存到本地的视频</view>
-                </view>
+        @update:show="showVideoPreview = false" />
 
-                <view class="flex gap-3">
-                    <view
-                        class="flex-1 py-4 px-2 flex flex-col items-center justify-center gap-1 rounded-[24rpx] bg-[#f1f5f9] active:bg-[#e2e8f0] transition-all border border-[transparent] active:border-[#cbd5e1]"
-                        hover-class="opacity-80"
-                        @click="handleDownload(1)">
-                        <view class="w-8 h-8 rounded-full bg-white flex items-center justify-center mb-1 shadow-sm">
-                            <text class="text-[#64748b] text-[24rpx] font-medium">原</text>
-                        </view>
-                        <text class="text-[#334155] font-medium text-[26rpx]">生成视频</text>
-                        <text class="text-[#94a3b8] text-[20rpx] scale-90">原始版本</text>
-                    </view>
+    <EditNamePopup v-model="showEditPopup" v-model:name="newName" @confirm="handleEditConfirm" />
 
-                    <view
-                        v-if="operateItem.clip_result_url && operateItem.automatic_clip"
-                        class="flex-1 py-4 px-2 flex flex-col items-center justify-center gap-1 rounded-[24rpx] bg-primary active:bg-[#0055d4] transition-all shadow-lg shadow-[#3b82f6]/30"
-                        hover-class="opacity-90"
-                        @click="handleDownload(2)">
-                        <view
-                            class="absolute top-0 right-0 w-12 h-12 bg-[#ffffff]/10 rounded-bl-[32rpx] pointer-events-none"></view>
+    <DownloadPopup v-model="showDownload" :operate-item="operateItem" @download="handleDownload" />
 
-                        <view
-                            class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mb-1 backdrop-blur-sm border border-solid border-[#ffffff]/20">
-                            <text class="text-white text-[24rpx] font-medium">AI</text>
-                        </view>
-                        <text class="text-white font-medium text-[26rpx]">剪辑视频</text>
-                        <text class="text-[#dbeafe] text-[20rpx] scale-90">智能处理</text>
-                    </view>
-                </view>
-            </view>
-        </view>
-    </u-popup>
-    <view class="modal-container" v-if="showPlaySelection" :class="{ show: showPlaySelection }" @touchmove.stop.prevent>
-        <view class="modal-mask" @tap="showPlaySelection = false"></view>
-        <view class="modal-content">
-            <view class="light-bar"></view>
-            <view class="close-btn" @tap="showPlaySelection = false">
-                <text class="close-icon">×</text>
-            </view>
-            <view class="modal-body">
-                <view class="header-section">
-                    <text class="modal-title">选择播放版本</text>
-                    <text class="modal-subtitle">检测到该作品包含 AI 剪辑版本</text>
-                </view>
-                <view class="action-group">
-                    <button
-                        class="select-btn primary-btn"
-                        hover-class="btn-hover"
-                        @tap="triggerPlay(operateItem.clip_result_url)">
-                        <view class="btn-left">
-                            <view class="icon-box blue-icon">
-                                <text class="icon-text">AI</text>
-                            </view>
-                            <view class="text-col">
-                                <text class="btn-title text-white">播放剪辑视频</text>
-                                <text class="btn-desc text-blue-light">AI 智能处理版本</text>
-                            </view>
-                        </view>
-                        <view class="arrow-icon"></view>
-                        <view class="shine-effect"></view>
-                    </button>
-                    <button
-                        class="select-btn secondary-btn"
-                        hover-class="btn-hover-dark"
-                        @click="triggerPlay(operateItem.video_result_url)">
-                        <view class="btn-left">
-                            <view class="icon-box gray-icon">
-                                <text class="icon-text">原</text>
-                            </view>
-                            <view class="text-col">
-                                <text class="btn-title text-gray">播放数字人视频</text>
-                                <text class="btn-desc text-gray-dark">原始生成版本</text>
-                            </view>
-                        </view>
-                        <view class="arrow-icon gray-arrow"></view>
-                    </button>
-                </view>
-            </view>
-        </view>
-    </view>
-    <popup-bottom v-model="showPublishType" title="选择创建任务" height="30%">
-        <template #content>
-            <view class="space-y-4 p-4">
-                <view
-                    class="bg-black h-[90rpx] flex items-center justify-center text-white font-medium rounded-[16rpx]"
-                    @click="toCreatePublishTask('timer')">
-                    创建定时发布任务
-                </view>
-                <view
-                    class="bg-black h-[90rpx] flex items-center justify-center text-white font-medium rounded-[16rpx]"
-                    @click="toCreatePublishTask('qrcode')">
-                    创建发布视频二维码
-                </view>
-            </view>
-        </template>
-    </popup-bottom>
+    <PlaySelectionModal v-model="showPlaySelection" :operate-item="operateItem" @play="triggerPlay" />
+
+    <PublishTypePopup v-model="showPublishType" @select="toCreatePublishTask" />
 </template>
 
 <script setup lang="ts">
 import { getVideoCreationRecord, deleteVideoCreationRecord, updateVideoCreationRecord } from "@/api/app";
-import { retrySoraTask } from "@/api/digital_human";
+import { retrySoraTask, downloadShanjianVideoTask } from "@/api/digital_human";
 import { drawingRecord, drawingDeleteRecord, getPuzzleTaskList } from "@/api/drawing";
 import { saveImageToPhotosAlbum, saveVideoToPhotosAlbum } from "@/utils/file";
 import PuzzleCard from "@/packages/components/puzzle-card/puzzle-card.vue";
+import EditNamePopup from "./components/popups/edit-name-popup.vue";
+import DownloadPopup from "./components/popups/download-popup.vue";
+import PlaySelectionModal from "./components/popups/play-selection-modal.vue";
+import PublishTypePopup from "./components/popups/publish-type-popup.vue";
+
+enum VideoDownloadStatusEnum {
+    PENDING = 0,
+    DOWNLOADING = 1,
+    SUCCESS = 2,
+    FAILED = 3,
+}
 
 enum VideoType {
     ALL = 0,
@@ -413,6 +369,15 @@ enum VideoType {
     SENTENCE = 6,
     MONTAGE_STORYBOARD = 7,
     HOT_WRITE = 8,
+    /** 闪剪数字人纯口播，展示归「数字人口播」 */
+    DIGITAL_HUMAN_SHANJIAN = 9,
+}
+
+/** 视频创作队列状态 */
+enum QueueStatus {
+    WAITING = "waiting",
+    SUBMITTED = "submitted",
+    FAILED = "failed",
 }
 
 enum DrawType {
@@ -480,6 +445,13 @@ const isHandle = ref(false);
 // 发布数据
 const handleList = ref<any[]>([]);
 const showPublishType = ref(false);
+const redownloadId = ref<number | null>(null);
+
+const getDownloadStatus = (item: any) => Number(item?.download_status ?? VideoDownloadStatusEnum.SUCCESS);
+const isDownloadFailed = (item: any) => getDownloadStatus(item) === VideoDownloadStatusEnum.FAILED;
+const isDownloading = (item: any) => getDownloadStatus(item) === VideoDownloadStatusEnum.DOWNLOADING;
+const showDownloadStatusUi = (item: any) => isDownloadFailed(item) || isDownloading(item);
+
 // 根据不同的类型获取不同的status值
 const getStatus = (item: any) => {
     const { type, status } = item || {};
@@ -511,7 +483,16 @@ const getStatus = (item: any) => {
     }
 };
 
+/** 是否处于排队等待中 */
+const isQueueWaiting = (item: any) => {
+    const status = item?.queue_status;
+    return status !== "" && status === QueueStatus.WAITING;
+};
+
 const getTypeName = (type: number) => {
+    if (type === VideoType.DIGITAL_HUMAN_SHANJIAN) {
+        return "数字人口播";
+    }
     return typeList.value.find((item: any) => item.key == type)?.name;
 };
 
@@ -544,8 +525,11 @@ const handleType = (type: VideoType | DrawType, index: number) => {
 };
 
 const fetchVideos = async (page_no: number, page_size: number) => {
-    const params: { page_no: number; page_size: number; type?: number } = { page_no, page_size };
-    if (currentType.value !== VideoType.ALL) {
+    const params: { page_no: number; page_size: number; type?: number | string } = { page_no, page_size };
+    // 数字人口播需同时查蝉镜(1)与闪剪纯口播(9)
+    if (currentType.value === VideoType.DIGITAL_HUMAN) {
+        params.type = `${VideoType.DIGITAL_HUMAN},${VideoType.DIGITAL_HUMAN_SHANJIAN}`;
+    } else if (currentType.value !== VideoType.ALL) {
         params.type = currentType.value;
     }
     const res = await getVideoCreationRecord(params);
@@ -553,7 +537,12 @@ const fetchVideos = async (page_no: number, page_size: number) => {
 };
 
 const fetchImages = async (page_no: number, page_size: number) => {
-    const params: { page_no: number; page_size: number; draw_type?: number; type?: number | string } = {
+    const params: {
+        page_no: number;
+        page_size: number;
+        draw_type?: number;
+        type?: number | string;
+    } = {
         page_no,
         page_size,
     };
@@ -615,6 +604,8 @@ const showVideo = ref(false);
 const showPlaySelection = ref(false);
 
 const handlePlayCheck = (item: any) => {
+    if (showDownloadStatusUi(item)) return;
+
     const { automatic_clip, clip_status, clip_result_url, video_result_url, pic } = item;
 
     const hasClipVideo = automatic_clip == 1 && clip_status == 3 && clip_result_url;
@@ -634,6 +625,30 @@ const triggerPlay = (url: string) => {
         showVideoPreview.value = true;
     } else {
         uni.$u.toast("视频未生成");
+    }
+};
+
+const handleRedownload = async (item: any) => {
+    if (!item?.id || redownloadId.value === item.id) return;
+    redownloadId.value = item.id;
+    item.download_status = VideoDownloadStatusEnum.DOWNLOADING;
+    try {
+        const res = await downloadShanjianVideoTask({ id: item.id });
+        item.download_status = Number(res?.download_status ?? VideoDownloadStatusEnum.SUCCESS);
+        if (res?.video_result_url) {
+            item.video_result_url = res.video_result_url;
+        }
+        if (item.download_status === VideoDownloadStatusEnum.SUCCESS) {
+            uni.$u.toast("下载成功");
+        }
+    } catch (error: any) {
+        const msg = String(error || "");
+        if (!msg.includes("正在下载中")) {
+            item.download_status = VideoDownloadStatusEnum.FAILED;
+        }
+        uni.$u.toast(error || "重新下载失败");
+    } finally {
+        redownloadId.value = null;
     }
 };
 
@@ -779,7 +794,7 @@ const handleDelete = async (index: number | number[]) => {
                     });
                     await drawingDeleteRecord({ log_id: imageIds, video_id: videoIds });
                     dataLists.value = dataLists.value.filter(
-                        (item: any, index: number) => !deleteIndex.includes(index)
+                        (item: any, index: number) => !deleteIndex.includes(index),
                     );
                 }
                 uni.showToast({
@@ -963,207 +978,31 @@ onShow(async () => {
     @apply bg-primary border-primary;
 }
 
-.modal-container {
-    position: fixed;
-    inset: 0;
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    visibility: hidden;
-
-    &.show {
-        visibility: visible;
-
-        .modal-mask {
-            opacity: 1;
-        }
-        .modal-content {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
+.queue-waiting-card {
+    @apply flex flex-col items-center px-[24rpx];
 }
-
-/* 遮罩 */
-.modal-mask {
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.7); // slate-900 / 0.7
-    backdrop-filter: blur(3px);
-    opacity: 0;
-    transition: opacity 0.3s ease;
+.queue-waiting-pill {
+    @apply inline-flex items-center gap-x-[10rpx] px-[20rpx] py-[8rpx] rounded-full mb-[12rpx];
+    background: rgba(254, 243, 199, 0.92);
 }
-
-/* 弹窗主体 */
-.modal-content {
-    position: relative;
-    width: 600rpx; // 小程序常用宽度单位
-    background: #0f172a; // slate-900
-    border: 1px solid rgba(51, 65, 85, 0.5); // slate-700
-    border-radius: 32rpx;
-    overflow: hidden;
-    transform: scale(0.95);
-    opacity: 0;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 20rpx 50rpx -12rpx rgba(0, 0, 0, 0.5);
+.queue-waiting-dot {
+    @apply w-[12rpx] h-[12rpx] rounded-full flex-shrink-0;
+    background: #f59e0b;
+    animation: queuePulse 1.4s ease-in-out infinite;
 }
-
-/* 顶部光效 */
-.light-bar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(0, 101, 251, 0.6), transparent);
+.queue-waiting-pos {
+    @apply text-[24rpx] text-white font-medium;
+    text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.35);
 }
-
-/* 关闭按钮 */
-.close-btn {
-    position: absolute;
-    top: 20rpx;
-    right: 20rpx;
-    width: 60rpx;
-    height: 60rpx;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-
-    .close-icon {
-        font-size: 40rpx;
-        color: #64748b;
-        line-height: 1;
+@keyframes queuePulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
     }
-}
-
-.modal-body {
-    padding: 48rpx 40rpx;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* 文本区域 */
-.header-section {
-    text-align: center;
-    margin-bottom: 40rpx;
-    display: flex;
-    flex-direction: column;
-    gap: 10rpx;
-
-    .modal-title {
-        font-size: 36rpx;
-        font-weight: bold;
-        color: #ffffff;
-        letter-spacing: 1px;
-    }
-
-    .modal-subtitle {
-        font-size: 24rpx;
-        color: #94a3b8; // slate-400
-    }
-}
-
-/* 按钮组 */
-.action-group {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 24rpx;
-}
-
-/* 通用按钮样式 */
-.select-btn {
-    position: relative;
-    width: 100%;
-    height: 120rpx;
-    padding: 0 30rpx;
-    border-radius: 24rpx;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin: 0;
-    line-height: normal;
-    overflow: hidden;
-
-    &::after {
-        border: none;
-    } // 去除小程序默认边框
-
-    .btn-left {
-        display: flex;
-        align-items: center;
-        gap: 24rpx;
-        z-index: 2;
-    }
-
-    .text-col {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4rpx;
-    }
-
-    .btn-title {
-        font-size: 28rpx;
-        font-weight: bold;
-    }
-
-    .btn-desc {
-        font-size: 20rpx;
-    }
-
-    .icon-box {
-        width: 64rpx;
-        height: 64rpx;
-        border-radius: 16rpx;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        .icon-text {
-            font-size: 24rpx;
-            font-weight: 900;
-        }
-    }
-}
-
-/* 样式1：Primary (蓝色) */
-.primary-btn {
-    background-color: #0065fb;
-
-    .blue-icon {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: #fff;
-    }
-
-    .text-white {
-        color: #ffffff;
-    }
-    .text-blue-light {
-        color: rgba(255, 255, 255, 0.7);
-    }
-
-    .arrow-icon {
-        width: 16rpx;
-        height: 16rpx;
-        border-top: 4rpx solid rgba(255, 255, 255, 0.8);
-        border-right: 4rpx solid rgba(255, 255, 255, 0.8);
-        transform: rotate(45deg);
-    }
-
-    /* 扫光动画 */
-    .shine-effect {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        transform: translateX(-100%);
-        animation: shine 3s infinite;
+    50% {
+        opacity: 0.45;
+        transform: scale(0.85);
     }
 }
 </style>

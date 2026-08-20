@@ -9,6 +9,11 @@ export function getUserInfo() {
     return $request.get({ url: "/user/info" });
 }
 
+// 当前用户会员等级 + 配额 + 用量(用户面板会员标识 + 套餐弹窗用)
+export function getMemberQuota() {
+    return $request.get({ url: "/user/memberQuota" });
+}
+
 // 个人编辑
 export function userEdit(params: any) {
     return $request.post({ url: "/user/setInfo", params });
@@ -54,9 +59,19 @@ export function getRpaQrcodeStatus() {
     return $request.post({ url: "/user/getDeviceBindStatus" });
 }
 
-// 获取代理下级列表
+// 获取代理下级列表，传直属下级的 user_id 可查看该下级的下级
 export function getAgentSubList(params: any) {
     return $request.get({ url: "/distributionAgent.distributionAgent/subLists", params });
+}
+
+// 获取下级充值流水明细
+export function getAgentSubRechargeList(params: any) {
+    return $request.get({ url: "/distributionAgent.distributionAgent/rechargeLists", params });
+}
+
+// 获取下级概要（基本信息 + 本人充值业绩）
+export function getAgentSubSummary(params: any) {
+    return $request.get({ url: "/distributionAgent.distributionAgent/subSummary", params });
 }
 
 // 获取代理卡密列表

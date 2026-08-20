@@ -13,7 +13,8 @@
                             v-model="formData.name"
                             class="text-xs"
                             placeholder="请输入您的姓名"
-                            placeholder-style="color: #AAA6B9;font-size: 24rpx" />
+                            placeholder-style="color: #AAA6B9;font-size: 24rpx"
+                        />
                     </view>
                 </view>
                 <view class="flex gap-4">
@@ -28,9 +29,10 @@
                                 v-model="formData.sex"
                                 :localdata="[
                                     { value: 1, text: '男' },
-                                    { value: 2, text: '女' },
+                                    { value: 2, text: '女' }
                                 ]"
-                                placeholder="请选择您的性别"></data-select>
+                                placeholder="请选择您的性别"
+                            ></data-select>
                         </view>
                     </view>
                     <view class="flex-1">
@@ -44,7 +46,8 @@
                                 class="text-xs"
                                 type="number"
                                 placeholder="请输入您的年龄"
-                                placeholder-style="color: #AAA6B9;font-size: 24rpx" />
+                                placeholder-style="color: #AAA6B9;font-size: 24rpx"
+                            />
                         </view>
                     </view>
                 </view>
@@ -59,7 +62,8 @@
                             class="text-xs"
                             type="tel"
                             placeholder="请输入您的联系方式"
-                            placeholder-style="color: #AAA6B9;font-size: 24rpx" />
+                            placeholder-style="color: #AAA6B9;font-size: 24rpx"
+                        />
                     </view>
                 </view>
                 <view class="">
@@ -72,7 +76,8 @@
                             v-model="formData.school"
                             class="text-xs"
                             placeholder="请输入您的毕业院校"
-                            placeholder-style="color: #AAA6B9;font-size: 24rpx" />
+                            placeholder-style="color: #AAA6B9;font-size: 24rpx"
+                        />
                     </view>
                 </view>
                 <view class="">
@@ -85,7 +90,8 @@
                             v-model="formData.degree"
                             class="text-xs"
                             placeholder="请输入您的学历"
-                            placeholder-style="color: #AAA6B9;font-size: 24rpx" />
+                            placeholder-style="color: #AAA6B9;font-size: 24rpx"
+                        />
                     </view>
                 </view>
                 <view class="">
@@ -99,7 +105,8 @@
                             class="text-xs"
                             type="number"
                             placeholder="请输入您的工作年限"
-                            placeholder-style="color: #AAA6B9;font-size: 24rpx" />
+                            placeholder-style="color: #AAA6B9;font-size: 24rpx"
+                        />
                     </view>
                 </view>
                 <view class="">
@@ -113,7 +120,8 @@
                             class="text-xs w-full"
                             :maxlength="-1"
                             placeholder="请输入您的工作经历"
-                            placeholder-style="color: #AAA6B9;font-size: 24rpx" />
+                            placeholder-style="color: #AAA6B9;font-size: 24rpx"
+                        />
                     </view>
                 </view>
                 <view class="">
@@ -127,7 +135,8 @@
                             class="text-xs w-full"
                             :maxlength="-1"
                             placeholder="请输入您的项目经历"
-                            placeholder-style="color: #AAA6B9;font-size: 24rpx" />
+                            placeholder-style="color: #AAA6B9;font-size: 24rpx"
+                        />
                     </view>
                 </view>
             </view>
@@ -135,12 +144,14 @@
         <view class="p-4 flex justify-between gap-4">
             <button
                 class="bg-white rounded-lg after:border-none h-[86rpx] flex-1 font-medium text-base flex items-center justify-center"
-                @click="handleReset">
+                @click="handleReset"
+            >
                 重置简历
             </button>
             <button
                 class="bg-primary text-white rounded-lg h-[86rpx] flex-1 font-medium text-base flex items-center justify-center"
-                @click="handleSave">
+                @click="handleSave"
+            >
                 保存
             </button>
         </view>
@@ -148,117 +159,117 @@
 </template>
 
 <script setup lang="ts">
-import { saveResume } from "@/api/interview";
-import { setFormData } from "@/utils/util";
+import { saveResume } from '@/api/interview'
+import { setFormData } from '@/utils/util'
 
 const state = reactive({
-    id: "",
-});
+    id: ''
+})
 
 const formData = reactive<any>({
-    name: "",
-    sex: "",
-    age: "",
-    mobile: "",
-    school: "",
-    degree: "",
-    work_years: "",
-    work_ex: "",
-    word_url: "",
-    project_ex: "",
-});
+    name: '',
+    sex: '',
+    age: '',
+    mobile: '',
+    school: '',
+    degree: '',
+    work_years: '',
+    work_ex: '',
+    word_url: '',
+    project_ex: ''
+})
 
 const formRules: any = {
     name: {
         required: true,
-        message: "请输入您的姓名",
+        message: '请输入您的姓名'
     },
     sex: {
         required: true,
-        message: "请选择您的性别",
+        message: '请选择您的性别'
     },
     age: {
         required: true,
-        message: "请输入您的年龄",
+        message: '请输入您的年龄'
     },
     mobile: {
         required: true,
-        message: "请输入您的联系方式",
+        message: '请输入您的联系方式'
     },
     school: {
         required: true,
-        message: "请输入您的毕业院校",
+        message: '请输入您的毕业院校'
     },
     degree: {
         required: true,
-        message: "请输入您的学历",
+        message: '请输入您的学历'
     },
     work_years: {
         required: true,
-        message: "请输入您的工作年限",
+        message: '请输入您的工作年限'
     },
     work_ex: {
         required: true,
-        message: "请输入您的工作经历",
+        message: '请输入您的工作经历'
     },
     project_ex: {
         required: true,
-        message: "请输入您的项目经历",
-    },
-};
+        message: '请输入您的项目经历'
+    }
+}
 const handleReset = () => {
     Object.keys(formData).forEach((key) => {
         // @ts-ignore
-        formData[key] = "";
-    });
-};
+        formData[key] = ''
+    })
+}
 const handleSave = async () => {
     const invalidField = Object.keys(formData).find((key) => {
-        const isRequired = formRules[key]?.required;
-        const isEmpty = !formData[key];
-        return isRequired && isEmpty;
-    });
+        const isRequired = formRules[key]?.required
+        const isEmpty = !formData[key]
+        return isRequired && isEmpty
+    })
 
     if (invalidField) {
         uni.showToast({
             title: formRules[invalidField].message,
-            icon: "none",
-        });
-        return;
+            icon: 'none'
+        })
+        return
     }
     try {
         await saveResume({
             interview_job_id: state.id,
-            ...formData,
-        });
-        uni.hideLoading();
+            ...formData
+        })
+        uni.hideLoading()
         uni.showToast({
-            title: "保存成功",
-            icon: "none",
-            duration: 3000,
-        });
+            title: '保存成功',
+            icon: 'none',
+            duration: 3000
+        })
         setTimeout(() => {
-            uni.$emit("update-resume", {
-                formData,
-            });
-            uni.navigateBack();
-        }, 500);
+            uni.$emit('update-resume', {
+                formData
+            })
+            uni.navigateBack()
+        }, 500)
     } catch (error: any) {
-        uni.hideLoading();
+        uni.hideLoading()
         uni.showToast({
-            title: error || "保存失败",
-            icon: "none",
-            duration: 3000,
-        });
+            title: error || '保存失败',
+            icon: 'none',
+            duration: 3000
+        })
     }
-};
+}
 
 onLoad((options: any) => {
-    state.id = options.id;
+    state.id = options.id
     if (options.data) {
-        setFormData(JSON.parse(options.data), formData);
+        setFormData(JSON.parse(options.data), formData)
     }
-});
+})
 </script>
 
 <style scoped lang="scss">

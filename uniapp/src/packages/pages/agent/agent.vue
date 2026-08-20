@@ -1,683 +1,694 @@
 <template>
-    <view class="h-screen relative flex flex-col bg-[#f4f8ff]">
-        <view class="w-full h-[440rpx] absolute top-0 left-0 bg-primary">
-            <view
-                class="absolute bottom-0 left-0 w-full h-[200rpx]"
-                style="background: linear-gradient(to bottom, transparent, #f4f8ff)"></view>
-        </view>
-
+    <view class="h-screen flex flex-col page-bg">
         <u-navbar
-            :is-fixed="false"
-            back-icon-color="#ffffff"
             :border-bottom="false"
-            :background="{ background: 'transparent' }">
+            :background="{
+                background: 'transparent',
+            }"
+            :is-back="false">
+            <view class="mx-4 w-full" v-if="tabList.length > 1">
+                <u-tabs
+                    :list="tabList"
+                    bg-color="transparent"
+                    :is-scroll="false"
+                    :current="currTab"
+                    @change="handleTabChange"></u-tabs>
+            </view>
+            <view class="mx-4 text-xl font-medium" v-else>AI智能体</view>
         </u-navbar>
-
-        <view class="relative grow min-h-0 flex flex-col">
-            <view class="px-[40rpx] pt-[10rpx] pb-[24rpx] flex items-center justify-between">
-                <view>
-                    <view class="text-[44rpx] font-bold text-white">代理管理</view>
-                    <view class="text-[24rpx] mt-[8rpx] text-[#ffffff]/60">管理你的下级用户和激活码</view>
-                </view>
-                <view
-                    class="h-[72rpx] px-[32rpx] rounded-[100rpx] flex items-center justify-center gap-[8rpx] bg-[#ffffff]/20 border border-solid border-[#ffffff]/30"
-                    @click="handleSetting">
-                    <u-icon name="setting" size="28" color="#ffffff"></u-icon>
-                    <text class="font-semibold text-white">配置</text>
-                </view>
+        <template v-if="currType == 1">
+            <view class="m-4 mt-2 relative z-10">
+                <u-search
+                    v-model="queryParams.name"
+                    bg-color="#ffffff"
+                    :show-action="false"
+                    placeholder="请输入关键词"
+                    @search="search"
+                    @clear="clear"></u-search>
             </view>
-
-            <view class="px-[26rpx]">
-                <view
-                    class="rounded-[28rpx] px-[40rpx] py-[32rpx] bg-white"
-                    style="box-shadow: 0 8px 32px rgba(0, 101, 251, 0.12)">
-                    <view class="flex items-center justify-between">
-                        <view class="px-[24rpx] py-[10rpx] rounded-[100rpx] border border-solid border-[#e0ecff]">
-                            <text class="text-[24rpx] font-bold text-primary">
-                                {{ agentUserInfo.level_name }}
-                            </text>
-                        </view>
-                        <view
-                            class="shrink-0 rounded-[100rpx] text-[26rpx] font-semibold px-[30rpx] py-[12rpx] text-primary border border-solid border-[#e0ecff] bg-[#f4f8ff]"
-                            @click="handleInvite">
-                            邀请好友
-                        </view>
-                    </view>
-                    <view class="w-full h-[1rpx] bg-[#f0f5ff] my-[28rpx]"></view>
-                    <view>
-                        <view class="text-[24rpx] text-[#adc0d8] mb-[10rpx]">我的算力点数</view>
-                        <view class="flex items-center gap-[10rpx]">
-                            <image src="@/packages/static/icons/shandian.svg" class="w-[32rpx] h-[32rpx]"></image>
-                            <text class="font-bold text-primary text-[56rpx] leading-none">{{ userTokens }}</text>
-                            <text class="text-[26rpx] text-[#adc0d8] self-end mb-[4rpx]">点</text>
-                        </view>
-                    </view>
-                </view>
-            </view>
-
-            <view class="mt-[28rpx] px-[26rpx]">
-                <view class="bg-white rounded-[20rpx] p-[6rpx]" style="box-shadow: 0 2px 12px rgba(0, 101, 251, 0.06)">
-                    <view class="w-full grid grid-cols-2 relative h-[76rpx]">
-                        <view
-                            v-for="(item, index) in tabsList"
-                            :key="index"
-                            class="rounded-[14rpx] font-medium flex items-center justify-center z-10 text-[28rpx] transition-colors duration-300"
-                            :class="current === index ? 'text-white' : 'text-[#adc0d8]'"
-                            @click="handleTabChange(index)">
-                            {{ item.name }}
-                        </view>
-                        <view class="tab-slider" :style="{ transform: `translateX(${current * 100}%)` }"></view>
-                    </view>
-                </view>
-
-                <view v-if="current == 1" class="mt-[16rpx]">
+            <view class="grow min-h-0 relative z-10">
+                <view class="h-full flex">
                     <view
-                        class="rounded-[20rpx] px-[28rpx] py-[18rpx] flex items-center justify-between bg-white"
-                        style="box-shadow: 0 2px 12px rgba(0, 101, 251, 0.06)">
-                        <text class="text-[26rpx] font-medium text-[#adc0d8]"
-                            >共 <text class="text-primary font-bold">{{ total }}</text> 张卡密</text
-                        >
-                        <view
-                            class="flex items-center gap-[8rpx] rounded-[100rpx] px-[28rpx] py-[12rpx] bg-primary"
-                            @click="showAddCardPopup = true">
-                            <text class="text-[24rpx] font-bold text-white">+ 批量生成</text>
-                        </view>
-                    </view>
-                </view>
-
-                <view
-                    class="mt-[16rpx] rounded-[20rpx] py-[8rpx] px-[16rpx] flex items-center gap-[12rpx] bg-white"
-                    style="box-shadow: 0 2px 12px rgba(0, 101, 251, 0.06)">
-                    <view class="flex-1">
-                        <u-search
-                            v-model="searchValue"
-                            bg-color="transparent"
-                            search-icon-color="#adc0d8"
-                            placeholder-color="#adc0d8"
-                            clearable
-                            :placeholder="current == 0 ? '搜索昵称或手机号' : '搜索卡密'"
-                            :show-action="false"
-                            @clear="clearSearch"
-                            @search="confirmSearch">
-                        </u-search>
-                    </view>
-                    <view
-                        class="flex items-center justify-center rounded-[14rpx] shrink-0 w-[120rpx] h-[68rpx] bg-primary"
-                        @click="confirmSearch">
-                        <text class="text-[26rpx] font-bold text-white">搜索</text>
-                    </view>
-                </view>
-            </view>
-
-            <view class="grow min-h-0 mt-[20rpx]">
-                <z-paging ref="pagingRef" v-model="dataList" :fixed="false" @query="queryList">
-                    <view class="px-[26rpx] flex flex-col gap-[16rpx] pb-[40rpx]">
-                        <template v-if="current == 0">
-                            <view
-                                v-for="(item, index) in dataList"
-                                :key="index"
-                                class="rounded-[24rpx] bg-white overflow-hidden"
-                                style="box-shadow: 0 2px 16px rgba(0, 101, 251, 0.07)">
-                                <view class="p-[28rpx]">
-                                    <view class="flex items-center justify-between gap-x-[16rpx]">
-                                        <view class="flex items-center flex-1 min-w-0">
-                                            <image
-                                                :src="item.avatar"
-                                                class="w-[88rpx] h-[88rpx] rounded-full shrink-0"></image>
-                                            <view class="ml-[20rpx] flex-1 min-w-0">
-                                                <view class="text-[30rpx] font-bold line-clamp-1 text-[#0a1f44]">
-                                                    {{ item.nickname }}
-                                                </view>
-                                                <view class="text-[24rpx] mt-[6rpx] text-[#adc0d8]">
-                                                    {{ item.mobile }}
-                                                </view>
+                        class="w-[248rpx] h-full flex flex-col overflow-hidden flex-shrink-0 rounded-tr-[36rpx] bg-white">
+                        <view class="grow min-h-0">
+                            <scroll-view scroll-y class="h-full">
+                                <view
+                                    v-for="(item, index) in optionsData.robotCate"
+                                    class="robot-cate"
+                                    :key="index"
+                                    :class="[
+                                        {
+                                            'robot-cate-active': robotCateActiveMenu == index,
+                                        },
+                                        {
+                                            'robot-cate-brother':
+                                                robotSubCateIndex == item.sub_list.length - 1 &&
+                                                isCurrMenu(item.sub_list),
+                                        },
+                                        {
+                                            'robot-cate-first': robotSubCateIndex == 0 && isCurrMenu(item.sub_list),
+                                        },
+                                    ]"
+                                    @click="handleRobotCate(index)">
+                                    <view class="robot-cate-item">
+                                        <view class="robot-cate-item-wrap">
+                                            <view class="flex items-center gap-2 w-full">
+                                                <view class="flex-1 text-[#6D6E70] text-xs font-medium">{{
+                                                    item.name
+                                                }}</view>
+                                                <u-icon
+                                                    :name="robotCateActiveMenu == index ? 'arrow-down' : 'arrow-right'"
+                                                    :size="24"
+                                                    color="#707173"></u-icon>
+                                            </view>
+                                            <view class="text-[20rpx] text-[#D0D0D0] mt-1">
+                                                {{ item.sub_list.length }}
                                             </view>
                                         </view>
+                                    </view>
+                                    <template v-if="robotCateActiveMenu == index">
                                         <view
-                                            class="shrink-0 rounded-[100rpx] flex items-center justify-center px-[28rpx] h-[58rpx] bg-[#0065fb]"
-                                            @click="handleSubSetting(item)">
-                                            <text class="text-[24rpx] font-bold text-white">设置</text>
-                                        </view>
-                                    </view>
-                                    <view class="mt-[22rpx] rounded-[16rpx] flex items-center py-[20rpx] bg-[#f4f8ff]">
-                                        <view class="flex-1 text-center">
-                                            <view class="text-[22rpx] mb-[6rpx] text-[#adc0d8]">代理等级</view>
-                                            <view class="font-bold text-[28rpx] text-[#0a1f44]">
-                                                {{
-                                                    agentLevel.find((row: any) => row.level == item.level)?.name ||
-                                                    "普通用户"
-                                                }}
+                                            v-for="(subItem, subIndex) in item.sub_list"
+                                            :key="`${index}-${subIndex}`"
+                                            class="sub-robot"
+                                            :class="{
+                                                'sub-robot-active': currSubId == subItem.id,
+                                                'sub-robot-last':
+                                                    robotSubCateIndex != 0 &&
+                                                    robotSubCateIndex - 1 == subIndex &&
+                                                    isCurrMenu(item.sub_list),
+                                            }"
+                                            @click.stop="handleRobotSubCate(subIndex, subItem.id)">
+                                            <view class="sub-robot-item">
+                                                <view class="text-xs text-[#9A9A9C] line-clamp-1">
+                                                    {{ subItem.name }}
+                                                </view>
                                             </view>
                                         </view>
-                                        <view class="w-[1rpx] h-[40rpx] bg-[#e0ecff]"></view>
-                                        <view class="flex-1 text-center">
-                                            <view class="text-[22rpx] mb-[6rpx] text-[#adc0d8]">算力点数</view>
-                                            <view class="font-bold text-[28rpx] text-[#0065fb]">{{ item.tokens }}</view>
-                                        </view>
-                                    </view>
+                                    </template>
                                 </view>
+                            </scroll-view>
+                        </view>
+                    </view>
+                    <view class="flex-1 flex flex-col min-h-0 overflow-hidden">
+                        <view class="text-[20rpx] font-medium text-[#6D6E70] mt-2 mx-[24rpx] mb-4">
+                            {{ total }}个智能体
+                        </view>
+                        <view class="grow relative">
+                            <view class="flex justify-center items-center absolute w-full h-full" v-if="queryLoading">
+                                <view class="loader"> </view>
                             </view>
-                        </template>
-
-                        <template v-if="current == 1">
-                            <view
-                                v-for="(item, index) in dataList"
-                                :key="index"
-                                class="rounded-[24rpx] bg-white overflow-hidden"
-                                style="box-shadow: 0 2px 16px rgba(0, 101, 251, 0.07)">
-                                <view class="p-[28rpx]">
-                                    <view class="flex items-center justify-between gap-x-[16rpx]">
-                                        <view class="flex-1 min-w-0">
-                                            <view class="flex items-center gap-[10rpx]">
-                                                <view class="rounded-[8rpx] px-[12rpx] py-[5rpx] shrink-0 bg-[#f4f8ff]">
-                                                    <text class="text-[20rpx] font-bold text-[#0065fb]">卡密</text>
-                                                </view>
-                                                <text class="text-[28rpx] font-bold line-clamp-1 text-[#0a1f44]">
-                                                    {{ item.card_code }}
-                                                </text>
-                                                <view
-                                                    class="text-[20rpx] text-[#0065fb] border border-solid border-[#e0ecff] px-[12rpx] py-[5rpx] rounded-[8rpx]"
-                                                    @click="copy(item.card_code)"
-                                                    >复制</view
-                                                >
-                                            </view>
-                                            <view class="text-[22rpx] mt-[10rpx] text-[#adc0d8]">
-                                                {{ item.package_name }} · {{ item.tokens }}点
-                                            </view>
-                                        </view>
-                                        <view
-                                            class="shrink-0 rounded-[100rpx] flex items-center justify-center px-[24rpx] h-[56rpx] border border-solid border-[#ffe0e0]"
-                                            @click="handleDeleteCard(item.id)">
-                                            <text class="text-[24rpx] font-medium text-[#ff6b6b]">删除</text>
-                                        </view>
-                                    </view>
+                            <z-paging
+                                ref="pagingRobotRef"
+                                v-model="robots"
+                                :auto="false"
+                                :fixed="false"
+                                :safe-area-inset-bottom="true"
+                                @query="queryRobotList">
+                                <view class="pl-[24rpx] pr-[16rpx] flex flex-col gap-4">
                                     <view
-                                        class="flex items-center justify-between mt-[20rpx] pt-[18rpx] border-[0] border-t border-solid border-[#f4f8ff]">
-                                        <text class="text-[22rpx] text-[#adc0d8]"
-                                            >使用: {{ item.used_num }} / {{ item.card_num }}</text
-                                        >
-                                        <text class="text-[22rpx] text-[#c8daf0]">{{ item.create_time }}</text>
+                                        v-for="(item, index) in robots"
+                                        :key="index"
+                                        class="bg-white p-[24rpx] rounded-[24rpx]"
+                                        @click="handleRobot(item)">
+                                        <view class="flex gap-2">
+                                            <image
+                                                :src="item.logo"
+                                                lazy
+                                                class="rounded-full w-[108rpx] h-[108rpx] flex-shrink-0"
+                                                mode="aspectFill"></image>
+                                            <view class="">
+                                                <text class="font-medium mt-1 line-clamp-1">{{ item.name }}</text>
+                                                <view class="text-[20rpx] mt-1 text-[#9C9C9E] line-clamp-2">
+                                                    {{ item.description }}
+                                                </view>
+                                            </view>
+                                        </view>
+                                    </view>
+                                </view>
+                                <template #empty>
+                                    <view class="mx-4">
+                                        <empty />
+                                    </view>
+                                </template>
+                            </z-paging>
+                        </view>
+                    </view>
+                </view>
+            </view>
+        </template>
+        <template v-if="currType == 2">
+            <view class="mt-4">
+                <scroll-view scroll-x>
+                    <view class="flex gap-2 px-[32rpx]">
+                        <view
+                            v-for="item in agentCateLists"
+                            class="text-[#959FAF] font-medium px-[24rpx] h-[64rpx] flex items-center rounded-full whitespace-nowrap"
+                            :class="{ 'bg-primary !text-white': currAgentType == item.value }"
+                            :key="item.value"
+                            @click="handleAgentCateClick(item)">
+                            <view>{{ item.label }}</view>
+                        </view>
+                    </view>
+                </scroll-view>
+            </view>
+            <view class="grow min-h-0 mt-4">
+                <z-paging
+                    ref="pagingCozeRef"
+                    v-model="agentList"
+                    :fixed="false"
+                    :safe-area-inset-bottom="true"
+                    @query="handleQueryAgentList">
+                    <view class="grid grid-cols-2 gap-4 px-[32rpx]">
+                        <view
+                            class="agent-item"
+                            :class="{ 'opacity-70': !canUseCurrentAgent(item) }"
+                            v-for="(item, index) in agentList"
+                            :key="index"
+                            @click="handleSelectAgent(item)">
+                            <view
+                                class="flex-shrink-0 h-[200rpx] w-full bg-no-repeat bg-center bg-cover relative"
+                                :style="{
+                                    backgroundImage: `url(${
+                                        item.bg_image || config.baseUrl + 'static/images/agent_bg.png'
+                                    })`,
+                                }">
+                                <view class="absolute -bottom-[40rpx] w-full flex justify-center">
+                                    <view
+                                        class="w-[108rpx] h-[108rpx] bg-white rounded-full p-[10rpx] flex justify-center">
+                                        <image
+                                            :src="item.image || item.avatar"
+                                            class="w-full h-full rounded-full"
+                                            mode="aspectFill"></image>
                                     </view>
                                 </view>
                             </view>
-                        </template>
+                            <view class="flex-1 w-full px-3 pt-8">
+                                <view class="agent-title-row">
+                                    <text class="agent-title-text">{{ item.name }}</text>
+                                </view>
+                                <view v-if="shouldShowAgentAccessTag(item)" class="flex justify-center mt-[8rpx]">
+                                    <text class="agent-access-tag" :class="getAgentAccessTagClass(item)">
+                                        {{ getAgentAccessTagText(item) }}
+                                    </text>
+                                </view>
+                                <view class="mt-1 line-clamp-2 text-center text-xs text-[#737373] break-all">
+                                    {{ item.intro || item.introduced }}
+                                </view>
+                            </view>
+                            <view class="flex items-center justify-between px-2 my-2">
+                                <view class="text-[22rpx] text-[#999999]"> 创建人：{{ item.source_text }} </view>
+                                <view class="px-1" v-if="isAgentOwner(item)" @click.stop="handleMore(item)">
+                                    <u-icon name="more-dot-fill" :size="24" color="#999999"></u-icon>
+                                </view>
+                            </view>
+                        </view>
                     </view>
                     <template #empty>
                         <empty />
                     </template>
                 </z-paging>
             </view>
-        </view>
+        </template>
+        <tabbar />
     </view>
-
-    <popup-bottom v-if="showSettingPopup" v-model="showSettingPopup" title="代理联系方式" height="60%">
-        <template #content>
-            <view class="h-full px-[42rpx] py-[32rpx] flex flex-col">
-                <view class="grow min-h-0">
-                    <view class="rounded-[16rpx] px-[24rpx] py-[20rpx] flex items-start gap-[12rpx] bg-[#f4f8ff]">
-                        <u-icon name="info-circle" size="28" color="#0065fb" class="shrink-0 mt-[2rpx]"></u-icon>
-                        <text class="text-[24rpx] leading-relaxed text-[#adc0d8]">
-                            设置你的联系方式后，通过您的链接注册的用户可以看到这些联系信息
-                        </text>
-                    </view>
-                    <view class="mt-[48rpx]">
-                        <view class="text-[30rpx] font-bold text-[#0a1f44] mb-[20rpx]">微信二维码</view>
-                        <view
-                            v-if="!agentUserInfo.qr_code"
-                            class="w-[240rpx] h-[240rpx] rounded-[20rpx] flex flex-col items-center justify-center gap-[16rpx] bg-[#f4f8ff] border-2 border-dashed border-[#b3d1ff]"
-                            @click="uploadAndProcessFiles('image')">
-                            <u-icon name="plus-circle-fill" size="48" color="#0065fb"></u-icon>
-                            <text class="text-[24rpx] font-medium text-primary">点击上传图片</text>
-                        </view>
-                        <view
-                            v-else
-                            class="w-[240rpx] h-[240rpx] rounded-[20rpx] relative overflow-hidden"
-                            style="box-shadow: 0 4px 20px rgba(0, 101, 251, 0.12)">
-                            <image :src="agentUserInfo.qr_code" class="w-full h-full" mode="aspectFill"></image>
-                            <view
-                                class="absolute top-[12rpx] right-[12rpx] w-[52rpx] h-[52rpx] rounded-full flex items-center justify-center bg-black/40"
-                                @click="agentUserInfo.qr_code = ''">
-                                <u-icon name="close" size="22" color="#FFFFFF"></u-icon>
-                            </view>
-                        </view>
-                    </view>
-                </view>
-                <view class="flex items-center gap-[20rpx] mt-[24rpx]">
-                    <view
-                        class="w-[220rpx] h-[92rpx] rounded-[20rpx] flex items-center justify-center font-bold text-[28rpx] bg-[#f4f8ff] text-[#adc0d8]"
-                        @click="showSettingPopup = false">
-                        取消
-                    </view>
-                    <view
-                        class="flex-1 h-[92rpx] rounded-[20rpx] flex items-center justify-center font-bold text-[28rpx] bg-[#0065fb] text-white"
-                        @click="handleConfirmSetting">
-                        确定保存
-                    </view>
-                </view>
-            </view>
-        </template>
-    </popup-bottom>
-
-    <popup-bottom v-if="showAddCardPopup" v-model="showAddCardPopup" title="批量生成卡密">
-        <template #content>
-            <view class="h-full px-[42rpx] py-4 flex flex-col">
-                <view class="grow min-h-0 space-y-[44rpx]">
-                    <view>
-                        <view class="text-[28rpx] font-bold text-[#0a1f44] mb-[12rpx]">选择套餐</view>
-                        <picker :range="packageList" range-key="name" @change="handlePackageChange">
-                            <view
-                                class="h-[90rpx] flex items-center justify-between bg-[#f4f8ff] rounded-[16rpx] px-[24rpx] border border-solid border-[#e0ecff]">
-                                <text
-                                    class="font-medium"
-                                    :class="[cardFormData.package ? 'text-[#0a1f44]' : 'text-[#adc0d8]']">
-                                    {{ getPackageName }}
-                                </text>
-                                <u-icon name="arrow-down" size="24" color="#adc0d8"></u-icon>
-                            </view>
-                        </picker>
-                    </view>
-                    <view>
-                        <view class="text-[28rpx] font-bold text-[#0a1f44] mb-[12rpx]">生成数量</view>
-                        <view
-                            class="h-[90rpx] flex items-center bg-[#f4f8ff] rounded-[16rpx] px-[24rpx] border border-solid border-[#e0ecff]">
-                            <u-input v-model="cardFormData.quantity" type="digit" placeholder="请输入生成数量" />
-                        </view>
-                    </view>
-                    <view>
-                        <view class="text-[28rpx] font-bold text-[#0a1f44] mb-[12rpx]">每张卡密可使用的次数</view>
-                        <view
-                            class="h-[90rpx] flex items-center bg-[#f4f8ff] rounded-[16rpx] px-[24rpx] border border-solid border-[#e0ecff]">
-                            <u-input v-model="cardFormData.use_times" type="digit" placeholder="请输入使用次数" />
-                        </view>
-                    </view>
-                </view>
-                <view class="flex items-center gap-[20rpx] mt-[24rpx]">
-                    <view
-                        class="w-[220rpx] h-[92rpx] rounded-[20rpx] flex items-center justify-center font-bold text-[28rpx] bg-[#f4f8ff] text-[#adc0d8]"
-                        @click="showAddCardPopup = false">
-                        取消
-                    </view>
-                    <view
-                        class="flex-1 h-[92rpx] rounded-[20rpx] flex items-center justify-center font-bold text-[28rpx] bg-primary text-white"
-                        @click="handleConfirmAddCard">
-                        确定生成
-                    </view>
-                </view>
-            </view>
-        </template>
-    </popup-bottom>
-
-    <popup-bottom v-if="showGiftTokensPopup" v-model="showGiftTokensPopup" title="赠送点数">
-        <template #content>
-            <view class="h-full px-[42rpx] py-4 flex flex-col">
-                <view class="grow min-h-0 space-y-[44rpx]">
-                    <view>
-                        <view class="text-[28rpx] font-bold text-[#0a1f44] mb-[12rpx]">赠送用户</view>
-                        <view class="flex items-center gap-[16rpx] p-[20rpx] bg-[#f4f8ff] rounded-[16rpx]">
-                            <image
-                                :src="giftTokensFormData.avatar"
-                                class="w-[80rpx] h-[80rpx] rounded-full shrink-0"></image>
-                            <view class="flex-1 min-w-0">
-                                <view class="text-[28rpx] font-bold text-[#0a1f44]">{{
-                                    giftTokensFormData.nickname
-                                }}</view>
-                                <view class="text-[24rpx] mt-[6rpx] text-[#adc0d8]">{{
-                                    giftTokensFormData.mobile
-                                }}</view>
-                            </view>
-                        </view>
-                    </view>
-                    <view>
-                        <view class="text-[28rpx] font-bold text-[#0a1f44] mb-[12rpx]">赠送数量</view>
-                        <view
-                            class="h-[90rpx] flex items-center bg-[#f4f8ff] rounded-[16rpx] px-[24rpx] border border-solid border-[#e0ecff]">
-                            <view class="flex-1">
-                                <u-input
-                                    v-model="giftTokensFormData.quantity"
-                                    type="digit"
-                                    :max="userTokens"
-                                    placeholder="请输入赠送数量" />
-                            </view>
-                            <text class="text-[24rpx] text-[#adc0d8] shrink-0">剩余 {{ userTokens }} 点</text>
-                        </view>
-                    </view>
-                </view>
-                <view class="flex items-center gap-[20rpx] mt-[24rpx]">
-                    <view
-                        class="w-[220rpx] h-[92rpx] rounded-[20rpx] flex items-center justify-center font-bold text-[28rpx] bg-[#f4f8ff] text-[#adc0d8]"
-                        @click="
-                            showGiftTokensPopup = false;
-                            giftTokensFormData.quantity = 1;
-                        ">
-                        取消
-                    </view>
-                    <view
-                        class="flex-1 h-[92rpx] rounded-[20rpx] flex items-center justify-center font-bold text-[28rpx] bg-primary text-white"
-                        @click="handleConfirmGiftTokens">
-                        确定赠送
-                    </view>
-                </view>
-            </view>
-        </template>
-    </popup-bottom>
-
-    <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
 </template>
 
-<script setup lang="ts">
-import {
-    getAgentSubList,
-    getAgentCardList,
-    generateAgentCard,
-    getAgentCardPackageList,
-    deleteAgentCard,
-    deleteAgentSub,
-    getAgentUserInfo,
-    setAgentUserContactQrcode,
-    agentGiftTokens,
-    getAgentLevel,
-    setAgentLevel,
-} from "@/api/user";
+<script lang="ts" setup>
+import { robotCategory, robotLists, getAgentList, getCozeAgentList, deleteAgent, deleteCozeAgent } from "@/api/agent";
+import { useDictOptions } from "@/hooks/useDictOptions";
 import { useUserStore } from "@/stores/user";
-import useUpload from "@/hooks/useUpload";
-import { useCopy } from "@/hooks/useCopy";
+import { useAppStore } from "@/stores/app";
+import config from "@/config";
+import {
+    AGENT_UNAVAILABLE_TIP,
+    canUseAgent,
+    getAgentAccessStatus,
+    getAgentAccessTagText as getAgentPermissionTagText,
+    shouldShowAgentAccessTag,
+} from "@/utils/agentPermission";
 
+// 实例化app状态
+const appStore = useAppStore();
+// 实例化user状态
 const userStore = useUserStore();
-const { userTokens } = storeToRefs(userStore);
+const { userInfo } = toRefs(userStore);
 
-const tabsList = [
-    { name: "用户管理", value: 1 },
-    { name: "卡密管理", value: 2 },
-];
-const current = ref(0);
-const searchValue = ref("");
-const showSettingPopup = ref(false);
-const showAddCardPopup = ref(false);
-const cardFormData = reactive<{
-    package: number | null;
-    quantity: number;
-    use_times: number;
+// 是否显示AI助理（机器人）的计算属性
+const isShowRobot = computed(() => appStore.getIsShowRobot);
+
+// Tab列表，默认为AI智能体
+const tabList = ref<any[]>([{ name: "AI智能体", type: 2 }]);
+
+// 当前选中的Tab索引
+const currTab = ref(0);
+// 当前选中的类型（1: AI助理, 2: AI智能体）
+const currType = ref(tabList.value[0].type);
+
+// 页面状态
+const state = reactive({
+    cate_id: "", // 分类ID
+});
+
+// AI助理（机器人）部分
+const robotCateIndex = ref<number>(0); // 当前机器人分类索引
+const robotCateActiveMenu = ref<number>(-1); // 当前激活的一级分类菜单索引
+const pagingRobotRef = shallowRef(); // 机器人列表分页组件的引用
+const robots = ref<any[]>([]); // 机器人列表数据
+const total = ref<number>(0); // 机器人总数
+const queryParams = reactive({
+    // 机器人列表查询参数
+    type: 3,
+    scene_id: "",
+    name: "",
+});
+const queryLoading = ref<boolean>(false); // 机器人列表加载状态
+
+// AI智能体部分
+const pagingCozeRef = shallowRef(); // 智能体列表分页组件的引用
+const agentCateLists = [
+    { label: "智能体", value: 1 },
+    { label: "Coze智能体", value: 2 },
+    { label: "Coze工作流", value: 3 },
+]; // 智能体分类列表
+const currAgentType = ref<any>(1); // 当前选中的智能体分类类型
+const agentList = ref<any[]>([]); // 智能体列表数据
+
+const canUseCurrentAgent = (item: any) => canUseAgent(item, userInfo.value);
+
+const ensureAgentAvailable = (item: any) => {
+    if (canUseCurrentAgent(item)) return true;
+    uni.$u.toast(AGENT_UNAVAILABLE_TIP);
+    return false;
+};
+
+const getAgentAccessTagText = (item: any) => getAgentPermissionTagText(item, userInfo.value);
+
+const getAgentAccessTagClass = (item: any) =>
+    getAgentAccessStatus(item, userInfo.value) === "free" ? "agent-access-tag--free" : "agent-access-tag--member";
+
+// 使用自定义hook获取机器人分类数据
+const { optionsData } = useDictOptions<{
+    robotCate: any[];
 }>({
-    package: null,
-    quantity: 1,
-    use_times: 1,
-});
-const packageList = ref<any[]>([]);
-
-const getPackageName = computed(() => {
-    const currentPackage = packageList.value.find((item) => item.id === cardFormData.package);
-    if (currentPackage) {
-        return `${currentPackage.name}`;
-    }
-    return "选择生成套餐";
-});
-
-const handleTabChange = (index: number) => {
-    current.value = index;
-    searchValue.value = "";
-    pagingRef.value.reload();
-};
-
-const clearSearch = () => {
-    searchValue.value = "";
-    pagingRef.value.reload();
-};
-const confirmSearch = () => {
-    pagingRef.value.reload();
-};
-
-const pagingRef = ref();
-const dataList = ref<any[]>([]);
-const total = ref(0);
-const queryList = async (page_no: number, page_size: number) => {
-    try {
-        const api = current.value == 0 ? getAgentSubList : getAgentCardList;
-        const { lists, count } = await api({
-            page_no: page_no,
-            page_size: page_size,
-            [current.value == 0 ? "user_keyword" : "sn"]: searchValue.value,
-        });
-        total.value = count;
-        pagingRef.value.complete(lists);
-    } catch (error) {
-        pagingRef.value.complete([]);
-    }
-};
-
-const { copy } = useCopy();
-
-const handleDeleteCard = (id: number) => {
-    uni.showModal({
-        title: "删除卡密",
-        content: "确定要删除这张卡密吗？",
-        success: async (res) => {
-            if (res.confirm) {
-                uni.showLoading({ title: "删除中...", mask: true });
-                try {
-                    await deleteAgentCard({ id });
-                    pagingRef.value.reload();
-                    userStore.getUser();
-                    uni.hideLoading();
-                    uni.showToast({ title: "删除成功", icon: "none", duration: 3000 });
-                } catch (error: any) {
-                    uni.hideLoading();
-                    uni.showToast({ title: error || "删除失败", icon: "none", duration: 3000 });
-                }
-            }
+    robotCate: {
+        api: robotCategory,
+        params: {
+            pageSize: 9999,
+            pid: 0,
         },
-    });
-};
-
-const showGiftTokensPopup = ref(false);
-const giftTokensFormData = reactive<{
-    quantity: number;
-    avatar: string;
-    mobile: string;
-    nickname: string;
-    user_id: number;
-}>({
-    quantity: 1,
-    avatar: "",
-    mobile: "",
-    nickname: "",
-    user_id: 0,
-});
-
-const handleSubSetting = (item: any) => {
-    const canAdjustLevel =
-        item.level == 0 && agentUserInfo.value.level != 3
-            ? agentUserInfo.value.level > item.level
-            : 1000 - (agentUserInfo.value.level || 0) > 1000 - item.level;
-
-    const itemList: string[] = [];
-    if (canAdjustLevel) {
-        itemList.push("调整等级");
-    }
-    itemList.push("赠送点数");
-    if (item.level != 0) {
-        itemList.push("移除代理");
-    }
-
-    uni.showActionSheet({
-        itemList: itemList,
-        success: async (res) => {
-            const action = itemList[res.tapIndex];
-
-            if (action === "调整等级") {
-                const levelList = agentLevel.value.filter(
-                    (row: any) => 1000 - (agentUserInfo.value.level || 0) > 1000 - row.level && row.level != item.level
-                );
-                if (item.level !== 0) {
-                    levelList.unshift({ name: "普通用户", level: 0 });
+        // 数据转换钩子
+        transformData: (data) => {
+            if (data.lists.length) {
+                // 如果从其他页面跳转过来并传入了分类ID，则找到对应分类
+                if (state.cate_id) {
+                    robotCateIndex.value = data.lists.findIndex((item: any) => item.id == state.cate_id);
                 }
-                uni.showActionSheet({
-                    itemList: levelList.map((item) => `${item.name}`),
-                    success: async (res) => {
-                        const currentLevel = levelList[res.tapIndex];
-                        uni.showLoading({ title: "调整中...", mask: true });
-                        try {
-                            await setAgentLevel({ user_id: item.user_id, level: currentLevel.level });
-                            uni.hideLoading();
-                            uni.showToast({ title: "调整成功", icon: "none", duration: 3000 });
-                            pagingRef.value.reload();
-                        } catch (error: any) {
-                            uni.showToast({ title: error || "调整失败", icon: "none", duration: 3000 });
-                            uni.hideLoading();
-                        }
-                    },
-                });
-            } else if (action === "赠送点数") {
-                giftTokensFormData.avatar = item.avatar;
-                giftTokensFormData.mobile = item.mobile;
-                giftTokensFormData.nickname = item.nickname;
-                giftTokensFormData.user_id = item.user_id;
-                showGiftTokensPopup.value = true;
-            } else if (action === "移除代理") {
-                uni.showModal({
-                    title: "移除代理",
-                    content: "确定要移除这个代理吗？",
-                    success: async (res) => {
-                        if (res.confirm) {
-                            uni.showLoading({ title: "移除中...", mask: true });
-                            try {
-                                await deleteAgentSub({ user_id: item.user_id });
-                                uni.hideLoading();
-                                uni.showToast({ title: "移除成功", icon: "none", duration: 3000 });
-                                pagingRef.value.reload();
-                            } catch (error: any) {
-                                uni.hideLoading();
-                                uni.showToast({ title: error || "移除失败", icon: "none", duration: 3000 });
-                            }
-                        }
-                    },
-                });
+                // 重新加载机器人列表
+                pagingRobotRef.value?.reload();
             }
+            return data.lists;
         },
-    });
-};
-
-const handleConfirmGiftTokens = async () => {
-    if (giftTokensFormData.quantity > userTokens.value || giftTokensFormData.quantity < 1) {
-        uni.$u.toast(`赠送数量必须在1-${userTokens.value}之间`);
-        return;
-    }
-    uni.showLoading({ title: "赠送中...", mask: true });
-    try {
-        await agentGiftTokens({ user_id: giftTokensFormData.user_id, tokens: giftTokensFormData.quantity });
-        uni.hideLoading();
-        uni.showToast({ title: "赠送成功", icon: "none", duration: 3000 });
-        showGiftTokensPopup.value = false;
-        giftTokensFormData.quantity = 1;
-        pagingRef.value.reload();
-        userStore.getUser();
-    } catch (error: any) {
-        uni.hideLoading();
-        uni.showToast({ title: error || "赠送失败", icon: "none", duration: 3000 });
-    }
-};
-
-const handleConfirmAddCard = async () => {
-    if (cardFormData.quantity > 100 || cardFormData.quantity < 1) {
-        uni.$u.toast("生成数量必须在1-100之间");
-        return;
-    }
-    if (cardFormData.use_times > 100 || cardFormData.use_times < 1) {
-        uni.$u.toast("使用次数必须在1-100之间");
-        return;
-    }
-    uni.showLoading({ title: "生成中...", mask: true });
-    try {
-        await generateAgentCard({
-            package_id: cardFormData.package,
-            count: cardFormData.quantity,
-            card_num: cardFormData.use_times,
-        });
-        uni.hideLoading();
-        showAddCardPopup.value = false;
-        pagingRef.value.reload();
-        userStore.getUser();
-    } catch (error: any) {
-        uni.hideLoading();
-        uni.showToast({ title: error || "生成失败", icon: "none", duration: 3000 });
-    }
-};
-
-const handleConfirmSetting = async () => {
-    if (!agentUserInfo.value.qr_code) {
-        uni.$u.toast("请上传微信二维码");
-        return;
-    }
-    uni.showLoading({ title: "保存中...", mask: true });
-    try {
-        await setAgentUserContactQrcode({ qr_code: agentUserInfo.value.qr_code });
-        uni.hideLoading();
-        showSettingPopup.value = false;
-        uni.showToast({ title: "保存成功", icon: "none", duration: 2000 });
-    } catch (error: any) {
-        uni.hideLoading();
-        uni.showToast({ title: error || "保存失败", icon: "none", duration: 3000 });
-    }
-};
-
-const handlePackageChange = (e: any) => {
-    const { value } = e.detail;
-    cardFormData.package = packageList.value[value].id;
-};
-
-const handleInvite = () => {
-    uni.$u.route({
-        url: "/packages/pages/agent_invite_poster/agent_invite_poster",
-    });
-};
-
-const handleSetting = () => {
-    showSettingPopup.value = true;
-    getAgentInfo();
-};
-
-const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
-    count: 1,
-    imageAccept: ["jpg", "png", "jpeg"],
-    imageSize: 20,
-    sourceType: ["album", "camera"],
-    onSuccess: (res: any) => {
-        if (res.length > 0) {
-            agentUserInfo.value.qr_code = res[0].url;
-        }
     },
 });
 
-const getPackageList = async () => {
-    const { lists } = await getAgentCardPackageList({ page_size: 1000 });
-    packageList.value = lists.map((item: any) => ({
-        ...item,
-        name: `${item.name} · ${item.tokens}点`,
-    }));
+const robotSubCateIndex = ref<number>(-1); // 当前激活的二级分类菜单索引
+const currSubId = ref<number>(); // 当前选中的二级分类ID
+
+// 用户是否登录的计算属性
+const isLogin = computed(() => userStore.isLogin);
+
+/**
+ * 切换顶部Tab
+ * @param {number} index - Tab的索引
+ */
+const handleTabChange = async (index: number) => {
+    currType.value = tabList.value[index].type;
+    currTab.value = index;
+    // 如果切换到AI助理tab，延迟加载数据以确保组件渲染完成
+    if (currTab.value == 1) {
+        setTimeout(() => {
+            pagingRobotRef.value?.reload();
+        }, 300);
+    }
 };
 
-const agentUserInfo = ref<any>({});
-const getAgentInfo = async () => {
-    const res = await getAgentUserInfo();
-    agentUserInfo.value = res;
+/**
+ * 搜索机器人
+ */
+const search = async () => {
+    pagingRobotRef.value?.reload();
 };
 
-const agentLevel = ref<any[]>([]);
-const fetchAgentLevel = async () => {
-    const res = await getAgentLevel();
-    agentLevel.value = res;
+/**
+ * 清除搜索关键词并重新加载
+ */
+const clear = async () => {
+    pagingRobotRef.value?.reload();
 };
 
-getAgentInfo();
-getPackageList();
-fetchAgentLevel();
+/**
+ * 查询机器人列表（由z-paging调用）
+ * @param {number} pageNo - 页码
+ * @param {number} pageSize - 每页数量
+ */
+const queryRobotList = async (pageNo: number, pageSize: number) => {
+    try {
+        const { lists = [], count } = await robotLists({
+            page_size: pageSize,
+            page_no: pageNo,
+            ...queryParams,
+        });
+        total.value = count; // 更新总数
+        pagingRobotRef.value?.complete(lists); // 请求成功，更新分页数据
+        queryLoading.value = false;
+    } catch (error) {
+        console.error("查询机器人列表失败:", error);
+        queryLoading.value = false;
+        pagingRobotRef.value?.complete(false); // 请求失败
+    }
+};
+
+/**
+ * 点击一级机器人分类
+ * @param {number} index - 分类索引
+ */
+const handleRobotCate = (index: number) => {
+    // 如果点击的是当前已展开的分类，则折叠
+    if (index == robotCateActiveMenu.value) {
+        robotCateActiveMenu.value = -1;
+        return;
+    }
+    robotCateActiveMenu.value = index;
+};
+
+/**
+ * 点击二级机器人分类
+ * @param {number} index - 二级分类索引
+ * @param {number} id - 二级分类ID
+ */
+const handleRobotSubCate = (index: number, id: number) => {
+    // 防止重复点击
+    if (index == robotSubCateIndex.value && id == currSubId.value) {
+        return;
+    }
+    currSubId.value = id;
+    robotSubCateIndex.value = index;
+    queryLoading.value = true; // 显示加载动画
+
+    const currSubLists = optionsData.robotCate[robotCateActiveMenu.value]?.sub_list;
+    queryParams.scene_id = currSubLists[index]?.id;
+    pagingRobotRef.value?.reload(); // 重新加载列表
+};
+
+/**
+ * 检查当前二级分类是否属于给定的一级分类列表
+ * @param {any[]} lists - 某个一级分类下的二级分类列表
+ * @returns {boolean}
+ */
+const isCurrMenu = (lists: any[]) => {
+    return lists.some((item) => item.id == currSubId.value);
+};
+
+/**
+ * 点击机器人项，跳转到聊天页面
+ * @param {any} data - 机器人数据
+ */
+const handleRobot = (data: any) => {
+    uni.$u.route({
+        url: "/packages/pages/robot_chat/robot_chat",
+        params: {
+            id: data.id,
+        },
+    });
+};
+
+/**
+ * 点击智能体分类
+ * @param {any} item - 分类项数据
+ */
+const handleAgentCateClick = (item: any) => {
+    currAgentType.value = item.value;
+    pagingCozeRef.value?.reload(); // 重新加载智能体列表
+};
+
+/**
+ * 点击智能体项
+ * @param {any} item - 智能体数据
+ */
+const handleSelectAgent = (item: any) => {
+    // 判断是否登录
+    if (!isLogin.value) {
+        uni.$u.route({ url: "/packages/pages/login/login" });
+        return;
+    }
+    if (!ensureAgentAvailable(item)) return;
+    // 根据智能体类型跳转到不同页面
+    if (currAgentType.value == 1) {
+        // 通用智能体
+        uni.$u.route({
+            url: "/packages/pages/home/home",
+            params: {
+                agent_name: item.name,
+                agent_id: item.id,
+                agent_logo: item.image,
+            },
+        });
+    } else {
+        // Coze等其他类型智能体
+        uni.$u.route({
+            url: "/packages/pages/coze_chat/coze_chat",
+            params: {
+                id: item.id,
+                type: item.type,
+            },
+        });
+    }
+};
+
+/** 标准智能体看 is_owner;Coze 仍按用户自建(source=1) */
+const isAgentOwner = (item: any) => {
+    if (currAgentType.value === 1) {
+        return Number(item.is_owner) === 1;
+    }
+    return Number(item.source) === 1;
+};
+
+/**
+ * 编辑智能体（仅标准智能体 + 创建者）
+ */
+const handleEditAgent = (item: any) => {
+    if (!isAgentOwner(item) || currAgentType.value !== 1) return;
+    uni.$u.route({
+        url: "/packages/pages/create_agent/create_agent",
+        params: { id: item.id },
+    });
+};
+
+/**
+ * 更多操作（团队共享:非创建者无编辑/删除入口，仅可点卡片对话）
+ */
+const handleMore = (item: any) => {
+    if (!isAgentOwner(item)) return;
+    const canEdit = currAgentType.value === 1;
+    const itemList = canEdit ? ["编辑", "删除"] : ["删除"];
+    uni.showActionSheet({
+        itemList,
+        success: (res) => {
+            const isEdit = canEdit && res.tapIndex === 0;
+            if (isEdit) {
+                handleEditAgent(item);
+                return;
+            }
+            uni.showModal({
+                title: "提示",
+                content: "确定删除该智能体吗？",
+                success: async (modalRes) => {
+                    if (!modalRes.confirm) return;
+                    uni.showLoading({
+                        title: "删除中...",
+                        mask: true,
+                    });
+                    try {
+                        const api = currAgentType.value == 1 ? deleteAgent : deleteCozeAgent;
+                        await api({ id: item.id });
+                        uni.hideLoading();
+                        uni.showToast({
+                            title: "删除成功",
+                            icon: "none",
+                            duration: 3000,
+                        });
+                        agentList.value = agentList.value.filter((value) => value.id != item.id);
+                    } catch (error: any) {
+                        uni.hideLoading();
+                        uni.showToast({
+                            title: error,
+                            icon: "none",
+                            duration: 3000,
+                        });
+                    }
+                },
+            });
+        },
+    });
+};
+
+/**
+ * 查询智能体列表（由z-paging调用）
+ * @param {number} page_no - 页码
+ * @param {number} page_size - 每页数量
+ */
+const handleQueryAgentList = async (page_no: number, page_size: number) => {
+    try {
+        const isType1 = currAgentType.value === 1;
+        // 根据类型选择不同的API和参数
+        const api = isType1 ? getAgentList : getCozeAgentList;
+        const params = {
+            page_no,
+            page_size,
+            ...(isType1 ? {} : { type: currAgentType.value === 2 ? 1 : 2 }),
+        };
+        // @ts-ignore
+        const response = await api(params);
+        pagingCozeRef.value?.complete(response.lists || []); // 请求成功，更新分页数据
+    } catch (error) {
+        console.error("查询智能体列表失败:", error);
+        pagingCozeRef.value?.complete(false); // 请求失败
+    }
+};
+
+// 监听isShowRobot变化，动态添加或移除"AI助理"tab
+watch(
+    () => isShowRobot.value,
+    (newVal) => {
+        // 移除已存在的 "AI助理" tab，防止重复添加
+        const assistantTabIndex = tabList.value.findIndex((tab) => tab.type === 1);
+        if (assistantTabIndex > -1) {
+            tabList.value.splice(assistantTabIndex, 1);
+        }
+
+        // 如果配置显示，则在首位添加 "AI助理" tab
+        if (newVal == "1") {
+            tabList.value.unshift({ name: "AI助理", type: 1 });
+        }
+
+        // 更新当前tab和类型，确保视图正确
+        currTab.value = 0;
+        currType.value = tabList.value[0].type;
+    },
+    { immediate: true }, // 立即执行一次
+);
+
+// onLoad生命周期，获取页面跳转时传递的参数
+onLoad(({ id }: any) => {
+    if (id) {
+        state.cate_id = id;
+    }
+});
 </script>
 
 <style lang="scss" scoped>
-picker {
-    width: 100%;
-    height: 100%;
+.robot-cate {
+    @apply overflow-hidden gap-2 relative;
+    &-active {
+        &.robot-cate-first {
+            .robot-cate-item {
+                @apply relative z-40;
+                .robot-cate-item-wrap {
+                    @apply rounded-br-[36rpx];
+                }
+                &::after {
+                    content: "";
+                    @apply absolute top-0 left-0 w-full h-full bg-[#F5F6F6] z-10;
+                }
+            }
+            .robot-cate-item {
+                @apply rounded-br-[36rpx];
+            }
+        }
+        &.robot-cate-brother {
+            & + .robot-cate {
+                .robot-cate-item-wrap {
+                    @apply rounded-tr-[36rpx];
+                }
+                .robot-cate-item {
+                    &::after {
+                        content: "";
+                        @apply absolute top-0 left-0 w-full h-full bg-[#F5F6F6] z-10;
+                    }
+                }
+            }
+        }
+    }
 }
-.tab-slider {
-    @apply h-[calc(100%-8rpx)] w-[50%] bg-primary rounded-[14rpx] absolute top-[4rpx] left-0 transition-all duration-300;
+
+.robot-cate-item-wrap {
+    @apply relative z-30 px-[24rpx] py-3 bg-white;
+}
+
+.sub-robot-item {
+    @apply w-full h-full flex items-center pl-[24rpx] relative z-10;
+}
+
+.sub-robot {
+    @apply h-[100rpx] relative;
+    // 当下一个元素是激活状态时的样式
+    &-last {
+        &::after {
+            content: "";
+            @apply absolute top-0 left-0 w-full h-full bg-[#F5F6F6];
+        }
+        .sub-robot-item {
+            @apply rounded-br-[36rpx] bg-white overflow-hidden;
+        }
+        .sub-robot-item-bg {
+            @apply bg-[#F5F6F6];
+        }
+    }
+}
+
+// 激活状态的子机器人项
+.sub-robot-active {
+    .sub-robot-item {
+        @apply bg-[#F5F6F6] rounded-tl-[36rpx] rounded-bl-[36rpx];
+    }
+
+    // 激活项的下一个兄弟元素样式
+    & + .sub-robot {
+        &::after {
+            content: "";
+            @apply absolute top-0 left-0 w-full h-full bg-[#F5F6F6];
+        }
+        .sub-robot-item {
+            @apply rounded-tr-[36rpx] bg-white overflow-hidden;
+        }
+        .sub-robot-item-bg {
+            @apply bg-[#F5F6F6];
+        }
+    }
+}
+.agent-item {
+    @apply bg-white rounded-[32rpx] overflow-hidden h-[430rpx] flex flex-col;
+    box-shadow: 0rpx 12rpx 24rpx rgba(0, 0, 0, 0.12);
+}
+
+.agent-title-row {
+    @apply flex min-w-0 items-center justify-center;
+}
+
+.agent-title-text {
+    @apply min-w-0 line-clamp-1 text-center font-medium;
+}
+
+.agent-access-tag {
+    @apply shrink-0 rounded-full border border-solid px-[12rpx] py-[4rpx] text-[20rpx] font-semibold leading-none;
+}
+
+.agent-access-tag--free {
+    @apply border-[#BBF7D0] bg-[#F0FDF4] text-[#16A34A];
+}
+
+.agent-access-tag--member {
+    @apply border-[#DDD6FE] bg-[#F5F3FF] text-[#8B5CF6];
 }
 </style>

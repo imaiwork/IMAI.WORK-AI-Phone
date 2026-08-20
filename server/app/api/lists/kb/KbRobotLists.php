@@ -23,17 +23,52 @@ class KbRobotLists extends BaseApiDataLists
         if (isset($this->params['cate_id']) && is_numeric($this->params['cate_id'])) {
             $where[] = ['kr.cate_id', '=', intval($this->params['cate_id'])];
         }
-        if (isset($this->params['source']) && ($this->params['source'] == 0 || $this->params['source'] == '0')) {
-            $where[] = ['kr.user_id', '=', 0];
-        } else if (isset($this->params['source']) && ($this->params['source'] == 1 || $this->params['source'] == '1')) {
-            $where[] = ['kr.user_id', '=', $this->userId];
-        } else {
-            $where[] = ['kr.user_id', 'in', [0, $this->userId]];
-        }
         if (!empty($this->params['keyword']) && $this->params['keyword']) {
             $where[] = ['kr.name', 'like', '%' . $this->params['keyword'] . '%'];
         }
         return $where;
+    }
+
+    /**
+     * @notes 归属范围(资源跟人):企业空间→本企业全体有效成员创建的智能体(不限创建时空间,
+     *        成员加入即共享、退团/移除/到期自动退出) ∪ 本人创建的全部;
+     *        个人空间→本人创建的全部;系统预置(user_id=0)始终可见。
+     *        source: 0=仅系统, 1=仅我的/团队, 其它=系统+我的/团队。
+     */
+    private function scope(): \Closure
+    {
+        $userId = (int)$this->userId;
+        $teamId = \app\common\service\TeamContextService::currentTeamId($userId);
+        $source = $this->params['source'] ?? null;
+
+        $mine = function ($q) use ($userId, $teamId) {
+            if ($teamId > 0) {
+                $memberIds = \app\common\service\TeamBillingService::activeMemberUserIds($teamId);
+                $q->where(function ($q2) use ($memberIds, $userId) {
+                    $q2->whereIn('kr.user_id', $memberIds ?: [-1])
+                        ->whereOr('kr.user_id', '=', $userId);
+                });
+            } else {
+                $q->where('kr.user_id', '=', $userId);
+            }
+        };
+        $system = function ($q) {
+            $q->where('kr.user_id', '=', 0)->where('kr.team_id', '=', 0);
+        };
+
+        return function ($q) use ($mine, $system, $source) {
+            if ($source === 0 || $source === '0') {
+                $system($q);
+            } elseif ($source === 1 || $source === '1') {
+                $mine($q);
+            } else {
+                $q->where(function ($q2) use ($mine) {
+                    $mine($q2);
+                })->whereOr(function ($q2) use ($system) {
+                    $system($q2);
+                });
+            }
+        };
     }
 
     /**
@@ -51,10 +86,12 @@ class KbRobotLists extends BaseApiDataLists
             ->alias('kr')
             ->field([
                         'kr.id,kr.kb_ids,kr.cate_id,kr.intro,kr.image,kr.bg_image,kr.name,kr.sort,kr.is_enable,kr.is_public',
-                        'kr.create_time,kr.user_id,u.nickname,u.avatar'
+                        'kr.permissions,kr.member_level_ids,kr.create_time,kr.user_id,u.nickname,u.avatar'
+
                     ])
             ->leftJoin('user u', 'u.id = kr.user_id')
             ->where($this->where())
+            ->where($this->scope())
             ->where($this->searchWhere)
             ->limit($this->limitOffset, $this->limitLength)
             ->order('kr.id desc')
@@ -72,6 +109,8 @@ class KbRobotLists extends BaseApiDataLists
             $item['cate_name']   = $item['cate_id'] ? AgentCate::where('id', $item['cate_id'])->value('name') : '';
             $item['source']      = $item['user_id'] ? 1 : 0;
             $item['source_text'] = $item['source'] ? '用户' : '后台';
+            // 团队共享可见,但仅创建者可编辑/删除
+            $item['is_owner']    = (int)$item['user_id'] === (int)$this->userId ? 1 : 0;
             $item['avatar']      = $item['avatar'] ? FileService::getFileUrl($item['avatar']) : '';
             unset($item['kb_ids']);
         }
@@ -105,6 +144,7 @@ class KbRobotLists extends BaseApiDataLists
                     ])
             ->leftJoin('user u', 'u.id = kr.user_id')
             ->where($this->where())
+            ->where($this->scope())
             ->where($this->searchWhere)
             ->count();
     }

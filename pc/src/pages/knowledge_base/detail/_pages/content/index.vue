@@ -13,7 +13,7 @@
                         管理知识库文件，系统将根据这些文档进行语义索引与对话回复。
                     </div>
                 </div>
-                <ElButton type="primary" class="add-doc-btn" @click="handleAddFile">
+                <ElButton v-if="kbCanManage" type="primary" class="add-doc-btn" @click="handleAddFile">
                     <Icon name="local-icon-add_circle" :size="18" />
                     <span class="ml-2">添加新文件</span>
                 </ElButton>
@@ -136,16 +136,18 @@
                                     type="primary"
                                     class="!font-black !text-[13px]"
                                     @click.stop="handleEdit(row)">
-                                    {{ isRag ? "查看" : "编辑" }}
+                                    {{ isRag || !kbCanManage ? "查看" : "编辑" }}
                                 </ElButton>
-                                <div class="w-[1px] h-3 bg-[#E2E8F0] self-center"></div>
-                                <ElButton
-                                    link
-                                    type="danger"
-                                    class="!font-black !text-[13px]"
-                                    @click.stop="handleDelete(row)">
-                                    删除
-                                </ElButton>
+                                <template v-if="kbCanManage">
+                                    <div class="w-[1px] h-3 bg-[#E2E8F0] self-center"></div>
+                                    <ElButton
+                                        link
+                                        type="danger"
+                                        class="!font-black !text-[13px]"
+                                        @click.stop="handleDelete(row)">
+                                        删除
+                                    </ElButton>
+                                </template>
                             </div>
                         </template>
                     </ElTableColumn>
@@ -154,7 +156,11 @@
                         <div class="py-20 flex flex-col items-center justify-center grayscale opacity-60">
                             <Icon name="local-icon-empty" :size="100" />
                             <p class="text-[14px] font-medium text-[#94A3B8] mt-4">
-                                没有任何文档，点击上方按钮开始上传
+                                {{
+                                    kbCanManage
+                                        ? "没有任何文档，点击上方按钮开始上传"
+                                        : "暂无文档"
+                                }}
                             </p>
                         </div>
                     </template>
@@ -195,6 +201,7 @@ import { usePaging } from "@/composables/usePaging";
 const route = useRoute();
 const router = useRouter();
 const nuxtApp = useNuxtApp();
+const kbCanManage = inject<Ref<boolean>>("kbCanManage", ref(true));
 
 const { kn_type, category_id, index_id, kn_name } = toRefs(route.query);
 const knId = computed(() => route.params.id as string);
@@ -259,6 +266,7 @@ const updateRouteQuery = (query: Record<string, any>) => {
 };
 
 const handleAddFile = () => {
+    if (!kbCanManage.value) return;
     isAddFile.value = true;
     updateRouteQuery({ is_add_file: "1" });
 };
@@ -269,6 +277,7 @@ const handleEdit = (row: any) => {
 };
 
 const handleDelete = (row: any) => {
+    if (!kbCanManage.value) return;
     nuxtApp.$confirm({
         message: "确定删除该文件吗？",
         onConfirm: async () => {
@@ -298,9 +307,22 @@ const back = () => {
 };
 
 watch(
+    () => kbCanManage.value,
+    (can) => {
+        // 无管理权限时禁止停留在上传页
+        if (!can && isAddFile.value) {
+            back();
+        }
+    }
+);
+
+watch(
     () => route.query,
     (query) => {
-        isAddFile.value = query.is_add_file === "1" && parseInt(query.type as string) === SidebarTypeEnum.CONTENT;
+        isAddFile.value =
+            kbCanManage.value &&
+            query.is_add_file === "1" &&
+            parseInt(query.type as string) === SidebarTypeEnum.CONTENT;
         isDetail.value = query.is_detail === "1" && parseInt(query.type as string) === SidebarTypeEnum.CONTENT;
     },
     { immediate: true }

@@ -23,10 +23,10 @@
                 <div v-else>无</div>
             </el-form-item>
             <el-form-item label="视频">
-                <div class="flex-1" v-if="formData.video.length">
+                <div class="flex-1" v-if="videos.length">
                     <MaterialFile
                         class="mr-[10px] mb-[10px]"
-                        v-for="(item, index) in formData.video"
+                        v-for="(item, index) in videos"
                         :key="index"
                         file-size="100px"
                         :uri="item.url"
@@ -36,8 +36,8 @@
                 <div v-else>无</div>
             </el-form-item>
             <el-form-item label="附件">
-                <div class="flex-1" v-if="formData.files?.length">
-                    <div v-for="(item, index) in formData.files" :key="index">
+                <div class="flex-1" v-if="files.length">
+                    <div v-for="(item, index) in files" :key="index">
                         <a :href="item.url" target="_blank" :download="item.name" class="text-primary">
                             {{ item.name }}
                         </a>
@@ -75,8 +75,10 @@ const previewVideo = (url: string) => {
     previewState.url = url;
 };
 const images = computed(() => {
-    return formData.value.images?.map(({ url }: any) => url);
+    return Array.isArray(formData.value.images) ? formData.value.images.map(({ url }: any) => url) : [];
 });
+const videos = computed(() => (Array.isArray(formData.value.video) ? formData.value.video : []));
+const files = computed(() => (Array.isArray(formData.value.files) ? formData.value.files : []));
 watch(
     () => props.show,
     (value) => {

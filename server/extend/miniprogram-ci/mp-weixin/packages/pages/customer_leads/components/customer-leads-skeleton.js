@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../common/vendor.js"),o=e.defineComponent({__name:"customer-leads-skeleton",props:{count:{default:3}},setup:o=>(t,n)=>({a:e.f(o.count,((o,t,n)=>({a:e.f(2,((e,o,t)=>({a:e}))),b:o})))})}),t=e._export_sfc(o,[["__scopeId","data-v-60df9c99"]]);wx.createComponent(t);

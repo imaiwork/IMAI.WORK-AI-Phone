@@ -1,139 +1,165 @@
 <template>
-    <view class="h-screen device-bg flex flex-col">
+    <view class="h-screen flex flex-col bg-[#F7F9FC]">
         <u-navbar
             title-bold
             :title="navTitle"
             :border-bottom="false"
             :is-fixed="false"
-            :background="{ background: 'transparent' }">
-        </u-navbar>
+            :background="{ background: '#ffffff' }" />
 
-        <view class="flex-shrink-0 h-[150rpx] flex items-center">
-            <view class="grid grid-cols-3 w-full px-4">
-                <view
-                    v-for="item in steps"
-                    :key="item.step"
-                    class="common-step-item"
-                    :class="{ active: currentStep == item.step }"
-                    @click="handleStepJump(item.step)">
-                    <view
-                        v-if="currentStep > item.step"
-                        class="common-step-item-success-icon bg-primary border-primary">
-                        <u-icon name="checkmark" color="#ffffff" size="14"></u-icon>
-                    </view>
-                    <view class="common-step-item-icon" v-else> </view>
-                    <text class="common-step-item-title">{{ item.title }}</text>
-                    <view
-                        v-if="item.step !== steps.length"
-                        class="common-step-item-line"
-                        :class="{ '!border-primary': currentStep > item.step }"></view>
-                </view>
-            </view>
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-b border-solid border-[#F0F2F5] px-6 pt-[24rpx] pb-[20rpx]">
+            <steps :steps="STEPS" :step="currentStep" @step="handleStepJump" />
         </view>
 
-        <view class="grow min-h-0 mt-[24rpx]">
+        <view class="grow min-h-0 mt-[16rpx]">
             <view v-show="currentStep === 1" class="flex flex-col h-full">
-                <view class="flex items-center justify-between px-4">
-                    <text class="font-medium">
-                        {{ taskType == TaskType.IMAGE ? "图组列表" : "视频素材" }}（{{ formData.materialList.length }}）
-                    </text>
+                <view class="flex items-center justify-between px-4 mb-[12rpx]">
+                    <view class="flex items-center gap-[10rpx]">
+                        <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                        <text class="text-[30rpx] font-extrabold text-[#0D1117]">
+                            {{ taskType == TaskType.IMAGE ? "图组列表" : "视频素材" }}
+                        </text>
+                        <text class="text-xs text-[#9CA3AF]">（{{ formData.materialList.length }}）</text>
+                    </view>
                     <view
                         v-if="taskType == TaskType.IMAGE"
-                        class="px-[28rpx] py-[12rpx] bg-primary text-white rounded-[50rpx] font-medium"
+                        class="flex items-center gap-[6rpx] bg-[#EBF2FF] px-[24rpx] py-[12rpx] rounded-full"
                         @click="handleEditMaterial()">
-                        添加图组
+                        <u-icon name="plus" color="#0065fb" size="18" />
+                        <text class="font-bold text-primary">添加图组</text>
                     </view>
                 </view>
 
                 <view class="grow min-h-0">
                     <template v-if="taskType == TaskType.IMAGE">
                         <scroll-view scroll-y class="h-full" v-if="formData.materialList.length > 0">
-                            <view class="p-4 flex flex-col gap-2">
+                            <view class="px-4 flex flex-col gap-[16rpx] pb-4">
                                 <view
                                     v-for="(item, index) in formData.materialList"
                                     :key="index"
-                                    class="material-image-item">
-                                    <view class="flex items-center justify-between">
-                                        <view class="font-medium">
-                                            {{ `图组${index + 1 < 10 ? "0" + (index + 1) : index + 1}` }}
-                                        </view>
-                                        <view class="flex items-center gap-x-1" @click="handleEditMaterial(index)">
-                                            <view class="flex items-center gap-x-[4rpx] font-medium">
-                                                <text>{{ item.url.length }}</text>
-                                                <text class="text-[#0000004d]">张</text>
+                                    class="bg-white rounded-[24rpx] p-[28rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                                    <view class="flex items-center justify-between mb-[16rpx]">
+                                        <view class="flex items-center gap-[10rpx]">
+                                            <view
+                                                class="w-[40rpx] h-[40rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center">
+                                                <text class="text-[22rpx] font-bold text-primary">
+                                                    {{ index + 1 < 10 ? "0" + (index + 1) : index + 1 }}
+                                                </text>
                                             </view>
-                                            <u-icon name="arrow-right" size="20" color="#00000099"></u-icon>
+                                            <text class="text-[28rpx] font-bold text-[#0D1117]">图组</text>
+                                        </view>
+                                        <view class="flex items-center gap-[8rpx]" @click="handleEditMaterial(index)">
+                                            <text class="font-bold text-primary">{{ item.url.length }}</text>
+                                            <text class="text-xs text-[#9CA3AF]">张</text>
+                                            <u-icon name="arrow-right" size="20" color="#9CA3AF" />
                                         </view>
                                     </view>
-                                    <view class="mt-[18rpx] grid grid-cols-4 gap-2">
-                                        <view v-for="(image, iindex) in item.url" :key="iindex" class="image-item">
+                                    <view class="grid grid-cols-4 gap-[10rpx]">
+                                        <view v-for="(image, iindex) in item.url" :key="iindex" class="aspect-[3/4]">
                                             <image
                                                 :src="image"
-                                                class="w-full h-full rounded-[10rpx]"
-                                                mode="aspectFill"></image>
+                                                class="w-full h-full rounded-[12rpx]"
+                                                mode="aspectFill" />
                                         </view>
                                     </view>
                                     <view
-                                        class="mt-[22rpx] flex items-center gap-x-1"
-                                        @click="handleDeleteMaterial(index)">
-                                        <image
-                                            src="/static/images/icons/delete.svg"
-                                            class="w-[28rpx] h-[28rpx]"></image>
-                                        <text class="text-[#0000004d]">删除</text>
+                                        class="flex items-center justify-between mt-[20rpx] pt-[16rpx] border-[0] border-t border-solid border-[#F0F2F5]">
+                                        <view
+                                            class="flex items-center gap-[8rpx]"
+                                            @click.stop="handleDeleteMaterial(index)">
+                                            <view
+                                                class="w-[36rpx] h-[36rpx] rounded-full bg-[#FFF1F2] flex items-center justify-center">
+                                                <u-icon name="trash" color="#F56C6C" size="16" />
+                                            </view>
+                                            <text class="text-xs text-[#F56C6C]">删除</text>
+                                        </view>
+                                        <view class="flex items-center gap-[6rpx]" @click="handleEditMaterial(index)">
+                                            <u-icon name="edit-pen" color="#9CA3AF" size="16" />
+                                            <text class="text-xs text-[#9CA3AF]">点击编辑</text>
+                                        </view>
                                     </view>
                                 </view>
                             </view>
                         </scroll-view>
-                        <view v-else class="mt-[100rpx]">
-                            <empty :size="260" text="您还没有图组哦" />
-                            <view class="mt-[44rpx] flex justify-center">
+
+                        <view v-else class="flex flex-col items-center justify-center h-full px-8">
+                            <view class="relative mb-[48rpx]">
                                 <view
-                                    class="w-[220rpx] h-[88rpx] rounded-[20rpx] border border-solid flex items-center justify-center gap-x-2"
-                                    @click="handleEditMaterial()">
-                                    <u-icon name="plus" size="24"></u-icon>
-                                    <text class="font-medium">添加图组</text>
+                                    class="w-[280rpx] h-[280rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center">
+                                    <view
+                                        class="w-[200rpx] h-[200rpx] rounded-full bg-[#DBEAFE] flex items-center justify-center">
+                                        <view
+                                            class="w-[120rpx] h-[120rpx] rounded-[32rpx] flex items-center justify-center shadow-[0_8rpx_24rpx_rgba(0,101,251,0.25)]"
+                                            style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)">
+                                            <u-icon name="photo" color="#fff" size="44" />
+                                        </view>
+                                    </view>
                                 </view>
+                                <view
+                                    class="absolute top-[8rpx] right-[-12rpx] w-[56rpx] h-[56rpx] rounded-full bg-white shadow-[0_4rpx_12rpx_rgba(0,101,251,0.15)] flex items-center justify-center">
+                                    <u-icon name="plus" color="#0065fb" size="22" />
+                                </view>
+                                <view
+                                    class="absolute bottom-[8rpx] left-[-12rpx] w-[56rpx] h-[56rpx] rounded-full bg-[#FEF9C3] shadow-[0_4rpx_12rpx_rgba(0,0,0,0.08)] flex items-center justify-center">
+                                    <u-icon name="grid" color="#D97706" size="22" />
+                                </view>
+                            </view>
+                            <text class="text-[34rpx] font-extrabold text-[#0D1117] mb-[16rpx]">还没有图组</text>
+                            <text class="text-[#9CA3AF] text-center leading-relaxed mb-[64rpx]">
+                                点击下方按钮，添加您的第一个图组素材
+                            </text>
+                            <view
+                                class="flex items-center gap-[10rpx] h-[96rpx] px-[64rpx] rounded-[24rpx] relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.30)]"
+                                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                                @click="handleEditMaterial()">
+                                <u-icon name="plus" size="24" color="#fff" />
+                                <text class="text-[30rpx] font-extrabold text-white">添加图组</text>
                             </view>
                         </view>
                     </template>
 
                     <template v-else>
                         <scroll-view scroll-y class="h-full">
-                            <view class="p-4 grid grid-cols-3 gap-2">
+                            <view class="p-4 grid grid-cols-3 gap-[16rpx]">
                                 <view
                                     v-for="(item, index) in formData.materialList"
                                     :key="index"
-                                    class="material-video-item">
-                                    <image
-                                        :src="item.url[0]"
-                                        class="w-full h-full rounded-[20rpx]"
-                                        mode="aspectFill"></image>
-                                    <view class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                                    class="relative rounded-[24rpx] overflow-hidden aspect-[3/4]">
+                                    <image :src="item.url[0]" class="w-full h-full" mode="aspectFill" />
+                                    <view
+                                        class="absolute bottom-0 left-0 right-0 h-[100rpx]"
+                                        style="background: linear-gradient(to top, rgba(0, 0, 0, 0.45), transparent)" />
+                                    <view
+                                        class="absolute inset-0 flex items-center justify-center"
+                                        @click="handlePlayVideo(item.url)">
                                         <view
-                                            class="rounded-full bg-[#ffffff33] w-[48rpx] h-[48rpx]"
-                                            style="backdrop-filter: blur(5px)"
-                                            @click="handlePlayVideo(item.url)">
-                                            <image src="/static/images/icons/play.svg" class="w-full h-full"></image>
+                                            class="w-[72rpx] h-[72rpx] rounded-full bg-[#fffff]/30 flex items-center justify-center border border-solid border-[#ffffff]/50">
+                                            <u-icon name="play-right-fill" color="#fff" size="28" />
                                         </view>
                                     </view>
                                     <view
-                                        class="absolute -top-2 -right-2 z-[77] rounded-full bg-[#0000004C] w-[32rpx] h-[32rpx] flex items-center justify-center"
+                                        class="absolute top-[12rpx] right-[12rpx] w-[40rpx] h-[40rpx] rounded-full bg-[#000000]/40 flex items-center justify-center"
                                         @click="handleDeleteVideo(index)">
-                                        <u-icon name="close" size="20" color="#ffffff"></u-icon>
+                                        <u-icon name="close" size="14" color="#ffffff" />
                                     </view>
-                                    <view class="absolute bottom-2 w-full z-[33] flex justify-center">
-                                        <view class="dh-version-name" @click="handleReplaceVideo(index)"> 替换 </view>
+                                    <view class="absolute bottom-[12rpx] left-[12rpx]">
+                                        <view
+                                            class="px-[16rpx] py-[6rpx] text-white text-[22rpx] rounded-full border border-solid border-[#ffffff]/40 bg-[#000000]/30"
+                                            @click="handleReplaceVideo(index)">
+                                            替换
+                                        </view>
                                     </view>
                                 </view>
                                 <view
                                     v-if="formData.materialList.length < VIDEO_CONFIG.limit"
-                                    class="bg-white rounded-[20rpx] h-[288rpx] flex flex-col items-center justify-center"
-                                    @click="triggerVideoUploadSelection">
+                                    class="bg-white aspect-[3/4] rounded-[20rpx] border-2 border-dashed border-[#0065fb]/30 bg-[#F0F6FF] flex flex-col items-center justify-center gap-[10rpx]"
+                                    @click="showUploadCategoryPanel = true">
                                     <view
-                                        class="w-[32rpx] h-[32rpx] bg-[#00000066] flex items-center justify-center rounded-full">
-                                        <u-icon name="plus" size="24" color="#ffffff"></u-icon>
+                                        class="w-[56rpx] h-[56rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center">
+                                        <u-icon name="plus" color="#0065fb" size="28" />
                                     </view>
-                                    <text class="mt-3 font-medium text-[#00000066]">添加视频</text>
+                                    <text class="text-xs text-primary font-semibold">添加视频</text>
                                 </view>
                             </view>
                         </scroll-view>
@@ -142,229 +168,286 @@
             </view>
 
             <view v-show="currentStep === 2" class="flex flex-col h-full">
-                <view class="flex items-center px-4 gap-x-2">
+                <view class="px-4 flex items-center gap-[16rpx] mb-[16rpx]">
                     <navigator
                         url="/ai_modules/device/pages/task_copywriter/task_copywriter"
                         hover-class="none"
-                        class="flex-1 flex items-center justify-center gap-x-2 bg-white h-[100rpx] rounded-[10rpx]"
+                        class="flex-1 flex items-center justify-center gap-[10rpx] h-[96rpx] rounded-[24rpx] bg-white border border-solid border-[#E5E9F0] shadow-[0_2rpx_8rpx_rgba(0,0,0,0.04)]"
                         @click="editCopywriterIndex = -1">
-                        <image src="/static/images/icons/edit.svg" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="font-medium text-[32rpx]">添加文案...</text>
+                        <u-icon name="edit-pen" color="#4B5563" size="22" />
+                        <text class="text-[28rpx] font-bold text-[#334155]">手动输入</text>
                     </navigator>
                     <navigator
                         url="/ai_modules/device/pages/task_ai_copywriter/task_ai_copywriter"
                         hover-class="none"
-                        class="flex-1 h-[100rpx] flex items-center justify-center gap-x-2 bg-black rounded-[10rpx]"
+                        class="flex-1 h-[96rpx] flex items-center justify-center gap-[10rpx] rounded-[24rpx] relative overflow-hidden shadow-[0_8rpx_20rpx_rgba(0,101,251,0.25)]"
+                        style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
                         @click="editCopywriterIndex = -1">
-                        <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]"></image>
-                        <text class="text-white font-medium text-[32rpx]">AI生成</text>
+                        <image src="/static/images/common/magic_white.png" class="w-[32rpx] h-[32rpx]" />
+                        <text class="text-[28rpx] font-bold text-white">AI 生成</text>
                     </navigator>
                 </view>
-                <view class="px-4 font-medium text-[30rpx] mt-[60rpx]">
-                    文案列表（{{ formData.copywriterList.length }}）
+
+                <view class="flex items-center gap-[10rpx] px-4 mb-[12rpx]">
+                    <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                    <text class="text-[28rpx] font-extrabold text-[#0D1117]">文案列表</text>
+                    <text class="text-xs text-[#9CA3AF]">（{{ formData.copywriterList.length }}）</text>
                 </view>
-                <view class="grow min-h-0 mt-[24rpx]">
+
+                <view class="grow min-h-0">
                     <scroll-view scroll-y class="h-full" v-if="formData.copywriterList.length > 0">
-                        <view class="px-4 flex flex-col gap-y-[30rpx] pb-[100rpx]">
+                        <view class="px-4 flex flex-col gap-[16rpx] pb-4">
                             <view
                                 v-for="(item, index) in formData.copywriterList"
                                 :key="index"
-                                class="copywriter-item"
+                                class="bg-white rounded-[24rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]"
                                 @click="handleEditCopywriter(index)">
-                                <view class="text-[30rpx] font-medium"> {{ item.title }} </view>
-                                <view class="font-medium mt-[26rpx]">
-                                    {{ item.content }}
-                                </view>
-                                <view class="mt-[50rpx] flex items-center flex-wrap gap-2" v-if="item.topic.length > 0">
-                                    <view
-                                        v-for="(tag, tindex) in item.topic"
-                                        :key="tindex"
-                                        class="text-xs text-[#0000004d]">
-                                        #{{ tag }}
+                                <view class="flex">
+                                    <view class="w-[6rpx] flex-shrink-0 bg-primary rounded-l-[24rpx]" />
+                                    <view class="flex-1 px-[24rpx] pt-[20rpx] pb-[18rpx]">
+                                        <view class="flex items-center justify-between mb-[12rpx]">
+                                            <view class="flex items-center gap-[10rpx]">
+                                                <view
+                                                    class="w-[40rpx] h-[40rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center flex-shrink-0">
+                                                    <text class="text-[22rpx] font-bold text-primary">{{
+                                                        index + 1
+                                                    }}</text>
+                                                </view>
+                                                <text class="text-[28rpx] font-bold text-[#0D1117] line-clamp-1">{{
+                                                    item.title
+                                                }}</text>
+                                            </view>
+                                            <view
+                                                class="w-[44rpx] h-[44rpx] rounded-full bg-[#F3F4F6] flex items-center justify-center flex-shrink-0"
+                                                @click.stop="handleDeleteCopywriter(index)">
+                                                <u-icon name="close" color="#9CA3AF" size="16" />
+                                            </view>
+                                        </view>
+                                        <text class="text-[#4B5563] leading-relaxed line-clamp-2">{{
+                                            item.content
+                                        }}</text>
+                                        <view class="mt-[12rpx] flex flex-wrap gap-[8rpx]" v-if="item.topic.length > 0">
+                                            <view
+                                                v-for="(tag, tindex) in item.topic"
+                                                :key="tindex"
+                                                class="px-[12rpx] py-[4rpx] rounded-full bg-[#EBF2FF]">
+                                                <text class="text-[22rpx] text-primary">{{ tag }}</text>
+                                            </view>
+                                        </view>
                                     </view>
-                                </view>
-                                <view
-                                    class="absolute top-2 right-2 w-5 h-5 flex items-center justify-center bg-[#0000004d] rounded-full"
-                                    @click.stop="handleDeleteCopywriter(index)">
-                                    <u-icon name="close" size="20" color="#ffffff"></u-icon>
                                 </view>
                             </view>
                         </view>
                     </scroll-view>
-                    <view v-else class="mt-[100rpx]">
-                        <empty :size="260" text="您还没有文案哦" />
-                    </view>
+
+                    <copywriter-empty v-else />
                 </view>
             </view>
 
             <view v-show="currentStep === 3" class="h-full">
                 <scroll-view scroll-y class="h-full">
-                    <view class="px-4 pb-[100rpx]">
+                    <view class="px-4 pb-[32rpx] flex flex-col gap-[16rpx]">
                         <view>
-                            <view class="text-[30rpx] font-medium"> 基础设置 </view>
-                            <view class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx]">
-                                <view>
-                                    <view class="text-[#7C7E80]">任务名称</view>
-                                    <view class="mt-[12rpx]">
-                                        <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1">
-                                            <u-input
-                                                v-model="formData.name"
-                                                placeholder-style="font-size: 24rpx;"
-                                                placeholder="请输入任务名称"
-                                                maxlength="30"
-                                                :custom-style="{ fontSize: '26rpx' }" />
-                                        </view>
+                            <view class="flex items-center gap-[10rpx] mb-[12rpx]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[30rpx] font-extrabold text-[#0D1117]">基础设置</text>
+                            </view>
+                            <view
+                                class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                                <view class="px-[28rpx] py-[22rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                    <text class="text-xs text-[#9CA3AF] font-semibold block mb-[12rpx]">任务名称</text>
+                                    <view class="bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] py-[14rpx]">
+                                        <u-input
+                                            v-model="formData.name"
+                                            placeholder-style="font-size:26rpx;color:#C0C4CC;"
+                                            placeholder="请输入任务名称"
+                                            maxlength="30" />
                                     </view>
                                 </view>
-                                <view class="mt-[28rpx]">
-                                    <view class="text-[#7C7E80]">发布账号选择</view>
-                                    <view class="mt-[12rpx]">
-                                        <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1">
-                                            <navigator
-                                                :url="`/ai_modules/device/pages/account_choose/account_choose?accounts=${JSON.stringify(
-                                                    formData.accounts
-                                                )}`"
-                                                class="flex items-center justify-between h-[70rpx]"
-                                                hover-class="none">
-                                                <text
-                                                    :class="[
-                                                        formData.accounts.length
-                                                            ? 'text-primary font-medium'
-                                                            : 'text-[#00000033]',
-                                                    ]">
-                                                    {{
-                                                        formData.accounts.length
-                                                            ? `${formData.accounts.length}个账号`
-                                                            : "选择账号"
-                                                    }}
-                                                </text>
-                                                <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
-                                            </navigator>
-                                        </view>
+                                <navigator
+                                    :url="`/ai_modules/device/pages/account_choose/account_choose?accounts=${JSON.stringify(
+                                        formData.accounts,
+                                    )}`"
+                                    hover-class="none"
+                                    class="flex items-center justify-between px-[28rpx] h-[100rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                    <text class="text-[28rpx] font-semibold text-[#0D1117]">发布账号</text>
+                                    <view class="flex items-center gap-[6rpx]">
+                                        <text
+                                            class=""
+                                            :class="
+                                                formData.accounts.length ? 'text-primary font-bold' : 'text-[#C0C4CC]'
+                                            ">
+                                            {{
+                                                formData.accounts.length
+                                                    ? `${formData.accounts.length} 个账号`
+                                                    : "选择账号"
+                                            }}
+                                        </text>
+                                        <u-icon name="arrow-right" size="20" color="#C0C4CC" />
+                                    </view>
+                                </navigator>
+                                <view
+                                    class="flex items-center justify-between px-[28rpx] h-[100rpx] border-[0] border-b border-solid border-[#F0F2F5]"
+                                    @click="handleKeywordsEdit">
+                                    <text class="text-[28rpx] font-semibold text-[#0D1117]">标记地点</text>
+                                    <view class="flex items-center gap-[6rpx]">
+                                        <text
+                                            class=""
+                                            :class="formData.location ? 'text-primary font-bold' : 'text-[#C0C4CC]'">
+                                            {{ formData.location || "选填" }}
+                                        </text>
+                                        <u-icon name="arrow-right" size="20" color="#C0C4CC" />
                                     </view>
                                 </view>
-                                <view class="mt-[28rpx]">
-                                    <view class="text-[#7C7E80]">标记地点(选填)</view>
-                                    <view class="mt-[12rpx]">
-                                        <view class="border-[0] border-b-[1rpx] border-solid border-[#EDEDED] py-1">
-                                            <view
-                                                class="flex items-center justify-between h-[70rpx]"
-                                                @click="handleKeywordsEdit">
-                                                <text
-                                                    :class="[
-                                                        formData.location
-                                                            ? 'text-primary font-medium'
-                                                            : 'text-[#00000033]',
-                                                    ]">
-                                                    {{ formData.location || "点击编辑" }}
-                                                </text>
-                                                <u-icon name="arrow-right" size="24" color="#00000033"></u-icon>
-                                            </view>
-                                        </view>
-                                    </view>
-                                </view>
-                                <view class="mt-[28rpx]">
-                                    <view class="text-[#7C7E80]">发布频率(每日)</view>
-                                    <view class="mt-[28rpx] flex flex-wrap gap-2">
+                                <view class="px-[28rpx] py-[22rpx]">
+                                    <text class="text-xs text-[#9CA3AF] font-semibold block mb-[16rpx]"
+                                        >发布频率（每日）</text
+                                    >
+                                    <view class="flex flex-wrap gap-[12rpx]">
                                         <view
-                                            v-for="item in publishFrequencyOptions"
+                                            v-for="item in PUBLISH_FREQUENCY_OPTIONS"
                                             :key="item"
-                                            class="frequency-item"
-                                            :class="{
-                                                active: formData.publish_frep === item && currentFrequencyIdx !== 5,
-                                            }"
+                                            class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                            :class="
+                                                formData.publish_frep === item && currentFrequencyIdx !== 5
+                                                    ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                    : 'bg-[#F0F2F5]'
+                                            "
                                             @click="handlePublishFrequency(item)">
-                                            {{ item }}条
+                                            <text
+                                                class="font-bold"
+                                                :class="
+                                                    formData.publish_frep === item && currentFrequencyIdx !== 5
+                                                        ? 'text-primary'
+                                                        : 'text-[#9CA3AF]'
+                                                ">
+                                                {{ item }}条
+                                            </text>
                                         </view>
                                         <view
-                                            class="frequency-item"
-                                            :class="{ active: currentFrequencyIdx == 5 }"
+                                            class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                            :class="
+                                                currentFrequencyIdx == 5
+                                                    ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                    : 'bg-[#F0F2F5]'
+                                            "
                                             @click="showNumberPop = true">
-                                            {{ customPublishFrep ? `${customPublishFrep}条` : "自定义" }}
+                                            <text
+                                                class="font-bold"
+                                                :class="currentFrequencyIdx == 5 ? 'text-primary' : 'text-[#9CA3AF]'">
+                                                {{ customPublishFrep ? `${customPublishFrep}条` : "自定义" }}
+                                            </text>
                                         </view>
                                     </view>
                                 </view>
                             </view>
                         </view>
 
-                        <view class="mt-[32rpx]">
-                            <view class="text-[30rpx] font-medium"> 时间设置 </view>
+                        <view>
+                            <view class="flex items-center gap-[10rpx] mb-[12rpx]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[30rpx] font-extrabold text-[#0D1117]">时间设置</text>
+                            </view>
                             <view
-                                class="bg-white mt-4 rounded-[16rpx] px-4 py-[28rpx] shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.03)]">
-                                <view class="bg-[#F4F5F9] rounded-[16rpx] p-[6rpx] flex mb-[36rpx] gap-2">
-                                    <view
-                                        v-for="(item, index) in taskExecTypeOptions"
-                                        class="flex-1 flex items-center justify-center gap-x-[8rpx] h-[72rpx] rounded-[12rpx] text-[28rpx]"
-                                        :key="index"
-                                        :class="
-                                            formData.task_exec_type === item.value
-                                                ? 'bg-white text-primary font-medium shadow-[0_2rpx_8rpx_rgba(0,0,0,0.06)]'
-                                                : 'text-[#00000066]'
-                                        "
-                                        @click="formData.task_exec_type = item.value">
-                                        <u-icon
-                                            :name="item.icon"
-                                            size="32"
-                                            :color="
-                                                formData.task_exec_type === item.value ? '#2979ff' : '#00000066'
-                                            "></u-icon>
-                                        <text>{{ item.text }}</text>
+                                class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                                <view
+                                    class="px-[20rpx] pt-[20rpx] pb-[16rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                    <view class="flex bg-[#F0F2F5] rounded-[16rpx] p-[6rpx] gap-[8rpx]">
+                                        <view
+                                            v-for="(item, index) in TASK_EXEC_TYPE_OPTIONS"
+                                            :key="index"
+                                            class="flex-1 flex items-center justify-center gap-[8rpx] h-[72rpx] rounded-[12rpx] transition-all duration-200"
+                                            :class="
+                                                formData.task_exec_type === item.value
+                                                    ? 'bg-white text-primary font-bold shadow-[0_2rpx_8rpx_rgba(0,0,0,0.08)]'
+                                                    : 'text-[#9CA3AF]'
+                                            "
+                                            @click="formData.task_exec_type = item.value">
+                                            <u-icon
+                                                :name="item.icon"
+                                                size="28"
+                                                :color="
+                                                    formData.task_exec_type === item.value ? '#0065fb' : '#9CA3AF'
+                                                " />
+                                            <text>{{ item.text }}</text>
+                                        </view>
                                     </view>
                                 </view>
-
-                                <view>
-                                    <view class="text-[#7C7E80]">任务频率</view>
-                                    <view class="mt-[22rpx]">
-                                        <view class="flex flex-wrap gap-x-2 gap-y-3">
-                                            <view
-                                                v-for="(item, index) in taskFrequencyOptions"
-                                                :key="index"
-                                                :class="{
-                                                    active: formData.task_frep == item && currentDayFrequencyIdx != 5,
-                                                }"
-                                                class="frequency-item"
-                                                @click="handleDayFrequency(item, index)">
+                                <view class="px-[28rpx] py-[22rpx]">
+                                    <text class="text-xs text-[#9CA3AF] font-semibold block mb-[16rpx]">任务频率</text>
+                                    <view class="flex flex-wrap gap-[12rpx]">
+                                        <view
+                                            v-for="(item, index) in TASK_FREQUENCY_OPTIONS"
+                                            :key="index"
+                                            class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                            :class="
+                                                formData.task_frep == item && currentDayFrequencyIdx != 5
+                                                    ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                    : 'bg-[#F0F2F5]'
+                                            "
+                                            @click="handleDayFrequency(item, index)">
+                                            <text
+                                                class="font-bold"
+                                                :class="
+                                                    formData.task_frep == item && currentDayFrequencyIdx != 5
+                                                        ? 'text-primary'
+                                                        : 'text-[#9CA3AF]'
+                                                ">
                                                 {{ item }}天
-                                            </view>
-                                            <view
-                                                class="frequency-item"
-                                                :class="{ active: currentDayFrequencyIdx == 5 }"
-                                                @click="handleCustomDate">
+                                            </text>
+                                        </view>
+                                        <view
+                                            class="h-[68rpx] px-[28rpx] flex items-center justify-center rounded-[20rpx] transition-all duration-200"
+                                            :class="
+                                                currentDayFrequencyIdx == 5
+                                                    ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
+                                                    : 'bg-[#F0F2F5]'
+                                            "
+                                            @click="handleCustomDate">
+                                            <text
+                                                class="font-bold"
+                                                :class="
+                                                    currentDayFrequencyIdx == 5 ? 'text-primary' : 'text-[#9CA3AF]'
+                                                ">
                                                 {{
                                                     formData.custom_date && currentDayFrequencyIdx == 5
                                                         ? "更改日期"
                                                         : "自定义"
                                                 }}
-                                            </view>
-                                        </view>
-                                    </view>
-                                </view>
-
-                                <view
-                                    class="mt-[28rpx]"
-                                    v-if="formData.custom_date.length && currentDayFrequencyIdx == 5">
-                                    <view class="flex items-center justify-between">
-                                        <view class="text-[#7C7E80]">任务时间</view>
-                                        <view
-                                            class="flex items-center gap-x-1"
-                                            v-if="formData.custom_date.length > 8"
-                                            @click="isExpandDate = !isExpandDate">
-                                            <text class="text-[#00000080]">{{ isExpandDate ? "收起" : "展开" }}</text>
-                                            <u-icon
-                                                :name="isExpandDate ? 'arrow-up' : 'arrow-down'"
-                                                size="24"
-                                                color="#00000033"></u-icon>
+                                            </text>
                                         </view>
                                     </view>
                                     <view
-                                        class="mt-[22rpx]"
-                                        :class="{ 'max-h-[120rpx] overflow-hidden': !isExpandDate }">
-                                        <view class="flex flex-wrap gap-2">
+                                        class="mt-[20rpx]"
+                                        v-if="formData.custom_date.length && currentDayFrequencyIdx == 5">
+                                        <view class="flex items-center justify-between mb-[12rpx]">
+                                            <text class="text-xs text-[#9CA3AF] font-semibold">任务时间</text>
                                             <view
-                                                v-for="(item, index) in formData.custom_date"
-                                                :key="index"
-                                                class="date-item">
-                                                {{ formatDate(item) }}
+                                                class="flex items-center gap-[4rpx]"
+                                                v-if="formData.custom_date.length > 8"
+                                                @click="isExpandDate = !isExpandDate">
+                                                <text class="text-xs text-[#9CA3AF]">{{
+                                                    isExpandDate ? "收起" : "展开"
+                                                }}</text>
+                                                <u-icon
+                                                    :name="isExpandDate ? 'arrow-up' : 'arrow-down'"
+                                                    size="22"
+                                                    color="#9CA3AF" />
+                                            </view>
+                                        </view>
+                                        <view
+                                            :class="{
+                                                'max-h-[120rpx] overflow-hidden': !isExpandDate,
+                                            }">
+                                            <view class="flex flex-wrap gap-[10rpx]">
+                                                <view
+                                                    v-for="(item, index) in formData.custom_date"
+                                                    :key="index"
+                                                    class="px-[16rpx] py-[8rpx] rounded-[12rpx] bg-[#EBF2FF]">
+                                                    <text class="text-[22rpx] text-primary font-semibold">{{
+                                                        formatDate(item)
+                                                    }}</text>
+                                                </view>
                                             </view>
                                         </view>
                                     </view>
@@ -372,73 +455,88 @@
                             </view>
                         </view>
 
-                        <view class="mt-[32rpx]">
-                            <view class="flex items-center gap-x-2">
-                                <view class="text-[30rpx] font-medium"> 发布时间 </view>
-                                <view class="text-[#E07B00] text-[22rpx]">
-                                    {{ `(发布的间隔时间必须大于${TIME_INTERVAL}分钟)` }}
+                        <view>
+                            <view class="flex items-center gap-[10rpx] mb-[12rpx]">
+                                <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
+                                <text class="text-[30rpx] font-extrabold text-[#0D1117]">发布时间</text>
+                                <view
+                                    class="flex items-center gap-[4rpx] bg-[#FFF7ED] px-[12rpx] py-[4rpx] rounded-full">
+                                    <u-icon name="info-circle" color="#D97706" size="16" />
+                                    <text class="text-[20rpx] text-[#D97706] font-semibold"
+                                        >间隔须大于 {{ TIME_INTERVAL }} 分钟</text
+                                    >
                                 </view>
                             </view>
                             <view
-                                class="mt-4 rounded-[16rpx] px-4 py-[28rpx] bg-white"
                                 v-for="(item, configIndex) in formData.time_config"
-                                :key="configIndex">
-                                <view class="text-primary font-medium text-[30rpx]">{{ formatDate(item.date) }}</view>
-                                <view class="flex flex-col gap-y-[28rpx] mt-[30rpx]">
+                                :key="configIndex"
+                                class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)] mb-[12rpx]">
+                                <view
+                                    class="flex items-center gap-[10rpx] px-[28rpx] py-[18rpx] border-[0] border-b border-solid border-[#F0F2F5] bg-[#F8FAFC]">
+                                    <view class="w-[8rpx] h-[8rpx] rounded-full bg-primary" />
+                                    <text class="text-[28rpx] font-bold text-primary">{{ formatDate(item.date) }}</text>
+                                </view>
+                                <view class="px-[28rpx] py-[20rpx] flex flex-col gap-[20rpx]">
                                     <view v-for="(time, timeIndex) in item.times" :key="timeIndex">
-                                        <view class="text-[#7C7E80]">第{{ timeIndex + 1 }}个内容任务发布时间</view>
-
+                                        <view class="flex items-center gap-[8rpx] mb-[10rpx]">
+                                            <view
+                                                class="w-[32rpx] h-[32rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center flex-shrink-0">
+                                                <text class="text-[18rpx] font-bold text-primary">{{
+                                                    timeIndex + 1
+                                                }}</text>
+                                            </view>
+                                            <text class="text-xs text-[#9CA3AF]"
+                                                >第 {{ timeIndex + 1 }} 个内容任务</text
+                                            >
+                                        </view>
                                         <template v-if="isImmediateFirstSlot(configIndex, timeIndex)">
                                             <view
-                                                class="mt-[12rpx] flex items-center justify-between h-[90rpx] border-[0] border-b-[1rpx] border-solid border-[#EDEDED]">
-                                                <text class="text-[#333] font-medium text-[28rpx]">今日发布时间</text>
+                                                class="flex items-center justify-between h-[80rpx] bg-[#F0FDF4] rounded-[16rpx] px-[20rpx] border border-solid border-[#BBF7D0]">
+                                                <text class="font-semibold text-[#16A34A]">今日发布时间</text>
                                                 <view
-                                                    class="px-[24rpx] py-[10rpx] rounded-full bg-[#EEF3FF] text-primary font-medium text-[26rpx]">
-                                                    立即执行
+                                                    class="px-[20rpx] py-[8rpx] rounded-full bg-[#DCFCE7] border border-solid border-[#BBF7D0]">
+                                                    <text class="text-xs font-bold text-[#16A34A]">立即执行</text>
                                                 </view>
                                             </view>
                                         </template>
-
                                         <template v-else>
-                                            <view class="mt-[12rpx] flex items-center gap-x-4">
+                                            <view class="flex items-center gap-[12rpx]">
                                                 <view
-                                                    class="border-[0] border-b-[1rpx] border-solid py-1 flex-1"
-                                                    :class="[
+                                                    class="flex-1 h-[80rpx] flex items-center justify-between px-[20rpx] rounded-[16rpx] border border-solid transition-all"
+                                                    :class="
                                                         timeErrors[timeIndex]?.start_time
-                                                            ? 'border-[#FF3C26]'
-                                                            : 'border-[#EDEDED]',
-                                                    ]">
+                                                            ? 'border-[#EF4444] bg-[#FEF2F2]'
+                                                            : 'border-[#E5E9F0] bg-[#F7F9FC]'
+                                                    ">
                                                     <picker
                                                         mode="time"
                                                         class="w-full"
                                                         :value="time.start_time"
                                                         @change="handleStartTimeChange($event, configIndex, timeIndex)">
-                                                        <view class="flex items-center justify-between h-[70rpx]">
+                                                        <view class="flex items-center justify-between">
                                                             <text
-                                                                :class="[
+                                                                class=""
+                                                                :class="
                                                                     timeErrors[timeIndex]?.start_time
-                                                                        ? 'text-[#FF3C26] font-medium'
+                                                                        ? 'text-[#EF4444] font-bold'
                                                                         : time.start_time
-                                                                        ? 'font-medium'
-                                                                        : 'text-[#00000033]',
-                                                                ]">
+                                                                        ? 'text-[#0D1117] font-bold'
+                                                                        : 'text-[#C0C4CC]'
+                                                                ">
                                                                 {{ time.start_time || "开始时间" }}
                                                             </text>
-                                                            <u-icon
-                                                                name="arrow-right"
-                                                                size="24"
-                                                                color="#00000033"></u-icon>
+                                                            <u-icon name="arrow-right" size="20" color="#C0C4CC" />
                                                         </view>
                                                     </picker>
                                                 </view>
-                                                <view class="text-[#7C7E80]">至</view>
+                                                <text class="text-xs text-[#9CA3AF] flex-shrink-0">至</text>
                                                 <view
-                                                    class="border-[0] border-b-[1rpx] border-solid py-1 flex-1"
-                                                    :class="[
+                                                    class="flex-1 h-[80rpx] flex items-center justify-between px-[20rpx] rounded-[16rpx] border border-solid transition-all"
+                                                    :class="
                                                         timeErrors[timeIndex]?.end_time
-                                                            ? 'border-[#FF3C26]'
-                                                            : 'border-[#EDEDED]',
-                                                    ]">
+                                                            ? 'border-[#EF4444] bg-[#FEF2F2]'
+                                                            : 'border-[#E5E9F0] bg-[#F7F9FC]'
+                                                    ">
                                                     <picker
                                                         mode="time"
                                                         class="w-full"
@@ -446,21 +544,19 @@
                                                         :disabled="!time.start_time"
                                                         @click="handleEndTimeClick(time.start_time)"
                                                         @change="handleEndTimeChange($event, configIndex, timeIndex)">
-                                                        <view class="flex items-center justify-between h-[70rpx]">
+                                                        <view class="flex items-center justify-between">
                                                             <text
-                                                                :class="[
+                                                                class=""
+                                                                :class="
                                                                     timeErrors[timeIndex]?.end_time
-                                                                        ? 'text-[#FF3C26] font-medium'
+                                                                        ? 'text-[#EF4444] font-bold'
                                                                         : time.end_time
-                                                                        ? 'font-medium'
-                                                                        : 'text-[#00000033]',
-                                                                ]">
+                                                                        ? 'text-[#0D1117] font-bold'
+                                                                        : 'text-[#C0C4CC]'
+                                                                ">
                                                                 {{ time.end_time || "结束时间" }}
                                                             </text>
-                                                            <u-icon
-                                                                name="arrow-right"
-                                                                size="24"
-                                                                color="#00000033"></u-icon>
+                                                            <u-icon name="arrow-right" size="20" color="#C0C4CC" />
                                                         </view>
                                                     </picker>
                                                 </view>
@@ -468,16 +564,25 @@
                                         </template>
                                     </view>
                                 </view>
-                                <view v-if="Object.keys(timeErrors).length > 0" class="mt-2 text-[#FF3C26]">
-                                    时间配置存在冲突
+                                <view
+                                    v-if="Object.keys(timeErrors).length > 0"
+                                    class="mx-[28rpx] mb-[20rpx] flex items-center gap-[8rpx] bg-[#FEF2F2] rounded-[12rpx] px-[16rpx] py-[12rpx] border border-solid border-[#FECACA]">
+                                    <u-icon name="info-circle" color="#EF4444" size="18" />
+                                    <text class="text-xs text-[#EF4444]">时间配置存在冲突</text>
                                 </view>
                             </view>
                         </view>
 
-                        <view v-if="taskErrorMsg" class="mt-5">
-                            <view>任务冲突</view>
-                            <view class="text-[#FF2442] mt-[20rpx] text-xs">
-                                {{ taskErrorMsg }}
+                        <view
+                            v-if="taskErrorMsg"
+                            class="bg-white rounded-[28rpx] overflow-hidden shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <view
+                                class="flex items-center gap-[10rpx] px-[28rpx] py-[18rpx] border-b border-solid border-[#F0F2F5]">
+                                <view class="w-[6rpx] h-[32rpx] bg-[#EF4444] rounded-full" />
+                                <text class="text-[28rpx] font-bold text-[#EF4444]">任务冲突</text>
+                            </view>
+                            <view class="px-[28rpx] py-[20rpx]">
+                                <text class="text-[#EF4444] leading-relaxed">{{ taskErrorMsg }}</text>
                             </view>
                         </view>
                     </view>
@@ -485,41 +590,63 @@
             </view>
         </view>
 
-        <view class="bg-white shadow-[0_0_0_1rpx_rgba(0,0,0,0.05)] flex-shrink-0 pb-5">
-            <view class="flex items-center justify-between px-4 h-[140rpx]">
-                <template v-if="currentStep != steps.length">
-                    <view
-                        v-if="currentStep === 1"
-                        class="w-[100rpx] h-[100rpx] flex flex-col items-center justify-center rounded-md text-white"
-                        :class="[formData.materialList.length > 0 ? 'bg-black' : 'bg-[#787878CC]']">
-                        <text class="font-medium text-[32rpx]">{{ formData.materialList.length }}</text>
-                        <text class="text-xs mt-1">已选</text>
-                    </view>
-                    <view v-else>
-                        <view
-                            class="px-[48rpx] py-[20rpx] rounded-md border border-solid border-[#F1F2F5] text-[#878787]"
-                            @click="navigateStep('prev')">
-                            上一步
-                        </view>
-                    </view>
-                    <view
-                        class="px-[48rpx] py-[20rpx] rounded-md text-white"
-                        :class="[canProceedNext ? 'bg-black' : 'bg-[#787878CC]']"
-                        @click="navigateStep('next')">
-                        下一步
-                    </view>
-                </template>
-                <template v-else>
-                    <view
-                        class="rounded-[16rpx] flex-1 h-[100rpx] bg-primary text-white font-medium flex items-center justify-center shadow-[0_12rpx_24rpx_0_rgba(0,0,0,0.12)]"
-                        @click="handleCreateTask">
-                        创建任务
-                    </view>
-                </template>
+        <view
+            class="flex-shrink-0 bg-white border-[0] border-t border-solid border-[#F0F2F5] px-6 pt-[20rpx] pb-[40rpx] flex items-center gap-[16rpx]">
+            <view
+                v-if="currentStep != 1"
+                class="h-[96rpx] px-[40rpx] rounded-[24rpx] flex items-center gap-[8rpx] border border-solid border-[#E5E9F0] bg-white"
+                @click="navigateStep('prev')">
+                <text class="text-[28rpx] font-semibold text-[#4B5563]">上一步</text>
             </view>
+            <template v-if="currentStep != STEPS.length">
+                <view
+                    v-if="currentStep === 1"
+                    class="w-[100rpx] h-[96rpx] rounded-[20rpx] flex flex-col items-center justify-center transition-all duration-300"
+                    :class="formData.materialList.length > 0 ? 'bg-[#EBF2FF]' : 'bg-[#F0F2F5]'">
+                    <text
+                        class="text-[32rpx] font-extrabold leading-none"
+                        :class="formData.materialList.length > 0 ? 'text-primary' : 'text-[#C0C4CC]'">
+                        {{ formData.materialList.length }}
+                    </text>
+                    <text
+                        class="text-[20rpx] mt-[4rpx]"
+                        :class="formData.materialList.length > 0 ? 'text-[#0065fb]/70' : 'text-[#C0C4CC]'"
+                        >已选</text
+                    >
+                </view>
+                <view
+                    class="flex-1 h-[96rpx] rounded-[24rpx] flex items-center justify-center gap-[8rpx] transition-all duration-300"
+                    :class="canProceedNext ? 'shadow-[0_8rpx_24rpx_rgba(28,111,235,0.30)]' : ''"
+                    :style="
+                        canProceedNext
+                            ? 'background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)'
+                            : 'background: #C0C4CC'
+                    "
+                    @click="navigateStep('next')">
+                    <text class="text-[30rpx] font-bold text-white">下一步</text>
+                </view>
+            </template>
+            <template v-else>
+                <view
+                    class="flex-1 h-[96rpx] rounded-[24rpx] flex items-center justify-center gap-[10rpx] relative overflow-hidden shadow-[0_10rpx_30rpx_rgba(28,111,235,0.35)]"
+                    style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                    @click="handleCreateTask">
+                    <text class="text-[32rpx] font-extrabold text-white tracking-wide">创建任务</text>
+                </view>
+            </template>
         </view>
     </view>
 
+    <upload-category-panel
+        v-model="showUploadCategoryPanel"
+        :show-categories="[UploadAlbumTypeEnum.Video, UploadCategoryEnum.Library, UploadCategoryEnum.Creation]"
+        @select="handleSelectCategory" />
+    <choose-material
+        v-model="showVideoMaterial"
+        type="video"
+        :disable-group-select="true"
+        :limit="replaceVideoIndex == -1 ? VIDEO_CONFIG.limit - formData.materialList.length : 1"
+        @select="handleSelectVideoMaterial" />
     <confirm-dialog
         v-if="confirmDialogVisible"
         v-model="confirmDialogVisible"
@@ -550,13 +677,7 @@
         v-model="showVideoPreview"
         :video-url="playItem.url"
         :poster="playItem.pic"
-        @update:show="showVideoPreview = false"></video-preview>
-    <choose-material
-        v-model="showVideoMaterial"
-        type="video"
-        :multiple="replaceVideoIndex == -1"
-        :limit="replaceVideoIndex == -1 ? VIDEO_CONFIG.limit - formData.materialList.length : 1"
-        @select="handleSelectVideoMaterial" />
+        @update:show="showVideoPreview = false" />
     <choose-history
         v-model="showHistory"
         type="video"
@@ -585,75 +706,41 @@
 </template>
 
 <script setup lang="ts">
-import WechatOA from "@/utils/wechat";
 import { getVideoCreationRecord } from "@/api/app";
-import { createMatrixTask, publishDeviceTask, checkTaskPublishTime } from "@/api/device";
+import { getHotWriteDetail } from "@/api/hot_write";
+import { getPuzzleTaskResultList } from "@/api/drawing";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
-import { getPuzzleTaskResultList } from "@/api/drawing";
-import useUpload from "@/hooks/useUpload";
+import { isJson } from "@/utils/util";
+import { UploadCategoryEnum, UploadAlbumTypeEnum } from "@/enums/appEnums";
+
+import Steps from "@/ai_modules/device/components/steps/steps.vue";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import NumberPop from "@/ai_modules/device/components/number-pop/number-pop.vue";
-import ChooseHistory from "@/ai_modules/device/components/choose-history/choose-history.vue";
 import KeywordsEdit from "@/ai_modules/device/components/keywords-edit/keywords-edit.vue";
 import TaskConflictDialog from "@/ai_modules/device/components/task-conflict-dialog/task-conflict-dialog.vue";
-const { on } = useEventBusManager();
+import CopywriterEmpty from "@/ai_modules/device/components/copywriter-empty/copywriter-empty.vue";
 
-// --- 类型定义 ---
-enum TaskType {
-    VIDEO = 1,
-    IMAGE = 2,
-}
+// ─── 引入各步骤 Hooks ──────────────────────────────────────────────────────────
+import { useStep } from "./hooks/useStep";
+import { useMaterialStep } from "./hooks/useMaterialStep";
+import { useCopywriterStep } from "./hooks/useCopywriter";
+import { useCreateTask } from "./hooks/useCreateTask";
 
-interface TimeConfig {
-    date: string;
-    times: { start_time: string; end_time: string }[];
-}
+// ─── 引入类型 & 常量 ───────────────────────────────────────────────────────────
+import {
+    TaskType,
+    VIDEO_CONFIG,
+    STEPS,
+    PUBLISH_FREQUENCY_OPTIONS,
+    TASK_FREQUENCY_OPTIONS,
+    TASK_EXEC_TYPE_OPTIONS,
+    TIME_INTERVAL,
+} from "./hooks/types";
+import type { FormData } from "./hooks/types";
 
-interface MaterialItem {
-    url: string[]; // 视频时: [pic, url], 图片时: [url1, url2...]
-}
-
-interface CopywriterItem {
-    title: string;
-    content: string;
-    topic: string[];
-}
-
-interface FormData {
-    name: string;
-    introduction: string;
-    copywriterList: CopywriterItem[];
-    materialList: MaterialItem[];
-    time_config: TimeConfig[];
-    accounts: any[];
-    publish_frep: number;
-    custom_date: string[];
-    task_frep: number;
-    location: string;
-    task_exec_type: number;
-}
-
-// --- 常量配置 ---
-const steps = [
-    { step: 1, title: "选择素材" },
-    { step: 2, title: "填写文案" },
-    { step: 3, title: "设定时间" },
-];
-
-const VIDEO_CONFIG = {
-    limit: 99,
-    size: 200, // MB
-    format: ["mp4", "mov"],
-};
-
-const TIME_INTERVAL = 30; // 分钟
-const publishFrequencyOptions = [1, 2, 3, 5, 10];
-const taskFrequencyOptions = [1, 3, 5, 10, 30];
-
-// --- 状态管理 ---
+// ─── 共享表单数据（页面层统一维护，传入各 Hook） ──────────────────────────────
 const taskType = ref<TaskType>(TaskType.VIDEO);
-const currentStep = ref(1);
 
 const formData = reactive<FormData>({
     name: "",
@@ -669,744 +756,168 @@ const formData = reactive<FormData>({
     task_exec_type: 1,
 });
 
-const taskExecTypeOptions = [
-    { icon: "arrow-upward", text: "即时执行", value: 1 },
-    { icon: "clock", text: "定时执行", value: 0 },
-];
-
-// UI 控制状态
-const deleteImgIndex = ref<number>(-1);
-const editImgIndex = ref<number>(-1);
-const showVideoMaterial = ref<boolean>(false);
-const showHistory = ref<boolean>(false);
-const confirmDialogVisible = ref<boolean>(false);
-const showVideoUploadTip = ref<boolean>(false);
-const isVideoInitialOpen = ref<boolean>(true);
-const replaceVideoIndex = ref<number>(-1);
-const showVideoPreview = ref(false);
-const editCopywriterIndex = ref<number>(-1);
-const showNumberPop = ref<boolean>(false);
-const showCreateTaskSuccessDialog = ref<boolean>(false);
-const isExpandDate = ref(false);
-const showKeywordsEdit = ref(false);
-const keywordsEditRef = ref<InstanceType<typeof KeywordsEdit>>();
-const playItem = reactive({ url: "", pic: "" });
-
-// 频率选择状态
-const customPublishFrep = ref<number | null>(null);
-const currentFrequencyIdx = ref(0);
-const currentDayFrequencyIdx = ref(0);
-
-// 校验状态
-const timeErrors = ref<Record<number, { start_time?: boolean; end_time?: boolean }>>({});
-const taskErrorMsg = ref<string>("");
-const showTaskMsgPop = ref(false);
-const taskMsgPopContent = ref<Record<string, any>>({});
-
-const pendingTaskIds = ref<string[]>([]);
-
-// --- 计算属性 ---
 const navTitle = computed(() => (taskType.value == TaskType.IMAGE ? "发布图文" : "发布视频"));
 
 const getVideoTipsContent = computed(
-    () => `
-    <div>· 视频素材支持：${VIDEO_CONFIG.format.join("、")}格式，${VIDEO_CONFIG.size}M以内</div>
-    <div class="mt-2">· 最多可传${VIDEO_CONFIG.limit}个视频</div>
-    <div class="mt-2">· 不符合条件的视频会被自动删除</div>
-`
+    () =>
+        `<div>· 视频素材支持：${VIDEO_CONFIG.format.join("、")}格式，${VIDEO_CONFIG.size}M以内</div>
+     <div class="mt-2">· 最多可传${VIDEO_CONFIG.limit}个视频</div>
+     <div class="mt-2">· 不符合条件的视频会被自动删除</div>`,
 );
 
-// 判断是否允许进入下一步
-const canProceedNext = computed(() => {
-    switch (currentStep.value) {
-        case 1:
-            return formData.materialList.length > 0;
-        case 2:
-            return formData.copywriterList.length > 0;
-        case 3:
-            return true;
-        default:
-            return false;
-    }
-});
+// ─── Hook：步骤导航 ────────────────────────────────────────────────────────────
+const { currentStep, canProceedNext, navigateStep, handleStepJump } = useStep(formData);
+
+// ─── Hook：Step1 素材管理 ──────────────────────────────────────────────────────
+const {
+    showUploadCategoryPanel,
+    showVideoMaterial,
+    showHistory,
+    showUploadProgress,
+    showVideoPreview,
+    showVideoUploadTip,
+    isVideoInitialOpen,
+    confirmDialogVisible,
+    replaceVideoIndex,
+    uploadMaterialList,
+    playItem,
+    handleSelectCategory,
+    handleSelectVideoMaterial,
+    handleSelectHistory,
+    handleEditMaterial,
+    handleDeleteMaterial,
+    handleDeleteMaterialConfirm,
+    handlePlayVideo,
+    handleDeleteVideo,
+    handleReplaceVideo,
+    uploadAndProcessFiles,
+    applyImgGroupResult,
+    removeImgGroupIfEditing,
+} = useMaterialStep(formData, taskType);
+
+// ─── Hook：Step2 文案管理 ──────────────────────────────────────────────────────
+const { editCopywriterIndex, handleEditCopywriter, handleDeleteCopywriter, onCopywriterConfirm } =
+    useCopywriterStep(formData);
+
+// ─── Hook：Step3 时间配置 + 创建任务 ──────────────────────────────────────────
+const {
+    currentFrequencyIdx,
+    currentDayFrequencyIdx,
+    customPublishFrep,
+    isExpandDate,
+    showNumberPop,
+    showKeywordsEdit,
+    showCreateTaskSuccessDialog,
+    showTaskMsgPop,
+    taskMsgPopContent,
+    taskErrorMsg,
+    timeErrors,
+    keywordsEditRef,
+    formatDate,
+    isImmediateFirstSlot,
+    changeTimeConfig,
+    handlePublishFrequency,
+    handleDayFrequency,
+    handleCustomDate,
+    handleNumberPopConfirm,
+    handleKeywordsEdit,
+    handleKeywordsEditConfirm,
+    handleStartTimeChange,
+    handleEndTimeChange,
+    handleEndTimeClick,
+    handleCreateTask,
+    handleTaskMsgPopConfirm,
+    handleCreateTaskSuccess,
+} = useCreateTask(formData, taskType);
+
+// ─── EventBus：统一分发所有子页面回调 ─────────────────────────────────────────
+const { on } = useEventBusManager();
 
-// --- 方法逻辑 ---
-
-// 步骤跳转逻辑
-const handleStepJump = (targetStep: number) => {
-    if (targetStep === currentStep.value) return;
-
-    // 如果是回退，直接跳转
-    if (targetStep < currentStep.value) {
-        currentStep.value = targetStep;
-    } else {
-        // 如果是前进，必须确保中间每一步都符合条件
-        for (let i = 1; i < targetStep; i++) {
-            if (!checkStepValidity(i)) {
-                return; // checkStepValidity 内部处理 Toast
-            }
-        }
-        currentStep.value = targetStep;
-    }
-};
-
-const navigateStep = (direction: "next" | "prev") => {
-    if (direction === "prev") {
-        currentStep.value--;
-        return;
-    }
-
-    if (direction === "next") {
-        if (canProceedNext.value) {
-            currentStep.value++;
-        } else {
-            const messages: Record<number, string> = {
-                1: "请至少选择一个图组",
-                2: "请至少添加一条文案",
-            };
-            uni.$u.toast(messages[currentStep.value] || "请完成当前步骤");
-        }
-    }
-};
-
-// 辅助校验函数
-const checkStepValidity = (stepNumber: number): boolean => {
-    let isValid = false;
-    let msg = "";
-    if (stepNumber === 1) {
-        isValid = formData.materialList.length > 0;
-        msg = "请至少选择一个图组";
-    } else if (stepNumber === 2) {
-        isValid = formData.copywriterList.length > 0;
-        msg = "请至少添加一条文案";
-    }
-
-    if (!isValid) uni.$u.toast(msg);
-    return isValid;
-};
-
-// 上传 hook
-const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
-    count: VIDEO_CONFIG.limit,
-    imageSize: VIDEO_CONFIG.size,
-    fileAccept: VIDEO_CONFIG.format,
-    videoAccept: VIDEO_CONFIG.format,
-    fileSize: VIDEO_CONFIG.size,
-    onSuccess: (res: any[]) => {
-        const data = res.map((item: any) => ({ url: [item.pic, item.url] }));
-        if (replaceVideoIndex.value !== -1) {
-            formData.materialList[replaceVideoIndex.value] = data[0];
-        } else {
-            formData.materialList.push(...data);
-        }
-        replaceVideoIndex.value = -1;
-    },
-});
-
-// 视频/素材相关逻辑
-const triggerVideoUploadSelection = () => {
-    showVideoUploadTip.value = false;
-    uni.showActionSheet({
-        itemList: ['从"素材库"中选择', '从"手机相册"中选择', '从"创作历史"中选择'],
-        success: (res) => {
-            if (res.tapIndex === 0) {
-                showVideoMaterial.value = true;
-            } else if (res.tapIndex === 1) {
-                if (isVideoInitialOpen.value) {
-                    isVideoInitialOpen.value = false;
-                    showVideoUploadTip.value = true;
-                } else {
-                    uploadAndProcessFiles("video");
-                }
-            } else if (res.tapIndex === 2) {
-                showHistory.value = true;
-            }
-        },
-    });
-};
-
-const handleSelectVideoMaterial = async (res: any[]) => {
-    const validVideos = res
-        .filter((item: any) => {
-            const suffix = item.url.split(".").pop()?.toLowerCase();
-            const isValid =
-                VIDEO_CONFIG.format.includes(suffix || "") && parseInt(item.size) <= VIDEO_CONFIG.size * 1024 * 1024;
-            if (!isValid) {
-                uni.showToast({ title: "部分视频不符合格式或大小限制，已过滤", icon: "none" });
-            }
-            return isValid;
-        })
-        .map((item: any) => ({ url: [item.pic, item.url] }));
-
-    if (replaceVideoIndex.value !== -1) {
-        if (validVideos.length) formData.materialList[replaceVideoIndex.value] = validVideos[0];
-    } else {
-        formData.materialList.push(...validVideos);
-    }
-    replaceVideoIndex.value = -1;
-};
-
-const handleEditMaterial = (index?: number) => {
-    editImgIndex.value = index ?? -1;
-    uni.$u.route({
-        url: "/ai_modules/device/pages/task_img_group/task_img_group",
-        params: {
-            imgs: editImgIndex.value !== -1 ? JSON.stringify(formData.materialList[editImgIndex.value].url) : "",
-        },
-    });
-};
-
-const handleSelectHistory = (res: any[]) => {
-    if (replaceVideoIndex.value !== -1) {
-        formData.materialList[replaceVideoIndex.value] = {
-            url: [res[0].pic, res[0].clip_result_url || res[0].video_result_url],
-        };
-    } else {
-        formData.materialList.push(
-            ...res.map((item: any) => ({ url: [item.pic, item.clip_result_url || item.video_result_url] }))
-        );
-    }
-    replaceVideoIndex.value = -1;
-};
-
-const handleDeleteMaterial = (index: number) => {
-    deleteImgIndex.value = index;
-    confirmDialogVisible.value = true;
-};
-
-const handleDeleteMaterialConfirm = () => {
-    formData.materialList.splice(deleteImgIndex.value, 1);
-    confirmDialogVisible.value = false;
-    deleteImgIndex.value = -1;
-};
-
-const handlePlayVideo = (item: string[]) => {
-    playItem.pic = item[0];
-    playItem.url = item[1];
-    showVideoPreview.value = true;
-};
-
-const handleDeleteVideo = (index: number) => {
-    formData.materialList.splice(index, 1);
-};
-
-const handleReplaceVideo = (index: number) => {
-    replaceVideoIndex.value = index;
-    triggerVideoUploadSelection();
-};
-
-// 文案相关逻辑
-const handleEditCopywriter = (index: number) => {
-    editCopywriterIndex.value = index;
-    uni.$u.route({
-        url: "/ai_modules/device/pages/task_copywriter/task_copywriter",
-        params: { copywriter: JSON.stringify(formData.copywriterList[index]) },
-    });
-};
-
-const handleDeleteCopywriter = (index: number) => {
-    formData.copywriterList.splice(index, 1);
-};
-
-const handleKeywordsEdit = () => {
-    showKeywordsEdit.value = true;
-    keywordsEditRef.value?.setFormData(formData.location);
-};
-
-const handleKeywordsEditConfirm = (value: string) => {
-    formData.location = value;
-    showKeywordsEdit.value = false;
-};
-
-// 时间配置相关逻辑
-const formatDate = (dateStr: string) => {
-    if (!dateStr) return "";
-    return uni.$u.timeFormat(new Date(dateStr), "mm月dd日");
-};
-
-const handleNumberPopConfirm = (value: number) => {
-    const maxFrequency = Math.floor((24 * 60) / TIME_INTERVAL);
-    if (value < 1) {
-        uni.$u.toast("请输入有效的发布数量");
-        return;
-    }
-    if (value > maxFrequency) {
-        uni.$u.toast(`每日发布频率最高为${maxFrequency}次`);
-        return;
-    }
-    currentFrequencyIdx.value = 5;
-    formData.publish_frep = value;
-    customPublishFrep.value = value;
-    showNumberPop.value = false;
-    changeTimeConfig();
-};
-
-const handlePublishFrequency = (freq: number) => {
-    currentFrequencyIdx.value = 0;
-    formData.publish_frep = freq;
-    changeTimeConfig();
-};
-
-const handleDayFrequency = (days: number, index: number) => {
-    if (currentDayFrequencyIdx.value === index) return;
-    formData.task_frep = days;
-    formData.custom_date = [];
-    currentDayFrequencyIdx.value = index;
-    changeTimeConfig();
-};
-
-const handleCustomDate = () => {
-    uni.$u.route({
-        url: "/ai_modules/device/pages/custom_date/custom_date",
-        params: { date: JSON.stringify(formData.custom_date) },
-    });
-};
-
-// 核心：重新生成时间配置
-const changeTimeConfig = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // 归一化到今天0点
-
-    const generateTimesForDay = (baseTime: Date) => {
-        return Array.from({ length: formData.publish_frep }, (_, i) => {
-            const startMs = baseTime.getTime() + i * TIME_INTERVAL * 60 * 1000;
-            const endMs = startMs + TIME_INTERVAL * 60 * 1000;
-
-            const startDate = new Date(startMs);
-            let endDate = new Date(endMs);
-
-            // 跨天处理：结束时间超过当天，截断为 23:59
-            if (endDate.getDate() !== startDate.getDate()) {
-                endDate = new Date(startDate);
-                endDate.setHours(23, 59, 59, 999);
-            }
-
-            return {
-                start_time: uni.$u.timeFormat(startDate, "hh:MM"),
-                end_time: uni.$u.timeFormat(endDate, "hh:MM"),
-            };
-        });
-    };
-
-    const now = new Date();
-    const todayStr = uni.$u.timeFormat(today, "yyyy-mm-dd"); // 确保格式一致
-
-    if (currentDayFrequencyIdx.value === 5 && formData.custom_date.length > 0) {
-        formData.time_config = formData.custom_date.map((dateStr) => {
-            const isToday = dateStr === todayStr;
-            const baseTime = isToday ? new Date(now) : new Date(dateStr.replace(/-/g, "/"));
-            baseTime.setSeconds(0, 0);
-
-            return {
-                date: uni.$u.timeFormat(new Date(dateStr.replace(/-/g, "/")), "yyyy-mm-dd"),
-                times: generateTimesForDay(baseTime),
-            };
-        });
-    } else {
-        formData.time_config = Array.from({ length: formData.task_frep }, (_, i) => {
-            const dateObj = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
-            const dateStr = uni.$u.timeFormat(dateObj, "yyyy-mm-dd");
-
-            // 第一天（今天）使用当前时间，其他天使用该天的开始时间
-            const baseTime = i === 0 ? new Date(now) : dateObj;
-            baseTime.setSeconds(0, 0);
-
-            return {
-                date: dateStr,
-                times: generateTimesForDay(baseTime),
-            };
-        });
-    }
-
-    // 重置错误状态
-    timeErrors.value = {};
-};
-
-const handleEndTimeClick = (startTime?: string) => {
-    if (!startTime) uni.$u.toast("请先选择开始时间");
-};
-
-const handleStartTimeChange = (e: any, configIndex: number, timeIndex: number) => {
-    if (isImmediateFirstSlot(configIndex, timeIndex)) return;
-
-    const value = e.detail.value;
-    const timeItem = formData.time_config[configIndex].times[timeIndex];
-    timeItem.start_time = value;
-
-    const [h, m] = value.split(":").map(Number);
-    const date = new Date();
-    date.setHours(h, m + TIME_INTERVAL, 0, 0);
-    timeItem.end_time = uni.$u.timeFormat(date, "hh:MM");
-
-    validateAndSetErrors(configIndex);
-};
-
-const handleEndTimeChange = (e: any, configIndex: number, timeIndex: number) => {
-    // 如果是立即执行的时间段，不允许修改
-    if (isImmediateFirstSlot(configIndex, timeIndex)) return;
-
-    const value = e.detail.value;
-    const timeItem = formData.time_config[configIndex].times[timeIndex];
-
-    if (!timeItem.start_time) return;
-
-    const d = new Date().toDateString();
-    const start = new Date(`${d} ${timeItem.start_time}`);
-    const end = new Date(`${d} ${value}`);
-
-    if (end <= start) {
-        uni.$u.toast("结束时间必须晚于开始时间");
-        return;
-    }
-
-    if (end.getTime() - start.getTime() < TIME_INTERVAL * 60 * 1000) {
-        uni.$u.toast(`间隔时间必须大于${TIME_INTERVAL}分钟`);
-        return;
-    }
-
-    timeItem.end_time = value;
-    validateAndSetErrors(configIndex);
-};
-
-// 校验特定某天的时间安排
-const validateAllTimeConfigs = () => {
-    let hasAnyError = false;
-    const allErrors: Record<number, { start_time?: boolean; end_time?: boolean }> = {};
-
-    for (let configIndex = 0; configIndex < formData.time_config.length; configIndex++) {
-        const times = formData.time_config[configIndex].times;
-        const toMin = (t: string) => {
-            const [h, m] = t.split(":").map(Number);
-            return h * 60 + m;
-        };
-
-        // 创建一个包含索引信息的时间数组，过滤掉立即执行的时间段
-        const timeWithIndex = times.map((time, timeIndex) => ({
-            time,
-            originalIndex: timeIndex,
-            isImmediate: isImmediateFirstSlot(configIndex, timeIndex),
-        }));
-
-        // 过滤掉立即执行的时间段
-        const nonImmediateTimes = timeWithIndex.filter((item) => !item.isImmediate);
-
-        // 如果没有需要验证的时间段，跳过
-        if (nonImmediateTimes.length === 0) continue;
-
-        // 检查每一项的完整性与顺序
-        for (let i = 0; i < nonImmediateTimes.length; i++) {
-            const currentItem = nonImmediateTimes[i];
-            const cur = currentItem.time;
-            const originalIndex = currentItem.originalIndex;
-
-            if (!cur.start_time || !cur.end_time) continue;
-
-            const s = toMin(cur.start_time);
-            const e = toMin(cur.end_time);
-
-            // 自身开始结束检查
-            if (s >= e) {
-                allErrors[originalIndex] = { start_time: true, end_time: true };
-                hasAnyError = true;
-            }
-
-            // 与上一项重叠检查
-            if (i > 0) {
-                const prevItem = nonImmediateTimes[i - 1];
-                const prev = prevItem.time;
-                const prevOriginalIndex = prevItem.originalIndex;
-
-                if (prev.end_time) {
-                    const prevE = toMin(prev.end_time);
-                    if (s < prevE) {
-                        allErrors[originalIndex] = { ...allErrors[originalIndex], start_time: true };
-                        allErrors[prevOriginalIndex] = { ...allErrors[prevOriginalIndex], end_time: true };
-                        hasAnyError = true;
-                    }
-                }
-            }
-        }
-    }
-
-    return { hasError: hasAnyError, errors: allErrors };
-};
-
-// 修改原来的 validateAndSetErrors 函数，保持单个配置验证的功能
-const validateAndSetErrors = (configIndex: number) => {
-    // 使用全局验证函数，但只更新当前配置的错误状态
-    const { hasError, errors } = validateAllTimeConfigs();
-    timeErrors.value = errors;
-
-    // 检查当前配置是否有错误
-    const currentConfigHasError = Object.keys(errors).some((key) => {
-        const timeIndex = Number(key);
-        return formData.time_config[configIndex].times[timeIndex] !== undefined;
-    });
-
-    return !currentConfigHasError;
-};
-// 判断是否为即时执行模式下当天第一条（用于模板中）
-const isImmediateFirstSlot = (configIndex: number, timeIndex: number): boolean => {
-    if (formData.task_exec_type !== 1) {
-        return false;
-    }
-
-    if (timeIndex !== 0) {
-        return false;
-    }
-
-    const currentDate = formData.time_config[configIndex]?.date;
-    if (!currentDate) {
-        return false;
-    }
-
-    const today = new Date();
-    const todayStr = uni.$u.timeFormat(today, "yyyy-mm-dd");
-
-    return currentDate === todayStr;
-};
-
-const getTimeConfig = () => {
-    const todayStr = uni.$u.timeFormat(new Date(), "yyyy-mm-dd");
-
-    return formData.time_config.map((item: any) => ({
-        date: item.date,
-        times: item.times.map((time: any, timeIndex: number) => {
-            const isToday = item.date === todayStr;
-            const isImmediate = formData.task_exec_type === 1 && isToday && timeIndex === 0;
-            return isImmediate ? 1 : `${time.start_time}-${time.end_time}`;
-        }),
-    }));
-};
-
-// 创建任务提交
-const executeCreateTask = async (task_ids: string[]) => {
-    uni.showLoading({ title: "创建中...", mask: true });
-    try {
-        const { id } = await createMatrixTask({
-            name: formData.name,
-            media_type: taskType.value,
-            media_url: formData.materialList,
-            copywriting: formData.copywriterList,
-        });
-
-        await publishDeviceTask({
-            name: formData.name,
-            matrix_media_setting_id: id,
-            time_config: getTimeConfig(),
-            accounts: formData.accounts,
-            publish_frep: formData.publish_frep,
-            media_type: taskType.value,
-            task_type: 3,
-            scene: 2,
-            data_type: 0,
-            poi: formData.location,
-            task_exec_type: formData.task_exec_type,
-            task_ids,
-        });
-
-        uni.hideLoading();
-        showCreateTaskSuccessDialog.value = true;
-        WechatOA.notify();
-    } catch (error: any) {
-        uni.hideLoading();
-        if (error.indexOf("24小时自动执行任务") > -1) {
-            uni.showModal({
-                title: "提示",
-                content: "您已开启24小时自动执行任务，无法创建手动任务，如您需手动创建任务，需先关闭24小时托管。",
-                success: (res) => {
-                    if (res.confirm) {
-                        uni.$u.route({ url: "/ai_modules/device/pages/index/index" });
-                    }
-                },
-            });
-        } else {
-            taskErrorMsg.value = error;
-            uni.showToast({ title: error, icon: "none", duration: 3000 });
-        }
-    }
-};
-
-const handleCreateTask = async () => {
-    const { hasError, errors } = validateAllTimeConfigs();
-
-    if (hasError) {
-        timeErrors.value = errors;
-        return uni.$u.toast("时间配置存在冲突");
-    }
-    if (!formData.name) return uni.$u.toast("请输入任务名称");
-    if (formData.accounts.length === 0) {
-        uni.$u.toast("请选择发布账号");
-        uni.$u.route({ url: "/ai_modules/device/pages/account_choose/account_choose" });
-        return;
-    }
-
-    if (formData.materialList.length === 1) {
-        const typeCountMap = formData.accounts.reduce<Record<string, number>>((acc, account) => {
-            acc[account.type] = (acc[account.type] || 0) + 1;
-            return acc;
-        }, {});
-        const duplicateTypes = Object.entries(typeCountMap)
-            .filter(([, count]) => count > 1)
-            .map(([type]) => type);
-        if (duplicateTypes.length > 0) {
-            const confirmed = await new Promise<boolean>((resolve) => {
-                uni.showModal({
-                    title: "提示",
-                    content: `当前素材只有1条，但您选择了多个相同平台的账号，将只选择一个账号发布内容，是否继续？`,
-                    confirmText: "继续创建",
-                    cancelText: "去修改",
-                    success: (res) => resolve(res.confirm),
-                });
-            });
-            if (!confirmed) return;
-        }
-    }
-
-    uni.showLoading({ title: "检测中...", mask: true });
-
-    try {
-        if (formData.task_exec_type === 1) {
-            const {
-                messages,
-                task_ids,
-                errors: rawErrors,
-            } = await checkTaskPublishTime({
-                accounts: formData.accounts,
-                time_config: getTimeConfig(),
-                minutes: 30,
-            });
-
-            uni.hideLoading();
-
-            if (messages && messages.length > 0) {
-                pendingTaskIds.value = task_ids;
-                taskMsgPopContent.value = { messages, errors: rawErrors };
-                showTaskMsgPop.value = true;
-                return;
-            }
-            await executeCreateTask(task_ids);
-        } else {
-            await executeCreateTask([]);
-        }
-
-        // 无冲突，直接创建
-    } catch (error: any) {
-        uni.hideLoading();
-        uni.showToast({ title: error, icon: "none", duration: 3000 });
-    }
-};
-
-const handleTaskMsgPopConfirm = async () => {
-    showTaskMsgPop.value = false;
-    await executeCreateTask(pendingTaskIds.value);
-    pendingTaskIds.value = []; // 清空
-};
-
-const handleCreateTaskSuccess = () => {
-    uni.$u.route({ url: "/ai_modules/device/pages/index/index", type: "reLaunch" });
-    showCreateTaskSuccessDialog.value = false;
-};
-
-function selectRandomElements<T>(sourceArray: T[], count: number): T[] {
-    const result: T[] = [];
-    const arrCopy = [...sourceArray];
-    for (let i = 0; i < count; i++) {
-        if (arrCopy.length === 0) break;
-        const randomIndex = Math.floor(Math.random() * arrCopy.length);
-        result.push(arrCopy[randomIndex]);
-    }
-    return result;
-}
-
-function createRandomImageGroups(allImages: string[], numberOfGroups: number) {
-    if (numberOfGroups <= 0) return [];
-
-    return Array.from({ length: numberOfGroups }, () => {
-        const countToAllocate = Math.floor(Math.random() * Math.min(allImages.length, 9)) + 1;
-        return { url: selectRandomElements(allImages, countToAllocate) };
-    });
-}
-
-// --- 生命周期 ---
 onLoad(async (options: any) => {
     // 初始化类型与默认名称
-    if (options.type) {
+    if (options?.type) {
         taskType.value = Number(options.type) as TaskType;
-        const prefix = taskType.value == TaskType.IMAGE ? "图文" : "视频";
-        formData.name = `${prefix}矩阵任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`;
+        formData.name = `${taskType.value == TaskType.IMAGE ? "图文" : "视频"}矩阵任务${uni.$u.timeFormat(
+            new Date(),
+            "yyyymmddhhMM",
+        )}`;
     }
 
-    // 处理来源数据: 视频创作
-    if (options.source === "creation_video") {
+    // 来源：视频创作
+    if (options?.source === "creation_video") {
         const videoIds = JSON.parse(options.ids || "[]");
         const { lists } = await getVideoCreationRecord({ page_size: 99999 });
-        if (lists?.length) {
-            lists
-                .filter((item: any) => videoIds.includes(item.task_id))
-                .forEach((item: any) => {
-                    formData.materialList.push({
-                        url: [item.pic, item.clip_result_url || item.video_result_url],
-                    });
+        lists
+            ?.filter((item: any) => videoIds.includes(item.task_id))
+            .forEach((item: any) => {
+                formData.materialList.push({
+                    url: [item.pic, item.clip_result_url || item.video_result_url],
                 });
-        }
+            });
     }
-    // 处理来源数据: 拼图
-    else if (options.source === "puzzle") {
+    // 来源：拼图
+    else if (options?.source === "puzzle") {
         const { id, count } = options;
         const { lists } = await getPuzzleTaskResultList({ puzzle_setting_id: id, page_size: 999 });
         if (lists?.length) {
             const allImages = lists.flatMap((curr: any) => curr.puzzle_url);
             formData.materialList = createRandomImageGroups(allImages, Number(count));
         }
-    } else if (options.source === "hot_write") {
+    }
+    // 来源：爆款复刻（视频 / 图文按 media_type 分流）
+    else if (options?.source === "hot_write") {
         const data = JSON.parse(options.data);
-        formData.materialList.push({
-            url: [data.pic, data.url],
-        });
-
+        const detail = await getHotWriteDetail({ id: data.id });
+        const isImageText = Number(detail?.media_type) === TaskType.IMAGE;
+        // 以详情 media_type 为准，避免图文误进「发布视频」
+        taskType.value = isImageText ? TaskType.IMAGE : TaskType.VIDEO;
+        formData.name = `${isImageText ? "图文" : "视频"}矩阵任务${uni.$u.timeFormat(
+            new Date(),
+            "yyyymmddhhMM",
+        )}`;
+        if (isImageText) {
+            const images = (
+                Array.isArray(detail?.rewritten_images) && detail.rewritten_images.length
+                    ? detail.rewritten_images
+                    : Array.isArray(detail?.original_images)
+                      ? detail.original_images
+                      : []
+            ).filter(Boolean);
+            if (images.length) {
+                formData.materialList.push({ url: images });
+            }
+        } else {
+            formData.materialList.push({ url: [detail.thumbnail, detail.video_url] });
+        }
         formData.copywriterList.push({
-            title: data.title,
-            content: data.content,
-            topic: data.topic,
+            is_title_show: 1,
+            title: detail.title,
+            content: detail.publish_text || detail.rewritten_text || "",
+            topic: isJson(detail.publish_topic) ? JSON.parse(detail.publish_topic) : [],
         });
     }
 
-    // 事件监听
+    // EventBus 监听
     on("confirm", (res: any) => {
         const { type, data } = res;
+
         if (!data || data.length === 0) {
-            // 如果是编辑模式下清空了数据，则删除该项
-            if (type === ListenerTypeEnum.CHOOSE_IMG && editImgIndex.value !== -1) {
-                formData.materialList.splice(editImgIndex.value, 1);
-                editImgIndex.value = -1;
-            }
+            if (type === ListenerTypeEnum.CHOOSE_IMG) removeImgGroupIfEditing();
             if (type === ListenerTypeEnum.CHOOSE_DATE) {
                 currentDayFrequencyIdx.value = 0;
                 formData.custom_date = [];
                 changeTimeConfig();
-                return;
             }
             return;
         }
 
         switch (type) {
             case ListenerTypeEnum.CHOOSE_IMG:
-                if (editImgIndex.value !== -1) {
-                    formData.materialList[editImgIndex.value].url = data;
-                    editImgIndex.value = -1;
-                } else {
-                    formData.materialList.push({ url: data });
-                }
+                applyImgGroupResult(data);
                 break;
             case ListenerTypeEnum.TASK_COPYWRITER:
             case ListenerTypeEnum.TASK_AI_COPYWRITER:
-                if (editCopywriterIndex.value !== -1) {
-                    formData.copywriterList[editCopywriterIndex.value] = data[0];
-                    editCopywriterIndex.value = -1;
-                } else {
-                    formData.copywriterList.push(...data);
-                }
+                onCopywriterConfirm(data);
                 break;
             case ListenerTypeEnum.CHOOSE_ACCOUNT:
                 formData.accounts = data.map((item: any) => ({
@@ -1418,7 +929,6 @@ onLoad(async (options: any) => {
             case ListenerTypeEnum.CHOOSE_DATE:
                 formData.custom_date = data;
                 currentDayFrequencyIdx.value = 5;
-                // 日期改变，重新计算时间表
                 changeTimeConfig();
                 break;
         }
@@ -1427,36 +937,29 @@ onLoad(async (options: any) => {
     // 初始化时间配置
     changeTimeConfig();
 });
+
+// ─── 工具函数（仅 onLoad 内使用） ─────────────────────────────────────────────
+function selectRandomElements<T>(arr: T[], count: number): T[] {
+    const result: T[] = [];
+    const copy = [...arr];
+    for (let i = 0; i < count; i++) {
+        if (!copy.length) break;
+        result.push(copy[Math.floor(Math.random() * copy.length)]);
+    }
+    return result;
+}
+
+function createRandomImageGroups(allImages: string[], numberOfGroups: number) {
+    if (numberOfGroups <= 0) return [];
+    return Array.from({ length: numberOfGroups }, () => {
+        const count = Math.floor(Math.random() * Math.min(allImages.length, 9)) + 1;
+        return { url: selectRandomElements(allImages, count) };
+    });
+}
 </script>
 
-<style scoped lang="scss">
-.material-image-item {
-    @apply rounded-[20rpx] bg-white p-[28rpx] relative;
-    .image-item {
-        @apply aspect-[3/4] rounded-[10rpx];
-    }
-}
-
-.material-video-item {
-    @apply rounded-[20rpx] h-[288rpx] relative;
-}
-.copywriter-item {
-    @apply rounded-[20rpx] bg-white p-[38rpx] relative;
-}
-
-.frequency-item,
-.prompt-length-item {
-    @apply px-[32rpx] py-[16rpx] rounded-[10rpx] bg-[#F6F6F6];
-
-    &.active {
-        // 使用 primary 颜色变量
-        @apply text-primary shadow-[0_0_0_2rpx_#0065fb] font-medium bg-white;
-    }
-}
-.date-item {
-    @apply text-xs font-medium text-[#000000b3] rounded-[10rpx] px-[20rpx] py-[10rpx] bg-[#F6F6F6];
-}
-.change-material-btn {
-    @apply text-white text-[22rpx] mt-8 border border-[#ffffff1a] shadow-[0_0_0_1px_rgba(0,0,0,0.24)] rounded-[50rpx] w-full h-[88rpx] flex items-center justify-center;
+<style lang="scss" scoped>
+.navigator-wrap {
+    @apply w-full h-full;
 }
 </style>

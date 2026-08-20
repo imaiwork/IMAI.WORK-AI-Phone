@@ -183,6 +183,7 @@
 
 <script setup lang="ts">
 import { getMaterialLibraryList, addMaterialLibrary } from "@/api/material";
+import { getValidUploadFileData } from "@/pages/app/digital_human/_hooks/useUpload";
 
 const props = defineProps({
     multiple: {
@@ -191,7 +192,7 @@ const props = defineProps({
     },
 });
 const emit = defineEmits<{
-    (e: "confirm", data: { music: any[] }): void;
+    (e: "confirm", data: { music: any[]; ai_music: boolean }): void;
     (e: "close"): void;
 }>();
 
@@ -223,6 +224,10 @@ const load = async (e: string) => {
 const isSelected = (id: any) => chooseList.value.some((item) => item.id === id);
 
 const handleSelect = (item: any) => {
+    // 选择普通音乐时关闭 AI 模式（与小程序互斥逻辑一致）
+    if (isAiMusic.value) {
+        isAiMusic.value = false;
+    }
     const index = chooseList.value.findIndex((i) => i.id === item.id);
     if (props.multiple) {
         // 多选：已选则取消，未选则追加
@@ -264,12 +269,10 @@ audioInstance.onended = () => {
 };
 
 const handleUploadSuccess = async (res: any) => {
-    const {
-        size,
-        response: {
-            data: { name, uri },
-        },
-    } = res || {};
+    const data = getValidUploadFileData(res);
+    if (!data) return;
+    const { size } = res || {};
+    const { name, uri } = data;
     try {
         await addMaterialLibrary({
             m_type: 6,
@@ -299,12 +302,10 @@ const close = () => {
 };
 
 const handleConfirm = () => {
-    if (!isAiMusic.value && chooseList.value.length === 0) {
-        feedback.msgWarning("请至少选择一首音乐");
-        return;
-    }
+    // 允许不选择音乐直接确定（与小程序一致）：可清空已选，或切回 AI 配乐
     emit("confirm", {
         music: isAiMusic.value ? [] : chooseList.value,
+        ai_music: isAiMusic.value,
     });
     close();
 };
@@ -314,16 +315,19 @@ onUnmounted(() => {
     audioInstance.src = "";
 });
 
+// 开启 AI 配乐时清空已选手动音乐（与小程序互斥）
+watch(isAiMusic, (val) => {
+    if (val) chooseList.value = [];
+});
+
 defineExpose({
     open,
     close,
-    setSelected: (val: any[]) => {
-        if (val.length == 0) {
-            isAiMusic.value = true;
-            return;
-        }
-        chooseList.value = [...(val ?? [])];
-        isAiMusic.value = false;
+    setSelected: (val: any[], aiMusic?: boolean) => {
+        const list = [...(val ?? [])];
+        chooseList.value = list;
+        // 显式传入 ai_music 时优先使用；否则空列表视为 AI 配乐（兼容旧调用）
+        isAiMusic.value = typeof aiMusic === "boolean" ? aiMusic : list.length === 0;
     },
 });
 </script>

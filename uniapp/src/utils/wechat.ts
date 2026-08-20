@@ -1,71 +1,73 @@
-import { getWxCodeUrl } from "@/api/account";
-import { getMnpNoticeTemplateList } from "@/api/app";
-import { isAndroid } from "./client";
-import { wxJsConfig } from "@/api/app";
-import { objectToQuery } from "./util";
+import { getWxCodeUrl } from '@/api/account'
+import { getMnpNoticeTemplateList } from '@/api/app'
+import { isAndroid } from './client'
+import { wxJsConfig } from '@/api/app'
+import { objectToQuery } from './util'
 export enum UrlScene {
-    LOGIN = "login",
-    PC_LOGIN = "pcLogin",
-    BIND_WX = "bindWx",
-    BASE = "base",
+    LOGIN = 'login',
+    PC_LOGIN = 'pcLogin',
+    BIND_WX = 'bindWx',
+    BASE = 'base'
 }
 const wechatOa = {
     _authData: {
-        code: "",
-        scene: "",
+        code: '',
+        scene: ''
     },
     setAuthData(data: any = {}) {
-        this._authData = data;
+        this._authData = data
     },
     getAuthData() {
-        return this._authData;
+        return this._authData
     },
     getSignLink() {
-        if (typeof window.signLink === "undefined" || window.signLink === "") {
-            window.signLink = location.href.split("#")[0];
+        if (typeof window.signLink === 'undefined' || window.signLink === '') {
+            window.signLink = location.href.split('#')[0]
         }
-        return isAndroid() ? location.href.split("#")[0] : window.signLink;
+        return isAndroid() ? location.href.split('#')[0] : window.signLink
     },
-    getUrl(scene: UrlScene, scope = "snsapi_userinfo", extra = {}): Promise<void> {
-        const currentUrl = `${location.href}${location.search ? "&" : "?"}scene=${scene || ""}&${objectToQuery(extra)}`;
+    getUrl(scene: UrlScene, scope = 'snsapi_userinfo', extra = {}): Promise<void> {
+        const currentUrl = `${location.href}${location.search ? '&' : '?'}scene=${
+            scene || ''
+        }&${objectToQuery(extra)}`
         return new Promise((resolve, reject) => {
             getWxCodeUrl({
                 url: currentUrl,
-                scope,
+                scope
             }).then((res) => {
-                location.href = res.url;
-                resolve();
-            }, reject);
-        });
+                location.href = res.url
+                resolve()
+            }, reject)
+        })
     },
     config() {
         return new Promise((resolve, reject) => {
             wxJsConfig({
-                url: this.getSignLink(),
+                url: this.getSignLink()
             }).then((res) => {
                 wx.config({
                     ...res,
                     success: () => {
-                        resolve("success");
+                        resolve('success')
                     },
                     fail: (res: any) => {
-                        reject("wx config is fail");
-                    },
-                });
-            });
-        });
+                        reject('wx config is fail')
+                    }
+                })
+            })
+        })
     },
     ready(): Promise<void> {
         return new Promise((resolve, reject) => {
             //#ifdef MP-WEIXIN
             wx.ready(() => {
-                resolve();
-            });
+                resolve()
+            })
             wx.error(() => {
-                reject();
-            });
+                reject()
+            })
             //#endif
-        });
+        })
     },
     pay(options: Record<any, any>) {
         return new Promise((resolve, reject) => {
@@ -78,31 +80,31 @@ const wechatOa = {
                         signType: options.signType,
                         paySign: options.paySign,
                         success: (res: any) => {
-                            if (res.errMsg === "chooseWXPay:ok") {
-                                resolve(res);
+                            if (res.errMsg === 'chooseWXPay:ok') {
+                                resolve(res)
                             } else {
-                                reject(res.errMsg);
+                                reject(res.errMsg)
                             }
                         },
                         cancel: (res: any) => {
-                            reject(res);
+                            reject(res)
                         },
                         fail: (res: any) => {
-                            reject(res);
-                        },
-                    });
+                            reject(res)
+                        }
+                    })
                 })
                 .catch((err) => {
-                    reject(err);
-                });
-        });
+                    reject(err)
+                })
+        })
     },
     async share(options: Record<any, any>): Promise<void> {
         return new Promise((resolve, reject) => {
             this.ready()
                 .then(() => {
-                    const { title, link, imgUrl, desc } = options;
-                    const shareApi = ["updateTimelineShareData", "updateAppMessageShareData"];
+                    const { title, link, imgUrl, desc } = options
+                    const shareApi = ['updateTimelineShareData', 'updateAppMessageShareData']
                     for (const api of shareApi) {
                         wx[api]({
                             title: title,
@@ -110,45 +112,45 @@ const wechatOa = {
                             imgUrl: imgUrl,
                             desc: desc,
                             success() {
-                                resolve();
+                                resolve()
                             },
                             fail() {
-                                reject();
-                            },
-                        });
+                                reject()
+                            }
+                        })
                     }
                 })
-                .catch(reject);
-        });
+                .catch(reject)
+        })
     },
     getAddress() {
         return new Promise((reslove, reject) => {
             this.ready().then(() => {
                 wx.openAddress({
                     success: (res: any) => {
-                        reslove(res);
+                        reslove(res)
                     },
                     fail: (res: any) => {
-                        reject(res);
-                    },
-                });
-            });
-        });
+                        reject(res)
+                    }
+                })
+            })
+        })
     },
     getLocation() {
         return new Promise((resolve, reject) => {
             this.ready().then(() => {
                 wx.getLocation({
-                    type: "gcj02",
+                    type: 'gcj02',
                     success: (res: any) => {
-                        resolve(res);
+                        resolve(res)
                     },
                     fail: (res: any) => {
-                        reject(res);
-                    },
-                });
-            });
-        });
+                        reject(res)
+                    }
+                })
+            })
+        })
     },
     hideMenuItems(menuList: string[]) {
         return new Promise((resolve, reject) => {
@@ -156,14 +158,14 @@ const wechatOa = {
                 wx.hideMenuItems({
                     menuList,
                     success: (res: any) => {
-                        resolve(res);
+                        resolve(res)
                     },
                     fail: (res: any) => {
-                        reject(res);
-                    },
-                });
-            });
-        });
+                        reject(res)
+                    }
+                })
+            })
+        })
     },
     showMenuItems(menuList: string[]) {
         return new Promise((resolve, reject) => {
@@ -171,36 +173,43 @@ const wechatOa = {
                 wx.showMenuItems({
                     menuList,
                     success: (res: any) => {
-                        resolve(res);
+                        resolve(res)
                     },
                     fail: (res: any) => {
-                        reject(res);
-                    },
-                });
-            });
-        });
+                        reject(res)
+                    }
+                })
+            })
+        })
     },
-    async notify() {
+    async notify(scene: 'auto' | 'manual' = 'manual') {
         const { lists } = await getMnpNoticeTemplateList({
-            page_size: 10,
+            page_size: 100,
             page_no: 1,
             recipient: 1,
             type: 1,
-            support: 4,
-        });
-        const tempIds = lists.map((item: any) => item.mnp_notice?.template_id);
+            support: 4
+        })
+
+        const getTempIds = (sceneIds: number[]) => {
+            return lists
+                .filter((item: any) => sceneIds.includes(item.scene_id))
+                .map((item: any) => item.mnp_notice?.template_id)
+        }
+
+        const tempIds = getTempIds(scene === 'auto' ? [402, 403, 404] : [401, 405, 406])
         return new Promise((resolve, reject) => {
             wx.requestSubscribeMessage({
-                tmplIds: tempIds,
+                tmplIds: tempIds.filter((item: any) => item),
                 success: (res: any) => {
-                    resolve(res);
+                    resolve(res)
                 },
                 fail: (res: any) => {
-                    reject(res);
-                },
-            });
-        });
-    },
-};
+                    reject(res)
+                }
+            })
+        })
+    }
+}
 
-export default wechatOa;
+export default wechatOa

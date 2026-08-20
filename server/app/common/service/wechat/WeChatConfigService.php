@@ -21,11 +21,12 @@ class WeChatConfigService
      * @author 段誉
      * @date 2022/9/6 19:49
      */
-    public static function getMnpConfig()
+    public static function getMnpConfig(int $teamId = 0)
     {
         return [
-            'app_id' => ConfigService::get('mnp_setting', 'app_id'),
-            'secret' => ConfigService::get('mnp_setting', 'app_secret'),
+            // team_id=0 主站小程序;>0 为团队(OEM)独立小程序,按租户隔离凭证
+            'app_id' => ConfigService::get('mnp_setting', 'app_id', '', $teamId),
+            'secret' => ConfigService::get('mnp_setting', 'app_secret', '', $teamId),
             'response_type' => 'array',
             'log' => [
                 'level' => 'debug',

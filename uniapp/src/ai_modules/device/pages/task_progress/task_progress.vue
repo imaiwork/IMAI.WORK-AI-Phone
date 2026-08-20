@@ -80,12 +80,12 @@
                             <text class="text-[32rpx] font-bold text-[#1e293b]">{{
                                 item.name.replace("(自动化)", "")
                             }}</text>
-                            <text class="text-[24rpx] text-[#94a3b8]">单次调用消耗</text>
+                            <text class="text-xs text-[#94a3b8]">单次调用消耗</text>
                         </view>
 
                         <view class="bg-[#f8fafc] px-4 py-[18rpx] rounded-[16rpx] flex items-baseline gap-1 shrink-0">
                             <text class="text-[40rpx] font-bold text-[#1e293b]">-{{ item.score }}</text>
-                            <text class="text-[24rpx] text-[#64748b] ml-1">{{ item.unit }}</text>
+                            <text class="text-xs text-[#64748b] ml-1">{{ item.unit }}</text>
                         </view>
                     </view>
                 </view>

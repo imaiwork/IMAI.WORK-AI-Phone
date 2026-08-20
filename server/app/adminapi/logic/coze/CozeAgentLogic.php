@@ -6,6 +6,7 @@ use app\common\logic\BaseLogic;
 use app\common\model\coze\CozeAgent;
 use app\common\model\coze\CozeLog;
 use app\common\model\coze\CozeWorkflow;
+use app\common\service\AgentPermissionService;
 use think\facade\Db;
 
 class CozeAgentLogic extends BaseLogic
@@ -14,6 +15,7 @@ class CozeAgentLogic extends BaseLogic
     {
         try {
             Db::startTrans();
+            $permissionData = AgentPermissionService::preparePermissionData($params);
 
             $data = [
                 'type' => $params['type'],
@@ -22,7 +24,8 @@ class CozeAgentLogic extends BaseLogic
                 'agent_cate_id' => $params['agent_cate_id'] ?? 0,
                 'name' => $params['name'],
                 'status' => $params['status'] ?? 0,
-                'permissions' => $params['permissions'] ?? CozeAgent::PERMISSIONS_UNLIMITED,
+                'permissions' => $permissionData['permissions'],
+                'member_level_ids' => $permissionData['member_level_ids'],
                 'source' => CozeAgent::SOURCE_ADMIN,
                 'source_id' => $params['source_id'],
                 'introduced' => $params['introduced'] ?? '',
@@ -88,27 +91,39 @@ class CozeAgentLogic extends BaseLogic
         try {
             Db::startTrans();
             $exists = CozeAgent::where('id', $params['id'])
+                ->where('source', CozeAgent::SOURCE_ADMIN)
                 ->findOrEmpty()->toArray();
 
             if (!$exists) {
-                self::setError('智能体不存在');
+                self::setError('后台智能体不存在');
                 return false;
             }
+            $permissionData = AgentPermissionService::preparePermissionData([
+                'permissions' => $params['permissions'] ?? $exists['permissions'] ?? CozeAgent::PERMISSIONS_UNLIMITED,
+                'member_level_ids' => $params['member_level_ids']
+                    ?? $params['level_ids']
+                    ?? $params['user_level_ids']
+                    ?? $exists['member_level_ids']
+                    ?? '',
+            ]);
 
             $updateData = [
                 'id' => $params['id'],
             ];
             
-            $allowFields = ['type', 'bg_image','agent_cate_id' ,'avatar', 'name', 'status', 'permissions', 'introduced', 'stream', 'deduction', 'tokens', 'coze_id'];
+            $allowFields = ['type', 'bg_image','agent_cate_id' ,'avatar', 'name', 'status', 'introduced', 'stream', 'deduction', 'tokens', 'coze_id'];
             foreach ($allowFields as $field) {
                 if (isset($params[$field])) {
                     $updateData[$field] = $params[$field];
                 }
             }
+            $updateData['permissions'] = $permissionData['permissions'];
+            $updateData['member_level_ids'] = $permissionData['member_level_ids'];
 
             CozeAgent::update($updateData);
             if ($params['type'] == CozeAgent::TYPE_WORKFLOW) {
                 $existsflow = CozeWorkflow::where('coze_agent_id', $params['id'])
+                    ->where('source', CozeAgent::SOURCE_ADMIN)
                     ->findOrEmpty()->toArray();
                 if (!$existsflow){
                     self::setError('工作流不存在');
@@ -215,6 +230,7 @@ class CozeAgentLogic extends BaseLogic
         $agent['source_text'] = CozeAgent::getSourceText((int)($agent['source'] ?? 0));
         $agent['type_text'] = CozeAgent::getTypeText((int)($agent['type'] ?? 0));
         $agent['permissions_text'] = CozeAgent::getPermissionsText((int)($agent['permissions'] ?? 0));
+        $agent['member_level_ids'] = AgentPermissionService::levelIdsToArray($agent['member_level_ids'] ?? '');
         $agent['stream_text'] = CozeAgent::getStreamText((int)($agent['stream'] ?? 0));
         $agent['deduction_text'] = CozeAgent::getDeductionText((int)($agent['deduction'] ?? 0));
         

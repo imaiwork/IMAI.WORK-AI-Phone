@@ -8,7 +8,7 @@
                 background: 'transparent',
             }">
             <template #custom-back-icon>
-                <view @click="handleBack">
+                <view>
                     <u-icon name="/static/images/icons/back_black.svg" size="32"></u-icon>
                 </view>
             </template>
@@ -82,6 +82,8 @@ import { useUserStore } from "@/stores/user";
 import { chatRobotSendTextStream, getChatLog } from "@/api/chat";
 import Sidebar from "./components/sidebar.vue";
 import { TokensSceneEnum, KnbTypeEnum } from "@/enums/appEnums";
+import { RequestCodeEnum } from "@/enums/requestEnums";
+import { parseChatStreamErrorPayload, resolveChatErrorMessage } from "@/utils/chatStream";
 
 const sidebarRef = shallowRef<InstanceType<typeof Sidebar>>();
 
@@ -101,10 +103,6 @@ const detail = reactive<Record<string, any>>({
     preliminary_ask: [],
     assistants_id: "",
 });
-
-const handleBack = () => {
-    uni.navigateBack();
-};
 
 const confirmKnb = (val: any) => {
     const { type, data } = val;
@@ -178,15 +176,15 @@ const getChatList = async () => {
 
 let streamReader: any = null;
 
-const contentPost = async (userInput?: any, isNewChat: boolean = false) => {
+const contentPost = async (userInput?: any, isNewChat = false) => {
     if (!isLogin.value) {
         uni.$u.route({
-            url: "/pages/login/login",
+            url: "/packages/pages/login/login",
         });
         return;
     }
     if (userTokens.value <= 0) {
-        uni.$u.toast("算力不足，请充值！");
+        powerInsufficientTip();
         rechargePopupRef.value?.open();
         return;
     }
@@ -228,33 +226,38 @@ const contentPost = async (userInput?: any, isNewChat: boolean = false) => {
                     value
                         .trim()
                         .split("data:")
-                        .forEach((text, index) => {
-                            if (text !== "") {
-                                try {
-                                    const dataJson = JSON.parse(text);
-                                    const { object, content, task_id, reasoning_content, usage } = dataJson;
-                                    if ((content || reasoning_content) && object === "loading") {
-                                        if (reasoning_content) {
-                                            result.is_reasoning_finished = false;
-                                            result.reasoning_content += reasoning_content;
-                                        } else {
-                                            result.is_reasoning_finished = true;
-                                            result.reply += content;
-                                        }
+                        .forEach((text) => {
+                            if (text === "") return;
+                            try {
+                                const dataJson = JSON.parse(text);
+                                const streamError = parseChatStreamErrorPayload(dataJson);
+                                if (streamError) {
+                                    result.error = streamError;
+                                    result.loading = false;
+                                    return;
+                                }
+                                const { object, content, task_id, reasoning_content, usage } = dataJson;
+                                if ((content || reasoning_content) && object === "loading") {
+                                    if (reasoning_content) {
+                                        result.is_reasoning_finished = false;
+                                        result.reasoning_content += reasoning_content;
+                                    } else {
+                                        result.is_reasoning_finished = true;
+                                        result.reply += content;
                                     }
-                                    if (object === "finished") {
-                                        result.loading = false;
-                                        result.consume_tokens = {
-                                            ...usage,
-                                        };
-                                        if (!taskId.value) {
-                                            taskId.value = task_id;
-                                        }
-                                        return;
+                                }
+                                if (object === "finished") {
+                                    result.loading = false;
+                                    result.consume_tokens = {
+                                        ...usage,
+                                    };
+                                    if (!taskId.value) {
+                                        taskId.value = task_id;
                                     }
-                                    chattingRef.value.scrollToBottom();
-                                } catch (error) {}
-                            }
+                                    return;
+                                }
+                                chattingRef.value.scrollToBottom();
+                            } catch (error) {}
                         });
                 },
                 onclose() {
@@ -265,16 +268,15 @@ const contentPost = async (userInput?: any, isNewChat: boolean = false) => {
                         chattingRef.value.scrollToBottom();
                     }, 600);
                 },
-            }
+            },
         );
     } catch (error: any) {
-        if (error.errno == 600004) {
-            result.reply = "用户已停止内容生成";
-        } else {
-            result.reply = error || "发生错误";
-            uni.$u.toast(error);
-        }
+        const message = resolveChatErrorMessage(error);
+        result.error = message;
         result.loading = false;
+        if (error?.errno !== RequestCodeEnum.ABORT) {
+            uni.$u.toast(message);
+        }
         resetChat();
     }
     nextTick(() => {

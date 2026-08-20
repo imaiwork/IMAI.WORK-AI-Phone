@@ -1,0 +1,1 @@
+"use strict";let t="",i=null;exports.exclusiveVideoPlay=function(e,n){const c=String(e||"").trim();if(c){if(t&&t!==c&&i)try{i()}catch{}t=c,i=n}},exports.releaseExclusiveVideo=function(e){const n=String(e||"").trim();t===n&&(t="",i=null)};

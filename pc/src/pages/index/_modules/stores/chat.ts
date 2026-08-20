@@ -34,6 +34,15 @@ export interface ChatFile {
     size: number;
 }
 
+export interface AgentValue {
+    id: string | number;
+    name: string;
+    image?: string; // 头像 URL
+    description?: string; // 描述/副标题
+    type?: string;
+    welcome_text?: string; // 欢迎语
+}
+
 /**
  * @description 聊天状态管理中心 (Pinia Store)
  *
@@ -64,7 +73,7 @@ export const useChatStore = defineStore("chat", () => {
     /**
      * @description 当前选择的智能体信息。
      */
-    const agentValue = ref<any>();
+    const agentValue = ref<AgentValue>();
 
     /**
      * @description 聊天消息列表。
@@ -140,14 +149,14 @@ export const useChatStore = defineStore("chat", () => {
      * @description 设置当前会话的 task_id。
      * @param id - 会话ID。
      */
-    function setTaskId(id: string) {
+    function replaceTaskId(id: string) {
         taskId.value = id;
         replaceState({
             task_id: taskId.value,
         });
     }
 
-    function setAgentId(id: string) {
+    function replaceAgentId(id: string) {
         replaceState({
             agent_id: id,
         });
@@ -158,8 +167,8 @@ export const useChatStore = defineStore("chat", () => {
      * 如果传入的智能体与当前相同，则取消选择并清空聊天，实现"切换"效果。
      * @param agent - 智能体对象。
      */
-    function setAgent(agent: any) {
-        // if (agentValue.value?.id && agent?.id != agentValue.value?.id) {
+    function setAgent(agent: AgentValue) {
+        // if (agentValue   .value?.id && agent?.id != agentValue.value?.id) {
         //     // 如果点击的是当前已选中的智能体，则取消选择并重置
         //     clearChat();
         //     // 重置URL，避免刷新后仍然是该智能体
@@ -170,7 +179,6 @@ export const useChatStore = defineStore("chat", () => {
         //     });
         // }
         agentValue.value = agent;
-        // console.log("agentValue", agentValue.value);
     }
 
     function setQuoteText(text: string) {
@@ -194,10 +202,18 @@ export const useChatStore = defineStore("chat", () => {
         agentValue.value = undefined;
         chatContentList.value = [];
         isLoading.value = false;
-        isDeep.value = false;
-        isNetwork.value = false;
-        fileLists.value = [];
         extraParams.value = {};
+        stopReceiving();
+    }
+
+    /**
+     * @description 切换会话时清空消息区，保留 / 由外部设置的 taskId，避免短暂回落到欢迎页。
+     */
+    function clearChatMessages() {
+        agentValue.value = undefined;
+        chatContentList.value = [];
+        extraParams.value = {};
+        fileLists.value = [];
         stopReceiving();
     }
 
@@ -273,9 +289,10 @@ export const useChatStore = defineStore("chat", () => {
         extraParams,
         // Actions
         setDetail,
-        setTaskId,
+        replaceTaskId,
         setAgent,
-        setAgentId,
+        replaceAgentId,
+        clearChatMessages,
         addMessage,
         clearChat,
         startReceiving,

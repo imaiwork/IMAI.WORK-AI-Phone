@@ -5,6 +5,7 @@ namespace app\adminapi\validate\setting;
 
 
 use app\common\enum\PayEnum;
+use app\adminapi\logic\setting\pay\PayConfigLogic;
 use app\common\model\pay\PayConfig;
 use app\common\validate\BaseValidate;
 
@@ -55,24 +56,7 @@ class PayConfigValidate extends BaseValidate
         }
 
         if ($result['pay_way'] == PayEnum::WECHAT_PAY) {
-            if (empty($config['interface_version'])) {
-                return '微信支付接口版本不能为空';
-            }
-            if (empty($config['merchant_type'])) {
-                return '商户类型不能为空';
-            }
-            if (empty($config['mch_id'])) {
-                return '微信支付商户号不能为空';
-            }
-            if (empty($config['pay_sign_key'])) {
-                return '商户API密钥不能为空';
-            }
-            if (empty($config['apiclient_cert'])) {
-                return '微信支付证书不能为空';
-            }
-            if (empty($config['apiclient_key'])) {
-                return '微信支付证书密钥不能为空';
-            }
+            return $this->checkWechatConfig((array)$config, $result['config'] ?? []);
         }
         if ($result['pay_way'] == PayEnum::ALI_PAY) {
             if (empty($config['mode'])) {
@@ -91,6 +75,68 @@ class PayConfigValidate extends BaseValidate
                 return '支付宝公钥不能为空';
             }
         }
+        return true;
+    }
+
+
+    /**
+     * @notes 校验微信支付配置，支持小程序普通微信支付/虚拟支付切换
+     * @param array $config
+     * @param array|string|null $oldConfig
+     * @return bool|string
+     */
+    private function checkWechatConfig(array $config, $oldConfig = [])
+    {
+        $formatConfig = PayConfigLogic::formatWechatConfig($config, $oldConfig);
+        $mnpPayType = (int)$formatConfig['mnp_pay_type'];
+
+        if (!in_array($mnpPayType, [PayConfigLogic::MNP_PAY_TYPE_WECHAT, PayConfigLogic::MNP_PAY_TYPE_VIRTUAL], true)) {
+            return '小程序支付方式参数错误';
+        }
+
+        if ($mnpPayType == PayConfigLogic::MNP_PAY_TYPE_WECHAT) {
+            if (empty($formatConfig['interface_version'])) {
+                return '微信支付接口版本不能为空';
+            }
+            if (empty($formatConfig['merchant_type'])) {
+                return '商户类型不能为空';
+            }
+            if (empty($formatConfig['mch_id'])) {
+                return '微信支付商户号不能为空';
+            }
+            if (empty($formatConfig['pay_sign_key'])) {
+                return '商户API密钥不能为空';
+            }
+            if (empty($formatConfig['apiclient_cert'])) {
+                return '微信支付证书不能为空';
+            }
+            if (empty($formatConfig['apiclient_key'])) {
+                return '微信支付证书密钥不能为空';
+            }
+        }
+
+        if ($mnpPayType == PayConfigLogic::MNP_PAY_TYPE_VIRTUAL) {
+            $virtualConfig = $formatConfig['mnp_virtual_pay'] ?? [];
+            if (empty($virtualConfig['offer_id'])) {
+                return '小程序虚拟支付offer_id不能为空';
+            }
+            if (empty($virtualConfig['app_key'])) {
+                return '小程序虚拟支付app_key不能为空';
+            }
+            if (!in_array((int)$virtualConfig['env'], [0, 1], true)) {
+                return '小程序虚拟支付环境参数错误';
+            }
+            if (empty($virtualConfig['currency_type'])) {
+                return '小程序虚拟支付币种不能为空';
+            }
+            if (empty($virtualConfig['mode'])) {
+                return '小程序虚拟支付mode不能为空';
+            }
+            if (empty($virtualConfig['method'])) {
+                return '小程序虚拟支付签名方法不能为空';
+            }
+        }
+
         return true;
     }
 

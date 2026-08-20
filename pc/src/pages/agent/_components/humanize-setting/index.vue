@@ -86,10 +86,7 @@
                                 </div>
                             </ElFormItem>
 
-                            <ElFormItem
-                                v-if="formData.model_id != ModelIdEnum.DEEPSEEK"
-                                label="重复惩罚 (Frequency Penalty)"
-                                class="col-span-1">
+                            <ElFormItem label="重复惩罚 (Frequency Penalty)" class="col-span-1">
                                 <div class="param-control-group">
                                     <div class="flex-1 px-[8px]">
                                         <ElSlider v-model="formData.frequency_penalty" :min="-2" :max="2" :step="0.1" />
@@ -103,10 +100,7 @@
                                 </div>
                             </ElFormItem>
 
-                            <ElFormItem
-                                v-if="formData.model_id != ModelIdEnum.DEEPSEEK"
-                                label="存在惩罚 (Presence Penalty)"
-                                class="col-span-1">
+                            <ElFormItem label="存在惩罚 (Presence Penalty)" class="col-span-1">
                                 <div class="param-control-group">
                                     <div class="flex-1 px-[8px]">
                                         <ElSlider v-model="formData.presence_penalty" :min="0" :max="1" :step="0.1" />
@@ -119,6 +113,10 @@
                                         :step="0.1" />
                                 </div>
                             </ElFormItem>
+                        </div>
+
+                        <div class="mt-[8px] text-xs text-[#94A3B8]">
+                            部分模型（如 DeepSeek）可能不支持存在惩罚、重复惩罚参数
                         </div>
 
                         <div

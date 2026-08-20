@@ -18,8 +18,7 @@ class InteractiveValidate extends BaseValidate
         'add_friend_script' => 'require',
         'is_like' => 'require|in:0,1',
         'is_comment' => 'require|in:0,1',
-        'comment_robot_prompt' => 'require',
-        'comment_speech' => 'require',
+        'comment_speech' => 'array',
     ];
 
 
@@ -29,8 +28,7 @@ class InteractiveValidate extends BaseValidate
         'add_friend_script.require' => '请输入添加好友话术',
         'is_like.require' => '请输入是否点赞',
         'is_comment.require' => '请输入是否评论',
-        'comment_robot_prompt.require' => '请输入评论机器人提示',
-        'comment_speech.require' => '请输入评论话术',
+        'comment_speech.array' => '评论话术必须是数组',
     ];
 
 
@@ -40,7 +38,7 @@ class InteractiveValidate extends BaseValidate
      */
     public function sceneUpdate()
     {
-        return $this->only(['persona_id', 'add_friend_script', 'is_like', 'is_comment', 'comment_robot_prompt', 'comment_speech']);
+        return $this->only(['persona_id', 'add_friend_script', 'is_like', 'is_comment', 'comment_speech']);
     }
 
     /**
@@ -52,4 +50,3 @@ class InteractiveValidate extends BaseValidate
         return $this->only(['id']);
     }
 }
-

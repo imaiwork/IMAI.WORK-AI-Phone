@@ -21,6 +21,8 @@ use app\common\model\knowledge\Knowledge;
 use app\common\model\knowledge\KnowledgeBind;
 use app\common\model\sv\SvReplyStrategy;
 use app\common\pgsql\KbEmbedding;
+use app\common\service\AgentPermissionService;
+use app\common\service\chat\ChatModelsService;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
 use Exception;
@@ -44,7 +46,7 @@ class KbRobotLogic extends BaseLogic
     {
         $modelKbRobot = new KbRobot();
         $detail = $modelKbRobot
-            ->field('id,user_id,cate_id,kb_type,kb_ids,icons,image,bg_image,name,intro,roles_prompt,model,model_id,model_sub_id,search_mode,search_tokens,search_similar,ranking_status,ranking_score,context_num,is_public,is_enable,optimize_ask,optimize_model,top_p,presence_penalty,frequency_penalty,logprobs,top_logprobs,search_empty_type,search_empty_text,welcome_introducer,copyright,threshold,mode_type,max_tokens,flow_config,flow_status')
+            ->field('id,user_id,cate_id,kb_type,kb_ids,icons,image,bg_image,name,intro,roles_prompt,model,model_id,model_sub_id,search_mode,search_tokens,search_similar,ranking_status,ranking_score,context_num,is_public,permissions,member_level_ids,is_enable,optimize_ask,optimize_model,top_p,presence_penalty,frequency_penalty,logprobs,top_logprobs,search_empty_type,search_empty_text,welcome_introducer,copyright,threshold,mode_type,max_tokens,flow_config,flow_status')
             ->field('threshold')
             ->where(['id'=>$id])
             ->findOrEmpty()
@@ -52,6 +54,8 @@ class KbRobotLogic extends BaseLogic
 
         if ($detail) {
             $detail['icons']  = FileService::getFileUrl($detail['icons']) ?? '';
+            $detail['permissions_text'] = AgentPermissionService::getPermissionsText((int)($detail['permissions'] ?? 0));
+            $detail['member_level_ids'] = AgentPermissionService::levelIdsToArray($detail['member_level_ids'] ?? '');
 
             // 知识库
             $detail['knows'] = [];
@@ -135,6 +139,7 @@ class KbRobotLogic extends BaseLogic
         $model = new KbRobot();
         $model->startTrans();
         try {
+            $permissionData = AgentPermissionService::preparePermissionData($post);
             // 默认图标
             $iconImage = '';
             $chatImage = FileService::getFileUrl(ConfigService::get('website', 'shop_logo'));
@@ -152,7 +157,10 @@ class KbRobotLogic extends BaseLogic
                                            'sort'         => 0,
                                            'roles_prompt' => '',
                                            'is_public'    => 0,
+                                           'permissions'  => $permissionData['permissions'],
+                                           'member_level_ids' => $permissionData['member_level_ids'],
                                            'context_num'  => $post['context_num'] ?? 0, // 上下文数量
+                                           'quota_exempt' => !empty($post['quota_exempt']) ? 1 : 0,
                                            'create_time'  => time(),
                                            'update_time'  => time()
                                        ]);
@@ -200,6 +208,9 @@ class KbRobotLogic extends BaseLogic
             $robot = $model->field(['id,user_id,is_enable,is_indexed,intro,roles_prompt'])
                            ->where(['id' => intval($post['id'])])
                            ->findOrEmpty();
+            if ($robot->isEmpty()) {
+                throw new Exception('该机器人应用已不存在了，请刷新重试！');
+            }
             if (is_string($post['kb_ids'])) {
                 $post['kb_ids'] = explode(',', $post['kb_ids']);
             }
@@ -272,6 +283,7 @@ class KbRobotLogic extends BaseLogic
             if (!$subModel || !$subModel['status']) {
                 throw new Exception('子模型已被下架!');
             }
+            ChatModelsService::assertAgentModelSelectable((string)($subModel['alias'] ?? ''));
 
             if ($subModel['model_id'] != $mainModel['id']) {
                 throw new Exception('模型匹配关系异常');
@@ -541,6 +553,55 @@ class KbRobotLogic extends BaseLogic
             } else {
                 self::setError('公开成功');
             }
+
+            return true;
+        } catch (Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * @notes 修改后台智能体权限
+     * @param int $id
+     * @param array $params
+     * @return bool
+     */
+    public static function changePermissions(int $id, array $params): bool
+    {
+        try {
+            $robot = KbRobot::field(['id,user_id,permissions,member_level_ids'])
+                ->where(['id' => $id])
+                ->findOrEmpty();
+            if ($robot->isEmpty()) {
+                throw new Exception('该机器人应用已不存在了!');
+            }
+            if ((int)$robot['user_id'] !== 0) {
+                throw new Exception('只能修改后台新增智能体的权限');
+            }
+
+            $permissionData = AgentPermissionService::preparePermissionData([
+                'permissions' => $params['permissions'] ?? $robot['permissions'] ?? 0,
+                'member_level_ids' => $params['member_level_ids']
+                    ?? $params['level_ids']
+                    ?? $params['user_level_ids']
+                    ?? $robot['member_level_ids']
+                    ?? '',
+            ]);
+
+            KbRobot::update([
+                'id'               => $id,
+                'permissions'      => $permissionData['permissions'],
+                'member_level_ids' => $permissionData['member_level_ids'],
+                'update_time'      => time(),
+            ]);
+
+            self::$returnData = [
+                'id'               => $id,
+                'permissions'      => $permissionData['permissions'],
+                'permissions_text' => AgentPermissionService::getPermissionsText($permissionData['permissions']),
+                'member_level_ids' => AgentPermissionService::levelIdsToArray($permissionData['member_level_ids']),
+            ];
 
             return true;
         } catch (Exception $e) {

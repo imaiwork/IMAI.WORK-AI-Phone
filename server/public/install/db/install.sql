@@ -302,7 +302,7 @@ CREATE TABLE `la_decorate_tabbar`  (
 
 
 BEGIN;
-INSERT INTO `la_decorate_tabbar` VALUES (1, '首页', 'resource/image/adminapi/default/tabbar_home_sel.png', 'resource/image/adminapi/default/tabbar_home.png', '{\"path\":\"/pages/index/index\",\"name\":\"商城首页\",\"type\":\"shop\"}', 1, 1662688157, 1662688157), (2, '资讯', 'resource/image/adminapi/default/tabbar_text_sel.png', 'resource/image/adminapi/default/tabbar_text.png', '{\"path\":\"/pages/news/news\",\"name\":\"文章资讯\",\"type\":\"shop\",\"canTab\":\"1\"}', 1, 1662688157, 1662688157), (3, '我的', 'resource/image/adminapi/default/tabbar_me_sel.png', 'resource/image/adminapi/default/tabbar_me.png', '{\"path\":\"/pages/user/user\",\"name\":\"个人中心\",\"type\":\"shop\",\"canTab\":\"1\"}', 1, 1662688157, 1662688157);
+INSERT INTO `la_decorate_tabbar` VALUES (1, 'AI手机', 'static/images/mp/tabbs/phone_s.png', 'static/images/mp/tabbs/phone.png', '{\"path\":\"/pages/index/index\",\"name\":\"AI手机\",\"type\":\"page\"}', 1, 1662688157, 1662688157), (2, 'AI助手', 'static/images/mp/tabbs/chat_s.png', 'static/images/mp/tabbs/chat.png', '{\"path\":\"/packages/pages/chat/chat\",\"name\":\"AI助手\",\"type\":\"page\"}', 1, 1662688157, 1662688157), (3, 'AI创作', 'static/images/mp/tabbs/creative_s.png', 'static/images/mp/tabbs/creative.png', '{\"path\":\"/ai_modules/digital_human/pages/index/index\",\"name\":\"AI创作\",\"type\":\"page\"}', 1, 1662688157, 1662688157), (4, '我的', 'static/images/mp/tabbs/me_s.png', 'static/images/mp/tabbs/me.png', '{\"path\":\"/packages/pages/user/user\",\"name\":\"我的\",\"type\":\"page\"}', 1, 1662688157, 1662688157);
 COMMIT;
 
 DROP TABLE IF EXISTS `la_dept`;

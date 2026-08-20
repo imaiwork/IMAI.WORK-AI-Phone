@@ -1,6 +1,7 @@
 import { chatSendTextStream } from "@/api/chat";
 import {
     getCozeAgentDetail as getCozeAgentDetailApi,
+    getAgentDetail as getAgentDetailApi,
     getCopyWritingGenerate,
     cozeAgentChatStream,
     cozeAgentChat,
@@ -8,6 +9,8 @@ import {
     cozeAgentChatMsgList,
 } from "@/api/agent";
 import usePolling from "@/hooks/usePolling";
+import { useUserStore } from "@/stores/user";
+import { AGENT_UNAVAILABLE_TIP, canUseAgent } from "@/utils/agentPermission";
 
 interface Options {
     onmessage?: (value: string) => void;
@@ -29,6 +32,7 @@ enum CozeChattingStatus {
 
 export default function useAgent(options: Options) {
     const { onmessage, onclose, onstart, onerror, onfinish } = options;
+    const userStore = useUserStore();
 
     const agentId = ref<string | number>();
     const agentDetail = ref<Record<string, any>>({});
@@ -41,11 +45,15 @@ export default function useAgent(options: Options) {
         keywords,
         number,
         length,
+        type,
+        persona_id,
     }: {
         sn: number;
         keywords: string;
         number: number;
         length: number;
+        type: number;
+        persona_id: number | null;
     }) => {
         return new Promise<any>((resolve, reject) => {
             getCopyWritingGenerate({
@@ -53,6 +61,8 @@ export default function useAgent(options: Options) {
                 keywords,
                 number,
                 length,
+                type,
+                persona_id,
             })
                 .then((res) => {
                     resolve(res);
@@ -93,16 +103,20 @@ export default function useAgent(options: Options) {
                                             onfinish?.();
                                             return;
                                         }
-                                    } catch (error) {}
+                                    } catch (error) {
+                                        console.error("解析智能体流式消息失败:", error);
+                                    }
                                 }
                             });
                     },
                     onclose() {
                         onclose?.();
                     },
-                }
+                },
             );
-        } catch (error: any) {}
+        } catch (error: any) {
+            onerror?.(error);
+        }
     };
 
     const cozeChat = async (userInput: string | undefined) => {
@@ -176,30 +190,19 @@ export default function useAgent(options: Options) {
                                             onfinish?.();
                                             return;
                                         }
-                                    } catch (error) {}
+                                    } catch (error) {
+                                        console.error("解析Coze流式消息失败:", error);
+                                    }
                                 }
                             });
                     },
                     onclose() {
                         onclose?.();
                     },
-                }
+                },
             );
         } catch (error: any) {
             onerror?.(error);
-        }
-    };
-
-    // 统一处理
-    const handleGenerate = async (userInput: string | undefined, agentType: number) => {
-        if (agentType == 2) {
-            await streamAgentChat(userInput);
-        } else if (agentType == 3) {
-            if (agentDetail.value.stream == 1) {
-                await streamCozeChat(userInput);
-            } else {
-                await cozeChat(userInput);
-            }
         }
     };
 
@@ -216,11 +219,57 @@ export default function useAgent(options: Options) {
         });
     };
 
+    const getRobotAgentDetail = async (agentId: number): Promise<Record<string, any>> => {
+        return new Promise((resolve, reject) => {
+            getAgentDetailApi({ id: agentId })
+                .then((res) => {
+                    resolve(res);
+                })
+                .catch((err) => {
+                    reject(err);
+                });
+        });
+    };
+
+    const ensureAgentDetail = async (type: number) => {
+        if (!agentId.value) return;
+        if (agentDetail.value?.id == agentId.value) return;
+
+        if (type == 2) {
+            agentDetail.value = await getRobotAgentDetail(Number(agentId.value));
+        } else if ([3, 4].includes(type)) {
+            agentDetail.value = await getCozeAgentDetail(Number(agentId.value));
+        }
+    };
+
+    const ensureAgentAvailable = async (type: number) => {
+        if (![2, 3, 4].includes(type)) return true;
+        await ensureAgentDetail(type);
+        if (canUseAgent(agentDetail.value, userStore.userInfo)) return true;
+        throw AGENT_UNAVAILABLE_TIP;
+    };
+
+    // 统一处理
+    const handleGenerate = async (userInput: string | undefined, agentType: number) => {
+        await ensureAgentAvailable(agentType);
+        if (agentType == 2) {
+            await streamAgentChat(userInput);
+        } else if (agentType == 3) {
+            if (agentDetail.value.stream == 1) {
+                await streamCozeChat(userInput);
+            } else {
+                await cozeChat(userInput);
+            }
+        }
+    };
+
     // 获取机器人详情
     const getDetail = async (id: number, type: number) => {
         agentId.value = id;
-        if ([3, 4].includes(type)) {
-            agentDetail.value = await getCozeAgentDetail(agentId.value);
+        if (type == 2) {
+            agentDetail.value = await getRobotAgentDetail(Number(agentId.value));
+        } else if ([3, 4].includes(type)) {
+            agentDetail.value = await getCozeAgentDetail(Number(agentId.value));
         }
     };
 

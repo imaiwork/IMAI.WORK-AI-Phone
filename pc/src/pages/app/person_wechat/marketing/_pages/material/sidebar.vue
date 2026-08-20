@@ -1,6 +1,6 @@
 <template>
     <div class="w-full h-full flex flex-col bg-white rounded-xl border border-br overflow-hidden">
-        <div class="px-5 py-4 border-b border-br-extra-light flex items-center justify-between bg-gray-50/30">
+        <div class="px-5 py-4 border-b border-br-extra-light flex items-center justify-between bg-[#f9f9f9]/30">
             <span class="text-[14px] font-[900] text-tx-primary tracking-tight">内容分组</span>
             <span class="text-primary opacity-50 leading-[0]">
                 <Icon name="el-icon-FolderOpened" />

@@ -15,6 +15,13 @@
                 </div>
             </div>
         </div>
+        <!-- 仅会员可用提示 -->
+        <div
+            v-if="unavailable"
+            class="mx-5 mt-3 flex items-center gap-2 px-4 py-2 rounded-lg border border-[#F4B400]/30 bg-[#FFF7E6] text-[#B45309] text-xs font-semibold">
+            <Icon name="el-icon-WarningFilled" :size="14" />
+            <span>{{ AGENT_UNAVAILABLE_TIP }}</span>
+        </div>
         <!-- 聊天内容区域 -->
         <div class="grow min-h-0 pt-3" v-loading="loading">
             <slot></slot>
@@ -23,12 +30,18 @@
 </template>
 
 <script setup lang="ts">
+import { AGENT_UNAVAILABLE_TIP } from "@/utils/agentPermission";
+
 /**
  * @description 聊天主区域框架组件
  * @summary 包含聊天窗口的头部和用于插入具体聊天组件的插槽
  */
-defineProps<{
-    detail: any; // 智能体详情
-    loading: boolean; // 加载状态
-}>();
+withDefaults(
+    defineProps<{
+        detail: any; // 智能体详情
+        loading: boolean; // 加载状态
+        unavailable?: boolean; // 是否为不可用智能体（仅会员可用且当前用户无权限）
+    }>(),
+    { unavailable: false },
+);
 </script>

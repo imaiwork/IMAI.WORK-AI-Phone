@@ -1,38 +1,27 @@
 <template>
     <view class="w-full">
-        <view class="bg-white px-[30rpx] py-[30rpx] shadow-[0_8rpx_24rpx_rgba(0,0,0,0.05)]">
-            <view class="flex items-center justify-between mb-[24rpx]">
-                <view class="flex items-center gap-[16rpx]">
-                    <view class="text-[32rpx] font-semibold text-[#111827]"
-                        >{{ currentYear }}年 {{ currentMonth }}月</view
-                    >
+        <view class="bg-white px-[32rpx] pt-[22rpx] pb-[20rpx] shadow-[0_8rpx_32rpx_rgba(0,0,0,0.08)]">
+            <view class="relative flex items-center justify-center mb-[16rpx]">
+                <view class="absolute left-0 flex items-center gap-[8rpx]">
                     <view
-                        class="text-[24rpx] text-[#0065fb] bg-[#ebf2ff] px-[16rpx] py-[4rpx] rounded-full"
+                        class="w-[52rpx] h-[52rpx] rounded-full bg-[#F3F4F6] flex items-center justify-center active:bg-[#E5E7EB]"
+                        @click="prevMonth">
+                        <u-icon name="arrow-left" color="#6B7280" size="18" />
+                    </view>
+                </view>
+                <view class="text-xs font-semibold text-[#9CA3AF]"> {{ currentYear }}年{{ currentMonth }}月 </view>
+                <view class="absolute right-0 flex items-center gap-[8rpx]">
+                    <view
+                        class="text-[22rpx] text-[#2B6EFF] bg-[#EFF6FF] px-[16rpx] py-[6rpx] rounded-full"
                         @click="backToToday(true)"
                         >今天</view
                     >
-                </view>
-                <view class="flex items-center gap-[8rpx]">
                     <view
-                        class="w-[56rpx] h-[56rpx] rounded-full bg-[#f3f4f6] flex items-center justify-center active:bg-[#e5e7eb]"
-                        @click="prevMonth">
-                        <u-icon name="arrow-left" color="#6b7280" size="20" />
-                    </view>
-                    <view
-                        class="w-[56rpx] h-[56rpx] rounded-full bg-[#f3f4f6] flex items-center justify-center active:bg-[#e5e7eb]"
+                        class="w-[52rpx] h-[52rpx] rounded-full bg-[#F3F4F6] flex items-center justify-center active:bg-[#E5E7EB]"
                         @click="nextMonth">
-                        <u-icon name="arrow-right" color="#6b7280" size="20" />
+                        <u-icon name="arrow-right" color="#6B7280" size="18" />
                     </view>
                 </view>
-            </view>
-
-            <view class="flex mb-[8rpx]">
-                <view
-                    class="flex-1 text-center text-[24rpx] text-[#9ca3af] py-[8rpx]"
-                    v-for="day in weekDays"
-                    :key="day"
-                    >{{ day }}</view
-                >
             </view>
 
             <view class="overflow-hidden transition-all duration-300 ease-in-out" :style="gridStyle">
@@ -52,14 +41,17 @@
                         v-for="(day, dayIndex) in week"
                         :key="dayIndex"
                         @click="selectDate(day)">
-                        <view class="day-number">{{ day.day }}</view>
+                        <view class="day-cell">
+                            <text class="week-label">{{ weekDays[dayIndex] }}</text>
+                            <text class="day-number">{{ day.day }}</text>
+                        </view>
                     </view>
                 </view>
             </view>
 
-            <view class="flex items-center justify-center pt-[16rpx] pb-[4rpx] active:opacity-60" @click="toggleExpand">
+            <view class="flex items-center justify-center pt-[12rpx] pb-[2rpx] active:opacity-60" @click="toggleExpand">
                 <view class="transition-transform duration-300" :class="isExpanded ? 'rotate-180' : 'rotate-0'">
-                    <u-icon name="arrow-down" color="#9CA3AF" size="24" />
+                    <u-icon name="arrow-down" color="#9CA3AF" size="22" />
                 </view>
             </view>
         </view>
@@ -98,7 +90,7 @@ const emit = defineEmits<{
     (e: "update:modelValue", value: string | string[]): void;
 }>();
 
-const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+const weekDays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 const days = ref<Day[]>([]);
 const currentYear = ref(new Date().getFullYear());
 const currentMonth = ref(new Date().getMonth() + 1);
@@ -106,10 +98,10 @@ const selectedDate = ref<string[]>([]);
 
 const isExpanded = ref(false);
 
-const ROW_HEIGHT_PX = 42;
+const ROW_HEIGHT_PX = 52;
 
 const gridStyle = computed(() => {
-    const visibleRows = isExpanded.value ? weeks.value.length : 1;
+    const visibleRows = isExpanded.value ? weeks.value.length + 1 : 1;
     return { maxHeight: `${visibleRows * ROW_HEIGHT_PX}px` };
 });
 
@@ -125,11 +117,15 @@ const toggleExpand = () => {
 };
 
 const toDateStr = (year: number, month: number, day: number): string => {
-    return `${year}-${month}-${day}`;
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return `${year}-${pad(month)}-${pad(day)}`;
 };
 
 const normalizeInputDate = (dateStr: string): string => {
-    return dateStr.replace(/\//g, "-");
+    const normalized = dateStr.replace(/\//g, "-");
+    const parts = normalized.split("-").map(Number);
+    if (parts.length < 3 || parts.some(isNaN)) return normalized;
+    return toDateStr(parts[0], parts[1], parts[2]);
 };
 
 const toOutputDate = (dateStr: string): string => {
@@ -149,7 +145,7 @@ watch(
             selectedDate.value = newSelected;
         }
     },
-    { deep: true, immediate: true }
+    { deep: true, immediate: true },
 );
 
 const weeks = computed(() => {
@@ -166,7 +162,7 @@ const generateCalendar = (year: number, month: number) => {
     today.setHours(0, 0, 0, 0);
     const todayDate = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
-    const firstDay = new Date(year, month - 1, 1).getDay();
+    const firstDay = (new Date(year, month - 1, 1).getDay() + 6) % 7;
     const daysInMonth = new Date(year, month, 0).getDate();
     const calendarDays: Day[] = [];
 
@@ -365,15 +361,35 @@ onMounted(() => {
 }
 
 .day-number {
-    @apply w-[64rpx] h-[64rpx] rounded-full flex items-center justify-center text-[28rpx] text-[#171717];
+    @apply text-sm font-bold mt-[4rpx] text-[#374151];
+}
+
+.day-cell {
+    @apply w-full mx-[4rpx] py-[10rpx] rounded-[24rpx] flex flex-col items-center justify-center;
+}
+
+.week-label {
+    @apply text-[20rpx] font-medium text-[#9CA3AF];
+}
+
+.today .day-cell {
+    @apply bg-[#EFF6FF];
 }
 
 .today .day-number {
-    @apply text-primary font-semibold border-[2rpx] border-solid border-primary;
+    @apply text-[#2B6EFF];
+}
+
+.selected .day-cell {
+    @apply bg-[#2B6EFF];
+}
+
+.selected .week-label {
+    @apply text-[#DBEAFE];
 }
 
 .selected .day-number {
-    @apply bg-primary text-white font-semibold border-none;
+    @apply text-white;
 }
 
 .not-current-month .day-number {
@@ -384,7 +400,12 @@ onMounted(() => {
     @apply text-[#d1d5db];
 }
 
-.selected.today .day-number {
-    @apply bg-primary text-white border-[none];
+.not-current-month .week-label,
+.disabled .week-label {
+    @apply text-[#D1D5DB];
+}
+
+.selected.today .day-cell {
+    @apply bg-[#2B6EFF];
 }
 </style>

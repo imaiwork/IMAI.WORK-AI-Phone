@@ -3,7 +3,6 @@
 
 namespace app\common\command;
 
-use app\api\logic\sora\SoraAnchorLogic;
 use app\api\logic\sora\SoraVideoSettingLogic;
 use app\api\logic\sora\SoraVideoTaskLogic;
 use think\console\Command;
@@ -25,14 +24,12 @@ class SoraVideoTaskCron extends Command
 
     protected function execute(Input $input, Output $output)
     {
-        print_r("\nSora视频生成任务1...'\n");
+        print_r("\nSeedance2.0视频生成任务1...'\n");
         SoraVideoSettingLogic::checkStatus();
-        print_r("\nSora视频生成任务2...'\n");
+        print_r("\nSeedance2.0视频生成任务2...'\n");
         SoraVideoTaskLogic::checkStatus();
-        print_r("\nSora视频生成任务3...'\n");
-        SoraAnchorLogic::checkVideoStatus();
-        print_r("\nSora视频生成任务4...'\n");
-        SoraAnchorLogic::checkStatus();
+//        SoraAnchorLogic::checkVideoStatus();
+//        SoraAnchorLogic::checkStatus();
 
         return true;
     }

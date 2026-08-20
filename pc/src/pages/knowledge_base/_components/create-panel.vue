@@ -70,21 +70,23 @@
 
 <script setup lang="ts">
 import { knowledgeBaseAdd, vectorKnowledgeBaseAdd } from "@/api/knowledge_base";
-import { uploadImage } from "@/api/app";
 import { useUserStore } from "@/stores/user";
+import { useAppStore } from "@/stores/app";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import type { CreateFormData } from "./type";
 import { KnTypeEnum } from "../_enums";
 import BaseForm from "./base-form.vue";
-import KnDefaultCover from "@/assets/images/kn_default_cover.png";
-import { urlToFile } from "@/utils/util"; // 确保导入工具函数
 
 const emit = defineEmits(["success", "back"]);
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
+const appStore = useAppStore();
 const { getTokenByScene } = userStore;
 const { userTokens } = toRefs(userStore);
+
+// 用户未选封面时，使用网站配置的 shop_logo（与 uniapp 一致，无需再上传本地默认图）
+const defaultCover = computed(() => appStore.getWebsiteConfig?.shop_logo || "");
 
 const tokensValue = computed(() => {
     return getTokenByScene(TokensSceneEnum.KNOWLEDGE_CREATE)?.score;
@@ -107,12 +109,7 @@ const handleNext = async () => {
     await baseFormRef.value.validateForm();
     try {
         const { name, description, cover } = formData;
-        let coverUrl = cover;
-        if (!cover) {
-            const file = await urlToFile(KnDefaultCover, "kn_default_cover.png");
-            const res = await uploadImage({ file });
-            coverUrl = res.uri;
-        }
+        const coverUrl = cover || defaultCover.value;
 
         const data = isRag.value
             ? await knowledgeBaseAdd({

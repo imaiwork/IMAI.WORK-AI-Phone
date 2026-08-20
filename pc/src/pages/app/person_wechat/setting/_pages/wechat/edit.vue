@@ -9,7 +9,7 @@
         custom-class="modern-config-popup">
         <div class="flex items-center gap-x-3 mb-8 px-2">
             <div
-                class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10 shadow-sm shadow-primary/5">
+                class="w-12 h-12 rounded-2xl bg-[#0065fb]/10 flex items-center justify-center text-primary border border-[#0065fb]/10 shadow-sm shadow-[#0065fb]/5">
                 <Icon name="el-icon-Setting" :size="24" />
             </div>
             <div>

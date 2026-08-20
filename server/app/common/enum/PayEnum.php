@@ -14,9 +14,10 @@ class PayEnum
 {
 
     //支付类型
-    const BALANCE_PAY   = 1; //余额支付
-    const WECHAT_PAY    = 2; //微信支付
-    const ALI_PAY       = 3; //支付宝支付
+    const BALANCE_PAY      = 1; //余额支付
+    const WECHAT_PAY       = 2; //微信支付
+    const ALI_PAY          = 3; //支付宝支付
+    const MNP_VIRTUAL_PAY  = 4; //微信小程序虚拟支付
 
 
     //支付状态
@@ -43,9 +44,10 @@ class PayEnum
     public static function getPayDesc($value = true)
     {
         $data = [
-            self::BALANCE_PAY => '余额支付',
-            self::WECHAT_PAY => '微信支付',
-            self::ALI_PAY => '支付宝支付',
+            self::BALANCE_PAY     => '余额支付',
+            self::WECHAT_PAY      => '微信支付',
+            self::ALI_PAY         => '支付宝支付',
+            self::MNP_VIRTUAL_PAY => '虚拟支付',
         ];
         if ($value === true) {
             return $data;

@@ -69,6 +69,7 @@
                                     </div>
                                 </div>
                                 <div
+                                    v-if="Number(item.is_super) === 1 || Number(item.is_owner) === 1"
                                     class="opacity-0 group-hover:opacity-100 transition-all transform scale-90"
                                     @click.stop>
                                     <handle-menu :data="item" :menu-list="handleMenuList" />

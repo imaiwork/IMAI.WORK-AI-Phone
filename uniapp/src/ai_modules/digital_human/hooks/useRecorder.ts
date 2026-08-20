@@ -78,7 +78,7 @@ export default function useRecorder(options?: Options, callbacks?: callbacks) {
                             }
                         },
                     });
-                }
+                },
             );
         });
     };
@@ -104,7 +104,7 @@ export default function useRecorder(options?: Options, callbacks?: callbacks) {
                         bufferDuration: any,
                         bufferSampleRate: any,
                         newBufferIdx: any,
-                        asyncEnd: any
+                        asyncEnd: any,
                     ) => {
                         // 记录录音时长
                         recordTime.value = bufferDuration;
@@ -135,7 +135,7 @@ export default function useRecorder(options?: Options, callbacks?: callbacks) {
                     const findCanvas = RecordApp.UniFindCanvas;
                     callbacks?.onstart?.();
                     callbacks?.ondrawAudio?.(findCanvas, Recorder);
-                }
+                },
             );
         } catch (error) {
             return Promise.reject(error);
@@ -154,7 +154,7 @@ export default function useRecorder(options?: Options, callbacks?: callbacks) {
                 },
                 (err: any) => {
                     console.log(err);
-                }
+                },
             );
             isRecording.value = false;
         });

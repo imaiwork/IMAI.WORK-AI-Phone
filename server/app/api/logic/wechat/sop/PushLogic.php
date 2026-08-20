@@ -113,6 +113,14 @@ class PushLogic extends ApiLogic
 
             $push->delete_time = time();
             $push->save();
+
+            // 删除推送内容
+            AiWechatSopPushContent::where(['push_id' => $params['id'], 'user_id' => self::$uid])->update(['delete_time' => time()]);
+            // 删除待推送内容
+            AiWechatSopPushLog::where(['push_id' => $params['id'], 'user_id' => self::$uid, 'status' => 0])->update(['delete_time' => time()]);
+            // 删除推送时间
+            AiWechatSopPushTime::where(['push_id' => $params['id'], 'user_id' => self::$uid])->update(['delete_time' => time()]);
+
             return true;
         } catch (\Exception $e) {
             self::setError($e->getMessage());

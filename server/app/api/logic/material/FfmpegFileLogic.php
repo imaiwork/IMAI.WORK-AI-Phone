@@ -24,6 +24,8 @@ class FfmpegFileLogic extends ApiLogic
                 'tries'       => $params['tries'] ?? 0,
                 'remark'      => $params['remark'] ?? '',
                 'uri'         => $uri,
+                'height'       => $params['height'] ?? 0,
+                'width'       => $params['width'] ?? 0,
                 'create_time' => time(),
             ];
             $ffmpegFile = FfmpegFile::create($data);
@@ -138,23 +140,33 @@ class FfmpegFileLogic extends ApiLogic
                     $output = shell_exec($command);
                     $mediaInfo = $finalUrl = '';
                     if ($output !== null && (strpos($output, 'ffmpeg version') !== false || strpos($output, 'ffmpeg6 version') !== false)) {
-                        $host = config('app.app_host');
+                        $host = (string)config('app.app_host');
                         $url = FileService::getFileUrl($task['uri']);
-                        $is_local = strpos($url, $host) === 0;
+                        $is_local = $host !== '' && strpos($url, $host) === 0;
+                        Log::channel('ffmpeg')->write("[定时任务转码] 路径检测{$url}-"." -是否本地文件: {$is_local}-"."-host: {$host}");
                         if (!$is_local) {
                             $tempFilePath = \app\common\service\UploadService::downloadRemoteFile($url);
                         } else {
-                            $tempFilePath = $task['uri'];
+                            $localPath = parse_url($url, PHP_URL_PATH);
+                            if ($localPath === false || $localPath === null || $localPath === '') {
+                                $localPath = FileService::setFileUrl($task['uri']);
+                            }
+                            $tempFilePath = public_path() . ltrim($localPath, '/');
                         }
                         // 步骤1：下载远程文件到本地临时目录
                         // 步骤2：获取媒体文件信息
                         $mediaInfo = \app\common\service\UploadService::getMediaInfo($tempFilePath);
                         // 步骤3：使用UploadService进行标准化处理
-                        $processedFilePath = \app\common\service\UploadService::standardizeMedia($tempFilePath);
+                        $processedFile = \app\common\service\UploadService::standardizeMedia($tempFilePath);
                         // 步骤4：上传处理后的文件到云存储
-                        $finalUrl = FileService::getFileUrl($processedFilePath);
+                        if (isset($processedFile['url'])) {
+                            $finalUrl = FileService::getFileUrl($processedFile['url']);
+                        }
+                        Log::channel('ffmpeg')->write("[定时任务转码] 获取结果{$finalUrl}");
                         $updateData = [
                             'status' => 2, // 成功
+                            'width' => $processedFile['width'] ?? 0, // 成功
+                            'height' => $processedFile['height'] ?? 0, // 成功
                             'tries' => $task['tries'] + 1,
                             'remark' => '处理成功 - ' . json_encode([
                                 'processed_at' => date('Y-m-d H:i:s')

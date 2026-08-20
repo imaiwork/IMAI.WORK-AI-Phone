@@ -40,7 +40,7 @@
                                     :class="{ 'is-active': formData.action_type === 1 }"
                                     @click="formData.action_type = 1">
                                     <div
-                                        class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                                        class="w-10 h-10 rounded-full bg-[#0065fb]/10 text-primary flex items-center justify-center">
                                         <Icon name="el-icon-UserFilled" />
                                     </div>
                                     <div class="flex-1">
@@ -86,7 +86,7 @@
                         <ElFormItem label="关键词配置" prop="chat_keywords">
                             <ElInput
                                 v-model="formData.chat_keywords"
-                                placeholder="输入触发词，多个词请用逗号隔开"
+                                placeholder="输入触发词，多个词请用分号相隔;,例如：你好;再见;谢谢;再见"
                                 class="custom-input">
                                 <template #prefix>
                                     <Icon name="el-icon-Search" color="var(--slate-400)" />

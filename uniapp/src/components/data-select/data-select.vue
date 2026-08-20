@@ -182,7 +182,7 @@ const emitSelection = () => {
 };
 
 const formatItemName = (item) => {
-    let { text, value, channel_code } = item;
+    const { text, value, channel_code } = item;
     return channel_code ? `${text}(${channel_code})` : text || `未命名(${value})`;
 };
 
@@ -193,7 +193,7 @@ watch(
             mixinDatacomResData.value = val;
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 watch(
@@ -205,7 +205,7 @@ watch(
             selectedItems.value = mixinDatacomResData.value.filter((item) => item.value == val);
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 </script>
 

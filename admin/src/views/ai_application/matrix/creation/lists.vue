@@ -12,12 +12,11 @@
                 </el-form-item>
                 <el-form-item label="任务状态">
                     <el-select class="!w-[160px]" v-model="queryParams.status" placeholder="请选择状态" clearable>
-                        <el-option label="草稿箱" :value="GenStatus.DRAFT" />
-                        <el-option label="待处理" :value="GenStatus.WAITING" />
-                        <el-option label="生成中" :value="GenStatus.GENERATING" />
+                        <el-option label="待开始" :value="GenStatus.DRAFT" />
+                        <el-option label="执行中" :value="GenStatus.RUNNING" />
                         <el-option label="已完成" :value="GenStatus.SUCCESS" />
-                        <el-option label="失败" :value="GenStatus.FAILED" />
-                        <el-option label="部分完成" :value="GenStatus.PARTIAL_SUCCESS" />
+                        <el-option label="执行失败" :value="GenStatus.FAILED" />
+                        <el-option label="已中断" :value="GenStatus.PARTIAL_SUCCESS" />
                     </el-select>
                 </el-form-item>
                 <el-form-item label="任务类型">
@@ -150,23 +149,21 @@ enum CreationType {
 }
 
 enum GenStatus {
-    DRAFT = 0, // 草稿箱
-    WAITING = 1, // 待处理
-    GENERATING = 2, // 生成中
-    SUCCESS = 3, // 已完成
-    FAILED = 4, // 生成失败
-    PARTIAL_SUCCESS = 5, // 部分完成
+    DRAFT = 0, // 待开始
+    RUNNING = 1, // 执行中
+    SUCCESS = 2, // 已完成
+    FAILED = 3, // 执行失败
+    PARTIAL_SUCCESS = 4, // 已中断
 }
 
 // 获取对应状态文本
 const getStatusText = (status: number) => {
     const statusMap = {
-        [GenStatus.DRAFT]: "草稿箱",
-        [GenStatus.WAITING]: "待处理",
-        [GenStatus.GENERATING]: "生成中",
+        [GenStatus.DRAFT]: "待开始",
+        [GenStatus.RUNNING]: "执行中",
         [GenStatus.SUCCESS]: "已完成",
-        [GenStatus.FAILED]: "失败",
-        [GenStatus.PARTIAL_SUCCESS]: "部分完成",
+        [GenStatus.FAILED]: "执行失败",
+        [GenStatus.PARTIAL_SUCCESS]: "已中断",
     } as Record<number, string>;
     return statusMap[status];
 };
@@ -184,11 +181,8 @@ const getStatusType = (status: number) => {
     if (status === GenStatus.SUCCESS || status === GenStatus.PARTIAL_SUCCESS) {
         return "success";
     }
-    if (status === GenStatus.WAITING || status === GenStatus.DRAFT) {
+    if (status === GenStatus.RUNNING || status === GenStatus.DRAFT) {
         return "info";
-    }
-    if (status === GenStatus.GENERATING) {
-        return "warning";
     }
     if (status === GenStatus.FAILED) {
         return "danger";

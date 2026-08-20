@@ -67,12 +67,12 @@ const tools = ref<any[]>([
                 icon: "menu_dh",
                 link: "/app/digital_human",
             },
-            {
-                key: "ai_image",
-                name: "AI图片",
-                icon: "menu_draw",
-                link: "/app/drawing",
-            },
+            // {
+            //     key: "ai_image",
+            //     name: "AI图片",
+            //     icon: "menu_draw",
+            //     link: "/app/drawing",
+            // },
             {
                 key: "matrix",
                 name: "矩阵任务",
@@ -110,6 +110,12 @@ const tools = ref<any[]>([
         name: "AI终端",
         icon: "menu_device",
         link: "/device",
+    },
+    {
+        key: "geo",
+        name: "GEO中心",
+        icon: "menu_agent",
+        link: "/geo",
     },
 ]);
 </script>

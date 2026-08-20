@@ -19,7 +19,7 @@ PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
 /* global Reflect, Promise */
 
-var extendStatics = function (d, b) {
+let extendStatics = function (d, b) {
     extendStatics =
         Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array &&
@@ -27,33 +27,28 @@ var extendStatics = function (d, b) {
                 d.__proto__ = b
             }) ||
         function (d, b) {
-            for (const p in b)
-                if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]
+            for (const p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]
         }
     return extendStatics(d, b)
 }
 
 function __extends(d, b) {
     if (typeof b !== 'function' && b !== null)
-        throw new TypeError(
-            'Class extends value ' + String(b) + ' is not a constructor or null'
-        )
+        throw new TypeError('Class extends value ' + String(b) + ' is not a constructor or null')
     extendStatics(d, b)
     function __() {
         this.constructor = d
     }
-    d.prototype =
-        b === null ? Object.create(b) : ((__.prototype = b.prototype), new __())
+    d.prototype = b === null ? Object.create(b) : ((__.prototype = b.prototype), new __())
 }
 
-var __assign = function () {
+let __assign = function () {
     __assign =
         Object.assign ||
         function __assign(t) {
             for (var s, i = 1, n = arguments.length; i < n; i++) {
                 s = arguments[i]
-                for (const p in s)
-                    if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p]
+                for (const p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p]
             }
             return t
         }
@@ -84,9 +79,7 @@ function __awaiter(thisArg, _arguments, P, generator) {
             }
         }
         function step(result) {
-            result.done
-                ? resolve(result.value)
-                : adopt(result.value).then(fulfilled, rejected)
+            result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected)
         }
         step((generator = generator.apply(thisArg, _arguments || [])).next())
     })
@@ -130,8 +123,7 @@ function __generator(thisArg, body) {
                             op[0] & 2
                                 ? y['return']
                                 : op[0]
-                                ? y['throw'] ||
-                                  ((t = y['return']) && t.call(y), 0)
+                                ? y['throw'] || ((t = y['return']) && t.call(y), 0)
                                 : y.next) &&
                         !(t = t.call(y, op[1])).done)
                 )
@@ -156,17 +148,13 @@ function __generator(thisArg, body) {
                         continue
                     default:
                         if (
-                            !((t = _.trys),
-                            (t = t.length > 0 && t[t.length - 1])) &&
+                            !((t = _.trys), (t = t.length > 0 && t[t.length - 1])) &&
                             (op[0] === 6 || op[0] === 2)
                         ) {
                             _ = 0
                             continue
                         }
-                        if (
-                            op[0] === 3 &&
-                            (!t || (op[1] > t[0] && op[1] < t[3]))
-                        ) {
+                        if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) {
                             _.label = op[1]
                             break
                         }
@@ -215,12 +203,7 @@ const Bounds = /** @class */ (function () {
         this.height = height
     }
     Bounds.prototype.add = function (x, y, w, h) {
-        return new Bounds(
-            this.left + x,
-            this.top + y,
-            this.width + w,
-            this.height + h
-        )
+        return new Bounds(this.left + x, this.top + y, this.width + w, this.height + h)
     }
     Bounds.fromClientRect = function (context, clientRect) {
         return new Bounds(
@@ -282,9 +265,7 @@ const toCodePoints$1 = function (str) {
         if (value >= 0xd800 && value <= 0xdbff && i < length) {
             const extra = str.charCodeAt(i++)
             if ((extra & 0xfc00) === 0xdc00) {
-                codePoints.push(
-                    ((value & 0x3ff) << 10) + (extra & 0x3ff) + 0x10000
-                )
+                codePoints.push(((value & 0x3ff) << 10) + (extra & 0x3ff) + 0x10000)
             } else {
                 codePoints.push(value)
                 i--
@@ -316,10 +297,7 @@ const fromCodePoint$1 = function () {
             codeUnits.push(codePoint)
         } else {
             codePoint -= 0x10000
-            codeUnits.push(
-                (codePoint >> 10) + 0xd800,
-                (codePoint % 0x400) + 0xdc00
-            )
+            codeUnits.push((codePoint >> 10) + 0xd800, (codePoint % 0x400) + 0xdc00)
         }
         if (index + 1 === length || codeUnits.length > 0x4000) {
             result += String.fromCharCode.apply(String, codeUnits)
@@ -328,8 +306,7 @@ const fromCodePoint$1 = function () {
     }
     return result
 }
-const chars$2 =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+const chars$2 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 // Use a lookup table to find the index.
 const lookup$2 = typeof Uint8Array === 'undefined' ? [] : new Uint8Array(256)
 for (let i$2 = 0; i$2 < chars$2.length; i$2++) {
@@ -341,8 +318,7 @@ for (let i$2 = 0; i$2 < chars$2.length; i$2++) {
  * Copyright (c) 2022 Niklas von Hertzen <https://hertzen.com>
  * Released under MIT License
  */
-const chars$1$1 =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+const chars$1$1 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 // Use a lookup table to find the index.
 const lookup$1$1 = typeof Uint8Array === 'undefined' ? [] : new Uint8Array(256)
 for (let i$1$1 = 0; i$1$1 < chars$1$1.length; i$1$1++) {
@@ -393,12 +369,7 @@ const polyUint32Array$1 = function (buffer) {
     const length = buffer.length
     const bytes = []
     for (let i = 0; i < length; i += 4) {
-        bytes.push(
-            (buffer[i + 3] << 24) |
-                (buffer[i + 2] << 16) |
-                (buffer[i + 1] << 8) |
-                buffer[i]
-        )
+        bytes.push((buffer[i + 3] << 24) | (buffer[i + 2] << 16) | (buffer[i + 1] << 8) | buffer[i])
     }
     return bytes
 }
@@ -432,8 +403,7 @@ const UTRIE2_DATA_BLOCK_LENGTH$1 = 1 << UTRIE2_SHIFT_2$1
 const UTRIE2_DATA_MASK$1 = UTRIE2_DATA_BLOCK_LENGTH$1 - 1
 const UTRIE2_LSCP_INDEX_2_LENGTH$1 = 0x400 >> UTRIE2_SHIFT_2$1
 /** Count the lengths of both BMP pieces. 2080=0x820 */
-const UTRIE2_INDEX_2_BMP_LENGTH$1 =
-    UTRIE2_LSCP_INDEX_2_OFFSET$1 + UTRIE2_LSCP_INDEX_2_LENGTH$1
+const UTRIE2_INDEX_2_BMP_LENGTH$1 = UTRIE2_LSCP_INDEX_2_OFFSET$1 + UTRIE2_LSCP_INDEX_2_LENGTH$1
 /**
  * The 2-byte UTF-8 version of the index-2 table follows at offset 2080=0x820.
  * Length 32=0x20 for lead bytes C0..DF, regardless of UTRIE2_SHIFT_2.
@@ -453,8 +423,7 @@ const UTRIE2_UTF8_2B_INDEX_2_LENGTH$1 =
  * Both the index-1 table and the following part of the index-2 table
  * are omitted completely if there is only BMP data.
  */
-const UTRIE2_INDEX_1_OFFSET$1 =
-    UTRIE2_UTF8_2B_INDEX_2_OFFSET$1 + UTRIE2_UTF8_2B_INDEX_2_LENGTH$1
+const UTRIE2_INDEX_1_OFFSET$1 = UTRIE2_UTF8_2B_INDEX_2_OFFSET$1 + UTRIE2_UTF8_2B_INDEX_2_LENGTH$1
 /**
  * Number of index-1 entries for the BMP. 32=0x20
  * This part of the index-1 table is omitted from the serialized form.
@@ -478,12 +447,8 @@ const slice32$1 = function (view, start, end) {
 }
 const createTrieFromBase64$1 = function (base64, _byteLength) {
     const buffer = decode$1(base64)
-    const view32 = Array.isArray(buffer)
-        ? polyUint32Array$1(buffer)
-        : new Uint32Array(buffer)
-    const view16 = Array.isArray(buffer)
-        ? polyUint16Array$1(buffer)
-        : new Uint16Array(buffer)
+    const view32 = Array.isArray(buffer) ? polyUint32Array$1(buffer) : new Uint32Array(buffer)
+    const view16 = Array.isArray(buffer) ? polyUint16Array$1(buffer) : new Uint16Array(buffer)
     const headerLength = 24
     const index = slice16$1(view16, headerLength / 2, view32[4] / 2)
     const data =
@@ -493,14 +458,7 @@ const createTrieFromBase64$1 = function (base64, _byteLength) {
     return new Trie$1(view32[0], view32[1], view32[2], view32[3], index, data)
 }
 var Trie$1 = /** @class */ (function () {
-    function Trie(
-        initialValue,
-        errorValue,
-        highStart,
-        highValueIndex,
-        index,
-        data
-    ) {
+    function Trie(initialValue, errorValue, highStart, highValueIndex, index, data) {
         this.initialValue = initialValue
         this.errorValue = errorValue
         this.highStart = highStart
@@ -517,17 +475,12 @@ var Trie$1 = /** @class */ (function () {
     Trie.prototype.get = function (codePoint) {
         let ix
         if (codePoint >= 0) {
-            if (
-                codePoint < 0x0d800 ||
-                (codePoint > 0x0dbff && codePoint <= 0x0ffff)
-            ) {
+            if (codePoint < 0x0d800 || (codePoint > 0x0dbff && codePoint <= 0x0ffff)) {
                 // Ordinary BMP code point, excluding leading surrogates.
                 // BMP uses a single level lookup.  BMP index starts at offset 0 in the Trie2 index.
                 // 16 bit data is stored in the index array itself.
                 ix = this.index[codePoint >> UTRIE2_SHIFT_2$1]
-                ix =
-                    (ix << UTRIE2_INDEX_SHIFT$1) +
-                    (codePoint & UTRIE2_DATA_MASK$1)
+                ix = (ix << UTRIE2_INDEX_SHIFT$1) + (codePoint & UTRIE2_DATA_MASK$1)
                 return this.data[ix]
             }
             if (codePoint <= 0xffff) {
@@ -539,12 +492,9 @@ var Trie$1 = /** @class */ (function () {
                 //       surrogate code points will be so rare in practice that it's not worth it.
                 ix =
                     this.index[
-                        UTRIE2_LSCP_INDEX_2_OFFSET$1 +
-                            ((codePoint - 0xd800) >> UTRIE2_SHIFT_2$1)
+                        UTRIE2_LSCP_INDEX_2_OFFSET$1 + ((codePoint - 0xd800) >> UTRIE2_SHIFT_2$1)
                     ]
-                ix =
-                    (ix << UTRIE2_INDEX_SHIFT$1) +
-                    (codePoint & UTRIE2_DATA_MASK$1)
+                ix = (ix << UTRIE2_INDEX_SHIFT$1) + (codePoint & UTRIE2_DATA_MASK$1)
                 return this.data[ix]
             }
             if (codePoint < this.highStart) {
@@ -556,9 +506,7 @@ var Trie$1 = /** @class */ (function () {
                 ix = this.index[ix]
                 ix += (codePoint >> UTRIE2_SHIFT_2$1) & UTRIE2_INDEX_2_MASK$1
                 ix = this.index[ix]
-                ix =
-                    (ix << UTRIE2_INDEX_SHIFT$1) +
-                    (codePoint & UTRIE2_DATA_MASK$1)
+                ix = (ix << UTRIE2_INDEX_SHIFT$1) + (codePoint & UTRIE2_DATA_MASK$1)
                 return this.data[ix]
             }
             if (codePoint <= 0x10ffff) {
@@ -576,8 +524,7 @@ var Trie$1 = /** @class */ (function () {
  * Copyright (c) 2022 Niklas von Hertzen <https://hertzen.com>
  * Released under MIT License
  */
-const chars$3 =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+const chars$3 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 // Use a lookup table to find the index.
 const lookup$3 = typeof Uint8Array === 'undefined' ? [] : new Uint8Array(256)
 for (let i$3 = 0; i$3 < chars$3.length; i$3++) {
@@ -764,21 +711,12 @@ const previousNonSpaceClassType = function (currentIndex, classTypes) {
     }
     return 0
 }
-const _lineBreakAtIndex = function (
-    codePoints,
-    classTypes,
-    indicies,
-    index,
-    forbiddenBreaks
-) {
+const _lineBreakAtIndex = function (codePoints, classTypes, indicies, index, forbiddenBreaks) {
     if (indicies[index] === 0) {
         return BREAK_NOT_ALLOWED$1
     }
     const currentIndex = index - 1
-    if (
-        Array.isArray(forbiddenBreaks) &&
-        forbiddenBreaks[currentIndex] === true
-    ) {
+    if (Array.isArray(forbiddenBreaks) && forbiddenBreaks[currentIndex] === true) {
         return BREAK_NOT_ALLOWED$1
     }
     const beforeIndex = currentIndex - 1
@@ -811,10 +749,7 @@ const _lineBreakAtIndex = function (
         return BREAK_NOT_ALLOWED$1
     }
     // zwj emojis
-    if (
-        (current === EB || current === EM) &&
-        UnicodeTrie$1.get(codePoints[afterIndex]) === ZWJ$1
-    ) {
+    if ((current === EB || current === EM) && UnicodeTrie$1.get(codePoints[afterIndex]) === ZWJ$1) {
         return BREAK_NOT_ALLOWED$1
     }
     // LB11 Do not break before or after Word joiner and related characters.
@@ -893,10 +828,8 @@ const _lineBreakAtIndex = function (
     }
     // LB24 Do not break between numeric prefix/postfix and letters, or between letters and prefix/postfix.
     if (
-        (ALPHABETICS.indexOf(current) !== -1 &&
-            PREFIX_POSTFIX.indexOf(next) !== -1) ||
-        (PREFIX_POSTFIX.indexOf(current) !== -1 &&
-            ALPHABETICS.indexOf(next) !== -1)
+        (ALPHABETICS.indexOf(current) !== -1 && PREFIX_POSTFIX.indexOf(next) !== -1) ||
+        (PREFIX_POSTFIX.indexOf(current) !== -1 && ALPHABETICS.indexOf(next) !== -1)
     ) {
         return BREAK_NOT_ALLOWED$1
     }
@@ -905,8 +838,7 @@ const _lineBreakAtIndex = function (
         // (PR | PO) × ( OP | HY )? NU
         ([PR, PO].indexOf(current) !== -1 &&
             (next === NU ||
-                ([OP, HY].indexOf(next) !== -1 &&
-                    classTypes[afterIndex + 1] === NU))) ||
+                ([OP, HY].indexOf(next) !== -1 && classTypes[afterIndex + 1] === NU))) ||
         // ( OP | HY ) × NU
         ([OP, HY].indexOf(current) !== -1 && next === NU) ||
         // NU ×	(NU | SY | IS)
@@ -930,8 +862,7 @@ const _lineBreakAtIndex = function (
     }
     // NU (NU | SY | IS)* (CL | CP)? × (PO | PR))
     if ([PR, PO].indexOf(next) !== -1) {
-        var prevIndex =
-            [CL, CP].indexOf(current) !== -1 ? beforeIndex : currentIndex
+        var prevIndex = [CL, CP].indexOf(current) !== -1 ? beforeIndex : currentIndex
         while (prevIndex >= 0) {
             var type = classTypes[prevIndex]
             if (type === NU) {
@@ -953,17 +884,13 @@ const _lineBreakAtIndex = function (
     }
     // LB27 Treat a Korean Syllable Block the same as ID.
     if (
-        (KOREAN_SYLLABLE_BLOCK.indexOf(current) !== -1 &&
-            [IN, PO].indexOf(next) !== -1) ||
+        (KOREAN_SYLLABLE_BLOCK.indexOf(current) !== -1 && [IN, PO].indexOf(next) !== -1) ||
         (KOREAN_SYLLABLE_BLOCK.indexOf(next) !== -1 && current === PR)
     ) {
         return BREAK_NOT_ALLOWED$1
     }
     // LB28 Do not break between alphabetics (“at”).
-    if (
-        ALPHABETICS.indexOf(current) !== -1 &&
-        ALPHABETICS.indexOf(next) !== -1
-    ) {
+    if (ALPHABETICS.indexOf(current) !== -1 && ALPHABETICS.indexOf(next) !== -1) {
         return BREAK_NOT_ALLOWED$1
     }
     // LB29 Do not break between numeric punctuation and alphabetics (“e.g.”).
@@ -1010,10 +937,7 @@ const cssFormattedClasses = function (codePoints, options) {
         indicies = _a[0],
         classTypes = _a[1],
         isLetterNumber = _a[2]
-    if (
-        options.wordBreak === 'break-all' ||
-        options.wordBreak === 'break-word'
-    ) {
+    if (options.wordBreak === 'break-all' || options.wordBreak === 'break-word') {
         classTypes = classTypes.map(function (type) {
             return [NU, AL, SA].indexOf(type) !== -1 ? ID : type
         })
@@ -1021,11 +945,7 @@ const cssFormattedClasses = function (codePoints, options) {
     const forbiddenBreakpoints =
         options.wordBreak === 'keep-all'
             ? isLetterNumber.map(function (letterNumber, i) {
-                  return (
-                      letterNumber &&
-                      codePoints[i] >= 0x4e00 &&
-                      codePoints[i] <= 0x9fff
-                  )
+                  return letterNumber && codePoints[i] >= 0x4e00 && codePoints[i] <= 0x9fff
               })
             : undefined
     return [indicies, classTypes, forbiddenBreakpoints]
@@ -1038,10 +958,7 @@ const Break = /** @class */ (function () {
         this.end = end
     }
     Break.prototype.slice = function () {
-        return fromCodePoint$1.apply(
-            void 0,
-            this.codePoints.slice(this.start, this.end)
-        )
+        return fromCodePoint$1.apply(void 0, this.codePoints.slice(this.start, this.end))
     }
     return Break
 })()
@@ -1071,12 +988,7 @@ const LineBreaker = function (str, options) {
                 )) === BREAK_NOT_ALLOWED$1
             ) {}
             if (lineBreak !== BREAK_NOT_ALLOWED$1 || nextIndex === length) {
-                const value = new Break(
-                    codePoints,
-                    lineBreak,
-                    lastEnd,
-                    nextIndex
-                )
+                const value = new Break(codePoints, lineBreak, lastEnd, nextIndex)
                 lastEnd = nextIndex
                 return { value: value, done: false }
             }
@@ -1169,25 +1081,13 @@ const isNonASCIICodePoint = function (codePoint) {
     return codePoint >= CONTROL
 }
 const isWhiteSpace = function (codePoint) {
-    return (
-        codePoint === LINE_FEED ||
-        codePoint === CHARACTER_TABULATION ||
-        codePoint === SPACE
-    )
+    return codePoint === LINE_FEED || codePoint === CHARACTER_TABULATION || codePoint === SPACE
 }
 const isNameStartCodePoint = function (codePoint) {
-    return (
-        isLetter(codePoint) ||
-        isNonASCIICodePoint(codePoint) ||
-        codePoint === LOW_LINE
-    )
+    return isLetter(codePoint) || isNonASCIICodePoint(codePoint) || codePoint === LOW_LINE
 }
 const isNameCodePoint = function (codePoint) {
-    return (
-        isNameStartCodePoint(codePoint) ||
-        isDigit(codePoint) ||
-        codePoint === HYPHEN_MINUS
-    )
+    return isNameStartCodePoint(codePoint) || isDigit(codePoint) || codePoint === HYPHEN_MINUS
 }
 const isNonPrintableCodePoint = function (codePoint) {
     return (
@@ -1238,9 +1138,7 @@ const stringToNumber = function (codePoints) {
     while (isDigit(codePoints[c])) {
         integers.push(codePoints[c++])
     }
-    const int = integers.length
-        ? parseInt(fromCodePoint$1.apply(void 0, integers), 10)
-        : 0
+    const int = integers.length ? parseInt(fromCodePoint$1.apply(void 0, integers), 10) : 0
     if (codePoints[c] === FULL_STOP) {
         c++
     }
@@ -1249,9 +1147,7 @@ const stringToNumber = function (codePoints) {
         fraction.push(codePoints[c++])
     }
     const fracd = fraction.length
-    const frac = fracd
-        ? parseInt(fromCodePoint$1.apply(void 0, fraction), 10)
-        : 0
+    const frac = fracd ? parseInt(fromCodePoint$1.apply(void 0, fraction), 10) : 0
     if (codePoints[c] === E || codePoints[c] === e) {
         c++
     }
@@ -1266,12 +1162,8 @@ const stringToNumber = function (codePoints) {
     while (isDigit(codePoints[c])) {
         exponent.push(codePoints[c++])
     }
-    const exp = exponent.length
-        ? parseInt(fromCodePoint$1.apply(void 0, exponent), 10)
-        : 0
-    return (
-        sign * (int + frac * Math.pow(10, -fracd)) * Math.pow(10, expsign * exp)
-    )
+    const exp = exponent.length ? parseInt(fromCodePoint$1.apply(void 0, exponent), 10) : 0
+    return sign * (int + frac * Math.pow(10, -fracd)) * Math.pow(10, expsign * exp)
 }
 const LEFT_PARENTHESIS_TOKEN = {
     type: 2 /* LEFT_PARENTHESIS_TOKEN */
@@ -1332,9 +1224,7 @@ const Tokenizer = /** @class */ (function () {
                 var c2 = this.peekCodePoint(1)
                 var c3 = this.peekCodePoint(2)
                 if (isNameCodePoint(c1) || isValidEscape(c2, c3)) {
-                    const flags = isIdentifierStart(c1, c2, c3)
-                        ? FLAG_ID
-                        : FLAG_UNRESTRICTED
+                    const flags = isIdentifierStart(c1, c2, c3) ? FLAG_ID : FLAG_UNRESTRICTED
                     var value = this.consumeName()
                     return {
                         type: 5 /* HASH_TOKEN */,
@@ -1362,13 +1252,7 @@ const Tokenizer = /** @class */ (function () {
                 }
                 break
             case PLUS_SIGN:
-                if (
-                    isNumberStart(
-                        codePoint,
-                        this.peekCodePoint(0),
-                        this.peekCodePoint(1)
-                    )
-                ) {
+                if (isNumberStart(codePoint, this.peekCodePoint(0), this.peekCodePoint(1))) {
                     this.reconsumeCodePoint(codePoint)
                     return this.consumeNumericToken()
                 }
@@ -1394,13 +1278,7 @@ const Tokenizer = /** @class */ (function () {
                 }
                 break
             case FULL_STOP:
-                if (
-                    isNumberStart(
-                        codePoint,
-                        this.peekCodePoint(0),
-                        this.peekCodePoint(1)
-                    )
-                ) {
+                if (isNumberStart(codePoint, this.peekCodePoint(0), this.peekCodePoint(1))) {
                     this.reconsumeCodePoint(codePoint)
                     return this.consumeNumericToken()
                 }
@@ -1561,10 +1439,7 @@ const Tokenizer = /** @class */ (function () {
             }
         }
         const start = parseInt(fromCodePoint$1.apply(void 0, digits), 16)
-        if (
-            this.peekCodePoint(0) === HYPHEN_MINUS &&
-            isHex(this.peekCodePoint(1))
-        ) {
+        if (this.peekCodePoint(0) === HYPHEN_MINUS && isHex(this.peekCodePoint(1))) {
             this.consumeCodePoint()
             codePoint = this.consumeCodePoint()
             const endDigits = []
@@ -1588,10 +1463,7 @@ const Tokenizer = /** @class */ (function () {
     }
     Tokenizer.prototype.consumeIdentLikeToken = function () {
         const value = this.consumeName()
-        if (
-            value.toLowerCase() === 'url' &&
-            this.peekCodePoint(0) === LEFT_PARENTHESIS
-        ) {
+        if (value.toLowerCase() === 'url' && this.peekCodePoint(0) === LEFT_PARENTHESIS) {
             this.consumeCodePoint()
             return this.consumeUrlToken()
         } else if (this.peekCodePoint(0) === LEFT_PARENTHESIS) {
@@ -1611,10 +1483,7 @@ const Tokenizer = /** @class */ (function () {
             const stringToken = this.consumeStringToken(this.consumeCodePoint())
             if (stringToken.type === 0 /* STRING_TOKEN */) {
                 this.consumeWhiteSpace()
-                if (
-                    this.peekCodePoint(0) === EOF ||
-                    this.peekCodePoint(0) === RIGHT_PARENTHESIS
-                ) {
+                if (this.peekCodePoint(0) === EOF || this.peekCodePoint(0) === RIGHT_PARENTHESIS) {
                     this.consumeCodePoint()
                     return {
                         type: 22 /* URL_TOKEN */,
@@ -1634,10 +1503,7 @@ const Tokenizer = /** @class */ (function () {
                 }
             } else if (isWhiteSpace(codePoint)) {
                 this.consumeWhiteSpace()
-                if (
-                    this.peekCodePoint(0) === EOF ||
-                    this.peekCodePoint(0) === RIGHT_PARENTHESIS
-                ) {
+                if (this.peekCodePoint(0) === EOF || this.peekCodePoint(0) === RIGHT_PARENTHESIS) {
                     this.consumeCodePoint()
                     return {
                         type: 22 /* URL_TOKEN */,
@@ -1687,10 +1553,7 @@ const Tokenizer = /** @class */ (function () {
         let value = ''
         while (count > 0) {
             const amount = Math.min(SLICE_STACK_SIZE, count)
-            value += fromCodePoint$1.apply(
-                void 0,
-                this._value.splice(0, amount)
-            )
+            value += fromCodePoint$1.apply(void 0, this._value.splice(0, amount))
             count -= amount
         }
         this._value.shift()
@@ -1701,11 +1564,7 @@ const Tokenizer = /** @class */ (function () {
         let i = 0
         do {
             const codePoint = this._value[i]
-            if (
-                codePoint === EOF ||
-                codePoint === undefined ||
-                codePoint === endingCodePoint
-            ) {
+            if (codePoint === EOF || codePoint === undefined || codePoint === endingCodePoint) {
                 value += this.consumeStringSlice(i)
                 return { type: 0 /* STRING_TOKEN */, value: value }
             }
@@ -1754,8 +1613,7 @@ const Tokenizer = /** @class */ (function () {
         const c3 = this.peekCodePoint(2)
         if (
             (c1 === E || c1 === e) &&
-            (((c2 === PLUS_SIGN || c2 === HYPHEN_MINUS) && isDigit(c3)) ||
-                isDigit(c2))
+            (((c2 === PLUS_SIGN || c2 === HYPHEN_MINUS) && isDigit(c3)) || isDigit(c2))
         ) {
             repr.push(this.consumeCodePoint(), this.consumeCodePoint())
             type = FLAG_NUMBER
@@ -1854,9 +1712,7 @@ const Parser = /** @class */ (function () {
             token = this.consumeToken()
         }
         if (token.type === 32 /* EOF_TOKEN */) {
-            throw new SyntaxError(
-                'Error parsing CSS component value, unexpected EOF'
-            )
+            throw new SyntaxError('Error parsing CSS component value, unexpected EOF')
         }
         this.reconsumeToken(token)
         const value = this.consumeComponentValue()
@@ -1897,10 +1753,7 @@ const Parser = /** @class */ (function () {
         const block = { type: type, values: [] }
         let token = this.consumeToken()
         while (true) {
-            if (
-                token.type === 32 /* EOF_TOKEN */ ||
-                isEndingTokenFor(token, type)
-            ) {
+            if (token.type === 32 /* EOF_TOKEN */ || isEndingTokenFor(token, type)) {
                 return block
             }
             this.reconsumeToken(token)
@@ -1954,10 +1807,7 @@ const nonWhiteSpace = function (token) {
     return token.type !== 31 /* WHITESPACE_TOKEN */
 }
 const nonFunctionArgSeparator = function (token) {
-    return (
-        token.type !== 31 /* WHITESPACE_TOKEN */ &&
-        token.type !== 4 /* COMMA_TOKEN */
-    )
+    return token.type !== 31 /* WHITESPACE_TOKEN */ && token.type !== 4 /* COMMA_TOKEN */
 }
 const parseFunctionArgs = function (tokens) {
     const args = []
@@ -1965,9 +1815,7 @@ const parseFunctionArgs = function (tokens) {
     tokens.forEach(function (token) {
         if (token.type === 4 /* COMMA_TOKEN */) {
             if (arg.length === 0) {
-                throw new Error(
-                    'Error parsing function args, zero tokens for arg'
-                )
+                throw new Error('Error parsing function args, zero tokens for arg')
             }
             args.push(arg)
             arg = []
@@ -1995,17 +1843,11 @@ var isEndingTokenFor = function (token, type) {
     ) {
         return true
     }
-    return (
-        type === 2 /* LEFT_PARENTHESIS_TOKEN */ &&
-        token.type === 3 /* RIGHT_PARENTHESIS_TOKEN */
-    )
+    return type === 2 /* LEFT_PARENTHESIS_TOKEN */ && token.type === 3 /* RIGHT_PARENTHESIS_TOKEN */
 }
 
 const isLength = function (token) {
-    return (
-        token.type === 17 /* NUMBER_TOKEN */ ||
-        token.type === 15 /* DIMENSION_TOKEN */
-    )
+    return token.type === 17 /* NUMBER_TOKEN */ || token.type === 15 /* DIMENSION_TOKEN */
 }
 
 const isLengthPercentage = function (token) {
@@ -2032,10 +1874,7 @@ const HUNDRED_PERCENT = {
 const getAbsoluteValueForTuple = function (tuple, width, height) {
     const x = tuple[0],
         y = tuple[1]
-    return [
-        getAbsoluteValue(x, width),
-        getAbsoluteValue(typeof y !== 'undefined' ? y : x, height)
-    ]
+    return [getAbsoluteValue(x, width), getAbsoluteValue(typeof y !== 'undefined' ? y : x, height)]
 }
 var getAbsoluteValue = function (token, parent) {
     if (token.type === 16 /* PERCENTAGE_TOKEN */) {
@@ -2143,9 +1982,7 @@ const color$1 = {
             const colorFunction = SUPPORTED_COLOR_FUNCTIONS[value.name]
             if (typeof colorFunction === 'undefined') {
                 throw new Error(
-                    'Attempting to parse an unsupported color function "' +
-                        value.name +
-                        '"'
+                    'Attempting to parse an unsupported color function "' + value.name + '"'
                 )
             }
             return colorFunction(context, value.values)
@@ -2155,12 +1992,7 @@ const color$1 = {
                 var r = value.value.substring(0, 1)
                 var g = value.value.substring(1, 2)
                 var b = value.value.substring(2, 3)
-                return pack(
-                    parseInt(r + r, 16),
-                    parseInt(g + g, 16),
-                    parseInt(b + b, 16),
-                    1
-                )
+                return pack(parseInt(r + r, 16), parseInt(g + g, 16), parseInt(b + b, 16), 1)
             }
             if (value.value.length === 4) {
                 var r = value.value.substring(0, 1)
@@ -2178,12 +2010,7 @@ const color$1 = {
                 var r = value.value.substring(0, 2)
                 var g = value.value.substring(2, 4)
                 var b = value.value.substring(4, 6)
-                return pack(
-                    parseInt(r, 16),
-                    parseInt(g, 16),
-                    parseInt(b, 16),
-                    1
-                )
+                return pack(parseInt(r, 16), parseInt(g, 16), parseInt(b, 16), 1)
             }
             if (value.value.length === 8) {
                 var r = value.value.substring(0, 2)
@@ -2228,9 +2055,7 @@ const getTokenColorValue = function (token, i) {
     }
     if (token.type === 16 /* PERCENTAGE_TOKEN */) {
         const max = i === 3 ? 1 : 255
-        return i === 3
-            ? (token.number / 100) * max
-            : Math.round((token.number / 100) * max)
+        return i === 3 ? (token.number / 100) * max : Math.round((token.number / 100) * max)
     }
     return 0
 }
@@ -2277,16 +2102,12 @@ const hsl = function (context, args) {
         lightness = tokens[2],
         alpha = tokens[3]
     const h =
-        (hue.type === 17 /* NUMBER_TOKEN */
-            ? deg(hue.number)
-            : angle.parse(context, hue)) /
+        (hue.type === 17 /* NUMBER_TOKEN */ ? deg(hue.number) : angle.parse(context, hue)) /
         (Math.PI * 2)
     const s = isLengthPercentage(saturation) ? saturation.number / 100 : 0
     const l = isLengthPercentage(lightness) ? lightness.number / 100 : 0
     const a =
-        typeof alpha !== 'undefined' && isLengthPercentage(alpha)
-            ? getAbsoluteValue(alpha, 1)
-            : 1
+        typeof alpha !== 'undefined' && isLengthPercentage(alpha) ? getAbsoluteValue(alpha, 1) : 1
     if (s === 0) {
         return pack(l * 255, l * 255, l * 255, 1)
     }
@@ -2551,12 +2372,8 @@ const getAngleFromCorner = function (corner, width, height) {
     return (Math.atan2(y, x) + Math.PI * 2) % (Math.PI * 2)
 }
 const calculateGradientDirection = function (angle, width, height) {
-    const radian =
-        typeof angle === 'number'
-            ? angle
-            : getAngleFromCorner(angle, width, height)
-    const lineLength =
-        Math.abs(width * Math.sin(radian)) + Math.abs(height * Math.cos(radian))
+    const radian = typeof angle === 'number' ? angle : getAngleFromCorner(angle, width, height)
+    const lineLength = Math.abs(width * Math.sin(radian)) + Math.abs(height * Math.cos(radian))
     const halfWidth = width / 2
     const halfHeight = height / 2
     const halfLineLength = lineLength / 2
@@ -2679,10 +2496,7 @@ const calculateRadius = function (gradient, x, y, width, height) {
     }
     if (Array.isArray(gradient.size)) {
         rx = getAbsoluteValue(gradient.size[0], width)
-        ry =
-            gradient.size.length === 2
-                ? getAbsoluteValue(gradient.size[1], height)
-                : rx
+        ry = gradient.size.length === 2 ? getAbsoluteValue(gradient.size[1], height) : rx
     }
     return [rx, ry]
 }
@@ -2693,10 +2507,7 @@ const linearGradient = function (context, tokens) {
     parseFunctionArgs(tokens).forEach(function (arg, i) {
         if (i === 0) {
             const firstToken = arg[0]
-            if (
-                firstToken.type === 20 /* IDENT_TOKEN */ &&
-                firstToken.value === 'to'
-            ) {
+            if (firstToken.type === 20 /* IDENT_TOKEN */ && firstToken.value === 'to') {
                 angle$1 = parseNamedSide(arg)
                 return
             } else if (isAngle(firstToken)) {
@@ -2718,14 +2529,12 @@ const prefixLinearGradient = function (context, tokens) {
             const firstToken = arg[0]
             if (
                 firstToken.type === 20 /* IDENT_TOKEN */ &&
-                ['top', 'left', 'right', 'bottom'].indexOf(firstToken.value) !==
-                    -1
+                ['top', 'left', 'right', 'bottom'].indexOf(firstToken.value) !== -1
             ) {
                 angle$1 = parseNamedSide(arg)
                 return
             } else if (isAngle(firstToken)) {
-                angle$1 =
-                    (angle.parse(context, firstToken) + deg(270)) % deg(360)
+                angle$1 = (angle.parse(context, firstToken) + deg(270)) % deg(360)
                 return
             }
         }
@@ -2752,10 +2561,7 @@ const webkitGradient = function (context, tokens) {
             if (isIdentToken(firstToken) && firstToken.value === 'linear') {
                 type = 1 /* LINEAR_GRADIENT */
                 return
-            } else if (
-                isIdentToken(firstToken) &&
-                firstToken.value === 'radial'
-            ) {
+            } else if (isIdentToken(firstToken) && firstToken.value === 'radial') {
                 type = 2 /* RADIAL_GRADIENT */
                 return
             }
@@ -2983,9 +2789,7 @@ const image = {
             const imageFunction = SUPPORTED_IMAGE_FUNCTIONS[value.name]
             if (typeof imageFunction === 'undefined') {
                 throw new Error(
-                    'Attempting to parse an unsupported image function "' +
-                        value.name +
-                        '"'
+                    'Attempting to parse an unsupported image function "' + value.name + '"'
                 )
             }
             return imageFunction(context, value.values)
@@ -2996,8 +2800,7 @@ const image = {
 function isSupportedImage(value) {
     return (
         !(value.type === 20 /* IDENT_TOKEN */ && value.value === 'none') &&
-        (value.type !== 18 /* FUNCTION */ ||
-            !!SUPPORTED_IMAGE_FUNCTIONS[value.name])
+        (value.type !== 18 /* FUNCTION */ || !!SUPPORTED_IMAGE_FUNCTIONS[value.name])
     )
 }
 var SUPPORTED_IMAGE_FUNCTIONS = {
@@ -3703,9 +3506,7 @@ const transform$1 = {
             const transformFunction = SUPPORTED_TRANSFORM_FUNCTIONS[token.name]
             if (typeof transformFunction === 'undefined') {
                 throw new Error(
-                    'Attempting to parse an unsupported transform function "' +
-                        token.name +
-                        '"'
+                    'Attempting to parse an unsupported transform function "' + token.name + '"'
                 )
             }
             return transformFunction(token.values)
@@ -4208,66 +4009,18 @@ const webkitTextStrokeWidth = {
 const CSSParsedDeclaration = /** @class */ (function () {
     function CSSParsedDeclaration(context, declaration) {
         let _a, _b
-        this.animationDuration = parse(
-            context,
-            duration,
-            declaration.animationDuration
-        )
-        this.backgroundClip = parse(
-            context,
-            backgroundClip,
-            declaration.backgroundClip
-        )
-        this.backgroundColor = parse(
-            context,
-            backgroundColor,
-            declaration.backgroundColor
-        )
-        this.backgroundImage = parse(
-            context,
-            backgroundImage,
-            declaration.backgroundImage
-        )
-        this.backgroundOrigin = parse(
-            context,
-            backgroundOrigin,
-            declaration.backgroundOrigin
-        )
-        this.backgroundPosition = parse(
-            context,
-            backgroundPosition,
-            declaration.backgroundPosition
-        )
-        this.backgroundRepeat = parse(
-            context,
-            backgroundRepeat,
-            declaration.backgroundRepeat
-        )
-        this.backgroundSize = parse(
-            context,
-            backgroundSize,
-            declaration.backgroundSize
-        )
-        this.borderTopColor = parse(
-            context,
-            borderTopColor,
-            declaration.borderTopColor
-        )
-        this.borderRightColor = parse(
-            context,
-            borderRightColor,
-            declaration.borderRightColor
-        )
-        this.borderBottomColor = parse(
-            context,
-            borderBottomColor,
-            declaration.borderBottomColor
-        )
-        this.borderLeftColor = parse(
-            context,
-            borderLeftColor,
-            declaration.borderLeftColor
-        )
+        this.animationDuration = parse(context, duration, declaration.animationDuration)
+        this.backgroundClip = parse(context, backgroundClip, declaration.backgroundClip)
+        this.backgroundColor = parse(context, backgroundColor, declaration.backgroundColor)
+        this.backgroundImage = parse(context, backgroundImage, declaration.backgroundImage)
+        this.backgroundOrigin = parse(context, backgroundOrigin, declaration.backgroundOrigin)
+        this.backgroundPosition = parse(context, backgroundPosition, declaration.backgroundPosition)
+        this.backgroundRepeat = parse(context, backgroundRepeat, declaration.backgroundRepeat)
+        this.backgroundSize = parse(context, backgroundSize, declaration.backgroundSize)
+        this.borderTopColor = parse(context, borderTopColor, declaration.borderTopColor)
+        this.borderRightColor = parse(context, borderRightColor, declaration.borderRightColor)
+        this.borderBottomColor = parse(context, borderBottomColor, declaration.borderBottomColor)
+        this.borderLeftColor = parse(context, borderLeftColor, declaration.borderLeftColor)
         this.borderTopLeftRadius = parse(
             context,
             borderTopLeftRadius,
@@ -4288,46 +4041,14 @@ const CSSParsedDeclaration = /** @class */ (function () {
             borderBottomLeftRadius,
             declaration.borderBottomLeftRadius
         )
-        this.borderTopStyle = parse(
-            context,
-            borderTopStyle,
-            declaration.borderTopStyle
-        )
-        this.borderRightStyle = parse(
-            context,
-            borderRightStyle,
-            declaration.borderRightStyle
-        )
-        this.borderBottomStyle = parse(
-            context,
-            borderBottomStyle,
-            declaration.borderBottomStyle
-        )
-        this.borderLeftStyle = parse(
-            context,
-            borderLeftStyle,
-            declaration.borderLeftStyle
-        )
-        this.borderTopWidth = parse(
-            context,
-            borderTopWidth,
-            declaration.borderTopWidth
-        )
-        this.borderRightWidth = parse(
-            context,
-            borderRightWidth,
-            declaration.borderRightWidth
-        )
-        this.borderBottomWidth = parse(
-            context,
-            borderBottomWidth,
-            declaration.borderBottomWidth
-        )
-        this.borderLeftWidth = parse(
-            context,
-            borderLeftWidth,
-            declaration.borderLeftWidth
-        )
+        this.borderTopStyle = parse(context, borderTopStyle, declaration.borderTopStyle)
+        this.borderRightStyle = parse(context, borderRightStyle, declaration.borderRightStyle)
+        this.borderBottomStyle = parse(context, borderBottomStyle, declaration.borderBottomStyle)
+        this.borderLeftStyle = parse(context, borderLeftStyle, declaration.borderLeftStyle)
+        this.borderTopWidth = parse(context, borderTopWidth, declaration.borderTopWidth)
+        this.borderRightWidth = parse(context, borderRightWidth, declaration.borderRightWidth)
+        this.borderBottomWidth = parse(context, borderBottomWidth, declaration.borderBottomWidth)
+        this.borderLeftWidth = parse(context, borderLeftWidth, declaration.borderLeftWidth)
         this.boxShadow = parse(context, boxShadow, declaration.boxShadow)
         this.color = parse(context, color, declaration.color)
         this.direction = parse(context, direction, declaration.direction)
@@ -4338,56 +4059,24 @@ const CSSParsedDeclaration = /** @class */ (function () {
         this.fontStyle = parse(context, fontStyle, declaration.fontStyle)
         this.fontVariant = parse(context, fontVariant, declaration.fontVariant)
         this.fontWeight = parse(context, fontWeight, declaration.fontWeight)
-        this.letterSpacing = parse(
-            context,
-            letterSpacing,
-            declaration.letterSpacing
-        )
+        this.letterSpacing = parse(context, letterSpacing, declaration.letterSpacing)
         this.lineBreak = parse(context, lineBreak, declaration.lineBreak)
         this.lineHeight = parse(context, lineHeight, declaration.lineHeight)
-        this.listStyleImage = parse(
-            context,
-            listStyleImage,
-            declaration.listStyleImage
-        )
-        this.listStylePosition = parse(
-            context,
-            listStylePosition,
-            declaration.listStylePosition
-        )
-        this.listStyleType = parse(
-            context,
-            listStyleType,
-            declaration.listStyleType
-        )
+        this.listStyleImage = parse(context, listStyleImage, declaration.listStyleImage)
+        this.listStylePosition = parse(context, listStylePosition, declaration.listStylePosition)
+        this.listStyleType = parse(context, listStyleType, declaration.listStyleType)
         this.marginTop = parse(context, marginTop, declaration.marginTop)
         this.marginRight = parse(context, marginRight, declaration.marginRight)
-        this.marginBottom = parse(
-            context,
-            marginBottom,
-            declaration.marginBottom
-        )
+        this.marginBottom = parse(context, marginBottom, declaration.marginBottom)
         this.marginLeft = parse(context, marginLeft, declaration.marginLeft)
         this.opacity = parse(context, opacity, declaration.opacity)
         const overflowTuple = parse(context, overflow, declaration.overflow)
         this.overflowX = overflowTuple[0]
         this.overflowY = overflowTuple[overflowTuple.length > 1 ? 1 : 0]
-        this.overflowWrap = parse(
-            context,
-            overflowWrap,
-            declaration.overflowWrap
-        )
+        this.overflowWrap = parse(context, overflowWrap, declaration.overflowWrap)
         this.paddingTop = parse(context, paddingTop, declaration.paddingTop)
-        this.paddingRight = parse(
-            context,
-            paddingRight,
-            declaration.paddingRight
-        )
-        this.paddingBottom = parse(
-            context,
-            paddingBottom,
-            declaration.paddingBottom
-        )
+        this.paddingRight = parse(context, paddingRight, declaration.paddingRight)
+        this.paddingBottom = parse(context, paddingBottom, declaration.paddingBottom)
         this.paddingLeft = parse(context, paddingLeft, declaration.paddingLeft)
         this.paintOrder = parse(context, paintOrder, declaration.paintOrder)
         this.position = parse(context, position, declaration.position)
@@ -4407,17 +4096,9 @@ const CSSParsedDeclaration = /** @class */ (function () {
                 : declaration.textDecoration
         )
         this.textShadow = parse(context, textShadow, declaration.textShadow)
-        this.textTransform = parse(
-            context,
-            textTransform,
-            declaration.textTransform
-        )
+        this.textTransform = parse(context, textTransform, declaration.textTransform)
         this.transform = parse(context, transform$1, declaration.transform)
-        this.transformOrigin = parse(
-            context,
-            transformOrigin,
-            declaration.transformOrigin
-        )
+        this.transformOrigin = parse(context, transformOrigin, declaration.transformOrigin)
         this.visibility = parse(context, visibility, declaration.visibility)
         this.webkitTextStrokeColor = parse(
             context,
@@ -4433,11 +4114,7 @@ const CSSParsedDeclaration = /** @class */ (function () {
         this.zIndex = parse(context, zIndex, declaration.zIndex)
     }
     CSSParsedDeclaration.prototype.isVisible = function () {
-        return (
-            this.display > 0 &&
-            this.opacity > 0 &&
-            this.visibility === 0 /* VISIBLE */
-        )
+        return this.display > 0 && this.opacity > 0 && this.visibility === 0 /* VISIBLE */
     }
     CSSParsedDeclaration.prototype.isTransparent = function () {
         return isTransparent(this.backgroundColor)
@@ -4475,16 +4152,8 @@ const CSSParsedPseudoDeclaration = /** @class */ (function () {
 })()
 const CSSParsedCounterDeclaration = /** @class */ (function () {
     function CSSParsedCounterDeclaration(context, declaration) {
-        this.counterIncrement = parse(
-            context,
-            counterIncrement,
-            declaration.counterIncrement
-        )
-        this.counterReset = parse(
-            context,
-            counterReset,
-            declaration.counterReset
-        )
+        this.counterIncrement = parse(context, counterIncrement, declaration.counterIncrement)
+        this.counterReset = parse(context, counterReset, declaration.counterReset)
     }
     return CSSParsedCounterDeclaration
 })()
@@ -4492,9 +4161,7 @@ const CSSParsedCounterDeclaration = /** @class */ (function () {
 var parse = function (context, descriptor, style) {
     const tokenizer = new Tokenizer()
     const value =
-        style !== null && typeof style !== 'undefined'
-            ? style.toString()
-            : descriptor.initialValue
+        style !== null && typeof style !== 'undefined' ? style.toString() : descriptor.initialValue
     tokenizer.write(value)
     const parser = new Parser(tokenizer.read())
     switch (descriptor.type) {
@@ -4561,10 +4228,7 @@ const ElementContainer = /** @class */ (function () {
         if (isDebugging(element, 3 /* PARSE */)) {
             debugger
         }
-        this.styles = new CSSParsedDeclaration(
-            context,
-            window.getComputedStyle(element, null)
-        )
+        this.styles = new CSSParsedDeclaration(context, window.getComputedStyle(element, null))
         if (isHTMLElementNode(element)) {
             if (
                 this.styles.animationDuration.some(function (duration) {
@@ -4599,8 +4263,7 @@ const base64 =
  * Copyright (c) 2022 Niklas von Hertzen <https://hertzen.com>
  * Released under MIT License
  */
-const chars$1 =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+const chars$1 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 // Use a lookup table to find the index.
 const lookup$1 = typeof Uint8Array === 'undefined' ? [] : new Uint8Array(256)
 for (let i$1 = 0; i$1 < chars$1.length; i$1++) {
@@ -4651,12 +4314,7 @@ const polyUint32Array = function (buffer) {
     const length = buffer.length
     const bytes = []
     for (let i = 0; i < length; i += 4) {
-        bytes.push(
-            (buffer[i + 3] << 24) |
-                (buffer[i + 2] << 16) |
-                (buffer[i + 1] << 8) |
-                buffer[i]
-        )
+        bytes.push((buffer[i + 3] << 24) | (buffer[i + 2] << 16) | (buffer[i + 1] << 8) | buffer[i])
     }
     return bytes
 }
@@ -4690,8 +4348,7 @@ const UTRIE2_DATA_BLOCK_LENGTH = 1 << UTRIE2_SHIFT_2
 const UTRIE2_DATA_MASK = UTRIE2_DATA_BLOCK_LENGTH - 1
 const UTRIE2_LSCP_INDEX_2_LENGTH = 0x400 >> UTRIE2_SHIFT_2
 /** Count the lengths of both BMP pieces. 2080=0x820 */
-const UTRIE2_INDEX_2_BMP_LENGTH =
-    UTRIE2_LSCP_INDEX_2_OFFSET + UTRIE2_LSCP_INDEX_2_LENGTH
+const UTRIE2_INDEX_2_BMP_LENGTH = UTRIE2_LSCP_INDEX_2_OFFSET + UTRIE2_LSCP_INDEX_2_LENGTH
 /**
  * The 2-byte UTF-8 version of the index-2 table follows at offset 2080=0x820.
  * Length 32=0x20 for lead bytes C0..DF, regardless of UTRIE2_SHIFT_2.
@@ -4711,8 +4368,7 @@ const UTRIE2_UTF8_2B_INDEX_2_LENGTH =
  * Both the index-1 table and the following part of the index-2 table
  * are omitted completely if there is only BMP data.
  */
-const UTRIE2_INDEX_1_OFFSET =
-    UTRIE2_UTF8_2B_INDEX_2_OFFSET + UTRIE2_UTF8_2B_INDEX_2_LENGTH
+const UTRIE2_INDEX_1_OFFSET = UTRIE2_UTF8_2B_INDEX_2_OFFSET + UTRIE2_UTF8_2B_INDEX_2_LENGTH
 /**
  * Number of index-1 entries for the BMP. 32=0x20
  * This part of the index-1 table is omitted from the serialized form.
@@ -4736,12 +4392,8 @@ const slice32 = function (view, start, end) {
 }
 const createTrieFromBase64 = function (base64, _byteLength) {
     const buffer = decode(base64)
-    const view32 = Array.isArray(buffer)
-        ? polyUint32Array(buffer)
-        : new Uint32Array(buffer)
-    const view16 = Array.isArray(buffer)
-        ? polyUint16Array(buffer)
-        : new Uint16Array(buffer)
+    const view32 = Array.isArray(buffer) ? polyUint32Array(buffer) : new Uint32Array(buffer)
+    const view16 = Array.isArray(buffer) ? polyUint16Array(buffer) : new Uint16Array(buffer)
     const headerLength = 24
     const index = slice16(view16, headerLength / 2, view32[4] / 2)
     const data =
@@ -4751,14 +4403,7 @@ const createTrieFromBase64 = function (base64, _byteLength) {
     return new Trie(view32[0], view32[1], view32[2], view32[3], index, data)
 }
 var Trie = /** @class */ (function () {
-    function Trie(
-        initialValue,
-        errorValue,
-        highStart,
-        highValueIndex,
-        index,
-        data
-    ) {
+    function Trie(initialValue, errorValue, highStart, highValueIndex, index, data) {
         this.initialValue = initialValue
         this.errorValue = errorValue
         this.highStart = highStart
@@ -4775,10 +4420,7 @@ var Trie = /** @class */ (function () {
     Trie.prototype.get = function (codePoint) {
         let ix
         if (codePoint >= 0) {
-            if (
-                codePoint < 0x0d800 ||
-                (codePoint > 0x0dbff && codePoint <= 0x0ffff)
-            ) {
+            if (codePoint < 0x0d800 || (codePoint > 0x0dbff && codePoint <= 0x0ffff)) {
                 // Ordinary BMP code point, excluding leading surrogates.
                 // BMP uses a single level lookup.  BMP index starts at offset 0 in the Trie2 index.
                 // 16 bit data is stored in the index array itself.
@@ -4795,8 +4437,7 @@ var Trie = /** @class */ (function () {
                 //       surrogate code points will be so rare in practice that it's not worth it.
                 ix =
                     this.index[
-                        UTRIE2_LSCP_INDEX_2_OFFSET +
-                            ((codePoint - 0xd800) >> UTRIE2_SHIFT_2)
+                        UTRIE2_LSCP_INDEX_2_OFFSET + ((codePoint - 0xd800) >> UTRIE2_SHIFT_2)
                     ]
                 ix = (ix << UTRIE2_INDEX_SHIFT) + (codePoint & UTRIE2_DATA_MASK)
                 return this.data[ix]
@@ -4858,9 +4499,7 @@ const toCodePoints = function (str) {
         if (value >= 0xd800 && value <= 0xdbff && i < length) {
             const extra = str.charCodeAt(i++)
             if ((extra & 0xfc00) === 0xdc00) {
-                codePoints.push(
-                    ((value & 0x3ff) << 10) + (extra & 0x3ff) + 0x10000
-                )
+                codePoints.push(((value & 0x3ff) << 10) + (extra & 0x3ff) + 0x10000)
             } else {
                 codePoints.push(value)
                 i--
@@ -4892,10 +4531,7 @@ const fromCodePoint = function () {
             codeUnits.push(codePoint)
         } else {
             codePoint -= 0x10000
-            codeUnits.push(
-                (codePoint >> 10) + 0xd800,
-                (codePoint % 0x400) + 0xdc00
-            )
+            codeUnits.push((codePoint >> 10) + 0xd800, (codePoint % 0x400) + 0xdc00)
         }
         if (index + 1 === length || codeUnits.length > 0x4000) {
             result += String.fromCharCode.apply(String, codeUnits)
@@ -4991,17 +4627,11 @@ const GraphemeBreaker = function (str) {
             let graphemeBreak = BREAK_NOT_ALLOWED
             while (
                 index < length &&
-                (graphemeBreak = _graphemeBreakAtIndex(
-                    codePoints,
-                    classTypes,
-                    ++index
-                )) === BREAK_NOT_ALLOWED
+                (graphemeBreak = _graphemeBreakAtIndex(codePoints, classTypes, ++index)) ===
+                    BREAK_NOT_ALLOWED
             ) {}
             if (graphemeBreak !== BREAK_NOT_ALLOWED || index === length) {
-                const value = fromCodePoint.apply(
-                    null,
-                    codePoints.slice(lastEnd, index)
-                )
+                const value = fromCodePoint.apply(null, codePoints.slice(lastEnd, index))
                 lastEnd = index
                 return { value: value, done: false }
             }
@@ -5050,8 +4680,7 @@ const testIOSLineBreak = function (document) {
     testElement.style.wordSpacing = '0px'
     document.body.appendChild(testElement)
     const range = document.createRange()
-    testElement.innerHTML =
-        typeof ''.repeat === 'function' ? '&#128104;'.repeat(10) : ''
+    testElement.innerHTML = typeof ''.repeat === 'function' ? '&#128104;'.repeat(10) : ''
     const node = testElement.firstChild
     const textList = toCodePoints$1(node.data).map(function (i) {
         return fromCodePoint$1(i)
@@ -5087,8 +4716,7 @@ const testSVG = function (document) {
     if (!ctx) {
         return false
     }
-    img.src =
-        "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'></svg>"
+    img.src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'></svg>"
     try {
         ctx.drawImage(img, 0, 0)
         canvas.toDataURL()
@@ -5128,9 +4756,7 @@ const testForeignObject = function (document) {
             node.style.height = size + 'px'
             // Firefox 55 does not render inline <img /> tags
             return isGreenPixel(data)
-                ? loadSerializedSVG$1(
-                      createForeignObjectSVG(size, size, 0, 0, node)
-                  )
+                ? loadSerializedSVG$1(createForeignObjectSVG(size, size, 0, 0, node))
                 : Promise.reject(false)
         })
         .then(function (img) {
@@ -5178,8 +4804,7 @@ var FEATURES = {
         return value
     },
     get SUPPORT_WORD_BREAKING() {
-        const value =
-            FEATURES.SUPPORT_RANGE_BOUNDS && testIOSLineBreak(document)
+        const value = FEATURES.SUPPORT_RANGE_BOUNDS && testIOSLineBreak(document)
         Object.defineProperty(FEATURES, 'SUPPORT_WORD_BREAKING', {
             value: value
         })
@@ -5192,8 +4817,7 @@ var FEATURES = {
     },
     get SUPPORT_FOREIGNOBJECT_DRAWING() {
         const value =
-            typeof Array.from === 'function' &&
-            typeof window.fetch === 'function'
+            typeof Array.from === 'function' && typeof window.fetch === 'function'
                 ? testForeignObject(document)
                 : Promise.resolve(false)
         Object.defineProperty(FEATURES, 'SUPPORT_FOREIGNOBJECT_DRAWING', {
@@ -5242,11 +4866,7 @@ const parseTextBounds = function (context, value, styles, node) {
     textList.forEach(function (text) {
         if (styles.textDecorationLine.length || text.trim().length > 0) {
             if (FEATURES.SUPPORT_RANGE_BOUNDS) {
-                const clientRects = createRange(
-                    node,
-                    offset,
-                    text.length
-                ).getClientRects()
+                const clientRects = createRange(node, offset, text.length).getClientRects()
                 if (clientRects.length > 1) {
                     const subSegments = segmentGraphemes(text)
                     let subOffset_1 = 0
@@ -5268,17 +4888,12 @@ const parseTextBounds = function (context, value, styles, node) {
                     })
                 } else {
                     textBounds.push(
-                        new TextBounds(
-                            text,
-                            Bounds.fromDOMRectList(context, clientRects)
-                        )
+                        new TextBounds(text, Bounds.fromDOMRectList(context, clientRects))
                     )
                 }
             } else {
                 const replacementNode = node.splitText(text.length)
-                textBounds.push(
-                    new TextBounds(text, getWrapperBounds(context, node))
-                )
+                textBounds.push(new TextBounds(text, getWrapperBounds(context, node)))
                 node = replacementNode
             }
         } else if (!FEATURES.SUPPORT_RANGE_BOUNDS) {
@@ -5342,21 +4957,15 @@ const segmentWords = function (value, styles) {
     return breakWords(value, styles)
 }
 var breakText = function (value, styles) {
-    return styles.letterSpacing !== 0
-        ? segmentGraphemes(value)
-        : segmentWords(value, styles)
+    return styles.letterSpacing !== 0 ? segmentGraphemes(value) : segmentWords(value, styles)
 }
 // https://drafts.csswg.org/css-text/#word-separator
-const wordSeparators = [
-    0x0020, 0x00a0, 0x1361, 0x10100, 0x10101, 0x1039, 0x1091
-]
+const wordSeparators = [0x0020, 0x00a0, 0x1361, 0x10100, 0x10101, 0x1039, 0x1091]
 var breakWords = function (str, styles) {
     const breaker = LineBreaker(str, {
         lineBreak: styles.lineBreak,
         wordBreak:
-            styles.overflowWrap === 'break-word' /* BREAK_WORD */
-                ? 'break-word'
-                : styles.wordBreak
+            styles.overflowWrap === 'break-word' /* BREAK_WORD */ ? 'break-word' : styles.wordBreak
     })
     const words = []
     let bk
@@ -5447,8 +5056,7 @@ const SVGElementContainer = /** @class */ (function (_super) {
         const bounds = parseBounds(context, img)
         img.setAttribute('width', bounds.width + 'px')
         img.setAttribute('height', bounds.height + 'px')
-        _this.svg =
-            'data:image/svg+xml,' + encodeURIComponent(s.serializeToString(img))
+        _this.svg = 'data:image/svg+xml,' + encodeURIComponent(s.serializeToString(img))
         _this.intrinsicWidth = img.width.baseVal.value
         _this.intrinsicHeight = img.height.baseVal.value
         _this.context.cache.addImage(_this.svg)
@@ -5472,8 +5080,7 @@ const OLElementContainer = /** @class */ (function (_super) {
     function OLElementContainer(context, element) {
         const _this = _super.call(this, context, element) || this
         _this.start = element.start
-        _this.reversed =
-            typeof element.reversed === 'boolean' && element.reversed === true
+        _this.reversed = typeof element.reversed === 'boolean' && element.reversed === true
         return _this
     }
     return OLElementContainer
@@ -5514,9 +5121,7 @@ const reformatInputBounds = function (bounds) {
 }
 const getInputValue = function (node) {
     const value =
-        node.type === PASSWORD
-            ? new Array(node.value.length + 1).join('\u2022')
-            : node.value
+        node.type === PASSWORD ? new Array(node.value.length + 1).join('\u2022') : node.value
     return value.length === 0 ? node.placeholder || '' : value
 }
 const CHECKBOX = 'checkbox'
@@ -5607,25 +5212,19 @@ const IFrameElementContainer = /** @class */ (function (_super) {
                 iframe.contentWindow.document &&
                 iframe.contentWindow.document.documentElement
             ) {
-                _this.tree = parseTree(
-                    context,
-                    iframe.contentWindow.document.documentElement
-                )
+                _this.tree = parseTree(context, iframe.contentWindow.document.documentElement)
                 // http://www.w3.org/TR/css3-background/#special-backgrounds
-                const documentBackgroundColor = iframe.contentWindow.document
-                    .documentElement
+                const documentBackgroundColor = iframe.contentWindow.document.documentElement
                     ? parseColor(
                           context,
-                          getComputedStyle(
-                              iframe.contentWindow.document.documentElement
-                          ).backgroundColor
+                          getComputedStyle(iframe.contentWindow.document.documentElement)
+                              .backgroundColor
                       )
                     : COLORS.TRANSPARENT
                 const bodyBackgroundColor = iframe.contentWindow.document.body
                     ? parseColor(
                           context,
-                          getComputedStyle(iframe.contentWindow.document.body)
-                              .backgroundColor
+                          getComputedStyle(iframe.contentWindow.document.body).backgroundColor
                       )
                     : COLORS.TRANSPARENT
                 _this.backgroundColor = isTransparent(documentBackgroundColor)
@@ -5641,17 +5240,11 @@ const IFrameElementContainer = /** @class */ (function (_super) {
 })(ElementContainer)
 
 const LIST_OWNERS = ['OL', 'UL', 'MENU']
-var parseNodeTree = function (context, node, parent, root) {
-    for (
-        let childNode = node.firstChild, nextNode = void 0;
-        childNode;
-        childNode = nextNode
-    ) {
+const parseNodeTree = function (context, node, parent, root) {
+    for (let childNode = node.firstChild, nextNode = void 0; childNode; childNode = nextNode) {
         nextNode = childNode.nextSibling
         if (isTextNode(childNode) && childNode.data.trim().length > 0) {
-            parent.textNodes.push(
-                new TextContainer(context, childNode, parent.styles)
-            )
+            parent.textNodes.push(new TextContainer(context, childNode, parent.styles))
         } else if (isElementNode(childNode)) {
             if (isSlotElement(childNode) && childNode.assignedNodes) {
                 childNode.assignedNodes().forEach(function (childNode) {
@@ -5660,9 +5253,7 @@ var parseNodeTree = function (context, node, parent, root) {
             } else {
                 const container = createContainer(context, childNode)
                 if (container.styles.isVisible()) {
-                    if (
-                        createsRealStackingContext(childNode, container, root)
-                    ) {
+                    if (createsRealStackingContext(childNode, container, root)) {
                         container.flags |= 4 /* CREATES_REAL_STACKING_CONTEXT */
                     } else if (createsStackingContext(container.styles)) {
                         container.flags |= 2 /* CREATES_STACKING_CONTEXT */
@@ -5673,12 +5264,7 @@ var parseNodeTree = function (context, node, parent, root) {
                     parent.elements.push(container)
                     childNode.slot
                     if (childNode.shadowRoot) {
-                        parseNodeTree(
-                            context,
-                            childNode.shadowRoot,
-                            container,
-                            root
-                        )
+                        parseNodeTree(context, childNode.shadowRoot, container, root)
                     } else if (
                         !isTextareaElement(childNode) &&
                         !isSVGElement(childNode) &&
@@ -5745,11 +5331,7 @@ var isElementNode = function (node) {
     return node.nodeType === Node.ELEMENT_NODE
 }
 var isHTMLElementNode = function (node) {
-    return (
-        isElementNode(node) &&
-        typeof node.style !== 'undefined' &&
-        !isSVGElementNode(node)
-    )
+    return isElementNode(node) && typeof node.style !== 'undefined' && !isSVGElementNode(node)
 }
 var isSVGElementNode = function (element) {
     return typeof element.className === 'object'
@@ -5859,27 +5441,12 @@ const CounterState = /** @class */ (function () {
 })()
 const ROMAN_UPPER = {
     integers: [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1],
-    values: [
-        'M',
-        'CM',
-        'D',
-        'CD',
-        'C',
-        'XC',
-        'L',
-        'XL',
-        'X',
-        'IX',
-        'V',
-        'IV',
-        'I'
-    ]
+    values: ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I']
 }
 const ARMENIAN = {
     integers: [
-        9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 900, 800, 700,
-        600, 500, 400, 300, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 9, 8,
-        7, 6, 5, 4, 3, 2, 1
+        9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 900, 800, 700, 600, 500, 400, 300,
+        200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
     ],
     values: [
         'Ք',
@@ -5922,9 +5489,8 @@ const ARMENIAN = {
 }
 const HEBREW = {
     integers: [
-        10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 400, 300,
-        200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 19, 18, 17, 16, 15, 10, 9, 8,
-        7, 6, 5, 4, 3, 2, 1
+        10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 400, 300, 200, 100, 90, 80, 70,
+        60, 50, 40, 30, 20, 19, 18, 17, 16, 15, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
     ],
     values: [
         'י׳',
@@ -5968,9 +5534,8 @@ const HEBREW = {
 }
 const GEORGIAN = {
     integers: [
-        10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 900, 800,
-        700, 600, 500, 400, 300, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10,
-        9, 8, 7, 6, 5, 4, 3, 2, 1
+        10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000, 900, 800, 700, 600, 500, 400,
+        300, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
     ],
     values: [
         'ჵ',
@@ -6012,14 +5577,7 @@ const GEORGIAN = {
         'ა'
     ]
 }
-const createAdditiveCounter = function (
-    value,
-    min,
-    max,
-    symbols,
-    fallback,
-    suffix
-) {
+const createAdditiveCounter = function (value, min, max, symbols, fallback, suffix) {
     if (value < min || value > max) {
         return createCounterText(value, fallback, suffix.length > 0)
     }
@@ -6065,8 +5623,7 @@ const createCounterStyleFromRange = function (
             isNumeric,
             function (codePoint) {
                 return fromCodePoint$1(
-                    Math.floor(codePoint % codePointRangeLength) +
-                        codePointRangeStart
+                    Math.floor(codePoint % codePointRangeLength) + codePointRangeStart
                 )
             }
         ) +
@@ -6093,14 +5650,7 @@ const CJK_ZEROS = 1 << 0
 const CJK_TEN_COEFFICIENTS = 1 << 1
 const CJK_TEN_HIGH_COEFFICIENTS = 1 << 2
 const CJK_HUNDRED_COEFFICIENTS = 1 << 3
-const createCJKCounter = function (
-    value,
-    numbers,
-    multipliers,
-    negativeSign,
-    suffix,
-    flags
-) {
+const createCJKCounter = function (value, numbers, multipliers, negativeSign, suffix, flags) {
     if (value < -9999 || value > 9999) {
         return createCounterText(value, 4 /* CJK_DECIMAL */, suffix.length > 0)
     }
@@ -6116,21 +5666,14 @@ const createCJKCounter = function (
         } else if (
             coefficient > 1 ||
             (coefficient === 1 && digit === 0) ||
-            (coefficient === 1 &&
-                digit === 1 &&
-                contains(flags, CJK_TEN_COEFFICIENTS)) ||
+            (coefficient === 1 && digit === 1 && contains(flags, CJK_TEN_COEFFICIENTS)) ||
             (coefficient === 1 &&
                 digit === 1 &&
                 contains(flags, CJK_TEN_HIGH_COEFFICIENTS) &&
                 value > 100) ||
-            (coefficient === 1 &&
-                digit > 1 &&
-                contains(flags, CJK_HUNDRED_COEFFICIENTS))
+            (coefficient === 1 && digit > 1 && contains(flags, CJK_HUNDRED_COEFFICIENTS))
         ) {
-            string =
-                numbers[coefficient] +
-                (digit > 0 ? multipliers[digit - 1] : '') +
-                string
+            string = numbers[coefficient] + (digit > 0 ? multipliers[digit - 1] : '') + string
         } else if (coefficient === 1 && digit > 0) {
             string = multipliers[digit - 1] + string
         }
@@ -6155,20 +5698,10 @@ var createCounterText = function (value, type, appendSuffix) {
         case 2 /* SQUARE */:
             return '◾' + spaceSuffix
         case 5 /* DECIMAL_LEADING_ZERO */:
-            var string = createCounterStyleFromRange(
-                value,
-                48,
-                57,
-                true,
-                defaultSuffix
-            )
+            var string = createCounterStyleFromRange(value, 48, 57, true, defaultSuffix)
             return string.length < 4 ? '0' + string : string
         case 4 /* CJK_DECIMAL */:
-            return createCounterStyleFromSymbols(
-                value,
-                '〇一二三四五六七八九',
-                cjkSuffix
-            )
+            return createCounterStyleFromSymbols(value, '〇一二三四五六七八九', cjkSuffix)
         case 6 /* LOWER_ROMAN */:
             return createAdditiveCounter(
                 value,
@@ -6188,47 +5721,16 @@ var createCounterText = function (value, type, appendSuffix) {
                 defaultSuffix
             )
         case 8 /* LOWER_GREEK */:
-            return createCounterStyleFromRange(
-                value,
-                945,
-                969,
-                false,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 945, 969, false, defaultSuffix)
         case 9 /* LOWER_ALPHA */:
-            return createCounterStyleFromRange(
-                value,
-                97,
-                122,
-                false,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 97, 122, false, defaultSuffix)
         case 10 /* UPPER_ALPHA */:
-            return createCounterStyleFromRange(
-                value,
-                65,
-                90,
-                false,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 65, 90, false, defaultSuffix)
         case 11 /* ARABIC_INDIC */:
-            return createCounterStyleFromRange(
-                value,
-                1632,
-                1641,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 1632, 1641, true, defaultSuffix)
         case 12 /* ARMENIAN */:
         case 49 /* UPPER_ARMENIAN */:
-            return createAdditiveCounter(
-                value,
-                1,
-                9999,
-                ARMENIAN,
-                3 /* DECIMAL */,
-                defaultSuffix
-            )
+            return createAdditiveCounter(value, 1, 9999, ARMENIAN, 3 /* DECIMAL */, defaultSuffix)
         case 35 /* LOWER_ARMENIAN */:
             return createAdditiveCounter(
                 value,
@@ -6239,34 +5741,14 @@ var createCounterText = function (value, type, appendSuffix) {
                 defaultSuffix
             ).toLowerCase()
         case 13 /* BENGALI */:
-            return createCounterStyleFromRange(
-                value,
-                2534,
-                2543,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 2534, 2543, true, defaultSuffix)
         case 14 /* CAMBODIAN */:
         case 30 /* KHMER */:
-            return createCounterStyleFromRange(
-                value,
-                6112,
-                6121,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 6112, 6121, true, defaultSuffix)
         case 15 /* CJK_EARTHLY_BRANCH */:
-            return createCounterStyleFromSymbols(
-                value,
-                '子丑寅卯辰巳午未申酉戌亥',
-                cjkSuffix
-            )
+            return createCounterStyleFromSymbols(value, '子丑寅卯辰巳午未申酉戌亥', cjkSuffix)
         case 16 /* CJK_HEAVENLY_STEM */:
-            return createCounterStyleFromSymbols(
-                value,
-                '甲乙丙丁戊己庚辛壬癸',
-                cjkSuffix
-            )
+            return createCounterStyleFromSymbols(value, '甲乙丙丁戊己庚辛壬癸', cjkSuffix)
         case 17 /* CJK_IDEOGRAPHIC */:
         case 48 /* TRAD_CHINESE_INFORMAL */:
             return createCJKCounter(
@@ -6275,9 +5757,7 @@ var createCounterText = function (value, type, appendSuffix) {
                 CHINESE_INFORMAL_MULTIPLIERS,
                 '負',
                 cjkSuffix,
-                CJK_TEN_COEFFICIENTS |
-                    CJK_TEN_HIGH_COEFFICIENTS |
-                    CJK_HUNDRED_COEFFICIENTS
+                CJK_TEN_COEFFICIENTS | CJK_TEN_HIGH_COEFFICIENTS | CJK_HUNDRED_COEFFICIENTS
             )
         case 47 /* TRAD_CHINESE_FORMAL */:
             return createCJKCounter(
@@ -6298,9 +5778,7 @@ var createCounterText = function (value, type, appendSuffix) {
                 CHINESE_INFORMAL_MULTIPLIERS,
                 '负',
                 cjkSuffix,
-                CJK_TEN_COEFFICIENTS |
-                    CJK_TEN_HIGH_COEFFICIENTS |
-                    CJK_HUNDRED_COEFFICIENTS
+                CJK_TEN_COEFFICIENTS | CJK_TEN_HIGH_COEFFICIENTS | CJK_HUNDRED_COEFFICIENTS
             )
         case 41 /* SIMP_CHINESE_FORMAL */:
             return createCJKCounter(
@@ -6360,47 +5838,15 @@ var createCounterText = function (value, type, appendSuffix) {
                 CJK_ZEROS | CJK_TEN_COEFFICIENTS | CJK_TEN_HIGH_COEFFICIENTS
             )
         case 18 /* DEVANAGARI */:
-            return createCounterStyleFromRange(
-                value,
-                0x966,
-                0x96f,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0x966, 0x96f, true, defaultSuffix)
         case 20 /* GEORGIAN */:
-            return createAdditiveCounter(
-                value,
-                1,
-                19999,
-                GEORGIAN,
-                3 /* DECIMAL */,
-                defaultSuffix
-            )
+            return createAdditiveCounter(value, 1, 19999, GEORGIAN, 3 /* DECIMAL */, defaultSuffix)
         case 21 /* GUJARATI */:
-            return createCounterStyleFromRange(
-                value,
-                0xae6,
-                0xaef,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0xae6, 0xaef, true, defaultSuffix)
         case 22 /* GURMUKHI */:
-            return createCounterStyleFromRange(
-                value,
-                0xa66,
-                0xa6f,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0xa66, 0xa6f, true, defaultSuffix)
         case 22 /* HEBREW */:
-            return createAdditiveCounter(
-                value,
-                1,
-                10999,
-                HEBREW,
-                3 /* DECIMAL */,
-                defaultSuffix
-            )
+            return createAdditiveCounter(value, 1, 10999, HEBREW, 3 /* DECIMAL */, defaultSuffix)
         case 23 /* HIRAGANA */:
             return createCounterStyleFromSymbols(
                 value,
@@ -6412,13 +5858,7 @@ var createCounterText = function (value, type, appendSuffix) {
                 'いろはにほへとちりぬるをわかよたれそつねならむうゐのおくやまけふこえてあさきゆめみしゑひもせす'
             )
         case 27 /* KANNADA */:
-            return createCounterStyleFromRange(
-                value,
-                0xce6,
-                0xcef,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0xce6, 0xcef, true, defaultSuffix)
         case 28 /* KATAKANA */:
             return createCounterStyleFromSymbols(
                 value,
@@ -6432,86 +5872,26 @@ var createCounterText = function (value, type, appendSuffix) {
                 cjkSuffix
             )
         case 34 /* LAO */:
-            return createCounterStyleFromRange(
-                value,
-                0xed0,
-                0xed9,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0xed0, 0xed9, true, defaultSuffix)
         case 37 /* MONGOLIAN */:
-            return createCounterStyleFromRange(
-                value,
-                0x1810,
-                0x1819,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0x1810, 0x1819, true, defaultSuffix)
         case 38 /* MYANMAR */:
-            return createCounterStyleFromRange(
-                value,
-                0x1040,
-                0x1049,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0x1040, 0x1049, true, defaultSuffix)
         case 39 /* ORIYA */:
-            return createCounterStyleFromRange(
-                value,
-                0xb66,
-                0xb6f,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0xb66, 0xb6f, true, defaultSuffix)
         case 40 /* PERSIAN */:
-            return createCounterStyleFromRange(
-                value,
-                0x6f0,
-                0x6f9,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0x6f0, 0x6f9, true, defaultSuffix)
         case 43 /* TAMIL */:
-            return createCounterStyleFromRange(
-                value,
-                0xbe6,
-                0xbef,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0xbe6, 0xbef, true, defaultSuffix)
         case 44 /* TELUGU */:
-            return createCounterStyleFromRange(
-                value,
-                0xc66,
-                0xc6f,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0xc66, 0xc6f, true, defaultSuffix)
         case 45 /* THAI */:
-            return createCounterStyleFromRange(
-                value,
-                0xe50,
-                0xe59,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0xe50, 0xe59, true, defaultSuffix)
         case 46 /* TIBETAN */:
-            return createCounterStyleFromRange(
-                value,
-                0xf20,
-                0xf29,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 0xf20, 0xf29, true, defaultSuffix)
         case 3 /* DECIMAL */:
         default:
-            return createCounterStyleFromRange(
-                value,
-                48,
-                57,
-                true,
-                defaultSuffix
-            )
+            return createCounterStyleFromRange(value, 48, 57, true, defaultSuffix)
     }
 }
 
@@ -6527,10 +5907,7 @@ const DocumentCloner = /** @class */ (function () {
         if (!element.ownerDocument) {
             throw new Error('Cloned element does not have an owner document')
         }
-        this.documentElement = this.cloneNode(
-            element.ownerDocument.documentElement,
-            false
-        )
+        this.documentElement = this.cloneNode(element.ownerDocument.documentElement, false)
     }
     DocumentCloner.prototype.toIFrame = function (ownerDocument, windowSize) {
         const _this = this
@@ -6553,29 +5930,21 @@ const DocumentCloner = /** @class */ (function () {
                         case 0:
                             this.scrolledElements.forEach(restoreNodeScroll)
                             if (cloneWindow) {
-                                cloneWindow.scrollTo(
-                                    windowSize.left,
-                                    windowSize.top
-                                )
+                                cloneWindow.scrollTo(windowSize.left, windowSize.top)
                                 if (
-                                    /(iPad|iPhone|iPod)/g.test(
-                                        navigator.userAgent
-                                    ) &&
+                                    /(iPad|iPhone|iPod)/g.test(navigator.userAgent) &&
                                     (cloneWindow.scrollY !== windowSize.top ||
                                         cloneWindow.scrollX !== windowSize.left)
                                 ) {
                                     this.context.logger.warn(
                                         'Unable to restore scroll position for cloned document'
                                     )
-                                    this.context.windowBounds =
-                                        this.context.windowBounds.add(
-                                            cloneWindow.scrollX -
-                                                windowSize.left,
-                                            cloneWindow.scrollY -
-                                                windowSize.top,
-                                            0,
-                                            0
-                                        )
+                                    this.context.windowBounds = this.context.windowBounds.add(
+                                        cloneWindow.scrollX - windowSize.left,
+                                        cloneWindow.scrollY - windowSize.top,
+                                        0,
+                                        0
+                                    )
                                 }
                             }
                             onclone = this.options.onclone
@@ -6590,20 +5959,14 @@ const DocumentCloner = /** @class */ (function () {
                                     )
                                 ]
                             }
-                            if (
-                                !(
-                                    documentClone.fonts &&
-                                    documentClone.fonts.ready
-                                )
-                            )
+                            if (!(documentClone.fonts && documentClone.fonts.ready))
                                 return [3 /*break*/, 2]
                             return [4 /*yield*/, documentClone.fonts.ready]
                         case 1:
                             _a.sent()
                             _a.label = 2
                         case 2:
-                            if (!/(AppleWebKit)/g.test(navigator.userAgent))
-                                return [3 /*break*/, 4]
+                            if (!/(AppleWebKit)/g.test(navigator.userAgent)) return [3 /*break*/, 4]
                             return [4 /*yield*/, imagesReady(documentClone)]
                         case 3:
                             _a.sent()
@@ -6614,10 +5977,7 @@ const DocumentCloner = /** @class */ (function () {
                                     2 /*return*/,
                                     Promise.resolve()
                                         .then(function () {
-                                            return onclone(
-                                                documentClone,
-                                                referenceElement
-                                            )
+                                            return onclone(documentClone, referenceElement)
                                         })
                                         .then(function () {
                                             return iframe
@@ -6630,15 +5990,9 @@ const DocumentCloner = /** @class */ (function () {
             })
         })
         documentClone.open()
-        documentClone.write(
-            serializeDoctype(document.doctype) + '<html></html>'
-        )
+        documentClone.write(serializeDoctype(document.doctype) + '<html></html>')
         // Chrome scrolls the parent document for some reason after the write to the cloned window???
-        restoreOwnerScroll(
-            this.referenceElement.ownerDocument,
-            scrollX,
-            scrollY
-        )
+        restoreOwnerScroll(this.referenceElement.ownerDocument, scrollX, scrollY)
         documentClone.replaceChild(
             documentClone.adoptNode(this.documentElement),
             documentClone.documentElement
@@ -6661,11 +6015,7 @@ const DocumentCloner = /** @class */ (function () {
         }
         const clone = node.cloneNode(false)
         if (isImageElement(clone)) {
-            if (
-                isImageElement(node) &&
-                node.currentSrc &&
-                node.currentSrc !== node.src
-            ) {
+            if (isImageElement(node) && node.currentSrc && node.currentSrc !== node.src) {
                 clone.src = node.currentSrc
                 clone.srcset = ''
             }
@@ -6687,14 +6037,12 @@ const DocumentCloner = /** @class */ (function () {
         try {
             const sheet = node.sheet
             if (sheet && sheet.cssRules) {
-                const css = [].slice
-                    .call(sheet.cssRules, 0)
-                    .reduce(function (css, rule) {
-                        if (rule && typeof rule.cssText === 'string') {
-                            return css + rule.cssText
-                        }
-                        return css
-                    }, '')
+                const css = [].slice.call(sheet.cssRules, 0).reduce(function (css, rule) {
+                    if (rule && typeof rule.cssText === 'string') {
+                        return css + rule.cssText
+                    }
+                    return css
+                }, '')
                 const style = node.cloneNode(false)
                 style.textContent = css
                 return style
@@ -6737,8 +6085,7 @@ const DocumentCloner = /** @class */ (function () {
                     )
                 } else {
                     const gl =
-                        (_a = canvas.getContext('webgl2')) !== null &&
-                        _a !== void 0
+                        (_a = canvas.getContext('webgl2')) !== null && _a !== void 0
                             ? _a
                             : canvas.getContext('webgl')
                     if (gl) {
@@ -6759,10 +6106,7 @@ const DocumentCloner = /** @class */ (function () {
             }
             return clonedCanvas
         } catch (e) {
-            this.context.logger.info(
-                'Unable to clone canvas as it is tainted',
-                canvas
-            )
+            this.context.logger.info('Unable to clone canvas as it is tainted', canvas)
         }
         return clonedCanvas
     }
@@ -6780,21 +6124,14 @@ const DocumentCloner = /** @class */ (function () {
             }
             return canvas
         } catch (e) {
-            this.context.logger.info(
-                'Unable to clone video as it is tainted',
-                video
-            )
+            this.context.logger.info('Unable to clone video as it is tainted', video)
         }
         const blankCanvas = video.ownerDocument.createElement('canvas')
         blankCanvas.width = video.offsetWidth
         blankCanvas.height = video.offsetHeight
         return blankCanvas
     }
-    DocumentCloner.prototype.appendChildNode = function (
-        clone,
-        child,
-        copyStyles
-    ) {
+    DocumentCloner.prototype.appendChildNode = function (clone, child, copyStyles) {
         if (
             !isElementNode(child) ||
             (!isScriptElement(child) &&
@@ -6802,25 +6139,15 @@ const DocumentCloner = /** @class */ (function () {
                 (typeof this.options.ignoreElements !== 'function' ||
                     !this.options.ignoreElements(child)))
         ) {
-            if (
-                !this.options.copyStyles ||
-                !isElementNode(child) ||
-                !isStyleElement(child)
-            ) {
+            if (!this.options.copyStyles || !isElementNode(child) || !isStyleElement(child)) {
                 clone.appendChild(this.cloneNode(child, copyStyles))
             }
         }
     }
-    DocumentCloner.prototype.cloneChildNodes = function (
-        node,
-        clone,
-        copyStyles
-    ) {
+    DocumentCloner.prototype.cloneChildNodes = function (node, clone, copyStyles) {
         const _this = this
         for (
-            let child = node.shadowRoot
-                ? node.shadowRoot.firstChild
-                : node.firstChild;
+            let child = node.shadowRoot ? node.shadowRoot.firstChild : node.firstChild;
             child;
             child = child.nextSibling
         ) {
@@ -6832,11 +6159,7 @@ const DocumentCloner = /** @class */ (function () {
                 const assignedNodes = child.assignedNodes()
                 if (assignedNodes.length) {
                     assignedNodes.forEach(function (assignedNode) {
-                        return _this.appendChildNode(
-                            clone,
-                            assignedNode,
-                            copyStyles
-                        )
+                        return _this.appendChildNode(clone, assignedNode, copyStyles)
                     })
                 }
             } else {
@@ -6852,11 +6175,7 @@ const DocumentCloner = /** @class */ (function () {
             return node.cloneNode(false)
         }
         const window = node.ownerDocument.defaultView
-        if (
-            window &&
-            isElementNode(node) &&
-            (isHTMLElementNode(node) || isSVGElementNode(node))
-        ) {
+        if (window && isElementNode(node) && (isHTMLElementNode(node) || isSVGElementNode(node))) {
             const clone = this.createElementClone(node)
             clone.style.transitionProperty = 'none'
             const style = window.getComputedStyle(node)
@@ -6905,11 +6224,7 @@ const DocumentCloner = /** @class */ (function () {
                 copyCSSStyles(style, clone)
             }
             if (node.scrollTop !== 0 || node.scrollLeft !== 0) {
-                this.scrolledElements.push([
-                    clone,
-                    node.scrollLeft,
-                    node.scrollTop
-                ])
+                this.scrolledElements.push([clone, node.scrollLeft, node.scrollTop])
             }
             if (
                 (isTextareaElement(node) || isSelectElement(node)) &&
@@ -6921,12 +6236,7 @@ const DocumentCloner = /** @class */ (function () {
         }
         return node.cloneNode(false)
     }
-    DocumentCloner.prototype.resolvePseudoContent = function (
-        node,
-        clone,
-        style,
-        pseudoElt
-    ) {
+    DocumentCloner.prototype.resolvePseudoContent = function (node, clone, style, pseudoElt) {
         const _this = this
         if (!style) {
             return
@@ -6942,19 +6252,13 @@ const DocumentCloner = /** @class */ (function () {
         ) {
             return
         }
-        this.counters.parse(
-            new CSSParsedCounterDeclaration(this.context, style)
-        )
+        this.counters.parse(new CSSParsedCounterDeclaration(this.context, style))
         const declaration = new CSSParsedPseudoDeclaration(this.context, style)
-        const anonymousReplacedElement = document.createElement(
-            'html2canvaspseudoelement'
-        )
+        const anonymousReplacedElement = document.createElement('html2canvaspseudoelement')
         copyCSSStyles(style, anonymousReplacedElement)
         declaration.content.forEach(function (token) {
             if (token.type === 0 /* STRING_TOKEN */) {
-                anonymousReplacedElement.appendChild(
-                    document.createTextNode(token.value)
-                )
+                anonymousReplacedElement.appendChild(document.createTextNode(token.value))
             } else if (token.type === 22 /* URL_TOKEN */) {
                 const img = document.createElement('img')
                 img.src = token.value
@@ -6965,9 +6269,7 @@ const DocumentCloner = /** @class */ (function () {
                     const attr = token.values.filter(isIdentToken)
                     if (attr.length) {
                         anonymousReplacedElement.appendChild(
-                            document.createTextNode(
-                                node.getAttribute(attr[0].value) || ''
-                            )
+                            document.createTextNode(node.getAttribute(attr[0].value) || '')
                         )
                     }
                 } else if (token.name === 'counter') {
@@ -6975,23 +6277,14 @@ const DocumentCloner = /** @class */ (function () {
                         counter = _a[0],
                         counterStyle = _a[1]
                     if (counter && isIdentToken(counter)) {
-                        const counterState = _this.counters.getCounterValue(
-                            counter.value
-                        )
+                        const counterState = _this.counters.getCounterValue(counter.value)
                         const counterType =
                             counterStyle && isIdentToken(counterStyle)
-                                ? listStyleType.parse(
-                                      _this.context,
-                                      counterStyle.value
-                                  )
+                                ? listStyleType.parse(_this.context, counterStyle.value)
                                 : 3 /* DECIMAL */
                         anonymousReplacedElement.appendChild(
                             document.createTextNode(
-                                createCounterText(
-                                    counterState,
-                                    counterType,
-                                    false
-                                )
+                                createCounterText(counterState, counterType, false)
                             )
                         )
                     }
@@ -7001,32 +6294,19 @@ const DocumentCloner = /** @class */ (function () {
                         delim = _b[1],
                         counterStyle = _b[2]
                     if (counter && isIdentToken(counter)) {
-                        const counterStates = _this.counters.getCounterValues(
-                            counter.value
-                        )
+                        const counterStates = _this.counters.getCounterValues(counter.value)
                         const counterType_1 =
                             counterStyle && isIdentToken(counterStyle)
-                                ? listStyleType.parse(
-                                      _this.context,
-                                      counterStyle.value
-                                  )
+                                ? listStyleType.parse(_this.context, counterStyle.value)
                                 : 3 /* DECIMAL */
                         const separator =
-                            delim && delim.type === 0 /* STRING_TOKEN */
-                                ? delim.value
-                                : ''
+                            delim && delim.type === 0 /* STRING_TOKEN */ ? delim.value : ''
                         const text = counterStates
                             .map(function (value) {
-                                return createCounterText(
-                                    value,
-                                    counterType_1,
-                                    false
-                                )
+                                return createCounterText(value, counterType_1, false)
                             })
                             .join(separator)
-                        anonymousReplacedElement.appendChild(
-                            document.createTextNode(text)
-                        )
+                        anonymousReplacedElement.appendChild(document.createTextNode(text))
                     }
                 } else;
             } else if (token.type === 20 /* IDENT_TOKEN */) {
@@ -7034,37 +6314,25 @@ const DocumentCloner = /** @class */ (function () {
                     case 'open-quote':
                         anonymousReplacedElement.appendChild(
                             document.createTextNode(
-                                getQuote(
-                                    declaration.quotes,
-                                    _this.quoteDepth++,
-                                    true
-                                )
+                                getQuote(declaration.quotes, _this.quoteDepth++, true)
                             )
                         )
                         break
                     case 'close-quote':
                         anonymousReplacedElement.appendChild(
                             document.createTextNode(
-                                getQuote(
-                                    declaration.quotes,
-                                    --_this.quoteDepth,
-                                    false
-                                )
+                                getQuote(declaration.quotes, --_this.quoteDepth, false)
                             )
                         )
                         break
                     default:
                         // safari doesn't parse string tokens correctly because of lack of quotes
-                        anonymousReplacedElement.appendChild(
-                            document.createTextNode(token.value)
-                        )
+                        anonymousReplacedElement.appendChild(document.createTextNode(token.value))
                 }
             }
         })
         anonymousReplacedElement.className =
-            PSEUDO_HIDE_ELEMENT_CLASS_BEFORE +
-            ' ' +
-            PSEUDO_HIDE_ELEMENT_CLASS_AFTER
+            PSEUDO_HIDE_ELEMENT_CLASS_BEFORE + ' ' + PSEUDO_HIDE_ELEMENT_CLASS_AFTER
         const newClassName =
             pseudoElt === PseudoElementType.BEFORE
                 ? ' ' + PSEUDO_HIDE_ELEMENT_CLASS_BEFORE
@@ -7182,8 +6450,7 @@ var restoreOwnerScroll = function (ownerDocument, x, y) {
     if (
         ownerDocument &&
         ownerDocument.defaultView &&
-        (x !== ownerDocument.defaultView.pageXOffset ||
-            y !== ownerDocument.defaultView.pageYOffset)
+        (x !== ownerDocument.defaultView.pageXOffset || y !== ownerDocument.defaultView.pageYOffset)
     ) {
         ownerDocument.defaultView.scrollTo(x, y)
     }
@@ -7199,8 +6466,7 @@ const PSEUDO_BEFORE = ':before'
 const PSEUDO_AFTER = ':after'
 var PSEUDO_HIDE_ELEMENT_CLASS_BEFORE = '___html2canvas___pseudoelement_before'
 var PSEUDO_HIDE_ELEMENT_CLASS_AFTER = '___html2canvas___pseudoelement_after'
-const PSEUDO_HIDE_ELEMENT_STYLE =
-    '{\n    content: "" !important;\n    display: none !important;\n}'
+const PSEUDO_HIDE_ELEMENT_STYLE = '{\n    content: "" !important;\n    display: none !important;\n}'
 var createPseudoHideStyles = function (body) {
     createStyles(
         body,
@@ -7305,9 +6571,7 @@ const Cache = /** @class */ (function () {
                         src = _a.sent()
                         _a.label = 2
                     case 2:
-                        this.context.logger.debug(
-                            'Added image ' + key.substring(0, 256)
-                        )
+                        this.context.logger.debug('Added image ' + key.substring(0, 256))
                         return [
                             4 /*yield*/,
                             new Promise(function (resolve, reject) {
@@ -7358,9 +6622,7 @@ const Cache = /** @class */ (function () {
         }
         const key = src.substring(0, 256)
         return new Promise(function (resolve, reject) {
-            const responseType = FEATURES.SUPPORT_RESPONSE_TYPE
-                ? 'blob'
-                : 'text'
+            const responseType = FEATURES.SUPPORT_RESPONSE_TYPE ? 'blob' : 'text'
             const xhr = new XMLHttpRequest()
             xhr.onload = function () {
                 if (xhr.status === 200) {
@@ -7385,12 +6647,7 @@ const Cache = /** @class */ (function () {
                         reader_1.readAsDataURL(xhr.response)
                     }
                 } else {
-                    reject(
-                        'Failed to proxy resource ' +
-                            key +
-                            ' with status code ' +
-                            xhr.status
-                    )
+                    reject('Failed to proxy resource ' + key + ' with status code ' + xhr.status)
                 }
             }
             xhr.onerror = reject
@@ -7412,9 +6669,7 @@ const Cache = /** @class */ (function () {
                 const timeout_1 = _this._options.imageTimeout
                 xhr.timeout = timeout_1
                 xhr.ontimeout = function () {
-                    return reject(
-                        'Timed out (' + timeout_1 + 'ms) proxying ' + key
-                    )
+                    return reject('Timed out (' + timeout_1 + 'ms) proxying ' + key)
                 }
             }
             xhr.send()
@@ -7484,12 +6739,7 @@ const BezierCurve = /** @class */ (function () {
         )
     }
     BezierCurve.prototype.reverse = function () {
-        return new BezierCurve(
-            this.end,
-            this.endControl,
-            this.startControl,
-            this.start
-        )
+        return new BezierCurve(this.end, this.endControl, this.startControl, this.start)
     }
     return BezierCurve
 })()
@@ -7501,18 +6751,10 @@ const BoundCurves = /** @class */ (function () {
     function BoundCurves(element) {
         const styles = element.styles
         const bounds = element.bounds
-        let _a = getAbsoluteValueForTuple(
-                styles.borderTopLeftRadius,
-                bounds.width,
-                bounds.height
-            ),
+        let _a = getAbsoluteValueForTuple(styles.borderTopLeftRadius, bounds.width, bounds.height),
             tlh = _a[0],
             tlv = _a[1]
-        let _b = getAbsoluteValueForTuple(
-                styles.borderTopRightRadius,
-                bounds.width,
-                bounds.height
-            ),
+        let _b = getAbsoluteValueForTuple(styles.borderTopRightRadius, bounds.width, bounds.height),
             trh = _b[0],
             trv = _b[1]
         let _c = getAbsoluteValueForTuple(
@@ -7553,22 +6795,10 @@ const BoundCurves = /** @class */ (function () {
         const borderRightWidth = styles.borderRightWidth
         const borderBottomWidth = styles.borderBottomWidth
         const borderLeftWidth = styles.borderLeftWidth
-        const paddingTop = getAbsoluteValue(
-            styles.paddingTop,
-            element.bounds.width
-        )
-        const paddingRight = getAbsoluteValue(
-            styles.paddingRight,
-            element.bounds.width
-        )
-        const paddingBottom = getAbsoluteValue(
-            styles.paddingBottom,
-            element.bounds.width
-        )
-        const paddingLeft = getAbsoluteValue(
-            styles.paddingLeft,
-            element.bounds.width
-        )
+        const paddingTop = getAbsoluteValue(styles.paddingTop, element.bounds.width)
+        const paddingRight = getAbsoluteValue(styles.paddingRight, element.bounds.width)
+        const paddingBottom = getAbsoluteValue(styles.paddingBottom, element.bounds.width)
+        const paddingLeft = getAbsoluteValue(styles.paddingLeft, element.bounds.width)
         this.topLeftBorderDoubleOuterBox =
             tlh > 0 || tlv > 0
                 ? getCurvePoints(
@@ -7578,10 +6808,7 @@ const BoundCurves = /** @class */ (function () {
                       tlv - borderTopWidth / 3,
                       CORNER.TOP_LEFT
                   )
-                : new Vector(
-                      bounds.left + borderLeftWidth / 3,
-                      bounds.top + borderTopWidth / 3
-                  )
+                : new Vector(bounds.left + borderLeftWidth / 3, bounds.top + borderTopWidth / 3)
         this.topRightBorderDoubleOuterBox =
             tlh > 0 || tlv > 0
                 ? getCurvePoints(
@@ -7682,10 +6909,7 @@ const BoundCurves = /** @class */ (function () {
                       tlv - borderTopWidth / 2,
                       CORNER.TOP_LEFT
                   )
-                : new Vector(
-                      bounds.left + borderLeftWidth / 2,
-                      bounds.top + borderTopWidth / 2
-                  )
+                : new Vector(bounds.left + borderLeftWidth / 2, bounds.top + borderTopWidth / 2)
         this.topRightBorderStroke =
             tlh > 0 || tlv > 0
                 ? getCurvePoints(
@@ -7727,23 +6951,11 @@ const BoundCurves = /** @class */ (function () {
                   )
         this.topLeftBorderBox =
             tlh > 0 || tlv > 0
-                ? getCurvePoints(
-                      bounds.left,
-                      bounds.top,
-                      tlh,
-                      tlv,
-                      CORNER.TOP_LEFT
-                  )
+                ? getCurvePoints(bounds.left, bounds.top, tlh, tlv, CORNER.TOP_LEFT)
                 : new Vector(bounds.left, bounds.top)
         this.topRightBorderBox =
             trh > 0 || trv > 0
-                ? getCurvePoints(
-                      bounds.left + topWidth,
-                      bounds.top,
-                      trh,
-                      trv,
-                      CORNER.TOP_RIGHT
-                  )
+                ? getCurvePoints(bounds.left + topWidth, bounds.top, trh, trv, CORNER.TOP_RIGHT)
                 : new Vector(bounds.left + bounds.width, bounds.top)
         this.bottomRightBorderBox =
             brh > 0 || brv > 0
@@ -7754,19 +6966,10 @@ const BoundCurves = /** @class */ (function () {
                       brv,
                       CORNER.BOTTOM_RIGHT
                   )
-                : new Vector(
-                      bounds.left + bounds.width,
-                      bounds.top + bounds.height
-                  )
+                : new Vector(bounds.left + bounds.width, bounds.top + bounds.height)
         this.bottomLeftBorderBox =
             blh > 0 || blv > 0
-                ? getCurvePoints(
-                      bounds.left,
-                      bounds.top + leftHeight,
-                      blh,
-                      blv,
-                      CORNER.BOTTOM_LEFT
-                  )
+                ? getCurvePoints(bounds.left, bounds.top + leftHeight, blh, blv, CORNER.BOTTOM_LEFT)
                 : new Vector(bounds.left, bounds.top + bounds.height)
         this.topLeftPaddingBox =
             tlh > 0 || tlv > 0
@@ -7777,15 +6980,11 @@ const BoundCurves = /** @class */ (function () {
                       Math.max(0, tlv - borderTopWidth),
                       CORNER.TOP_LEFT
                   )
-                : new Vector(
-                      bounds.left + borderLeftWidth,
-                      bounds.top + borderTopWidth
-                  )
+                : new Vector(bounds.left + borderLeftWidth, bounds.top + borderTopWidth)
         this.topRightPaddingBox =
             trh > 0 || trv > 0
                 ? getCurvePoints(
-                      bounds.left +
-                          Math.min(topWidth, bounds.width - borderRightWidth),
+                      bounds.left + Math.min(topWidth, bounds.width - borderRightWidth),
                       bounds.top + borderTopWidth,
                       topWidth > bounds.width + borderRightWidth
                           ? 0
@@ -7800,13 +6999,8 @@ const BoundCurves = /** @class */ (function () {
         this.bottomRightPaddingBox =
             brh > 0 || brv > 0
                 ? getCurvePoints(
-                      bounds.left +
-                          Math.min(bottomWidth, bounds.width - borderLeftWidth),
-                      bounds.top +
-                          Math.min(
-                              rightHeight,
-                              bounds.height - borderBottomWidth
-                          ),
+                      bounds.left + Math.min(bottomWidth, bounds.width - borderLeftWidth),
+                      bounds.top + Math.min(rightHeight, bounds.height - borderBottomWidth),
                       Math.max(0, brh - borderRightWidth),
                       Math.max(0, brv - borderBottomWidth),
                       CORNER.BOTTOM_RIGHT
@@ -7819,11 +7013,7 @@ const BoundCurves = /** @class */ (function () {
             blh > 0 || blv > 0
                 ? getCurvePoints(
                       bounds.left + borderLeftWidth,
-                      bounds.top +
-                          Math.min(
-                              leftHeight,
-                              bounds.height - borderBottomWidth
-                          ),
+                      bounds.top + Math.min(leftHeight, bounds.height - borderBottomWidth),
                       Math.max(0, blh - borderLeftWidth),
                       Math.max(0, blv - borderBottomWidth),
                       CORNER.BOTTOM_LEFT
@@ -7849,10 +7039,7 @@ const BoundCurves = /** @class */ (function () {
             trh > 0 || trv > 0
                 ? getCurvePoints(
                       bounds.left +
-                          Math.min(
-                              topWidth,
-                              bounds.width + borderLeftWidth + paddingLeft
-                          ),
+                          Math.min(topWidth, bounds.width + borderLeftWidth + paddingLeft),
                       bounds.top + borderTopWidth + paddingTop,
                       topWidth > bounds.width + borderLeftWidth + paddingLeft
                           ? 0
@@ -7861,35 +7048,23 @@ const BoundCurves = /** @class */ (function () {
                       CORNER.TOP_RIGHT
                   )
                 : new Vector(
-                      bounds.left +
-                          bounds.width -
-                          (borderRightWidth + paddingRight),
+                      bounds.left + bounds.width - (borderRightWidth + paddingRight),
                       bounds.top + borderTopWidth + paddingTop
                   )
         this.bottomRightContentBox =
             brh > 0 || brv > 0
                 ? getCurvePoints(
                       bounds.left +
-                          Math.min(
-                              bottomWidth,
-                              bounds.width - (borderLeftWidth + paddingLeft)
-                          ),
+                          Math.min(bottomWidth, bounds.width - (borderLeftWidth + paddingLeft)),
                       bounds.top +
-                          Math.min(
-                              rightHeight,
-                              bounds.height + borderTopWidth + paddingTop
-                          ),
+                          Math.min(rightHeight, bounds.height + borderTopWidth + paddingTop),
                       Math.max(0, brh - (borderRightWidth + paddingRight)),
                       brv - (borderBottomWidth + paddingBottom),
                       CORNER.BOTTOM_RIGHT
                   )
                 : new Vector(
-                      bounds.left +
-                          bounds.width -
-                          (borderRightWidth + paddingRight),
-                      bounds.top +
-                          bounds.height -
-                          (borderBottomWidth + paddingBottom)
+                      bounds.left + bounds.width - (borderRightWidth + paddingRight),
+                      bounds.top + bounds.height - (borderBottomWidth + paddingBottom)
                   )
         this.bottomLeftContentBox =
             blh > 0 || blv > 0
@@ -7902,9 +7077,7 @@ const BoundCurves = /** @class */ (function () {
                   )
                 : new Vector(
                       bounds.left + borderLeftWidth + paddingLeft,
-                      bounds.top +
-                          bounds.height -
-                          (borderBottomWidth + paddingBottom)
+                      bounds.top + bounds.height - (borderBottomWidth + paddingBottom)
                   )
     }
     return BoundCurves
@@ -8063,11 +7236,9 @@ const ElementPaint = /** @class */ (function () {
         }
         if (this.container.styles.transform !== null) {
             const offsetX =
-                this.container.bounds.left +
-                this.container.styles.transformOrigin[0].number
+                this.container.bounds.left + this.container.styles.transformOrigin[0].number
             const offsetY =
-                this.container.bounds.top +
-                this.container.styles.transformOrigin[1].number
+                this.container.bounds.top + this.container.styles.transformOrigin[1].number
             const matrix = this.container.styles.transform
             this.effects.push(new TransformEffect(offsetX, offsetY, matrix))
         }
@@ -8076,49 +7247,34 @@ const ElementPaint = /** @class */ (function () {
             const paddingBox = calculatePaddingBoxPath(this.curves)
             if (equalPath(borderBox, paddingBox)) {
                 this.effects.push(
-                    new ClipEffect(
-                        borderBox,
-                        2 /* BACKGROUND_BORDERS */ | 4 /* CONTENT */
-                    )
+                    new ClipEffect(borderBox, 2 /* BACKGROUND_BORDERS */ | 4 /* CONTENT */)
                 )
             } else {
-                this.effects.push(
-                    new ClipEffect(borderBox, 2 /* BACKGROUND_BORDERS */)
-                )
+                this.effects.push(new ClipEffect(borderBox, 2 /* BACKGROUND_BORDERS */))
                 this.effects.push(new ClipEffect(paddingBox, 4 /* CONTENT */))
             }
         }
     }
     ElementPaint.prototype.getEffects = function (target) {
         let inFlow =
-            [2 /* ABSOLUTE */, 3 /* FIXED */].indexOf(
-                this.container.styles.position
-            ) === -1
+            [2 /* ABSOLUTE */, 3 /* FIXED */].indexOf(this.container.styles.position) === -1
         let parent = this.parent
         const effects = this.effects.slice(0)
         while (parent) {
             const croplessEffects = parent.effects.filter(function (effect) {
                 return !isClipEffect(effect)
             })
-            if (
-                inFlow ||
-                parent.container.styles.position !== 0 /* STATIC */ ||
-                !parent.parent
-            ) {
+            if (inFlow || parent.container.styles.position !== 0 /* STATIC */ || !parent.parent) {
                 effects.unshift.apply(effects, croplessEffects)
                 inFlow =
-                    [2 /* ABSOLUTE */, 3 /* FIXED */].indexOf(
-                        parent.container.styles.position
-                    ) === -1
+                    [2 /* ABSOLUTE */, 3 /* FIXED */].indexOf(parent.container.styles.position) ===
+                    -1
                 if (parent.container.styles.overflowX !== 0 /* VISIBLE */) {
                     const borderBox = calculateBorderBoxPath(parent.curves)
                     const paddingBox = calculatePaddingBoxPath(parent.curves)
                     if (!equalPath(borderBox, paddingBox)) {
                         effects.unshift(
-                            new ClipEffect(
-                                paddingBox,
-                                2 /* BACKGROUND_BORDERS */ | 4 /* CONTENT */
-                            )
+                            new ClipEffect(paddingBox, 2 /* BACKGROUND_BORDERS */ | 4 /* CONTENT */)
                         )
                     }
                 }
@@ -8133,28 +7289,18 @@ const ElementPaint = /** @class */ (function () {
     }
     return ElementPaint
 })()
-var parseStackTree = function (
-    parent,
-    stackingContext,
-    realStackingContext,
-    listItems
-) {
+const parseStackTree = function (parent, stackingContext, realStackingContext, listItems) {
     parent.container.elements.forEach(function (child) {
         const treatAsRealStackingContext = contains(
             child.flags,
             4 /* CREATES_REAL_STACKING_CONTEXT */
         )
-        const createsStackingContext = contains(
-            child.flags,
-            2 /* CREATES_STACKING_CONTEXT */
-        )
+        const createsStackingContext = contains(child.flags, 2 /* CREATES_STACKING_CONTEXT */)
         const paintContainer = new ElementPaint(child, parent)
         if (contains(child.styles.display, 2048 /* LIST_ITEM */)) {
             listItems.push(paintContainer)
         }
-        const listOwnerItems = contains(child.flags, 8 /* IS_LIST_OWNER */)
-            ? []
-            : listItems
+        const listOwnerItems = contains(child.flags, 8 /* IS_LIST_OWNER */) ? [] : listItems
         if (treatAsRealStackingContext || createsStackingContext) {
             const parentStack =
                 treatAsRealStackingContext || child.styles.isPositioned()
@@ -8170,10 +7316,7 @@ var parseStackTree = function (
                 if (order_1 < 0) {
                     let index_1 = 0
                     parentStack.negativeZIndex.some(function (current, i) {
-                        if (
-                            order_1 >
-                            current.element.container.styles.zIndex.order
-                        ) {
+                        if (order_1 > current.element.container.styles.zIndex.order) {
                             index_1 = i
                             return false
                         } else if (index_1 > 0) {
@@ -8185,10 +7328,7 @@ var parseStackTree = function (
                 } else if (order_1 > 0) {
                     let index_2 = 0
                     parentStack.positiveZIndex.some(function (current, i) {
-                        if (
-                            order_1 >=
-                            current.element.container.styles.zIndex.order
-                        ) {
+                        if (order_1 >= current.element.container.styles.zIndex.order) {
                             index_2 = i + 1
                             return false
                         } else if (index_2 > 0) {
@@ -8198,9 +7338,7 @@ var parseStackTree = function (
                     })
                     parentStack.positiveZIndex.splice(index_2, 0, stack)
                 } else {
-                    parentStack.zeroOrAutoZIndexOrTransformedOrOpacity.push(
-                        stack
-                    )
+                    parentStack.zeroOrAutoZIndexOrTransformedOrOpacity.push(stack)
                 }
             } else {
                 if (child.styles.isFloating()) {
@@ -8221,12 +7359,7 @@ var parseStackTree = function (
             } else {
                 stackingContext.nonInlineLevel.push(paintContainer)
             }
-            parseStackTree(
-                paintContainer,
-                stackingContext,
-                realStackingContext,
-                listOwnerItems
-            )
+            parseStackTree(paintContainer, stackingContext, realStackingContext, listOwnerItems)
         }
         if (contains(child.flags, 8 /* IS_LIST_OWNER */)) {
             processListItems(child, listOwnerItems)
@@ -8235,8 +7368,7 @@ var parseStackTree = function (
 }
 var processListItems = function (owner, elements) {
     let numbering = owner instanceof OLElementContainer ? owner.start : 1
-    const reversed =
-        owner instanceof OLElementContainer ? owner.reversed : false
+    const reversed = owner instanceof OLElementContainer ? owner.reversed : false
     for (let i = 0; i < elements.length; i++) {
         const item = elements[i]
         if (
@@ -8246,11 +7378,7 @@ var processListItems = function (owner, elements) {
         ) {
             numbering = item.container.value
         }
-        item.listValue = createCounterText(
-            numbering,
-            item.container.styles.listStyleType,
-            true
-        )
+        item.listValue = createCounterText(numbering, item.container.styles.listStyleType, true)
         numbering += reversed ? -1 : 1
     }
 }
@@ -8446,25 +7574,12 @@ const contentBox = function (element) {
     return bounds.add(
         paddingLeft + styles.borderLeftWidth,
         paddingTop + styles.borderTopWidth,
-        -(
-            styles.borderRightWidth +
-            styles.borderLeftWidth +
-            paddingLeft +
-            paddingRight
-        ),
-        -(
-            styles.borderTopWidth +
-            styles.borderBottomWidth +
-            paddingTop +
-            paddingBottom
-        )
+        -(styles.borderRightWidth + styles.borderLeftWidth + paddingLeft + paddingRight),
+        -(styles.borderTopWidth + styles.borderBottomWidth + paddingTop + paddingBottom)
     )
 }
 
-const calculateBackgroundPositioningArea = function (
-    backgroundOrigin,
-    element
-) {
+const calculateBackgroundPositioningArea = function (backgroundOrigin, element) {
     if (backgroundOrigin === 0 /* BORDER_BOX */) {
         return element.bounds
     }
@@ -8482,11 +7597,7 @@ const calculateBackgroundPaintingArea = function (backgroundClip, element) {
     }
     return paddingBox(element)
 }
-const calculateBackgroundRendering = function (
-    container,
-    index,
-    intrinsicSize
-) {
+const calculateBackgroundRendering = function (container, index, intrinsicSize) {
     const backgroundPositioningArea = calculateBackgroundPositioningArea(
         getBackgroundValueForIndex(container.styles.backgroundOrigin, index),
         container
@@ -8534,21 +7645,16 @@ var calculateBackgroundSize = function (size, _a, bounds) {
         return [0, 0]
     }
     if (isLengthPercentage(first) && second && isLengthPercentage(second)) {
-        return [
-            getAbsoluteValue(first, bounds.width),
-            getAbsoluteValue(second, bounds.height)
-        ]
+        return [getAbsoluteValue(first, bounds.width), getAbsoluteValue(second, bounds.height)]
     }
     const hasIntrinsicProportion = hasIntrinsicValue(intrinsicProportion)
     if (
         isIdentToken(first) &&
-        (first.value === BACKGROUND_SIZE.CONTAIN ||
-            first.value === BACKGROUND_SIZE.COVER)
+        (first.value === BACKGROUND_SIZE.CONTAIN || first.value === BACKGROUND_SIZE.COVER)
     ) {
         if (hasIntrinsicValue(intrinsicProportion)) {
             const targetRatio = bounds.width / bounds.height
-            return targetRatio < intrinsicProportion !==
-                (first.value === BACKGROUND_SIZE.COVER)
+            return targetRatio < intrinsicProportion !== (first.value === BACKGROUND_SIZE.COVER)
                 ? [bounds.width, bounds.width / intrinsicProportion]
                 : [bounds.height * intrinsicProportion, bounds.height]
         }
@@ -8657,17 +7763,11 @@ var calculateBackgroundRepeatPath = function (
                     Math.round(backgroundPositioningArea.top + y)
                 ),
                 new Vector(
-                    Math.round(
-                        backgroundPositioningArea.left +
-                            backgroundPositioningArea.width
-                    ),
+                    Math.round(backgroundPositioningArea.left + backgroundPositioningArea.width),
                     Math.round(backgroundPositioningArea.top + y)
                 ),
                 new Vector(
-                    Math.round(
-                        backgroundPositioningArea.left +
-                            backgroundPositioningArea.width
-                    ),
+                    Math.round(backgroundPositioningArea.left + backgroundPositioningArea.width),
                     Math.round(height + backgroundPositioningArea.top + y)
                 ),
                 new Vector(
@@ -8687,17 +7787,11 @@ var calculateBackgroundRepeatPath = function (
                 ),
                 new Vector(
                     Math.round(backgroundPositioningArea.left + x + width),
-                    Math.round(
-                        backgroundPositioningArea.height +
-                            backgroundPositioningArea.top
-                    )
+                    Math.round(backgroundPositioningArea.height + backgroundPositioningArea.top)
                 ),
                 new Vector(
                     Math.round(backgroundPositioningArea.left + x),
-                    Math.round(
-                        backgroundPositioningArea.height +
-                            backgroundPositioningArea.top
-                    )
+                    Math.round(backgroundPositioningArea.height + backgroundPositioningArea.top)
                 )
             ]
         case 1 /* NO_REPEAT */:
@@ -8726,35 +7820,22 @@ var calculateBackgroundRepeatPath = function (
                     Math.round(backgroundPaintingArea.top)
                 ),
                 new Vector(
-                    Math.round(
-                        backgroundPaintingArea.left +
-                            backgroundPaintingArea.width
-                    ),
+                    Math.round(backgroundPaintingArea.left + backgroundPaintingArea.width),
                     Math.round(backgroundPaintingArea.top)
                 ),
                 new Vector(
-                    Math.round(
-                        backgroundPaintingArea.left +
-                            backgroundPaintingArea.width
-                    ),
-                    Math.round(
-                        backgroundPaintingArea.height +
-                            backgroundPaintingArea.top
-                    )
+                    Math.round(backgroundPaintingArea.left + backgroundPaintingArea.width),
+                    Math.round(backgroundPaintingArea.height + backgroundPaintingArea.top)
                 ),
                 new Vector(
                     Math.round(backgroundPaintingArea.left),
-                    Math.round(
-                        backgroundPaintingArea.height +
-                            backgroundPaintingArea.top
-                    )
+                    Math.round(backgroundPaintingArea.height + backgroundPaintingArea.top)
                 )
             ]
     }
 }
 
-const SMALL_IMAGE =
-    'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+const SMALL_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
 const SAMPLE_TEXT = 'Hidden Text'
 const FontMetrics = /** @class */ (function () {
@@ -8820,9 +7901,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
     function CanvasRenderer(context, options) {
         const _this = _super.call(this, context, options) || this
         _this._activeEffects = []
-        _this.canvas = options.canvas
-            ? options.canvas
-            : document.createElement('canvas')
+        _this.canvas = options.canvas ? options.canvas : document.createElement('canvas')
         _this.ctx = _this.canvas.getContext('2d')
         if (!options.canvas) {
             _this.canvas.width = Math.floor(options.width * options.scale)
@@ -8904,20 +7983,11 @@ const CanvasRenderer = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (
-                            contains(
-                                paint.container.flags,
-                                16 /* DEBUG_RENDER */
-                            )
-                        ) {
+                        if (contains(paint.container.flags, 16 /* DEBUG_RENDER */)) {
                             debugger
                         }
-                        if (!paint.container.styles.isVisible())
-                            return [3 /*break*/, 3]
-                        return [
-                            4 /*yield*/,
-                            this.renderNodeBackgroundAndBorders(paint)
-                        ]
+                        if (!paint.container.styles.isVisible()) return [3 /*break*/, 3]
+                        return [4 /*yield*/, this.renderNodeBackgroundAndBorders(paint)]
                     case 1:
                         _a.sent()
                         return [4 /*yield*/, this.renderNodeContent(paint)]
@@ -8937,11 +8007,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
     ) {
         const _this = this
         if (letterSpacing === 0) {
-            this.ctx.fillText(
-                text.text,
-                text.bounds.left,
-                text.bounds.top + baseline
-            )
+            this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + baseline)
         } else {
             const letters = segmentGraphemes(text.text)
             letters.reduce(function (left, letter) {
@@ -8961,13 +8027,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
             ? '' + styles.fontSize.number + styles.fontSize.unit
             : styles.fontSize.number + 'px'
         return [
-            [
-                styles.fontStyle,
-                fontVariant,
-                styles.fontWeight,
-                fontSize,
-                fontFamily
-            ].join(' '),
+            [styles.fontStyle, fontVariant, styles.fontWeight, fontSize, fontFamily].join(' '),
             fontFamily,
             fontSize
         ]
@@ -8982,8 +8042,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                     (fontFamily = _a[1]),
                     (fontSize = _a[2])
                 this.ctx.font = font
-                this.ctx.direction =
-                    styles.direction === 1 /* RTL */ ? 'rtl' : 'ltr'
+                this.ctx.direction = styles.direction === 1 /* RTL */ ? 'rtl' : 'ltr'
                 this.ctx.textAlign = 'left'
                 this.ctx.textBaseline = 'ideographic'
                 ;(_b = this.fontMetrics.getMetrics(fontFamily, fontSize)),
@@ -9001,25 +8060,17 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                     baseline
                                 )
                                 var textShadows = styles.textShadow
-                                if (
-                                    textShadows.length &&
-                                    text.text.trim().length
-                                ) {
+                                if (textShadows.length && text.text.trim().length) {
                                     textShadows
                                         .slice(0)
                                         .reverse()
                                         .forEach(function (textShadow) {
-                                            _this.ctx.shadowColor = asString(
-                                                textShadow.color
-                                            )
+                                            _this.ctx.shadowColor = asString(textShadow.color)
                                             _this.ctx.shadowOffsetX =
-                                                textShadow.offsetX.number *
-                                                _this.options.scale
+                                                textShadow.offsetX.number * _this.options.scale
                                             _this.ctx.shadowOffsetY =
-                                                textShadow.offsetY.number *
-                                                _this.options.scale
-                                            _this.ctx.shadowBlur =
-                                                textShadow.blur.number
+                                                textShadow.offsetY.number * _this.options.scale
+                                            _this.ctx.shadowBlur = textShadow.blur.number
                                             _this.renderTextWithLetterSpacing(
                                                 text,
                                                 styles.letterSpacing,
@@ -9033,8 +8084,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                 }
                                 if (styles.textDecorationLine.length) {
                                     _this.ctx.fillStyle = asString(
-                                        styles.textDecorationColor ||
-                                            styles.color
+                                        styles.textDecorationColor || styles.color
                                     )
                                     styles.textDecorationLine.forEach(function (
                                         textDecorationLine
@@ -9046,10 +8096,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                                 // need to take that into account both in position and size
                                                 _this.ctx.fillRect(
                                                     text.bounds.left,
-                                                    Math.round(
-                                                        text.bounds.top +
-                                                            baseline
-                                                    ),
+                                                    Math.round(text.bounds.top + baseline),
                                                     text.bounds.width,
                                                     1
                                                 )
@@ -9066,9 +8113,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                                 // TODO try and find exact position for line-through
                                                 _this.ctx.fillRect(
                                                     text.bounds.left,
-                                                    Math.ceil(
-                                                        text.bounds.top + middle
-                                                    ),
+                                                    Math.ceil(text.bounds.top + middle),
                                                     text.bounds.width,
                                                     1
                                                 )
@@ -9078,19 +8123,11 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                 }
                                 break
                             case 1 /* STROKE */:
-                                if (
-                                    styles.webkitTextStrokeWidth &&
-                                    text.text.trim().length
-                                ) {
-                                    _this.ctx.strokeStyle = asString(
-                                        styles.webkitTextStrokeColor
-                                    )
-                                    _this.ctx.lineWidth =
-                                        styles.webkitTextStrokeWidth
+                                if (styles.webkitTextStrokeWidth && text.text.trim().length) {
+                                    _this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor)
+                                    _this.ctx.lineWidth = styles.webkitTextStrokeWidth
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    _this.ctx.lineJoin = window.chrome
-                                        ? 'miter'
-                                        : 'round'
+                                    _this.ctx.lineJoin = window.chrome ? 'miter' : 'round'
                                     _this.ctx.strokeText(
                                         text.text,
                                         text.bounds.left,
@@ -9108,16 +8145,8 @@ const CanvasRenderer = /** @class */ (function (_super) {
             })
         })
     }
-    CanvasRenderer.prototype.renderReplacedElement = function (
-        container,
-        curves,
-        image
-    ) {
-        if (
-            image &&
-            container.intrinsicWidth > 0 &&
-            container.intrinsicHeight > 0
-        ) {
+    CanvasRenderer.prototype.renderReplacedElement = function (container, curves, image) {
+        if (image && container.intrinsicWidth > 0 && container.intrinsicHeight > 0) {
             const box = contentBox(container)
             const path = calculatePaddingBoxPath(curves)
             this.path(path)
@@ -9182,42 +8211,28 @@ const CanvasRenderer = /** @class */ (function (_super) {
                         _i++
                         return [3 /*break*/, 1]
                     case 4:
-                        if (!(container instanceof ImageElementContainer))
-                            return [3 /*break*/, 8]
+                        if (!(container instanceof ImageElementContainer)) return [3 /*break*/, 8]
                         _c.label = 5
                     case 5:
                         _c.trys.push([5, 7, , 8])
-                        return [
-                            4 /*yield*/,
-                            this.context.cache.match(container.src)
-                        ]
+                        return [4 /*yield*/, this.context.cache.match(container.src)]
                     case 6:
                         image = _c.sent()
                         this.renderReplacedElement(container, curves, image)
                         return [3 /*break*/, 8]
                     case 7:
                         _c.sent()
-                        this.context.logger.error(
-                            'Error loading image ' + container.src
-                        )
+                        this.context.logger.error('Error loading image ' + container.src)
                         return [3 /*break*/, 8]
                     case 8:
                         if (container instanceof CanvasElementContainer) {
-                            this.renderReplacedElement(
-                                container,
-                                curves,
-                                container.canvas
-                            )
+                            this.renderReplacedElement(container, curves, container.canvas)
                         }
-                        if (!(container instanceof SVGElementContainer))
-                            return [3 /*break*/, 12]
+                        if (!(container instanceof SVGElementContainer)) return [3 /*break*/, 12]
                         _c.label = 9
                     case 9:
                         _c.trys.push([9, 11, , 12])
-                        return [
-                            4 /*yield*/,
-                            this.context.cache.match(container.svg)
-                        ]
+                        return [4 /*yield*/, this.context.cache.match(container.svg)]
                     case 10:
                         image = _c.sent()
                         this.renderReplacedElement(container, curves, image)
@@ -9225,17 +8240,11 @@ const CanvasRenderer = /** @class */ (function (_super) {
                     case 11:
                         _c.sent()
                         this.context.logger.error(
-                            'Error loading svg ' +
-                                container.svg.substring(0, 255)
+                            'Error loading svg ' + container.svg.substring(0, 255)
                         )
                         return [3 /*break*/, 12]
                     case 12:
-                        if (
-                            !(
-                                container instanceof IFrameElementContainer &&
-                                container.tree
-                            )
-                        )
+                        if (!(container instanceof IFrameElementContainer && container.tree))
                             return [3 /*break*/, 14]
                         iframeRenderer = new CanvasRenderer(this.context, {
                             scale: this.options.scale,
@@ -9245,10 +8254,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                             width: container.width,
                             height: container.height
                         })
-                        return [
-                            4 /*yield*/,
-                            iframeRenderer.render(container.tree)
-                        ]
+                        return [4 /*yield*/, iframeRenderer.render(container.tree)]
                     case 13:
                         canvas = _c.sent()
                         if (container.width && container.height) {
@@ -9267,17 +8273,13 @@ const CanvasRenderer = /** @class */ (function (_super) {
                         _c.label = 14
                     case 14:
                         if (container instanceof InputElementContainer) {
-                            size = Math.min(
-                                container.bounds.width,
-                                container.bounds.height
-                            )
+                            size = Math.min(container.bounds.width, container.bounds.height)
                             if (container.type === CHECKBOX) {
                                 if (container.checked) {
                                     this.ctx.save()
                                     this.path([
                                         new Vector(
-                                            container.bounds.left +
-                                                size * 0.39363,
+                                            container.bounds.left + size * 0.39363,
                                             container.bounds.top + size * 0.79
                                         ),
                                         new Vector(
@@ -9285,29 +8287,23 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                             container.bounds.top + size * 0.5549
                                         ),
                                         new Vector(
-                                            container.bounds.left +
-                                                size * 0.27347,
-                                            container.bounds.top +
-                                                size * 0.44071
+                                            container.bounds.left + size * 0.27347,
+                                            container.bounds.top + size * 0.44071
                                         ),
                                         new Vector(
-                                            container.bounds.left +
-                                                size * 0.39694,
+                                            container.bounds.left + size * 0.39694,
                                             container.bounds.top + size * 0.5649
                                         ),
                                         new Vector(
-                                            container.bounds.left +
-                                                size * 0.72983,
+                                            container.bounds.left + size * 0.72983,
                                             container.bounds.top + size * 0.23
                                         ),
                                         new Vector(
                                             container.bounds.left + size * 0.84,
-                                            container.bounds.top +
-                                                size * 0.34085
+                                            container.bounds.top + size * 0.34085
                                         ),
                                         new Vector(
-                                            container.bounds.left +
-                                                size * 0.39363,
+                                            container.bounds.left + size * 0.39363,
                                             container.bounds.top + size * 0.79
                                         )
                                     ])
@@ -9333,23 +8329,15 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                 }
                             }
                         }
-                        if (
-                            isTextInputElement(container) &&
-                            container.value.length
-                        ) {
+                        if (isTextInputElement(container) && container.value.length) {
                             ;(_b = this.createFontStyle(styles)),
                                 (fontFamily = _b[0]),
                                 (fontSize = _b[1])
-                            baseline = this.fontMetrics.getMetrics(
-                                fontFamily,
-                                fontSize
-                            ).baseline
+                            baseline = this.fontMetrics.getMetrics(fontFamily, fontSize).baseline
                             this.ctx.font = fontFamily
                             this.ctx.fillStyle = asString(styles.color)
                             this.ctx.textBaseline = 'alphabetic'
-                            this.ctx.textAlign = canvasTextAlign(
-                                container.styles.textAlign
-                            )
+                            this.ctx.textAlign = canvasTextAlign(container.styles.textAlign)
                             bounds = contentBox(container)
                             x = 0
                             switch (container.styles.textAlign) {
@@ -9360,27 +8348,13 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                     x += bounds.width
                                     break
                             }
-                            textBounds = bounds.add(
-                                x,
-                                0,
-                                0,
-                                -bounds.height / 2 + 1
-                            )
+                            textBounds = bounds.add(x, 0, 0, -bounds.height / 2 + 1)
                             this.ctx.save()
                             this.path([
                                 new Vector(bounds.left, bounds.top),
-                                new Vector(
-                                    bounds.left + bounds.width,
-                                    bounds.top
-                                ),
-                                new Vector(
-                                    bounds.left + bounds.width,
-                                    bounds.top + bounds.height
-                                ),
-                                new Vector(
-                                    bounds.left,
-                                    bounds.top + bounds.height
-                                )
+                                new Vector(bounds.left + bounds.width, bounds.top),
+                                new Vector(bounds.left + bounds.width, bounds.top + bounds.height),
+                                new Vector(bounds.left, bounds.top + bounds.height)
                             ])
                             this.ctx.clip()
                             this.renderTextWithLetterSpacing(
@@ -9392,18 +8366,11 @@ const CanvasRenderer = /** @class */ (function (_super) {
                             this.ctx.textBaseline = 'alphabetic'
                             this.ctx.textAlign = 'left'
                         }
-                        if (
-                            !contains(
-                                container.styles.display,
-                                2048 /* LIST_ITEM */
-                            )
-                        )
+                        if (!contains(container.styles.display, 2048 /* LIST_ITEM */))
                             return [3 /*break*/, 20]
-                        if (!(container.styles.listStyleImage !== null))
-                            return [3 /*break*/, 19]
+                        if (!(container.styles.listStyleImage !== null)) return [3 /*break*/, 19]
                         img = container.styles.listStyleImage
-                        if (!((img.type === 0) /* URL */))
-                            return [3 /*break*/, 18]
+                        if (!((img.type === 0) /* URL */)) return [3 /*break*/, 18]
                         image = void 0
                         url = img.url
                         _c.label = 15
@@ -9420,17 +8387,12 @@ const CanvasRenderer = /** @class */ (function (_super) {
                         return [3 /*break*/, 18]
                     case 17:
                         _c.sent()
-                        this.context.logger.error(
-                            'Error loading list-style-image ' + url
-                        )
+                        this.context.logger.error('Error loading list-style-image ' + url)
                         return [3 /*break*/, 18]
                     case 18:
                         return [3 /*break*/, 20]
                     case 19:
-                        if (
-                            paint.listValue &&
-                            container.styles.listStyleType !== -1 /* NONE */
-                        ) {
+                        if (paint.listValue && container.styles.listStyleType !== -1 /* NONE */) {
                             fontFamily = this.createFontStyle(styles)[0]
                             this.ctx.font = fontFamily
                             this.ctx.fillStyle = asString(styles.color)
@@ -9444,22 +8406,12 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                         container.bounds.width
                                     ),
                                 container.bounds.width,
-                                computeLineHeight(
-                                    styles.lineHeight,
-                                    styles.fontSize.number
-                                ) /
-                                    2 +
-                                    1
+                                computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 1
                             )
                             this.renderTextWithLetterSpacing(
                                 new TextBounds(paint.listValue, bounds),
                                 styles.letterSpacing,
-                                computeLineHeight(
-                                    styles.lineHeight,
-                                    styles.fontSize.number
-                                ) /
-                                    2 +
-                                    2
+                                computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 2
                             )
                             this.ctx.textBaseline = 'bottom'
                             this.ctx.textAlign = 'left'
@@ -9497,20 +8449,12 @@ const CanvasRenderer = /** @class */ (function (_super) {
             return __generator(this, function (_p) {
                 switch (_p.label) {
                     case 0:
-                        if (
-                            contains(
-                                stack.element.container.flags,
-                                16 /* DEBUG_RENDER */
-                            )
-                        ) {
+                        if (contains(stack.element.container.flags, 16 /* DEBUG_RENDER */)) {
                             debugger
                         }
                         // https://www.w3.org/TR/css-position-3/#painting-order
                         // 1. the background and borders of the element forming the stacking context.
-                        return [
-                            4 /*yield*/,
-                            this.renderNodeBackgroundAndBorders(stack.element)
-                        ]
+                        return [4 /*yield*/, this.renderNodeBackgroundAndBorders(stack.element)]
                     case 1:
                         // https://www.w3.org/TR/css-position-3/#painting-order
                         // 1. the background and borders of the element forming the stacking context.
@@ -9529,10 +8473,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                         return [3 /*break*/, 2]
                     case 5:
                         // 3. For all its in-flow, non-positioned, block-level descendants in tree order:
-                        return [
-                            4 /*yield*/,
-                            this.renderNodeContent(stack.element)
-                        ]
+                        return [4 /*yield*/, this.renderNodeContent(stack.element)]
                     case 6:
                         // 3. For all its in-flow, non-positioned, block-level descendants in tree order:
                         _p.sent()
@@ -9588,8 +8529,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                         _h++
                         return [3 /*break*/, 19]
                     case 22:
-                        ;(_k = 0),
-                            (_l = stack.zeroOrAutoZIndexOrTransformedOrOpacity)
+                        ;(_k = 0), (_l = stack.zeroOrAutoZIndexOrTransformedOrOpacity)
                         _p.label = 23
                     case 23:
                         if (!(_k < _l.length)) return [3 /*break*/, 26]
@@ -9656,12 +8596,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
             }
         })
     }
-    CanvasRenderer.prototype.renderRepeat = function (
-        path,
-        pattern,
-        offsetX,
-        offsetY
-    ) {
+    CanvasRenderer.prototype.renderRepeat = function (path, pattern, offsetX, offsetY) {
         this.path(path)
         this.ctx.fillStyle = pattern
         this.ctx.translate(offsetX, offsetY)
@@ -9674,24 +8609,12 @@ const CanvasRenderer = /** @class */ (function (_super) {
             return image
         }
         const ownerDocument =
-            (_a = this.canvas.ownerDocument) !== null && _a !== void 0
-                ? _a
-                : document
+            (_a = this.canvas.ownerDocument) !== null && _a !== void 0 ? _a : document
         const canvas = ownerDocument.createElement('canvas')
         canvas.width = Math.max(1, width)
         canvas.height = Math.max(1, height)
         const ctx = canvas.getContext('2d')
-        ctx.drawImage(
-            image,
-            0,
-            0,
-            image.width,
-            image.height,
-            0,
-            0,
-            width,
-            height
-        )
+        ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, width, height)
         return canvas
     }
     CanvasRenderer.prototype.renderBackgroundImage = function (container) {
@@ -9747,72 +8670,49 @@ const CanvasRenderer = /** @class */ (function (_super) {
                             return __generator(this, function (_h) {
                                 switch (_h.label) {
                                     case 0:
-                                        if (
-                                            !(
-                                                (
-                                                    backgroundImage.type === 0
-                                                ) /* URL */
-                                            )
-                                        )
+                                        if (!((backgroundImage.type === 0) /* URL */))
                                             return [3 /*break*/, 5]
                                         image = void 0
                                         url = backgroundImage.url
                                         _h.label = 1
                                     case 1:
                                         _h.trys.push([1, 3, , 4])
-                                        return [
-                                            4 /*yield*/,
-                                            this_1.context.cache.match(url)
-                                        ]
+                                        return [4 /*yield*/, this_1.context.cache.match(url)]
                                     case 2:
                                         image = _h.sent()
                                         return [3 /*break*/, 4]
                                     case 3:
                                         _h.sent()
                                         this_1.context.logger.error(
-                                            'Error loading background-image ' +
-                                                url
+                                            'Error loading background-image ' + url
                                         )
                                         return [3 /*break*/, 4]
                                     case 4:
                                         if (image) {
-                                            ;(_c = calculateBackgroundRendering(
-                                                container,
-                                                index,
-                                                [
-                                                    image.width,
-                                                    image.height,
-                                                    image.width / image.height
-                                                ]
-                                            )),
+                                            ;(_c = calculateBackgroundRendering(container, index, [
+                                                image.width,
+                                                image.height,
+                                                image.width / image.height
+                                            ])),
                                                 (path = _c[0]),
                                                 (x = _c[1]),
                                                 (y = _c[2]),
                                                 (width = _c[3]),
                                                 (height = _c[4])
                                             pattern = this_1.ctx.createPattern(
-                                                this_1.resizeImage(
-                                                    image,
-                                                    width,
-                                                    height
-                                                ),
+                                                this_1.resizeImage(image, width, height),
                                                 'repeat'
                                             )
-                                            this_1.renderRepeat(
-                                                path,
-                                                pattern,
-                                                x,
-                                                y
-                                            )
+                                            this_1.renderRepeat(path, pattern, x, y)
                                         }
                                         return [3 /*break*/, 6]
                                     case 5:
                                         if (isLinearGradient(backgroundImage)) {
-                                            ;(_d = calculateBackgroundRendering(
-                                                container,
-                                                index,
-                                                [null, null, null]
-                                            )),
+                                            ;(_d = calculateBackgroundRendering(container, index, [
+                                                null,
+                                                null,
+                                                null
+                                            ])),
                                                 (path = _d[0]),
                                                 (x = _d[1]),
                                                 (y = _d[2]),
@@ -9828,18 +8728,11 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                                 (x1 = _e[2]),
                                                 (y0 = _e[3]),
                                                 (y1 = _e[4])
-                                            canvas =
-                                                document.createElement('canvas')
+                                            canvas = document.createElement('canvas')
                                             canvas.width = width
                                             canvas.height = height
                                             ctx = canvas.getContext('2d')
-                                            gradient_1 =
-                                                ctx.createLinearGradient(
-                                                    x0,
-                                                    y0,
-                                                    x1,
-                                                    y1
-                                                )
+                                            gradient_1 = ctx.createLinearGradient(x0, y0, x1, y1)
                                             processColorStops(
                                                 backgroundImage.stops,
                                                 lineLength
@@ -9852,40 +8745,25 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                             ctx.fillStyle = gradient_1
                                             ctx.fillRect(0, 0, width, height)
                                             if (width > 0 && height > 0) {
-                                                pattern =
-                                                    this_1.ctx.createPattern(
-                                                        canvas,
-                                                        'repeat'
-                                                    )
-                                                this_1.renderRepeat(
-                                                    path,
-                                                    pattern,
-                                                    x,
-                                                    y
-                                                )
+                                                pattern = this_1.ctx.createPattern(canvas, 'repeat')
+                                                this_1.renderRepeat(path, pattern, x, y)
                                             }
-                                        } else if (
-                                            isRadialGradient(backgroundImage)
-                                        ) {
-                                            ;(_f = calculateBackgroundRendering(
-                                                container,
-                                                index,
-                                                [null, null, null]
-                                            )),
+                                        } else if (isRadialGradient(backgroundImage)) {
+                                            ;(_f = calculateBackgroundRendering(container, index, [
+                                                null,
+                                                null,
+                                                null
+                                            ])),
                                                 (path = _f[0]),
                                                 (left = _f[1]),
                                                 (top_1 = _f[2]),
                                                 (width = _f[3]),
                                                 (height = _f[4])
                                             position =
-                                                backgroundImage.position
-                                                    .length === 0
+                                                backgroundImage.position.length === 0
                                                     ? [FIFTY_PERCENT]
                                                     : backgroundImage.position
-                                            x = getAbsoluteValue(
-                                                position[0],
-                                                width
-                                            )
+                                            x = getAbsoluteValue(position[0], width)
                                             y = getAbsoluteValue(
                                                 position[position.length - 1],
                                                 height
@@ -9900,63 +8778,41 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                                 (rx = _g[0]),
                                                 (ry = _g[1])
                                             if (rx > 0 && ry > 0) {
-                                                radialGradient_1 =
-                                                    this_1.ctx.createRadialGradient(
-                                                        left + x,
-                                                        top_1 + y,
-                                                        0,
-                                                        left + x,
-                                                        top_1 + y,
-                                                        rx
-                                                    )
+                                                radialGradient_1 = this_1.ctx.createRadialGradient(
+                                                    left + x,
+                                                    top_1 + y,
+                                                    0,
+                                                    left + x,
+                                                    top_1 + y,
+                                                    rx
+                                                )
                                                 processColorStops(
                                                     backgroundImage.stops,
                                                     rx * 2
                                                 ).forEach(function (colorStop) {
                                                     return radialGradient_1.addColorStop(
                                                         colorStop.stop,
-                                                        asString(
-                                                            colorStop.color
-                                                        )
+                                                        asString(colorStop.color)
                                                     )
                                                 })
                                                 this_1.path(path)
-                                                this_1.ctx.fillStyle =
-                                                    radialGradient_1
+                                                this_1.ctx.fillStyle = radialGradient_1
                                                 if (rx !== ry) {
                                                     midX =
                                                         container.bounds.left +
-                                                        0.5 *
-                                                            container.bounds
-                                                                .width
+                                                        0.5 * container.bounds.width
                                                     midY =
                                                         container.bounds.top +
-                                                        0.5 *
-                                                            container.bounds
-                                                                .height
+                                                        0.5 * container.bounds.height
                                                     f = ry / rx
                                                     invF = 1 / f
                                                     this_1.ctx.save()
-                                                    this_1.ctx.translate(
-                                                        midX,
-                                                        midY
-                                                    )
-                                                    this_1.ctx.transform(
-                                                        1,
-                                                        0,
-                                                        0,
-                                                        f,
-                                                        0,
-                                                        0
-                                                    )
-                                                    this_1.ctx.translate(
-                                                        -midX,
-                                                        -midY
-                                                    )
+                                                    this_1.ctx.translate(midX, midY)
+                                                    this_1.ctx.transform(1, 0, 0, f, 0, 0)
+                                                    this_1.ctx.translate(-midX, -midY)
                                                     this_1.ctx.fillRect(
                                                         left,
-                                                        invF * (top_1 - midY) +
-                                                            midY,
+                                                        invF * (top_1 - midY) + midY,
                                                         width,
                                                         height * invF
                                                     )
@@ -9974,10 +8830,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                             })
                         }
                         this_1 = this
-                        ;(_i = 0),
-                            (_a = container.styles.backgroundImage
-                                .slice(0)
-                                .reverse())
+                        ;(_i = 0), (_a = container.styles.backgroundImage.slice(0).reverse())
                         _b.label = 1
                     case 1:
                         if (!(_i < _a.length)) return [3 /*break*/, 4]
@@ -9995,11 +8848,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
             })
         })
     }
-    CanvasRenderer.prototype.renderSolidBorder = function (
-        color,
-        side,
-        curvePoints
-    ) {
+    CanvasRenderer.prototype.renderSolidBorder = function (color, side, curvePoints) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 this.path(parsePathForBorder(curvePoints, side))
@@ -10009,37 +8858,23 @@ const CanvasRenderer = /** @class */ (function (_super) {
             })
         })
     }
-    CanvasRenderer.prototype.renderDoubleBorder = function (
-        color,
-        width,
-        side,
-        curvePoints
-    ) {
+    CanvasRenderer.prototype.renderDoubleBorder = function (color, width, side, curvePoints) {
         return __awaiter(this, void 0, void 0, function () {
             let outerPaths, innerPaths
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!(width < 3)) return [3 /*break*/, 2]
-                        return [
-                            4 /*yield*/,
-                            this.renderSolidBorder(color, side, curvePoints)
-                        ]
+                        return [4 /*yield*/, this.renderSolidBorder(color, side, curvePoints)]
                     case 1:
                         _a.sent()
                         return [2 /*return*/]
                     case 2:
-                        outerPaths = parsePathForBorderDoubleOuter(
-                            curvePoints,
-                            side
-                        )
+                        outerPaths = parsePathForBorderDoubleOuter(curvePoints, side)
                         this.path(outerPaths)
                         this.ctx.fillStyle = asString(color)
                         this.ctx.fill()
-                        innerPaths = parsePathForBorderDoubleInner(
-                            curvePoints,
-                            side
-                        )
+                        innerPaths = parsePathForBorderDoubleInner(curvePoints, side)
                         this.path(innerPaths)
                         this.ctx.fill()
                         return [2 /*return*/]
@@ -10049,25 +8884,15 @@ const CanvasRenderer = /** @class */ (function (_super) {
     }
     CanvasRenderer.prototype.renderNodeBackgroundAndBorders = function (paint) {
         return __awaiter(this, void 0, void 0, function () {
-            let styles,
-                hasBackground,
-                borders,
-                backgroundPaintingArea,
-                side,
-                _i,
-                borders_1,
-                border
+            let styles, hasBackground, borders, backgroundPaintingArea, side, _i, borders_1, border
             const _this = this
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.applyEffects(
-                            paint.getEffects(2 /* BACKGROUND_BORDERS */)
-                        )
+                        this.applyEffects(paint.getEffects(2 /* BACKGROUND_BORDERS */))
                         styles = paint.container.styles
                         hasBackground =
-                            !isTransparent(styles.backgroundColor) ||
-                            styles.backgroundImage.length
+                            !isTransparent(styles.backgroundColor) || styles.backgroundImage.length
                         borders = [
                             {
                                 style: styles.borderTopStyle,
@@ -10090,29 +8915,19 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                 width: styles.borderLeftWidth
                             }
                         ]
-                        backgroundPaintingArea =
-                            calculateBackgroundCurvedPaintingArea(
-                                getBackgroundValueForIndex(
-                                    styles.backgroundClip,
-                                    0
-                                ),
-                                paint.curves
-                            )
-                        if (!(hasBackground || styles.boxShadow.length))
-                            return [3 /*break*/, 2]
+                        backgroundPaintingArea = calculateBackgroundCurvedPaintingArea(
+                            getBackgroundValueForIndex(styles.backgroundClip, 0),
+                            paint.curves
+                        )
+                        if (!(hasBackground || styles.boxShadow.length)) return [3 /*break*/, 2]
                         this.ctx.save()
                         this.path(backgroundPaintingArea)
                         this.ctx.clip()
                         if (!isTransparent(styles.backgroundColor)) {
-                            this.ctx.fillStyle = asString(
-                                styles.backgroundColor
-                            )
+                            this.ctx.fillStyle = asString(styles.backgroundColor)
                             this.ctx.fill()
                         }
-                        return [
-                            4 /*yield*/,
-                            this.renderBackgroundImage(paint.container)
-                        ]
+                        return [4 /*yield*/, this.renderBackgroundImage(paint.container)]
                     case 1:
                         _a.sent()
                         this.ctx.restore()
@@ -10121,23 +8936,14 @@ const CanvasRenderer = /** @class */ (function (_super) {
                             .reverse()
                             .forEach(function (shadow) {
                                 _this.ctx.save()
-                                const borderBoxArea = calculateBorderBoxPath(
-                                    paint.curves
-                                )
-                                const maskOffset = shadow.inset
-                                    ? 0
-                                    : MASK_OFFSET
+                                const borderBoxArea = calculateBorderBoxPath(paint.curves)
+                                const maskOffset = shadow.inset ? 0 : MASK_OFFSET
                                 const shadowPaintingArea = transformPath(
                                     borderBoxArea,
-                                    -maskOffset +
-                                        (shadow.inset ? 1 : -1) *
-                                            shadow.spread.number,
-                                    (shadow.inset ? 1 : -1) *
-                                        shadow.spread.number,
-                                    shadow.spread.number *
-                                        (shadow.inset ? -2 : 2),
-                                    shadow.spread.number *
-                                        (shadow.inset ? -2 : 2)
+                                    -maskOffset + (shadow.inset ? 1 : -1) * shadow.spread.number,
+                                    (shadow.inset ? 1 : -1) * shadow.spread.number,
+                                    shadow.spread.number * (shadow.inset ? -2 : 2),
+                                    shadow.spread.number * (shadow.inset ? -2 : 2)
                                 )
                                 if (shadow.inset) {
                                     _this.path(borderBoxArea)
@@ -10148,8 +8954,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                                     _this.ctx.clip()
                                     _this.path(shadowPaintingArea)
                                 }
-                                _this.ctx.shadowOffsetX =
-                                    shadow.offsetX.number + maskOffset
+                                _this.ctx.shadowOffsetX = shadow.offsetX.number + maskOffset
                                 _this.ctx.shadowOffsetY = shadow.offsetY.number
                                 _this.ctx.shadowColor = asString(shadow.color)
                                 _this.ctx.shadowBlur = shadow.blur.number
@@ -10175,8 +8980,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                             )
                         )
                             return [3 /*break*/, 11]
-                        if (!((border.style === 2) /* DASHED */))
-                            return [3 /*break*/, 5]
+                        if (!((border.style === 2) /* DASHED */)) return [3 /*break*/, 5]
                         return [
                             4 /*yield*/,
                             this.renderDashedDottedBorder(
@@ -10191,8 +8995,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                         _a.sent()
                         return [3 /*break*/, 11]
                     case 5:
-                        if (!((border.style === 3) /* DOTTED */))
-                            return [3 /*break*/, 7]
+                        if (!((border.style === 3) /* DOTTED */)) return [3 /*break*/, 7]
                         return [
                             4 /*yield*/,
                             this.renderDashedDottedBorder(
@@ -10207,16 +9010,10 @@ const CanvasRenderer = /** @class */ (function (_super) {
                         _a.sent()
                         return [3 /*break*/, 11]
                     case 7:
-                        if (!((border.style === 4) /* DOUBLE */))
-                            return [3 /*break*/, 9]
+                        if (!((border.style === 4) /* DOUBLE */)) return [3 /*break*/, 9]
                         return [
                             4 /*yield*/,
-                            this.renderDoubleBorder(
-                                border.color,
-                                border.width,
-                                side,
-                                paint.curves
-                            )
+                            this.renderDoubleBorder(border.color, border.width, side, paint.curves)
                         ]
                     case 8:
                         _a.sent()
@@ -10224,11 +9021,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                     case 9:
                         return [
                             4 /*yield*/,
-                            this.renderSolidBorder(
-                                border.color,
-                                side,
-                                paint.curves
-                            )
+                            this.renderSolidBorder(border.color, side, paint.curves)
                         ]
                     case 10:
                         _a.sent()
@@ -10318,19 +9111,12 @@ const CanvasRenderer = /** @class */ (function (_super) {
                     dashLength *= multiplier
                     spaceLength *= multiplier
                 } else {
-                    numberOfDashes = Math.floor(
-                        (length + spaceLength) / (dashLength + spaceLength)
-                    )
-                    minSpace =
-                        (length - numberOfDashes * dashLength) /
-                        (numberOfDashes - 1)
-                    maxSpace =
-                        (length - (numberOfDashes + 1) * dashLength) /
-                        numberOfDashes
+                    numberOfDashes = Math.floor((length + spaceLength) / (dashLength + spaceLength))
+                    minSpace = (length - numberOfDashes * dashLength) / (numberOfDashes - 1)
+                    maxSpace = (length - (numberOfDashes + 1) * dashLength) / numberOfDashes
                     spaceLength =
                         maxSpace <= 0 ||
-                        Math.abs(spaceLength - minSpace) <
-                            Math.abs(spaceLength - maxSpace)
+                        Math.abs(spaceLength - minSpace) < Math.abs(spaceLength - maxSpace)
                             ? minSpace
                             : maxSpace
                 }
@@ -10385,9 +9171,7 @@ const CanvasRenderer = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         if (this.options.backgroundColor) {
-                            this.ctx.fillStyle = asString(
-                                this.options.backgroundColor
-                            )
+                            this.ctx.fillStyle = asString(this.options.backgroundColor)
                             this.ctx.fillRect(
                                 this.options.x,
                                 this.options.y,
@@ -10457,9 +9241,7 @@ const ForeignObjectRenderer = /** @class */ (function (_super) {
     __extends(ForeignObjectRenderer, _super)
     function ForeignObjectRenderer(context, options) {
         const _this = _super.call(this, context, options) || this
-        _this.canvas = options.canvas
-            ? options.canvas
-            : document.createElement('canvas')
+        _this.canvas = options.canvas ? options.canvas : document.createElement('canvas')
         _this.ctx = _this.canvas.getContext('2d')
         _this.options = options
         _this.canvas.width = Math.floor(options.width * options.scale)
@@ -10499,9 +9281,7 @@ const ForeignObjectRenderer = /** @class */ (function (_super) {
                     case 1:
                         img = _a.sent()
                         if (this.options.backgroundColor) {
-                            this.ctx.fillStyle = asString(
-                                this.options.backgroundColor
-                            )
+                            this.ctx.fillStyle = asString(this.options.backgroundColor)
                             this.ctx.fillRect(
                                 0,
                                 0,
@@ -10556,10 +9336,7 @@ const Logger = /** @class */ (function () {
                 typeof console.debug === 'function'
             ) {
                 // eslint-disable-next-line no-console
-                console.debug.apply(
-                    console,
-                    __spreadArray([this.id, this.getTime() + 'ms'], args)
-                )
+                console.debug.apply(console, __spreadArray([this.id, this.getTime() + 'ms'], args))
             } else {
                 this.info.apply(this, args)
             }
@@ -10582,10 +9359,7 @@ const Logger = /** @class */ (function () {
                 typeof console.info === 'function'
             ) {
                 // eslint-disable-next-line no-console
-                console.info.apply(
-                    console,
-                    __spreadArray([this.id, this.getTime() + 'ms'], args)
-                )
+                console.info.apply(console, __spreadArray([this.id, this.getTime() + 'ms'], args))
             }
         }
     }
@@ -10603,10 +9377,7 @@ const Logger = /** @class */ (function () {
                 typeof console.warn === 'function'
             ) {
                 // eslint-disable-next-line no-console
-                console.warn.apply(
-                    console,
-                    __spreadArray([this.id, this.getTime() + 'ms'], args)
-                )
+                console.warn.apply(console, __spreadArray([this.id, this.getTime() + 'ms'], args))
             } else {
                 this.info.apply(this, args)
             }
@@ -10626,10 +9397,7 @@ const Logger = /** @class */ (function () {
                 typeof console.error === 'function'
             ) {
                 // eslint-disable-next-line no-console
-                console.error.apply(
-                    console,
-                    __spreadArray([this.id, this.getTime() + 'ms'], args)
-                )
+                console.error.apply(console, __spreadArray([this.id, this.getTime() + 'ms'], args))
             } else {
                 this.info.apply(this, args)
             }
@@ -10648,10 +9416,7 @@ const Context = /** @class */ (function () {
             id: this.instanceName,
             enabled: options.logging
         })
-        this.cache =
-            (_a = options.cache) !== null && _a !== void 0
-                ? _a
-                : new Cache(this, options)
+        this.cache = (_a = options.cache) !== null && _a !== void 0 ? _a : new Cache(this, options)
     }
     Context.instanceCount = 1
     return Context
@@ -10698,9 +9463,7 @@ var renderElement = function (element, opts) {
                     if (!element || typeof element !== 'object') {
                         return [
                             2 /*return*/,
-                            Promise.reject(
-                                'Invalid element provided as first argument'
-                            )
+                            Promise.reject('Invalid element provided as first argument')
                         ]
                     }
                     ownerDocument = element.ownerDocument
@@ -10712,26 +9475,15 @@ var renderElement = function (element, opts) {
                         throw new Error('Document is not attached to a Window')
                     }
                     resourceOptions = {
-                        allowTaint:
-                            (_b = opts.allowTaint) !== null && _b !== void 0
-                                ? _b
-                                : false,
+                        allowTaint: (_b = opts.allowTaint) !== null && _b !== void 0 ? _b : false,
                         imageTimeout:
-                            (_c = opts.imageTimeout) !== null && _c !== void 0
-                                ? _c
-                                : 15000,
+                            (_c = opts.imageTimeout) !== null && _c !== void 0 ? _c : 15000,
                         proxy: opts.proxy,
-                        useCORS:
-                            (_d = opts.useCORS) !== null && _d !== void 0
-                                ? _d
-                                : false
+                        useCORS: (_d = opts.useCORS) !== null && _d !== void 0 ? _d : false
                     }
                     contextOptions = __assign(
                         {
-                            logging:
-                                (_e = opts.logging) !== null && _e !== void 0
-                                    ? _e
-                                    : true,
+                            logging: (_e = opts.logging) !== null && _e !== void 0 ? _e : true,
                             cache: opts.cache
                         },
                         resourceOptions
@@ -10762,15 +9514,9 @@ var renderElement = function (element, opts) {
                     )
                     context = new Context(contextOptions, windowBounds)
                     foreignObjectRendering =
-                        (_k = opts.foreignObjectRendering) !== null &&
-                        _k !== void 0
-                            ? _k
-                            : false
+                        (_k = opts.foreignObjectRendering) !== null && _k !== void 0 ? _k : false
                     cloneOptions = {
-                        allowTaint:
-                            (_l = opts.allowTaint) !== null && _l !== void 0
-                                ? _l
-                                : false,
+                        allowTaint: (_l = opts.allowTaint) !== null && _l !== void 0 ? _l : false,
                         onclone: opts.onclone,
                         ignoreElements: opts.ignoreElements,
                         inlineImages: foreignObjectRendering,
@@ -10786,29 +9532,19 @@ var renderElement = function (element, opts) {
                             ',' +
                             -windowBounds.top
                     )
-                    documentCloner = new DocumentCloner(
-                        context,
-                        element,
-                        cloneOptions
-                    )
+                    documentCloner = new DocumentCloner(context, element, cloneOptions)
                     clonedElement = documentCloner.clonedReferenceElement
                     if (!clonedElement) {
                         return [
                             2 /*return*/,
-                            Promise.reject(
-                                'Unable to find element in cloned iframe'
-                            )
+                            Promise.reject('Unable to find element in cloned iframe')
                         ]
                     }
-                    return [
-                        4 /*yield*/,
-                        documentCloner.toIFrame(ownerDocument, windowBounds)
-                    ]
+                    return [4 /*yield*/, documentCloner.toIFrame(ownerDocument, windowBounds)]
                 case 1:
                     container = _u.sent()
                     ;(_a =
-                        isBodyElement(clonedElement) ||
-                        isHTMLElement(clonedElement)
+                        isBodyElement(clonedElement) || isHTMLElement(clonedElement)
                             ? parseDocumentSize(clonedElement.ownerDocument)
                             : parseBounds(context, clonedElement)),
                         (width = _a.width),
@@ -10827,29 +9563,17 @@ var renderElement = function (element, opts) {
                             (_o =
                                 (_m = opts.scale) !== null && _m !== void 0
                                     ? _m
-                                    : defaultView.devicePixelRatio) !== null &&
-                            _o !== void 0
+                                    : defaultView.devicePixelRatio) !== null && _o !== void 0
                                 ? _o
                                 : 1,
-                        x:
-                            ((_p = opts.x) !== null && _p !== void 0 ? _p : 0) +
-                            left,
-                        y:
-                            ((_q = opts.y) !== null && _q !== void 0 ? _q : 0) +
-                            top,
-                        width:
-                            (_r = opts.width) !== null && _r !== void 0
-                                ? _r
-                                : Math.ceil(width),
+                        x: ((_p = opts.x) !== null && _p !== void 0 ? _p : 0) + left,
+                        y: ((_q = opts.y) !== null && _q !== void 0 ? _q : 0) + top,
+                        width: (_r = opts.width) !== null && _r !== void 0 ? _r : Math.ceil(width),
                         height:
-                            (_s = opts.height) !== null && _s !== void 0
-                                ? _s
-                                : Math.ceil(height)
+                            (_s = opts.height) !== null && _s !== void 0 ? _s : Math.ceil(height)
                     }
                     if (!foreignObjectRendering) return [3 /*break*/, 3]
-                    context.logger.debug(
-                        'Document cloned, using foreign object rendering'
-                    )
+                    context.logger.debug('Document cloned, using foreign object rendering')
                     renderer = new ForeignObjectRenderer(context, renderOptions)
                     return [4 /*yield*/, renderer.render(clonedElement)]
                 case 2:
@@ -10888,11 +9612,7 @@ var renderElement = function (element, opts) {
                     canvas = _u.sent()
                     _u.label = 5
                 case 5:
-                    if (
-                        (_t = opts.removeContainer) !== null && _t !== void 0
-                            ? _t
-                            : true
-                    ) {
+                    if ((_t = opts.removeContainer) !== null && _t !== void 0 ? _t : true) {
                         if (!DocumentCloner.destroy(container)) {
                             context.logger.error(
                                 'Cannot detach cloned iframe as it is not in the DOM anymore'
@@ -10905,24 +9625,14 @@ var renderElement = function (element, opts) {
         })
     })
 }
-var parseBackgroundColor = function (
-    context,
-    element,
-    backgroundColorOverride
-) {
+var parseBackgroundColor = function (context, element, backgroundColorOverride) {
     const ownerDocument = element.ownerDocument
     // http://www.w3.org/TR/css3-background/#special-backgrounds
     const documentBackgroundColor = ownerDocument.documentElement
-        ? parseColor(
-              context,
-              getComputedStyle(ownerDocument.documentElement).backgroundColor
-          )
+        ? parseColor(context, getComputedStyle(ownerDocument.documentElement).backgroundColor)
         : COLORS.TRANSPARENT
     const bodyBackgroundColor = ownerDocument.body
-        ? parseColor(
-              context,
-              getComputedStyle(ownerDocument.body).backgroundColor
-          )
+        ? parseColor(context, getComputedStyle(ownerDocument.body).backgroundColor)
         : COLORS.TRANSPARENT
     const defaultBackgroundColor =
         typeof backgroundColorOverride === 'string'

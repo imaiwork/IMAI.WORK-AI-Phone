@@ -6,27 +6,30 @@ namespace app\api\logic\device;
 use app\api\logic\ApiLogic;
 use app\common\enum\DeviceEnum;
 use app\common\model\sv\SvAccount;
+use app\common\model\sv\SvCityExposureTask;
+use app\common\model\sv\SvCityExposureTaskAccount;
+use app\common\model\sv\SvCityTouchTask;
+use app\common\model\sv\SvCityTouchTaskAccount;
 use app\common\model\sv\SvCrawlingManualTask;
-use app\common\model\sv\SvCrawlingWechatTask;
 use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvCrawlingTaskDeviceBind;
+use app\common\model\sv\SvCrawlingWechatTask;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceActive;
 use app\common\model\sv\SvDeviceActiveAccount;
+use app\common\model\sv\SvDeviceCircleLikeReply;
+use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
 use app\common\model\sv\SvDeviceTakeOverTask;
 use app\common\model\sv\SvDeviceTakeOverTaskAccount;
 use app\common\model\sv\SvDeviceTask;
+use app\common\model\sv\SvDeviceTaskLog;
+use app\common\model\sv\SvGroupBuyTaskAccount;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSettingAccount;
 use app\common\model\sv\SvPublishSettingDetail;
-use app\common\model\wechat\AiWechat;
 use app\common\model\sv\SvWechatStrategy;
-use app\common\model\sv\SvDeviceTaskLog;
-
-use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\model\wechat\AiWechatCircleTask;
-use app\common\model\sv\SvDeviceCircleLikeReply;
-use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
+use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\traits\{DeviceTaskTrait};
 use think\facade\Db;
 
@@ -193,9 +196,9 @@ class TaskLogic extends ApiLogic
             ->where('start_time', '<', $endTime)
             ->where('end_time', '>', $startTime);
 
-        if ($taskScene > 0) {
-            $query->where('task_scene', '<>', $taskScene);
-        }
+        // if ($taskScene > 0) {
+        //     $query->where('task_scene', '<>', $taskScene);
+        // }
 
         if (!empty($date)) {
             $query->where('day', $date);
@@ -240,7 +243,9 @@ class TaskLogic extends ApiLogic
 
         SvDeviceTask::where('device_code', $deviceCode)
             ->where('status', 'in', [0, 1, 3])
-            ->where('task_scene', 10)
+            ->where('auto_type', 0)
+            ->where('account_type', 1)
+            ->where('task_scene', 6)
             ->where('day', date('Y-m-d', $endTime))
             ->delete();
         return;
@@ -351,7 +356,8 @@ class TaskLogic extends ApiLogic
                     //print_r($resTimes);die;
                     //$startDate = date('Y-m-d', strtotime("{$startDate} +1 day"));
                 }
-                array_multisort(array_column($resTimes, 'start_time'), SORT_ASC, $resTimes);
+                $tmpKeys = array_column($resTimes, 'start_time');
+                array_multisort($tmpKeys, SORT_ASC, $resTimes);
             } else if ($timeType == 1) {
                 foreach ($timeConfigs as $config) {
                     $date = $config['date'];
@@ -390,8 +396,8 @@ class TaskLogic extends ApiLogic
                         ];
                     }
                 }
-
-                array_multisort(array_column($resTimes, 'start_time'), SORT_ASC, $resTimes);
+                $tmpKeys = array_column($resTimes, 'start_time');
+                array_multisort($tmpKeys, SORT_ASC, $resTimes);
             }
         }
         //print_r($resTimes);die;
@@ -409,6 +415,7 @@ class TaskLogic extends ApiLogic
         ];
         if ($device_code) {
             $where['dt.device_code'] = $device_code;
+            $where['dt.auto_type'] = SvDevice::where('device_code', $device_code)->value('auto_type');
         }
 
 
@@ -541,7 +548,7 @@ class TaskLogic extends ApiLogic
 
                                 ), JSON_UNESCAPED_UNICODE),
                                 'deviceId' => $_deviceId,
-                                'appVersion' => '2.1.1',
+                                'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
                                 'messageId' => 0,
                             );
 
@@ -583,6 +590,27 @@ class TaskLogic extends ApiLogic
                         throw new \Exception('自动截流任务不存在');
                     }
                     SvLeadScrapingSettingAccount::where('id', $params['sub_task_id'])->delete();
+                    break;
+                case DeviceEnum::TASK_SOURCE_SAME_CITY_EXPOSURE:
+                    $taskinfo = SvCityExposureTaskAccount::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('同城曝光任务不存在');
+                    }
+                    SvCityExposureTaskAccount::where('id', $params['sub_task_id'])->delete();
+                    break;
+                case DeviceEnum::TASK_SOURCE_SAME_CITY_CUTOFF:
+                    $taskinfo = SvCityTouchTaskAccount::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('同城截流任务不存在');
+                    }
+                    SvCityTouchTaskAccount::where('id', $params['sub_task_id'])->delete();
+                    break;
+                case DeviceEnum::TASK_SOURCE_GROUP_BUY:
+                    $taskinfo = SvGroupBuyTaskAccount::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('团购截流任务不存在');
+                    }
+                    SvGroupBuyTaskAccount::where('id', $params['sub_task_id'])->delete();
                     break;
                 case DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_PUBLISH:
                     $taskinfo = AiWechatCircleTaskConfig::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty();
@@ -643,7 +671,7 @@ class TaskLogic extends ApiLogic
         try {
 
             $source = $params['source'] ?? 0;
-            $task = SvDeviceTask::field('start_time,end_time,account_type,account,status,device_code,task_name,task_type,auto_type,sub_data_id,source')
+            $task = SvDeviceTask::field('start_time,end_time,account_type,account,status,device_code,task_name,task_type,auto_type,sub_data_id,source,task_scene')
                 ->where('id', $params['id'])
                 ->where('user_id', self::$uid)
                 ->findOrEmpty()->toArray();
@@ -667,9 +695,17 @@ class TaskLogic extends ApiLogic
                     $detail =  SvPublishSettingDetail::where('publish_id', $taskinfo['publish_id'])->where('user_id', self::$uid)
                         ->where('publish_account_id', $taskinfo['id'])->where('publish_time', 'between', [$start_time, $end_time])->findOrEmpty()->toArray();
                     if ($detail) {
-                        $material_tag = $detail['material_tag'] = trim($detail['material_tag']);
-                        if ($material_tag && !empty($material_tag)) {
-                            $detail['material_tag'] =  explode(",", $detail['material_tag']);;
+                        $material_tag = trim((string)($detail['material_tag'] ?? ''));
+                        if ($material_tag !== '') {
+                            $detail['material_tag'] = array_values(array_filter(array_map(function ($tag) {
+                                $tag = trim((string)$tag);
+                                if ($tag === '') {
+                                    return '';
+                                }
+                                return str_starts_with($tag, '#') ? $tag : '#' . $tag;
+                            }, explode(',', $material_tag))));
+                        } else {
+                            $detail['material_tag'] = [];
                         }
                         $detail['name'] =  $taskinfo['name'] ?? '';
                         $task['detail'] = $detail;
@@ -735,6 +771,27 @@ class TaskLogic extends ApiLogic
                     }
                     $task['detail'] = $taskinfo;
                     break;
+                case DeviceEnum::TASK_SOURCE_SAME_CITY_EXPOSURE:
+                    $taskinfo = SvCityExposureTaskAccount::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('同城曝光任务');
+                    }
+                    $task['detail'] = $taskinfo;
+                    break;
+                case DeviceEnum::TASK_SOURCE_SAME_CITY_CUTOFF:
+                    $taskinfo = SvCityTouchTaskAccount::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('同城截流任务');
+                    }
+                    $task['detail'] = $taskinfo;
+                    break;
+                case DeviceEnum::TASK_SOURCE_GROUP_BUY:
+                    $taskinfo = SvGroupBuyTaskAccount::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('团购截流任务');
+                    }
+                    $task['detail'] = $taskinfo;
+                    break;
                 case DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_PUBLISH:
                     $taskinfo = AiWechatCircleTaskConfig::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
                     if (!$taskinfo) {
@@ -774,6 +831,30 @@ class TaskLogic extends ApiLogic
                     $taskinfo['account_type'] = 2;
                     $task['detail'] = $taskinfo;
                     break;
+                case DeviceEnum::TASK_SOURCE_SPH_THUMB:
+                    //sv_device_take_over_task_account
+                    $taskinfo = SvDeviceTakeOverTaskAccount::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('点赞任务不存在');
+                    }
+                    $task['detail'] = $taskinfo;
+                    break;
+                case DeviceEnum::TASK_SOURCE_VIRAL_REWRITER:
+                    //sv_viral_rewriter_task_account
+                    $taskinfo = \app\common\model\sv\SvDeviceViralAccount::where('id', $task['sub_data_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('爆款仿写任务不存在');
+                    }
+                    $task['detail'] = $taskinfo;
+                    break;
+                case DeviceEnum::TASK_SOURCE_PRECISE_CLUES:
+                    //sv_precise_clues_task_account
+                    $taskinfo = \app\common\model\sv\SvDevicePreciseCluesAccount::where('id', $task['sub_data_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('精准线索任务不存在');
+                    }
+                    $task['detail'] = $taskinfo;
+                    break;
                 default:
 
                     throw new \Exception('参数错误');
@@ -785,14 +866,27 @@ class TaskLogic extends ApiLogic
 
             $where = [
                 'device_code' => $task['device_code'],
-                'account' => $task['account']
+                'type' => $task['account_type']
             ];
-            $account_info = SvAccount::where($where)->findOrEmpty()->toArray();
-            $account_info['type'] = (int)$source === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $account_info['type'];
-            $task['account_info'] = $account_info;
+            $account_info = SvAccount::where($where)->findOrEmpty();
+            if (!$account_info->isEmpty()) {
+                $account_info['type'] = (int)$source === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $account_info['type'];
+                $task['account_info'] = $account_info;
+            } else {
+                $account_info['type'] = $task['account_type'];
+                $task['account_info'] = [
+                    'device_code' => $task['device_code'],
+                    'account' => $task['account'],
+                    'account_no' => $task['account'],
+                    'nickname' => $task['nickname'],
+                    'avatar' => $task['avatar'],
+                    'type' => $task['account_type']
+                ];
+            }
             $task['account_type'] = (int)$source === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $task['account_type'];
 
-            $task['task_category'] = !in_array($task['source'], [5, 7, 8]) ? DeviceEnum::getAccountTypeDesc($task['account_type']) . DeviceEnum::getTaskTypeDesc($task['task_type']) : DeviceEnum::getTaskSceneDesc($task['task_type']);
+            //$task['task_category'] = !in_array($task['source'], [5, 7, 8]) ? DeviceEnum::getAccountTypeDesc($task['account_type']) . DeviceEnum::getTaskTypeDesc($task['task_type']) : DeviceEnum::getTaskSceneDesc($task['task_scene']);
+            $task['task_category'] = DeviceEnum::getAccountTypeDesc($task['account_type']) . DeviceEnum::getTaskSceneDesc($task['task_scene']);
             if (
                 in_array($task['task_type'], [DeviceEnum::TASK_TYPE_TAKEOVER, DeviceEnum::AUTO_TYPE_TAKE_OVER]) &&
                 $task['source'] == DeviceEnum::TASK_SOURCE_TAKEOVER &&
@@ -800,10 +894,17 @@ class TaskLogic extends ApiLogic
             ) {
                 $task['task_category'] = '微信私信接管';
             }
+            if ($task['task_scene'] == DeviceEnum::AUTO_TASK_SCENE_COMMENT_TAKE_OVER) {
+                $task['task_category'] = DeviceEnum::getAccountTypeDesc($task['account_type']) . '评论' . ((int)$task['account_type'] ===1 ? '点赞' : '接管');
+            }
+            if($task['task_scene'] == DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH){
+                $task['task_category'] = strpos($task['task_name'], '图文') !== false ? str_replace('视频', '图文', $task['task_category']) : $task['task_category'];
+            }
+
             $task['start_time'] = date('H:i', $task['start_time']);
             $task['end_time'] = date('H:i', $task['end_time']);
             $task['task_type'] = DeviceEnum::getTaskTypeByAuto($task['task_type']);
-            $task['log'] = SvDeviceTaskLog::where('task_id', $params['id'])->order('create_time', 'asc')->select()->toArray();
+            $task['log'] = SvDeviceTaskLog::where('task_id', $params['id'])->order('create_time', 'asc')->group('task_id,task_source,device_code,message')->select()->toArray();
 
             self::$returnData = $task;
             return true;
@@ -926,6 +1027,30 @@ class TaskLogic extends ApiLogic
                     }
                     $name =  $params['name'] ?? $taskinfo['task_name'];
                     SvWechatStrategy::where('id', $taskinfo['id'])->update(['task_name' => $name]);
+                    break;
+                case DeviceEnum::TASK_SOURCE_SAME_CITY_EXPOSURE:
+                    $taskinfo = SvCityExposureTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('同城曝光任务不存在');
+                    }
+                    $name =  $params['name'] ?? $taskinfo['task_name'];
+                    SvCityExposureTask::where('id', $taskinfo['id'])->update(['task_name' => $name]);
+                    break;
+                case DeviceEnum::TASK_SOURCE_SAME_CITY_CUTOFF:
+                    $taskinfo = SvCityTouchTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('同城截流任务不存在');
+                    }
+                    $name =  $params['name'] ?? $taskinfo['task_name'];
+                    SvCityTouchTask::where('id', $taskinfo['id'])->update(['task_name' => $name]);
+                    break;
+                case DeviceEnum::TASK_SOURCE_GROUP_BUY:
+                    $taskinfo = SvCityTouchTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('团购截流任务不存在');
+                    }
+                    $name =  $params['name'] ?? $taskinfo['task_name'];
+                    SvCityTouchTask::where('id', $taskinfo['id'])->update(['task_name' => $name]);
                     break;
                 default:
 

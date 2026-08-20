@@ -37,6 +37,7 @@
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
                 <el-table-column label="ID" prop="id" min-width="80" />
                 <el-table-column label="任务ID" prop="task_id" width="160" show-overflow-tooltip />
+                <el-table-column label="回调ID" prop="result_id" width="160" show-overflow-tooltip />
                 <el-table-column label="参考素材" prop="name" min-width="180">
                     <template #default="{ row }">
                         <div class="grid grid-cols-4 gap-2">
@@ -61,6 +62,7 @@
                 <el-table-column label="消耗算力" prop="video_token" min-width="120" />
                 <el-table-column label="备注" prop="remark" min-width="120" />
                 <el-table-column label="创作时间" prop="create_time" min-width="180" />
+                <el-table-column label="更新时间" prop="update_time" min-width="180" show-overflow-tooltip />
                 <el-table-column label="操作" width="160" fixed="right">
                     <template #default="{ row }">
                         <el-button type="primary" link @click="handlePlay(row)"> 播放 </el-button>

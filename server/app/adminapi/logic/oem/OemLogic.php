@@ -20,7 +20,10 @@ class OemLogic extends BaseLogic
     {
         $result =  \app\common\service\ToolsService::Auth()->checkby();
         $result['authnum'] = (int)$result['authnum'];
-        $result['useauthnum'] = Oem::count();
+        // 已用名额 = 旧版OEM绑定数 + 已开通(oem_status=2)团队数(与团队OEM共用授权总数)
+        $result['useauthnum'] = \app\api\logic\TeamLogic::oemUsedQuota();
+        $result['oem_num'] = Oem::count();
+        $result['team_oem_num'] = \app\common\model\team\Team::where('oem_status', 2)->count();
         $result['balance'] = $result['authnum'] - $result['useauthnum'];
         unset($result['bystatus'], $result['byname']);
         return $result;
@@ -52,8 +55,8 @@ class OemLogic extends BaseLogic
             $params['status'] = $params['status'] ?? 1;
             $params['name'] = $params['name'] ?? 1;
             $params['update_time'] = time();
-            $params['logo_url'] = $params['logo_url'] ? FileService::setFileUrl($params['logo_url']) : '';
-            $params['site_logo'] = $params['site_logo'] ? FileService::setFileUrl($params['site_logo']) : '';
+            $params['logo_url'] = !empty($params['logo_url']) ? FileService::setFileUrl($params['logo_url']) : '';
+            $params['site_logo'] = !empty($params['site_logo']) ? FileService::setFileUrl($params['site_logo']) : '';
             $params['username'] = User::where('id', $params['user_id'])->value('nickname');
             
             //更新oem数量
@@ -100,8 +103,11 @@ class OemLogic extends BaseLogic
                 return false;
             }
             $params['update_time'] = time();
-            $params['logo_url'] = $params['logo_url'] ? FileService::setFileUrl($params['logo_url']) : '';
-            $params['site_logo'] = $params['site_logo'] ? FileService::setFileUrl($params['site_logo']) : '';
+            $params['logo_url'] = !empty($params['logo_url']) ? FileService::setFileUrl($params['logo_url']) : '';
+            // 未传 site_logo 时不覆盖已有值(编辑表单可能不含该字段)
+            if (array_key_exists('site_logo', $params)) {
+                $params['site_logo'] = !empty($params['site_logo']) ? FileService::setFileUrl($params['site_logo']) : '';
+            }
             $params['username'] = User::where('id', $params['user_id'])->value('nickname');
             Oem::update($params);
             return true;

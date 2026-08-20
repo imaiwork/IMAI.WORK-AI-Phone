@@ -8,6 +8,7 @@ use app\common\model\hd\HdPuzzleSetting;
 use app\common\model\hd\HdPuzzle;
 use app\common\model\user\User;
 use app\common\service\FileService;
+use app\common\service\draw\DrawBillingService;
 
 class HdPuzzleSettingLists extends BaseAdminDataLists implements ListsSearchInterface
 {
@@ -43,6 +44,8 @@ class HdPuzzleSettingLists extends BaseAdminDataLists implements ListsSearchInte
                 $item['copywriting_num'] = count($item['copywriting']);
                 $item['material_num'] = count($item['material']);
                 $item['puzzle_token'] = HdPuzzle::where('puzzle_setting_id', $item['id'])->sum('img_token') ?? 0;
+                $puzzleState = (int)$item['status'] === 1 ? 'hold' : 'consume';
+                $item['points_remark'] = DrawBillingService::consumePointsRemark($puzzleState, (float)$item['puzzle_token']);
                 // 处理状态文本
                 $item['status_text'] = HdPuzzleSetting::getStatusText($item['status']);
             })

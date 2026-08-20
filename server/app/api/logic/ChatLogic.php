@@ -4,9 +4,7 @@ namespace app\api\logic;
 
 use app\api\logic\coze\CozeToolsLogic;
 use app\api\logic\kb\KbKnowLogic;
-use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
-use app\common\logic\AccountLogLogic;
 use app\common\model\chat\Assistants;
 use app\common\model\chat\ChatLog;
 use app\common\model\chat\ModelsCost;
@@ -21,12 +19,22 @@ use app\common\model\knowledge\Knowledge;
 use app\common\model\mindMap\MindMap;
 use app\common\model\sv\SvRobotKeyword;
 use app\common\model\user\User;
+use app\common\service\aiPersona\AgentConfigService;
+use app\common\service\chat\ChatBillingService;
+use app\common\service\chat\ChatModelsService;
 use app\common\service\FileService;
+use app\common\service\MemberService;
 use app\common\service\WordsService;
 use GuzzleHttp\Client;
 
 class ChatLogic extends ApiLogic
 {
+
+    /** @deprecated 使用 MemberService::matchModelFamily */
+    public static function matchAllowedModel(string $model): string
+    {
+        return MemberService::matchModelFamily($model);
+    }
 
     const COMMON_CHAT = 'common_chat'; //通用聊天
     const SCENE_CHAT = 'scene_chat'; //场景聊天
@@ -36,28 +44,53 @@ class ChatLogic extends ApiLogic
     public static function generalChat(array $params)
     {
         ini_set('max_execution_time', 0);
-        $params['scene'] = '通用聊天';
-        $params['stream'] = true;
-        $params['assistant_id'] = $params['assistant_id'] ?? 0; //默认0为通用助手
-//        $params['channel'] = $params['channel'] ?? 0;
-        $params['temperature'] = $params['temperature'] ?? 1.0; //温度
-        $params['top_p']       = $params['top_p'] ?? 0.5;       //多样性范围
-        $params['presence_penalty'] = $params['presence_penalty'] ?? 0.2; //避免重复力度
-        $params['frequency_penalty'] = $params['frequency_penalty'] ?? 0.3; //避免重复用词力度
-        $params['max_tokens'] = $params['max_tokens'] ?? 4096; //token上限
-        $params['context_num'] = $params['context_num'] ?? 5; //上下文数
-        $params['model'] = $params['model'] ?? 'deepseek'; //默认deepseek模型
-        $params['file_info'] = $params['file_info'] ?? []; //文件信息
-        $params['user_id'] = self::$uid ?? 0;
-        $params['quotes'] = $params['quotes'] ?? '';
-        if (isset($params['model_id']) && !empty($params['model_id'])) {
-            $params['model'] = ModelsCost::where('model_id', $params['model_id'])->value('alias') ?? $params['model'];
+        $params['scene']             = '通用聊天';
+        $params['stream']            = true;
+        $params['assistant_id']      = $params['assistant_id'] ?? 0;                                                    //默认0为通用助手
+        $params['temperature']       = isset($params['temperature']) ? (float)$params['temperature'] : 1.0;             //温度
+        $params['top_p']             = isset($params['top_p']) ? (float)$params['top_p'] : 0.5;                         //多样性范围
+        $params['presence_penalty']  = isset($params['presence_penalty']) ? (float)$params['presence_penalty'] : 0.2;   //避免重复力度
+        $params['frequency_penalty'] = isset($params['frequency_penalty']) ? (float)$params['frequency_penalty'] : 0.3; //避免重复用词力度
+        $params['max_tokens']        = isset($params['max_tokens']) ? (int)$params['max_tokens'] : 4096;                //token上限
+        $params['context_num']       = isset($params['context_num']) ? (int)$params['context_num'] : 5;                 //上下文数
+        $params['model']             = $params['model'] ?? 'deepseek';                                                  //默认deepseek模型
+        $params['file_info']         = $params['file_info'] ?? [];                                                      //文件信息
+        $params['user_id']           = self::$uid ?? 0;
+        $params['quotes']            = $params['quotes'] ?? '';
+        $modelId = (int)($params['model_id'] ?? 0);
+        $modelSubId = (int)($params['model_sub_id'] ?? 0);
+        if ($modelId > 0) {
+            $params['model'] = ModelsCost::where('model_id', $modelId)->where('status', 1)->value('alias') ?? $params['model'];
+            if ($modelSubId <= 0) {
+                $modelSubId = (int)(ModelsCost::where('model_id', $modelId)->where('status', 1)->order('sort asc, id desc')->value('id') ?? 0);
+            }
+        } elseif (!empty($params['model'])) {
+            $costRow = ModelsCost::where('alias', $params['model'])->where('status', 1)->findOrEmpty();
+            if (!$costRow->isEmpty()) {
+                $modelId = (int)$costRow['model_id'];
+                $modelSubId = (int)$costRow['id'];
+            } else {
+                $modelId = (int)(ModelsCost::where('alias', $params['model'])->value('model_id') ?? 0);
+                $modelSubId = (int)(ModelsCost::where('alias', $params['model'])->value('id') ?? 0);
+            }
+        }
+
+        // 发布分享对话(v1/chat/commonChat):公开链路,不校验访问者/创建者当前团队空间
+        $isShareChat = !empty($params['share_id']) || !empty($params['apiKey']);
+        if ($isShareChat) {
+            $params['skip_team_check'] = true;
         }
 
         if (!empty($params['robot_id']) && empty($params['indexid']) && empty($params['kb_id'])) {
             $robot = KbRobot::where('id', $params['robot_id'])->findOrEmpty();
             if ($robot->isEmpty()) {
                 throw new \Exception('机器人信息变动，请刷新后重试');
+            }
+            // 分享出去的智能体人人可用;站内对话仍校验当前企业空间
+            if (!$isShareChat
+                && !AgentConfigService::isAgentUsableInCurrentSpace((int)self::$uid, $robot->toArray())
+            ) {
+                throw new \Exception('当前空间不可用该智能体（创建者已离开团队或空间不匹配）');
             }
             if ($robot['kb_type'] == 1) {
                 $params['indexid'] = Knowledge::where('id', $robot['kb_ids'])->value('index_id');
@@ -72,7 +105,28 @@ class ChatLogic extends ApiLogic
             $params['presence_penalty']  = (float)$robot['presence_penalty'];  //避免重复力度
             $params['frequency_penalty'] = (float)$robot['frequency_penalty']; //避免重复用词力度
             $params['context_num']       = $robot['context_num'];       //上下文数
-            $params['model']             = ModelsCost::where('id', $robot['model_sub_id'])->value('alias');  //模型
+            $modelId = (int)$robot['model_id'];
+            $modelSubId = (int)$robot['model_sub_id'];
+            $params['model_id'] = $modelId;
+            $params['model_sub_id'] = $modelSubId;
+            $params['model'] = ModelsCost::where('id', $modelSubId)->value('alias');  //模型
+
+            // 分享对话按创建者会员能力;站内团队共享仍按能力主体解析
+            if ($isShareChat) {
+                $checkUid = (int)($robot['user_id'] ?? 0);
+            } else {
+                $checkUid = \app\common\service\TeamContextService::resolveCapabilityUserId(
+                    (int)self::$uid,
+                    (int)($robot['user_id'] ?? 0),
+                    (int)($robot['team_id'] ?? 0)
+                );
+            }
+            try {
+                ChatModelsService::assertChatModelUsable($modelId, $modelSubId, $checkUid > 0 ? $checkUid : null);
+            } catch (\Exception $e) {
+                self::setError($e->getMessage());
+                return false;
+            }
 
             //coze智能体回复
             if ($robot['flow_status'] == 1) {
@@ -85,7 +139,7 @@ class ChatLogic extends ApiLogic
                     $params['question'] = $params['message'];
                     $params['messages'] = [];
                 }
-                $flow_reply = self::requestFlow($flow_config['bot_id'],$flow_config['api_token'],['user_id' => $_SERVER['HTTP_HOST'].self::$uid,'content'=>$params['message']]);
+                $flow_reply = self::requestFlow($flow_config['bot_id'], $flow_config['api_token'], ['user_id' => $_SERVER['HTTP_HOST'] . self::$uid, 'content' => $params['message']]);
                 header('Content-type: text/event-stream');
                 header('Cache-Control: no-cache');
                 header('Connection: keep-alive');
@@ -180,7 +234,49 @@ class ChatLogic extends ApiLogic
                         ]);
                         exit;
                     }
+                    else if ($robot_keyword['match_type'] == 0 && strpos($params['message'], $robot_keyword['keyword']) !== false){
+                        if (isset($params['unique_id'])) {
+                            // 发布聊天的task_id使用前端传过来的unique_id
+                            $task_id            = $params['unique_id'];
+                            $params['question'] = $params['message'];
+                            $params['messages'] = [];
+                        }
+                        header('Content-type: text/event-stream');
+                        header('Cache-Control: no-cache');
+                        header('Connection: keep-alive');
+                        header('X-Accel-Buffering: no');
+                        $str1 = 'data:{"object":"loading","created":' . time() . ',"content":"' . self::escapeSpecialChars($robot_keyword['reply'][0]['content']) . '","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
+                        $str  = 'data:{"object":"finished","created":' . time() . ',"content":"","file_info":[],"reasoning_content":null,"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"knowledge_tokens":0},"task_id":"' . $task_id . '"}' . "\n\n";
+                        echo $str1;
+                        ob_flush();
+                        flush();
+                        echo $str;
+                        ob_flush();
+                        flush();
+                        //记录日志
+                        ChatLogic::saveChatResponseLog($params, [
+                            'reply'             => $robot_keyword['reply'] ?? '',
+                            'reasoning_content' => null,
+                            'usage_tokens'      => 0,
+                            'extra'             => [
+                                'file' => [], //文件信息
+                            ]
+                        ]);
+                        exit;
+                    }
                 }
+            }
+        } else {
+            try {
+                ChatModelsService::assertChatModelUsable(
+                    $modelId,
+                    $modelSubId,
+                    !empty(self::$uid) ? (int)self::$uid : null,
+                    (string)($params['model'] ?? '')
+                );
+            } catch (\Exception $e) {
+                self::setError($e->getMessage());
+                return false;
             }
         }
 
@@ -201,20 +297,13 @@ class ChatLogic extends ApiLogic
                 $params['net_content'] = $content;
             }
 
-            //print_r($params);die;
-            if (isset($params['indexid']) && !empty($params['indexid'])) {
-                $params['scene'] = 'RAG知识库聊天';
-                if (!KnowledgeLogic::chat($params)) {
-                    throw new \Exception(KnowledgeLogic::getError());
-                }
-                self::$returnData = KnowledgeLogic::getReturnData();
-            } else if (isset($params['kb_id']) && !empty($params['kb_id'])) {
+            if (isset($params['kb_id']) && !empty($params['kb_id'])) {
                 $params['scene'] = '向量知识库聊天';
                 if (!KnowledgeLogic::commonVectorChat($params)) {
                     throw new \Exception(KnowledgeLogic::getError());
                 }
                 self::$returnData = KnowledgeLogic::getReturnData();
-            } else if (isset($params['robot_id']) && empty($params['kb_id'])){
+            } else if (isset($params['robot_id']) && empty($params['kb_id'])) {
                 if (!ChatLogic::commonChat($params)) {
                     throw new \Exception(ChatLogic::getError());
                 }
@@ -264,7 +353,7 @@ class ChatLogic extends ApiLogic
         $request['robot_id'] = $params['robot_id'] ?? 0; //机器人id
         $request['quotes'] = $params['quotes'] ?? ''; //引用内容
 
-        if (!empty($params['quotes'])){
+        if (!empty($params['quotes'])) {
             $request['message'] = '引用的内容：' . $params['quotes'] . "。引用结束>>" . $request['message'];
         }
 
@@ -275,6 +364,9 @@ class ChatLogic extends ApiLogic
             $request['share_id']  = $params['share_id'];
             $request['question']  = $params['question'];
         }
+        if (!empty($params['skip_team_check'])) {
+            $request['skip_team_check'] = true;
+        }
 
         if (empty($params['message']) && empty($request['file_info'])) {
             message('参数错误');
@@ -283,10 +375,15 @@ class ChatLogic extends ApiLogic
         $logs = [];
 
         //模型大管家检索
-        $systemRoleCheck = KbKnowLogic::embModelButlerSearch($params['user_id'],$request['message'],$checkRobotId);
+        $systemRoleCheck = KbKnowLogic::embModelButlerSearch($params['user_id'], $request['message'], $checkRobotId);
+        // 网络搜索
+        $netContent = '';
+        if (!empty($params['net_content'])) {
+            $netContent = "\n 补充（联网检索内容）：".$params['net_content'];
+        }
         $systemRole[] = [
             'role' => 'system',
-            'content' => "你的角色是模型大管家，当用户提出问题时，帮助用户检索出合适的智能体进行问答，如果检索到合适的智能体，不要进行虚构的内容补充，只需告诉用户找到了对应的智能体，例如：'关于这个问题，我找到了更适合的智能体为你解答，建议你寻找 【@小助理】 的帮助。' \n 如果没检索到智能体，你的角色是对话机器人，恢复成常规对话模式对用户进行回复。\n" . $systemRoleCheck,
+            'content' => "你的角色是模型大管家，帮助用户检索出合适的智能体。当检索到合适的智能体时，不能虚构内容，只需要告诉用户找到了对应的智能体，例如：'关于这个问题，我找到了更适合的智能体为你解答，建议你寻找 【@xxx】 的帮助。' \n 当没有检索到合适智能体时，你的角色转换成常规对话机器人，恢复成正常对话模式。\n" . $netContent . $systemRoleCheck,
         ];
         $request['check_robot_id'] = $checkRobotId ?? 0;
 
@@ -306,24 +403,24 @@ class ChatLogic extends ApiLogic
             }
         } else {
             $ids = KbRobotRecord::where('unique_id', $params['unique_id'])
-                                ->column('id');
+                ->column('id');
             if (count($ids) > $params['context_num']) {
                 $ids = array_slice($ids, count($ids) - $params['context_num'], $params['context_num']);
             }
             KbRobotRecord::whereIn('id', $ids)
-                         ->order('id asc')
-                         ->select()
-                         ->each(function ($item) use (&$logs) {
-                             $logs[] = [
-                                 'role'    => 'user',
-                                 'content' => $item->ask
-                             ];
-                             $logs[] = [
-                                 'role'    => 'assistant',
-                                 'content' => $item->reply
-                             ];
-                         })
-                         ->toArray();
+                ->order('id asc')
+                ->select()
+                ->each(function ($item) use (&$logs) {
+                    $logs[] = [
+                        'role'    => 'user',
+                        'content' => $item->ask
+                    ];
+                    $logs[] = [
+                        'role'    => 'assistant',
+                        'content' => $item->reply
+                    ];
+                })
+                ->toArray();
             $request['task_id'] = $params['unique_id'];
         }
 
@@ -334,12 +431,12 @@ class ChatLogic extends ApiLogic
             ];
         }
 
-        if (isset($params['net_content']) && !empty($params['net_content'])) {
-            $logs[] = [
-                'role' => 'user',
-                'content' => $params['net_content']
-            ];
-        }
+//        if (isset($params['net_content']) && !empty($params['net_content'])) {
+//            $logs[] = [
+//                'role' => 'user',
+//                'content' => $params['net_content']
+//            ];
+//        }
 
         if (isset($params['robot_id']) && $params['robot_id'] != 0 && $params['robot_id'] != '0') {
             $robot_set = KbRobot::where('id', $params['robot_id'])->value('roles_prompt');
@@ -371,20 +468,28 @@ class ChatLogic extends ApiLogic
             'gpt-4o-mini',
             'gpt-4o-2024-08-06',
             'gpt-3.5-turbo',
-            'claude-sonnet-4-5'
+            'gpt-5.4',
+            'gpt-5.4-mini',
+            'gpt-5',
+            'gpt-5-mini',
+            'claude-sonnet-4-5',
+            'claude-sonnet-4-6',
+            'claude-sonnet-4-6-think'
         ];
         $geminiModels = [
             'gemini-2.5-pro',
             'gemini-2.5-flash',
             'gemini-2.0-flash',
             'gemma-3-4b-it',
+            'gemini-3.1-pro-preview',
+            'gemma-4-31b-it'
         ];
         $request['messages'] = $messages;
-        if (in_array($request['model'], $gptModels)){
+        if (in_array($request['model'], $gptModels)) {
             $scene = self::OPENAI_CHAT;
-        }else if (in_array($request['model'], $geminiModels)){
+        } else if (in_array($request['model'], $geminiModels)) {
             $scene = self::GEMINI_CHAT;
-        }else{
+        } else {
             $scene = self::COMMON_CHAT;
         }
         //print_r($request);die;
@@ -405,15 +510,11 @@ class ChatLogic extends ApiLogic
     public static function commonChat(array $params)
     {
 
-        // if (empty($params['message'])) {
-        //     message('参数错误');
-        // }
         if (!empty($params['message'])) {
             WordsService::sensitive($params['message']);
             // 问题审核(百度)
             WordsService::askCensor($params['message']);
         }
-
 
         $request['message'] = $params['message'];
         $request['open_reasoning'] = $params['open_reasoning'] ?? 0;
@@ -429,7 +530,7 @@ class ChatLogic extends ApiLogic
         $request['robot_id'] = $params['robot_id'] ?? 0; //机器人id
         $request['quotes'] = $params['quotes'] ?? ''; //引用内容
 
-        if (!empty($params['quotes'])){
+        if (!empty($params['quotes'])) {
             $request['message'] = '引用的内容：' . $params['quotes'] . "。引用结束>>" . $request['message'];
         }
 
@@ -439,6 +540,9 @@ class ChatLogic extends ApiLogic
             $request['identity']  = $params['identity'];
             $request['share_id']  = $params['share_id'];
             $request['question']  = $params['question'];
+        }
+        if (!empty($params['skip_team_check'])) {
+            $request['skip_team_check'] = true;
         }
 
         if (empty($params['message']) && empty($request['file_info'])) {
@@ -465,24 +569,24 @@ class ChatLogic extends ApiLogic
             }
         } else {
             $ids = KbRobotRecord::where('unique_id', $params['unique_id'])
-                                ->column('id');
+                ->column('id');
             if (count($ids) > $params['context_num']) {
                 $ids = array_slice($ids, count($ids) - $params['context_num'], $params['context_num']);
             }
             KbRobotRecord::whereIn('id', $ids)
-                         ->order('id asc')
-                         ->select()
-                         ->each(function ($item) use (&$logs) {
-                             $logs[] = [
-                                 'role'    => 'user',
-                                 'content' => $item->ask
-                             ];
-                             $logs[] = [
-                                 'role'    => 'assistant',
-                                 'content' => $item->reply
-                             ];
-                         })
-                         ->toArray();
+                ->order('id asc')
+                ->select()
+                ->each(function ($item) use (&$logs) {
+                    $logs[] = [
+                        'role'    => 'user',
+                        'content' => $item->ask
+                    ];
+                    $logs[] = [
+                        'role'    => 'assistant',
+                        'content' => $item->reply
+                    ];
+                })
+                ->toArray();
             $request['task_id'] = $params['unique_id'];
         }
 
@@ -529,23 +633,31 @@ class ChatLogic extends ApiLogic
             'gpt-4o-mini',
             'gpt-4o-2024-08-06',
             'gpt-3.5-turbo',
-            'claude-sonnet-4-5'
+            'gpt-5.4',
+            'gpt-5.4-mini',
+            'gpt-5',
+            'gpt-5-mini',
+            'claude-sonnet-4-5',
+            'claude-sonnet-4-6',
+            'claude-sonnet-4-6-think'
         ];
         $geminiModels = [
             'gemini-2.5-pro',
             'gemini-2.5-flash',
             'gemini-2.0-flash',
             'gemma-3-4b-it',
+            'gemini-3.1-pro-preview',
+            'gemma-4-31b-it'
         ];
         $request['messages'] = $messages;
-        if (in_array($request['model'], $gptModels)){
+        if (in_array($request['model'], $gptModels)) {
             $scene = self::OPENAI_CHAT;
-        }else if (in_array($request['model'], $geminiModels)){
+        } else if (in_array($request['model'], $geminiModels)) {
             $scene = self::GEMINI_CHAT;
-        }else{
+        } else {
             $scene = self::COMMON_CHAT;
         }
-        //print_r($request);die;
+
         $uid = self::$uid;
         if ($uid == 0 && isset($params['unique_id'])) {
             $uid = KbRobot::where('id', $params['robot_id'])->value('user_id');
@@ -684,10 +796,6 @@ class ChatLogic extends ApiLogic
         $request['message'] = $message;
         $request['task_id'] = $taskId;
 
-        // 存在文件 TODO
-        if (isset($params['file_id'])) {
-        }
-
         self::requestChatUrl($request, self::SCENE_CHAT, self::$uid);
 
         exit;
@@ -701,6 +809,7 @@ class ChatLogic extends ApiLogic
      */
     public static function promptChat(array $params): bool
     {
+        $model = $params['model'] ?? 'deepseek';
 
         if (empty($params['message'])) {
 
@@ -748,6 +857,7 @@ class ChatLogic extends ApiLogic
                     'content' => $params['message']
                 ]
             ],
+            "model" => $model,
             'stream' => false,
             'message' => $params['message'],
             'task_id' => generate_unique_task_id(),
@@ -757,41 +867,32 @@ class ChatLogic extends ApiLogic
             'now' => time(),
         ];
 
-        $unit = TokenLogService::checkToken(self::$uid, $scene);
-
-        if ($scene == 'human_prompt') {
-            $request['open_reasoning'] = 5;
-        }
+        $modelAlias = $model ?? 'deepseek';
+        ChatBillingService::checkBalance(self::$uid, $modelAlias);
 
         $response = \app\common\service\ToolsService::Chat()->message($request);
 
         $reply = $response['data']['choices'][0]['message']['content'] ?? '';
 
-        //计费
-        $tokens = $response['data']['usage']['total_tokens'] ?? 0;
-
-        if (!$reply || $tokens == 0) {
-
+        $usage = $response['data']['usage'] ?? [];
+        if (!$reply || empty($usage['total_tokens'])) {
             message('获取内容失败');
         }
 
         $response = [
             'reply' => $reply,
-            'usage_tokens' => $response['data']['usage'] ?? [],
+            'usage_tokens' => $usage,
         ];
 
-        // 保存聊天记录
         self::saveChatResponseLog($request, $response);
 
-        //计算消耗tokens
-        $points = $unit > 0 ? round($tokens / $unit, 2) : 0;
-        $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit . 'tokens/算力', '实际消耗算力' => $points];
-
-        //token扣除
-        User::userTokensChange(self::$uid, $points);
-
-        //扣费记录
-        AccountLogLogic::recordUserTokensLog(true, self::$uid, $scene_type, $points, $request['task_id'], $extra);
+        ChatBillingService::charge(
+            self::$uid,
+            $modelAlias,
+            $usage,
+            $scene_type,
+            $request['task_id']
+        );
 
         if ($scene_type == AccountLogEnum::TOKENS_DEC_MIND_MAP) {
 
@@ -845,7 +946,7 @@ class ChatLogic extends ApiLogic
 
                     $user_avatar = User::where('id', $item['user_id'])->value('avatar') ?? '';
                     $assistants_avatar = Assistants::where('id', $item['assistant_id'] ?: 1)->value('logo') ?? '';
-                    if (!empty($item['robot_id'])){
+                    if (!empty($item['robot_id'])) {
                         $robot = KbRobot::field('name,image')->where('id', $item['robot_id'])->findOrEmpty();
                     }
                     $robot_avatar = !empty($robot['image']) ? $robot['image'] : '';
@@ -900,11 +1001,11 @@ class ChatLogic extends ApiLogic
                 $chat_type = [9006, 1001, 1003, 1004];
                 ChatLog::where(['robot_id' => $params['robot_id'], 'user_id' => self::$uid])->whereIn('chat_type', $chat_type)->select()->delete();
             } else {
-                if (is_numeric($params['task_id'])){
-                    $task_id = ChatLog::where('id',$params['task_id'])->value('task_id');
+                if (is_numeric($params['task_id'])) {
+                    $task_id = ChatLog::where('id', $params['task_id'])->value('task_id');
                     ChatLog::where('task_id', $task_id)->where('user_id', self::$uid)->select()->delete();
                 }
-                if (is_string($params['task_id'])){
+                if (is_string($params['task_id'])) {
                     ChatLog::where('task_id', $params['task_id'])->where('user_id', self::$uid)->select()->delete();
                 }
             }
@@ -943,43 +1044,43 @@ class ChatLogic extends ApiLogic
      * @date 2024/6/27 9:30
      * @author dagouzi
      */
-    public static function saveChatResponseLog(array $request, array $response = [])
+    public static function saveChatResponseLog(array $request, array $response = [], $scene = 'chat')
     {
         try {
             if (isset($request['unique_id'])) {
                 KbRobotRecord::create([
-                                          'user_id'        => $request['user_id'] ?? 0,
-                                          'robot_id'       => $request['robot_id'] ?? 0,
-                                          'category_id'    => 0,
-                                          'square_id'      => 0,
-                                          'chat_model_id'  => 0,
-                                          'emb_model_id'   => 0,
-                                          'ask'            => self::cutAfterQuotesEnd($request['question']),
-                                          'reply'          => $response['reply'],
-                                          'reasoning'      => $response['reasoning_content'] ?? null,
-                                          'images'         => '',
-                                          'video'          => '',
-                                          'files'          => '',
-                                          'quotes'         => $request['quotes'] ?? '',
-                                          'context'        => json_encode($request['messages'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                                          'correlation'    => null,
-                                          'flows'          => '',
-                                          'files_plugin'   => '',
-                                          'model'          => '',
-                                          'tokens'         => (float)$response['usage_tokens'] ?? [],
-                                          'share_id'       => $request['share_id'],
-                                          'share_apikey'   => $request['apiKey'],
-                                          'share_identity' => $request['identity'],
-                                          'is_flow'        => 0,
-                                          'unique_id'      => $request['unique_id'],
-                                      ]);
+                    'user_id'        => $request['user_id'] ?? 0,
+                    'robot_id'       => $request['robot_id'] ?? 0,
+                    'category_id'    => 0,
+                    'square_id'      => 0,
+                    'chat_model_id'  => 0,
+                    'emb_model_id'   => 0,
+                    'ask'            => self::cutAfterQuotesEnd($request['question']),
+                    'reply'          => $response['reply'],
+                    'reasoning'      => $response['reasoning_content'] ?? null,
+                    'images'         => '',
+                    'video'          => '',
+                    'files'          => '',
+                    'quotes'         => $request['quotes'] ?? '',
+                    'context'        => json_encode($request['messages'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    'correlation'    => null,
+                    'flows'          => '',
+                    'files_plugin'   => '',
+                    'model'          => '',
+                    'tokens'         => (float)$response['usage_tokens'] ?? [],
+                    'share_id'       => $request['share_id'],
+                    'share_apikey'   => $request['apiKey'],
+                    'share_identity' => $request['identity'],
+                    'is_flow'        => 0,
+                    'unique_id'      => $request['unique_id'],
+                ]);
                 (new KbRobotPublish())
                     ->where(['id' => $request['share_id']])
                     ->where(['robot_id' => $request['robot_id']])
                     ->update([
-                                 'use_count' => ['inc', 1],
-                                 'use_time'  => time()
-                             ]);
+                        'use_count' => ['inc', 1],
+                        'use_time'  => time()
+                    ]);
             } else {
                 $chatLogData = [
                     'user_id'           => $request['user_id'],
@@ -999,7 +1100,11 @@ class ChatLogic extends ApiLogic
                 ChatLog::create($chatLogData);
             }
         } catch (\Throwable $e) {
-            message($e->getMessage(), 1);
+            if ($scene == 'msg') {
+                throw new \Exception($e->__toString());
+            } else {
+                message($e->getMessage(), 1);
+            }
         }
     }
 
@@ -1029,34 +1134,19 @@ class ChatLogic extends ApiLogic
      * @date 2024/12/17 10:46
      * @author dagouzi
      */
-    public static function chatTokensCharge($request, $tokens): void
+    public static function chatTokensCharge($request, $tokensOrUsage): void
     {
+        $usage = ChatBillingService::normalizeUsage($tokensOrUsage);
+        $logType = (int)($request['chat_type'] ?? AccountLogEnum::TOKENS_DEC_COMMON_CHAT);
+        $modelKey = $request['model'] ?? 'deepseek';
 
-        [$tokenScene, $tokenCode] = match ($request['chat_type']) {
-            AccountLogEnum::TOKENS_DEC_COMMON_CHAT => ['common_chat', AccountLogEnum::TOKENS_DEC_COMMON_CHAT],
-            AccountLogEnum::TOKENS_DEC_SCENE_CHAT => ['scene_chat', AccountLogEnum::TOKENS_DEC_SCENE_CHAT],
-            AccountLogEnum::TOKENS_DEC_KNOWLEDGE_CHAT => ['knowledge_chat', AccountLogEnum::TOKENS_DEC_KNOWLEDGE_CHAT],
-            AccountLogEnum::TOKENS_DEC_OPENAI_CHAT => ['openai_chat', AccountLogEnum::TOKENS_DEC_OPENAI_CHAT],
-            AccountLogEnum::TOKENS_DEC_GEMINI_CHAT => ['gemini_chat', AccountLogEnum::TOKENS_DEC_GEMINI_CHAT],
-        };
-
-        $unit =  TokenLogService::getTypeScore($tokenScene);
-
-        //计算消耗tokens
-        $points = $unit > 0 ? round($tokens / $unit, 2) : 0;
-
-        //token扣除
-        User::userTokensChange($request['user_id'], $points);
-
-        if ($request['chat_type'] == AccountLogEnum::TOKENS_DEC_KNOWLEDGE_CHAT) {
-            $extra = ['总消耗tokens数' => $tokens,  '知识库消耗tokens数' => $request['knowledge_tokens'], '算力单价' => $unit, '实际消耗算力' => $points];
-        } else {
-            $extra = ['总消耗tokens数' => $tokens, '算力单价' => $unit, '实际消耗算力' => $points];
-        }
-
-
-        //扣费记录
-        AccountLogLogic::recordUserTokensLog(true, $request['user_id'], $tokenCode, $points, $request['task_id'], $extra);
+        ChatBillingService::charge(
+            (int)$request['user_id'],
+            $modelKey,
+            $usage,
+            $logType,
+            (string)($request['task_id'] ?? '')
+        );
     }
 
     /**
@@ -1184,8 +1274,9 @@ class ChatLogic extends ApiLogic
             self::GEMINI_CHAT => ['gemini_chat', AccountLogEnum::TOKENS_DEC_GEMINI_CHAT],
         };
 
-        //检查用户token
-        TokenLogService::checkToken($userId, $tokenScene);
+        $modelAlias = $request['model'] ?? 'deepseek';
+        // 分享智能体公开使用:只校验算力,不校验团队到期/停用
+        ChatBillingService::checkBalance($userId, $modelAlias, !empty($request['skip_team_check']));
 
         $requestService = \app\common\service\ToolsService::Chat();
 
@@ -1225,7 +1316,24 @@ class ChatLogic extends ApiLogic
                     $where[0] = ['user_id', '=', 0];
                     $result   = ModelsSetting::field('id, model_id, model_sub_id, top_p, temperature, presence_penalty, frequency_penalty, max_tokens, context_num, logprobs,top_logprobs,is_default')
                         ->where($where)
-                        ->find();
+                        ->findOrEmpty();
+                }
+                // 用户与系统都无该模型配置时，回落默认值，避免 null->toArray()
+                if ($result->isEmpty()) {
+                    self::$returnData = [
+                        'model_id'          => $params['model_id'],
+                        'model_sub_id'      => $params['model_sub_id'],
+                        'top_p'             => 0.5,
+                        'temperature'       => 1,
+                        'presence_penalty'  => 0.1,
+                        'frequency_penalty' => 2,
+                        'max_tokens'        => 4096,
+                        'context_num'       => 3,
+                        'logprobs'          => 0,
+                        'top_logprobs'      => 10,
+                        'is_default'        => 1,
+                    ];
+                    return true;
                 }
                 self::$returnData = $result->toArray();
                 return true;
@@ -1344,7 +1452,7 @@ class ChatLogic extends ApiLogic
         $rsp      = $client->post($url, $request);
         $contents = $rsp->getBody()->getContents();
         $data     = json_decode($contents, true);
-//        Log::channel('sora')->write('发起对话'.$contents);
+        //        Log::channel('sora')->write('发起对话'.$contents);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return 'coze返回异常';
         }
@@ -1374,7 +1482,7 @@ class ChatLogic extends ApiLogic
         return addcslashes($str, "\0\n\r\t\v\\'\"");
     }
 
-    private static function requestFlowStatus($conversation_id,$chat_id, $token): bool
+    private static function requestFlowStatus($conversation_id, $chat_id, $token): bool
     {
         $url      = 'https://api.coze.cn/v3/chat/retrieve';
         $body     = [
@@ -1392,7 +1500,7 @@ class ChatLogic extends ApiLogic
         $rsp      = $client->get($url, $request);
         $contents = $rsp->getBody()->getContents();
         $data     = json_decode($contents, true);
-//        Log::channel('sora')->write('聊天结果返回'.$contents);
+        //        Log::channel('sora')->write('聊天结果返回'.$contents);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return false;
         }
@@ -1405,7 +1513,7 @@ class ChatLogic extends ApiLogic
         return false;
     }
 
-    private static function requestFlowMessage($conversation_id,$chat_id, $token): string
+    private static function requestFlowMessage($conversation_id, $chat_id, $token): string
     {
         $url      = 'https://api.coze.cn/v3/chat/message/list';
         $body     = [
@@ -1423,7 +1531,7 @@ class ChatLogic extends ApiLogic
         $rsp      = $client->get($url, $request);
         $contents = $rsp->getBody()->getContents();
         $data     = json_decode($contents, true);
-//        Log::channel('sora')->write('聊天内容返回'.$contents);
+        //        Log::channel('sora')->write('聊天内容返回'.$contents);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return 'coze返回异常';
         }
@@ -1431,13 +1539,12 @@ class ChatLogic extends ApiLogic
             return 'coze返回异常';
         }
 
-        foreach ($data['data'] as $item){
-            if ($item['type'] == 'answer'){
+        foreach ($data['data'] as $item) {
+            if ($item['type'] == 'answer') {
                 return $item['content'];
             }
         }
 
         return 'coze返回异常';
-
     }
 }

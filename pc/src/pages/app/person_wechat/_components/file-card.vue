@@ -15,11 +15,6 @@
             <div class="file-name" :title="name">
                 {{ name }}
             </div>
-            <div class="file-meta">
-                <span>{{ fileExt.toUpperCase() }} 文档</span>
-                <span class="divider"></span>
-                <span>点击预览详情</span>
-            </div>
         </div>
     </div>
 </template>
@@ -35,7 +30,7 @@ const props = withDefaults(
     }>(),
     {
         iconSize: 34,
-    }
+    },
 );
 
 // 根据文件后缀动态计算颜色，增加辨识度

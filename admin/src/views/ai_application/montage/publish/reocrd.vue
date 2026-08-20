@@ -104,14 +104,6 @@
                             </router-link>
                         </el-button>
                         <el-button
-                            v-if="row.auto_type == 0 && (row.status == 1 || row.status == 2 || row.status == 4)"
-                            v-perms="['ai_application.montage.publish_record/start:pause']"
-                            type="primary"
-                            link
-                            @click="handleChangeStatus(row)">
-                            {{ row.status == 2 || row.status == 1 ? "暂停" : "开始" }}
-                        </el-button>
-                        <el-button
                             v-if="row.auto_type == 0"
                             v-perms="['ai_application.montage.publish_record/delete']"
                             type="danger"

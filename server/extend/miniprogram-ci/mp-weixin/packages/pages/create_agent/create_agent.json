@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "新建智能体",
+  "enablePullDownRefresh": false,
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-switch": "../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "popup-bottom": "../../../components/popup-bottom/popup-bottom",
+    "kb-select-popup": "./components/kb-select-popup"
+  }
+}

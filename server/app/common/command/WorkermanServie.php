@@ -45,11 +45,22 @@ class WorkermanServie extends Command
         try {
 
             // 初始化Channel服务（用于跨进程通信）
-            $channel_server = new \Channel\Server('0.0.0.0', env('WORKERMAN.CHANNEL_PROT', 2206));
-            Worker::$stdoutFile = root_path(). '/runtime/log/workerman.log';
+            $this->configureWorkermanLogs();
+            $channelPort = (int)env('WORKERMAN.CHANNEL_PROT', 2206);
+            $rpaPort = (int)env('WORKERMAN.RPA_PORT', 2345);
+            $wechatPort = (int)env('WORKERMAN.WECHAT_PORT', 2347);
+            $devicePort = (int)env('WORKERMAN.DEVICE_PORT', 6489);
+
+            $output->writeln('listen ports:');
+            $output->writeln("  CHANNEL  127.0.0.1:{$channelPort}");
+            $output->writeln("  RPA      websocket://0.0.0.0:{$rpaPort}");
+            $output->writeln("  WECHAT   websocket://0.0.0.0:{$wechatPort}");
+            $output->writeln("  DEVICE   tcp://0.0.0.0:{$devicePort}");
+
+            $channel_server = new \Channel\Server('127.0.0.1', $channelPort);
             // 在这里放心的实例化worker,
-            $rpaWorker = new Worker('websocket://0.0.0.0:'.env('WORKERMAN.RPA_PORT', 2345));
-            $rpaWorker->count = 1;
+            $rpaWorker = new Worker('websocket://0.0.0.0:' . $rpaPort);
+            $rpaWorker->count = 4;
             $rpaWorker->name = 'AiRpaService';
             $service = new \app\common\workerman\rpa\RpaSocketService($rpaWorker);
             $rpaWorker->onWorkerStart = array($service, 'onWorkerStart');
@@ -62,7 +73,7 @@ class WorkermanServie extends Command
              // 添加端口复用配置
             $rpaWorker->reusePort = true; // 启用端口复用，解决惊群效应
 
-            $worker = new Worker('websocket://0.0.0.0:'.env('WORKERMAN.WECHAT_PORT', 2347));
+            $worker = new Worker('websocket://0.0.0.0:' . $wechatPort);
             $worker->count = 4;
             $worker->name = 'AiWechatService';
             $service = new \app\common\workerman\wechat\WechatSocketService();
@@ -73,7 +84,7 @@ class WorkermanServie extends Command
             $worker->onError       = array($service, 'onError');
 
             // //设备socket
-            $tcpWorker = new Worker('tcp://0.0.0.0:'.env('WORKERMAN.DEVICE_PORT', 6489));
+            $tcpWorker = new Worker('tcp://0.0.0.0:' . $devicePort);
             $tcpWorker->count = 4;
             $tcpWorker->transport = 'tcp';
             $tcpWorker->reusePort = true;
@@ -89,6 +100,32 @@ class WorkermanServie extends Command
         } catch (\Exception $e) {
             $level = 'ws';
             \think\facade\Log::channel('socket')->{$level}($e->__toString());
+        }
+    }
+
+    private function configureWorkermanLogs(): void
+    {
+        $logRoot = root_path() . 'runtime' . DIRECTORY_SEPARATOR . 'log';
+        $workermanLog = $logRoot . DIRECTORY_SEPARATOR . 'workerman.log';
+        $this->ensureDirectory(dirname($workermanLog));
+
+        Worker::$stdoutFile = $workermanLog;
+        Worker::$logFile = $workermanLog;
+
+        $month = date('Ym');
+        foreach (['socket', 'wechat_socket'] as $channel) {
+            $this->ensureDirectory($logRoot . DIRECTORY_SEPARATOR . $channel . DIRECTORY_SEPARATOR . date('Ymd') . DIRECTORY_SEPARATOR . $month);
+        }
+    }
+
+    private function ensureDirectory(string $path): void
+    {
+        if (is_dir($path)) {
+            return;
+        }
+
+        if (!mkdir($path, 0755, true) && !is_dir($path)) {
+            throw new \RuntimeException('Cannot create log directory: ' . $path);
         }
     }
 }

@@ -7,6 +7,7 @@ use app\api\lists\BaseApiDataLists;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\draw\DrawVideo;
 use app\common\service\FileService;
+use app\common\service\draw\DrawBillingService;
 
 
 /**
@@ -39,11 +40,6 @@ class VideoRecordLists extends BaseApiDataLists implements ListsSearchInterface
         $where['dv.user_id'] = $this->userId;
         $result = DrawVideo::alias('dv')
                             ->join('user u', 'u.id = dv.user_id')
-                            ->with([
-                                      'userTokensLog' => function($query) {
-                                          $query->field('task_id, change_amount')->where('task_id', '<>', '');
-                                      }
-                                  ])
                             ->when($this->request->get('user'), function ($query) {
                                 $query->where('nickname', 'like', '%' . $this->request->get('user') . '%');
                             })
@@ -58,7 +54,15 @@ class VideoRecordLists extends BaseApiDataLists implements ListsSearchInterface
                             ->each(function($item) {
                                 $item->video_url = $item->video_url ? FileService::getFileUrl($item->video_url) : '';
                                 $item->avatar = $item->avatar ? FileService::getFileUrl($item->avatar) : '';
-                                $item->points = ($item->task_status == 1 || 2 ? '-' : ($item->task_status == -1 ? '+' : '')) . ($item->userTokensLog ? $item->userTokensLog->change_amount : 0);
+                                $amount = DrawBillingService::resolveRecordPoints(
+                                    (int)$item->user_id,
+                                    (string)($item->task_id ?? ''),
+                                    (int)($item->draw_task_id ?? 0),
+                                    DrawBillingService::videoRecordChangeTypes()
+                                );
+                                $pointsInfo = DrawBillingService::describeVideoRecordPoints($amount, (int)$item->task_status);
+                                $item->points = $pointsInfo['points'];
+                                $item->points_remark = $pointsInfo['points_remark'];
                                 $item->type_name = $this->type_name($item->type);
                             })
                            ->toArray();

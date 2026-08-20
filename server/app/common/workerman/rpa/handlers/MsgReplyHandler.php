@@ -12,6 +12,9 @@ class MsgReplyHandler extends BaseMessageHandler
     public function handle(TcpConnection $connection, string $uid, array $payload): void
     {
         $content = !is_array($payload['content']) ? json_decode($payload['content'], true) : $payload['content'];
+        if(is_null($content)){
+            $content = [];
+        }
         try {
             $this->msgType = WorkerEnum::DESC[$payload['type']] ?? $payload['type'];
             $this->uid = $uid;
@@ -47,7 +50,7 @@ class MsgReplyHandler extends BaseMessageHandler
     }
 
 
-    private function msgReplyStart($content)
+    private function msgReplyStart(array $content)
     {
         try {
 
@@ -87,7 +90,7 @@ class MsgReplyHandler extends BaseMessageHandler
         }
     }
 
-    private function msgReplyCompleted($content)
+    private function msgReplyCompleted(array $content)
     {
         try {
 
@@ -126,7 +129,7 @@ class MsgReplyHandler extends BaseMessageHandler
     }
 
 
-    private function sendWeb($content)
+    private function sendWeb(array $content)
     {
 
         try {

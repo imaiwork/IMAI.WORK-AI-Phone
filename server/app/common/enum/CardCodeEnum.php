@@ -11,6 +11,7 @@ class CardCodeEnum
 
     const TYPE_TOKENS = 3;
     const TYPE_DISTRIBUTION_TOKENS = 5;
+    const TYPE_MEMBER = 6;
 
     /**
      * @notes 获取卡密类型
@@ -24,6 +25,7 @@ class CardCodeEnum
         $desc = [
             self::TYPE_TOKENS => '算力值',
             self::TYPE_DISTRIBUTION_TOKENS => '代理算力卡',
+            self::TYPE_MEMBER => '会员兑换码',
         ];
         if (true === $from) {
             return $desc;

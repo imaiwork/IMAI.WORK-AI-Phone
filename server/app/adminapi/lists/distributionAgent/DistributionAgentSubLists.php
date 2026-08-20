@@ -3,6 +3,7 @@
 namespace app\adminapi\lists\distributionAgent;
 
 use app\adminapi\lists\BaseAdminDataLists;
+use app\adminapi\logic\setting\DistributionAgentConfigLogic;
 use app\common\lists\ListsExtendInterface;
 use app\common\model\distribution\DistributionAgent;
 use app\common\service\FileService;
@@ -56,43 +57,35 @@ class DistributionAgentSubLists extends BaseAdminDataLists implements ListsExten
      */
     public function extend()
     {
-        $userId = $this->params['user_id'] ?? 0;
-        if (!$userId) {
+        $userId = (int)($this->params['user_id'] ?? 0);
+        $currentUserLevel = $userId ? self::getUserLevel($userId) : 0;
+        // 普通用户不发展下级
+        if (!$userId || $currentUserLevel <= 0) {
             return ['level1_count' => 0, 'level2_count' => 0, 'level1_agent_count' => 0, 'level2_agent_count' => 0];
         }
 
-        $currentUserLevel = DistributionAgent::where('user_id', $userId)->value('level') ?: 0;
+        $lowerLevels = self::getLowerLevels($currentUserLevel);
+        $nextLevel = $lowerLevels[0] ?? null;
+        $secondLevel = $lowerLevels[1] ?? null;
 
-        $level1Count = 0;
-        $level2Count = 0;
-        $level1AgentCount = 0;
-        $level2AgentCount = 0;
-
-        if ($currentUserLevel == 1) {
-            // 下一级：包含level=0的普通用户 + level=2的代理
-            $level1Count = DistributionAgent::where('parent_id', $userId)->whereIn('level', [0, 2])->count();
-            // 下级分销商：仅level=2的代理
-            $level1AgentCount = DistributionAgent::where('parent_id', $userId)->where('level', 2)->count();
-
-            // 下二级：包含level=3的代理
-            $level2Count = DistributionAgent::where('parent_id', $userId)->where('level', 3)->count();
-            // 下二级分销商：仅level=3的代理
-            $level2AgentCount = $level2Count;
-        } elseif ($currentUserLevel == 2) {
-            // 下一级：包含level=0的普通用户 + level=3的代理
-            $level1Count = DistributionAgent::where('parent_id', $userId)->whereIn('level', [0, 3])->count();
-            $level1AgentCount = DistributionAgent::where('parent_id', $userId)->where('level', 3)->count();
-        } elseif ($currentUserLevel == 3) {
-            // 下一级：仅普通用户
-            $level1Count = DistributionAgent::where('parent_id', $userId)->where('level', 0)->count();
-            $level1AgentCount = 0;
-        }
+        // 下一级：直属下级中的普通用户 + 低一档的代理
+        $level1Count = DistributionAgent::where('parent_id', $userId)
+            ->whereIn('level', $nextLevel === null ? [0] : [0, $nextLevel])
+            ->count();
+        // 下级分销商：仅低一档的代理
+        $level1AgentCount = $nextLevel === null ? 0 : DistributionAgent::where('parent_id', $userId)
+            ->where('level', $nextLevel)
+            ->count();
+        // 下二级：直属下级中低两档的代理
+        $level2Count = $secondLevel === null ? 0 : DistributionAgent::where('parent_id', $userId)
+            ->where('level', $secondLevel)
+            ->count();
 
         return [
             'level1_count' => $level1Count,
             'level2_count' => $level2Count,
             'level1_agent_count' => $level1AgentCount,
-            'level2_agent_count' => $level2AgentCount,
+            'level2_agent_count' => $level2Count,
         ];
     }
 
@@ -107,29 +100,17 @@ class DistributionAgentSubLists extends BaseAdminDataLists implements ListsExten
         // 必须要有个根查询人，不然就是查全站了
         if (isset($this->params['user_id']) && $this->params['user_id']) {
             $userId = (int) $this->params['user_id'];
-            $currentUserLevel = DistributionAgent::where('user_id', $userId)->value('level') ?: 0;
             $hierarchy = $this->params['hierarchy'] ?? 'all'; // all, level1, level2
 
             // 1、仅查询亲直属下级
             $where[] = ['DA.parent_id', '=', $userId];
 
-            // 2、根据上一级代理级别区分下级
-            if ($hierarchy === 'level1') {
-                if ($currentUserLevel == 1) {
-                    $where[] = ['DA.level', '=', 2];
-                } elseif ($currentUserLevel == 2) {
-                    $where[] = ['DA.level', '=', 3];
-                } elseif ($currentUserLevel == 3) {
-                    $where[] = ['DA.level', '=', -1];
-                } else {
-                    $where[] = ['DA.level', '=', -1]; // 其他级别没有下级
-                }
-            } elseif ($hierarchy === 'level2') {
-                if ($currentUserLevel == 1) {
-                    $where[] = ['DA.level', '=', 3];
-                } else {
-                    $where[] = ['DA.level', '=', -1]; // 其他级别没有下二级
-                }
+            // 2、根据上一级代理级别区分下级：低一档算下一级，低两档算下二级
+            if ($hierarchy === 'level1' || $hierarchy === 'level2') {
+                $lowerLevels = self::getLowerLevels(self::getUserLevel($userId));
+                $targetLevel = $hierarchy === 'level1' ? ($lowerLevels[0] ?? null) : ($lowerLevels[1] ?? null);
+                // 没有对应层级时用查不到的等级，保持空结果
+                $where[] = ['DA.level', '=', $targetLevel ?? -1];
             }
         }
 
@@ -155,5 +136,35 @@ class DistributionAgentSubLists extends BaseAdminDataLists implements ListsExten
         }
 
         return $where;
+    }
+
+    /**
+     * @notes 用户当前代理等级，非代理为 0
+     * @param int $userId
+     * @return int
+     */
+    private static function getUserLevel(int $userId): int
+    {
+        return (int)(DistributionAgent::where('user_id', $userId)->value('level') ?: 0);
+    }
+
+    /**
+     * @notes 比当前等级更低的等级值，升序（level 数值越大等级越低）
+     *   等级清单由后台「代理等级」配置，数量可增删，不能按固定 1/2/3 推算
+     * @param int $currentLevel
+     * @return array
+     */
+    private static function getLowerLevels(int $currentLevel): array
+    {
+        if ($currentLevel <= 0) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            DistributionAgentConfigLogic::getLevelValues(),
+            static function ($level) use ($currentLevel) {
+                return $level > $currentLevel;
+            }
+        ));
     }
 }

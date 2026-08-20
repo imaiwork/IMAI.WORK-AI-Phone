@@ -27,14 +27,12 @@
                 <el-table-column label="执行用户" prop="nickname" min-width="160" />
                 <el-table-column label="执行设备" prop="device_codes" width="180" show-overflow-tooltip />
                 <el-table-column label="任务名称" prop="name" min-width="150" />
-                <el-table-column label="关键词执行数量">
+                <el-table-column label="关键词执行数量" prop="total_progress" min-width="140" align="center">
                     <template #default="{ row }">
-                        {{ row.number_of_implemented_keywords }}/{{ row.implementation_keywords_number }}
+                        {{ row.current_progress || 0 }}/{{ row.total_progress || 0 }}
                     </template>
                 </el-table-column>
-                <el-table-column label="当前执行数量">
-                    <template #default="{ row }"> {{ row.current_progress }}/{{ row.total_progress }} </template>
-                </el-table-column>
+                <el-table-column label="当前执行数量" prop="current_progress" min-width="140" align="center" />
                 <el-table-column label="执行状态" width="120">
                     <template #default="{ row }">
                         <el-tag type="info" v-if="row.status == 0">未执行</el-tag>

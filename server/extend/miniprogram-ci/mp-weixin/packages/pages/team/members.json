@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "成员管理",
+  "enablePullDownRefresh": false,
+  "disableScroll": true,
+  "backgroundColor": "#EDF2FA",
+  "usingComponents": {
+    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
+    "consume-detail-popup": "./components/consume-detail-popup",
+    "member-act-popup": "./components/member-act-popup",
+    "member-expire-popup": "./components/member-expire-popup",
+    "member-invite-popup": "./components/member-invite-popup",
+    "member-tokens-popup": "./components/member-tokens-popup"
+  }
+}

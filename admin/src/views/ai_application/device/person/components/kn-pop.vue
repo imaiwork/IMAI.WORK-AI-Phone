@@ -18,6 +18,7 @@
                     时，根据知识库中的内容，来生成视频中对应的文案，如果为空则不参考
                 </p>
             </div>
+
             <field-block icon="💼" icon-bg="#E6F0FF" title="我的主营业务/产品" tip="告诉AI您具体卖什么、提供什么服务。">
                 <rich-textarea
                     v-model="formData.main_business"
@@ -61,18 +62,59 @@
                         '服务过500强企业，点击主页免费定制方案',
                     ]" />
             </field-block>
+
+            <!-- 发布附加配置：商家定位 -->
+            <field-block
+                icon="🛍️"
+                icon-bg="#F3F0FF"
+                title="发布附加配置"
+                badge-text="可选"
+                badge-class="bg-[#f5f5f5] text-[#888]">
+                <div>
+                    <!-- 商家定位行 -->
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-[#EEF5FF] flex items-center justify-center flex-shrink-0">
+                                <el-icon :size="16" color="#0065FB"><Location /></el-icon>
+                            </div>
+                            <span class="text-sm font-bold text-[#212121]">商家定位</span>
+                        </div>
+                        <el-switch v-model="formData.is_store_position" :active-value="1" :inactive-value="0" />
+                    </div>
+
+                    <!-- 定位关键词输入框，仅开启时显示 -->
+                    <template v-if="formData.is_store_position === 1">
+                        <el-input
+                            v-model="formData.store_position"
+                            placeholder="请输入要搜索挂载的门店位置"
+                            :maxlength="100"
+                            clearable>
+                            <template #prefix>
+                                <el-icon color="#c0c4cc"><Search /></el-icon>
+                            </template>
+                        </el-input>
+                    </template>
+
+                    <!-- 底部提示 -->
+                    <div class="bg-[#f8f9fd] rounded-lg px-3 py-2 mt-3">
+                        <p class="text-xs text-[#666] leading-relaxed m-0">
+                            <span class="font-bold text-[#212121]">提示：</span>
+                            开启后，系统在自动发布时将通过顶部搜索栏查找您填写的关键词，并挂载对应的定位；若关闭或未填写，则不携带。
+                        </p>
+                    </div>
+                </div>
+            </field-block>
         </div>
     </popup>
 </template>
 
 <script setup lang="ts">
 import { defineComponent, h, ref as vRef, computed as vComputed } from "vue";
-import { InfoFilled } from "@element-plus/icons-vue";
-import { ElMessage, ElInput } from "element-plus";
+import { InfoFilled, Location, Search } from "@element-plus/icons-vue";
+import { ElMessage, ElInput, ElSwitch, ElIcon } from "element-plus";
 import { updateKnowledgeConfig } from "@/api/ai_application/device/person";
 import Popup from "@/components/popup/index.vue";
 import { setFormData } from "@/utils/util";
-import { use } from "echarts";
 import { useLockFn } from "@/hooks/useLockFn";
 
 const emit = defineEmits(["success", "close"]);
@@ -89,6 +131,8 @@ const FieldBlock = defineComponent({
         title: { type: String, required: true },
         required: { type: Boolean, default: false },
         tip: { type: String, default: "" },
+        badgeText: { type: String, default: "" },
+        badgeClass: { type: String, default: "" },
     },
     setup(props, { slots }) {
         return () =>
@@ -108,10 +152,14 @@ const FieldBlock = defineComponent({
                         "div",
                         {
                             class: `ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${
-                                props.required ? "bg-[#fef2f2] text-[#ef4444]" : "bg-[#eff6ff] text-primary"
+                                props.badgeText
+                                    ? props.badgeClass
+                                    : props.required
+                                    ? "bg-[#fef2f2] text-[#ef4444]"
+                                    : "bg-[#eff6ff] text-primary"
                             }`,
                         },
-                        props.required ? "必填" : "选填"
+                        props.badgeText || (props.required ? "必填" : "选填")
                     ),
                 ]),
                 // 卡片容器
@@ -158,7 +206,7 @@ const RichTextarea = defineComponent({
                               ),
                           ])
                         : null,
-                    // 文本域 —— 使用引入的 ElInput 组件
+                    // 文本域
                     h(ElInput, {
                         modelValue: props.modelValue,
                         type: "textarea",
@@ -188,8 +236,6 @@ const RichTextarea = defineComponent({
 // 主逻辑
 // ════════════════════════════════════════════════════
 const loading = ref(false);
-const saving = ref(false);
-const personId = ref("");
 const maxLength = 2000;
 
 const formData = reactive({
@@ -197,16 +243,12 @@ const formData = reactive({
     main_business: "",
     target_pain_points: "",
     conversion_hook: "",
+    is_store_position: 0 as 0 | 1, // 商家定位开关
+    store_position: "", // 商家定位关键词
 });
-
-// ─── 校验 ────────────────────────────────────────────────────────
-const checkForm = (): boolean => {
-    return true;
-};
 
 // ─── 保存 ────────────────────────────────────────────────────────
 const handleSave = async () => {
-    if (!checkForm()) return;
     await updateKnowledgeConfig(formData);
     close();
     emit("success");

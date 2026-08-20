@@ -133,11 +133,13 @@ class QaQueueJob
         $surplus_num = '收费每1k/token = ' . $this->price;
 
 
-        // 验证用户
-        $modelUser = new User();
-        $user = $modelUser->where(['id'=>$knowQa->user_id])->findOrEmpty();
-        if ($user->isEmpty())    { return $this->inputError("用户不存在了", $qaId, $job, true); }
-        if ($user->balance <= 0 && !$this->isVipFree) { return $this->inputError("用户余额不足", $qaId, $job, true); }
+        // 验证用户 (user_id=0 为后台创建的系统数据,无需校验用户及余额)
+        if ($knowQa->user_id > 0) {
+            $modelUser = new User();
+            $user = $modelUser->where(['id'=>$knowQa->user_id])->findOrEmpty();
+            if ($user->isEmpty())    { return $this->inputError("用户不存在了", $qaId, $job, true); }
+            if ($user->balance <= 0 && !$this->isVipFree) { return $this->inputError("用户余额不足", $qaId, $job, true); }
+        }
 
         // 更新状态
         $knowQa->status    = KnowEnum::RUN_ING;

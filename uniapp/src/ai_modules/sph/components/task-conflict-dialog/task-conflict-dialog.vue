@@ -127,7 +127,7 @@ const handleConfirm = () => {
     }
 
     &__item-text {
-        @apply text-[24rpx] leading-relaxed;
+        @apply text-xs leading-relaxed;
         color: #c85a00;
         word-break: break-all;
     }

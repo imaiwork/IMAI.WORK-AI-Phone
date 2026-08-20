@@ -80,8 +80,7 @@ class CircleLogic extends WechatBaseLogic
             $params['task_name'] = $params['task_name'] ?? '朋友圈发布任务' . date('YmdHis');
             //print_r($params);die;
             if (empty($params['attachment_content'])) {
-                self::setError('请选择媒体素材');
-                return false;
+                throw new \Exception('请选择媒体素材');
             }
             $taskConfig = AiWechatCircleTaskConfig::create($params);
             self::createCircleTask($params, $taskConfig);
@@ -228,6 +227,7 @@ class CircleLogic extends WechatBaseLogic
                             'end_time' => $time['end_time'] - 120,
                             'sub_task_id' => $taskConfig->id,
                             'sub_data_id' => $task->id,
+                            'task_scene' => DeviceEnum::AUTO_TASK_SCENE_WECHAT_CIRCLE_PUBLISH,
                             'source' => DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_PUBLISH, //sv_device_active_account
                             'create_time' => time(),
                         ]);

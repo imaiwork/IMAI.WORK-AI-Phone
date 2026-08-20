@@ -7,6 +7,7 @@ use app\api\controller\BaseApiController;
 use app\api\lists\kb\KbRobotLists;
 use app\api\logic\kb\KbRobotLogic;
 use app\common\logic\BaseLogic;
+use app\common\service\MemberService;
 use Exception;
 use think\db\exception\DbException;
 use think\response\Json;
@@ -90,12 +91,19 @@ class RobotController extends BaseApiController
      */
     public function add(): Json
     {
+        // 智能体配额统一口径：KB 普通智能体 + 扣子智能体 + 扣子工作流
+        $existing = MemberService::countQuotaSmartAgents($this->userId);
+        $reason = '';
+        if (!MemberService::canCreate($this->userId, 'robot', $existing, $reason)) {
+            return $this->fail($reason . ',请升级会员');
+        }
         $post = $this->request->post();
         $results = KbRobotLogic::add($post, $this->userId);
         if ($results === false) {
             return $this->fail(KbRobotLogic::getError());
         }
-        return $this->success('创建成功', $results);
+        // show=0：由前端统一提示；也避免「创建后再 edit 写全量」时连弹两次 toast
+        return $this->success('创建成功', $results, 1, 0);
     }
 
     /**

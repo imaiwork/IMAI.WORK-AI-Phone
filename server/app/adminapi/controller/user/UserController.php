@@ -3,6 +3,7 @@
 namespace app\adminapi\controller\user;
 
 use app\adminapi\controller\BaseAdminController;
+use app\adminapi\lists\user\AccountLogLists;
 use app\adminapi\lists\user\UserLists;
 use app\adminapi\logic\user\UserLogic;
 use app\adminapi\validate\user\AdjustUserMoney;
@@ -26,6 +27,11 @@ class UserController extends BaseAdminController
     public function lists()
     {
         return $this->dataLists(new UserLists());
+    }
+
+    public function accountLogLists()
+    {
+        return $this->dataLists(new AccountLogLists());
     }
 
 
@@ -54,6 +60,37 @@ class UserController extends BaseAdminController
         $params = (new UserValidate())->post()->goCheck('setInfo');
         UserLogic::setUserInfo($params);
         return $this->success('操作成功', [], 1, 1);
+    }
+
+    /**
+     * @notes 拉黑/解除拉黑用户
+     * @return Json
+     */
+    public function blacklist(): Json
+    {
+        $params = (new UserValidate())->post()->goCheck('detail');
+        if ($this->request->has('type')) {
+            $params['type'] = (int)$this->request->post('type');
+        }
+        $result = UserLogic::blacklist($params);
+        if ($result === false) {
+            return $this->fail(UserLogic::getError());
+        }
+        return $this->success('操作成功', [], 1, 1);
+    }
+
+    /**
+     * @notes 变更用户会员等级
+     * @return Json
+     */
+    public function changeLevel(): Json
+    {
+        $params = (new UserValidate())->post()->goCheck('changeLevel');
+        $result = UserLogic::changeLevel($params);
+        if ($result === false) {
+            return $this->fail(UserLogic::getError());
+        }
+        return $this->success('操作成功', UserLogic::getReturnData(), 1, 1);
     }
 
     /**
@@ -100,6 +137,21 @@ class UserController extends BaseAdminController
         }
         return $this->fail($res);
     }
+
+    /**
+     * @notes 下级充值业绩清零
+     * @return \think\response\Json
+     */
+    public function resetRechargeStats(): Json
+    {
+        $params = (new UserValidate())->post()->goCheck('detail');
+        $result = UserLogic::resetRechargeStats($params);
+        if ($result === false) {
+            return $this->fail(UserLogic::getError());
+        }
+        return $this->success('清零成功', UserLogic::getReturnData());
+    }
+
 
     /**
      * @notes 编辑用户信息

@@ -48,7 +48,7 @@ class WechatPlusFriendLogic extends ApiLogic
                     '20:45-21:00'
                 ]
             ],
-            1 => [
+            3 => [
                 1 => [
                     '11:15-11:30',
                     '14:30-14:45',
@@ -110,8 +110,10 @@ class WechatPlusFriendLogic extends ApiLogic
             foreach ($times as $time) {
                 list($st, $et) = explode('-', $time);
                 $startTime = strtotime($date . ' ' . $st . ':00');
-                $endTime =  strtotime(date('Y-m-d', $startTime) . ' ' . $et . ':00') - 120;
-
+                $endTime =  strtotime(date('Y-m-d', $startTime) . ' ' . $et . ':00');
+                if($endTime < time()){
+                    continue;
+                }
                 $deviceTask = [
                     'user_id' => $item->user_id,
                     'device_code' => $item->device_code,

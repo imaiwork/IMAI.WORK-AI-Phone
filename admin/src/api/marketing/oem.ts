@@ -29,3 +29,17 @@ export const deleteOem = async (params: any) => {
 export const changeOemStatus = async (params: any) => {
     return request.post({ url: "/oem.oem/changeStatus", params });
 };
+
+// OEM 收费配置：读取
+export const getOemPricing = async () => {
+    return request.get({ url: "/oem.oem/oemPricing" });
+};
+
+// OEM 收费配置：保存
+export const saveOemPricing = async (params: {
+    oem_cost_price: number;
+    oem_upgrade_price: number;
+    oem_charge_cost: number;
+}) => {
+    return request.post({ url: "/oem.oem/saveOemPricing", params });
+};
