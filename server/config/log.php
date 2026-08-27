@@ -318,6 +318,15 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
+        'hotspot' => [//热点追踪日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/hotspot/',
+            'json'           => false,
+            'single'         => false,
+            'time_format'    => 'Y-m-d H:i:s',
+            'format'         => '[%s][%s] %s',
+            'realtime_write' => true,
+        ],
         // 其它日志通道配置
     ],
 

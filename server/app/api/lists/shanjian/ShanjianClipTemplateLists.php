@@ -20,7 +20,8 @@ class ShanjianClipTemplateLists extends BaseApiDataLists implements ListsSearchI
     public function lists(): array
     {
         $list = ShanjianClipTemplate::where($this->searchWhere)
-            ->order(['id' => 'desc'])
+            // 按中台下发的 sort 倒序（越大越靠前）；sort 相同（含未下发的 0）再按 id 兜底，保证分页稳定不重不漏
+            ->order(['sort' => 'desc', 'id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
             ->each(function ($item) {

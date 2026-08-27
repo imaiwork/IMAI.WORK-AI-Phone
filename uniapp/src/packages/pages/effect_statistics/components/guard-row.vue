@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-type TagType = "primary" | "success" | "warning";
+type TagType = "primary" | "success" | "warning" | "danger";
 
 withDefaults(
     defineProps<{
@@ -32,7 +32,7 @@ withDefaults(
         value: number;
         unit: string;
         tag: string;
-        tagType?: TagType;
+        tagType: TagType;
     }>(),
     {
         tagType: "primary",
@@ -42,6 +42,7 @@ withDefaults(
 const getTagClass = (type?: TagType) => {
     if (type === "success") return "text-[#16A34A] bg-[#DCFCE7]";
     if (type === "warning") return "text-[#D97706] bg-[#FFF3DC]";
+    if (type === "danger") return "text-[#DC2626] bg-[#FEE2E2]";
     return "text-[#3D5CF5] bg-[#EEF2FF]";
 };
 </script>

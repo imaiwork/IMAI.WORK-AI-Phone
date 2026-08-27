@@ -8,6 +8,8 @@ use app\common\model\marketing\MarketingTemplate;
 use app\common\model\marketing\MarketingTemplateSchedule;
 use app\common\model\aiPersona\AiPersona;
 use app\common\enum\DeviceEnum;
+use app\common\service\auto\AutoTaskSceneConfigService;
+use app\common\service\auto\AutoTaskSceneScheduleSyncService;
 use think\facade\Db;
 
 /**
@@ -30,21 +32,10 @@ class MarketingTemplateLogic extends BaseLogic
             $params['create_time'] = time();
             $params['update_time'] = time();
             $template = MarketingTemplate::create($params);
-            $insertData = array();
-            foreach ($params['schedule'] as $schedule) {
-                $insertData[] = [
-                    'user_id' => 0,
-                    'persona_id' => 0,
-                    'template_id' => $template->id,
-                    'start_time' => $schedule['start_time'],
-                    'end_time' => $schedule['end_time'],
-                    'task_category' => DeviceEnum::getTaskSceneDesc($schedule['scene']),
-                    'scene' => $schedule['scene'],
-                    'platform' => json_encode($schedule['platform'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                    'create_time' => time(),
-                ];
+            $insertData = self::buildScheduleInserts((int)$template->id, 0, 0, $params['schedule'] ?? []);
+            if (!empty($insertData)) {
+                MarketingTemplateSchedule::insertAll($insertData);
             }
-            MarketingTemplateSchedule::insertAll($insertData);
             $template->schedule = MarketingTemplateSchedule::where('template_id', $template->id)->order('start_time', 'asc')->select()->toArray();
             self::$returnData = $template->toArray();
             Db::commit();
@@ -64,7 +55,9 @@ class MarketingTemplateLogic extends BaseLogic
                 throw new \Exception('该模板不存在');
             }
             $template->schedule = MarketingTemplateSchedule::where('template_id', $template->id)->order('start_time', 'asc')->select()->toArray();
-            self::$returnData = $template->toArray();
+            $data = $template->toArray();
+            $data['schedule'] = self::normalizeSchedules($data['schedule'] ?? []);
+            self::$returnData = $data;
             return true;
         } catch (\Throwable $e) {
             self::setError($e->getMessage());
@@ -90,21 +83,15 @@ class MarketingTemplateLogic extends BaseLogic
 
             MarketingTemplateSchedule::where('template_id', $find->id)->select()->delete();
             if (isset($params['schedule']) && !empty($params['schedule'])) {
-                $insertData = array();
-                foreach ($params['schedule'] as $schedule) {
-                    $insertData[] = [
-                        'user_id' => $find->user_id,
-                        'persona_id' => $find->persona_id,
-                        'template_id' => $find->id,
-                        'start_time' => $schedule['start_time'],
-                        'end_time' => $schedule['end_time'],
-                        'task_category' => DeviceEnum::getTaskSceneDesc($schedule['scene']),
-                        'scene' => $schedule['scene'],
-                        'platform' => json_encode($schedule['platform'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                        'create_time' => time(),
-                    ];
+                $insertData = self::buildScheduleInserts(
+                    (int)$find->id,
+                    (int)$find->user_id,
+                    (int)$find->persona_id,
+                    $params['schedule']
+                );
+                if (!empty($insertData)) {
+                    MarketingTemplateSchedule::insertAll($insertData);
                 }
-                MarketingTemplateSchedule::insertAll($insertData);
             }
             $find->schedule = MarketingTemplateSchedule::where('template_id', $find->id)->order('start_time', 'asc')->select()->toArray();
 
@@ -193,5 +180,54 @@ class MarketingTemplateLogic extends BaseLogic
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 剥离已关平台并重算视频发布等锁定结束时间
+     *
+     * @param array $schedules
+     * @return array
+     */
+    private static function normalizeSchedules(array $schedules): array
+    {
+        return AutoTaskSceneScheduleSyncService::applyClosedPlatformsToSchedules(
+            $schedules,
+            AutoTaskSceneScheduleSyncService::collectCurrentlyClosedPlatforms(
+                AutoTaskSceneConfigService::getConfigMap()
+            )
+        );
+    }
+
+    /**
+     * @param int $templateId
+     * @param int $userId
+     * @param int $personaId
+     * @param array $schedules
+     * @return array
+     */
+    private static function buildScheduleInserts(int $templateId, int $userId, int $personaId, array $schedules): array
+    {
+        $insertData = [];
+        foreach (self::normalizeSchedules($schedules) as $schedule) {
+            if (!is_array($schedule)) {
+                continue;
+            }
+            $platforms = $schedule['platform'] ?? [];
+            if (!is_array($platforms) || $platforms === []) {
+                continue;
+            }
+            $insertData[] = [
+                'user_id' => $userId,
+                'persona_id' => $personaId,
+                'template_id' => $templateId,
+                'start_time' => $schedule['start_time'] ?? '',
+                'end_time' => $schedule['end_time'] ?? '',
+                'task_category' => DeviceEnum::getTaskSceneDesc($schedule['scene'] ?? 0),
+                'scene' => $schedule['scene'] ?? 0,
+                'platform' => json_encode($platforms, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'create_time' => time(),
+            ];
+        }
+        return $insertData;
     }
 }

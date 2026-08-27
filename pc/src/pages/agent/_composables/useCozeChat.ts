@@ -1,4 +1,5 @@
 import { cozeAgentChat, cozeAgentChatStream, cozeAgentChatView, cozeAgentChatMsgList } from "@/api/agent";
+import { handleSseFrames } from "@/utils/http/sse-frame";
 import { useUserStore } from "@/stores/user";
 import feedback from "@/utils/feedback";
 
@@ -59,24 +60,18 @@ export function useCozeChat(detail: Ref<any>, agentId: any) {
                         isStopChat.value = true;
                     },
                     onmessage: (value) => {
-                        value
-                            .trim()
-                            .split("data:")
-                            .forEach((text) => {
-                                if (!text) return;
-                                try {
-                                    const { object, content, usage, conversation_id: newConvId } = JSON.parse(text);
-                                    if (content && object === "loading") result.reply += content;
-                                    if (object === "finished") {
-                                        result.loading = false;
-                                        result.consume_tokens = { total_tokens: usage.token_count };
-                                        if (newConvId && conversationId.value !== newConvId) {
-                                            conversationId.value = newConvId;
-                                            onConversationIdChange(newConvId);
-                                        }
-                                    }
-                                } catch {}
-                            });
+                        handleSseFrames(value, (dataJson) => {
+                            const { object, content, usage, conversation_id: newConvId } = dataJson;
+                            if (content && object === "loading") result.reply += content;
+                            if (object === "finished") {
+                                result.loading = false;
+                                result.consume_tokens = { total_tokens: usage.token_count };
+                                if (newConvId && conversationId.value !== newConvId) {
+                                    conversationId.value = newConvId;
+                                    onConversationIdChange(newConvId);
+                                }
+                            }
+                        });
                     },
                     onclose: () => {
                         result.loading = false;

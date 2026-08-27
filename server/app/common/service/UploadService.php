@@ -2881,7 +2881,8 @@ class UploadService
         string $type = 'video',
         int $cid = 0,
         int $sourceId = 0,
-        int $source = FileEnum::SOURCE_ADMIN
+        int $source = FileEnum::SOURCE_ADMIN,
+        int $timeout = 0
     ): array {
         if (empty($url)) {
             throw new Exception("URL不能为空");
@@ -2930,6 +2931,7 @@ class UploadService
             $saveDir = ltrim(dirname($localSourceUri), '/\\');
         }
 
+        $fileSize = 0;
         // 下载/抓取文件
         if ($config['default'] == 'local') {
             $directory = dirname($localPath);
@@ -2939,24 +2941,51 @@ class UploadService
             Log::channel('ffmpeg')->write("[Source转码投递] 类型1:{$type} | URL:{$url} | 本地路径:{$localPath}");
 
             if ($localSourcePath === '') {
-                // 使用你现有的 download_file 辅助函数
-                $downloadedPath = download_file($url, rtrim($directory, '/\\') . '/', $filename);
-                if (empty($downloadedPath) || !is_file($localPath) || filesize($localPath) <= 0) {
-                    throw new Exception("远程文件下载到本地失败: {$url}");
+                if ($timeout > 0) {
+                    if (!FileService::streamDownloadToFile($url, $localPath, $timeout)) {
+                        throw new Exception("远程文件下载超时或失败: {$url}");
+                    }
+                } else {
+                    $downloadedPath = download_file($url, rtrim($directory, '/\\') . '/', $filename);
+                    if (empty($downloadedPath) || !is_file($localPath) || filesize($localPath) <= 0) {
+                        throw new Exception("远程文件下载到本地失败: {$url}");
+                    }
                 }
             } elseif (!is_file($localPath) || filesize($localPath) <= 0) {
                 throw new Exception("本地素材文件不存在或为空: {$localPath}");
             }
+            $fileSize = self::localFileSize($localPath);
         } else {
-            // 第三方存储 (OSS/COS)
             $storageDriver = new StorageDriver($config);
-            // 抓取远程文件到云端
-            if (!$storageDriver->fetch($url, $fileUri)) {
-                throw new Exception("第三方存储抓取失败: " . $storageDriver->getError());
+            if ($timeout > 0) {
+                $tmp = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
+                    . 'dl_' . md5($url . microtime(true)) . '_' . $filename;
+                if (!FileService::streamDownloadToFile($url, $tmp, $timeout)) {
+                    throw new Exception("远程文件下载超时或失败: {$url}");
+                }
+                $fileSize = self::localFileSize($tmp);
+                $storageDriver->setUploadFileByReal($tmp);
+                if (!$storageDriver->upload($saveDir)) {
+                    @unlink($tmp);
+                    throw new Exception("第三方存储上传失败: " . $storageDriver->getError());
+                }
+                $savedName = (string)$storageDriver->getFileName();
+                if ($savedName !== '') {
+                    $fileUri = $saveDir . '/' . $savedName;
+                }
+                $ossUri = FileService::getFileUrl($fileUri);
+                $localPath = self::downloadForTranscode($fileUri, $saveDir, $savedName !== '' ? $savedName : $filename);
+                @unlink($tmp);
+            } else {
+                if (!$storageDriver->fetch($url, $fileUri)) {
+                    throw new Exception("第三方存储抓取失败: " . $storageDriver->getError());
+                }
+                $ossUri = FileService::getFileUrl($fileUri);
+                $localPath = self::downloadForTranscode($fileUri, $saveDir, $filename);
+                if ($fileSize <= 0) {
+                    $fileSize = self::localFileSize($localPath);
+                }
             }
-            $ossUri = FileService::getFileUrl($fileUri);
-            // 转码队列需要本地文件，如果云端抓取成功，下载一份到本地供 FFmpeg 读取
-            $localPath = self::downloadForTranscode($fileUri, $saveDir, $filename);
             Log::channel('ffmpeg')->write("[Source转码投递] 类型2:{$type} | URL:{$url} | 本地路径:{$fileUri}");
         }
 
@@ -2982,12 +3011,26 @@ class UploadService
 
         Log::channel('ffmpeg')->write("[Source转码投递] 类型:{$type} | URL:{$url} | FileID:{$file['id']}");
 
+        if ($fileSize <= 0) {
+            $fileSize = self::localFileSize($localPath);
+        }
+
         return [
             'id'  => $file['id'],
             'url' => FileService::getFileUrl($fileUri),
             'uri' => $localPath,
             'oss_uri' => $ossUri,
+            'size' => $fileSize,
         ];
+    }
+
+    private static function localFileSize(string $path): int
+    {
+        if ($path === '' || !is_file($path)) {
+            return 0;
+        }
+        $size = filesize($path);
+        return ($size !== false && $size > 0) ? (int)$size : 0;
     }
 
     /**
@@ -2997,14 +3040,19 @@ class UploadService
      * @param string $type 类型: video 或 image
      * @param int $userId 用户ID（写入文件来源 source_id）
      * @param int $cid 分类ID
+     * @param int $timeout 下载超时秒数，0 表示沿用原路径（无硬超时）
+     * @param int|null $outSize 上传前算出的字节数
      * @return string
      */
     public static function transcodeRemoteFileBySource(
         string $url,
         string $type = 'video',
         int $userId = 0,
-        int $cid = 0
+        int $cid = 0,
+        int $timeout = 0,
+        ?int &$outSize = null
     ): string {
+        $outSize = 0;
         if (empty($url)) {
             return '';
         }
@@ -3012,7 +3060,8 @@ class UploadService
             return $url;
         }
 
-        $transRes = self::transcodeBySource($url, $type, $cid, $userId, FileEnum::SOURCE_USER);
+        $transRes = self::transcodeBySource($url, $type, $cid, $userId, FileEnum::SOURCE_USER, $timeout);
+        $outSize = (int)($transRes['size'] ?? 0);
         $path = !empty($transRes['oss_uri']) ? $transRes['oss_uri'] : ($transRes['url'] ?? '');
         if (!empty($path)) {
             return FileService::getFileUrl($path);

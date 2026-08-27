@@ -14,6 +14,7 @@ use app\common\enum\user\AccountLogEnum;
 use app\common\enum\notice\NoticeEnum;
 use app\common\model\user\UserTokensLog;
 use app\common\service\sms\SmsDriver;
+use app\common\service\wechat\MnpCiService;
 use think\facade\Db;
 
 /**
@@ -1763,9 +1764,12 @@ class TeamLogic extends BaseLogic
                 $ciDir . 'node_modules',
                 rtrim(root_path(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'node_modules',
             ]));
-            $command = 'cd ' . escapeshellarg(rtrim($ciDir, DIRECTORY_SEPARATOR))
+            $command = MnpCiService::buildUploadCommand(
+                'upload.js',
+                json_encode($data, JSON_UNESCAPED_SLASHES),
+                'cd ' . escapeshellarg(rtrim($ciDir, DIRECTORY_SEPARATOR))
                 . ' && NODE_PATH=' . escapeshellarg($nodePath)
-                . ' node upload.js ' . escapeshellarg(json_encode($data, JSON_UNESCAPED_SLASHES)) . ' 2>&1';
+            );
             $output = null;
             $retval = null;
             exec($command, $output, $retval);

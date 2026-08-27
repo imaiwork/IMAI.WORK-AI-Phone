@@ -13,9 +13,18 @@ class ShanjianVideoSettingLogic extends BaseLogic
         try {
             if (is_string($id)) {
                 ShanjianVideoSetting::destroy(['id' => $id]);
+                // 派生包装任务挂在自己的 setting 下，按 setting 删除时须显式级联，避免孤儿
+                $type5Ids = ShanjianVideoTask::where('video_setting_id', $id)
+                    ->where('shanjian_type', 5)
+                    ->column('id');
+                ShanjianVideoTask::deleteDerivedPackaging($type5Ids);
                 ShanjianVideoTask::where('video_setting_id', $id)->select()->delete();
             } else {
                 ShanjianVideoSetting::whereIn('id', $id)->select()->delete();
+                $type5Ids = ShanjianVideoTask::whereIn('video_setting_id', $id)
+                    ->where('shanjian_type', 5)
+                    ->column('id');
+                ShanjianVideoTask::deleteDerivedPackaging($type5Ids);
                 ShanjianVideoTask::whereIn('video_setting_id', $id)->select()->delete();
             }
             return true;

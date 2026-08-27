@@ -7,13 +7,15 @@ export interface UseMentionOptions {
     agentList: ComputedRef<MentionItem[]>;
     inputRef: Ref<HTMLTextAreaElement | null>;
     inputContent: Ref<string>;
+    /** at-mention-pop 的模板 ref，由组件声明后传入 */
+    mentionPopRef: Ref<any>;
     emit: (event: string, ...args: any[]) => void;
     /** 是否禁用 @ 功能，默认 false */
     disableMention?: ComputedRef<boolean> | boolean;
 }
 
 export function useMention(options: UseMentionOptions) {
-    const { agentList, inputRef, inputContent, emit } = options;
+    const { agentList, inputRef, inputContent, mentionPopRef, emit } = options;
 
     const disableMention = computed(() => {
         const val = options.disableMention;
@@ -24,7 +26,6 @@ export function useMention(options: UseMentionOptions) {
     const mentionKeyword = ref("");
     const mentionStartIndex = ref(-1);
     const selectedAgent = ref<MentionItem | null>(null);
-    const mentionPopRef = ref<any>(null);
 
     const mentionAgentList = computed(() => agentList.value);
 
@@ -134,22 +135,16 @@ export function useMention(options: UseMentionOptions) {
         }
     });
 
-    const resetMention = () => {
-        selectedAgent.value = null;
-    };
-
     return {
         showMentionPop,
         mentionKeyword,
         selectedAgent,
         mentionAgentList,
-        mentionPopRef,
         openMentionPop,
         closeMentionPop,
         clearSelectedAgent,
         handleMentionSelect,
         handleTextareaInput,
         handleMentionKeydown,
-        resetMention,
     };
 }

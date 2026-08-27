@@ -80,7 +80,7 @@ class RecallUtils
         }
 
         if ($mode === 'similar') {
-            return array_filter($results, fn($item) => ($item['emb_score'] ?? 0) >= $similar);
+            return array_filter($results, fn($item) => (float)($item['emb_score'] ?? 0) >= $similar);
         }
 
         return $results;

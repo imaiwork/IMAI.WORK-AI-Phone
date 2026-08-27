@@ -7,6 +7,7 @@ use app\common\model\marketing\MarketingTemplate;
 use app\common\model\marketing\MarketingTemplateSchedule;
 use app\common\model\sv\SvDeviceExecutionSchedule;
 use app\common\service\auto\AutoTaskSceneConfigService;
+use app\common\service\auto\AutoTaskSceneScheduleSyncService;
 use think\facade\Db;
 
 class PersonaWorkflowService
@@ -161,14 +162,19 @@ class PersonaWorkflowService
             throw new \Exception('不存在当前人设类型的专属工作流');
         }
 
-        // 跳过后台已关闭「允许添加」的场景，避免新建人设写入关闭任务节点
+        // 跳过后台已关闭「允许添加」的场景与已关闭的平台，避免新建人设写入不会生成任务的节点
         $configMap = AutoTaskSceneConfigService::getConfigMap();
         $addableSchedules = [];
         foreach ($schedules as $schedule) {
-            if (!AutoTaskSceneConfigService::canAdd((int)$schedule->scene, $configMap)) {
+            $scene = (int)$schedule->scene;
+            if (!AutoTaskSceneConfigService::canAdd($scene, $configMap)) {
                 continue;
             }
-            $addableSchedules[] = $schedule;
+            $platform = self::filterOpenPlatforms(self::normalizePlatform($schedule->platform), $scene, $configMap);
+            if ($platform === '[]') {
+                continue;
+            }
+            $addableSchedules[] = ['schedule' => $schedule, 'platform' => $platform];
         }
         if (empty($addableSchedules)) {
             throw new \Exception('当前开放的任务类型为空，无法生成专属工作流');
@@ -216,15 +222,22 @@ class PersonaWorkflowService
 
         $insertData = [];
         $customInsertData = [];
-        foreach ($addableSchedules as $schedule) {
+        foreach ($addableSchedules as $addable) {
+            $schedule = $addable['schedule'];
+            $synced = AutoTaskSceneScheduleSyncService::syncLockedEndTime([
+                'scene' => (int)$schedule->scene,
+                'start_time' => (string)$schedule->start_time,
+                'end_time' => (string)$schedule->end_time,
+                'platform' => $addable['platform'],
+            ]);
             $row = [
                 'user_id' => $persona->user_id,
                 'persona_id' => $persona->id,
-                'start_time' => $schedule->start_time,
-                'end_time' => $schedule->end_time,
+                'start_time' => $synced['start_time'] ?? $schedule->start_time,
+                'end_time' => $synced['end_time'] ?? $schedule->end_time,
                 'task_category' => $schedule->task_category,
                 'scene' => $schedule->scene,
-                'platform' => self::normalizePlatform($schedule->platform),
+                'platform' => $addable['platform'],
                 'remark' => $schedule->remark,
                 'create_time' => $now,
             ];
@@ -291,6 +304,37 @@ class PersonaWorkflowService
 
         sort($signature, SORT_STRING);
         return $signature;
+    }
+
+    /**
+     * 剔除已关闭的平台并重排 order；平台全关返回 '[]'
+     * 仅用于写入节点，签名比对仍用未过滤的 normalizePlatform
+     *
+     * @param string $platformJson normalizePlatform 的返回值
+     * @param int $scene
+     * @param array $configMap
+     * @return string
+     */
+    private static function filterOpenPlatforms(string $platformJson, int $scene, array $configMap): string
+    {
+        $decoded = json_decode($platformJson, true);
+        if (!is_array($decoded)) {
+            return '[]';
+        }
+
+        $result = [];
+        foreach ($decoded as $item) {
+            $accountType = (int)($item['account_type'] ?? 0);
+            if ($accountType <= 0 || !AutoTaskSceneConfigService::canAdd($scene, $accountType, $configMap)) {
+                continue;
+            }
+            $result[] = [
+                'account_type' => $accountType,
+                'order' => count($result) + 1,
+            ];
+        }
+
+        return json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     private static function normalizePlatform($platform): string

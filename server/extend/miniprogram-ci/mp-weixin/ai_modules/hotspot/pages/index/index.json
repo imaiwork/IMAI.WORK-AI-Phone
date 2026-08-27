@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "热点追踪",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "empty": "../../../../components/empty/empty",
+    "u-loading": "../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading",
+    "queue-task-card": "./components/queue-task-card",
+    "flow-popup": "./components/flow-popup"
+  }
+}

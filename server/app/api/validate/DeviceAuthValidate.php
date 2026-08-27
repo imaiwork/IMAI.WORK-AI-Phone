@@ -44,9 +44,9 @@ class DeviceAuthValidate extends BaseValidate
         return $this->only(['code', 'device_code']);
     }
 
-    public function sceneActivateDevice()
+    public function sceneNotice()
     {
-        return $this->only(['code', 'device_code', 'user_id']);
+        return $this->only(['device_code']);
     }
 
     public function sceneAddPhone()

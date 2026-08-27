@@ -160,7 +160,7 @@ class KbTeachLogic extends BaseLogic
         if ($record) {
             $record = json_decode($record['reply']??'[]', true);
         }
-        return $record;
+        return KbEmbedding::fillSearchTestAnnex($record);
     }
 
 
@@ -638,6 +638,10 @@ class KbTeachLogic extends BaseLogic
                 $file = (new KbKnowFiles())->where(['id' => $val['fd_id']])->findOrEmpty()->toArray();
                 $returnList[$key]['source_path'] = $file ? FileService::getFileUrl($file['file']) : '';
                 $returnList[$key]['source'] = $file ? $file['name'] : '';
+                $annex = KbEmbedding::formatAnnex($val['annex'] ?? []);
+                $returnList[$key]['images'] = $annex['images'];
+                $returnList[$key]['video'] = $annex['video'];
+                $returnList[$key]['files'] = $annex['files'];
             }
 
             $insert = [

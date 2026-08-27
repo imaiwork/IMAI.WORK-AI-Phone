@@ -214,13 +214,34 @@ class FileCompareService
             throw new \Exception("ZIP 损坏，ZipArchive 错误码：{$openResult}");
         }
 
-        $count  = 0;
-        $errors = [];
+        $count   = 0;
+        $skipped = 0;
+        $errors  = [];
+        $dirNorm = rtrim(str_replace('\\', '/', $dir), '/') . '/';
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $relativePath = $zip->getNameIndex($i);
-            $localPath    = $this->safeResolve($relativePath);
+            $pathNorm     = str_replace('\\', '/', $relativePath);
 
+            // 目录项跳过
+            if (str_ends_with($pathNorm, '/')) {
+                continue;
+            }
+
+            // 只允许写入本次请求的覆盖目录内（兼容云端路径不带 public/ 前缀）
+            if (!str_starts_with($pathNorm, $dirNorm) && !str_starts_with('public/' . $pathNorm, $dirNorm)) {
+                $skipped++;
+                $errors[] = ['file' => $relativePath, 'msg' => "不在目标目录 {$dirNorm} 内，已拒绝写入"];
+                continue;
+            }
+
+            // 与逐文件模式保持一致：忽略列表 / 系统垃圾文件不落盘
+            if ($this->isIgnored($pathNorm) || $this->matchRules($pathNorm, ['__MACOSX/', '*.DS_Store', 'Thumbs.db'])) {
+                $skipped++;
+                continue;
+            }
+
+            $localPath = $this->safeResolve($relativePath);
             if ($localPath === null) {
                 $errors[] = ['file' => $relativePath, 'msg' => '非法路径，已跳过'];
                 continue;
@@ -253,7 +274,7 @@ class FileCompareService
         $zip->close();
         @unlink($tmpZip);
 
-        return ['count' => $count, 'errors' => $errors];
+        return ['count' => $count, 'skipped' => $skipped, 'errors' => $errors];
     }
 
     // ===== 私有工具方法 =====

@@ -153,6 +153,8 @@ class SynthesisConfigLogic extends BaseLogic
             'music_source',
             'music_volume',
             'speech_rate',
+            'copywriting_generation_type',
+            'copywriting_generation_custom',
         ];
 
         $data = [];
@@ -212,6 +214,17 @@ class SynthesisConfigLogic extends BaseLogic
 
         if (array_key_exists('speech_rate', $data)) {
             $data['speech_rate'] = AiPersonaSynthesisConfig::normalizeSpeechRate($data['speech_rate']);
+        }
+
+        $mergedGeneration = ApiSynthesisConfigLogic::applyCopywritingGenerationFields(
+            array_merge($params, $data),
+            $config
+        );
+        if (array_key_exists('copywriting_generation_type', $mergedGeneration)) {
+            $data['copywriting_generation_type'] = $mergedGeneration['copywriting_generation_type'];
+        }
+        if (array_key_exists('copywriting_generation_custom', $mergedGeneration)) {
+            $data['copywriting_generation_custom'] = $mergedGeneration['copywriting_generation_custom'];
         }
 
         if (array_key_exists('template_config', $data)) {

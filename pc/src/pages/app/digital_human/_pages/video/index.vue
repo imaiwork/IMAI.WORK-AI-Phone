@@ -30,6 +30,7 @@
                     <ElOption label="一句话" :value="CreateVideoTypeEnum.SENTENCE" />
                     <ElOption label="分镜" :value="CreateVideoTypeEnum.STORYBOARD" />
                     <ElOption label="爆款仿写" :value="CreateVideoTypeEnum.HOT_WRITE" />
+                    <ElOption label="热点追踪" :value="CreateVideoTypeEnum.HOTSPOT" />
                 </ElSelect>
             </div>
         </div>
@@ -106,7 +107,8 @@ const handleDelete = async (data: any) => {
         onConfirm: async () => {
             try {
                 await deleteVideoCreationRecord({ id: data.id, task_id: data.task_id, type: data.type });
-                pager.lists = pager.lists.filter((item) => item.id !== data.id);
+                // 多表 UNION 数据 id 会重复，须同时比对 type，避免误删其它表的同 id 记录
+                pager.lists = pager.lists.filter((item) => !(item.id === data.id && item.type === data.type));
                 feedback.msgSuccess("删除成功");
             } catch (error) {
                 feedback.msgError("删除失败");

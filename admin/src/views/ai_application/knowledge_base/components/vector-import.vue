@@ -1,7 +1,26 @@
 <template>
     <el-drawer v-model="drawerVisible" title="添加新文件" size="80%" destroy-on-close @close="close">
         <div class="h-full flex flex-col">
-            <el-alert v-if="kbName" class="mb-4" :closable="false" type="info" :title="`正在导入到知识库：${kbName}`" />
+            <div class="mb-4 flex items-center gap-3">
+                <span class="text-sm shrink-0">
+                    <span class="text-danger mr-1">*</span>所属知识库
+                </span>
+                <el-select
+                    v-model="selectedKbId"
+                    class="w-[320px]"
+                    filterable
+                    remote
+                    clearable
+                    placeholder="请选择知识库"
+                    :remote-method="getKnLists"
+                    :loading="knLoading">
+                    <el-option
+                        v-for="item in knLists"
+                        :key="item.id"
+                        :label="item.name"
+                        :value="`${item.id}`" />
+                </el-select>
+            </div>
             <el-tabs v-model="activeType" class="mb-4" @tab-click="handleTypeChange">
                 <el-tab-pane label="通用文档导入" :name="ImportType.DOCUMENT" />
                 <el-tab-pane label="问答对导入" :name="ImportType.QUESTION" />
@@ -125,6 +144,7 @@ import { uploadFile } from "@/api/app";
 import feedback from "@/utils/feedback";
 import { useLockFn } from "@/hooks/useLockFn";
 import { knowKnowledgeVectorFileAdd, knowKnowledgeWebHtmlCapture } from "@/api/ai_application/knowledge_base/files";
+import { knowKnowledgeVectorList } from "@/api/ai_application/knowledge_base/lists";
 
 enum ImportType {
     DOCUMENT = 1,
@@ -147,10 +167,11 @@ interface DocumentItem {
 
 const props = withDefaults(
     defineProps<{
-        kbId: string | number;
+        kbId?: string | number;
         kbName?: string;
     }>(),
     {
+        kbId: "",
         kbName: "",
     },
 );
@@ -167,16 +188,53 @@ const documents = ref<DocumentItem[]>([]);
 const currentIndex = ref(0);
 const loading = ref(false);
 const webLoading = ref(false);
+const knLoading = ref(false);
 const webUrls = ref("");
 const stageLen = ref(512);
+const selectedKbId = ref("");
+const knLists = ref<{ id: string | number; name: string }[]>([]);
+const route = useRoute();
 
 const uploadAccept = computed(() => (activeType.value === ImportType.DOCUMENT ? ".txt,.pdf,.md" : ".csv"));
 
 const currentDocument = computed(() => documents.value[currentIndex.value]);
 
+const normalizeKbId = (id?: string | number) => {
+    if (id === undefined || id === null || id === "") return "";
+    return String(id);
+};
+
+const resolveKbId = () => normalizeKbId(props.kbId || (route.query.id as string));
+const resolveKbName = () => props.kbName || (route.query.name as string) || "";
+
+const ensureSelectedOption = () => {
+    const kbId = selectedKbId.value;
+    if (!kbId) return;
+    const exists = knLists.value.some((item) => String(item.id) === kbId);
+    const kbName = resolveKbName();
+    if (!exists && kbName) {
+        knLists.value = [{ id: kbId, name: kbName }, ...knLists.value];
+    }
+};
+
+const getKnLists = async (query?: string) => {
+    knLoading.value = true;
+    try {
+        const { lists } = await knowKnowledgeVectorList({ page_size: 25000, name: query || "" });
+        knLists.value = lists || [];
+        ensureSelectedOption();
+    } finally {
+        knLoading.value = false;
+    }
+};
+
 const open = () => {
     resetData();
+    selectedKbId.value = resolveKbId();
+    knLists.value = [];
+    ensureSelectedOption();
     drawerVisible.value = true;
+    getKnLists();
 };
 
 const close = () => {
@@ -189,6 +247,8 @@ const resetData = () => {
     currentIndex.value = 0;
     webUrls.value = "";
     stageLen.value = 512;
+    selectedKbId.value = "";
+    knLists.value = [];
 };
 
 const handleTypeChange = (pane: TabsPaneContext) => {
@@ -429,6 +489,7 @@ const splitText2Chunks = (text: string, maxLen = 512) => {
 };
 
 const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
+    if (!selectedKbId.value) return feedback.msgWarning("请选择知识库");
     const submitDocuments = documents.value
         .map(({ content, ...item }) => ({
             ...item,
@@ -437,7 +498,7 @@ const { lockFn: submitForm, isLock: isSubmitting } = useLockFn(async () => {
         .filter((item) => item.data.length);
     if (!submitDocuments.length) return feedback.msgWarning("请先添加数据");
     await knowKnowledgeVectorFileAdd({
-        kb_id: props.kbId,
+        kb_id: selectedKbId.value,
         method: activeType.value,
         documents: submitDocuments,
     });

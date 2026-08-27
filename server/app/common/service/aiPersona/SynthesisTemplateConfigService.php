@@ -2,6 +2,7 @@
 
 namespace app\common\service\aiPersona;
 
+use app\common\model\aiPersona\AiPersonaSynthesisConfig;
 use app\common\model\shanjian\ShanjianClipTemplate;
 use think\facade\Log;
 
@@ -115,11 +116,41 @@ class SynthesisTemplateConfigService
             $validIds = array_values(array_map('strval', $validIds));
             $invalidIds = array_values(array_diff($item['template_ids'], $validIds));
             if (!empty($invalidIds)) {
-                throw new \Exception(self::typeName((int)$type) . '模板不存在或类型不匹配：' . implode(',', $invalidIds));
+                Log::channel('ipVideoSynthesis')->warning(self::typeName((int)$type) . '模板不存在或类型不匹配，已自动过滤：' . implode(',', $invalidIds));
+                $config[$key]['template_ids'] = $validIds;
+                if (empty($validIds)) {
+                    throw new \Exception(self::typeName((int)$type) . '当前选择模板调整中，暂停开放');
+                }
             }
         }
 
         return $config;
+    }
+
+    /**
+     * 按人设合成配置选取模板。无配置记录时按自动模式从对应 scene 抽取。
+     */
+    public static function pickForPersona(int $userId, int $personaId, int $generationType, int $autoType = 1): string
+    {
+        $config = AiPersonaSynthesisConfig::where('persona_id', $personaId)
+            ->where('user_id', $userId)
+            ->findOrEmpty();
+        $templateConfig = $config->isEmpty() ? [] : ($config->template_config ?? []);
+        return self::pickTemplateId($templateConfig, $generationType, $autoType);
+    }
+
+    /**
+     * 闪剪 add/addType3 识别的 clip 参数结构。
+     */
+    public static function toClipPayload(string $clipId): array
+    {
+        return [['clip_template_id' => trim($clipId)]];
+    }
+
+    public static function templateMode($config, int $generationType): int
+    {
+        $normalized = self::normalize($config);
+        return (int)($normalized[(string)$generationType]['mode'] ?? self::MODE_AUTO);
     }
 
     public static function pickTemplateId($config, int $generationType, int $autoType = 1): string

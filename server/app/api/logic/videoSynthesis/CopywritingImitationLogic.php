@@ -22,12 +22,16 @@ use app\common\model\aiPersona\SynthesisConfig as AiPersonaSynthesisConfig;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\model\file\File;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceViralRecord;
+use app\common\model\sv\SvMediaMaterial;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
+use app\common\service\hotspot\HotspotLog;
+use app\common\service\hotspot\VideoService;
 use app\common\service\UploadService;
 use think\facade\Cache;
 use think\facade\Db;
@@ -43,6 +47,261 @@ class CopywritingImitationLogic extends BasePersonaLogic
     const GRAB_IMAGE = 'grabImage'; //抓取图片
     const GRAB_VIDEO = 'grabVideo'; //抓取视频
     const SHANJIAN_AI_COVER = 'shanjianAiCover'; //使用Shanjian的AI封面图
+    public const KEYWORD_SLACK = 2;
+    public const API_SLACK_SEC = 3;
+    public const VIDEO_FETCH_RESERVE_SEC = 18;
+    public const IMAGE_OVERTIME_SEC = 25;
+    public const TRANSCODE_VIDEO_SEC = 15;
+    public const TRANSCODE_IMAGE_SEC = 10;
+    public const GRAB_SOURCE_COVER_FILL = 'cover_fill';
+
+    /**
+     * 测试钩子：仅 tests/ 注入，生产勿用。
+     * @var array<string, mixed>
+     */
+    private static array $testHooks = [];
+
+    /** @var array{paid_video?:int,paid_image?:int,need_video?:int,need_image?:int,kept_video?:int,kept_image?:int,cover_image?:int} */
+    private static array $lastGrabStats = [];
+
+    public static function setTestHooks(array $hooks): void
+    {
+        self::$testHooks = $hooks;
+        self::$testHooks['requestUrlCalls'] = self::$testHooks['requestUrlCalls'] ?? [];
+        self::$testHooks['refundCalls'] = self::$testHooks['refundCalls'] ?? [];
+        self::$testHooks['persistCalls'] = self::$testHooks['persistCalls'] ?? [];
+    }
+
+    public static function clearTestHooks(): void
+    {
+        self::$testHooks = [];
+        self::$lastGrabStats = [];
+    }
+
+    public static function testHookState(): array
+    {
+        return self::$testHooks;
+    }
+
+    public static function lastGrabStats(): array
+    {
+        return self::$lastGrabStats;
+    }
+
+    public static function setTestElapsedSec(?float $seconds): void
+    {
+        if ($seconds === null) {
+            unset(self::$testHooks['elapsedSec']);
+            return;
+        }
+        self::$testHooks['elapsedSec'] = $seconds;
+    }
+
+    public static function setTestImagePhaseElapsedSec(?float $seconds): void
+    {
+        if ($seconds === null) {
+            unset(self::$testHooks['imagePhaseElapsedSec']);
+            return;
+        }
+        self::$testHooks['imagePhaseElapsedSec'] = $seconds;
+    }
+
+    public static function canStartPaidGrab(int $kept, int $paid, int $need): bool
+    {
+        return $need > 0 && $kept < $need && $paid < $need;
+    }
+
+    /**
+     * 墙钟模式下：已超时或剩余时间不足一次 grab 往返时，禁止再发付费请求。
+     * 非墙钟（max_elapsed_sec=0）一律放行。
+     */
+    public static function shouldSkipPaidGrabForBudget(
+        bool $useWallBudget,
+        bool $timeoutTriggered,
+        float $elapsedSec,
+        int $maxElapsedSec,
+        int $apiSlackSec = self::API_SLACK_SEC
+    ): bool {
+        if (!$useWallBudget) {
+            return false;
+        }
+        if ($timeoutTriggered) {
+            return true;
+        }
+        return ($maxElapsedSec - $elapsedSec) < $apiSlackSec;
+    }
+
+    /**
+     * 墙钟模式下：图片仍缺且剩余时间不够再开一条视频+转存时，停视频改抓图。
+     * 不得因此置 timeoutTriggered。
+     */
+    public static function shouldStopVideoForImageReserve(
+        bool $useWallBudget,
+        int $keptVideo,
+        int $needVideo,
+        int $keptImage,
+        int $needImage,
+        float $elapsedSec,
+        int $maxElapsedSec,
+        int $videoReserveSec = self::VIDEO_FETCH_RESERVE_SEC
+    ): bool {
+        if (!$useWallBudget) {
+            return false;
+        }
+        if ($keptVideo >= $needVideo || $needVideo <= 0) {
+            return false;
+        }
+        if ($keptImage >= $needImage || $needImage <= 0) {
+            return false;
+        }
+        return ($maxElapsedSec - $elapsedSec) < $videoReserveSec;
+    }
+
+    /**
+     * 视频阶段已超时后，图片加班时窗内仍允许付费搜图。
+     */
+    public static function shouldAllowPaidImageAfterVideoTimeout(
+        bool $timeoutTriggered,
+        float $imagePhaseElapsed,
+        int $overtimeSec = self::IMAGE_OVERTIME_SEC
+    ): bool {
+        if (!$timeoutTriggered) {
+            return true;
+        }
+        return $overtimeSec > 0 && $imagePhaseElapsed < $overtimeSec;
+    }
+
+    public static function transcodeTimeoutSec(string $type, int $maxTranscodeSec = 0): int
+    {
+        $max = $maxTranscodeSec > 0 ? $maxTranscodeSec : self::TRANSCODE_VIDEO_SEC;
+        if ($type === 'image') {
+            return min(self::TRANSCODE_IMAGE_SEC, $max);
+        }
+        return $max;
+    }
+
+    public static function countCoverFillImages(array $images): int
+    {
+        $n = 0;
+        foreach ($images as $img) {
+            if (is_array($img) && (string)($img['grab_source'] ?? '') === self::GRAB_SOURCE_COVER_FILL) {
+                $n++;
+            }
+        }
+        return $n;
+    }
+
+    public static function keywordProcessLimit(int $totalNeed): int
+    {
+        return max(0, $totalNeed) + self::KEYWORD_SLACK;
+    }
+
+    public static function fallbackKeywordLimit(int $shortage): int
+    {
+        return max(0, $shortage);
+    }
+
+    /**
+     * 图片不够时用已有视频封面补齐，不发起新的视频抓取。
+     */
+    public static function fillImagesFromVideoCovers(array $videos, array $images, int $needI): array
+    {
+        if ($needI <= 0 || count($images) >= $needI) {
+            return array_values($images);
+        }
+        $usedRemotes = [];
+        foreach ($images as $img) {
+            if (!is_array($img)) {
+                continue;
+            }
+            $remote = (string)($img['remote_url'] ?? $img['file_url'] ?? '');
+            if ($remote !== '') {
+                $usedRemotes[$remote] = true;
+            }
+        }
+        foreach ($videos as $sourceVideo) {
+            if (count($images) >= $needI) {
+                break;
+            }
+            if (!is_array($sourceVideo)) {
+                continue;
+            }
+            $imageFileUrl = (string)($sourceVideo['thumbnail_url'] ?? '');
+            if ($imageFileUrl === '') {
+                $imageFileUrl = (string)($sourceVideo['file_url'] ?? '');
+            }
+            if ($imageFileUrl === '') {
+                continue;
+            }
+            $remote = (string)($sourceVideo['remote_url'] ?? $imageFileUrl);
+            if (isset($usedRemotes[$remote])) {
+                continue;
+            }
+            $images[] = [
+                'id' => 0,
+                'material_type' => 2,
+                'remote_url' => $remote,
+                'file_url' => $imageFileUrl,
+                'thumbnail_url' => $imageFileUrl,
+                'duration' => 0,
+                'width' => (int)($sourceVideo['width'] ?? 0),
+                'height' => (int)($sourceVideo['height'] ?? 0),
+                'material_name' => '视频封面',
+                'grab_source' => self::GRAB_SOURCE_COVER_FILL,
+            ];
+            $usedRemotes[$remote] = true;
+        }
+        return array_values($images);
+    }
+
+    public static function adoptMaterialsToQuota(array $videos, array $images, int $vCount, int $iCount): array
+    {
+        return [
+            array_slice(array_values($videos), 0, max(0, $vCount)),
+            array_slice(array_values($images), 0, max(0, $iCount)),
+        ];
+    }
+
+    /**
+     * 封面补图若仍是远程 URL，补图阶段再按需转存。
+     */
+    public static function localizeCoverFillImages(array $images, int $userId): array
+    {
+        foreach ($images as $i => $img) {
+            if (!is_array($img) || (string)($img['grab_source'] ?? '') !== self::GRAB_SOURCE_COVER_FILL) {
+                continue;
+            }
+            $url = (string)($img['file_url'] ?? '');
+            if ($url === '' || !preg_match('#^https?://#i', $url)) {
+                continue;
+            }
+            try {
+                $local = self::transcodeRemoteFileBySourceSafe($url, 'image', $userId);
+                if ($local) {
+                    $images[$i]['file_url'] = $local;
+                    $images[$i]['thumbnail_url'] = $local;
+                }
+            } catch (\Throwable $e) {
+                Log::channel('explosionVideoSynthesis')->write(
+                    '封面补图转存失败：' . mb_substr($url, 0, 180) . ' 错误=' . $e->getMessage()
+                );
+            }
+        }
+        return $images;
+    }
+
+    private static function rememberGrabStats(int $paidV, int $paidI, int $needV, int $needI, int $keptV, int $keptI, int $coverI = 0): void
+    {
+        self::$lastGrabStats = [
+            'paid_video' => $paidV,
+            'paid_image' => $paidI,
+            'need_video' => $needV,
+            'need_image' => $needI,
+            'kept_video' => $keptV,
+            'kept_image' => $keptI,
+            'cover_image' => $coverI,
+        ];
+    }
     /**
      * 视频合成主入口
      */
@@ -217,6 +476,14 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 throw new \Exception('视频类型不存在');
         }
 
+        $voice = AiPersonaSynthesisConfig::buildCopywritingGenerationVoice(
+            (int)($config->copywriting_generation_type ?? AiPersonaSynthesisConfig::COPYWRITING_GENERATION_TYPE_KNOWLEDGE),
+            (string)($config->copywriting_generation_custom ?? '')
+        );
+
+        $cozeParams['voice'] = $voice;
+        $cozeParams['hook'] = '';
+
         $copywritingLogContext = [
             'copywriting_id' => (int)$copywritingRecord->id,
             'copywriting_status' => (int)$copywritingRecord->status,
@@ -229,25 +496,43 @@ class CopywritingImitationLogic extends BasePersonaLogic
             'number' => (int)$cozeParams['number'],
             'length' => (int)$cozeParams['length'],
             'keywords_preview' => mb_substr((string)($cozeParams['keywords'] ?? ''), 0, 500),
+            'copywriting_generation_type' => (int)($config->copywriting_generation_type ?? 1),
+            'voice' => $voice,
+            'hook' => '',
         ];
         Log::channel('explosionVideoSynthesis')->write('纯AI文案生成请求：' . json_encode($copywritingLogContext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         $aiRes = AutoDeviceSettingLogic::copywriting($cozeParams, $userId, 6);
-        $rewrittenText = $aiRes['content'][0] ?? '';
+        $content = $aiRes['content'] ?? '';
+        if (is_array($content)) {
+            $first = $content[0] ?? '';
+            $rewrittenText = is_scalar($first) ? trim((string)$first) : '';
+        } else {
+            $rewrittenText = trim((string)$content);
+        }
         Log::channel('explosionVideoSynthesis')->write('纯AI文案生成结果：' . json_encode(array_merge($copywritingLogContext, [
             'content_preview' => mb_substr((string)$rewrittenText, 0, 500),
-            'content_empty' => empty($rewrittenText) ? 1 : 0,
+            'content_empty' => $rewrittenText === '' ? 1 : 0,
             'response_keys' => is_array($aiRes) ? array_keys($aiRes) : [],
         ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        if (empty($rewrittenText)) throw new \Exception('AI文案生成失败');
+        if ($rewrittenText === '') throw new \Exception('AI文案生成失败');
 
-        $titleParams = ['sn' => 8, 'number' => 1, 'length' => 15, 'keywords' => $rewrittenText];
+        $titleParams = ['sn' => 8, 'number' => 1, 'length' => 15, 'keywords' => $rewrittenText, 'voice' => $voice, 'hook' => ''];
         Log::channel('explosionVideoSynthesis')->write('纯AI标题生成请求：' . json_encode(array_merge($copywritingLogContext, [
             'title_sn' => 8,
             'title_keywords_preview' => mb_substr((string)$rewrittenText, 0, 500),
         ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $titleRes = AutoDeviceSettingLogic::copywriting($titleParams, $userId, 6);
-        $title = $titleRes['content'][0] ?? 'AI自动生成视频';
+        $titleContent = $titleRes['content'] ?? '';
+        if (is_array($titleContent)) {
+            $titleFirst = $titleContent[0] ?? '';
+            $title = is_scalar($titleFirst) ? trim((string)$titleFirst) : '';
+        } else {
+            $title = trim((string)$titleContent);
+        }
+        if ($title === '') {
+            $title = 'AI自动生成视频';
+        }
         Log::channel('explosionVideoSynthesis')->write('纯AI标题生成结果：' . json_encode(array_merge($copywritingLogContext, [
             'title_preview' => mb_substr((string)$title, 0, 200),
             'response_keys' => is_array($titleRes) ? array_keys($titleRes) : [],
@@ -306,6 +591,100 @@ class CopywritingImitationLogic extends BasePersonaLogic
 
         return [
             'keywords' => self::buildPersonaCopywritingKeywordsText($persona, $personaInfo, (int)$persona->persona_type),
+            'persona' => $personaInfo->getClueContent($persona),
+        ];
+    }
+
+    protected static function buildType7CopywritingRequest($device, $persona, $config, int $shanjianType): array
+    {
+        $coze = self::buildPersonaCopywritingParams($device, $persona);
+        $lengthHint = $shanjianType === 1 ? 100 : 80;
+        $keywords = trim((string)($coze['keywords'] ?? ''));
+        if ($keywords !== '') {
+            $keywords .= "\n\n口播约{$lengthHint}字。";
+        }
+
+        return [
+            'keywords' => $keywords,
+            'number' => 1,
+            'persona' => (string)($coze['persona'] ?? ''),
+            'original' => '',
+            'voice' => AiPersonaSynthesisConfig::buildCopywritingGenerationVoice(
+                (int)($config->copywriting_generation_type ?? AiPersonaSynthesisConfig::COPYWRITING_GENERATION_TYPE_KNOWLEDGE),
+                (string)($config->copywriting_generation_custom ?? '')
+            ),
+            'hook' => '',
+            'model' => 0,
+        ];
+    }
+
+    protected static function requestType7Copywriting(
+        array $titlecoze,
+        int $userId,
+        int $shanjianType,
+        bool $allowEmptyMsg = false,
+        string $logChannel = 'ipVideoSynthesis',
+        array $logContext = []
+    ): array {
+        $requestLog = array_merge($logContext, [
+            '用户ID' => $userId,
+            '视频类型' => $shanjianType,
+            '接口类型' => 7,
+            '允许空正文' => $allowEmptyMsg ? 1 : 0,
+            '请求参数' => $titlecoze,
+        ]);
+        Log::channel($logChannel)->write('AI文案生成请求：' . json_encode($requestLog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        try {
+            $copywritingResult = AutoDeviceSettingLogic::copywriting($titlecoze, $userId, 7, true);
+        } catch (\Throwable $e) {
+            Log::channel($logChannel)->write('AI文案生成返回异常：' . json_encode(array_merge($logContext, [
+                '用户ID' => $userId,
+                '视频类型' => $shanjianType,
+                '接口类型' => 7,
+                '错误信息' => $e->getMessage(),
+            ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            throw $e;
+        }
+
+        $rawContent = $copywritingResult['content'] ?? [];
+        $content = $rawContent;
+        if (is_string($content)) {
+            $content = json_decode($content, true) ?: [];
+        }
+        if (!is_array($content)) {
+            $content = [];
+        }
+
+        $taskMsg = trim((string)($content['rewritten_text'] ?? ''));
+        $taskTitle = trim((string)($content['title'] ?? ''));
+        $parsedTitle = $taskTitle;
+        if ($taskTitle === '') {
+            $parsedTitle = $taskMsg !== '' ? mb_substr($taskMsg, 0, 10, 'utf-8') : 'AI自动生成视频';
+        }
+        if ($shanjianType === 4) {
+            $parsedTitle = $taskMsg;
+        }
+
+        Log::channel($logChannel)->write('AI文案生成返回：' . json_encode(array_merge($logContext, [
+            '用户ID' => $userId,
+            '视频类型' => $shanjianType,
+            '接口类型' => 7,
+            '原始返回' => $copywritingResult,
+            '解析标题' => $parsedTitle,
+            '解析正文' => $taskMsg,
+            '正文为空' => $taskMsg === '' ? 1 : 0,
+            '标题为空' => $taskTitle === '' ? 1 : 0,
+        ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        if ($taskMsg === '' && !$allowEmptyMsg) {
+            throw new \Exception('AI文案生成失败');
+        }
+
+        return [
+            'title' => $parsedTitle,
+            'msg' => $taskMsg,
+            'material_keywords' => $taskMsg !== '' ? $taskMsg : (string)($titlecoze['keywords'] ?? ''),
         ];
     }
 
@@ -931,24 +1310,55 @@ class CopywritingImitationLogic extends BasePersonaLogic
     /**
      * 远程文件转存（兼容方法不存在或单文件失败场景）
      */
-    public static function transcodeRemoteFileBySourceSafe(string $fileUrl, string $type, int $userId): ?string
+    public static function transcodeRemoteFileBySourceSafe(string $fileUrl, string $type, int $userId, int $timeout = 0, ?int &$outSize = null): ?string
     {
+        $outSize = 0;
+        if (array_key_exists('transcode', self::$testHooks)) {
+            $hook = self::$testHooks['transcode'];
+            if ($hook instanceof \Throwable) {
+                throw $hook;
+            }
+            if (is_callable($hook)) {
+                $ret = $hook($fileUrl, $type, $userId, $timeout);
+                if ($ret === false) {
+                    return null;
+                }
+                if (is_array($ret)) {
+                    $outSize = (int)($ret['size'] ?? $ret['file_size'] ?? 0);
+                    $url = (string)($ret['url'] ?? '');
+                    return $url !== '' ? $url : $fileUrl;
+                }
+                return is_string($ret) && $ret !== '' ? $ret : $fileUrl;
+            }
+            if ($hook === false) {
+                return null;
+            }
+            if (is_array($hook)) {
+                $outSize = (int)($hook['size'] ?? $hook['file_size'] ?? 0);
+                $url = (string)($hook['url'] ?? '');
+                return $url !== '' ? $url : $fileUrl;
+            }
+            return is_string($hook) && $hook !== '' ? $hook : $fileUrl;
+        }
         if (!method_exists(UploadService::class, 'transcodeRemoteFileBySource')) {
             throw new \RuntimeException('UploadService::transcodeRemoteFileBySource 方法不可用');
         }
         $startAt = microtime(true);
+        $timeout = $timeout > 0 ? $timeout : self::transcodeTimeoutSec($type);
         Log::channel('explosionVideoSynthesis')->write('transcode监控:start ' . json_encode([
             'type' => $type,
             'user_id' => $userId,
+            'timeout_sec' => $timeout,
             'url' => mb_substr($fileUrl, 0, 200),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         try {
-            $localFileUrl = UploadService::transcodeRemoteFileBySource($fileUrl, $type, $userId);
+            $localFileUrl = UploadService::transcodeRemoteFileBySource($fileUrl, $type, $userId, 0, $timeout, $outSize);
             Log::channel('explosionVideoSynthesis')->write('transcode监控:end ' . json_encode([
                 'type' => $type,
                 'user_id' => $userId,
                 'elapsed_ms' => (int)((microtime(true) - $startAt) * 1000),
                 'success' => !empty($localFileUrl),
+                'size' => $outSize,
                 'local_url' => !empty($localFileUrl) ? mb_substr((string)$localFileUrl, 0, 200) : '',
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             return $localFileUrl ?: null;
@@ -1482,26 +1892,54 @@ class CopywritingImitationLogic extends BasePersonaLogic
         return $selected;
     }
 
-    public static function getAiMaterials($text, $vCount, $iCount, $userId, $personaId)
+    /**
+     * 连续转存失败是否应熔断。max=0 表示不熔断（爆炸视频默认路径）。
+     */
+    public static function shouldOpenTranscodeCircuit(int $failStreak, int $maxTranscodeFail): bool
+    {
+        return $maxTranscodeFail > 0 && $failStreak >= $maxTranscodeFail;
+    }
+
+    /**
+     * 超时或转存熔断后跳过行业兜底，避免锁过期二次认领。
+     */
+    public static function shouldSkipIndustryFallback(bool $timeoutTriggered, bool $transcodeCircuitOpen): bool
+    {
+        return $timeoutTriggered || $transcodeCircuitOpen;
+    }
+
+    public static function getAiMaterials($text, $vCount, $iCount, $userId, $personaId, array $opts = [])
     {
         $videos = [];
         $images = [];
         $now = time();
+        $vCount = max(0, (int)$vCount);
+        $iCount = max(0, (int)$iCount);
         $totalNeed = $vCount + $iCount;
-        $existingRemoteUrls = Db::name('ai_persona_material')
-            ->where('persona_id', $personaId)
-            ->where('user_id', $userId)
-            ->whereNull('delete_time')
-            ->where('remote_url', '<>', '')
-            ->column('remote_url');
-        $existingRemoteUrlMap = [];
-        foreach ($existingRemoteUrls as $url) {
-            $existingRemoteUrlMap[(string)$url] = true;
+        $paidVideoGrabs = 0;
+        $paidImageGrabs = 0;
+        $maxElapsedSecOpt = max(0, (int)($opts['max_elapsed_sec'] ?? 0));
+        $keywordBudgetSec = max(0, (int)($opts['max_keyword_elapsed_sec'] ?? 0));
+        $maxCandidatesPerKeyword = max(0, (int)($opts['max_candidates_per_keyword'] ?? 0));
+        $maxTranscodeFail = max(0, (int)($opts['max_transcode_fail'] ?? 0));
+        $maxTranscodeSec = max(0, (int)($opts['max_transcode_sec'] ?? 0));
+        if ($maxTranscodeSec <= 0) {
+            $maxTranscodeSec = self::TRANSCODE_VIDEO_SEC;
         }
+        $imageOvertimeSec = max(0, (int)($opts['image_overtime_sec'] ?? self::IMAGE_OVERTIME_SEC));
+        $videoTranscodeSec = self::transcodeTimeoutSec('video', $maxTranscodeSec);
+        $imageTranscodeSec = self::transcodeTimeoutSec('image', $maxTranscodeSec);
+        $useWallBudget = $maxElapsedSecOpt > 0;
+        $hotspotBudget = $opts !== [];
+        $transcodeCircuitOpen = false;
+        $materialStore = self::resolveMaterialStore($opts);
+        $platform = (string)($opts['platform'] ?? '');
+        $existingRemoteUrlMap = self::loadExistingRemoteUrlMap($materialStore, $userId, $personaId);
         $currentBatchRemoteUrlMap = [];
         $startAt = microtime(true);
+        $fetchStartAt = $startAt;
         $textPreview = mb_substr((string)$text, 0, 60);
-        $logStage = function (string $stage, array $extra = []) use (&$videos, &$images, $startAt, $vCount, $iCount, $totalNeed, $userId, $personaId, $textPreview) {
+        $logStage = function (string $stage, array $extra = []) use (&$videos, &$images, $startAt, &$fetchStartAt, $vCount, $iCount, $totalNeed, $userId, $personaId, $textPreview, $useWallBudget) {
             $payload = array_merge([
                 'stage' => $stage,
                 'user_id' => $userId,
@@ -1512,23 +1950,56 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 'current_video' => count($videos),
                 'current_image' => count($images),
                 'elapsed_ms' => (int)((microtime(true) - $startAt) * 1000),
+                'fetch_elapsed_ms' => (int)((microtime(true) - $fetchStartAt) * 1000),
                 'memory_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
                 'memory_peak_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
                 'text_preview' => $textPreview,
+                'wall_budget' => $useWallBudget ? 1 : 0,
             ], $extra);
             Log::channel('explosionVideoSynthesis')->write('getAiMaterials监控: ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         };
-        $maxElapsedSec = 100;
+        $maxElapsedSec = $useWallBudget ? $maxElapsedSecOpt : 100;
         $timeoutTriggered = false;
-        // 单任务计时：每次关键词提取/素材抓取前重置，不做全流程累计超时
+        // 默认：每次关键词提取/素材抓取前重置。热点抓取预算：抽词结束后单独起算。
         $taskStartAt = microtime(true);
-        $ensureNotTimeout = function (string $stage) use (&$taskStartAt, $maxElapsedSec, $logStage) {
-            $elapsedSec = microtime(true) - $taskStartAt;
+        $elapsedFetch = static function () use ($useWallBudget, &$taskStartAt, &$fetchStartAt): float {
+            if (isset(self::$testHooks['elapsedSec']) && is_numeric(self::$testHooks['elapsedSec'])) {
+                return (float)self::$testHooks['elapsedSec'];
+            }
+            return $useWallBudget ? (microtime(true) - $fetchStartAt) : (microtime(true) - $taskStartAt);
+        };
+        $imagePhaseStartAt = microtime(true);
+        $imagePhaseElapsed = static function () use (&$imagePhaseStartAt): float {
+            if (isset(self::$testHooks['imagePhaseElapsedSec']) && is_numeric(self::$testHooks['imagePhaseElapsedSec'])) {
+                return (float)self::$testHooks['imagePhaseElapsedSec'];
+            }
+            return microtime(true) - $imagePhaseStartAt;
+        };
+        $ensureNotTimeout = function (string $stage) use ($maxElapsedSec, $logStage, $useWallBudget, $elapsedFetch) {
+            $elapsedSec = $elapsedFetch();
             if ($elapsedSec > $maxElapsedSec) {
                 $logStage('timeout_guard', [
                     'timeout_stage' => $stage,
                     'task_elapsed_sec' => round($elapsedSec, 3),
                     'max_elapsed_sec' => $maxElapsedSec,
+                    'wall_budget' => $useWallBudget ? 1 : 0,
+                ]);
+                return false;
+            }
+            return true;
+        };
+        $ensureKeywordNotTimeout = function (string $stage) use ($useWallBudget, $keywordBudgetSec, $startAt, $logStage, &$taskStartAt, $maxElapsedSec) {
+            $elapsedSec = $useWallBudget && $keywordBudgetSec > 0
+                ? (microtime(true) - $startAt)
+                : (microtime(true) - $taskStartAt);
+            $limit = $useWallBudget && $keywordBudgetSec > 0 ? $keywordBudgetSec : $maxElapsedSec;
+            if ($elapsedSec > $limit) {
+                $logStage('timeout_guard', [
+                    'timeout_stage' => $stage,
+                    'task_elapsed_sec' => round($elapsedSec, 3),
+                    'max_elapsed_sec' => $limit,
+                    'wall_budget' => $useWallBudget ? 1 : 0,
+                    'keyword_budget' => 1,
                 ]);
                 return false;
             }
@@ -1550,10 +2021,16 @@ class CopywritingImitationLogic extends BasePersonaLogic
             $maxLoops = 5;
             while (count($keywordList) < $totalNeed && $loopCount < $maxLoops) {
                 $taskStartAt = microtime(true);
-                $keywords = self::requestUrl($request, self::EXTRACT_KEYWORDS, $userId);
-                if (!$ensureNotTimeout('extract_keywords_loop')) {
-                    $timeoutTriggered = true;
+                if ($useWallBudget && !$ensureKeywordNotTimeout('extract_keywords_precheck')) {
                     $logStage('extract_keywords_timeout_skip', ['keyword_loop' => $loopCount + 1]);
+                    break;
+                }
+                $keywords = self::requestUrl($request, self::EXTRACT_KEYWORDS, $userId);
+                if (!$ensureKeywordNotTimeout('extract_keywords_loop')) {
+                    $logStage('extract_keywords_timeout_skip', ['keyword_loop' => $loopCount + 1]);
+                    if ($useWallBudget) {
+                        break;
+                    }
                     continue;
                 }
                 $newKeywords = $keywords['content'] ?? [];
@@ -1565,7 +2042,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 'keyword_count' => count($keywordList),
                 'keyword_loop_count' => $loopCount,
             ]);
-            $maxKeywordProcess = max(6, $totalNeed * 2);
+            $maxKeywordProcess = self::keywordProcessLimit($totalNeed);
             if (count($keywordList) > $maxKeywordProcess) {
                 $keywordList = array_slice($keywordList, 0, $maxKeywordProcess);
                 $logStage('keywords_trimmed', [
@@ -1577,17 +2054,104 @@ class CopywritingImitationLogic extends BasePersonaLogic
             if (empty($keywordList)) {
                 Log::channel('explosionVideoSynthesis')->write('grabMaterial关键词提取失败，文案：' . $text);
                 $logStage('keywords_empty');
+                self::rememberGrabStats(0, 0, $vCount, $iCount, 0, 0, 0);
                 return [$videos, $images];
             }
+            if ($useWallBudget) {
+                $fetchStartAt = microtime(true);
+                $logStage('fetch_clock_reset', [
+                    'max_elapsed_sec' => $maxElapsedSec,
+                    'keyword_budget_sec' => $keywordBudgetSec,
+                ]);
+            }
             $videoUsedKeys = $imageUsedKeys = [];
+            $videoFailStreak = 0;
+            $imageFailStreak = 0;
+            $stopVideoFetch = false;
+            $noteTranscodeFail = function (string $type, string $keyword, string $reason) use (
+                $hotspotBudget,
+                $maxTranscodeFail,
+                $logStage,
+                &$videoFailStreak,
+                &$imageFailStreak,
+                &$transcodeCircuitOpen
+            ): bool {
+                if ($type === '视频') {
+                    $videoFailStreak++;
+                    $streak = $videoFailStreak;
+                } else {
+                    $imageFailStreak++;
+                    $streak = $imageFailStreak;
+                }
+                $reasonClip = mb_substr($reason, 0, 180);
+                if ($hotspotBudget) {
+                    HotspotLog::write(sprintf(
+                        '素材转存失败：类型=%s 关键词=%s 原因=%s',
+                        $type,
+                        $keyword,
+                        $reasonClip
+                    ));
+                }
+                if (!self::shouldOpenTranscodeCircuit($streak, $maxTranscodeFail)) {
+                    return false;
+                }
+                $transcodeCircuitOpen = true;
+                $logStage('transcode_fail_fast', [
+                    'type' => $type === '视频' ? 'video' : 'image',
+                    'fail_streak' => $streak,
+                    'error' => $reasonClip,
+                ]);
+                if ($hotspotBudget) {
+                    HotspotLog::write(sprintf(
+                        '素材转存熔断：类型=%s 连续失败=%d 停止互补与兜底',
+                        $type,
+                        $streak
+                    ));
+                }
+                return true;
+            };
             // B. 尝试按原计划获取视频
             foreach ($keywordList as $key) {
-                if (count($videos) >= $vCount) break;
+                if ($timeoutTriggered || $transcodeCircuitOpen || $stopVideoFetch || !self::canStartPaidGrab(count($videos), $paidVideoGrabs, $vCount)) break;
+                $fetchElapsed = $elapsedFetch();
+                if (self::shouldSkipPaidGrabForBudget($useWallBudget, $timeoutTriggered, $fetchElapsed, $maxElapsedSec)) {
+                    if ($fetchElapsed > $maxElapsedSec) {
+                        $timeoutTriggered = true;
+                        $logStage('timeout_guard', [
+                            'timeout_stage' => 'video_fetch_precheck',
+                            'task_elapsed_sec' => round($fetchElapsed, 3),
+                            'max_elapsed_sec' => $maxElapsedSec,
+                        ]);
+                    } else {
+                        $logStage('video_fetch_budget_skip', [
+                            'keyword' => $key,
+                            'remaining_sec' => round($maxElapsedSec - $fetchElapsed, 3),
+                        ]);
+                    }
+                    $stopVideoFetch = true;
+                    break;
+                }
+                if (self::shouldStopVideoForImageReserve(
+                    $useWallBudget,
+                    count($videos),
+                    $vCount,
+                    count($images),
+                    $iCount,
+                    $fetchElapsed,
+                    $maxElapsedSec
+                )) {
+                    $logStage('video_fetch_reserve_images', [
+                        'keyword' => $key,
+                        'remaining_sec' => round($maxElapsedSec - $fetchElapsed, 3),
+                    ]);
+                    $stopVideoFetch = true;
+                    break;
+                }
                 $taskStartAt = microtime(true);
                 $materialtaskid = generate_unique_task_id();
                 $logStage('video_fetch_request_start', ['keyword' => $key]);
                 $vRes = self::requestUrl(['searchTerm' => $key, 'orientation' => 'portrait'], self::GRAB_VIDEO, $userId,$materialtaskid);
-                if (!$ensureNotTimeout('video_fetch_loop')) {
+                if (!$useWallBudget && !$ensureNotTimeout('video_fetch_loop')) {
                     $timeoutTriggered = true;
                     $logStage('video_fetch_keyword_timeout_skip', ['keyword' => $key]);
                     self::refundGrabTokens($materialtaskid, 'video', $userId, '视频抓取超时退费');
@@ -1599,8 +2163,18 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 ]);
                 if (!empty($vRes)) {
                     $videoAdded = false;
+                    $triedCandidates = 0;
                     foreach ($vRes as $item) {
                         if (count($videos) >= $vCount) break;
+                        if ($maxCandidatesPerKeyword > 0 && $triedCandidates >= $maxCandidatesPerKeyword) {
+                            break;
+                        }
+                        // 墙钟：付费请求已发出，不因墙钟中断本笔转存
+                        if (!$useWallBudget && !$ensureNotTimeout('video_transcode')) {
+                            $timeoutTriggered = true;
+                            $stopVideoFetch = true;
+                            break;
+                        }
                         
                         $remoteUrl = $item['link'] ?? '';
                         $fileUrl = $remoteUrl;
@@ -1617,33 +2191,42 @@ class CopywritingImitationLogic extends BasePersonaLogic
                         
                         // 下载远程文件到本地，失败则跳过
                         if (!empty($fileUrl)) {
+                            $triedCandidates++;
                             try {
-                                $localFileUrl = self::transcodeRemoteFileBySourceSafe($fileUrl, 'video', $userId);
+                                $transcodeSize = 0;
+                                $localFileUrl = self::transcodeRemoteFileBySourceSafe($fileUrl, 'video', $userId, $videoTranscodeSec, $transcodeSize);
                                 if ($localFileUrl) {
                                     $fileUrl = $localFileUrl;
+                                    $videoFailStreak = 0;
                                 } else {
+                                    if ($noteTranscodeFail('视频', $key, '转存结果为空')) {
+                                        $stopVideoFetch = true;
+                                        break;
+                                    }
                                     continue;
                                 }
                             } catch (\Throwable $e) {
                                 Log::channel('explosionVideoSynthesis')->write("grabMaterial视频下载失败，关键词: {$key}，URL: {$fileUrl}，错误: " . $e->getMessage());
+                                if ($noteTranscodeFail('视频', $key, $e->getMessage())) {
+                                    $stopVideoFetch = true;
+                                    break;
+                                }
                                 continue;
                             }
                         }else{
                             continue;
                         }
                         
-                        // 下载缩略图到本地
-                        if (!empty($thumbUrl)) {
+                        // 热点墙钟：封面先保留远程 URL，补图时再按需转存；空封面仍收下视频
+                        if (!$useWallBudget && !empty($thumbUrl)) {
                             try {
-                                $localThumbUrl = self::transcodeRemoteFileBySourceSafe($thumbUrl, 'image', $userId);
+                                $localThumbUrl = self::transcodeRemoteFileBySourceSafe($thumbUrl, 'image', $userId, $imageTranscodeSec);
                                 if ($localThumbUrl) {
                                     $thumbUrl = $localThumbUrl;
                                 }
                             } catch (\Throwable $e) {
                                 Log::channel('explosionVideoSynthesis')->write("grabMaterial缩略图下载失败，关键词: {$key}，URL: {$thumbUrl}，错误: " . $e->getMessage());
                             }
-                        }else{
-                            continue;
                         }
                         
                         $videos[] = [
@@ -1656,11 +2239,13 @@ class CopywritingImitationLogic extends BasePersonaLogic
                             'width' => $item['width'] ?? 0,
                             'height' => $item['height'] ?? 0,
                             'material_name' => $key,
+                            'size' => $transcodeSize,
                         ];
                         $currentBatchRemoteUrlMap[$remoteUrl] = true;
                         // 标记该关键词已使用，防止图片重复使用（可选）
                         $videoUsedKeys[] = $key;
                         $videoAdded = true;
+                        $paidVideoGrabs++;
                         break;
                     }
                     if (!$videoAdded) {
@@ -1669,19 +2254,62 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 } else {
                     self::refundGrabTokens($materialtaskid, 'video', $userId, '视频抓取空结果退费');
                 }
+                // 墙钟：本笔付费素材处理完后再拦下一笔，已收下的不因墙钟退费
+                if ($useWallBudget && !$ensureNotTimeout('video_paid_after')) {
+                    $timeoutTriggered = true;
+                    $stopVideoFetch = true;
+                }
             }
             $logStage('video_fetch_done', [
                 'video_used_keys_count' => count($videoUsedKeys),
             ]);
 
-            // C. 尝试按原计划获取图片
+            // C. 尝试按原计划获取图片（视频超时后仍给加班时窗）
+            $imagePhaseStartAt = microtime(true);
+            $stopImageFetch = false;
             foreach ($keywordList as $key) {
-                if (count($images) >= $iCount) break;
+                if ($transcodeCircuitOpen || $stopImageFetch || !self::canStartPaidGrab(count($images), $paidImageGrabs, $iCount)) {
+                    break;
+                }
+                $imageElapsed = $imagePhaseElapsed();
+                if ($timeoutTriggered && !self::shouldAllowPaidImageAfterVideoTimeout(true, $imageElapsed, $imageOvertimeSec)) {
+                    $logStage('image_fetch_skipped_timeout', [
+                        'image_phase_elapsed_sec' => round($imageElapsed, 3),
+                        'image_overtime_sec' => $imageOvertimeSec,
+                    ]);
+                    break;
+                }
+                $fetchElapsed = $elapsedFetch();
+                if (!$timeoutTriggered && self::shouldSkipPaidGrabForBudget($useWallBudget, false, $fetchElapsed, $maxElapsedSec)) {
+                    if ($fetchElapsed > $maxElapsedSec) {
+                        $timeoutTriggered = true;
+                        $logStage('timeout_guard', [
+                            'timeout_stage' => 'image_fetch_precheck',
+                            'task_elapsed_sec' => round($fetchElapsed, 3),
+                            'max_elapsed_sec' => $maxElapsedSec,
+                        ]);
+                        if (!self::shouldAllowPaidImageAfterVideoTimeout(true, $imagePhaseElapsed(), $imageOvertimeSec)) {
+                            $logStage('image_fetch_skipped_timeout', [
+                                'image_phase_elapsed_sec' => round($imagePhaseElapsed(), 3),
+                                'image_overtime_sec' => $imageOvertimeSec,
+                            ]);
+                            $stopImageFetch = true;
+                            break;
+                        }
+                    } else {
+                        $logStage('image_fetch_budget_skip', [
+                            'keyword' => $key,
+                            'remaining_sec' => round($maxElapsedSec - $fetchElapsed, 3),
+                        ]);
+                        $stopImageFetch = true;
+                        break;
+                    }
+                }
                 $taskStartAt = microtime(true);
                 $materialtaskid = generate_unique_task_id();
                 $logStage('image_fetch_request_start', ['keyword' => $key]);
                 $iRes = self::requestUrl(['searchTerm' => $key, 'orientation' => 'portrait'], self::GRAB_IMAGE, $userId,$materialtaskid);
-                if (!$ensureNotTimeout('image_fetch_loop')) {
+                if (!$useWallBudget && !$ensureNotTimeout('image_fetch_loop')) {
                     $timeoutTriggered = true;
                     $logStage('image_fetch_keyword_timeout_skip', ['keyword' => $key]);
                     self::refundGrabTokens($materialtaskid, 'image', $userId, '图片抓取超时退费');
@@ -1694,8 +2322,18 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 if (!empty($iRes)) {
                     $imageAdded = false;
                     $imageFailReason = '图片抓取结果不可用退费';
+                    $triedCandidates = 0;
                     foreach ($iRes as $item) {
                         if (count($images) >= $iCount) break;
+                        if ($maxCandidatesPerKeyword > 0 && $triedCandidates >= $maxCandidatesPerKeyword) {
+                            break;
+                        }
+                        // 墙钟：付费请求已发出，不因墙钟中断本笔转存
+                        if (!$useWallBudget && !$ensureNotTimeout('image_transcode')) {
+                            $timeoutTriggered = true;
+                            $stopImageFetch = true;
+                            break;
+                        }
                         
                         $remoteUrl = $item['link'] ?? '';
                         $fileUrl = $remoteUrl;
@@ -1714,17 +2352,28 @@ class CopywritingImitationLogic extends BasePersonaLogic
                         
                         // 下载远程文件到本地，失败则跳过
                         if (!empty($fileUrl)) {
+                            $triedCandidates++;
                             try {
-                                $localFileUrl = self::transcodeRemoteFileBySourceSafe($fileUrl, 'image', $userId);
+                                $transcodeSize = 0;
+                                $localFileUrl = self::transcodeRemoteFileBySourceSafe($fileUrl, 'image', $userId, $imageTranscodeSec, $transcodeSize);
                                 if ($localFileUrl) {
                                     $fileUrl = $localFileUrl;
+                                    $imageFailStreak = 0;
                                 } else {
                                     $imageFailReason = '图片抓取下载失败退费';
+                                    if ($noteTranscodeFail('图片', $key, '转存结果为空')) {
+                                        $stopImageFetch = true;
+                                        break;
+                                    }
                                     continue;
                                 }
                             } catch (\Throwable $e) {
                                 Log::channel('explosionVideoSynthesis')->write("grabMaterial图片下载失败，关键词: {$key}，URL: {$fileUrl}，错误: " . $e->getMessage());
                                 $imageFailReason = '图片抓取下载失败退费';
+                                if ($noteTranscodeFail('图片', $key, $e->getMessage())) {
+                                    $stopImageFetch = true;
+                                    break;
+                                }
                                 continue;
                             }
                         }else{
@@ -1742,10 +2391,12 @@ class CopywritingImitationLogic extends BasePersonaLogic
                               'width' => $item['width'] ?? 0,
                               'height' => $item['height'] ?? 0,
                               'material_name' => $key,
+                              'size' => $transcodeSize,
                         ];
                         $currentBatchRemoteUrlMap[$remoteUrl] = true;
                         $imageUsedKeys[] = $key;
                         $imageAdded = true;
+                        $paidImageGrabs++;
                         break;
                     }
                     if (!$imageAdded) {
@@ -1753,6 +2404,13 @@ class CopywritingImitationLogic extends BasePersonaLogic
                     }
                 } else {
                     self::refundGrabTokens($materialtaskid, 'image', $userId, '图片抓取空结果退费');
+                }
+                // 墙钟：本笔付费素材处理完后再拦下一笔；加班时窗未用尽则继续搜图
+                if ($useWallBudget && !$ensureNotTimeout('image_paid_after')) {
+                    $timeoutTriggered = true;
+                    if (!self::shouldAllowPaidImageAfterVideoTimeout(true, $imagePhaseElapsed(), $imageOvertimeSec)) {
+                        $stopImageFetch = true;
+                    }
                 }
             }
             $logStage('image_fetch_done', [
@@ -1765,9 +2423,42 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 &$images,
                 &$currentBatchRemoteUrlMap,
                 $existingRemoteUrlMap,
-                $logStage
+                $logStage,
+                $noteTranscodeFail,
+                &$transcodeCircuitOpen,
+                &$videoFailStreak,
+                &$imageFailStreak,
+                &$paidVideoGrabs,
+                &$paidImageGrabs,
+                $vCount,
+                $iCount,
+                $useWallBudget,
+                $maxElapsedSec,
+                $elapsedFetch,
+                &$timeoutTriggered,
+                $videoTranscodeSec,
+                $imageTranscodeSec
             ) {
+                if ($transcodeCircuitOpen) {
+                    return false;
+                }
+                if ($targetType === 1 && !self::canStartPaidGrab(count($videos), $paidVideoGrabs, $vCount)) {
+                    return false;
+                }
+                if ($targetType === 2 && !self::canStartPaidGrab(count($images), $paidImageGrabs, $iCount)) {
+                    return false;
+                }
+                $fetchElapsed = $elapsedFetch();
+                if (self::shouldSkipPaidGrabForBudget($useWallBudget, $timeoutTriggered, $fetchElapsed, $maxElapsedSec)) {
+                    $logStage('fallback_paid_grab_skip', [
+                        'stage_tag' => $stageTag,
+                        'keyword' => $key,
+                        'remaining_sec' => round($maxElapsedSec - $fetchElapsed, 3),
+                    ]);
+                    return false;
+                }
                 $scene = $targetType === 1 ? self::GRAB_VIDEO : self::GRAB_IMAGE;
+                $typeLabel = $targetType === 1 ? '视频' : '图片';
                 $materialtaskid = generate_unique_task_id();
                 $res = self::requestUrl(['searchTerm' => $key, 'orientation' => 'portrait'], $scene, $userId,$materialtaskid);
                 if (empty($res)) {
@@ -1777,6 +2468,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 $appended = false;
                 $refundReason = $stageTag . '不可用结果退费';
                 foreach ($res as $item) {
+                    if ($transcodeCircuitOpen) {
+                        break;
+                    }
                     $remoteUrl = (string)($item['link'] ?? '');
                     $fileUrl = $remoteUrl;
                     $thumbUrl = (string)($item['image'] ?? '');
@@ -1792,15 +2486,30 @@ class CopywritingImitationLogic extends BasePersonaLogic
                         $refundReason = $stageTag . ($targetType === 2 ? '文件已存在退费' : '不可用结果退费');
                         continue;
                     }
+                    $transcodeSize = 0;
                     try {
-                        $localFileUrl = self::transcodeRemoteFileBySourceSafe($fileUrl, $targetType === 1 ? 'video' : 'image', $userId);
+                        $localFileUrl = self::transcodeRemoteFileBySourceSafe(
+                            $fileUrl,
+                            $targetType === 1 ? 'video' : 'image',
+                            $userId,
+                            $targetType === 1 ? $videoTranscodeSec : $imageTranscodeSec,
+                            $transcodeSize
+                        );
                         if (empty($localFileUrl)) {
                             $refundReason = $stageTag . ($targetType === 2 ? '下载失败退费' : '不可用结果退费');
+                            if ($noteTranscodeFail($typeLabel, $key, '转存结果为空')) {
+                                break;
+                            }
                             continue;
                         }
+                        if ($targetType === 1) {
+                            $videoFailStreak = 0;
+                        } else {
+                            $imageFailStreak = 0;
+                        }
                         $fileUrl = $localFileUrl;
-                        if ($thumbUrl !== '') {
-                            $localThumbUrl = self::transcodeRemoteFileBySourceSafe($thumbUrl, 'image', $userId);
+                        if (!$useWallBudget && $thumbUrl !== '') {
+                            $localThumbUrl = self::transcodeRemoteFileBySourceSafe($thumbUrl, 'image', $userId, $imageTranscodeSec);
                             if (!empty($localThumbUrl)) {
                                 $thumbUrl = $localThumbUrl;
                             }
@@ -1813,6 +2522,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
                             'error' => $e->getMessage(),
                         ]);
                         $refundReason = $stageTag . ($targetType === 2 ? '下载失败退费' : '不可用结果退费');
+                        if ($noteTranscodeFail($typeLabel, $key, $e->getMessage())) {
+                            break;
+                        }
                         continue;
                     }
 
@@ -1826,6 +2538,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                         'width' => $item['width'] ?? 0,
                         'height' => $item['height'] ?? 0,
                         'material_name' => $key . '(' . $stageTag . ')',
+                        'size' => $transcodeSize,
                     ];
                     if ($targetType === 1) {
                         $videos[] = $itemPayload;
@@ -1834,6 +2547,11 @@ class CopywritingImitationLogic extends BasePersonaLogic
                     }
                     $currentBatchRemoteUrlMap[$remoteUrl] = true;
                     $appended = true;
+                    if ($targetType === 1) {
+                        $paidVideoGrabs++;
+                    } else {
+                        $paidImageGrabs++;
+                    }
                     break;
                 }
                 if (!$appended) {
@@ -1842,118 +2560,15 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 return $appended;
             };
 
-            $runCrossTypeCompensation = function (array $keys, string $stageTag) use (
-                &$videos,
-                &$images,
-                $vCount,
-                $iCount,
-                &$videoUsedKeys,
-                &$imageUsedKeys,
-                &$timeoutTriggered,
-                $ensureNotTimeout,
-                $appendMaterialBySearch,
-                $logStage
-            ) {
-                if (count($images) < $iCount) {
-                    foreach ($keys as $key) {
-                        if (count($images) >= $iCount) {
-                            break;
-                        }
-                        if (in_array($key, $videoUsedKeys, true)) {
-                            continue;
-                        }
-                        $taskStartAt = microtime(true);
-                        if ($appendMaterialBySearch($key, 1, '视频补图_' . $stageTag)) {
-                            if (!$ensureNotTimeout('image_compensation_' . $stageTag)) {
-                                $timeoutTriggered = true;
-                                $logStage('image_compensation_timeout_skip', ['keyword' => $key, 'stage_tag' => $stageTag]);
-                                continue;
-                            }
-                            $sourceVideo = end($videos);
-                            if (!empty($sourceVideo)) {
-                                $imageFileUrl = (string)($sourceVideo['thumbnail_url'] ?? '');
-                                if ($imageFileUrl === '') {
-                                    $imageFileUrl = (string)($sourceVideo['file_url'] ?? '');
-                                }
-                                if ($imageFileUrl !== '') {
-                                    $images[] = [
-                                        'id' => 0,
-                                        'material_type' => 1,
-                                        'remote_url' => (string)($sourceVideo['remote_url'] ?? ''),
-                                        'file_url' => $imageFileUrl,
-                                        'thumbnail_url' => $imageFileUrl,
-                                        'duration' => $sourceVideo['duration'] ?? 0,
-                                        'width' => (int)($sourceVideo['width'] ?? 0),
-                                        'height' => (int)($sourceVideo['height'] ?? 0),
-                                        'material_name' => (string)($sourceVideo['material_name'] ?? $key),
-                                    ];
-                                }
-                            }
-                            $imageUsedKeys[] = $key;
-                        }
-                    }
-                }
-
-                if (count($videos) < $vCount) {
-                    foreach ($keys as $key) {
-                        if (count($videos) >= $vCount) {
-                            break;
-                        }
-                        if (in_array($key, $imageUsedKeys, true)) {
-                            continue;
-                        }
-                        $taskStartAt = microtime(true);
-                        if ($appendMaterialBySearch($key, 2, '图片补视频_' . $stageTag)) {
-                            if (!$ensureNotTimeout('video_compensation_' . $stageTag)) {
-                                $timeoutTriggered = true;
-                                $logStage('video_compensation_timeout_skip', ['keyword' => $key, 'stage_tag' => $stageTag]);
-                                continue;
-                            }
-                            $sourceImage = end($images);
-                            if (!empty($sourceImage)) {
-                                $videoFileUrl = (string)($sourceImage['file_url'] ?? '');
-                                if ($videoFileUrl === '') {
-                                    $videoFileUrl = (string)($sourceImage['thumbnail_url'] ?? '');
-                                }
-                                if ($videoFileUrl !== '') {
-                                    $videos[] = [
-                                        'id' => 0,
-                                        'material_type' => 2,
-                                        'remote_url' => (string)($sourceImage['remote_url'] ?? ''),
-                                        'file_url' => $videoFileUrl,
-                                        'thumbnail_url' => (string)($sourceImage['thumbnail_url'] ?? $videoFileUrl),
-                                        'duration' => 0,
-                                        'width' => (int)($sourceImage['width'] ?? 0),
-                                        'height' => (int)($sourceImage['height'] ?? 0),
-                                        'material_name' => (string)($sourceImage['material_name'] ?? $key),
-                                    ];
-                                }
-                            }
-                            $videoUsedKeys[] = $key;
-                        }
-                    }
-                }
-
-                $videoUsedKeys = array_values(array_unique($videoUsedKeys));
-                $imageUsedKeys = array_values(array_unique($imageUsedKeys));
-                $logStage('cross_type_compensation_done', [
-                    'stage_tag' => $stageTag,
-                    'video_used_keys_count' => count($videoUsedKeys),
-                    'image_used_keys_count' => count($imageUsedKeys),
-                    'current_total' => count($videos) + count($images),
-                ]);
-            };
-
-            // 第三阶段：先跑一次互补
-            $runCrossTypeCompensation($keywordList, 'phase1');
+            // 第三阶段：不再用视频封面补图片，缺口如实返回
 
             // 第四阶段：异常兜底（最多一次），使用 iw_ai_persona.industry 作为泛关键词来源
             $fallbackCount = 0;
             $isFallbackTriggered = false;
             $currentTotal = count($videos) + count($images);
-            if ($currentTotal < $totalNeed && !$timeoutTriggered && $fallbackCount < 1 && !$isFallbackTriggered) {
+            if ($currentTotal < $totalNeed && !self::shouldSkipIndustryFallback($timeoutTriggered, $transcodeCircuitOpen) && $fallbackCount < 1 && !$isFallbackTriggered) {
                 $shortage = max(0, $vCount - count($videos)) + max(0, $iCount - count($images));
-                $fallbackKeywordNeed = max(10, $shortage);
+                $fallbackKeywordNeed = self::fallbackKeywordLimit($shortage);
                 $industry = (string)Db::name('ai_persona')
                     ->where('id', $personaId)
                     ->where('user_id', $userId)
@@ -1976,8 +2591,13 @@ class CopywritingImitationLogic extends BasePersonaLogic
                     while (count($fallbackKeywordList) < $fallbackKeywordNeed && $extractLoop < $maxExtractLoop) {
                         $extractLoop++;
                         $taskStartAt = microtime(true);
+                        $fetchElapsed = $elapsedFetch();
+                        if (self::shouldSkipPaidGrabForBudget($useWallBudget, $timeoutTriggered, $fetchElapsed, $maxElapsedSec)) {
+                            $logStage('fallback_extract_keywords_timeout_skip', ['extract_loop' => $extractLoop]);
+                            break;
+                        }
                         $fallbackRes = self::requestUrl(['keywords' => $industry], self::EXTRACT_KEYWORDS, $userId);
-                        if (!$ensureNotTimeout('fallback_extract_keywords_loop')) {
+                        if (!$useWallBudget && !$ensureNotTimeout('fallback_extract_keywords_loop')) {
                             $timeoutTriggered = true;
                             $logStage('fallback_extract_keywords_timeout_skip', ['extract_loop' => $extractLoop]);
                             continue;
@@ -2005,7 +2625,15 @@ class CopywritingImitationLogic extends BasePersonaLogic
                     ]);
 
                     foreach ($fallbackKeywordList as $fKey) {
+                        if ($transcodeCircuitOpen || $timeoutTriggered) {
+                            break;
+                        }
                         $taskStartAt = microtime(true);
+                        $fetchElapsed = $elapsedFetch();
+                        if (self::shouldSkipPaidGrabForBudget($useWallBudget, $timeoutTriggered, $fetchElapsed, $maxElapsedSec)) {
+                            $logStage('fallback_fetch_timeout_skip', ['keyword' => $fKey]);
+                            break;
+                        }
                         if (count($videos) < $vCount) {
                             if ($appendMaterialBySearch($fKey, 1, '行业兜底视频')) {
                                 $videoUsedKeys[] = $fKey;
@@ -2016,7 +2644,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                                 $imageUsedKeys[] = $fKey;
                             }
                         }
-                        if (!$ensureNotTimeout('fallback_fetch_loop')) {
+                        if (!$useWallBudget && !$ensureNotTimeout('fallback_fetch_loop')) {
                             $timeoutTriggered = true;
                             $logStage('fallback_fetch_timeout_skip', ['keyword' => $fKey]);
                             continue;
@@ -2026,13 +2654,17 @@ class CopywritingImitationLogic extends BasePersonaLogic
                         }
                     }
 
-                    // 兜底后再跑一次互补
-                    $runCrossTypeCompensation($fallbackKeywordList, 'fallback');
+                    // 不再用视频封面补图
                 }
+            } elseif ($transcodeCircuitOpen && $currentTotal < $totalNeed) {
+                $logStage('fallback_skipped_transcode_circuit', [
+                    'fallback_reason' => 'transcode_fail_fast',
+                    'current_total' => $currentTotal,
+                ]);
             }
 
             $currentTotal = count($videos) + count($images);
-            if ($currentTotal < $totalNeed && !$timeoutTriggered) {
+            if ($currentTotal < $totalNeed && !$timeoutTriggered && !$transcodeCircuitOpen) {
                 $msg = '视频总数数量' . count($videos) . '，图片总数数量' . count($images);
                 $logStage('material_not_enough', [
                     'current_total' => $currentTotal,
@@ -2056,7 +2688,13 @@ class CopywritingImitationLogic extends BasePersonaLogic
             if ($timeoutTriggered) {
                 $logStage('timeout_skip_fetch', ['current_total' => $currentTotal]);
             }
-            $logStage('fetch_complete', ['current_total' => $currentTotal]);
+            $logStage('fetch_complete', [
+                'current_total' => $currentTotal,
+                'transcode_circuit' => $transcodeCircuitOpen ? 1 : 0,
+            ]);
+            if ($transcodeCircuitOpen && $videos === [] && $images === []) {
+                throw new \RuntimeException('素材转存失败，连续多次无法下载到本地');
+            }
         } catch (\Throwable $e) {
             $wenan = mb_substr($text ?? '', 0, 100);
             $logStage('exception', ['error' => $e->getMessage()]);
@@ -2065,28 +2703,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
         }
 
         if ($timeoutTriggered && empty($videos) && empty($images)) {
-            $fallbackMaterial = Db::name('ai_persona_material')
-                ->where('persona_id', $personaId)
-                ->where('user_id', $userId)
-                ->where('use_status', 1)
-                ->where('is_wechat', 0)
-                ->where('publish_mode', 1)
-                ->whereNull('delete_time')
-                ->orderRaw('rand()')
-                ->find();
-            if (!empty($fallbackMaterial)) {
-                $fallback = [
-                    'id' => (int)$fallbackMaterial['id'],
-                    'material_type' => (int)$fallbackMaterial['material_type'],
-                    'remote_url' => (string)($fallbackMaterial['remote_url'] ?? ''),
-                    'file_url' => (string)($fallbackMaterial['file_url'] ?? ''),
-                    'thumbnail_url' => (string)($fallbackMaterial['thumbnail_url'] ?? ''),
-                    'duration' => (int)($fallbackMaterial['duration'] ?? 0),
-                    'width' => (int)($fallbackMaterial['width'] ?? 0),
-                    'height' => (int)($fallbackMaterial['height'] ?? 0),
-                    'material_name' => (string)($fallbackMaterial['material_name'] ?? '兜底素材'),
-                ];
-                if ($fallback['material_type'] === 1) {
+            $fallback = self::loadTimeoutFallbackMaterial($materialStore, $userId, $personaId);
+            if ($fallback !== null) {
+                if ((int)$fallback['material_type'] === 1) {
                     $videos[] = $fallback;
                 } else {
                     $images[] = $fallback;
@@ -2100,59 +2719,374 @@ class CopywritingImitationLogic extends BasePersonaLogic
             }
         }
 
-        // 插入AI抓取的素材到数据库
-        $allMaterials = array_merge($videos, $images);
-        if (!empty($allMaterials)) {
-            $insertData = [];
-            foreach ($allMaterials as $item) {
-                $insertData[] = [
-                    'persona_id' => $personaId,
-                    'user_id' => $userId,
-                    'material_name' => $item['material_name'] ?? '',
-                    'material_type' => $item['material_type'],
-                    'remote_url' => $item['remote_url'] ?? '',
-                    'is_wechat' => 0,
-                    'file_url' => $item['file_url'],
-                    'thumbnail_url' => $item['thumbnail_url'] ?? '',
-                    'duration' => $item['duration'] ?? 0,
-                    'width' => $item['width'] ?? 0,
-                    'height' => $item['height'] ?? 0,
-                    'use_status' => 1,
-                    'publish_mode' => 1,
-                    'grab_type' => 1,
-                    'create_time' => $now,
-                    'update_time' => $now,
-                ];
-            }
-            if (!empty($insertData)) {
-                $result = (new \app\common\model\aiPersona\Material())->saveAll($insertData);
-                // 将新插入的id设置到返回数组中
-                foreach ($result as $index => $model) {
-                    $allMaterials[$index]['id'] = $model->id;
-                }
-                // 重新分离videos和images
-                $videos = array_filter($allMaterials, fn($item) => $item['material_type'] == 1);
-                $images = array_filter($allMaterials, fn($item) => $item['material_type'] == 2);
-                $videos = array_values($videos);
-                $images = array_values($images);
-            }
-        }
-        $logStage('end', ['insert_count' => count($allMaterials)]);
+        [$videos, $images] = self::adoptMaterialsToQuota($videos, $images, $vCount, $iCount);
+        $coverImageCount = self::countCoverFillImages($images);
+        $allMaterials = self::persistGrabbedMaterials(
+            $materialStore,
+            $userId,
+            $personaId,
+            array_merge($videos, $images),
+            $now,
+            $platform
+        );
+        $videos = array_values(array_filter($allMaterials, static fn($item) => (int)($item['material_type'] ?? 0) === 1));
+        $images = array_values(array_filter($allMaterials, static fn($item) => (int)($item['material_type'] ?? 0) === 2));
+        $logStage('end', [
+            'insert_count' => count($allMaterials),
+            'paid_video' => $paidVideoGrabs,
+            'paid_image' => $paidImageGrabs,
+            'cover_image' => $coverImageCount,
+        ]);
+        self::rememberGrabStats(
+            $paidVideoGrabs,
+            $paidImageGrabs,
+            $vCount,
+            $iCount,
+            count($videos),
+            count($images),
+            $coverImageCount
+        );
 
         return [$videos, $images];
+    }
+
+    public static function resolveMaterialStoreForTest(array $opts): string
+    {
+        return self::resolveMaterialStore($opts);
+    }
+
+    public static function loadExistingRemoteUrlMapForTest(string $store, int $userId, int $personaId): array
+    {
+        return self::loadExistingRemoteUrlMap($store, $userId, $personaId);
+    }
+
+    public static function persistGrabbedMaterialsForTest(
+        string $store,
+        int $userId,
+        int $personaId,
+        array $all,
+        int $now,
+        string $platform
+    ): array {
+        return self::persistGrabbedMaterials($store, $userId, $personaId, $all, $now, $platform);
+    }
+
+    public static function resolveFileSizeBytesForTest(string $fileUrl): int
+    {
+        return self::resolveFileSizeBytes($fileUrl);
+    }
+
+    public static function resolveHotspotMaterialSize(array $item): int
+    {
+        $size = (int)($item['size'] ?? $item['file_size'] ?? 0);
+        if ($size > 0) {
+            return $size;
+        }
+        $fileUrl = (string)($item['file_url'] ?? '');
+        if ($fileUrl === '') {
+            return 0;
+        }
+        return self::resolveFileSizeBytes($fileUrl);
+    }
+
+    public static function composeSvMaterialNameForTest(string $raw): string
+    {
+        return self::composeSvMaterialName($raw);
+    }
+
+    private static function resolveMaterialStore(array $opts): string
+    {
+        return (($opts['material_store'] ?? '') === 'sv_media') ? 'sv_media' : 'persona';
+    }
+
+    private static function loadExistingRemoteUrlMap(string $store, int $userId, int $personaId): array
+    {
+        if (array_key_exists('existingRemoteUrlMap', self::$testHooks)) {
+            $hook = self::$testHooks['existingRemoteUrlMap'];
+            if (is_callable($hook)) {
+                $map = $hook($store, $userId, $personaId);
+                return is_array($map) ? $map : [];
+            }
+            return is_array($hook) ? $hook : [];
+        }
+        if ($store === 'sv_media') {
+            $existingRemoteUrlMap = [];
+            foreach (SvMediaMaterial::listExistingRemoteUrls($userId, SvMediaMaterial::SOURCE_HOTSPOT) as $url) {
+                $url = trim((string)$url);
+                if ($url === '') {
+                    continue;
+                }
+                $existingRemoteUrlMap[$url] = true;
+            }
+            return $existingRemoteUrlMap;
+        }
+        if ($store !== 'persona') {
+            return [];
+        }
+        $existingRemoteUrls = Db::name('ai_persona_material')
+            ->where('persona_id', $personaId)
+            ->where('user_id', $userId)
+            ->whereNull('delete_time')
+            ->where('remote_url', '<>', '')
+            ->column('remote_url');
+        $existingRemoteUrlMap = [];
+        foreach ($existingRemoteUrls as $url) {
+            $existingRemoteUrlMap[(string)$url] = true;
+        }
+        return $existingRemoteUrlMap;
+    }
+
+    private static function loadTimeoutFallbackMaterial(string $store, int $userId, int $personaId): ?array
+    {
+        if ($store === 'sv_media') {
+            $row = Db::name('sv_media_material')
+                ->where('user_id', $userId)
+                ->where('source', SvMediaMaterial::SOURCE_HOTSPOT)
+                ->whereNull('delete_time')
+                ->orderRaw('rand()')
+                ->find();
+            if (empty($row)) {
+                return null;
+            }
+            return [
+                'id' => (int)$row['id'],
+                'material_type' => SvMediaMaterial::toPersonaMaterialType((int)($row['m_type'] ?? 0)),
+                'remote_url' => '',
+                'file_url' => (string)($row['content'] ?? ''),
+                'thumbnail_url' => (string)($row['pic'] ?? ''),
+                'duration' => (int)($row['duration'] ?? 0),
+                'width' => 0,
+                'height' => 0,
+                'material_name' => (string)($row['name'] ?? '兜底素材'),
+                'material_store' => 'sv_media',
+            ];
+        }
+
+        $fallbackMaterial = Db::name('ai_persona_material')
+            ->where('persona_id', $personaId)
+            ->where('user_id', $userId)
+            ->where('use_status', 1)
+            ->where('is_wechat', 0)
+            ->where('publish_mode', 1)
+            ->whereNull('delete_time')
+            ->orderRaw('rand()')
+            ->find();
+        if (empty($fallbackMaterial)) {
+            return null;
+        }
+        return [
+            'id' => (int)$fallbackMaterial['id'],
+            'material_type' => (int)$fallbackMaterial['material_type'],
+            'remote_url' => (string)($fallbackMaterial['remote_url'] ?? ''),
+            'file_url' => (string)($fallbackMaterial['file_url'] ?? ''),
+            'thumbnail_url' => (string)($fallbackMaterial['thumbnail_url'] ?? ''),
+            'duration' => (int)($fallbackMaterial['duration'] ?? 0),
+            'width' => (int)($fallbackMaterial['width'] ?? 0),
+            'height' => (int)($fallbackMaterial['height'] ?? 0),
+            'material_name' => (string)($fallbackMaterial['material_name'] ?? '兜底素材'),
+            'material_store' => 'persona',
+        ];
+    }
+
+    private static function resolveFileSizeBytes(string $fileUrl): int
+    {
+        $fileUrl = trim($fileUrl);
+        if ($fileUrl === '') {
+            return 0;
+        }
+        $uri = ltrim((string)FileService::setFileUrl($fileUrl), '/\\');
+        $candidates = [];
+        if (is_file($fileUrl)) {
+            $candidates[] = $fileUrl;
+        }
+        if ($uri !== '') {
+            $public = FileService::getFileUrl($uri, 'public_path');
+            if ($public !== '' && !str_starts_with($public, 'http://') && !str_starts_with($public, 'https://')) {
+                $candidates[] = $public;
+            }
+            $rel = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $uri);
+            $candidates[] = rtrim(public_path(), '/\\') . DIRECTORY_SEPARATOR . $rel;
+            if (function_exists('root_path')) {
+                $candidates[] = rtrim(root_path(), '/\\') . DIRECTORY_SEPARATOR . $rel;
+            }
+        }
+        foreach ($candidates as $path) {
+            if ($path === '' || !is_file($path)) {
+                continue;
+            }
+            $size = filesize($path);
+            if ($size !== false && $size > 0) {
+                return (int)$size;
+            }
+        }
+        if ($uri !== '') {
+            try {
+                $file = File::where('uri', $uri)->whereNull('delete_time')->order('id', 'desc')->find();
+                if ($file && isset($file['size']) && (int)$file['size'] > 0) {
+                    return (int)$file['size'];
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+        return 0;
+    }
+
+    private static function composeSvMaterialName(string $raw): string
+    {
+        $prefix = VideoService::NAME_PREFIX;
+        $raw = trim($raw);
+        if ($raw !== '' && str_starts_with($raw, $prefix)) {
+            return $raw;
+        }
+        return $prefix . $raw;
+    }
+
+    private static function persistGrabbedMaterials(
+        string $store,
+        int $userId,
+        int $personaId,
+        array $all,
+        int $now,
+        string $platform
+    ): array {
+        if (self::$testHooks !== []) {
+            if (!isset(self::$testHooks['persistCalls']) || !is_array(self::$testHooks['persistCalls'])) {
+                self::$testHooks['persistCalls'] = [];
+            }
+            self::$testHooks['persistCalls'][] = $all;
+            if (array_key_exists('persist', self::$testHooks)) {
+                $hook = self::$testHooks['persist'];
+                if (is_callable($hook)) {
+                    return $hook($store, $userId, $personaId, $all, $now, $platform);
+                }
+                $id = 1;
+                foreach ($all as $i => $item) {
+                    if (!is_array($item)) {
+                        continue;
+                    }
+                    if ((int)($item['id'] ?? 0) <= 0) {
+                        $all[$i]['id'] = $id++;
+                    }
+                    $all[$i]['material_store'] = $store;
+                    if ($store === 'sv_media') {
+                        $all[$i]['size'] = self::resolveHotspotMaterialSize($item);
+                    }
+                }
+                return array_values($all);
+            }
+        }
+        if ($all === []) {
+            return [];
+        }
+        $insertData = [];
+        $insertPositions = [];
+        foreach ($all as $index => $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $all[$index]['material_store'] = $store;
+            if ((int)($item['id'] ?? 0) > 0) {
+                continue;
+            }
+            if ($store === 'sv_media') {
+                $fileUrl = (string)($item['file_url'] ?? '');
+                $size = self::resolveHotspotMaterialSize($item);
+                if ($size <= 0) {
+                    $msg = '热点素材无法计算文件大小：' . mb_substr($fileUrl, 0, 180);
+                    Log::channel('explosionVideoSynthesis')->write($msg);
+                    HotspotLog::write($msg);
+                }
+                $row = SvMediaMaterial::buildHotspotRow(
+                    $userId,
+                    self::composeSvMaterialName((string)($item['material_name'] ?? '')),
+                    $fileUrl,
+                    (string)($item['thumbnail_url'] ?? ''),
+                    SvMediaMaterial::fromPersonaMaterialType((int)($item['material_type'] ?? 0)),
+                    SvMediaMaterial::mapHotspotPlatform($platform),
+                    (int)($item['duration'] ?? 0),
+                    $size,
+                    (string)($item['remote_url'] ?? ''),
+                    $now
+                );
+                if ($row === null) {
+                    continue;
+                }
+                $existingId = SvMediaMaterial::findExistingId(
+                    $userId,
+                    SvMediaMaterial::SOURCE_HOTSPOT,
+                    (string)$row['content']
+                );
+                if ($existingId > 0) {
+                    $all[$index]['id'] = $existingId;
+                    continue;
+                }
+                $insertPositions[] = $index;
+                $insertData[] = $row;
+                continue;
+            }
+            $insertPositions[] = $index;
+            $insertData[] = [
+                'persona_id' => $personaId,
+                'user_id' => $userId,
+                'material_name' => $item['material_name'] ?? '',
+                'material_type' => $item['material_type'],
+                'remote_url' => $item['remote_url'] ?? '',
+                'is_wechat' => 0,
+                'file_url' => $item['file_url'],
+                'thumbnail_url' => $item['thumbnail_url'] ?? '',
+                'duration' => $item['duration'] ?? 0,
+                'width' => $item['width'] ?? 0,
+                'height' => $item['height'] ?? 0,
+                'use_status' => 1,
+                'publish_mode' => 1,
+                'grab_type' => 1,
+                'create_time' => $now,
+                'update_time' => $now,
+            ];
+        }
+        if ($insertData === []) {
+            return array_values($all);
+        }
+        $result = $store === 'sv_media'
+            ? SvMediaMaterial::saveMaterialRows($insertData)
+            : (new MaterialModel())->saveAll($insertData);
+        foreach ($result as $j => $model) {
+            $pos = $insertPositions[$j] ?? null;
+            if ($pos === null) {
+                continue;
+            }
+            $all[$pos]['id'] = is_object($model) ? (int)($model->id ?? 0) : (int)($model['id'] ?? 0);
+            $all[$pos]['material_store'] = $store;
+        }
+        return array_values($all);
     }
 
 
     private static function requestUrl(array $request, string $scene, int $userId, string $taskId='')
     {
         $startAt = microtime(true);
-        Log::channel('explosionVideoSynthesis')->write('requestUrl监控:start ' . json_encode([
-            'scene' => $scene,
-            'user_id' => $userId,
-            'task_id' => $taskId,
-            'request_keys' => array_keys($request),
-            'search_term' => isset($request['searchTerm']) ? mb_substr((string)$request['searchTerm'], 0, 100) : '',
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $response = [];
+        if (self::$testHooks !== []) {
+            self::$testHooks['requestUrlCalls'][] = [
+                'scene' => $scene,
+                'request' => $request,
+                'user_id' => $userId,
+                'task_id' => $taskId,
+            ];
+            if (array_key_exists('requestUrl', self::$testHooks)) {
+                $hook = self::$testHooks['requestUrl'];
+                if ($hook instanceof \Throwable) {
+                    throw $hook;
+                }
+                if (is_callable($hook)) {
+                    return $hook($request, $scene, $userId, $taskId);
+                }
+                if (is_array($hook) && array_key_exists($scene, $hook)) {
+                    $mapped = $hook[$scene];
+                    return is_callable($mapped) ? $mapped($request, $userId, $taskId) : $mapped;
+                }
+            }
+        }
         try {
 
             [$tokenScene, $tokenCode] = match ($scene) {
@@ -2165,6 +3099,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
             $request['task_id'] = $taskId;
             $request['user_id'] = $userId;
             $request['now'] = time();
+            self::logThirdPartyExchange('第三方请求参数', $scene, $userId, $taskId, $request);
             switch ($scene) {
                 case self::EXTRACT_KEYWORDS:
                      $response = \app\common\service\ToolsService::Coze()->extractKeywords($request);
@@ -2180,6 +3115,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                     break;
                 default:
             } //成功响应，需要扣费
+            self::logThirdPartyExchange('第三方原始返回', $scene, $userId, $taskId, $response ?? []);
             if (isset($response['code']) && $response['code'] == 10000) {
                 $points = $unit;
                 if ($points > 0) {
@@ -2242,6 +3178,15 @@ class CopywritingImitationLogic extends BasePersonaLogic
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             throw new \Exception($e->getMessage());
         }
+    }
+
+    private static function logThirdPartyExchange(string $label, string $scene, int $userId, string $taskId, mixed $payload): void
+    {
+        $safe = HotspotLog::safe($payload);
+        $text = HotspotLog::clip($safe, 3000);
+        $line = sprintf('%s：场景=%s 用户=%d 任务=%s %s', $label, $scene, $userId, $taskId, $text);
+        Log::channel('explosionVideoSynthesis')->write($line);
+        HotspotLog::write($line);
     }
 
 
@@ -2310,6 +3255,17 @@ class CopywritingImitationLogic extends BasePersonaLogic
 
     public static function refundGrabTokens($task_id,string $type,int $userId=0,string $reason='抓取失败退费'): bool
     {
+        if (self::$testHooks !== []) {
+            self::$testHooks['refundCalls'][] = [
+                'task_id' => $task_id,
+                'type' => $type,
+                'user_id' => $userId,
+                'reason' => $reason,
+            ];
+            if (!empty(self::$testHooks['skipRefund'])) {
+                return true;
+            }
+        }
         try {
             $taskId = $task_id ?? '';
             $type = $type ?? '';

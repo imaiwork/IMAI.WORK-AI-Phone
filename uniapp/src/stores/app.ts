@@ -88,6 +88,30 @@ export const useAppStore = defineStore({
         /** 生图/生视频模型（IndexLogic.draw_model.channel，对齐 PC getDrawModel） */
         getDrawModel: (state) => state.config.draw_model?.channel || [],
         getOemConfig: (state) => state.oem || {},
+        /** OEM 站点自己的 logo(site_logo=OEM pc_logo,未单独配置时后端已回落 web_logo);非 OEM 返回空 */
+        getOemLogo: (state) => {
+            const oem: any = state.oem || {};
+            if (Number(oem.is_oem) !== 1) return "";
+            return String(oem.site_logo || oem.logo_url || "");
+        },
+        /** OEM 站点品牌名;非 OEM 返回空 */
+        getOemName: (state) => {
+            const oem: any = state.oem || {};
+            if (Number(oem.is_oem) !== 1) return "";
+            return String(oem.name || "");
+        },
+        /** 登录页/大图 logo:OEM 优先,回落平台 pc_logo */
+        getSiteLogo(state): string {
+            return this.getOemLogo || state.config.website?.pc_logo || "";
+        },
+        /** 头像位/弹窗小 logo:OEM 优先,回落平台 shop_logo */
+        getSiteShopLogo(state): string {
+            return this.getOemLogo || state.config.website?.shop_logo || "";
+        },
+        /** 站点名称:OEM 优先,回落平台 shop_name */
+        getSiteName(state): string {
+            return this.getOemName || state.config.website?.shop_name || "";
+        },
         /** 当前是否 OEM 独立站点 */
         isOemSite: (state) => Number(state.oem?.is_oem) === 1,
         /** 团队 OEM 已解散/关闭：全屏拦截，不回落主站 */

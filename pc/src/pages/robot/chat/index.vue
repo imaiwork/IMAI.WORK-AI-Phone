@@ -75,6 +75,7 @@
 </template>
 
 <script setup lang="ts">
+import { handleSseFrames } from "@/utils/http/sse-frame";
 import ChatArea from "chatarea";
 import "chatarea/lib/ChatArea.css";
 import { robotDetail } from "@/api/robot";
@@ -358,39 +359,31 @@ const contentPost = async (userInput?: any, isNewChat: boolean = false, isSlider
                     isStopChat.value = true;
                 },
                 onmessage(value) {
-                    value
-                        .trim()
-                        .split("data:")
-                        .forEach((text, index) => {
-                            if (text !== "") {
-                                try {
-                                    const dataJson = JSON.parse(text);
-                                    const { object, content, task_id, reasoning_content, usage } = dataJson;
-                                    if ((content || reasoning_content) && object === "loading") {
-                                        if (reasoning_content) {
-                                            result.is_reasoning_finished = false;
-                                            result.reasoning_content += reasoning_content;
-                                        } else {
-                                            result.is_reasoning_finished = true;
-                                            result.reply += content;
-                                        }
-                                    }
-                                    if (object === "finished") {
-                                        result.loading = false;
-                                        result.consume_tokens = {
-                                            ...usage,
-                                        };
-                                        if (!taskId.value) {
-                                            taskId.value = task_id;
-                                        }
-                                        replaceState({
-                                            task_id: task_id || "",
-                                        });
-                                        return;
-                                    }
-                                } catch (error) {}
+                    handleSseFrames(value, (dataJson) => {
+                        const { object, content, task_id, reasoning_content, usage } = dataJson;
+                        if ((content || reasoning_content) && object === "loading") {
+                            if (reasoning_content) {
+                                result.is_reasoning_finished = false;
+                                result.reasoning_content += reasoning_content;
+                            } else {
+                                result.is_reasoning_finished = true;
+                                result.reply += content;
                             }
-                        });
+                        }
+                        if (object === "finished") {
+                            result.loading = false;
+                            result.consume_tokens = {
+                                ...usage,
+                            };
+                            if (!taskId.value) {
+                                taskId.value = task_id;
+                            }
+                            replaceState({
+                                task_id: task_id || "",
+                            });
+                            return;
+                        }
+                    });
                 },
                 async onclose() {
                     result.loading = false;

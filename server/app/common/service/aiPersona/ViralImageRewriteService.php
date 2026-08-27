@@ -2,9 +2,11 @@
 
 namespace app\common\service\aiPersona;
 
+use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\sv\SvDeviceViralRecord;
+use app\common\model\sv\SvMediaMaterial;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\service\ConfigService;
@@ -24,6 +26,22 @@ class ViralImageRewriteService
 
     /** 图生图计费模型（技术 alias，展示名 image-2） */
     private const BILLING_MODEL_ALIAS = 'gpt-image-2';
+
+    /**
+     * 测试钩子：仅 tests/ 注入，生产勿用。
+     * @var array<string, mixed>
+     */
+    private static array $testHooks = [];
+
+    public static function setTestHooks(array $hooks): void
+    {
+        self::$testHooks = $hooks;
+    }
+
+    public static function clearTestHooks(): void
+    {
+        self::$testHooks = [];
+    }
 
     private const FIXED_PROMPT = <<<'PROMPT'
 # 图片重绘提示词
@@ -204,10 +222,13 @@ PROMPT;
                     Log::channel('auto')->write("GPT-2图像改写成功 " . $storedImage . "\n", 'img2');
 
                     // 单张先上 OSS，再立即追加 rewritten_images
+                    $platformType = (int)($record->publish_platform ?? 0);
                     $uploadedLocals = self::uploadRewriteImagesToOss(
                         [$originalImagePath],
                         [$storedImage],
-                        $recordId
+                        $recordId,
+                        $userId,
+                        $platformType
                     );
                     foreach ($uploadedLocals as $localPath) {
                         $localFilesToCleanup[] = $localPath;
@@ -1037,8 +1058,13 @@ PROMPT;
      * @param array $rewrittenImages
      * @return array<int, string> 上传成功后待删除的本地绝对路径（仅 gpt2 结果图，不含共享原图）
      */
-    private static function uploadRewriteImagesToOss(array $originalImages, array $rewrittenImages, int $recordId): array
-    {
+    private static function uploadRewriteImagesToOss(
+        array $originalImages,
+        array $rewrittenImages,
+        int $recordId,
+        int $userId = 0,
+        int $platformType = 0
+    ): array {
         $relativePaths = self::collectLocalRewriteImagePaths($originalImages, $rewrittenImages);
         if (empty($relativePaths)) {
             Log::channel('auto')->write(
@@ -1048,8 +1074,9 @@ PROMPT;
             return [];
         }
 
-        $storageDefault = (string)ConfigService::get('storage', 'default', 'local');
+        $storageDefault = self::resolveStorageDefault();
         if ($storageDefault === 'local') {
+            self::persistLocalRewrittenMaterials($rewrittenImages, $userId, $platformType);
             Log::channel('auto')->write(
                 "图文改写OSS上传跳过：当前存储为local record_id={$recordId} count=" . count($relativePaths),
                 'img2'
@@ -1104,6 +1131,15 @@ PROMPT;
                 );
             }
 
+            $isResult = isset($rewrittenRelativeSet[$relativeUri]);
+            $size = 0;
+            if ($isResult) {
+                $gotSize = @filesize($localPath);
+                if ($gotSize !== false && $gotSize > 0) {
+                    $size = (int)$gotSize;
+                }
+            }
+
             try {
                 self::uploadLocalFileToRemoteStorage($storageConfig, $localPath, $relativeUri);
             } catch (\Throwable $th) {
@@ -1112,6 +1148,10 @@ PROMPT;
                     'img2'
                 );
                 throw new \Exception('图文改写图片上传OSS失败：' . $relativeUri . '，' . $th->getMessage(), 0, $th);
+            }
+
+            if ($isResult) {
+                self::persistRewrittenMaterial($userId, $platformType, $relativeUri, $size);
             }
 
             $uploadedCount++;
@@ -1132,6 +1172,64 @@ PROMPT;
         );
 
         return $localAbsolutePaths;
+    }
+
+    /**
+     * @param array<int, mixed> $rewrittenImages
+     */
+    private static function persistLocalRewrittenMaterials(array $rewrittenImages, int $userId, int $platformType): void
+    {
+        foreach ($rewrittenImages as $image) {
+            $relativeUri = self::normalizeLocalRelativePath((string)$image);
+            if ($relativeUri === '') {
+                continue;
+            }
+            $localPath = self::resolvePublicLocalPath($relativeUri);
+            if (!is_file($localPath)) {
+                continue;
+            }
+            $size = 0;
+            $gotSize = @filesize($localPath);
+            if ($gotSize !== false && $gotSize > 0) {
+                $size = (int)$gotSize;
+            }
+            self::persistRewrittenMaterial($userId, $platformType, $relativeUri, $size);
+        }
+    }
+
+    private static function persistRewrittenMaterial(int $userId, int $platformType, string $relativeUri, int $size): void
+    {
+        if ($userId <= 0 || $relativeUri === '') {
+            return;
+        }
+        if ($platformType <= 0) {
+            $platformType = DeviceEnum::ACCOUNT_TYPE_XHS;
+        }
+        SvMediaMaterial::persistImageRewriteMaterial(
+            $userId,
+            $platformType,
+            SvMediaMaterial::IMAGE_REWRITE_SCENE_AUTO,
+            $relativeUri,
+            $size
+        );
+    }
+
+    private static function resolveStorageDefault(): string
+    {
+        if (array_key_exists('storage', self::$testHooks)) {
+            return (string)self::$testHooks['storage'];
+        }
+        return (string)ConfigService::get('storage', 'default', 'local');
+    }
+
+    public static function uploadRewriteImagesToOssForTest(
+        array $originalImages,
+        array $rewrittenImages,
+        int $recordId,
+        int $userId = 0,
+        int $platformType = 0
+    ): array {
+        return self::uploadRewriteImagesToOss($originalImages, $rewrittenImages, $recordId, $userId, $platformType);
     }
 
     /**
@@ -1280,6 +1378,17 @@ PROMPT;
 
     private static function uploadLocalFileToRemoteStorage(array $storageConfig, string $localPath, string $relativeUri): void
     {
+        if (array_key_exists('uploadRemote', self::$testHooks)) {
+            $hook = self::$testHooks['uploadRemote'];
+            if ($hook instanceof \Throwable) {
+                throw $hook;
+            }
+            if (is_callable($hook)) {
+                $hook($localPath, $relativeUri);
+            }
+            return;
+        }
+
         $filename = basename($relativeUri);
         $saveDir = dirname($relativeUri);
         if ($saveDir === '.' || $saveDir === '\\') {

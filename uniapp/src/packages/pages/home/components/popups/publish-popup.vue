@@ -59,7 +59,7 @@
                         :key="device.device_code"
                         class="bg-white rounded-[32rpx] overflow-hidden">
                         <view
-                            class="px-[28rpx] py-[20rpx] flex items-center gap-[16rpx] border-b-[2rpx] border-[#f9fafb]">
+                            class="px-[28rpx] py-[20rpx] flex items-center gap-[16rpx] border-[0] border-b-[2rpx] border-[#f9fafb]">
                             <image
                                 :src="device.avatar || defaultAvatar"
                                 mode="aspectFill"
@@ -76,7 +76,7 @@
                         <view
                             v-for="item in device.items"
                             :key="item.task_id"
-                            class="px-[28rpx] py-[24rpx] flex items-center justify-between gap-[16rpx] border-b-[2rpx] border-[#f9fafb] last:border-b-0 active:bg-[#f9fafb]"
+                            class="px-[28rpx] py-[24rpx] flex items-center justify-between gap-[16rpx] border-[0] border-b-[2rpx] border-[#f9fafb] last:border-b-0 active:bg-[#f9fafb]"
                             @click="openDetail(item)">
                             <view class="flex items-center gap-[16rpx] flex-1 min-w-0">
                                 <text
@@ -93,13 +93,19 @@
                                     </text>
                                 </view>
                             </view>
-                            <view
-                                class="flex items-center gap-[6rpx] flex-shrink-0"
-                                :class="tabStatusClass(item.task_status)">
-                                <text class="text-xs font-semibold whitespace-nowrap">
-                                    {{ item.task_status_text }}
-                                </text>
-                                <u-icon name="arrow-right" :size="20" color="#c0c4cc"></u-icon>
+                            <view class="flex items-center gap-[12rpx] flex-shrink-0">
+                                <view
+                                    v-if="item.can_resend"
+                                    class="rounded-full bg-error px-[20rpx] py-[8rpx] active:opacity-80"
+                                    @click.stop="openResend(item)">
+                                    <text class="text-[20rpx] font-bold text-white">重新发送</text>
+                                </view>
+                                <view class="flex items-center gap-[6rpx]" :class="tabStatusClass(item.task_status)">
+                                    <text class="text-xs font-semibold whitespace-nowrap">
+                                        {{ item.task_status_text }}
+                                    </text>
+                                    <u-icon name="arrow-right" :size="20" color="#c0c4cc"></u-icon>
+                                </view>
                             </view>
                         </view>
                     </view>
@@ -111,11 +117,13 @@
         </template>
     </popup-bottom>
 
-    <publish-detail-popup v-model="detailVisible" :item="detailItem" />
+    <publish-detail-popup v-model="detailVisible" :item="detailItem" @resend="openResend(detailItem)" />
+    <publish-resend-popup v-model="resendVisible" :item="resendItem" @success="handleResendSuccess" />
 </template>
 
 <script setup lang="ts">
 import PublishDetailPopup from "./publish-detail-popup.vue";
+import PublishResendPopup from "./publish-resend-popup.vue";
 import { getPublishTaskList } from "@/api/person";
 import { AppTypeEnum } from "@/enums/appEnums";
 import config from "@/config";
@@ -147,6 +155,20 @@ const detailItem = ref<PublishItem | null>(null);
 const openDetail = (item: PublishItem) => {
     detailItem.value = item;
     detailVisible.value = true;
+};
+
+const resendVisible = ref(false);
+const resendItem = ref<PublishItem | null>(null);
+const openResend = (item: PublishItem | null) => {
+    if (!item) return;
+    resendItem.value = item;
+    resendVisible.value = true;
+};
+
+// 重发下发成功后任务回到执行中，关闭详情并刷新列表状态
+const handleResendSuccess = () => {
+    detailVisible.value = false;
+    pagingRef.value?.reload();
 };
 
 const currentSlot = computed<PublishSlot | undefined>(() => {
@@ -209,6 +231,7 @@ watch(
         } else {
             activeTab.value = 0;
             detailVisible.value = false;
+            resendVisible.value = false;
         }
     },
 );

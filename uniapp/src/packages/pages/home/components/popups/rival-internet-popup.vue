@@ -27,11 +27,7 @@
                         <u-icon name="close" size="28" color="#6b7280"></u-icon>
                     </view>
                 </view>
-                <scroll-view
-                    v-if="tabs.length"
-                    scroll-x
-                    class="mt-[24rpx] whitespace-nowrap"
-                    show-scrollbar="false">
+                <scroll-view v-if="tabs.length" scroll-x class="mt-[24rpx] whitespace-nowrap" show-scrollbar="false">
                     <view class="inline-flex gap-[16rpx]">
                         <view
                             v-for="tab in tabs"
@@ -69,9 +65,7 @@
                                         class="rounded-[16rpx] px-[20rpx] py-[8rpx] text-xs text-primary bg-primary-light-9">
                                         {{ term }}
                                     </text>
-                                    <text
-                                        v-if="!config.search_keywords.length"
-                                        class="text-[22rpx] text-[#9ca3af]">
+                                    <text v-if="!config.search_keywords.length" class="text-[22rpx] text-[#9ca3af]">
                                         暂无
                                     </text>
                                 </view>
@@ -79,10 +73,7 @@
                             <view
                                 class="flex-shrink-0 flex items-center gap-[8rpx] text-xs font-medium text-primary bg-primary-light-9 px-[20rpx] py-[12rpx] rounded-full"
                                 @click="emit('edit-tracking')">
-                                <image
-                                    :src="settingsIcon"
-                                    mode="aspectFit"
-                                    class="w-[24rpx] h-[24rpx]" />
+                                <image :src="settingsIcon" mode="aspectFit" class="w-[24rpx] h-[24rpx]" />
                                 <text>前往修改</text>
                             </view>
                         </view>
@@ -95,9 +86,7 @@
                                     class="rounded-[16rpx] px-[20rpx] py-[8rpx] text-xs font-medium text-[#4b5563] bg-[#f3f4f6]">
                                     {{ time }}
                                 </text>
-                                <text
-                                    v-if="!config.execute_times.length"
-                                    class="text-[22rpx] text-[#9ca3af]">
+                                <text v-if="!config.execute_times.length" class="text-[22rpx] text-[#9ca3af]">
                                     未配置
                                 </text>
                             </view>
@@ -111,9 +100,7 @@
                                     class="rounded-[16rpx] px-[20rpx] py-[8rpx] text-xs text-warning bg-warning-light-9">
                                     {{ kw }}
                                 </text>
-                                <text
-                                    v-if="!config.hit_keywords.length"
-                                    class="text-[22rpx] text-[#9ca3af]">
+                                <text v-if="!config.hit_keywords.length" class="text-[22rpx] text-[#9ca3af]">
                                     暂无
                                 </text>
                             </view>
@@ -122,7 +109,7 @@
 
                     <view class="bg-white rounded-[32rpx] overflow-hidden">
                         <view
-                            class="px-[32rpx] py-[24rpx] border-b-[2rpx] border-[#f9fafb] flex items-center gap-[12rpx]">
+                            class="px-[32rpx] py-[24rpx] border-[0] border-b-[2rpx] border-[#f9fafb] flex items-center gap-[12rpx]">
                             <text class="text-sm font-bold text-[#1f2937]">客户列表</text>
                             <text class="text-xs text-[#9ca3af]">{{ customers.length }} 条</text>
                         </view>
@@ -235,23 +222,16 @@ const queryList = async (page_no: number, page_size: number) => {
     try {
         const data: any = await getLeadScrapingReport({
             persona_id: props.personaId,
-            platform_type:
-                activePlatform.value === "all" ? "" : String(activePlatform.value),
+            platform_type: activePlatform.value === "all" ? "" : String(activePlatform.value),
             date: "",
             page_no,
             page_size,
         });
         const ext = data?.extend || {};
         if (ext.config) {
-            config.search_keywords = Array.isArray(ext.config.search_keywords)
-                ? ext.config.search_keywords
-                : [];
-            config.hit_keywords = Array.isArray(ext.config.hit_keywords)
-                ? ext.config.hit_keywords
-                : [];
-            config.execute_times = Array.isArray(ext.config.execute_times)
-                ? ext.config.execute_times
-                : [];
+            config.search_keywords = Array.isArray(ext.config.search_keywords) ? ext.config.search_keywords : [];
+            config.hit_keywords = Array.isArray(ext.config.hit_keywords) ? ext.config.hit_keywords : [];
+            config.execute_times = Array.isArray(ext.config.execute_times) ? ext.config.execute_times : [];
         }
         if (Array.isArray(ext.tabs)) tabs.value = ext.tabs;
         const raw = Array.isArray(data?.lists) ? data.lists : [];

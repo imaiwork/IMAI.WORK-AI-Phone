@@ -65,7 +65,7 @@ import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import { AUTHORIZATION_KEY } from "@/enums/cacheEnums";
 import { useLocalStorage } from "@vueuse/core";
-import { Sse } from "@/utils/http/sse";
+import { handleSseFrames } from "@/utils/http/sse-frame";
 import { Delete } from "@element-plus/icons-vue";
 import PwdCheck from "./_components/pwd-check.vue";
 
@@ -144,26 +144,17 @@ const contentPost = async (content: string) => {
                     isStopChat.value = true;
                 },
                 onmessage: (value) => {
-                    value
-                        .trim()
-                        .split("data:")
-                        .forEach((text) => {
-                            if (!text) return;
-
-                            try {
-                                const { object, content, task_id: newTaskId, usage } = JSON.parse(text);
-
-                                if (object === "loading") {
-                                    currentChat.reply += content;
-                                } else if (object === "finished") {
-                                    currentChat.loading = false;
-                                    currentChat.consume_tokens = usage;
-                                }
-                                chatScrollToBottom();
-                            } catch (error) {
-                                console.error("解析流式消息失败:", error, "原始文本:", text);
-                            }
-                        });
+                    handleSseFrames(value, (dataJson) => {
+                        const { object, content, usage } = dataJson;
+                        if (object === "loading") {
+                            // 不判空的话，不带 content 的帧会把字符串 "undefined" 拼进正文
+                            if (content) currentChat.reply += content;
+                        } else if (object === "finished") {
+                            currentChat.loading = false;
+                            currentChat.consume_tokens = usage;
+                        }
+                        chatScrollToBottom();
+                    });
                 },
                 onclose: () => {
                     currentChat.loading = false;
@@ -173,60 +164,23 @@ const contentPost = async (content: string) => {
                 },
             }
         );
-        // streamReader.addEventListener("reasoning", ({ data: dataJson }: any) => {
-        //     const { data, index } = dataJson;
-        //     if (!currentChat.reasoning) {
-        //         currentChat.reasoning = "";
-        //     }
-        //     currentChat.reasoning += data;
-        // });
-        // streamReader.addEventListener("chat", ({ data: dataJson }: any) => {
-        //     const { data, index } = dataJson;
-        //     if (!currentChat.reply) {
-        //         currentChat.reply = "";
-        //     }
-        //     currentChat.reply += data;
-        //     console.log(currentChat);
-        // });
-        // streamReader.addEventListener("close", () => {
-        //     currentChat.loading = false;
-        //     isReceiving.value = false;
-        //     setTimeout(async () => {
-        //         await getChatRecord();
-        //         chattingRef.value.scrollToBottom();
-        //     }, 1000);
-        // });
-        // streamReader.addEventListener("error", (ev) => {
-        //     if (ev.errorType === "connectError") {
-        //         feedback.msgError("请求失败，请重试");
-        //     }
-        //     // 登录失效
-        //     if (ev.data?.code === 1200) {
-        //         feedback.msgError(ev.data?.message);
-        //         logout();
-        //         setTimeout(() => {
-        //             checkLogin();
-        //         }, 10);
-        //     }
-        //     if (["connectError", "responseError"].includes(ev.errorType!)) {
-        //         chatContentList.value.splice(chatContentList.value.length - 2, 2);
-        //     }
-        //     currentChat.loading = false;
-        //     setTimeout(() => {
-        //         isReceiving.value = false;
-        //     }, 200);
-        // });
     } catch (error) {
         currentChat.loading = false;
         isReceiving.value = false;
-        currentChat.reply = "请求失败，请重试";
+        // 已经流出来的内容要留着，只有一个字都没有时才整条替换
+        if (!currentChat.reply) currentChat.reply = "请求失败，请重试";
     }
 };
 
+let scrollFrame = 0;
 const chatScrollToBottom = () => {
-    setTimeout(() => {
-        chattingRef.value.scrollToBottom();
-    }, 100);
+    if (typeof requestAnimationFrame === "undefined") return;
+    // 流式每帧都会调这里：用 rAF 合并成一帧一次；组件可能已卸载，必须可选链
+    if (scrollFrame) return;
+    scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = 0;
+        chattingRef.value?.scrollToBottom();
+    });
 };
 
 const clearChat = () => {

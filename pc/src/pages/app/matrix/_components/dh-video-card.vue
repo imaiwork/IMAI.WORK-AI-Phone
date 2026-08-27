@@ -37,7 +37,7 @@
                         class="py-1.5 px-3 rounded-full bg-[#000000]/40 backdrop-blur-xl border border-[#ffffff]/10 text-center w-fit mx-auto">
                         <span class="text-[11px] font-medium" :class="getClipStatusClass(item.clip_status)">
                             <Icon v-if="item.clip_status < 3" name="el-icon-Loading" class="mr-1 animate-spin" />
-                            {{ getClipStatusText(item.clip_status) }}
+                            {{ getClipStatusText(item.clip_status, item.remark) }}
                         </span>
                     </div>
                 </div>
@@ -111,7 +111,7 @@ const props = withDefaults(
     }>(),
     {
         item: {},
-    }
+    },
 );
 
 const emit = defineEmits(["edit", "delete", "preview"]);
@@ -136,8 +136,8 @@ const modelVersionMap = computed(() => {
     }, {});
 });
 
-const getClipStatusText = (status: number) => {
-    const map = { 1: "AI智能剪辑中", 2: "AI智能剪辑中", 3: "AI剪辑已完成", 4: "AI剪辑失败" };
+const getClipStatusText = (status: number, remark: string) => {
+    const map = { 1: "AI智能剪辑中", 2: "AI智能剪辑中", 3: "AI剪辑已完成", 4: remark || "AI剪辑失败" };
     return map[status] || "等待剪辑";
 };
 
@@ -194,7 +194,7 @@ const getUtilsMenuList = (item) => {
                         handleDownLoad(clip_result_url);
                     },
                 },
-            ]
+            ],
         );
     }
     return utilsMenuList;

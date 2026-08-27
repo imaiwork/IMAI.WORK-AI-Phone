@@ -21,6 +21,16 @@ class VideoImitationTask extends BaseModel
     public const MEDIA_TYPE_VIDEO = 1;
     public const MEDIA_TYPE_IMAGE_TEXT = 2;
 
+    /** 文案模式：1人设复刻（兼容默认），2不使用人设的洗稿 */
+    public const REWRITE_MODE_PERSONA = 1;
+    public const REWRITE_MODE_WASH = 2;
+
+    /** 洗稿视频生成类型 */
+    public const GENERATION_TYPE_NONE = 0;
+    public const GENERATION_TYPE_DIGITAL_HUMAN = 1;
+    public const GENERATION_TYPE_MATERIAL = 2;
+    public const GENERATION_TYPE_NEWS = 3;
+
     public const IMAGE_REWRITE_STATUS_NONE = 0;
     public const IMAGE_REWRITE_STATUS_WAIT = 1;
     public const IMAGE_REWRITE_STATUS_PROCESSING = 2;

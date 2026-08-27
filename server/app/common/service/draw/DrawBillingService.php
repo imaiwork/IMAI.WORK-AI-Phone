@@ -612,8 +612,32 @@ class DrawBillingService
             $query->whereIn('change_type', $changeTypes);
         }
 
+        return self::sumRecordPoints($query->field('action,change_amount,extra')->select()->toArray());
+    }
+
+    /**
+     * 同 resolveRecordPoints，但吃调用方预取好的流水
+     * 列表页批量展示时用：一次把整页的流水查回来，避免每行各查一次
+     *
+     * @param array      $logs         该记录对应的 user_tokens_log 行（需含 action/change_amount/extra）
+     * @param float|null $drawTaskCost draw_task.tokens_cost，大于 0 时优先采用
+     */
+    public static function resolveRecordPointsFromLogs(array $logs, ?float $drawTaskCost = null): float
+    {
+        if ($drawTaskCost !== null && $drawTaskCost > 0) {
+            return round($drawTaskCost, 2);
+        }
+
+        return self::sumRecordPoints($logs);
+    }
+
+    /**
+     * 流水汇总口径：扣减累加、退还相抵，优先取 extra.实际消耗算力
+     */
+    protected static function sumRecordPoints(iterable $logs): float
+    {
         $points = 0.0;
-        $query->field('action,change_amount,extra')->select()->each(function ($log) use (&$points) {
+        foreach ($logs as $log) {
             $extra = $log['extra'] ?? '';
             if (is_string($extra) && $extra !== '') {
                 $extra = json_decode($extra, true) ?: [];
@@ -629,7 +653,7 @@ class DrawBillingService
             } else {
                 $points -= $amt;
             }
-        });
+        }
 
         return max(round($points, 2), 0);
     }

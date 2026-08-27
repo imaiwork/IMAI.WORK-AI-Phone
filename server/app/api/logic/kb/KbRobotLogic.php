@@ -1042,7 +1042,10 @@ class KbRobotLogic extends BaseLogic
             if (!isset($params['keywords']) && empty($params['keywords']) &&  $params['persona_id'] = 0) {
                  throw new \Exception('如果填写想要生成的主题大纲，必须绑定人设');
             }
-            if ($params['type'] == 1) {
+            if (!empty($params['skip_charge'])) {
+                // 系统纠错重试（如热点追踪文案质量不合格自动重试）：首次已足额扣费，重试不预检不扣费
+                $unit = 0;
+            } elseif ($params['type'] == 1) {
                 $unit = TokenLogService::checkToken($userId, 'coze_copywriting');
             } else {
                 $unit = TokenLogService::checkToken($userId, 'coze_copywriting_senior');
@@ -1167,11 +1170,11 @@ class KbRobotLogic extends BaseLogic
                 $cozeKeywords = $params['keywords'] ?? '';
             }
 
-            if(isset($params['keywords']) && empty($params['keywords'])){
-               $params['keywords'] = $cozeKeywords."我想生成的主题是：【{$params['keywords']}】。";
-            }else{
-                $params['keywords'] = $cozeKeywords;
-            }
+            $params['keywords'] = self::mergeCopywritingKeywords(
+                (int)$params['persona_id'],
+                (string)$cozeKeywords,
+                $params['keywords'] ?? ''
+            );
 
 
             // 添加辅助参数
@@ -1213,6 +1216,19 @@ class KbRobotLogic extends BaseLogic
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 人设线索与用户主题合流。
+     * persona_id>0 且主题非空时拼接主题，避免非空 keywords 被整段丢掉。
+     */
+    public static function mergeCopywritingKeywords(int $personaId, string $cozeKeywords, mixed $keywords): string
+    {
+        $theme = is_scalar($keywords) ? trim((string)$keywords) : '';
+        if ($personaId > 0 && $theme !== '') {
+            return $cozeKeywords . '我想生成的主题是：【' . $theme . '】。';
+        }
+        return $cozeKeywords;
     }
 
     /**

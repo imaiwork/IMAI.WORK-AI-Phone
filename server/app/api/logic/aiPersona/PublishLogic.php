@@ -27,6 +27,8 @@ use app\common\model\aiPersona\AiPersonaSynthesisCopywriting;
 use app\common\model\aiPersona\SynthesisConfig as AiPersonaSynthesisConfig;
 use app\common\service\aiPersona\AiPersonaOptionService;
 use app\common\service\aiPersona\IdRoundRobinPicker;
+use app\common\service\auto\AutoTaskSceneConfigService;
+use app\common\service\auto\AutoTaskSceneScheduleSyncService;
 use app\common\service\sv\SvDeviceTaskExistenceService;
 use think\facade\Cache;
 use think\facade\Db;
@@ -687,24 +689,33 @@ class PublishLogic extends BasePersonaLogic
 
 
             foreach ($matchedSchedules as $sjKey => $schedule) {
-                $st = strtotime($date . ' ' . $schedule->start_time . ':00');
-                $et = strtotime($date . ' ' . $schedule->end_time . ':00');
+                $window = self::resolveScheduleWindow($schedule);
+                $st = strtotime($date . ' ' . $window['start_time'] . ':00');
+                $et = strtotime($date . ' ' . $window['end_time'] . ':00');
 
-                $platforms = self::normalizeShanjianPublishPlatforms($schedule->platform);
-                if (empty($platforms)) {
+                $platforms = self::normalizeShanjianPublishPlatforms($window['platform']);
+                if (empty($platforms) || $st === false || $et === false || $et <= $st) {
                     \think\facade\Log::channel('auto')->write($device->device_code . ' 内容发布时间段平台配置为空，跳过该时段 persona_id=' . $device->persona_id . ' schedule_id=' . ($schedule->id ?? 0), 'create');
                     continue;
                 }
                 $interval = ($et - $st) / count($platforms);
                 $sort = array_column($platforms, 'order');
                 array_multisort($sort, SORT_ASC, $platforms);
-                $execTime = $schedule->start_time . '-' . $schedule->end_time;
+                $execTime = $window['time_range'];
                 if(!isset($medias[$sjKey])){
                     continue;
                 }
                 $media = $medias[$sjKey];
                 $slotCreated = 0;
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$device->device_code,
+                        '视频发布任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $device->user_id)->where('device_code', $device->device_code)->findOrEmpty();
@@ -1016,11 +1027,11 @@ class PublishLogic extends BasePersonaLogic
 
     /**
      * 根据上一条朋友圈附件类型，计算本轮优先素材类型（图/视频交替）
-     * attachment_type：1=图片 2=短视频；material_type：1=视频 2=图片
+     * attachment_type：1=图片 2=短视频 3=长视频；material_type：1=视频 2=图片
      */
     private static function resolveCircleMaterialPreference(int $lastAttachmentType): int
     {
-        return $lastAttachmentType === 2
+        return in_array($lastAttachmentType, [2, 3], true)
             ? Material::MATERIAL_TYPE_IMAGE
             : Material::MATERIAL_TYPE_VIDEO;
     }
@@ -1131,10 +1142,11 @@ class PublishLogic extends BasePersonaLogic
             \think\facade\Log::channel('auto')->write('附件类型：' . $attachment_type, 'create');
             \think\facade\Log::channel('auto')->write(json_encode($medias, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'create');
             foreach ($schedules as $mediaIndex => $schedule) {
-                $st = strtotime($date . ' ' . $schedule->start_time . ':00');
-                $et = strtotime($date . ' ' . $schedule->end_time . ':00');
+                $window = self::resolveScheduleWindow($schedule);
+                $st = strtotime($date . ' ' . $window['start_time'] . ':00');
+                $et = strtotime($date . ' ' . $window['end_time'] . ':00');
 
-                $platforms = $schedule->platform;
+                $platforms = $window['platform'];
                 if (is_string($platforms)) {
                     $platforms = json_decode($platforms, true) ?: [];
                 }
@@ -1146,14 +1158,14 @@ class PublishLogic extends BasePersonaLogic
                 }, $platforms), static function ($platform) {
                     return is_array($platform) && !empty($platform['account_type']);
                 }));
-                if (empty($platforms)) {
+                if (empty($platforms) || $st === false || $et === false || $et <= $st) {
                     \think\facade\Log::channel('auto')->write($device->device_code . ' 朋友圈发布时间段平台配置为空，跳过该时段 persona_id=' . $device->persona_id . ' schedule_id=' . ($schedule->id ?? 0), 'create');
                     continue;
                 }
                 $interval = ($et - $st) / count($platforms);
                 $sort = array_column($platforms, 'order');
                 array_multisort($sort, SORT_ASC, $platforms);
-                $execTime = $schedule->start_time . '-' . $schedule->end_time;
+                $execTime = $window['time_range'];
                 $media = [];
                 if ($attachment_type == 2) {
                     if(!isset($medias[$mediaIndex])){
@@ -1180,6 +1192,14 @@ class PublishLogic extends BasePersonaLogic
                 
                 $material_ids = [];
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_WECHAT_CIRCLE_PUBLISH,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$device->device_code,
+                        '朋友圈发布任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $device->user_id)->where('device_code', $device->device_code)->findOrEmpty();
@@ -1408,6 +1428,14 @@ class PublishLogic extends BasePersonaLogic
             }
 
             $platform = (int)($record->publish_platform ?: AiPersona::PUBLISH_PLATFORM_XHS);
+            if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH,
+                $platform,
+                (string)$device->device_code,
+                '视频发布任务'
+            )) {
+                throw new \Exception('当前平台视频发布暂未开放');
+            }
             $platformConfig = AiPersona::getPlatformContentPublishConfig($persona['content_publish_config'], $platform);
             if ((int)$platformConfig['publish_media_type'] !== AiPersona::PUBLISH_MEDIA_TYPE_IMAGE_TEXT) {
                 throw new \Exception('当前平台发布内容类型不是图文');
@@ -1588,6 +1616,31 @@ class PublishLogic extends BasePersonaLogic
     }
 
     /**
+     * 发布排期有效窗：剥离已关平台后按每平台 10 分钟锁定结束时间。
+     *
+     * @param object|array $schedule
+     * @return array{scene:int,start_time:string,end_time:string,time_range:string,platform:array}
+     */
+    private static function resolveScheduleWindow($schedule): array
+    {
+        if (is_object($schedule)) {
+            $schedule = [
+                'scene' => (int)($schedule->scene ?? DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH),
+                'start_time' => (string)($schedule->start_time ?? ''),
+                'end_time' => (string)($schedule->end_time ?? ''),
+                'platform' => $schedule->platform ?? [],
+            ];
+        }
+        if (!is_array($schedule)) {
+            $schedule = [];
+        }
+        if (!isset($schedule['scene']) || (int)$schedule['scene'] <= 0) {
+            $schedule['scene'] = DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH;
+        }
+        return AutoTaskSceneScheduleSyncService::resolveEffectiveWindow($schedule);
+    }
+
+    /**
      * 是否存在指定日的空闲图文发布时段（供填坑服务预检，避免无坑时污染库存 remark）。
      */
     public static function hasAvailableImageTextPublishSlot(
@@ -1603,16 +1656,25 @@ class PublishLogic extends BasePersonaLogic
     {
         $schedules = self::getAutoSchedule($persona, 5);
         foreach ($schedules as $schedule) {
-            $st = strtotime($day . ' ' . $schedule->start_time . ':00');
-            $et = strtotime($day . ' ' . $schedule->end_time . ':00');
-            $platforms = self::normalizeShanjianPublishPlatforms($schedule->platform);
-            if (empty($platforms) || $et <= $st) {
+            $window = self::resolveScheduleWindow($schedule);
+            $st = strtotime($day . ' ' . $window['start_time'] . ':00');
+            $et = strtotime($day . ' ' . $window['end_time'] . ':00');
+            $platforms = self::normalizeShanjianPublishPlatforms($window['platform']);
+            if (empty($platforms) || $st === false || $et === false || $et <= $st) {
                 continue;
             }
 
             $interval = ($et - $st) / count($platforms);
             foreach ($platforms as $index => $platformItem) {
                 if ((int)$platformItem['account_type'] !== $platform) {
+                    continue;
+                }
+                if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                    DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH,
+                    $platform,
+                    (string)$device->device_code,
+                    '视频发布任务'
+                )) {
                     continue;
                 }
                 $startTime = (int)($st + $index * $interval);
@@ -1653,7 +1715,7 @@ class PublishLogic extends BasePersonaLogic
                     'start_time' => $startTime,
                     'end_time' => $endTime,
                     'publish_time' => $startTime,
-                    'exec_time' => $schedule->start_time . '-' . $schedule->end_time,
+                    'exec_time' => $window['time_range'],
                 ];
             }
         }
@@ -1907,10 +1969,11 @@ class PublishLogic extends BasePersonaLogic
         $slots = [];
         $schedules = self::getAutoSchedule($persona, 5);
         foreach ($schedules as $schedule) {
-            $st = strtotime($date . ' ' . $schedule->start_time . ':00');
-            $et = strtotime($date . ' ' . $schedule->end_time . ':00');
-            $platforms = self::normalizeShanjianPublishPlatforms($schedule->platform);
-            if (empty($platforms) || $et <= $st) {
+            $window = self::resolveScheduleWindow($schedule);
+            $st = strtotime($date . ' ' . $window['start_time'] . ':00');
+            $et = strtotime($date . ' ' . $window['end_time'] . ':00');
+            $platforms = self::normalizeShanjianPublishPlatforms($window['platform']);
+            if (empty($platforms) || $st === false || $et === false || $et <= $st) {
                 continue;
             }
 
@@ -1921,7 +1984,7 @@ class PublishLogic extends BasePersonaLogic
                     continue;
                 }
 
-                $publishAccount['exec_time'] = $schedule->start_time . '-' . $schedule->end_time;
+                $publishAccount['exec_time'] = $window['time_range'];
                 $publishAccount['schedule_start_time'] = $st;
                 $publishAccount['schedule_end_time'] = $et;
                 $slots[] = $publishAccount;
@@ -2212,10 +2275,11 @@ class PublishLogic extends BasePersonaLogic
 
             $schedules = self::getAutoSchedule($persona, 5);
             foreach ($schedules as $schedule) {
-                $st = strtotime($date . ' ' . $schedule->start_time . ':00');
-                $et = strtotime($date . ' ' . $schedule->end_time . ':00');
-                $platforms = self::normalizeShanjianPublishPlatforms($schedule->platform);
-                if (empty($platforms) || $et <= $st) {
+                $window = self::resolveScheduleWindow($schedule);
+                $st = strtotime($date . ' ' . $window['start_time'] . ':00');
+                $et = strtotime($date . ' ' . $window['end_time'] . ':00');
+                $platforms = self::normalizeShanjianPublishPlatforms($window['platform']);
+                if (empty($platforms) || $st === false || $et === false || $et <= $st) {
                     continue;
                 }
 
@@ -2251,7 +2315,7 @@ class PublishLogic extends BasePersonaLogic
                     $remark = $media->remark ?? 'video generate failed';
                 }
 
-                $execTime = $schedule->start_time . '-' . $schedule->end_time;
+                $execTime = $window['time_range'];
                 $materialUrl = $media->video_result_url != '' ? FileService::getFileUrl($media->video_result_url) : '';
                 $createdCount = 0;
 
@@ -2786,6 +2850,14 @@ class PublishLogic extends BasePersonaLogic
         $interval = ($et - $st) / count($platforms);
         $accounts = [];
         foreach ($platforms as $index => $platform) {
+            if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH,
+                (int)($platform['account_type'] ?? 0),
+                (string)$device->device_code,
+                '视频发布任务'
+            )) {
+                continue;
+            }
             $startTime = (int)($st + $index * $interval);
             $endTime = (int)($startTime + $interval);
             $account = SvAccount::field('id,account,type,nickname,avatar')

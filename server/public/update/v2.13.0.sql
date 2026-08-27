@@ -523,4 +523,3 @@ WHERE NOT EXISTS (
 ALTER TABLE `la_sv_publish_setting_detail`
 MODIFY COLUMN `material_subtitle` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '发布内容副标题';
 
-

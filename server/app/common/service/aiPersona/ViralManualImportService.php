@@ -1805,7 +1805,14 @@ class ViralManualImportService
             'prompt_len' => mb_strlen($promptContent),
             'prompt_preview' => mb_substr($promptContent, 0, 400),
         ]);
-        $imitationResult = AutoDeviceSettingLogic::copywriting(['keywords' => $promptContent], $userId, 5);
+        $imitationResult = AutoDeviceSettingLogic::copywriting([
+            'keywords' => $promptContent,
+            'persona' => $rule->getClueContent($persona),
+            'original' => $audioText,
+            'voice' => '',
+            'hook' => '',
+            'model' => 0,
+        ], $userId, 7);
         self::log('【仿写】生成结果', [
             'user_id' => $userId,
             'persona_id' => (int)$persona->id,

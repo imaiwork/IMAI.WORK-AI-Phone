@@ -10,6 +10,7 @@ use app\common\model\marketing\MarketingCategory;
 use app\common\model\marketing\MarketingTemplate;
 use app\common\model\marketing\MarketingTemplateSchedule;
 use app\common\service\auto\AutoTaskSceneConfigService;
+use app\common\service\auto\AutoTaskSceneScheduleSyncService;
 use think\facade\Db;
 
 
@@ -68,6 +69,7 @@ class WorkflowLogic extends BasePersonaLogic
                 $item->is_default = 0;
             });
             $template = $template->toArray();
+            $template['schedule'] = AutoTaskSceneScheduleSyncService::sanitizeSchedulesForDisplay($template['schedule'] ?? []);
             $template['schedule'] = array_merge($template['schedule'], DeviceEnum::getDefaultScheduleScene($persona->id));
             $key = array_column($template['schedule'], 'start_time');
             array_multisort($key, SORT_ASC, $template['schedule']);
@@ -92,7 +94,9 @@ class WorkflowLogic extends BasePersonaLogic
                 return false;
             }
             $template->schedule = MarketingTemplateSchedule::where('template_id', $template->id)->order('start_time', 'asc')->select();
-            self::$returnData = $template->toArray();
+            $data = $template->toArray();
+            $data['schedule'] = AutoTaskSceneScheduleSyncService::sanitizeSchedulesForDisplay($data['schedule'] ?? []);
+            self::$returnData = $data;
             return true;
         } catch (\Throwable $th) {
             self::setError($th->getMessage());
@@ -274,6 +278,21 @@ class WorkflowLogic extends BasePersonaLogic
                 throw new \Exception('人设不存在');
             }
 
+            $configMap = AutoTaskSceneConfigService::getConfigMap();
+            if (!AutoTaskSceneConfigService::canAdd((int)$params['scene'], $configMap)) {
+                throw new \Exception('该任务类型暂未开放添加');
+            }
+            $rawPlatforms = $params['platform'] ?? [];
+            $beforeCount = is_array($rawPlatforms) ? count($rawPlatforms) : 0;
+            $platforms = self::resolveAddablePlatforms((int)$params['scene'], $rawPlatforms, $configMap);
+            $synced = AutoTaskSceneScheduleSyncService::syncLockedEndTime([
+                'scene' => (int)$params['scene'],
+                'start_time' => $params['start_time'] ?? '',
+                'end_time' => $params['end_time'] ?? '',
+                'platform' => $platforms,
+            ], $beforeCount);
+            $params['end_time'] = $synced['end_time'] ?? $params['end_time'];
+
             $find = MarketingTemplateSchedule::where('persona_id', $persona->id)
                 ->where('template_id', $params['template_id'])
                 ->where('user_id', self::$uid)
@@ -284,19 +303,15 @@ class WorkflowLogic extends BasePersonaLogic
                 throw new \Exception('该时段已存在节点，请重新选择时段');
             }
 
-            if (!AutoTaskSceneConfigService::canAdd((int)$params['scene'])) {
-                throw new \Exception('该任务类型暂未开放添加');
-            }
-
             $schedule = MarketingTemplateSchedule::create([
                 'user_id' => self::$uid,
                 'persona_id' => $persona->id,
                 'template_id' => $params['template_id'],
                 'start_time' => $params['start_time'],
                 'end_time' => $params['end_time'],
-                'task_category' => AutoTaskSceneConfigService::getSceneName((int)$params['scene']),
+                'task_category' => AutoTaskSceneConfigService::getSceneName((int)$params['scene'], $configMap),
                 'scene' => $params['scene'],
-                'platform' => $params['platform'],
+                'platform' => $platforms,
                 'create_time' => time(),
             ]);
 
@@ -356,24 +371,19 @@ class WorkflowLogic extends BasePersonaLogic
             $template->update_time = time();
             $template->save();
 
-            $schedules = MarketingTemplateSchedule::where('template_id', $originalTemplate->id)->select();
-            $insertData = [];
-            foreach ($schedules as $schedule) {
-                array_push($insertData, [
-                    'user_id' => self::$uid,
-                    'persona_id' => $persona->id,
-                    'template_id' => $template->id,
-                    'start_time' => $schedule->start_time,
-                    'end_time' => $schedule->end_time,
-                    'task_category' => $schedule->task_category,
-                    'scene' => $schedule->scene,
-                    'platform' => json_encode($schedule->platform),
-                    'remark' => $schedule->remark,
-                    'create_time' => time(),
-                ]);
+            $configMap = AutoTaskSceneConfigService::getConfigMap();
+            $schedules = MarketingTemplateSchedule::where('template_id', $originalTemplate->id)->select()->toArray();
+            $insertData = self::buildSanitizedScheduleInserts(
+                $schedules,
+                $configMap,
+                self::$uid,
+                (int)$persona->id,
+                (int)$template->id
+            );
+            if (!empty($insertData)) {
+                MarketingTemplateSchedule::insertAll($insertData);
             }
-            MarketingTemplateSchedule::insertAll($insertData);
-            $template->schedule = $schedules;
+            $template->schedule = MarketingTemplateSchedule::where('template_id', $template->id)->order('start_time', 'asc')->select();
 
 
             Db::commit();
@@ -420,20 +430,7 @@ class WorkflowLogic extends BasePersonaLogic
             $configMap = AutoTaskSceneConfigService::getConfigMap();
             $newFingerprints = [];
             $insertData = [];
-            foreach ($params['schedule'] as $schedule) {
-                if (in_array((int)$schedule['scene'], [16, 17], true)) {
-                    continue;
-                }
-                // 后台已关闭「允许添加」的场景一律不写入（含模板原有关闭类型）
-                if (!AutoTaskSceneConfigService::canAdd((int)$schedule['scene'], $configMap)) {
-                    continue;
-                }
-                foreach ($schedule['platform'] as $platform) {
-                    if (!in_array((int)$platform['account_type'], [1, 2, 3, 4, 5], true)) {
-                        throw new \Exception("时段{$schedule['start_time']}至{$schedule['end_time']}存在无效的账号类型");
-                    }
-                }
-
+            foreach (self::sanitizeSchedulesForUpdate($params['schedule'] ?? [], $oldSchedules, $configMap) as $schedule) {
                 $fp = self::buildScheduleFingerprint($schedule);
                 $newFingerprints[$fp] = (int)$schedule['scene'];
                 $insertData[] = [
@@ -444,7 +441,7 @@ class WorkflowLogic extends BasePersonaLogic
                     'end_time' => $schedule['end_time'],
                     'task_category' => $schedule['task_category'] ?? AutoTaskSceneConfigService::getSceneName((int)$schedule['scene'], $configMap),
                     'scene' => $schedule['scene'],
-                    'platform' => json_encode($schedule['platform']),
+                    'platform' => json_encode($schedule['platform'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                     'remark' => $schedule['remark'] ?? '',
                     'create_time' => time(),
                 ];
@@ -500,8 +497,8 @@ class WorkflowLogic extends BasePersonaLogic
                 throw new \Exception('人设不存在');
             }
 
-            $originalTemplate = MarketingTemplate::where('id', $params['template_id'])->where('type', 3)->findOrEmpty();
-            if ($originalTemplate->isEmpty()) {
+            $originalTemplate = MarketingTemplate::where('id', $params['template_id'])->findOrEmpty();
+            if ($originalTemplate->isEmpty() || !self::canCopyTemplateType((int)$originalTemplate->type)) {
                 throw new \Exception('该系统模板不存在');
             }
 
@@ -519,23 +516,18 @@ class WorkflowLogic extends BasePersonaLogic
                 'original_id' => $originalTemplate->id,
                 'create_time' => time(),
             ]);
-            $schedules = MarketingTemplateSchedule::where('template_id', $originalTemplate->id)->order('start_time', 'asc')->select();
-            $insertData = [];
-            foreach ($schedules as $schedule) {
-                array_push($insertData, [
-                    'user_id' => self::$uid,
-                    'persona_id' => $persona->id,
-                    'template_id' => $template->id,
-                    'start_time' => $schedule['start_time'],
-                    'end_time' => $schedule['end_time'],
-                    'task_category' => $schedule['task_category'] ?? AutoTaskSceneConfigService::getSceneName((int)$schedule['scene']),
-                    'scene' => $schedule['scene'],
-                    'platform' => json_encode($schedule['platform']),
-                    'remark' => $schedule['remark'] ?? '',
-                    'create_time' => time(),
-                ]);
+            $configMap = AutoTaskSceneConfigService::getConfigMap();
+            $schedules = MarketingTemplateSchedule::where('template_id', $originalTemplate->id)->order('start_time', 'asc')->select()->toArray();
+            $insertData = self::buildSanitizedScheduleInserts(
+                $schedules,
+                $configMap,
+                self::$uid,
+                (int)$persona->id,
+                (int)$template->id
+            );
+            if (!empty($insertData)) {
+                MarketingTemplateSchedule::insertAll($insertData);
             }
-            MarketingTemplateSchedule::insertAll($insertData);
             $template->schedule = MarketingTemplateSchedule::where('template_id', $template->id)->order('start_time', 'asc')->select();
             Db::commit();
             self::$returnData = $template->toArray();
@@ -640,6 +632,224 @@ class WorkflowLogic extends BasePersonaLogic
     }
 
     /**
+     * 仅允许克隆 IP 专属(type=1) 与系统模板(type=3)
+     *
+     * @param int $type
+     * @return bool
+     */
+    public static function canCopyTemplateType(int $type): bool
+    {
+        return in_array($type, [1, 3], true);
+    }
+
+    /**
+     * 编辑保存：未改节点也剥离已关平台；关闭类型的已有节点保留；不补回重开平台。
+     *
+     * @param array $schedules
+     * @param array $oldSchedules
+     * @param array $configMap
+     * @return array
+     * @throws \Exception
+     */
+    public static function sanitizeSchedulesForUpdate(array $schedules, array $oldSchedules, array $configMap): array
+    {
+        $oldSceneSet = [];
+        $oldBySlot = [];
+        foreach ($oldSchedules as $old) {
+            if (!is_array($old)) {
+                continue;
+            }
+            $scene = (int)($old['scene'] ?? 0);
+            if ($scene > 0) {
+                $oldSceneSet[$scene] = true;
+            }
+            $oldBySlot[self::buildScheduleSlotKey($old)] = $old;
+        }
+
+        $result = [];
+        $keptSlots = [];
+        foreach ($schedules as $schedule) {
+            if (!is_array($schedule)) {
+                continue;
+            }
+            $scene = (int)($schedule['scene'] ?? 0);
+            if (in_array($scene, [16, 17], true)) {
+                continue;
+            }
+            $isExistingScene = isset($oldSceneSet[$scene]);
+            if (!AutoTaskSceneConfigService::canAdd($scene, $configMap) && !$isExistingScene) {
+                continue;
+            }
+
+            $platforms = $schedule['platform'] ?? [];
+            if (is_string($platforms)) {
+                $decoded = json_decode($platforms, true);
+                $platforms = json_last_error() === JSON_ERROR_NONE ? $decoded : [];
+            }
+            if (!is_array($platforms)) {
+                $platforms = [];
+            }
+            foreach ($platforms as $platform) {
+                if (!is_array($platform)) {
+                    continue;
+                }
+                if (!in_array((int)($platform['account_type'] ?? 0), [1, 2, 3, 4, 5], true)) {
+                    throw new \Exception("时段{$schedule['start_time']}至{$schedule['end_time']}存在无效的账号类型");
+                }
+            }
+
+            $beforeCount = count($platforms);
+            $platforms = self::filterAddablePlatforms($scene, $platforms, $configMap);
+            if ($platforms === [] && !$isExistingScene) {
+                continue;
+            }
+
+            $row = $schedule;
+            $row['scene'] = $scene;
+            $row['platform'] = $platforms;
+            $row['task_category'] = $schedule['task_category'] ?? AutoTaskSceneConfigService::getSceneName($scene, $configMap);
+            $keptSlots[self::buildScheduleSlotKey($row)] = true;
+            $result[] = AutoTaskSceneScheduleSyncService::syncLockedEndTime($row, $beforeCount);
+        }
+
+        foreach ($oldBySlot as $slot => $old) {
+            if (isset($keptSlots[$slot])) {
+                continue;
+            }
+            $scene = (int)($old['scene'] ?? 0);
+            if (in_array($scene, [16, 17], true)) {
+                continue;
+            }
+            if (AutoTaskSceneConfigService::canAdd($scene, $configMap)) {
+                continue;
+            }
+            $platforms = $old['platform'] ?? [];
+            if (is_string($platforms)) {
+                $decoded = json_decode($platforms, true);
+                $platforms = json_last_error() === JSON_ERROR_NONE ? $decoded : [];
+            }
+            $rawPlatforms = is_array($platforms) ? $platforms : [];
+            $row = $old;
+            $row['scene'] = $scene;
+            $row['platform'] = self::filterAddablePlatforms($scene, $rawPlatforms, $configMap);
+            $row['task_category'] = $old['task_category'] ?? AutoTaskSceneConfigService::getSceneName($scene, $configMap);
+            $result[] = AutoTaskSceneScheduleSyncService::syncLockedEndTime($row, count($rawPlatforms));
+        }
+
+        return $result;
+    }
+
+    /**
+     * 按当前开放配置清洗待写入节点：关闭类型跳过，关闭平台剔除，全空跳过
+     *
+     * @param array $schedules
+     * @param array $configMap
+     * @return array
+     */
+    public static function sanitizeSchedulesForWrite(array $schedules, array $configMap): array
+    {
+        $result = [];
+        foreach ($schedules as $schedule) {
+            if (!is_array($schedule)) {
+                continue;
+            }
+            $scene = (int)($schedule['scene'] ?? 0);
+            if (in_array($scene, [16, 17], true)) {
+                continue;
+            }
+            if (!AutoTaskSceneConfigService::canAdd($scene, $configMap)) {
+                continue;
+            }
+            $platforms = $schedule['platform'] ?? [];
+            if (is_string($platforms)) {
+                $decoded = json_decode($platforms, true);
+                $platforms = json_last_error() === JSON_ERROR_NONE ? $decoded : [];
+            }
+            if (!is_array($platforms)) {
+                $platforms = [];
+            }
+            $beforeCount = count($platforms);
+            $platforms = self::filterAddablePlatforms($scene, $platforms, $configMap);
+            if (empty($platforms)) {
+                continue;
+            }
+            $row = $schedule;
+            $row['scene'] = $scene;
+            $row['platform'] = $platforms;
+            $row['task_category'] = $schedule['task_category'] ?? AutoTaskSceneConfigService::getSceneName($scene, $configMap);
+            $result[] = AutoTaskSceneScheduleSyncService::syncLockedEndTime($row, $beforeCount);
+        }
+        return $result;
+    }
+
+    /**
+     * 手动 addNode：剔除未开放平台后仍有剩余则返回；否则抛暂未开放
+     *
+     * @param int $scene
+     * @param mixed $platforms
+     * @param array $configMap
+     * @return array
+     * @throws \Exception
+     */
+    public static function resolveAddablePlatforms(int $scene, $platforms, array $configMap): array
+    {
+        $filtered = self::filterAddablePlatforms($scene, $platforms, $configMap);
+        if (!empty($filtered)) {
+            return $filtered;
+        }
+        self::assertPlatformsAddable($scene, $platforms, $configMap);
+        throw new \Exception('该任务类型暂未开放添加');
+    }
+
+    /**
+     * 将清洗后的节点转成 insertAll 行
+     *
+     * @param array $schedules
+     * @param array $configMap
+     * @param int $userId
+     * @param int $personaId
+     * @param int $templateId
+     * @return array
+     */
+    private static function buildSanitizedScheduleInserts(
+        array $schedules,
+        array $configMap,
+        int $userId,
+        int $personaId,
+        int $templateId
+    ): array {
+        $insertData = [];
+        foreach (self::sanitizeSchedulesForWrite($schedules, $configMap) as $schedule) {
+            $insertData[] = [
+                'user_id' => $userId,
+                'persona_id' => $personaId,
+                'template_id' => $templateId,
+                'start_time' => $schedule['start_time'] ?? '',
+                'end_time' => $schedule['end_time'] ?? '',
+                'task_category' => $schedule['task_category'] ?? AutoTaskSceneConfigService::getSceneName((int)$schedule['scene'], $configMap),
+                'scene' => $schedule['scene'],
+                'platform' => json_encode($schedule['platform'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'remark' => $schedule['remark'] ?? '',
+                'create_time' => time(),
+            ];
+        }
+        return $insertData;
+    }
+
+    /**
+     * 时段槽位：场景+起止时间，用于识别已有节点（不含平台，避免剥离后对不上）
+     *
+     * @param array $schedule
+     * @return string
+     */
+    private static function buildScheduleSlotKey(array $schedule): string
+    {
+        return (int)($schedule['scene'] ?? 0)
+            . '|' . (string)($schedule['start_time'] ?? '')
+            . '|' . (string)($schedule['end_time'] ?? '');
+    }
+
+    /**
      * 构建节点指纹，用于判断节点是否变更
      *
      * @param array $schedule
@@ -700,6 +910,61 @@ class WorkflowLogic extends BasePersonaLogic
                 $name = AutoTaskSceneConfigService::getSceneName($scene, $configMap);
                 throw new \Exception("任务类型「{$name}」暂未开放添加");
             }
+        }
+    }
+
+    /**
+     * 剔除未开放的平台（含历史数据里该类型根本不支持的平台）
+     *
+     * @param int $scene
+     * @param mixed $platforms [{account_type, order}]
+     * @param array $configMap
+     * @return array
+     */
+    private static function filterAddablePlatforms(int $scene, $platforms, array $configMap): array
+    {
+        if (!is_array($platforms)) {
+            return [];
+        }
+        $result = [];
+        foreach ($platforms as $platform) {
+            $accountType = (int)($platform['account_type'] ?? 0);
+            if ($accountType <= 0 || !AutoTaskSceneConfigService::canAdd($scene, $accountType, $configMap)) {
+                continue;
+            }
+            $result[] = $platform;
+        }
+        return array_values($result);
+    }
+
+    /**
+     * 校验任务节点选择的平台是否开放（单节点新增用，addNode）
+     *
+     * @param int $scene
+     * @param mixed $platforms [{account_type, order}]
+     * @param array $configMap
+     * @return void
+     * @throws \Exception
+     */
+    private static function assertPlatformsAddable(int $scene, $platforms, array $configMap): void
+    {
+        if (!is_array($platforms)) {
+            return;
+        }
+        foreach ($platforms as $platform) {
+            $accountType = (int)($platform['account_type'] ?? 0);
+            if ($accountType <= 0) {
+                continue;
+            }
+            if (AutoTaskSceneConfigService::canAdd($scene, $accountType, $configMap)) {
+                continue;
+            }
+            $sceneName = AutoTaskSceneConfigService::getSceneName($scene, $configMap);
+            $platformName = DeviceEnum::getAccountTypeDesc($accountType);
+            if ($platformName === '') {
+                $platformName = '平台' . $accountType;
+            }
+            throw new \Exception("任务类型「{$sceneName}」在{$platformName}暂未开放");
         }
     }
 }

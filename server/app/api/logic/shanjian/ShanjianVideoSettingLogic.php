@@ -628,15 +628,25 @@ class ShanjianVideoSettingLogic extends ApiLogic
     public static function delete($id): bool
     {
         try {
-            if (is_string($id)) {
-                ShanjianVideoSetting::destroy(['id' => $id]);
-                // 删除关联的视频任务
-                ShanjianVideoTask::where('video_setting_id', $id)->select()->delete();
-            } else {
-                ShanjianVideoSetting::whereIn('id', $id)->select()->delete();
-                // 删除关联的视频任务
-                ShanjianVideoTask::whereIn('video_setting_id', $id)->select()->delete();
+            // 仅允许删除当前用户自己的设置,避免越权按 id 删除他人设置及其全部任务
+            $ids = array_values(array_filter(array_map('intval', is_array($id) ? $id : [$id])));
+            if (!$ids) {
+                throw new \Exception('参数错误');
             }
+            $ownedIds = ShanjianVideoSetting::whereIn('id', $ids)
+                ->where('user_id', (int)self::$uid)
+                ->column('id');
+            if (count($ownedIds) !== count(array_unique($ids))) {
+                throw new \Exception('视频设置不存在或无权限删除');
+            }
+            ShanjianVideoSetting::whereIn('id', $ownedIds)->select()->delete();
+            // 派生包装任务挂在自己的 setting 下，按 setting 删除时须显式级联，避免孤儿
+            $type5Ids = ShanjianVideoTask::whereIn('video_setting_id', $ownedIds)
+                ->where('shanjian_type', 5)
+                ->column('id');
+            ShanjianVideoTask::deleteDerivedPackaging($type5Ids);
+            // 删除关联的视频任务
+            ShanjianVideoTask::whereIn('video_setting_id', $ownedIds)->select()->delete();
             return true;
         } catch (\Exception $e) {
             self::setError($e->getMessage());
@@ -1207,11 +1217,15 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 return false;
             }
 
-            // 文案长度统一放开
+            // 蝉镜模型：开启包装限制1750字，关闭包装限制3900字；其他类型统一1800字
+            $copywritingMaxLen = self::COPYWRITING_MAX_LENGTH;
+            if ($engineType === self::ENGINE_TYPE_CHANJING) {
+                $copywritingMaxLen = $aiClipEnabled ? 1750 : 3900;
+            }
             foreach ($copywriting as $data) {
                 $content = (string)($data['content'] ?? '');
-                if (mb_strlen($content, 'UTF-8') > self::COPYWRITING_MAX_LENGTH) {
-                    self::setError('文案长度不能超过' . self::COPYWRITING_MAX_LENGTH . '个字符');
+                if (mb_strlen($content, 'UTF-8') > $copywritingMaxLen) {
+                    self::setError('文案长度不能超过' . $copywritingMaxLen . '个字符');
                     return false;
                 }
             }
@@ -1992,17 +2006,48 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     $settingId = (int)$item->id;
                     $now = time();
 
-                    // 未完成子任务一并标失败,避免父任务已收口但子任务仍挂"生成中"
-                    ShanjianVideoTask::where('video_setting_id', $settingId)
+                    // 获取需要标记为失败的子任务（用于后续退费）
+                    // 加行锁:notify 回调同样 lock(true) 该行,保证 SELECT→UPDATE→退费期间状态不会被并发翻成 SUCCESS,
+                    // 否则会出现"视频已交付却被全额退费"
+                    $failedTasks = ShanjianVideoTask::where('video_setting_id', $settingId)
                         ->whereIn('status', [
                             ShanjianVideoTask::STATUS_PENDING,
                             ShanjianVideoTask::STATUS_PROCESSING,
                         ])
-                        ->update([
-                            'status' => ShanjianVideoTask::STATUS_FAILED,
-                            'remark' => '父任务超时未完成，系统自动标记失败',
-                            'update_time' => $now,
-                        ]);
+                        ->lock(true)
+                        ->select();
+                    $failedTaskIds = [];
+                    foreach ($failedTasks as $task) {
+                        $failedTaskIds[] = (int)$task->id;
+                    }
+
+                    // 未完成子任务一并标失败,避免父任务已收口但子任务仍挂"生成中"
+                    if ($failedTaskIds) {
+                        ShanjianVideoTask::whereIn('id', $failedTaskIds)
+                            ->whereIn('status', [
+                                ShanjianVideoTask::STATUS_PENDING,
+                                ShanjianVideoTask::STATUS_PROCESSING,
+                            ])
+                            ->update([
+                                'status' => ShanjianVideoTask::STATUS_FAILED,
+                                'remark' => '父任务超时未完成，系统自动标记失败',
+                                'update_time' => $now,
+                            ]);
+                    }
+
+                    // 对超时失败的子任务进行退费处理(仅退本事务内确实被标记失败的任务)
+                    foreach ($failedTasks as $task) {
+                        if ((int)ShanjianVideoTask::where('id', $task->id)->value('status') !== ShanjianVideoTask::STATUS_FAILED) {
+                            continue;
+                        }
+                        try {
+                            self::refundTimeoutTaskTokens($task);
+                        } catch (\Throwable $e) {
+                            Log::channel('shanjiannotice')->write(
+                                '[设置超时收口退费失败] task_id=' . $task->task_id . ' err=' . $e->getMessage()
+                            );
+                        }
+                    }
 
                     $successNum = (int)ShanjianVideoTask::where('video_setting_id', $settingId)
                         ->where('status', ShanjianVideoTask::STATUS_SUCCESS)
@@ -2046,6 +2091,65 @@ class ShanjianVideoSettingLogic extends ApiLogic
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 退费处理：超时失败的任务退还已扣除的算力
+     */
+    private static function refundTimeoutTaskTokens(ShanjianVideoTask $task): bool
+    {
+        $userId = (int)$task->user_id;
+        $taskId = (string)$task->task_id;
+        
+        // 根据 shanjian_type 获取对应的扣费类型
+        $typeID = match ((int)$task->shanjian_type) {
+            2 => AccountLogEnum::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN,
+            3 => AccountLogEnum::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN,
+            4 => AccountLogEnum::TOKENS_DEC_NEWS_MIXCUT_SHANJIAN,
+            5 => AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN,
+            default => AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN,
+        };
+
+        // 计算已扣除的算力
+        $deducted = (float)UserTokensLog::where('user_id', $userId)
+            ->where('change_type', $typeID)
+            ->where('action', AccountLogEnum::DEC)
+            ->where('task_id', $taskId)
+            ->sum('change_amount');
+
+        if ($deducted <= 0) {
+            return false;
+        }
+
+        // 计算已退还的算力
+        $refunded = (float)UserTokensLog::where('user_id', $userId)
+            ->where('change_type', $typeID)
+            ->where('action', AccountLogEnum::INC)
+            ->where('status', 2)
+            ->where('task_id', $taskId)
+            ->sum('change_amount');
+
+        // 计算需要退还的算力（已扣除 - 已退还）
+        $points = round(max(0, $deducted - $refunded), 2);
+        if ($points <= 0) {
+            return false;
+        }
+
+        // 执行退费
+        AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId, [
+            '扣费项目' => '超时收口算力退回',
+            '失败原因' => '父任务超时未完成，系统自动标记失败',
+        ]);
+
+        Log::channel('shanjiannotice')->write('[超时收口退费] ' . json_encode([
+            'user_id' => $userId,
+            'task_id' => $taskId,
+            'deducted' => $deducted,
+            'refunded' => $refunded,
+            'refund_points' => $points,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        return true;
     }
 
 
@@ -2546,7 +2650,8 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $videoCount = max(1, (int)($extraData['video_count'] ?? 1));
         $contentMode = (int)($extraData['content_mode'] ?? 1);
         $musicMode = (int)($extraData['music'] ?? 1);
-        $useDefaultMusic = !empty($extraData['aimusic']);
+        // 所有调用方写入的键是 ai_music（兼容读取历史 aimusic 拼写）
+        $useDefaultMusic = !empty($extraData['ai_music']) || !empty($extraData['aimusic']);
         $defaultPic = (string)($params['pic'] ?? '');
         $taskData = [];
         $copywritingCount = count($copywritingData);

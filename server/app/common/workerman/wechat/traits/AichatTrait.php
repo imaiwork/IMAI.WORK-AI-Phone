@@ -583,8 +583,15 @@ trait AichatTrait
         // 检查AI 是否已有回复记录
         $log = ChatLog::where('task_id', $payload['task_id'])->findOrEmpty();
         $reply = '请稍等，该问题我不太清楚，为您转接给对应的部门同事';
+        $kbAnnex = ['images' => [], 'video' => [], 'files' => []];
         if ($log->isEmpty()) {
-            if (!empty($payload['knowledge']) || ($payload['robot']['kb_type'] == 2 && !empty($payload['robot']['kb_ids']))) {
+            $kbIds = $payload['robot']['kb_ids'] ?? '';
+            if (\app\api\logic\KnowledgeLogic::normalizeRobotKbIds($kbIds) === []
+                && !empty($payload['knowledge']['id'])
+            ) {
+                $kbIds = $payload['knowledge']['id'];
+            }
+            if (!empty($payload['knowledge']) || ((int)($payload['robot']['kb_type'] ?? 0) === 2 && \app\api\logic\KnowledgeLogic::normalizeRobotKbIds($kbIds) !== [])) {
                 [$chatStatus, $response] = \app\api\logic\KnowledgeLogic::socketChat([
                     'message' => $payload['request']['message'],
                     'messages' => $payload['request']['messages'],
@@ -601,7 +608,7 @@ trait AichatTrait
                     'frequency_penalty' => $payload['request']['frequency_penalty'] ?? 0.3,
                     'max_tokens' => $payload['request']['max_tokens'] ?? 4096,
                     'context_num' => $payload['request']['context_num'] ?? 3,
-                    'kb_id' => $payload['robot']['kb_ids']
+                    'kb_id' => $kbIds
                 ]);
                 if ($chatStatus === false) {
                     $reply = '我现在有点累了，稍后再回答您的问题';
@@ -611,6 +618,9 @@ trait AichatTrait
                 } else {
                     if (isset($response['choices'][0]) && !empty($response['choices'][0])) {
                         $reply =  $response['choices'][0]['message']['content'];
+                    }
+                    if (is_array($response) && isset($response['kb_annex']) && is_array($response['kb_annex'])) {
+                        $kbAnnex = $response['kb_annex'];
                     }
                 }
             } else {
@@ -630,6 +640,9 @@ trait AichatTrait
             $reply = $log->reply;
         }
 
+        $kbAnnex = \app\api\logic\kb\KbKnowLogic::limitAnnexForWechatSend($kbAnnex);
+        $skipImageUrls = \app\api\logic\kb\KbKnowLogic::annexUrls($kbAnnex);
+
         //分段回复
         if ($payload['reply_strategy']['paragraph_enable'] == 1) {
             $replies = explode("\n", formatMarkdown($reply));
@@ -647,6 +660,7 @@ trait AichatTrait
                     'user_message'   => $payload['user_message'],
                     'is_chatroom'    => $payload['is_chatroom'],
                     'user_id'        => $payload['user_id'],
+                    'skip_image_urls' => $skipImageUrls,
                 ]);
             }
         } else {
@@ -662,8 +676,11 @@ trait AichatTrait
                 'user_message'   => $payload['user_message'],
                 'is_chatroom'    => $payload['is_chatroom'],
                 'user_id'        => $payload['user_id'],
+                'skip_image_urls' => $skipImageUrls,
             ]);
         }
+
+        $this->sendKbAnnexToFriend($payload, $kbAnnex);
 
         //TODO 添加AI回复记录
         $payload['user_message'] = $reply;
@@ -758,34 +775,76 @@ trait AichatTrait
 
     private function parseReplyImageToSend(array $request): void
     {
-        $images = extractAllImageUrls($request['message']);
-        foreach ($images as $ik => $image) {
-            $filepath = FileService::getFileUrl($image);
-            $aiContent = TalkToFriendTaskHandler::handle([
-                'DeviceId' => $request['device_code'],
-                'WeChatId' => $request['wechat_id'],
-                'FriendId' => $request['friend_id'],
-                'TaskId' => time(),
-                'ContentType' => 2,
-                'Remark' => $request['MsgSvrId'] ?? '',
-                'MsgId' => time(),
-                'Content' => $filepath,
-                'Immediate' => true
-            ]);
-            $this->withChannel('wechat_socket')->withLevel('msg')->withTitle('parse image Send')->withContext([
-                'DeviceId' => $request['device_code'],
-                'WeChatId' => $request['wechat_id'],
-                'FriendId' => $request['friend_id'],
-                'TaskId' => time(),
-                'ContentType' => 2,
-                'Remark' => $request['MsgSvrId'] ?? '',
-                'MsgId' => time(),
-                'Content' => $filepath,
-                'Immediate' => true,
-                'user_message' => $request['user_message'] ?? '',
-            ])->log();
-            $this->sendChannelMessage(SocketType::SOCKET, $request['device_code'], $aiContent);
+        $images = extractAllImageUrls($request['message'] ?? '');
+        $images = \app\api\logic\kb\KbKnowLogic::filterReplyImagesAlreadySent(
+            $images,
+            $request['skip_image_urls'] ?? []
+        );
+        foreach ($images as $image) {
+            $this->sendTalkMedia($request, 2, FileService::getFileUrl($image), 'parse image Send');
         }
+    }
+
+    /**
+     * @notes 个微聊天：文字发完后补发召回的图片/视频/附件
+     */
+    private function sendKbAnnexToFriend(array $payload, array $annex): void
+    {
+        $request = [
+            'device_code' => $payload['device_code'],
+            'wechat_id' => $payload['wechat_id'],
+            'friend_id' => $payload['friend_id'],
+            'MsgSvrId' => $payload['request']['MsgSvrId'] ?? '',
+            'user_message' => $payload['user_message'] ?? '',
+        ];
+        foreach ($annex['images'] ?? [] as $item) {
+            $this->sendTalkMedia($request, 2, (string)($item['url'] ?? ''), 'kb annex image Send');
+        }
+        foreach ($annex['video'] ?? [] as $item) {
+            $this->sendTalkMedia($request, 4, (string)($item['url'] ?? ''), 'kb annex video Send');
+        }
+        foreach ($annex['files'] ?? [] as $item) {
+            $this->sendTalkMedia($request, 8, (string)($item['url'] ?? ''), 'kb annex file Send');
+        }
+    }
+
+    /**
+     * @notes 向好友发送媒体（图片2 / 视频4 / 文件8）
+     */
+    private function sendTalkMedia(array $request, int $contentType, string $url, string $logTitle): void
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return;
+        }
+        $filepath = FileService::getFileUrl($url);
+        if ($filepath === '') {
+            return;
+        }
+        $aiContent = TalkToFriendTaskHandler::handle([
+            'DeviceId' => $request['device_code'],
+            'WeChatId' => $request['wechat_id'],
+            'FriendId' => $request['friend_id'],
+            'TaskId' => time(),
+            'ContentType' => $contentType,
+            'Remark' => $request['MsgSvrId'] ?? '',
+            'MsgId' => time(),
+            'Content' => $filepath,
+            'Immediate' => true
+        ]);
+        $this->withChannel('wechat_socket')->withLevel('msg')->withTitle($logTitle)->withContext([
+            'DeviceId' => $request['device_code'],
+            'WeChatId' => $request['wechat_id'],
+            'FriendId' => $request['friend_id'],
+            'TaskId' => time(),
+            'ContentType' => $contentType,
+            'Remark' => $request['MsgSvrId'] ?? '',
+            'MsgId' => time(),
+            'Content' => $filepath,
+            'Immediate' => true,
+            'user_message' => $request['user_message'] ?? '',
+        ])->log();
+        $this->sendChannelMessage(SocketType::SOCKET, $request['device_code'], $aiContent);
     }
 
     /**

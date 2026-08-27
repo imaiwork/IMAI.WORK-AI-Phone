@@ -216,6 +216,13 @@
         "pages/index/index",
         "pages/detail/detail"
       ]
+    },
+    {
+      "root": "ai_modules/hotspot",
+      "pages": [
+        "pages/index/index",
+        "pages/detail/detail"
+      ]
     }
   ],
   "window": {

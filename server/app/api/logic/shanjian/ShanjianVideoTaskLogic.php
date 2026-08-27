@@ -26,6 +26,7 @@ use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\service\FileService;
 use app\common\service\MaterialReadinessService;
 use app\common\service\ShanjianQueueService;
+use app\common\service\hotspot\VideoService;
 use app\common\service\TeamBillingService;
 use app\common\service\TeamContextService;
 use think\facade\Cache;
@@ -51,6 +52,8 @@ class ShanjianVideoTaskLogic extends ApiLogic
     private const DOWNLOAD_STUCK_TIMEOUT = 900;
     /** 自动转存仅处理创建时间在最近 N 秒内的任务（默认 24 小时；不用 update_time，下载过程会刷新它） */
     private const AUTO_DOWNLOAD_WITHIN_SECONDS = 86400;
+    /** 生成成功但已超过原定发布时间时，发布明细保持失败，需手动重试 */
+    private const OVERDUE_PUBLISH_REMARK = '生成成功时已超过原定发布时间，请手动重试发布';
 
     private static function billingDurationFromTask(ShanjianVideoTask $task): float
     {
@@ -408,6 +411,160 @@ class ShanjianVideoTaskLogic extends ApiLogic
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 蝉镜引擎 type5 桥接任务：由同 task_id 的 HumanVideoTask 驱动合成（闪剪 cron 显式跳过），
+     * 重试会换新 task_id 导致关联断裂、任务永久停留在生成中，必须禁止走闪剪重试链路
+     */
+    public static function isChanjingBridgeTask(ShanjianVideoTask $task): bool
+    {
+        if ((int)$task->shanjian_type !== 5) {
+            return false;
+        }
+        $extra = is_array($task->extra) ? $task->extra : [];
+        return (int)($extra['engine_type'] ?? 0) === ShanjianVideoSettingLogic::ENGINE_TYPE_CHANJING
+            || ($extra['waiting_engine'] ?? '') === 'chanjing';
+    }
+
+    /**
+     * 失败视频重新入队生成。换新 task_id 避免旧回调覆盖重试态，扣费由合成 cron 提交时处理。
+     *
+     * @param bool $allowAutoTask 人设内容记录入口豁免 auto_type 限制（人设视频均为 auto_type=1）
+     */
+    public static function retryFailedGenerate(int $id, bool $allowAutoTask = false): bool
+    {
+        Db::startTrans();
+        try {
+            $task = ShanjianVideoTask::where('id', $id)
+                ->where('user_id', self::$uid)
+                ->lock(true)
+                ->find();
+            if (!$task) {
+                self::setError('视频任务不存在');
+                Db::rollback();
+                return false;
+            }
+            if ((int)$task->status !== ShanjianVideoTask::STATUS_FAILED) {
+                self::setError('仅失败的视频任务可重试');
+                Db::rollback();
+                return false;
+            }
+            if (self::isChanjingBridgeTask($task)) {
+                self::setError('该视频由数字人引擎合成，暂不支持重试，请重新发起生成');
+                Db::rollback();
+                return false;
+            }
+            // 仅手动任务(auto_type=0)可手动重试，自动任务(auto_type=1)由系统自动处理
+            if (!$allowAutoTask && (int)$task->auto_type !== 0) {
+                self::setError('自动任务不支持手动重试');
+                Db::rollback();
+                return false;
+            }
+
+            $scene = self::billingSceneFromTask($task);
+            $duration = self::billingDurationFromTask($task);
+            try {
+                self::withTaskBillingTeam($task, static function () use ($task, $scene, $duration) {
+                    TokenLogService::checkToken((int)$task->user_id, $scene, $duration);
+                });
+            } catch (\Throwable $e) {
+                Db::rollback();
+                self::setError($e->getMessage() ?: '算力不足');
+                return false;
+            }
+
+            $oldTaskId = (string)$task->task_id;
+            $task->task_id = generate_unique_task_id();
+            $task->status = ShanjianVideoTask::STATUS_PENDING;
+            // 合成 cron 只拾取 thumb_status in [2,3,4]，封面生成中(1)失败的任务按有无封面回落，避免重试后无人拾取
+            if (!in_array((int)$task->thumb_status, [2, 3, 4], true)) {
+                $task->thumb_status = trim((string)$task->pic) !== '' ? 2 : 4;
+            }
+            $task->tries = 0;
+            $task->remark = '';
+            $task->video_token = 0;
+            $task->result_id = '';
+            $task->queue_status = '';
+            $task->queue_position = 0;
+            $task->queue_refund_status = 0;
+            $task->download_status = ShanjianVideoTask::DOWNLOAD_PENDING;
+            $task->download_tries = 0;
+            $task->video_result_url = '';
+            $task->video_source_url = '';
+            $task->update_time = time();
+            $task->save();
+
+            MaterialUseLog::where('task_id', $task->id)
+                ->where('use_status', MaterialUseLog::USE_STATUS_FAILED)
+                ->update([
+                    'use_status' => MaterialUseLog::USE_STATUS_USING,
+                    'fail_reason' => '',
+                    'update_time' => time(),
+                ]);
+
+            self::updateVideoSettingStatus((int)$task->video_setting_id, false);
+
+            Db::commit();
+            self::$returnData = [
+                'id' => (int)$task->id,
+                'status' => ShanjianVideoTask::STATUS_PENDING,
+                'task_id' => (string)$task->task_id,
+            ];
+            Log::channel('shanjiannotice')->write('视频生成失败重试' . json_encode([
+                'id' => (int)$task->id,
+                'user_id' => (int)$task->user_id,
+                'old_task_id' => $oldTaskId,
+                'task_id' => (string)$task->task_id,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            return true;
+        } catch (\Throwable $e) {
+            Db::rollback();
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    private static function billingSceneFromTask(ShanjianVideoTask $task): string
+    {
+        return match ((int)$task->shanjian_type) {
+            2 => 'shanjian_realman_broadcast',
+            3 => 'shanjian_broadcast_mixcut',
+            4 => 'shanjian_news_mixcut',
+            default => 'human_video_shanjian',
+        };
+    }
+
+    private static function parseScheduleTimestamp($timeValue): int
+    {
+        $raw = is_numeric($timeValue) ? (string)$timeValue : trim((string)$timeValue);
+        if ($raw === '' || $raw === '0') {
+            return 0;
+        }
+        $ts = is_numeric($raw) ? (int)$raw : strtotime($raw);
+        return $ts === false ? 0 : $ts;
+    }
+
+    private static function isScheduledTimeInFuture($timeValue): bool
+    {
+        $ts = self::parseScheduleTimestamp($timeValue);
+        return $ts > time();
+    }
+
+    private static function restoreFailedPublishDeviceTask(int $userId, int $detailId, int $source): void
+    {
+        if ($userId <= 0 || $detailId <= 0) {
+            return;
+        }
+        SvDeviceTask::where('user_id', $userId)
+            ->where('sub_data_id', $detailId)
+            ->where('source', $source)
+            ->where('status', DeviceEnum::TASK_STATUS_FAILED)
+            ->update([
+                'status' => DeviceEnum::TASK_STATUS_WAIT,
+                'remark' => '',
+                'update_time' => time(),
+            ]);
     }
 
     private static function handleMaterialUseFailure($task): void
@@ -1026,7 +1183,12 @@ class ShanjianVideoTaskLogic extends ApiLogic
         return !empty($extra['ai_clip_enabled']);
     }
 
-    private static function syncPendingPublishDetailVideo(ShanjianVideoTask $task, string $videoUrl): void
+    /**
+     * 成片就绪后同步待发布明细
+     * @param bool $reviveFailed 是否复活因"成片未就绪"而失败的明细(仅生成成功回调路径为 true;
+     *                           转存路径不得复活,否则会把设备端真实失败的明细重新置为待发布/覆盖失败原因)
+     */
+    private static function syncPendingPublishDetailVideo(ShanjianVideoTask $task, string $videoUrl, bool $reviveFailed = false): void
     {
         if (trim($videoUrl) === '') {
             return;
@@ -1037,26 +1199,59 @@ class ShanjianVideoTaskLogic extends ApiLogic
         }
 
         try {
-            $update = [
-                'material_url' => FileService::getFileUrl($videoUrl),
-                'remark' => '',
-                'update_time' => time(),
-            ];
-            if (trim((string)$task->pic) !== '') {
-                $update['pic'] = FileService::getFileUrl((string)$task->pic);
-            }
-
+            $now = time();
+            $fileUrl = FileService::getFileUrl($videoUrl);
+            $pic = trim((string)$task->pic) !== '' ? FileService::getFileUrl((string)$task->pic) : '';
             $taskIds = [(int)$task->id];
             if ((int)($task->origin_task_id ?? 0) > 0) {
                 $taskIds[] = (int)$task->origin_task_id;
-                $update['video_task_id'] = (int)$task->id;
             }
+            $taskIds = array_values(array_unique($taskIds));
 
-            $count = SvPublishSettingDetail::where('video_task_id', 'in', array_values(array_unique($taskIds)))
+            $details = SvPublishSettingDetail::where('video_task_id', 'in', $taskIds)
                 ->where('user_id', (int)$task->user_id)
-                ->where('status', 0)
                 ->where('account_type', 'in', [1, 3, 4, 5])
-                ->update($update);
+                ->where('status', 'in', $reviveFailed ? [0, 2, 5] : [0])
+                ->select();
+
+            $pendingCount = 0;
+            $overdueCount = 0;
+            foreach ($details as $detail) {
+                // 已失败明细仅当此前没有成片(material_url 为空,即因视频未生成而失败)才允许复活;
+                // 设备端发布失败的明细已有成片与真实失败原因,不得重置
+                if ((int)$detail->status !== 0 && trim((string)$detail->getData('material_url')) !== '') {
+                    continue;
+                }
+                $update = [
+                    'material_url' => $fileUrl,
+                    'update_time' => $now,
+                ];
+                if ($pic !== '') {
+                    $update['pic'] = $pic;
+                }
+                if ((int)($task->origin_task_id ?? 0) > 0) {
+                    $update['video_task_id'] = (int)$task->id;
+                }
+
+                if (self::isScheduledTimeInFuture($detail->getData('publish_time'))) {
+                    $update['status'] = 0;
+                    $update['remark'] = '';
+                    $pendingCount++;
+                    self::restoreFailedPublishDeviceTask(
+                        (int)$task->user_id,
+                        (int)$detail->id,
+                        DeviceEnum::TASK_SOURCE_PUBLISH
+                    );
+                } else {
+                    $update['status'] = 2;
+                    $update['remark'] = self::OVERDUE_PUBLISH_REMARK;
+                    $overdueCount++;
+                }
+
+                SvPublishSettingDetail::where('id', (int)$detail->id)
+                    ->where('status', 'in', [0, 2, 5])
+                    ->update($update);
+            }
 
             Log::channel('shanjian')->write('闪剪视频生成成功同步待发布详情' . json_encode([
                 'user_id' => (int)$task->user_id,
@@ -1064,7 +1259,8 @@ class ShanjianVideoTaskLogic extends ApiLogic
                 'origin_task_id' => (int)($task->origin_task_id ?? 0),
                 'task_id' => (string)$task->task_id,
                 'video_result_url' => $videoUrl,
-                'publish_detail_count' => $count,
+                'pending_count' => $pendingCount,
+                'overdue_count' => $overdueCount,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         } catch (\Throwable $e) {
             Log::channel('shanjian')->error('闪剪视频同步待发布详情失败: ' . $e->getMessage());
@@ -1090,6 +1286,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     self::setError('视频任务不存在或状态不允许删除');
                     return false;
                 }
+                if ((int)$task->shanjian_type === 5) {
+                    // 派生包装任务不在创作记录单独展示，随源任务一并删除，避免孤儿
+                    ShanjianVideoTask::deleteDerivedPackaging([(int)$task->id]);
+                }
                 ShanjianVideoTask::where('id', $id)->select()->delete();
             } else {
                 $task = ShanjianVideoTask::whereIn('id', $id)->where(['user_id' => self::$uid])
@@ -1099,6 +1299,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     self::setError('视频任务不存在或状态不允许删除');
                     return false;
                 }
+                $type5Ids = ShanjianVideoTask::whereIn('id', $task)
+                    ->where('shanjian_type', 5)
+                    ->column('id');
+                ShanjianVideoTask::deleteDerivedPackaging($type5Ids);
                 ShanjianVideoTask::whereIn('id', $id)->select()->delete();
             }
 
@@ -1173,6 +1377,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
             ShanjianVideoTask::STATUS_FAILED,
             ShanjianVideoTask::STATUS_SUCCESS,
         ], true)) {
+            $doneTask = ShanjianVideoTask::where('task_id', $data['task_id'])->find();
+            if ($doneTask) {
+                self::syncHotspotFromNotify($doneTask);
+            }
             return true;
         }
 
@@ -1271,7 +1479,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             if ($task->persona_id > 0) {
                                 MaterialUseLog::where('task_id', $task->id)->where('persona_id', $task->persona_id)->update(['use_status' => 1]);
                             }
-                            self::syncPendingPublishDetailVideo($task, $video_result_url);
+                            self::syncPendingPublishDetailVideo($task, $video_result_url, true);
 
                             $user = User::where('id', $task->user_id)->lock(true)->find();
                             if (!$user) {
@@ -1366,6 +1574,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     $setPublish = self::updateVideoSettingStatus((int)$task->video_setting_id, $task->status === ShanjianVideoTask::STATUS_SUCCESS);
                 }
                 Db::commit();
+                self::syncHotspotFromNotify($task);
 
                 if ($notice) {
                     ApiLogic::sendNotice([
@@ -1414,6 +1623,15 @@ class ShanjianVideoTaskLogic extends ApiLogic
         Log::channel('shanjiannotice')->error('Notify 1205重试耗尽, task_id: ' . ($data['task_id'] ?? '') . ', Error: ' . $lastError);
         self::setError($lastError);
         return false;
+    }
+
+    private static function syncHotspotFromNotify($task): void
+    {
+        try {
+            VideoService::syncFromShanjianTask($task);
+        } catch (\Throwable $e) {
+            Log::channel('hotspot')->write('热点任务回写失败: ' . $e->getMessage());
+        }
     }
 
 
@@ -1647,7 +1865,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
         $userId = (int)$task->user_id;
 
         return AiWechatCircleTask::where('user_id', $userId)
-            ->where('send_status', 0)
+            ->where('send_status', 'in', [0, 3])
             ->where('attachment_type', 'in', [2, 3])
             ->where(function ($query) use ($taskIds, $userId) {
                 $query->where('shanjian_video_task_id', 'in', $taskIds)
@@ -1667,28 +1885,46 @@ class ShanjianVideoTaskLogic extends ApiLogic
         $attachmentContent = json_encode([$videoUrl], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $configIds = [];
         $circleTaskIds = [];
+        $pendingCount = 0;
+        $overdueCount = 0;
 
         foreach ($circleTasks as $circleTask) {
-            $circleTaskIds[] = (int)$circleTask->id;
+            $circleTaskId = (int)$circleTask->id;
+            if ($circleTaskId <= 0) {
+                continue;
+            }
+            $circleTaskIds[] = $circleTaskId;
             if ((int)$circleTask->task_config_id > 0) {
                 $configIds[] = (int)$circleTask->task_config_id;
             }
+
+            $update = [
+                'attachment_content' => $attachmentContent,
+                'shanjian_video_task_id' => (int)$task->id,
+                'update_time' => $now,
+            ];
+            if (self::isScheduledTimeInFuture($circleTask->getData('send_time'))) {
+                $update['send_status'] = 0;
+                $pendingCount++;
+                self::restoreFailedPublishDeviceTask(
+                    (int)$task->user_id,
+                    $circleTaskId,
+                    DeviceEnum::TASK_SOURCE_WECHAT_CIRCLE_PUBLISH
+                );
+            } else {
+                $update['send_status'] = 3;
+                $overdueCount++;
+            }
+
+            Db::name('ai_wechat_circle_task')
+                ->where('user_id', (int)$task->user_id)
+                ->where('id', $circleTaskId)
+                ->where('send_status', 'in', [0, 3])
+                ->where('attachment_type', 'in', [2, 3])
+                ->update($update);
         }
 
         $circleTaskIds = array_values(array_unique(array_filter($circleTaskIds)));
-        if (!empty($circleTaskIds)) {
-            Db::name('ai_wechat_circle_task')
-                ->where('user_id', (int)$task->user_id)
-                ->where('id', 'in', $circleTaskIds)
-                ->where('send_status', 0)
-                ->where('attachment_type', 'in', [2, 3])
-                ->update([
-                    'attachment_content' => $attachmentContent,
-                    'shanjian_video_task_id' => (int)$task->id,
-                    'update_time' => $now,
-                ]);
-        }
-
         if (empty($circleTaskIds)) {
             Log::channel('wechatCircle')->warning('自动化朋友圈视频合成替换原发布任务视频失败，未找到待更新任务' . json_encode([
                 'user_id' => (int)$task->user_id,
@@ -1732,6 +1968,8 @@ class ShanjianVideoTaskLogic extends ApiLogic
             'shanjian_task_id' => (string)$task->task_id,
             'circle_task_ids' => $circleTaskIds,
             'task_config_ids' => $configIds,
+            'pending_count' => $pendingCount,
+            'overdue_count' => $overdueCount,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         return true;
@@ -1751,7 +1989,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
         $circleTask = AiWechatCircleTask::where('user_id', (int)$task->user_id)
             ->where('device_code', (string)$task->device_code)
             ->where('wechat_id', (string)$wechat['account'])
-            ->where('send_status', 0)
+            ->where('send_status', 'in', [0, 3])
             ->where('shanjian_video_task_id', (int)$task->id)
             ->order('id desc')
             ->findOrEmpty();
@@ -1803,6 +2041,9 @@ class ShanjianVideoTaskLogic extends ApiLogic
             ]);
         }
 
+        $sendAt = strtotime((string)$circleTask->getData('send_time')) ?: $sendTimestamp;
+        $keepPending = $sendAt > time();
+
         $circleTask->save([
             'task_config_id' => $taskConfigId,
             'task_type' => 1,
@@ -1811,6 +2052,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
             'persona_id' => $task->persona_id,
             'attachment_type' => 2,
             'attachment_content' => [$videoUrl],
+            'send_status' => $keepPending ? 0 : 3,
             'update_time' => $now,
         ]);
 
@@ -1831,7 +2073,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
             'account' => $wechat['account'],
             'account_type' => 1,
             'task_name' => '自动化朋友圈发布任务' . date('YmdHi'),
-            'status' => 0,
+            'status' => $keepPending ? DeviceEnum::TASK_STATUS_WAIT : DeviceEnum::TASK_STATUS_FAILED,
             'auto_type' => 1,
             'sub_task_id' => $taskConfigId,
             'sub_data_id' => $circleTask->id,
@@ -1839,21 +2081,24 @@ class ShanjianVideoTaskLogic extends ApiLogic
             'update_time' => $now,
         ];
 
-        $sendAt = strtotime((string)$circleTask->getData('send_time')) ?: $sendTimestamp;
         if ($deviceTask->isEmpty()) {
-            $deviceTaskData += [
-                'day' => date('Y-m-d', $sendAt),
-                'time_config' => json_encode($execTime, JSON_UNESCAPED_UNICODE),
-                'start_time' => $startTimeTimestamp ?: $sendAt,
-                'end_time' => $endTimeTimestamp ?: ($sendAt + 1800),
-                'create_time' => $now,
-            ];
-            TaskLogic::add([$deviceTaskData]);
+            if ($keepPending) {
+                $deviceTaskData += [
+                    'day' => date('Y-m-d', $sendAt),
+                    'time_config' => json_encode($execTime, JSON_UNESCAPED_UNICODE),
+                    'start_time' => $startTimeTimestamp ?: $sendAt,
+                    'end_time' => $endTimeTimestamp ?: ($sendAt + 1800),
+                    'create_time' => $now,
+                ];
+                TaskLogic::add([$deviceTaskData]);
+            }
         } else {
             $deviceTask->save($deviceTaskData);
         }
 
-        TaskLogic::updateWechatRpaTaskTime((string)$task->device_code, $sendAt);
+        if ($keepPending) {
+            TaskLogic::updateWechatRpaTaskTime((string)$task->device_code, $sendAt);
+        }
         if ($task instanceof \think\Model) {
             $task->is_publish = 1;
             $task->update_time = $now;
@@ -2883,6 +3128,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
                 $task->video_result_url = $localPath;
                 self::syncPendingPublishDetailVideo($task, $localPath);
+                $fresh = ShanjianVideoTask::where('id', $task->id)->find();
+                if ($fresh) {
+                    self::syncHotspotFromNotify($fresh);
+                }
 
                 Log::channel('shanjiannotice')->write($mode . '下载成片成功' . json_encode([
                     'task_id' => $task->task_id,

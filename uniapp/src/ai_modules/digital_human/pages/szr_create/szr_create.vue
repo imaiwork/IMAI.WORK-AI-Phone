@@ -531,6 +531,7 @@ import {
     ClipStyleEnum,
     SpeechEngineTypeEnum,
     cloneModeToIsPro,
+    SPEECH_TEXT_LIMIT,
 } from "@/ai_modules/digital_human/enums";
 import useUpload from "@/hooks/useUpload";
 import { useAudio } from "@/hooks/useAudio";
@@ -614,8 +615,18 @@ const formData = reactive<any>({
 
 // 状态变量：标准版→is_pro=1，优质版→is_pro=2（创建仍用 clone_mode 2/3）
 const cloneModeTabs = [
-    { value: CloneModeEnum.FAST, name: "标准版", sub: "1500字", max: 1500 },
-    { value: CloneModeEnum.PRO, name: "优质版", sub: "1000字", max: 1000 },
+    {
+        value: CloneModeEnum.FAST,
+        name: "标准版",
+        sub: `${SPEECH_TEXT_LIMIT.DEFAULT}字`,
+        max: SPEECH_TEXT_LIMIT.DEFAULT,
+    },
+    {
+        value: CloneModeEnum.PRO,
+        name: "优质版",
+        sub: `${SPEECH_TEXT_LIMIT.DEFAULT}字`,
+        max: SPEECH_TEXT_LIMIT.DEFAULT,
+    },
 ] as const;
 const currCloneMode = ref<CloneModeEnum>(CloneModeEnum.FAST);
 const anchorListLoading = ref(false);
@@ -657,12 +668,18 @@ const modelVersionMap = computed(() => {
     }, {});
 });
 
-// 文案字数：蝉镜 4000；闪剪按标准/优质档位 1500/1000
+const clipConfig = reactive({
+    is_open: false,
+});
+
+// 文案字数：蝉镜无包装 4000，蝉镜有包装 / 标准版 / 优质版 1500
 const textLimit = computed(() => {
     if (formData.model_version == DigitalHumanModelVersionEnum.CHANJING) {
-        return 4000;
+        return clipConfig.is_open && formData.ai_clip_enabled == 1
+            ? SPEECH_TEXT_LIMIT.DEFAULT
+            : SPEECH_TEXT_LIMIT.CHANJING_NO_PACK;
     }
-    return cloneModeTabs.find((item) => item.value === currCloneMode.value)?.max ?? 1500;
+    return cloneModeTabs.find((item) => item.value === currCloneMode.value)?.max ?? SPEECH_TEXT_LIMIT.DEFAULT;
 });
 
 const trimMsgByLimit = () => {
@@ -670,6 +687,10 @@ const trimMsgByLimit = () => {
         formData.msg = formData.msg.slice(0, textLimit.value);
     }
 };
+
+watch([() => clipConfig.is_open, () => formData.ai_clip_enabled], () => {
+    trimMsgByLimit();
+});
 
 const isAudioCreate = computed(() => formData.audio_type == CreateTypeEnum.AUDIO);
 
@@ -713,10 +734,6 @@ const canCreate = computed(() => {
 
 const volumePercent = computed(() => {
     return Math.round(Number(formData.extra.volume || 0) * 100);
-});
-
-const clipConfig = reactive({
-    is_open: false,
 });
 
 const getClipConfigData = async () => {

@@ -33,6 +33,8 @@
                     :model-value="fileList"
                     :file-limit="fileLimit"
                     :accept="uploadAccept"
+                    :image-max-size="imageMaxSize"
+                    :file-max-size="fileMaxSize"
                     @update:model-value="emit('update:fileList', $event)"
                     @change="onFileChange">
                     <div class="toolbar-btn dashed icon-only">
@@ -48,6 +50,7 @@
 import FileUpload from '@/components/chatting/file-upload.vue'
 import type { FileParams } from '@/composables/usePasteImage'
 import { IMAGE_REF_MAX } from '../../_enums/welcome-toolbar'
+import { CHAT_IMAGE_MAX_SIZE, CHAT_FILE_MAX_SIZE } from '@/components/chatting/upload-rules'
 
 const props = defineProps<{
     activeMode: string
@@ -69,6 +72,9 @@ const historyAnchorRef = ref<HTMLElement | null>(null)
 
 /** 图片模式对齐小程序 3 张；其它模式保持原 9 */
 const fileLimit = computed(() => (props.activeMode === 'image' ? IMAGE_REF_MAX : 9))
+/** 聊天模式：图片 20M / 其他 150M；其它模式沿用组件默认 20M */
+const imageMaxSize = computed(() => (props.activeMode === 'chat' ? CHAT_IMAGE_MAX_SIZE : 20))
+const fileMaxSize = computed(() => (props.activeMode === 'chat' ? CHAT_FILE_MAX_SIZE : 20))
 
 function onFileChange(list: FileParams[]) {
     emit('syncFiles', list)

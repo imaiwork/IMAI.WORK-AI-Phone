@@ -224,6 +224,37 @@
                                         <text class="block rule-note-text">{{ currentCopyHint }}</text>
                                     </view>
 
+                                    <view v-if="hasCopyAiGen" class="rule-sub rule-sub-ai">
+                                        <text class="rule-sub-label">文案生成类型</text>
+                                        <text class="rule-sub-desc">决定 AI 往哪个方向写口播文案</text>
+                                        <view class="rule-chips">
+                                            <view
+                                                v-for="opt in COPY_AI_TYPE_OPTIONS"
+                                                :key="opt.val"
+                                                class="rule-chip"
+                                                :class="{ sel: innerState.copyAiType === opt.val }"
+                                                @click="innerState.copyAiType = opt.val">
+                                                <text>{{ opt.label }}</text>
+                                            </view>
+                                        </view>
+                                        <view
+                                            v-if="innerState.copyAiType === CopyAiTypeEnum.Custom"
+                                            class="rule-chip-custom">
+                                            <input
+                                                v-model="innerState.copyAiCustom"
+                                                class="rule-chip-custom-input"
+                                                :maxlength="COPY_AI_CUSTOM_MAX"
+                                                placeholder="一句话描述想要的类型"
+                                                placeholder-class="rule-chip-custom-ph" />
+                                            <text class="rule-chip-custom-cnt">
+                                                {{ innerState.copyAiCustom.length }}/{{ COPY_AI_CUSTOM_MAX }}
+                                            </text>
+                                        </view>
+                                        <view class="rule-note">
+                                            <text class="block rule-note-text">{{ currentCopyAiTypeNote }}</text>
+                                        </view>
+                                    </view>
+
                                     <view v-if="hasCopyLib" class="rule-sub">
                                         <text class="rule-sub-label">使用方式</text>
                                         <view class="rule-seg">
@@ -334,7 +365,10 @@
                                         <text class="rule-slider-val">{{ musicVolumePercent }}%</text>
                                     </view>
                                     <!-- key：切换音乐来源重新显示时强制重挂载，避免沿用错误轨道宽度 -->
-                                    <view v-if="visible" :key="`vol-${innerState.musicSource}`" class="rule-slider-body">
+                                    <view
+                                        v-if="visible"
+                                        :key="`vol-${innerState.musicSource}`"
+                                        class="rule-slider-body">
                                         <u-slider
                                             v-model="musicVolumeSlider"
                                             :min="0"
@@ -476,6 +510,10 @@ interface InnerState {
     synthTypes: string[];
     materialSource: string;
     copySource: string;
+    /** AI生成 · 文案生成类型（对应 copywriting_generation_type / copywriting_generation_custom） */
+    copyAiType: CopyAiTypeEnum;
+    /** AI生成 · 自定义类型描述（copyAiType = custom 时有效） */
+    copyAiCustom: string;
     copyStyle: string;
     coverSource: string;
     coverImage: string;
@@ -605,6 +643,44 @@ const COPY_HINTS: Record<string, string> = {
     [COPY_LIB_VALUE]: "从该人设的文案库中按规则取用，已审过的内容直接发，更稳。",
 };
 
+/** AI生成 · 文案生成类型（预设 + 自定义） */
+enum CopyAiTypeEnum {
+    Ganhuo = "ganhuo",
+    Zhongcao = "zhongcao",
+    Guandian = "guandian",
+    Juqing = "juqing",
+    Qinggan = "qinggan",
+    Jiemi = "jiemi",
+    Custom = "custom",
+}
+const COPY_AI_CUSTOM_MAX = 60;
+const COPY_AI_TYPE_OPTIONS: { val: CopyAiTypeEnum; label: string; note: string }[] = [
+    { val: CopyAiTypeEnum.Ganhuo, label: "干货科普", note: "把卖点讲成知识点，先给结论再讲原因，适合建立专业信任。" },
+    { val: CopyAiTypeEnum.Zhongcao, label: "带货种草", note: "突出使用场景与前后对比，结尾直接引导下单或进店。" },
+    { val: CopyAiTypeEnum.Guandian, label: "观点评论", note: "对行业现象亮明态度，争议感强，评论区互动率高。" },
+    { val: CopyAiTypeEnum.Juqing, label: "剧情段子", note: "小剧情加反转带出产品，完播率高，适合泛流量涨粉。" },
+    { val: CopyAiTypeEnum.Qinggan, label: "情感共鸣", note: "讲人和故事，唤起共鸣后自然带出品牌，转化路径更软。" },
+    { val: CopyAiTypeEnum.Jiemi, label: "揭秘避坑", note: "用「内行人才知道」的口吻拆行业内幕，信任感与收藏率高。" },
+    {
+        val: CopyAiTypeEnum.Custom,
+        label: "✏️ 自定义",
+        note: "用一句话描述想要的类型，AI 按你的描述生成。如：反常识冷知识，结尾抛一个互动问题。",
+    },
+];
+/** 文案生成类型：枚举 ↔ 接口数字（copywriting_generation_type 1~7） */
+const COPY_AI_TYPE_TO_API: Record<string, number> = {
+    [CopyAiTypeEnum.Ganhuo]: 1,
+    [CopyAiTypeEnum.Zhongcao]: 2,
+    [CopyAiTypeEnum.Guandian]: 3,
+    [CopyAiTypeEnum.Juqing]: 4,
+    [CopyAiTypeEnum.Qinggan]: 5,
+    [CopyAiTypeEnum.Jiemi]: 6,
+    [CopyAiTypeEnum.Custom]: 7,
+};
+const API_TO_COPY_AI_TYPE: Record<string, CopyAiTypeEnum> = Object.fromEntries(
+    Object.entries(COPY_AI_TYPE_TO_API).map(([k, v]) => [String(v), k as CopyAiTypeEnum]),
+);
+
 const COVER_HINTS: Record<string, string> = {
     [CoverSourceEnum.Default]: "截取视频首帧作为封面，简单直接。",
     [CoverSourceEnum.AI]: "AI 根据视频内容自动生成更适合推荐流的封面。",
@@ -671,6 +747,8 @@ const innerState = reactive<InnerState>({
     synthTypes: [SynthTypeEnum.DigitalHuman],
     materialSource: MaterialSourceEnum.AILib,
     copySource: CopySourceEnum.Rewrite,
+    copyAiType: CopyAiTypeEnum.Ganhuo,
+    copyAiCustom: "",
     copyStyle: CopyStyleEnum.Spoken,
     coverSource: CoverSourceEnum.AI,
     coverImage: "",
@@ -692,14 +770,18 @@ const { on: onEventBus } = useEventBusManager();
 const hasDigitalHuman = computed(() => innerState.synthTypes.includes(SynthTypeEnum.DigitalHuman));
 const hasNews = computed(() => innerState.synthTypes.includes(SynthTypeEnum.News));
 const hasCopyLib = computed(() => innerState.copySource === COPY_LIB_VALUE);
+const hasCopyAiGen = computed(() => innerState.copySource === CopySourceEnum.AIGen);
+const currentCopyAiTypeNote = computed(() => {
+    const custom = innerState.copyAiCustom.trim();
+    if (innerState.copyAiType === CopyAiTypeEnum.Custom && custom) return `将按「${custom}」的方向生成文案。`;
+    return COPY_AI_TYPE_OPTIONS.find((o) => o.val === innerState.copyAiType)?.note ?? "";
+});
 
 const activeSynthApiTypes = computed(() =>
     innerState.synthTypes.map((t) => synthUiToApi(t)).filter((n): n is number => typeof n === "number"),
 );
 
-const templateSummary = computed(() =>
-    buildTemplateSummary(activeSynthApiTypes.value, innerState.templateConfig),
-);
+const templateSummary = computed(() => buildTemplateSummary(activeSynthApiTypes.value, innerState.templateConfig));
 
 const currentWorkModeNote = computed(() => WORK_MODE_NOTES[innerState.workMode]);
 const currentEditorLibRuleNote = computed(() => EDITOR_LIB_RULE_NOTES[innerState.libRandomRule]);
@@ -908,6 +990,9 @@ const buildApiParams = () => ({
     generation_types: innerState.synthTypes.map((t) => SYNTH_TYPE_TO_API[t]).filter(Boolean),
     visual_material_source: MATERIAL_SOURCE_TO_API[innerState.materialSource],
     copywriting_source: COPY_SOURCE_TO_API[innerState.copySource],
+    copywriting_generation_type: COPY_AI_TYPE_TO_API[innerState.copyAiType],
+    copywriting_generation_custom:
+        innerState.copyAiType === CopyAiTypeEnum.Custom ? innerState.copyAiCustom.trim() : "",
     library_use_mode: LIB_USE_MODE_TO_API[innerState.copyLibUseMode],
     library_reuse_mode: LIB_RULE_TO_API[innerState.copyLibRandomRule],
     video_cover_source: COVER_SOURCE_TO_API[innerState.coverSource],
@@ -963,6 +1048,7 @@ const handleConfirm = async (): Promise<void> => {
         await (innerState.id ? updateAiSynthesisRule(params) : addAiSynthesisRule(params));
 
         visible.value = false;
+        uni.hideLoading();
         uni.showToast({ title: "保存成功", icon: "none", duration: 3000 });
         emit(
             "confirm",
@@ -973,10 +1059,9 @@ const handleConfirm = async (): Promise<void> => {
             },
             buildSummary(),
         );
-    } catch {
-        uni.showToast({ title: "保存失败", icon: "none", duration: 3000 });
-    } finally {
+    } catch (error: any) {
         uni.hideLoading();
+        uni.showToast({ title: error || "保存失败", icon: "none", duration: 3000 });
     }
 };
 
@@ -993,6 +1078,8 @@ const getDetail = async (): Promise<void> => {
     ];
     innerState.materialSource = API_TO_MATERIAL_SOURCE[res.visual_material_source] ?? MaterialSourceEnum.AILib;
     innerState.copySource = API_TO_COPY_SOURCE[res.copywriting_source] ?? CopySourceEnum.Rewrite;
+    innerState.copyAiType = API_TO_COPY_AI_TYPE[String(res.copywriting_generation_type)] ?? CopyAiTypeEnum.Ganhuo;
+    innerState.copyAiCustom = String(res.copywriting_generation_custom ?? "").slice(0, COPY_AI_CUSTOM_MAX);
     const libraryUseMode = API_TO_LIB_USE_MODE[res.library_use_mode] ?? LibUseModeEnum.Random;
     const libraryReuseMode = API_TO_LIB_RULE[res.library_reuse_mode] ?? LibRuleEnum.Once;
     const hasProductFields = res.product_use_mode != null || res.product_reuse_mode != null;
@@ -1015,9 +1102,7 @@ const getDetail = async (): Promise<void> => {
         : NEWS_DURATION.default;
     innerState.coverImage = res.pic ?? "";
     innerState.musicSource = normalizeMusicSource(res.music_source);
-    innerState.musicVolume = normalizeMusicVolume(
-        res.music_volume ?? MUSIC_VOLUME_DEFAULT,
-    );
+    innerState.musicVolume = normalizeMusicVolume(res.music_volume ?? MUSIC_VOLUME_DEFAULT);
     innerState.speechRate = normalizeSpeechRate(res.speech_rate ?? SPEECH_RATE_DEFAULT);
 
     // 回显全部类型模板（含当前未启用），以便重新勾选生成类型时恢复
@@ -1388,6 +1473,76 @@ defineExpose({
 
 .rule-sub .rule-seg + .rule-sub-label {
     margin-top: 24rpx;
+}
+
+/* AI生成 · 文案生成类型 */
+.rule-sub-ai {
+    padding-left: 24rpx;
+    border-left: 4rpx solid #e3e9f2;
+}
+
+.rule-sub-ai .rule-sub-label {
+    margin-bottom: 8rpx;
+}
+
+.rule-sub-desc {
+    display: block;
+    font-size: 22rpx;
+    color: #9ca3af;
+    margin: 0 0 20rpx;
+}
+
+.rule-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16rpx;
+}
+
+.rule-chip {
+    padding: 14rpx 26rpx;
+    border-radius: 999rpx;
+    border: 2rpx solid #e3e9f2;
+    background: #ffffff;
+    font-size: 24rpx;
+    font-weight: 500;
+    color: #4b5563;
+    transition: all 0.15s;
+}
+
+.rule-chip.sel {
+    border-color: #2f73f6;
+    background: #2f73f6;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.rule-chip-custom {
+    margin-top: 20rpx;
+}
+
+.rule-chip-custom-input {
+    width: 100%;
+    box-sizing: border-box;
+    height: 80rpx;
+    padding: 0 24rpx;
+    border-radius: 24rpx;
+    border: 2rpx solid #e3e9f2;
+    background: #f7f9fc;
+    font-size: 25rpx;
+    color: #1d2129;
+}
+
+.rule-chip-custom-ph {
+    font-size: 23rpx;
+    color: #c9cdd4;
+}
+
+.rule-chip-custom-cnt {
+    display: block;
+    text-align: right;
+    font-size: 21rpx;
+    color: #c9cdd4;
+    margin: 10rpx 4rpx 0;
 }
 
 .rule-upload {

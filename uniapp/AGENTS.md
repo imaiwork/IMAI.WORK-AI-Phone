@@ -106,6 +106,7 @@ const emit = defineEmits<{
 -   `<style lang="scss" scoped>` 中自定义 class 应优先通过 `@apply` 组合 Tailwind 工具类，避免把布局、间距、颜色、字体、圆角、边框等基础样式拆成大量传统 CSS 属性。
 -   `box-shadow`、复杂背景渐变、关键帧动画、组件深层覆盖、Tailwind 当前无法表达或小程序转换不稳定的样式，可以保留传统 CSS 写法。
 -   当前项目 Tailwind 主题覆盖了默认颜色，部分默认工具类不可用；透明色不要写 `bg-transparent`、`border-transparent`，应使用 `bg-[transparent]`、`border-[transparent]` 这类 arbitrary value 写法。
+-   **单边边框必须先重置全边**：写 `border-t-[2rpx] border-solid border-[#F3F4F8]` 这类单边边框时，必须同时加 `border-[0]`（写在最前，如 `border-[0] border-t-[2rpx] border-solid border-[#F3F4F8]`），否则小程序端会四条边全部显示边框。四边同宽的 `border-[2rpx]` 不受影响，无需重置。
 -   全局主题色从 `tailwind.config.js` 和 `src/uni.scss` 获取，不要在多个页面重复定义一套色板。
 -   不要引入新的 CSS 框架。
 -   不要在页面内写大段重复 SCSS；重复 2 次以上且有业务意义时抽成组件或局部 class。

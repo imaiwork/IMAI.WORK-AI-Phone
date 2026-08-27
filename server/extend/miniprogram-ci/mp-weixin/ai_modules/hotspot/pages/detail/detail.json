@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "创作详情",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "empty": "../../../../components/empty/empty",
+    "u-loading": "../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "video-preview-v2": "../../../../components/video-preview-v2/video-preview-v2"
+  }
+}

@@ -8,6 +8,7 @@ interface Detail {
 
 // 定义单条聊天消息的接口，确保数据结构的类型安全。
 export interface ChatMessage {
+    _key?: number; // 列表渲染用的稳定 key（由 store 分配，勿手填）
     type: 1 | 2; // 消息类型: 1 代表用户, 2 代表机器人
     message?: string; // 用户发送的消息内容
     reply?: string; // 机器人的回复内容
@@ -79,6 +80,10 @@ export const useChatStore = defineStore("chat", () => {
      * @description 聊天消息列表。
      */
     const chatContentList = ref<ChatMessage[]>([]);
+
+    /** 消息 key 自增序列，仅用于列表渲染，不参与业务 */
+    let messageSeq = 0;
+    const nextMessageKey = () => ++messageSeq;
 
     /**
      * @description 是否正在接收流式消息。
@@ -190,7 +195,14 @@ export const useChatStore = defineStore("chat", () => {
      * @param message - 消息对象。
      */
     function addMessage(message: ChatMessage) {
-        chatContentList.value.push(message);
+        chatContentList.value.push({ ...message, _key: nextMessageKey() });
+    }
+
+    /**
+     * @description 整体替换消息列表（如加载历史记录），统一补上稳定 key。
+     */
+    function setMessages(list: ChatMessage[]) {
+        chatContentList.value = list.map((item) => ({ ...item, _key: nextMessageKey() }));
     }
 
     /**
@@ -203,6 +215,10 @@ export const useChatStore = defineStore("chat", () => {
         chatContentList.value = [];
         isLoading.value = false;
         extraParams.value = {};
+        // 这三项以前不重置，会跨会话泄漏：新会话仍在偷偷带上一轮的联网/深度开关和待上传文件
+        isNetwork.value = false;
+        isDeep.value = false;
+        fileLists.value = [];
         stopReceiving();
     }
 
@@ -294,6 +310,7 @@ export const useChatStore = defineStore("chat", () => {
         replaceAgentId,
         clearChatMessages,
         addMessage,
+        setMessages,
         clearChat,
         startReceiving,
         stopReceiving,

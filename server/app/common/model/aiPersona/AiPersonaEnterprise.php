@@ -19,9 +19,9 @@ class AiPersonaEnterprise extends BaseModel
         $brand_tone = AiPersonaTextService::join($this->brand_tone);
         $account_goal = AiPersonaTextService::join($this->account_goal);
         $spokesperson = AiPersonaTextService::join($this->spokesperson);
-        $this->clue_content ="我的IP名称是{$persona->devicpersona_namee_code}。
+        $this->clue_content ="我的IP人设名称是{$persona->devicpersona_namee_code}。
 
-                    IP介绍如下：
+                    IP人设介绍如下：
                     {$persona->persona_desc}
 
                     账号类型是{$persona->persona_type}。

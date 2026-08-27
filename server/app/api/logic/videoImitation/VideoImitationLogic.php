@@ -16,6 +16,8 @@ use app\common\model\aiPersona\AiPersona;
 use app\common\service\aiPersona\XhsImageNoteExtractService;
 use app\common\service\TeamBillingService;
 use app\common\service\ToolsService;
+use app\common\service\videoImitation\VideoImitationImageBilling;
+use app\common\service\videoImitation\VideoImitationImageLifecycle;
 use app\common\service\videoImitation\VideoImitationImageRewriteService;
 use think\exception\HttpResponseException;
 use think\facade\Cache;
@@ -36,7 +38,7 @@ class VideoImitationLogic extends BaseLogic
     public const RESUME_FROM_GENERATE = 'generate';
 
     /** 图文提取超过该秒数无进展 → 标 FAIL，供手动重试 */
-    public const PARSE_STALE_SECONDS = 1800;
+    public const PARSE_STALE_SECONDS = VideoImitationImageLifecycle::PARSE_STALE_SECONDS;
 
     /**
      * 视频仿写解析与生成（支持按失败步骤续跑；文案已齐时转发 generate）
@@ -47,7 +49,14 @@ class VideoImitationLogic extends BaseLogic
      * @return array|bool
      * @throws \Exception
      */
-    public static function createOrUpdateTask(string $url, int $userId, int $personaId, int $id = 0, int $visualMaterialSource = 3)
+    public static function createOrUpdateTask(
+        string $url,
+        int $userId,
+        int $personaId,
+        int $id = 0,
+        int $visualMaterialSource = 0,
+        int $rewriteMode = 0
+    )
     {
         if ($id > 0) {
             $task = VideoImitationTask::where('id', $id)->where('user_id', $userId)->find();
@@ -58,6 +67,24 @@ class VideoImitationLogic extends BaseLogic
             if ((int)$task->media_type !== VideoImitationTask::MEDIA_TYPE_VIDEO) {
                 self::setError('该任务不是视频复刻任务，无法重跑');
                 return false;
+            }
+            $storedRewriteMode = (int)($task->rewrite_mode ?: VideoImitationTask::REWRITE_MODE_PERSONA);
+            $rewriteMode = $rewriteMode > 0 ? $rewriteMode : $storedRewriteMode;
+            if ($rewriteMode !== $storedRewriteMode) {
+                self::setError('重试时不能变更改写模式');
+                return false;
+            }
+            if ($rewriteMode === VideoImitationTask::REWRITE_MODE_WASH) {
+                $personaId = 0;
+                if ($visualMaterialSource > 0 && $visualMaterialSource !== 1) {
+                    self::setError('洗稿模式仅支持AI找素材');
+                    return false;
+                }
+                $visualMaterialSource = 1;
+            } else {
+                $visualMaterialSource = $visualMaterialSource > 0
+                    ? $visualMaterialSource
+                    : (int)($task->visual_material_source ?: 3);
             }
             if (!self::assertVideoRetryAllowed($task, $url, $personaId)) {
                 return false;
@@ -100,10 +127,26 @@ class VideoImitationLogic extends BaseLogic
             return $result;
         }
 
+        $rewriteMode = $rewriteMode > 0 ? $rewriteMode : VideoImitationTask::REWRITE_MODE_PERSONA;
+        if (!self::validateRewriteModeForCreate($userId, $personaId, $rewriteMode)) {
+            return false;
+        }
+        if ($rewriteMode === VideoImitationTask::REWRITE_MODE_WASH) {
+            if ($visualMaterialSource > 0 && $visualMaterialSource !== 1) {
+                self::setError('洗稿模式仅支持AI找素材');
+                return false;
+            }
+            $personaId = 0;
+            $visualMaterialSource = 1;
+        } else {
+            $visualMaterialSource = $visualMaterialSource > 0 ? $visualMaterialSource : 3;
+        }
+
         $task = VideoImitationTask::create([
             'user_id' => $userId,
             'prompt' => $url,
             'persona_id' => $personaId,
+            'rewrite_mode' => $rewriteMode,
             'visual_material_source' => $visualMaterialSource,
             'platform_type' => DeviceEnum::ACCOUNT_TYPE_DY,
             'media_type' => VideoImitationTask::MEDIA_TYPE_VIDEO,
@@ -216,6 +259,7 @@ class VideoImitationLogic extends BaseLogic
             'status' => VideoImitationTask::STATUS_PARSING,
             'original_text' => '',
             'rewritten_text' => '',
+            'rewritten_text_confirmed' => 0,
             'word_count' => 0,
             'analysis_tags' => '',
             'remarks' => '视频续跑：重新提取文案',
@@ -223,6 +267,18 @@ class VideoImitationLogic extends BaseLogic
             'platform_task_id' => '',
             'origin_video_duration' => 0,
         ]);
+        if ((int)$task->rewrite_mode === VideoImitationTask::REWRITE_MODE_WASH) {
+            $task->save([
+                'generation_type' => VideoImitationTask::GENERATION_TYPE_NONE,
+                'wash_avatar_id' => 0,
+                'wash_voice_id' => 0,
+                'wash_voice_provider' => '',
+                'wash_third_avatar_id' => '',
+                'wash_third_voice_id' => '',
+                'generation_config_confirmed' => 0,
+                'rewritten_text_confirmed' => 0,
+            ]);
+        }
     }
 
     /**
@@ -253,7 +309,13 @@ class VideoImitationLogic extends BaseLogic
     /**
      * 小红书图文任务创建/按失败步骤续跑（异步解析或交由 Cron）
      */
-    public static function createOrUpdateImageTextTask(string $url, int $userId, int $personaId, int $id = 0)
+    public static function createOrUpdateImageTextTask(
+        string $url,
+        int $userId,
+        int $personaId,
+        int $id = 0,
+        int $rewriteMode = 0
+    )
     {
         if ($id > 0) {
             $task = VideoImitationTask::where('id', $id)->where('user_id', $userId)->find();
@@ -264,6 +326,15 @@ class VideoImitationLogic extends BaseLogic
             if ((int)$task->media_type !== VideoImitationTask::MEDIA_TYPE_IMAGE_TEXT) {
                 self::setError('该任务不是图文复刻任务，无法重跑');
                 return false;
+            }
+            $storedRewriteMode = (int)($task->rewrite_mode ?: VideoImitationTask::REWRITE_MODE_PERSONA);
+            $rewriteMode = $rewriteMode > 0 ? $rewriteMode : $storedRewriteMode;
+            if ($rewriteMode !== $storedRewriteMode) {
+                self::setError('重试时不能变更改写模式');
+                return false;
+            }
+            if ($rewriteMode === VideoImitationTask::REWRITE_MODE_WASH) {
+                $personaId = 0;
             }
             if (!self::assertImageTextRetryAllowed($task)) {
                 return false;
@@ -295,10 +366,19 @@ class VideoImitationLogic extends BaseLogic
             return $result;
         }
 
+        $rewriteMode = $rewriteMode > 0 ? $rewriteMode : VideoImitationTask::REWRITE_MODE_PERSONA;
+        if (!self::validateRewriteModeForCreate($userId, $personaId, $rewriteMode)) {
+            return false;
+        }
+        if ($rewriteMode === VideoImitationTask::REWRITE_MODE_WASH) {
+            $personaId = 0;
+        }
+
         $task = VideoImitationTask::create([
             'user_id' => $userId,
             'prompt' => $url,
             'persona_id' => $personaId,
+            'rewrite_mode' => $rewriteMode,
             'platform_type' => DeviceEnum::ACCOUNT_TYPE_XHS,
             'media_type' => VideoImitationTask::MEDIA_TYPE_IMAGE_TEXT,
             'status' => VideoImitationTask::STATUS_PARSING,
@@ -310,6 +390,30 @@ class VideoImitationLogic extends BaseLogic
         $result = $task ? $task->toArray() : [];
         $result['resume_from'] = self::RESUME_FROM_EXTRACT;
         return $result;
+    }
+
+    private static function validateRewriteModeForCreate(int $userId, int $personaId, int $rewriteMode): bool
+    {
+        if (!in_array($rewriteMode, [
+            VideoImitationTask::REWRITE_MODE_PERSONA,
+            VideoImitationTask::REWRITE_MODE_WASH,
+        ], true)) {
+            self::setError('改写模式不正确');
+            return false;
+        }
+        if ($rewriteMode === VideoImitationTask::REWRITE_MODE_WASH) {
+            return true;
+        }
+        if ($personaId <= 0) {
+            self::setError('必须选择IP人设');
+            return false;
+        }
+        $exists = AiPersona::where('id', $personaId)->where('user_id', $userId)->count() > 0;
+        if (!$exists) {
+            self::setError('IP人设不存在或不属于当前用户');
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -756,6 +860,17 @@ class VideoImitationLogic extends BaseLogic
     public static function recoverStaleImageTextParse(VideoImitationTask $task): array
     {
         $taskId = (int)$task->id;
+        if (!VideoImitationImageLifecycle::canScanParseRecover($task)) {
+            Log::channel('shanjian')->write(sprintf(
+                'VideoImitation 解析超时回收跳过：已删除或改写状态不允许回收 task_id=%d media_type=%d status=%d rewrite_status=%d task_delete=%d',
+                $taskId,
+                (int)$task->media_type,
+                (int)$task->status,
+                (int)$task->image_rewrite_status,
+                (int)$task->task_delete
+            ));
+            return ['action' => 'skip'];
+        }
         if ($taskId <= 0 || !self::isImageTextParseStale($task)) {
             return ['action' => 'skip'];
         }
@@ -763,7 +878,7 @@ class VideoImitationLogic extends BaseLogic
         $lockKey = 'video_imitation:parse_recover_lock:' . $taskId;
         try {
             $redis = Cache::store('redis')->handler();
-            if (!$redis->set($lockKey, (string)(getmypid() ?: 1), ['nx', 'ex' => 60])) {
+            if (!$redis->set($lockKey, (string)(getmypid() ?: 1), ['nx', 'ex' => VideoImitationImageLifecycle::PARSE_TASK_LOCK_TTL])) {
                 return ['action' => 'locked'];
             }
         } catch (\Throwable $th) {
@@ -896,9 +1011,12 @@ class VideoImitationLogic extends BaseLogic
             // 先预检算力
             $rewriteUnit = (float)TokenLogService::checkToken($userId, 'images_explosion_rewrite');
 
-            $persona = AiPersona::where('id', $personaId)->where('user_id', $userId)->findOrEmpty();
-            if ($persona->isEmpty()) {
-                throw new \RuntimeException('IP人设不存在');
+            $persona = null;
+            if ((int)$task->rewrite_mode !== VideoImitationTask::REWRITE_MODE_WASH) {
+                $persona = AiPersona::where('id', $personaId)->where('user_id', $userId)->findOrEmpty();
+                if ($persona->isEmpty()) {
+                    throw new \RuntimeException('IP人设不存在');
+                }
             }
 
             $originalText = trim((string)$task->original_text);
@@ -909,7 +1027,7 @@ class VideoImitationLogic extends BaseLogic
                 $note = XhsImageNoteExtractService::extract($url);
                 $noteType = strtolower(trim((string)($note['type'] ?? '')));
                 $images = is_array($note['images'] ?? null) ? array_values($note['images']) : [];
-                if ($noteType === 'video' && count($images) <= 0) {
+                if ($noteType === 'video') {
                     throw new \RuntimeException((string)($note['error'] ?? '暂不支持小红书视频分享链接'));
                 }
                 if (empty($images)) {
@@ -938,13 +1056,17 @@ class VideoImitationLogic extends BaseLogic
                 $billingRound
             );
 
-            self::buildImageTextPublishCopywriting(
-                $task,
-                $persona,
-                $userId,
-                $originalText,
-                $fallbackTitle
-            );
+            if ((int)$task->rewrite_mode === VideoImitationTask::REWRITE_MODE_WASH) {
+                self::buildImageTextWashCopywriting($task, $userId, $originalText, $fallbackTitle);
+            } else {
+                self::buildImageTextPublishCopywriting(
+                    $task,
+                    $persona,
+                    $userId,
+                    $originalText,
+                    $fallbackTitle
+                );
+            }
 
             // CAS：仅 PARSING 可落选图态，避免并发旧请求覆盖已成功任务
             $now = time();
@@ -1015,11 +1137,6 @@ class VideoImitationLogic extends BaseLogic
         }
     }
 
-    private static function buildExtractBillingTaskId(int $taskId, int $billingRound): string
-    {
-        return 'video_imitation_info_extract_' . $taskId . '_r' . max(1, $billingRound);
-    }
-
     /**
      * 对齐 ViralRewriterHandler::chargeImageExplosionRewrite：按次扣图文信息抓取费
      *
@@ -1036,7 +1153,7 @@ class VideoImitationLogic extends BaseLogic
             return false;
         }
 
-        $billingTaskId = self::buildExtractBillingTaskId($taskId, $billingRound);
+        $oldBillingKey = VideoImitationImageBilling::extractBillingKey($taskId, $billingRound);
         Db::startTrans();
         try {
             $user = User::where('id', $userId)->lock(true)->findOrEmpty();
@@ -1045,17 +1162,14 @@ class VideoImitationLogic extends BaseLogic
             }
 
             // 净扣费：DEC 次数大于 INC 退费次数才视为已扣费（退费后同 round 可再扣）
-            $decCount = UserTokensLog::where('user_id', $userId)
-                ->where('task_id', $billingTaskId)
-                ->where('change_type', AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE)
-                ->where('action', AccountLogEnum::DEC)
-                ->count();
-            $incCount = UserTokensLog::where('user_id', $userId)
-                ->where('task_id', $billingTaskId)
-                ->where('change_type', AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE)
-                ->where('action', AccountLogEnum::INC)
-                ->count();
-            if ($decCount > $incCount) {
+            $counts = VideoImitationImageBilling::countDecInc(
+                $userId,
+                $taskId,
+                AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE,
+                $billingRound,
+                $oldBillingKey
+            );
+            if ($counts['dec'] > $counts['inc']) {
                 Db::commit();
                 return false;
             }
@@ -1073,15 +1187,13 @@ class VideoImitationLogic extends BaseLogic
                 $userId,
                 AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE,
                 $unit,
-                $billingTaskId,
-                [
+                VideoImitationImageBilling::writeTaskId($taskId),
+                VideoImitationImageBilling::mergeExtra($taskId, $billingRound, $oldBillingKey, [
                     '扣费项目' => '手动-图文爆款仿写信息抓取',
                     '算力单价' => $unit,
                     '实际消耗算力' => $unit,
-                    'task_id' => $taskId,
-                    'billing_round' => max(1, $billingRound),
                     'share_url' => $shareUrl,
-                ]
+                ])
             );
             Db::commit();
             return true;
@@ -1105,7 +1217,7 @@ class VideoImitationLogic extends BaseLogic
             return;
         }
 
-        $billingTaskId = self::buildExtractBillingTaskId($taskId, $billingRound);
+        $oldBillingKey = VideoImitationImageBilling::extractBillingKey($taskId, $billingRound);
         Db::startTrans();
         try {
             $user = User::where('id', $userId)->lock(true)->findOrEmpty();
@@ -1113,48 +1225,49 @@ class VideoImitationLogic extends BaseLogic
                 throw new \RuntimeException('用户查询失败');
             }
 
-            $decCount = (int)UserTokensLog::where('user_id', $userId)
-                ->where('task_id', $billingTaskId)
-                ->where('change_type', AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE)
-                ->where('action', AccountLogEnum::DEC)
-                ->count();
-            $incCount = (int)UserTokensLog::where('user_id', $userId)
-                ->where('task_id', $billingTaskId)
-                ->where('change_type', AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE)
-                ->where('action', AccountLogEnum::INC)
-                ->count();
+            $counts = VideoImitationImageBilling::countDecInc(
+                $userId,
+                $taskId,
+                AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE,
+                $billingRound,
+                $oldBillingKey
+            );
             // 净扣费为 0 则无需退费（兼容同 round 多次扣退）
-            if ($decCount <= $incCount) {
+            if ($counts['dec'] <= $counts['inc']) {
                 Db::commit();
                 return;
             }
 
-            $decLog = UserTokensLog::where('user_id', $userId)
-                ->where('task_id', $billingTaskId)
-                ->where('change_type', AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE)
-                ->where('action', AccountLogEnum::DEC)
-                ->order('id', 'desc')
-                ->findOrEmpty();
+            $decLog = VideoImitationImageBilling::findLatestDec(
+                $userId,
+                $taskId,
+                AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE,
+                $billingRound,
+                $oldBillingKey
+            );
             $refundAmount = abs((float)($decLog->change_amount ?? $unit));
             if ($refundAmount <= 0) {
                 Db::commit();
                 return;
             }
 
+            // 第5参必须对上原 DEC.task_id，否则 AccountLogLogic 查不到 team_id，团队钱包会错退个人
+            $refundSourceSn = !$decLog->isEmpty() && (string)$decLog->task_id !== ''
+                ? (string)$decLog->task_id
+                : VideoImitationImageBilling::writeTaskId($taskId);
+
             AccountLogLogic::recordUserTokensLog(
                 false,
                 $userId,
                 AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE,
                 $refundAmount,
-                $billingTaskId,
-                [
+                $refundSourceSn,
+                VideoImitationImageBilling::mergeExtra($taskId, $billingRound, $oldBillingKey, [
                     '扣费项目' => '手动-图文爆款仿写信息抓取失败退费',
                     '算力单价' => $unit,
                     '实际恢复算力' => $refundAmount,
-                    'task_id' => $taskId,
-                    'billing_round' => max(1, $billingRound),
                     'share_url' => $shareUrl,
-                ]
+                ])
             );
             Db::commit();
         } catch (\Throwable $th) {
@@ -1252,6 +1365,75 @@ class VideoImitationLogic extends BaseLogic
     }
 
     /**
+     * 手动小红书洗稿：只使用原笔记，不查询、不注入人设、业务或产品信息。
+     */
+    private static function buildImageTextWashCopywriting(
+        VideoImitationTask $task,
+        int $userId,
+        string $originalText,
+        string $fallbackTitle = ''
+    ): void {
+        $prompt = "请将以下小红书图文笔记进行洗稿改写。保留核心事实与原意，避免复用原句，重组表达和结构；不要新增人设、业务、产品或转化信息。"
+            . "\n输出适合小红书发布的标题、正文和标签。\n\n原笔记：\n"
+            . trim($originalText);
+        $response = AutoDeviceSettingLogic::copywriting([
+            'keywords' => $prompt,
+            'persona' => '',
+            'original' => $originalText,
+            'voice' => '',
+            'hook' => '',
+            'model' => 0,
+        ], $userId, 7);
+        Log::channel('shanjian')->write(
+            'VideoImitationImageTextWash 文案仿写: ' . json_encode($response, JSON_UNESCAPED_UNICODE)
+        );
+        $data = $response['content'] ?? [];
+        if (is_string($data)) {
+            $data = json_decode($data, true) ?: [];
+        }
+        if (!is_array($data)) {
+            $data = [];
+        }
+
+        $content = trim((string)($data['rewritten_text'] ?? $data['content'] ?? ''));
+        if ($content === '') {
+            throw new \RuntimeException('通用洗稿未返回可用正文');
+        }
+        $title = trim((string)($data['title'] ?? $fallbackTitle));
+        $tags = $data['analysis_tags'] ?? $data['tag'] ?? [];
+        if (is_string($tags)) {
+            $decoded = json_decode($tags, true);
+            $tags = is_array($decoded) ? $decoded : preg_split('/[,，\s]+/u', $tags, -1, PREG_SPLIT_NO_EMPTY);
+        }
+        $topic = [];
+        foreach (is_array($tags) ? $tags : [] as $tag) {
+            if (is_array($tag)) {
+                $tag = $tag['name'] ?? $tag['title'] ?? '';
+            }
+            $tag = ltrim(trim((string)$tag), '#');
+            if ($tag !== '') {
+                $topic[] = '#' . $tag;
+            }
+        }
+
+        $task->title = $title !== '' ? $title : mb_substr($content, 0, 20, 'UTF-8');
+        $task->rewritten_text = $content;
+        $task->publish_title = $task->title;
+        $task->publish_text = $content;
+        $task->publish_topic = mb_substr(
+            implode(' ', array_values(array_unique($topic))),
+            0,
+            255,
+            'UTF-8'
+        );
+        $task->word_count = (int)($data['word_count'] ?? mb_strlen($content, 'UTF-8'));
+        $task->analysis_tags = json_encode(array_values(array_unique($topic)), JSON_UNESCAPED_UNICODE);
+        $task->persona_role = '';
+        $task->persona_tone = '';
+        $task->save();
+    }
+
+    /**
      * 抖音/视频异步解析（支持跳过提取、仅续跑仿写）
      */
     private static function processVideoParseTask(array $data, VideoImitationTask $task): void
@@ -1272,7 +1454,8 @@ class VideoImitationLogic extends BaseLogic
                     'VideoImitationParseTask 跳过提取续跑仿写 task_id=' . $taskId
                 );
             } else {
-                $response = ToolsService::VideoImitation()->video2text($url);
+                // 手动爆款复刻固定走 V2 阿里云百炼；自动爆款复刻仍使用原 V1 调用。
+                $response = ToolsService::VideoImitation()->video2textV2($url);
                 Log::channel('shanjian')->write(
                     'VideoImitationParseTask 视频解析: ' . json_encode($response, JSON_UNESCAPED_UNICODE)
                 );
@@ -1462,7 +1645,11 @@ class VideoImitationLogic extends BaseLogic
     {
         $promptContent = "视频文案：\n{$originalText}";
 
-        if ($personaId) {
+        if ((int)$task->rewrite_mode === VideoImitationTask::REWRITE_MODE_WASH) {
+            // 洗稿：只基于原文案做同义改写与结构重组，不注入人设、业务或产品信息
+            $promptContent = "请将以下短视频口播文案进行洗稿改写。保留核心事实与原意，避免复用原句，重组表达和结构；"
+                . "不要新增人设、业务、产品或转化信息，字数与原文相近，输出适合口播的文案。\n\n视频文案：\n{$originalText}";
+        } elseif ($personaId) {
             // 获取人设信息
             $persona = AiPersona::where('id', $personaId)->find();
             if ($persona) {
@@ -1491,8 +1678,14 @@ class VideoImitationLogic extends BaseLogic
         }
 
         $titlecoze['keywords'] = $promptContent;
+        $titlecoze['persona'] = '';
+        $titlecoze['original'] = $originalText;
+        $titlecoze['voice'] = $opt['voice'] ?? '';
+        $titlecoze['hook'] = $opt['hook'] ?? '';
+        $titlecoze['model'] = 0;
+
         Log::channel('shanjian')->write("VideoImitationParseTask 请求参数: " . json_encode($titlecoze, JSON_UNESCAPED_UNICODE));
-        $imitationResult = AutoDeviceSettingLogic::copywriting($titlecoze, $userId, 5);
+        $imitationResult = AutoDeviceSettingLogic::copywriting($titlecoze, $userId, 7);
         Log::channel('shanjian')->write("VideoImitationParseTask 文案仿写: " . json_encode($imitationResult, JSON_UNESCAPED_UNICODE));
         $contentData = $imitationResult['content'] ?? [];
         if (is_string($contentData)) {
@@ -1507,8 +1700,13 @@ class VideoImitationLogic extends BaseLogic
         $task->word_count = $contentData['word_count'] ?? 0;
         $task->analysis_tags = json_encode($contentData['analysis_tags'] ?? [], JSON_UNESCAPED_UNICODE);
         $task->compliance_status = $contentData['compliance_status'] ?? '';
-        $task->persona_role = $contentData['persona_role'] ?? '';
-        $task->persona_tone = $contentData['persona_tone'] ?? '';
+        if ((int)$task->rewrite_mode === VideoImitationTask::REWRITE_MODE_WASH) {
+            $task->persona_role = '';
+            $task->persona_tone = '';
+        } else {
+            $task->persona_role = $contentData['persona_role'] ?? '';
+            $task->persona_tone = $contentData['persona_tone'] ?? '';
+        }
 
         return $task;
     }
@@ -1531,18 +1729,27 @@ class VideoImitationLogic extends BaseLogic
 
         try {
             if ((int)$task->media_type === VideoImitationTask::MEDIA_TYPE_IMAGE_TEXT) {
-                $persona = AiPersona::where('id', (int)$task->persona_id)->where('user_id', $userId)->findOrEmpty();
-                if ($persona->isEmpty()) {
-                    self::setError('IP人设不存在');
-                    return false;
+                if ((int)$task->rewrite_mode === VideoImitationTask::REWRITE_MODE_WASH) {
+                    self::buildImageTextWashCopywriting(
+                        $task,
+                        $userId,
+                        (string)$task->original_text,
+                        (string)$task->title
+                    );
+                } else {
+                    $persona = AiPersona::where('id', (int)$task->persona_id)->where('user_id', $userId)->findOrEmpty();
+                    if ($persona->isEmpty()) {
+                        self::setError('IP人设不存在');
+                        return false;
+                    }
+                    self::buildImageTextPublishCopywriting(
+                        $task,
+                        $persona,
+                        $userId,
+                        (string)$task->original_text,
+                        (string)$task->title
+                    );
                 }
-                self::buildImageTextPublishCopywriting(
-                    $task,
-                    $persona,
-                    $userId,
-                    (string)$task->original_text,
-                    (string)$task->title
-                );
                 $task->status = VideoImitationTask::STATUS_WAIT_CONFIRM;
                 $rewriteStatus = (int)$task->image_rewrite_status;
                 if (in_array($rewriteStatus, [
@@ -1555,6 +1762,8 @@ class VideoImitationLogic extends BaseLogic
             } else {
                 self::buildRewriteCopywriting($task, $userId, $task->original_text, $task->persona_id);
                 $task->status = VideoImitationTask::STATUS_WAIT_CONFIRM;
+                // 重新生成文案后需用户重新确认
+                $task->rewritten_text_confirmed = 0;
             }
             $task->save();
             return $task->toArray();

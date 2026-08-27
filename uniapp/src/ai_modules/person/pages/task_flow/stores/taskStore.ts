@@ -125,6 +125,8 @@ export interface TaskConfigItem {
 export interface AddableSceneItem {
     scene: number;
     name: string;
+    /** 后端开放的平台 account_type；接口未下发时为 null，表示不做平台过滤 */
+    platforms: number[] | null;
 }
 
 export interface SchedulePayload {
@@ -167,6 +169,7 @@ export const taskConfig: Record<TaskScene, TaskConfigItem> = {
         platforms: [
             { type: DOYIN_TYPE, name: "抖音" },
             { type: XHS_TYPE, name: "小红书" },
+            { type: KUAISHOU_TYPE, name: "快手" },
         ],
     },
     [TaskScene.PRIVATE_MESSAGE_GET_CUSTOMER]: {
@@ -175,6 +178,7 @@ export const taskConfig: Record<TaskScene, TaskConfigItem> = {
         platforms: [
             { type: DOYIN_TYPE, name: "抖音" },
             { type: XHS_TYPE, name: "小红书" },
+            { type: KUAISHOU_TYPE, name: "快手" },
         ],
     },
     [TaskScene.LEAVE_TRAIL_GET_CUSTOMER]: {
@@ -228,7 +232,10 @@ export const taskConfig: Record<TaskScene, TaskConfigItem> = {
     [TaskScene.AUTO_HONGBAO]: {
         label: "自动养号",
         scene: 10,
-        platforms: [{ type: DOYIN_TYPE, name: "抖音" }],
+        platforms: [
+            { type: DOYIN_TYPE, name: "抖音" },
+            { type: KUAISHOU_TYPE, name: "快手" },
+        ],
     },
     [TaskScene.COMMENT_RECEIVE]: {
         label: "评论接管",
@@ -264,16 +271,21 @@ export const taskConfig: Record<TaskScene, TaskConfigItem> = {
 export const taskConfigList: TaskConfigItem[] = Object.values(taskConfig).sort((a, b) => a.scene - b.scene);
 export const taskLabelList: string[] = taskConfigList.map((c) => c.label);
 
-/** 将接口场景列表与本地平台配置合并；无平台配置的场景跳过 */
+/** 将接口场景列表与本地平台配置合并；无平台配置、平台全部关闭的场景跳过 */
 export const buildSelectableTaskConfigList = (scenes: AddableSceneItem[]): TaskConfigItem[] => {
     const result: TaskConfigItem[] = [];
     for (const item of scenes) {
         const config = taskConfig[item.scene as TaskScene];
         if (!config?.platforms?.length) continue;
+        // 后端下发开放平台时按后台平台开关过滤，未下发（旧接口）保持本地全量
+        const platforms = item.platforms
+            ? config.platforms.filter((p) => item.platforms?.includes(p.type))
+            : config.platforms;
+        if (!platforms.length) continue;
         result.push({
             label: item.name || config.label,
             scene: item.scene,
-            platforms: config.platforms,
+            platforms,
         });
     }
     return result;
@@ -286,6 +298,9 @@ const normalizeAddableScenes = (raw: unknown): AddableSceneItem[] => {
         .map((item: any) => ({
             scene: Number(item?.scene),
             name: String(item?.name ?? ""),
+            platforms: Array.isArray(item?.platforms)
+                ? item.platforms.map((p: any) => Number(p)).filter((p: number) => Number.isFinite(p))
+                : null,
         }))
         .filter((item: AddableSceneItem) => Number.isFinite(item.scene) && item.scene > 0);
 };
@@ -305,6 +320,21 @@ export const minsToTime = (mins: number): string => {
     const m = (mins % 60).toString().padStart(2, "0");
     return `${h}:${m}`;
 };
+
+export const MINUTES_PER_PLATFORM = 10;
+
+export const shouldLockTaskEndTime = (scene: number, platformCount: number) =>
+    scene === TaskScene.VIDEO_PUBLISH || platformCount > 1;
+
+export const resolveLockedEndTime = (
+    scene: number,
+    startTime: string,
+    platformCount: number,
+    fallbackEnd: string,
+) =>
+    shouldLockTaskEndTime(scene, platformCount) && platformCount > 0
+        ? minsToTime(timeToMins(startTime) + platformCount * MINUTES_PER_PLATFORM)
+        : fallbackEnd;
 
 export const buildPlatformPayload = (scene: TaskScene, names: string[]): { order: number; account_type: number }[] => {
     const platformOptions = taskConfig[scene]?.platforms ?? [];
@@ -334,9 +364,10 @@ const toTaskItem = (s: ScheduleRaw): TaskItem => {
         .sort((a, b) => Number(a.order) - Number(b.order))
         .map((p) => getPlatformName(s.scene, p.account_type))
         .join("、");
+    const endTime = resolveLockedEndTime(s.scene, s.start_time, s.platform.length, s.end_time);
     return {
         id: s.id,
-        time: `${s.start_time}-${s.end_time}`,
+        time: `${s.start_time}-${endTime}`,
         title: s.task_category,
         platform: platformNames,
         remark: s.remark ?? "",
@@ -373,14 +404,24 @@ export const toTemplateItem = (raw: TemplateRaw): TemplateItem => {
     };
 };
 
-const buildSchedulePayload = (tasks: TaskItem[]): SchedulePayload[] => {
+const buildSchedulePayload = (
+    tasks: TaskItem[],
+    allowedPlatformsByScene?: Map<number, number[]>,
+): SchedulePayload[] => {
     return tasks.map((t) => {
-        const [start_time, end_time] = t.time.split("-");
+        const [start_time, rawEnd] = t.time.split("-");
+        const allowed = allowedPlatformsByScene?.get(t.scene);
+        let platform = [...t.platformRaw].sort((a, b) => a.order - b.order);
+        if (allowed) {
+            platform = platform
+                .filter((p) => allowed.includes(p.account_type))
+                .map((p, idx) => ({ order: idx + 1, account_type: p.account_type }));
+        }
         return {
             start_time,
-            end_time,
+            end_time: resolveLockedEndTime(t.scene, start_time, platform.length, rawEnd),
             scene: t.scene,
-            platform: [...t.platformRaw].sort((a, b) => a.order - b.order),
+            platform,
         };
     });
 };
@@ -415,7 +456,7 @@ export const useTaskStore = defineStore("taskFlow", () => {
                   currentTemplate.value?.type == TemplateTypeEnum.SYSTEM;
     });
 
-    /** 严格可添加列表：仅接口 allow_add=1 的场景；失败时回退本地全量 */
+    /** 严格可添加列表：仅接口 allow_add=1 且平台开放的场景；失败时回退本地全量 */
     const selectableTaskConfigList = computed<TaskConfigItem[]>(() => {
         if (addableScenesLoaded.value && !addableScenesFailed.value) {
             return buildSelectableTaskConfigList(addableScenes.value);
@@ -822,7 +863,13 @@ export const useTaskStore = defineStore("taskFlow", () => {
 
         if (!sourceTemplate) return;
 
-        const tasksSnapshot = buildSchedulePayload(sourceTasks);
+        const allowedPlatformsByScene = new Map<number, number[]>();
+        for (const item of addableScenes.value) {
+            if (Array.isArray(item.platforms)) {
+                allowedPlatformsByScene.set(item.scene, item.platforms);
+            }
+        }
+        const tasksSnapshot = buildSchedulePayload(sourceTasks, allowedPlatformsByScene);
         const cloneName = sourceTemplate.name;
 
         isLoading.value = true;

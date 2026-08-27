@@ -96,6 +96,8 @@ class AutoVideoSynthesis extends Command
             ->join('ai_persona p', 'd.persona_id = p.id')
             ->where('d.auto_type', 1)//自动化操作
             ->where('d.synthesis_m', 0)//社媒任务没有完成
+            // 过渡期交集条件：旧布尔锁与完成日期都判定"今天未完成"才挑选，日期化稳定后旧条件下线
+            ->whereRaw(SvDevice::synthesisPendingDateSql(SvDevice::SYNTHESIS_SCENE_SOCIAL, 'd'))
             ->where('p.status', 1)//人设开启
             ->where('p.publish_mode', 1) // 仅制作视频（非成品库直发）
             // ->where('d.is_first', 0)
@@ -107,7 +109,8 @@ class AutoVideoSynthesis extends Command
             )->where('c.copywriting_source', $sourceFilter);
         }
         $devices = $query
-            ->order(['d.synthesis_m_retry_count' => 'asc', 'd.id' => 'asc'])
+            // retry_date 非当天视为计数 0，避免历史失败计数让设备长期排在队尾
+            ->orderRaw('IF(d.retry_date IS NULL OR d.retry_date < CURDATE(), 0, d.synthesis_m_retry_count) ASC, d.id ASC')
             ->limit($limit)
             ->select();
         Log::channel('ipVideoSynthesis')->write('设备维度处理：' . count($devices) . '条');
@@ -117,7 +120,7 @@ class AutoVideoSynthesis extends Command
             try {
                 if (!AiPersonaOptionService::isEnabledForPersonaId((int)$device->persona_id, 'video_clip')) {
                     Log::channel('ipVideoSynthesis')->write('global_option.video_clip=0，跳过设备视频合成：' . $device->device_code);
-                    SvDevice::where('device_code', $device->device_code)->update(['synthesis_m' => 1]);
+                    SvDevice::markSynthesisDoneWhere(['device_code' => $device->device_code], SvDevice::SYNTHESIS_SCENE_SOCIAL);
                     continue;
                 }
 
@@ -145,12 +148,16 @@ class AutoVideoSynthesis extends Command
                 $source = (int)$config->copywriting_source;
 
                 // 仅真正开始处理时计数并乐观抢占，避免缓存命中/配置缺失也增加 retry_count。
+                // retry_date 非当天时计数视为 0（按天惰性清零，替代 reset_video_synthesis 的全量清零）
                 $retryCount = (int)$device->synthesis_m_retry_count;
+                $isSameDay = ($device->retry_date ?? '') === date('Y-m-d');
                 $claimed = SvDevice::where('id', (int)$device->id)
                     ->where('synthesis_m', 0)
                     ->where('synthesis_m_retry_count', $retryCount)
-                    ->inc('synthesis_m_retry_count')
-                    ->update();
+                    ->update([
+                        'synthesis_m_retry_count' => $isSameDay ? $retryCount + 1 : 1,
+                        'retry_date' => date('Y-m-d'),
+                    ]);
                 if (!$claimed) {
                     Log::channel('ipVideoSynthesis')->write('设备已被其他进程抢占，跳过：' . $device->device_code);
                     continue;
@@ -511,10 +518,11 @@ class AutoVideoSynthesis extends Command
             return;
         }
 
-        SvDevice::where('user_id', $userId)
-            ->where('persona_id', $personaId)
-            ->where('device_code', $deviceCode)
-            ->update(['synthesis_m' => 1]);
+        SvDevice::markSynthesisDoneWhere([
+            'user_id' => $userId,
+            'persona_id' => $personaId,
+            'device_code' => $deviceCode,
+        ], SvDevice::SYNTHESIS_SCENE_SOCIAL);
 
         Log::channel('explosionVideoSynthesis')->write('爆款仿写合成数量已达发布数量，设备标记已合成：' . json_encode([
             'user_id' => $userId,

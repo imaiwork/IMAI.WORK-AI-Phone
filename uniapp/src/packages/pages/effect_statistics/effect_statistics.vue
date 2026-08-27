@@ -184,7 +184,7 @@ import LeadTile from "./components/lead-tile.vue";
 import MetricTile from "./components/metric-tile.vue";
 import SectionCard from "./components/section-card.vue";
 
-type TagType = "primary" | "success" | "warning";
+type TagType = "primary" | "success" | "warning" | "danger";
 
 interface StatisticsData {
     exposure: number;
@@ -220,7 +220,7 @@ interface GuardItem {
     value: number;
     unit: string;
     tag: string;
-    tagType?: TagType;
+    tagType: TagType;
     icon: string;
 }
 
@@ -238,7 +238,7 @@ interface EffectStatisticsResponse {
         viral_hit_count?: number;
         video_publish_count?: number;
         video_publish_success_count?: number;
-        video_publish_all_success?: boolean;
+        video_publish_all_success?: number;
     };
     peer_acquisition?: {
         clue_count?: number;
@@ -390,8 +390,13 @@ function createStatisticsData(data: EffectStatisticsResponse): StatisticsData {
     const peerAcquisition = data.peer_acquisition || {};
     const guard = data.guard || {};
     const circleMaintenance = data.circle_maintenance || {};
-    const videoPublishAllSuccess = Boolean(coreTasks.video_publish_all_success);
-
+    const videoPublishAllSuccess = coreTasks.video_publish_all_success == 1;
+    // 部分完成
+    const videoPublishPartSuccess = coreTasks.video_publish_all_success == 2;
+    // 无任务
+    const videoPublishNoTask = coreTasks.video_publish_all_success == 3;
+    // 全部失败
+    const videoPublishAllFail = coreTasks.video_publish_all_success == 4;
     return {
         exposure: toNumber(top.today_expose_number),
         leads: toNumber(top.today_clue_number),
@@ -418,8 +423,21 @@ function createStatisticsData(data: EffectStatisticsResponse): StatisticsData {
                 label: "视频发布",
                 value: toNumber(coreTasks.video_publish_count),
                 unit: "次",
-                tag: videoPublishAllSuccess ? "全部成功" : `成功 ${toNumber(coreTasks.video_publish_success_count)} 次`,
-                tagType: videoPublishAllSuccess ? "success" : "warning",
+                tag: (() => {
+                    if (videoPublishAllSuccess) return "全部成功";
+                    if (videoPublishPartSuccess) return "部分成功";
+                    if (videoPublishNoTask) return "无任务";
+                    if (videoPublishAllFail) return "全部失败";
+                    return `成功 ${toNumber(coreTasks.video_publish_success_count)} 次`;
+                })(),
+
+                tagType: (() => {
+                    if (videoPublishAllSuccess) return "success";
+                    if (videoPublishPartSuccess) return "warning";
+                    if (videoPublishNoTask) return "warning";
+                    if (videoPublishAllFail) return "danger";
+                    return "primary";
+                })(),
                 icon: SendIcon,
             },
         ],

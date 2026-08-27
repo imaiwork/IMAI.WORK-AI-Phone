@@ -35,7 +35,7 @@
                             :class="item.clip_status == 4 ? 'text-red-400' : 'text-primary'">
                             <template v-if="item.clip_status == 1 || item.clip_status == 2"> AI智能剪辑中... </template>
                             <template v-if="item.clip_status == 3"> AI智能剪辑完成 </template>
-                            <template v-if="item.clip_status == 4"> AI智能剪辑失败 </template>
+                            <template v-if="item.clip_status == 4">{{ item.remark || "AI智能剪辑失败" }}</template>
                         </span>
                     </div>
                 </div>
@@ -399,6 +399,7 @@ const getTypeName = (type: number) => {
         { name: "一句话生成", key: CreateVideoTypeEnum.SENTENCE },
         { name: "分镜混剪", key: CreateVideoTypeEnum.STORYBOARD },
         { name: "爆款仿写", key: CreateVideoTypeEnum.HOT_WRITE },
+        { name: "热点追踪", key: CreateVideoTypeEnum.HOTSPOT },
     ].find((item: any) => item.key === type)?.name;
 };
 

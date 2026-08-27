@@ -14,6 +14,7 @@ use app\common\model\sv\SvDeviceTakeOverTaskAccount;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaAgentConfig;
 use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\auto\AutoTaskSceneConfigService;
 use app\common\service\sv\SvDeviceTaskExistenceService;
 
 use think\facade\Db;
@@ -302,6 +303,14 @@ class TakeOverLogic extends BasePersonaLogic
                 array_multisort($sort, SORT_ASC, $platforms);
                 $execTime = $schedule->start_time . '-' . $schedule->end_time;
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_COMMENT_LIKE,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$item->device_code,
+                        '视频号点赞任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();
@@ -432,6 +441,14 @@ class TakeOverLogic extends BasePersonaLogic
                 $execTime = $schedule->start_time . '-' . $schedule->end_time;
 
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_COMMENT_TAKE_OVER,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$item->device_code,
+                        '评论接管任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();
@@ -571,6 +588,14 @@ class TakeOverLogic extends BasePersonaLogic
                 $execTime = $schedule->start_time . '-' . $schedule->end_time;
                 
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_TAKE_OVER,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$item->device_code,
+                        '私信接管任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();

@@ -1,12 +1,6 @@
 <template>
     <div class="edit-popup">
-        <popup
-            ref="popupRef"
-            title="设置存储"
-            :async="true"
-            width="550px"
-            @confirm="handleSubmit"
-            @close="handleClose">
+        <popup ref="popupRef" title="设置存储" :async="true" width="550px" @confirm="handleSubmit" @close="handleClose">
             <el-form ref="formRef" :model="formData" label-width="160px" :rules="formRules">
                 <el-form-item label="存储方式" prop="engine">
                     <div>
@@ -63,13 +57,13 @@
                                 </div>
                             </div>
                         </el-form-item>
+                        <el-form-item label="Location(位置)" prop="Location">
+                            <div class="flex-1">
+                                <el-input v-model="formData.Location" placeholder="例如 oss-cn-beijing" clearable />
+                                <div class="form-tips">须与 Bucket 地域一致，格式：oss-cn-xxx</div>
+                            </div>
+                        </el-form-item>
                         <template v-if="formData.media_process === 'oss'">
-                            <el-form-item label="Location(位置)" prop="Location">
-                                <div class="flex-1">
-                                    <el-input v-model="formData.Location" placeholder="例如 oss-cn-beijing" clearable />
-                                    <div class="form-tips">须与 Bucket 地域一致，格式：oss-cn-xxx</div>
-                                </div>
-                            </el-form-item>
                             <el-form-item label="PipelineId(管道ID)" prop="PipelineId">
                                 <el-input v-model="formData.PipelineId" placeholder="请输入 MPS 管道 ID" clearable />
                             </el-form-item>
@@ -142,22 +136,22 @@ const formData = reactive<StorageFormData>({
 
 const storageArr = [
     {
-        name: '本地存储',
+        name: "本地存储",
         type: StorageEnum.LOCAL,
-        tips: '本地存储方式不需要配置其他参数'
+        tips: "本地存储方式不需要配置其他参数",
     },
     {
-        name: '七牛云存储',
+        name: "七牛云存储",
         type: StorageEnum.QINIU,
         tips: "仅文件存储；切割/转码固定本地 ffmpeg，不支持云处理切换",
     },
     {
-        name: '阿里云OSS',
+        name: "阿里云OSS",
         type: StorageEnum.ALIYUN,
         tips: "文件存阿里云；切割/转码可选本地 ffmpeg 或 OSS(MPS)",
     },
     {
-        name: '腾讯云OSS',
+        name: "腾讯云OSS",
         type: StorageEnum.QCLOUD,
         tips: "仅文件存储；切割/转码固定本地 ffmpeg，不支持云处理切换",
     },
@@ -289,6 +283,6 @@ const handleClose = () => {
 };
 
 defineExpose({
-    open
-})
+    open,
+});
 </script>

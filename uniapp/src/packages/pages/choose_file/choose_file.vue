@@ -5,7 +5,7 @@
                 <image src="@/packages/static/images/common/file_bg.png" class="" mode="aspectFit"></image>
             </view>
             <view class="text-center text-[#6D7074]">
-                支持{{ accept.join(",") }}格式，最多上传{{ fileLimit }}个文件，每个文件不超过20M
+                {{ acceptHint }}，最多上传{{ fileLimit }}个文件，图片不超过{{ CHAT_IMAGE_MAX_SIZE }}M，其他文件不超过{{ CHAT_FILE_MAX_SIZE }}M
             </view>
             <view class="w-[80%] mt-[80rpx] flex flex-col gap-4">
                 <view
@@ -48,13 +48,27 @@ import {
     getFilesByExtname,
     normalizeFileData,
 } from "@/components/file-upload/choose-file";
+import {
+    CHAT_UPLOAD_EXTS,
+    CHAT_IMAGE_MAX_SIZE,
+    CHAT_FILE_MAX_SIZE,
+    getChatSizeLimit,
+} from "@/components/file-upload/upload-rules";
 
 const fileLimit = ref<number>(1);
 const sumImage = ref<number>(0);
 const fileLists = ref<any[]>([]);
 
-/** 默认全量文档格式；页面可传 accept=pdf,doc,docx,txt 按场景收窄（对齐 PC） */
-const accept = ref(["html", "xml", "doc", "docx", "txt", "pdf", "csv", "xlsx"]);
+/** 默认 chat 全量格式（文档+图片+视频，对齐 PC）；页面可传 accept=pdf,doc,docx,txt 按场景收窄 */
+const accept = ref([...CHAT_UPLOAD_EXTS]);
+
+/** 默认全量时按类别汇总，避免 21 个扩展名撑爆文案；收窄时逐个列出 */
+const acceptHint = computed(() => {
+    if (accept.value.length === CHAT_UPLOAD_EXTS.length) {
+        return "支持常见文档、图片、视频格式";
+    }
+    return `支持${accept.value.join("、")}格式`;
+});
 
 const openFile = async (type: string) => {
     if (fileLists.value.length >= fileLimit.value) {
@@ -64,28 +78,50 @@ const openFile = async (type: string) => {
         });
         return;
     }
-    let filesResult: any = {};
-    if (type === "record") {
-        filesResult = await chooseFile({
-            type: "file",
-            extension: accept.value,
-            count: fileLimit.value - fileLists.value.length,
-        });
-    } else if (type === "album") {
-        filesResult = await chooseFile({
-            type: "image",
-            count: 1,
-            sizeType: ["original", "compressed"],
-            sourceType: ["album"],
-        });
-    } else if (type === "camera") {
-        filesResult = await chooseFile({
-            type: "image",
-            count: 1,
-            sizeType: ["original", "compressed"],
-            sourceType: ["album"],
-        });
+    let filesResult: ChooseResult | undefined;
+    try {
+        if (type === "record") {
+            filesResult = await chooseFile({
+                // "all"：微信聊天记录里的图片/视频消息也可选（accept 已含图片/视频格式）
+                type: "all",
+                extension: accept.value,
+                count: fileLimit.value - fileLists.value.length,
+            });
+        } else if (type === "album") {
+            filesResult = await chooseFile({
+                type: "image",
+                count: 1,
+                sizeType: ["original", "compressed"],
+                sourceType: ["album"],
+            });
+        } else if (type === "camera") {
+            filesResult = await chooseFile({
+                type: "image",
+                count: 1,
+                sizeType: ["original", "compressed"],
+                sourceType: ["camera"],
+            });
+        }
+    } catch (e: any) {
+        // 用户取消选择时静默返回
+        const errMsg = e?.errMsg || "";
+        if (errMsg.includes("cancel")) return;
+        // 相机/相册权限被拒：引导去小程序设置里开启，而不是抛英文 errMsg
+        if (errMsg.includes("auth") || errMsg.includes("deny") || errMsg.includes("privacy")) {
+            uni.showModal({
+                title: "无法使用相机/相册",
+                content: "请在小程序设置中开启相机与相册权限后重试",
+                confirmText: "去设置",
+                success: (res) => {
+                    if (res.confirm) uni.openSetting({});
+                },
+            });
+            return;
+        }
+        uni.showToast({ title: errMsg || "选择文件失败", icon: "none" });
+        return;
     }
+    if (!filesResult) return;
     chooseFileCallback(filesResult);
 };
 
@@ -96,15 +132,28 @@ const chooseFileCallback = async (filesResult: ChooseResult) => {
     }
     const { files } = getFilesByExtname(filesResult, []);
     const currentData = [];
+    const oversizeNames: string[] = [];
     for (let i = 0; i < files.length; i++) {
         if (fileLimit.value - fileLists.value.length <= 0) break;
         const fileData = normalizeFileData(files[i]);
-        // @ts-ignore
-        if (fileData.size < 20 * 1024 * 1024) {
+        // 图片 ≤ 20M，其他 ≤ 150M
+        const limit = getChatSizeLimit(fileData.extname);
+        if (fileData.size <= limit * 1024 * 1024) {
             fileLists.value.push(fileData);
             currentData.push(fileData);
+        } else {
+            oversizeNames.push(`${fileData.name}(超过${limit}M)`);
         }
     }
+    if (oversizeNames.length) {
+        uni.showToast({
+            title: `文件大小超出限制：${oversizeNames.join("、")}`,
+            icon: "none",
+            duration: 4000,
+        });
+    }
+    // 没有可上传的文件时直接留在本页，不触发上传/返回
+    if (!currentData.length && !fileLists.value.length) return;
     await upload(currentData);
     uni.$emit("chooseFile", fileLists.value);
     uni.navigateBack();
@@ -116,6 +165,11 @@ const upload = (files: FileData[]): Promise<void> => {
     let index = 0;
     let count = 0;
     return new Promise((resolve) => {
+        // 空数组直接完成，否则并发循环不会执行，loading 永远不关闭
+        if (!len) {
+            resolve();
+            return;
+        }
         uni.showLoading({
             title: `上传中,请稍后`,
             mask: true,

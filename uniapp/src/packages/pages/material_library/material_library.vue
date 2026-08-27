@@ -106,7 +106,7 @@
                                 </view>
                             </view>
 
-                            <view class="p-3">
+                            <view class="px-2 py-3">
                                 <view class="flex items-start justify-between mb-2">
                                     <text class="text-xs font-medium text-[#1F2937] truncate flex-1 mr-2 leading-[1.3]">
                                         {{ item.name || "未命名素材" }}
@@ -118,8 +118,8 @@
                                 </view>
 
                                 <view class="flex items-center justify-between">
-                                    <text class="text-[20rpx] text-[#9CA3AF]">
-                                        {{ item.create_time ? item.create_time.split(" ")[0] : "" }}
+                                    <text class="text-[18rpx] text-[#9CA3AF]">
+                                        {{ item.create_time }}
                                     </text>
                                     <view
                                         class="flex items-center gap-1 bg-[#F8FAFC] px-[8rpx] py-[2rpx] rounded border border-solid border-[#F1F5F9]">

@@ -199,6 +199,7 @@
             <div>
                 <el-tabs v-model="activeTab" @tab-change="handleTabChange">
                     <el-tab-pane label="订阅记录" name="subscribe" />
+                    <el-tab-pane label="下级用户" name="subUser" />
                     <el-tab-pane label="消耗记录" name="consume" />
                     <el-tab-pane label="手机设备" name="device" />
                     <el-tab-pane label="CDK记录" name="cdk" />
@@ -223,6 +224,65 @@
                 </el-table>
                 <div class="flex justify-end mt-4">
                     <pagination v-model="orderPager" @change="getOrderLists" />
+                </div>
+            </template>
+
+            <!-- 下级用户表格 -->
+            <template v-if="activeTab === 'subUser'">
+                <div class="mb-3 flex items-center gap-2">
+                    <el-input
+                        class="!w-[240px]"
+                        v-model="subUserQueryParams.user_keyword"
+                        placeholder="用户ID/编号/昵称"
+                        clearable
+                        @keyup.enter="getSubUserLists" />
+                    <el-button type="primary" @click="getSubUserLists">查询</el-button>
+                    <span class="text-xs text-[#9ca3af]">仅展示直属下级,共 {{ formData.sub_user_count || 0 }} 名全层级下级</span>
+                </div>
+                <el-table size="large" :data="subUserPager.lists" v-loading="subUserPager.loading">
+                    <el-table-column label="用户" min-width="160">
+                        <template #default="{ row }">
+                            <div class="flex items-center gap-2">
+                                <el-avatar :size="28" :src="row.avatar" />
+                                <span>{{ row.nickname || "-" }}</span>
+                            </div>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="用户编号" prop="sn" min-width="120" show-overflow-tooltip />
+                    <el-table-column label="身份" min-width="110">
+                        <template #default="{ row }">
+                            <el-tag v-if="Number(row.level) > 0" type="warning" size="small">
+                                {{ getLevelName(row.level) }}
+                            </el-tag>
+                            <el-tag v-else type="info" size="small">普通用户</el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="直属上级" min-width="110" show-overflow-tooltip>
+                        <template #default="{ row }">{{ row.parent_nickname || "-" }}</template>
+                    </el-table-column>
+                    <el-table-column label="成为下级时间" min-width="160" show-overflow-tooltip>
+                        <template #default="{ row }">{{ row.become_time || "-" }}</template>
+                    </el-table-column>
+                    <el-table-column label="注册时间" prop="create_time" min-width="160" show-overflow-tooltip />
+                    <el-table-column label="操作" width="80" fixed="right">
+                        <template #default="{ row }">
+                            <el-button v-perms="['user.user/detail']" type="primary" link>
+                                <router-link
+                                    :to="{
+                                        path: getRoutePath('user.user/detail'),
+                                        query: { id: row.user_id },
+                                    }">
+                                    详情
+                                </router-link>
+                            </el-button>
+                        </template>
+                    </el-table-column>
+                    <template #empty>
+                        <el-empty description="该用户暂无直属下级" />
+                    </template>
+                </el-table>
+                <div class="flex justify-end mt-4">
+                    <pagination v-model="subUserPager" @change="getSubUserLists" />
                 </div>
             </template>
 
@@ -377,7 +437,7 @@
 
 <script lang="ts" setup name="consumerDetail">
 import type { FormInstance } from "element-plus";
-import { getAgentGradeConfig } from "@/api/marketing/agent";
+import { getAgentGradeConfig, getAgentUserLowerList } from "@/api/marketing/agent";
 import { accountLog } from "@/api/finance";
 import {
     getUserDetail,
@@ -468,6 +528,7 @@ const userLevelRef = shallowRef();
 const activeTab = ref("subscribe");
 const tabFetchMap: Record<string, () => void> = {
     subscribe: () => getOrderLists(),
+    subUser: () => getSubUserLists(),
     consume: () => getConsumeLists(),
     device: () => getDeviceLists(),
     cdk: () => getCdkLists(),
@@ -485,6 +546,20 @@ const { pager: orderPager, getLists: getOrderLists } = usePaging({
     fetchFun: accountLog,
     params: orderQueryParams,
 });
+
+// ==================== 下级用户 ====================
+const subUserQueryParams = reactive({
+    user_id: route.query.id,
+    user_keyword: "",
+});
+const { pager: subUserPager, getLists: getSubUserLists } = usePaging({
+    fetchFun: getAgentUserLowerList,
+    params: subUserQueryParams,
+});
+
+const getLevelName = (level: number) => {
+    return gradeList.value.find((item) => item.level == level)?.name || `代理L${level}`;
+};
 
 // ==================== 消耗记录 ====================
 const consumeQueryParams = reactive({
@@ -693,6 +768,22 @@ const handleEditDistributionParent = async () => {
 // ==================== 初始化 ====================
 getGradeList();
 getDetails();
+
+// 从下级用户跳到同页面的其他用户详情时（同 path 仅 query 变化，组件被复用），
+// 同步各 tab 查询参数里的 user_id 并重新加载
+watch(
+    () => route.query.id,
+    (id, oldId) => {
+        if (!id || id === oldId) return;
+        orderQueryParams.user_id = id;
+        subUserQueryParams.user_id = id;
+        consumeQueryParams.user_id = id;
+        deviceQueryParams.user_id = id;
+        cdkQueryParams.user_id = id;
+        subUserQueryParams.user_keyword = "";
+        getDetails();
+    },
+);
 </script>
 
 <style lang="scss" scoped>

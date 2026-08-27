@@ -27,6 +27,19 @@ use think\facade\Cache;
  */
 class ResetVideoSynthesis extends Command
 {
+    /**
+     * 执行时间窗口（小时，浮点数）
+     * 必须与凌晨的自动合成窗口（AutoVideoSynthesis 0:30-8:00、WechatVideoSynthesis 1:00-6:00）错开，
+     * 否则设备刚合成完就被解锁，会导致当天重复生成
+     */
+    const EXEC_START_TIME = 9.0;
+    const EXEC_END_TIME   = 23.0;
+
+    /**
+     * 单次重置的设备数量上限（cron 每30分钟一次，窗口内共28次，日解锁上限 = 28 * 该值）
+     */
+    const RESET_BATCH_LIMIT = 200;
+
     protected function configure()
     {
         $this->setName('reset_video_synthesis')
@@ -40,14 +53,12 @@ class ResetVideoSynthesis extends Command
             $currentHour = date('H');
             $currentMinute = date('i');
             $currentTime = floatval($currentHour) + floatval($currentMinute) / 60;
-            $startTime = 9.0;
-            $endTime = 23.0;
 
-            if ($currentTime < $startTime || $currentTime >= $endTime) {
-                print_r("\n 时间非9:00-23:30，任务跳过\n");
+            if ($currentTime < self::EXEC_START_TIME || $currentTime >= self::EXEC_END_TIME) {
+                print_r("\n 时间非9:00-23:00，任务跳过\n");
                 return true;
             }
-            $mIds = SvDevice::where('synthesis_m', 1)->limit(30)->column('id');
+            $mIds = SvDevice::where('synthesis_m', 1)->limit(self::RESET_BATCH_LIMIT)->column('id');
             if (!empty($mIds)) {
                 SvDevice::whereIn('id', $mIds)->update(['synthesis_m' => 0]);
                 Log::channel('ipVideoSynthesis')->write('重置 synthesis_m 成功，ID列表：' . implode(',', $mIds));
@@ -62,7 +73,7 @@ class ResetVideoSynthesis extends Command
             Log::channel('ipVideoSynthesis')->write('重置 synthesis_m_retry_count 成功，数量：' . $retryCount);
             print_r("重置 synthesis_m_retry_count 成功，数量：{$retryCount}\n");
 
-            $wIds = SvDevice::where('synthesis_w', 1)->limit(30)->column('id');
+            $wIds = SvDevice::where('synthesis_w', 1)->limit(self::RESET_BATCH_LIMIT)->column('id');
             if (!empty($wIds)) {
                 SvDevice::whereIn('id', $wIds)->update(['synthesis_w' => 0]);
                 Log::channel('wechatVideoSynthesis')->write('重置 synthesis_w 成功，ID列表：' . implode(',', $wIds));
@@ -74,11 +85,11 @@ class ResetVideoSynthesis extends Command
 
             return true;
         } catch (\Exception $e) {
-            Log::channel('wechatVideoSynthesis')->info('重置视频合成设备视频任务失败' . $e->getMessage());
+            // 注意 finally 内不能 return，否则会覆盖此处的失败返回值
+            Log::channel('wechatVideoSynthesis')->error('重置视频合成设备视频任务失败：' . $e->getMessage());
             return false;
         } finally {
             print_r("\n 重置视频合成设备视频任务结束...\n");
-            return true;
         }
     }
 }

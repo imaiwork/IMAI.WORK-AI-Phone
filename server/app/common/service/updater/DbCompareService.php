@@ -52,16 +52,29 @@ class DbCompareService
             $refCols    = $this->getColumns($this->pdoRef, $refTable);
             $targetCols = $this->getColumns($this->pdoTarget, $targetTable);
 
+            $prevCol = null;
             foreach ($refCols as $colName => $refCol) {
                 if (!isset($targetCols[$colName])) {
-                    $def     = $this->buildColumnDef($refCol);
-                    $sqls[]  = "ALTER TABLE `{$targetTable}` ADD COLUMN `{$colName}` {$def};";
-                    $diffs[] = ['type' => 'add_column', 'msg' => "新增字段：`{$targetTable}`.`{$colName}`"];
+                    $def = $this->buildColumnDef($refCol);
+                    if ($def === null) {
+                        $diffs[] = ['type' => 'skip_generated_column', 'msg' => "跳过生成列：`{$targetTable}`.`{$colName}`，需在版本 SQL 中手动添加"];
+                    } else {
+                        // 尽量保持与参考库一致的列顺序
+                        $position = ($prevCol !== null && isset($targetCols[$prevCol])) ? " AFTER `{$prevCol}`" : ($prevCol === null ? ' FIRST' : '');
+                        $sqls[]   = "ALTER TABLE `{$targetTable}` ADD COLUMN `{$colName}` {$def}{$position};";
+                        $diffs[]  = ['type' => 'add_column', 'msg' => "新增字段：`{$targetTable}`.`{$colName}`"];
+                        $targetCols[$colName] = $refCol; // 后续列可以 AFTER 它
+                    }
                 } elseif ($this->isColumnChanged($refCol, $targetCols[$colName])) {
-                    $def     = $this->buildColumnDef($refCol);
-                    $sqls[]  = "ALTER TABLE `{$targetTable}` MODIFY COLUMN `{$colName}` {$def};";
-                    $diffs[] = ['type' => 'modify_column', 'msg' => "更新字段：`{$targetTable}`.`{$colName}`"];
+                    $def = $this->buildColumnDef($refCol);
+                    if ($def === null) {
+                        $diffs[] = ['type' => 'skip_generated_column', 'msg' => "跳过生成列变更：`{$targetTable}`.`{$colName}`"];
+                    } else {
+                        $sqls[]  = "ALTER TABLE `{$targetTable}` MODIFY COLUMN `{$colName}` {$def};";
+                        $diffs[] = ['type' => 'modify_column', 'msg' => "更新字段：`{$targetTable}`.`{$colName}`"];
+                    }
                 }
+                $prevCol = $colName;
             }
 
             // 3. 新增索引
@@ -78,9 +91,9 @@ class DbCompareService
                         ];
                         continue;
                     }
-                    $cols    = implode('`,`', $idxDef['columns']);
+                    $cols    = implode(',', $idxDef['parts']);
                     $unique  = $isUnique ? 'UNIQUE ' : '';
-                    $sqls[]  = "ALTER TABLE `{$targetTable}` ADD {$unique}INDEX `{$idxName}` (`{$cols}`);";
+                    $sqls[]  = "ALTER TABLE `{$targetTable}` ADD {$unique}INDEX `{$idxName}` ({$cols});";
                     $diffs[] = ['type' => 'add_index', 'msg' => "新增索引：`{$targetTable}`.`{$idxName}`"];
                 }
             }
@@ -249,16 +262,34 @@ class DbCompareService
         return $cols;
     }
 
+    /**
+     * 读取表索引
+     *
+     * columns 只放纯列名（供 hasDuplicateValues 拼 GROUP BY），
+     * parts 放建索引用的列表达式，前缀索引会带上长度，如 `remote_url`(191)。
+     * 丢掉前缀长度会让 varchar(1024) utf8mb4 整列进索引（4096 字节），超过 InnoDB 3072 上限直接报 1071。
+     */
     private function getIndexes(\PDO $pdo, string $table): array
     {
         $indexes = [];
         $stmt    = $pdo->query("SHOW INDEX FROM `{$table}`");
-        while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+        $rows    = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // SHOW INDEX 的行序不做保证，按 Seq_in_index 排序后再拼，避免复合索引列序错乱
+        usort($rows, static fn(array $a, array $b): int => (int)$a['Seq_in_index'] <=> (int)$b['Seq_in_index']);
+
+        foreach ($rows as $row) {
             $name = $row['Key_name'];
             if (!isset($indexes[$name])) {
-                $indexes[$name] = ['non_unique' => $row['Non_unique'], 'columns' => []];
+                $indexes[$name] = ['non_unique' => $row['Non_unique'], 'columns' => [], 'parts' => []];
             }
-            $indexes[$name]['columns'][] = $row['Column_name'];
+            $col     = $row['Column_name'];
+            $subPart = $row['Sub_part'] ?? null;
+
+            $indexes[$name]['columns'][] = $col;
+            $indexes[$name]['parts'][]   = ($subPart !== null && (int)$subPart > 0)
+                ? "`{$col}`(" . (int)$subPart . ")"
+                : "`{$col}`";
         }
         return $indexes;
     }
@@ -298,15 +329,16 @@ class DbCompareService
     private function parseAddUniqueIndexSql(string $sql): ?array
     {
         if (!preg_match(
-            '/ALTER\s+TABLE\s+`?([A-Za-z0-9_]+)`?\s+ADD\s+UNIQUE\s+(?:INDEX|KEY)\s+`?[A-Za-z0-9_]+`?\s*\(([^)]+)\)/i',
+            '/ALTER\s+TABLE\s+`?([A-Za-z0-9_]+)`?\s+ADD\s+UNIQUE\s+(?:INDEX|KEY)\s+`?[A-Za-z0-9_]+`?\s*\(((?:[^()]|\(\s*\d+\s*\))+)\)/i',
             $sql,
             $m
         )) {
             return null;
         }
 
+        // 前缀索引列形如 `remote_url`(191)，去掉长度再去查重
         $columns = array_map(
-            static fn(string $col): string => trim($col, " `\t\n\r"),
+            static fn(string $col): string => trim((string)preg_replace('/\(\s*\d+\s*\)\s*$/', '', trim($col)), " `\t\n\r"),
             explode(',', $m[2])
         );
         $columns = array_values(array_filter($columns, static fn(string $col): bool => $col !== ''));
@@ -317,30 +349,70 @@ class DbCompareService
         return ['table' => $m[1], 'columns' => $columns];
     }
 
-    private function buildColumnDef(array $col): string
+    /**
+     * 由 SHOW FULL COLUMNS 的一行拼出列定义
+     *
+     * 处理要点：
+     *  - CURRENT_TIMESTAMP / NOW() 等函数默认值不能加引号
+     *  - MySQL 8 的 Extra 含 DEFAULT_GENERATED 标记，需剥离
+     *  - 生成列（VIRTUAL/STORED GENERATED）无法从 SHOW COLUMNS 还原表达式，返回 null 由调用方跳过
+     */
+    private function buildColumnDef(array $col): ?string
     {
+        $extra = strtolower(trim((string)($col['Extra'] ?? '')));
+
+        if (str_contains($extra, 'generated')) {
+            // "VIRTUAL GENERATED" / "STORED GENERATED"：无表达式信息，不能重建
+            if (preg_match('/\b(virtual|stored)\s+generated\b/', $extra)) {
+                return null;
+            }
+            // MySQL 8: "DEFAULT_GENERATED" / "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+            $extra = trim(str_replace('default_generated', '', $extra));
+        }
+
         $def = $col['Type'];
         if (!empty($col['Collation'])) {
             $charset = explode('_', $col['Collation'])[0];
             $def    .= " CHARACTER SET {$charset} COLLATE {$col['Collation']}";
         }
         $def .= $col['Null'] === 'NO' ? ' NOT NULL' : ' NULL';
-        if ($col['Default'] !== null) {
-            $def .= " DEFAULT '{$col['Default']}'";
+
+        $default = $col['Default'];
+        if ($default !== null) {
+            if ($this->isExpressionDefault($default)) {
+                $def .= " DEFAULT {$default}";
+            } else {
+                $def .= " DEFAULT '" . addslashes($default) . "'";
+            }
         } elseif ($col['Null'] === 'YES') {
             $def .= ' DEFAULT NULL';
         }
-        if (!empty($col['Extra']))   $def .= " {$col['Extra']}";
-        if (!empty($col['Comment'])) $def .= " COMMENT '" . addslashes($col['Comment']) . "'";
+
+        if ($extra !== '') {
+            $def .= ' ' . strtoupper($extra);
+        }
+        if (!empty($col['Comment'])) {
+            $def .= " COMMENT '" . addslashes($col['Comment']) . "'";
+        }
         return $def;
+    }
+
+    /**
+     * 默认值是否为表达式（不能加引号）
+     */
+    private function isExpressionDefault(string $default): bool
+    {
+        return (bool)preg_match('/^(CURRENT_TIMESTAMP|NOW|LOCALTIME|LOCALTIMESTAMP|CURRENT_DATE|CURRENT_TIME)(\s*\(\d*\))?$/i', trim($default));
     }
 
     private function isColumnChanged(array $ref, array $target): bool
     {
+        $norm = fn($v) => strtolower(trim(str_replace('DEFAULT_GENERATED', '', (string)$v)));
+
         return $ref['Type']    !== $target['Type']
             || $ref['Null']    !== $target['Null']
             || $ref['Default'] !== $target['Default']
-            || $ref['Extra']   !== $target['Extra'];
+            || $norm($ref['Extra']) !== $norm($target['Extra']);
     }
 
     private function httpGet(string $url): array

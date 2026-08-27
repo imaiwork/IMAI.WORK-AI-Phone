@@ -20,6 +20,7 @@ use app\common\model\marketing\MarketingTemplateSchedule;
 use app\common\model\aiPersona\AiPersonaAgentConfig;
 use app\common\service\aiPersona\AiPersonaOptionService;
 use app\common\service\aiPersona\SphClueKeywordService;
+use app\common\service\auto\AutoTaskSceneConfigService;
 use app\common\service\sv\SvDeviceTaskExistenceService;
 
 /**
@@ -271,6 +272,14 @@ class ClueTouchLogic extends BasePersonaLogic
                 $execTime = $schedule->start_time . '-' . $schedule->end_time;
                 
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_SAME_CITY_EXPOSURE,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$item->device_code,
+                        '同城曝光任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();
@@ -423,6 +432,14 @@ class ClueTouchLogic extends BasePersonaLogic
                 $execTime = $schedule->start_time . '-' . $schedule->end_time;
                 
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_SAME_CITY_CUTOFF,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$item->device_code,
+                        '同城截流任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();
@@ -593,6 +610,14 @@ class ClueTouchLogic extends BasePersonaLogic
                 $execTime = $schedule->start_time . '-' . $schedule->end_time;
                 
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_GROUP_BUY,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$item->device_code,
+                        '团购截流任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();
@@ -768,6 +793,14 @@ class ClueTouchLogic extends BasePersonaLogic
                 array_multisort($sort, SORT_ASC, $platforms);
                 $execTime = $schedule->start_time . '-' . $schedule->end_time;
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_SPH_CLUE,
+                        DeviceEnum::ACCOUNT_TYPE_SPH,
+                        (string)$item->device_code,
+                        '视频号获客任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();
@@ -1124,6 +1157,14 @@ class ClueTouchLogic extends BasePersonaLogic
 
             $execTime = $schedule->start_time . '-' . $schedule->end_time;
             foreach ($platforms as $index => $platform) {
+                if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                    $scene,
+                    (int)($platform['account_type'] ?? 0),
+                    (string)$item->device_code,
+                    $taskLabel
+                )) {
+                    continue;
+                }
                 $startTime = $st + $index * $interval;
                 $endTime = $startTime + $interval;
                 $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();

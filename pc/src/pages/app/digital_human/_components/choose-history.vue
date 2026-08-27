@@ -130,7 +130,7 @@
                             <div class="flex gap-2 px-4 py-2 overflow-x-auto no-scrollbar">
                                 <div
                                     v-for="item in group.items"
-                                    :key="item.id"
+                                    :key="recordKey(item)"
                                     class="relative shrink-0 w-16 rounded-xl overflow-hidden aspect-[3/4]">
                                     <ElImage :src="item.image || item.pic" fit="cover" class="w-full h-full" lazy />
                                     <div
@@ -176,7 +176,7 @@
                     <div :class="['grid gap-3 px-6 pb-4', gridClass]">
                         <div
                             v-for="(item, index) in displayLists"
-                            :key="item.id ?? index"
+                            :key="item.id != null ? recordKey(item) : index"
                             :class="[
                                 'relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer group border-2 transition-all',
                                 isChoose(item)
@@ -308,6 +308,8 @@ enum VideoType {
     MONTAGE_STORYBOARD = 7,
     /** 闪剪数字人纯口播，展示归「数字人口播」 */
     DIGITAL_HUMAN_SHANJIAN = 9,
+    /** 热点追踪（闪剪任务按 extra.source=hotspot 区分） */
+    HOTSPOT = 10,
 }
 
 const typeList = [
@@ -319,6 +321,7 @@ const typeList = [
     { name: "新闻体", key: VideoType.NEWS },
     { name: "一句话生成", key: VideoType.SENTENCE },
     { name: "分镜混剪", key: VideoType.MONTAGE_STORYBOARD },
+    { name: "热点追踪", key: VideoType.HOTSPOT },
 ];
 
 type AllTabKey = "video" | "image";
@@ -448,8 +451,8 @@ const isCurrentPageAllSelected = computed(() => {
 
 const toggleSelect = () => {
     if (isCurrentPageAllSelected.value) {
-        const currentIds = new Set(displayLists.value.map((i: any) => i.id));
-        chooseLists.value = chooseLists.value.filter((i) => !currentIds.has(i.id));
+        const currentKeys = new Set(displayLists.value.map((i: any) => recordKey(i)));
+        chooseLists.value = chooseLists.value.filter((i) => !currentKeys.has(recordKey(i)));
         if (chooseLists.value.length === 0) showChoosePanel.value = false;
     } else {
         for (const item of displayLists.value) {
@@ -460,12 +463,14 @@ const toggleSelect = () => {
 };
 
 // ── 选择逻辑 ───────────────────────────────────────────────────────────────
-const isChoose = (data: any) => chooseLists.value.some((item) => item.id === data.id);
-const getChooseIndex = (data: any) => chooseLists.value.findIndex((item) => item.id === data.id) + 1;
+// 创作记录是多张表 UNION，id 跨表会重复，须用 媒体类型+type/draw_type+id 复合键判重
+const recordKey = (item: any) => `${item.media_type || ""}_${item.type ?? item.draw_type ?? ""}_${item.id}`;
+const isChoose = (data: any) => chooseLists.value.some((item) => recordKey(item) === recordKey(data));
+const getChooseIndex = (data: any) => chooseLists.value.findIndex((item) => recordKey(item) === recordKey(data)) + 1;
 
 const handleSelect = (data: any) => {
     if (isChoose(data)) {
-        chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
+        chooseLists.value = chooseLists.value.filter((item) => recordKey(item) !== recordKey(data));
         if (chooseLists.value.length === 0) showChoosePanel.value = false;
         return;
     }

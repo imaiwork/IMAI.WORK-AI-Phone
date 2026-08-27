@@ -12,6 +12,11 @@
                     <image :src="meta.icon" mode="aspectFit" class="w-[20rpx] h-[20rpx]" />
                     <text class="text-[20rpx] text-white font-semibold">{{ meta.label }}</text>
                 </view>
+                <view
+                    v-if="isWash"
+                    class="inline-flex items-center px-[12rpx] py-[4rpx] rounded-[8rpx] bg-[#FFFBEB] flex-shrink-0">
+                    <text class="text-[20rpx] text-[#D97706] font-semibold">洗稿</text>
+                </view>
                 <text class="text-[30rpx] font-bold text-[#111827] leading-snug flex-1 min-w-0 line-clamp-2">
                     {{ displayTitle }}
                 </text>
@@ -124,6 +129,11 @@
                             <image :src="meta.icon" mode="aspectFit" class="w-[20rpx] h-[20rpx]" />
                             <text class="text-[20rpx] text-white font-semibold">{{ meta.label }}</text>
                         </view>
+                        <view
+                            v-if="isWash"
+                            class="inline-flex items-center px-[12rpx] py-[4rpx] rounded-[8rpx] bg-[#FFFBEB] flex-shrink-0">
+                            <text class="text-[20rpx] text-[#D97706] font-semibold">洗稿</text>
+                        </view>
                         <text
                             class="text-[30rpx] font-bold text-[#111827] leading-snug flex-1 min-w-0 line-clamp-2">
                             {{ displayTitle }}
@@ -165,6 +175,11 @@
                     <image :src="meta.icon" mode="aspectFit" class="w-[20rpx] h-[20rpx]" />
                     <text class="text-[20rpx] text-white font-semibold">{{ meta.label }}</text>
                 </view>
+                <view
+                    v-if="isWash"
+                    class="inline-flex items-center px-[12rpx] py-[4rpx] rounded-[8rpx] bg-[#FFFBEB] flex-shrink-0">
+                    <text class="text-[20rpx] text-[#D97706] font-semibold">洗稿</text>
+                </view>
                 <text class="text-[30rpx] font-bold text-[#111827] leading-snug flex-1 min-w-0 line-clamp-2">
                     {{ displayTitle }}
                 </text>
@@ -203,6 +218,12 @@
                     </view>
                 </template>
                 <view
+                    v-else-if="isWashSelecting"
+                    class="flex-1 h-[80rpx] rounded-[16rpx] bg-[#F59E0B] flex items-center justify-center"
+                    @click.stop="emit('detail')">
+                    <text class="text-white font-semibold">去选类型/形象/音色</text>
+                </view>
+                <view
                     v-else
                     class="flex-1 h-[80rpx] rounded-[16rpx] bg-[#F3F4F6] flex items-center justify-center gap-[10rpx]">
                     <u-loading mode="circle" size="24" color="#6B7280"></u-loading>
@@ -226,6 +247,7 @@ import {
     ImageRewriteStatus,
     getTaskPreviewImages,
     isImageTextTask,
+    isWashTask,
 } from "@/ai_modules/hot_write/enums";
 
 const props = defineProps<{
@@ -255,11 +277,20 @@ const imageCount = computed(
 
 const isFailed = computed(() => Number(props.task?.status) === HotWriteTaskStatus.FAIL);
 const isDone = computed(() => Number(props.task?.status) === HotWriteTaskStatus.SUCCESS);
+const isWash = computed(() => isWashTask(props.task));
 const isSelecting = computed(
     () =>
         isImageText.value &&
         Number(props.task?.status) === HotWriteTaskStatus.WAIT_CONFIRM &&
         Number(props.task?.image_rewrite_status) === ImageRewriteStatus.SELECTING,
+);
+/** 洗稿视频：文案已洗好，等待用户选视频类型/形象/音色 */
+const isWashSelecting = computed(
+    () =>
+        isWash.value &&
+        !isImageText.value &&
+        Number(props.task?.status) === HotWriteTaskStatus.WAIT_CONFIRM &&
+        Number(props.task?.generation_config_confirmed) !== 1,
 );
 const isVideoDone = computed(
     () =>
@@ -272,6 +303,7 @@ const statusLabel = computed(() => {
     if (isFailed.value) return "失败";
     if (isDone.value) return "已完成";
     if (isSelecting.value) return "待选图";
+    if (isWashSelecting.value) return "待选配置";
     if (
         [ImageRewriteStatus.WAIT, ImageRewriteStatus.PROCESSING].includes(
             Number(props.task?.image_rewrite_status),
@@ -285,7 +317,7 @@ const statusLabel = computed(() => {
 const statusStyle = computed(() => {
     if (isFailed.value) return { wrap: "bg-[#FEF2F2]", text: "text-[#EF4444]" };
     if (isDone.value) return { wrap: "bg-[#ECFDF5]", text: "text-[#059669]" };
-    if (isSelecting.value) return { wrap: "bg-[#FFFBEB]", text: "text-[#D97706]" };
+    if (isSelecting.value || isWashSelecting.value) return { wrap: "bg-[#FFFBEB]", text: "text-[#D97706]" };
     return { wrap: "bg-[#EFF6FF]", text: "text-[#2563EB]" };
 });
 

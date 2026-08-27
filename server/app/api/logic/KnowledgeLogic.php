@@ -37,6 +37,70 @@ class KnowledgeLogic extends ApiLogic
     const RERANK_MIN_SCORE = 0.2; //知识库检索最小分数
     const OPENAI_CHAT = 'openai_chat'; //openai聊天
     const GEMINI_CHAT = 'gemini_chat'; //gemini聊天
+    const SCENE_WECHAT_PERSONAL_CHAT = '个微聊天';
+
+    /**
+     * @notes 是否把知识库 annex 注入检索并回传（仅个微聊天）
+     */
+    public static function shouldIncludeKbAnnex(string $scene): bool
+    {
+        return $scene === self::SCENE_WECHAT_PERSONAL_CHAT;
+    }
+
+    /**
+     * @notes 规范化机器人挂载的向量库 ID
+     * @param mixed $kbId
+     * @return int[]
+     */
+    public static function normalizeRobotKbIds(mixed $kbId): array
+    {
+        if (is_array($kbId)) {
+            $parts = $kbId;
+        } elseif (is_string($kbId) || is_numeric($kbId)) {
+            $text = trim((string)$kbId);
+            if ($text === '') {
+                return [];
+            }
+            $parts = str_contains($text, ',') ? explode(',', $text) : [$text];
+        } else {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($parts as $part) {
+            if (is_array($part)) {
+                continue;
+            }
+            $id = (int)trim((string)$part);
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+        return array_values($ids);
+    }
+
+    /**
+     * @notes 从机器人配置组装向量检索参数
+     * @param mixed $robot
+     * @return array{search_mode?: string, search_tokens?: mixed, search_similar?: mixed}
+     */
+    public static function buildRobotEmbSetting(mixed $robot): array
+    {
+        if (!is_array($robot) && !is_object($robot)) {
+            return [];
+        }
+        $mode = is_array($robot) ? ($robot['search_mode'] ?? null) : ($robot->search_mode ?? null);
+        $tokens = is_array($robot) ? ($robot['search_tokens'] ?? null) : ($robot->search_tokens ?? null);
+        $similar = is_array($robot) ? ($robot['search_similar'] ?? null) : ($robot->search_similar ?? null);
+        if ($mode === null && $tokens === null && $similar === null) {
+            return [];
+        }
+        return [
+            'search_mode' => $mode ?: 'similar',
+            'search_tokens' => $tokens ?? 3000,
+            'search_similar' => $similar ?? 0.5,
+        ];
+    }
 
     /**
      * 指定用户当前空间可读的 RAG 知识库(企业空间:同 team 且创建者仍在团;个人空间仅自己)
@@ -1314,6 +1378,10 @@ class KnowledgeLogic extends ApiLogic
                 }
             } elseif ($isChatScene) {
                 $usage = $response['data']['usage'] ?? [];
+                $preprocess = $request['preprocess_usage'] ?? [];
+                $usage['prompt_tokens'] = (int)($usage['prompt_tokens'] ?? 0) + (int)($preprocess['prompt_tokens'] ?? 0);
+                $usage['completion_tokens'] = (int)($usage['completion_tokens'] ?? 0) + (int)($preprocess['completion_tokens'] ?? 0);
+                $usage['total_tokens'] = (int)($usage['prompt_tokens'] ?? 0) + (int)($usage['completion_tokens'] ?? 0);
                 $points = ChatBillingService::charge(
                     $userId,
                     $modelAlias,
@@ -1551,6 +1619,17 @@ class KnowledgeLogic extends ApiLogic
             'file_info' => $params['file_info'] ?? [], //文件信息
             //            'channel' => $params['channel'] ?? 0, //应用渠道 1:个微 2:小红书 3:通用聊天
         ];
+        $preprocess = $params['preprocess_usage'] ?? [];
+        if ((int)($preprocess['prompt_tokens'] ?? 0) > 0 || (int)($preprocess['completion_tokens'] ?? 0) > 0) {
+            $request['preprocess_usage'] = $preprocess;
+            $request['extra_usage'] = [
+                'prompt_tokens' => (int)($preprocess['prompt_tokens'] ?? 0),
+                'completion_tokens' => (int)($preprocess['completion_tokens'] ?? 0),
+            ];
+        }
+        if (trim((string)($params['preprocess_reasoning'] ?? '')) !== '') {
+            $request['preprocess_reasoning'] = trim((string)$params['preprocess_reasoning']);
+        }
 
         if ($params['scene'] == '陪练聊天') {
             $request['voice'] = $params['voice'] ?? '';
@@ -1612,10 +1691,11 @@ class KnowledgeLogic extends ApiLogic
                 if (!isset($params['unique_id'])) {
                     if (isset($params['task_id']) && $params['task_id']) {
                         $request['task_id'] = $params['task_id'];
-                        // 对话记录
-                        $logs = \app\api\logic\ChatLogic::chatLog($request['task_id'], $params['assistant_id'], $uid, $params['context_num']);
-                        if (!$logs) {
-                            message('对话记录ID错误');
+                        if (empty($params['task_id_is_new'])) {
+                            $logs = \app\api\logic\ChatLogic::chatLog($request['task_id'], $params['assistant_id'], $uid, $params['context_num']);
+                            if (!$logs) {
+                                message('对话记录ID错误');
+                            }
                         }
                     } else {
                         $request['task_id'] = generate_unique_task_id();
@@ -1643,16 +1723,8 @@ class KnowledgeLogic extends ApiLogic
                     $request['task_id'] = $params['unique_id'];
                 }
 
-                if (isset($params['file_content']) && !empty($params['file_content'])) {
-                    $logs[] = ['role' => 'user','content' => $params['file_content']];
-                }
-
-                if (isset($params['net_content']) && !empty($params['net_content'])) {
-                    $logs[] = ['role' => 'user','content' => $params['net_content']];
-                }
-
                 $messages = array_merge($logs, [
-                    ['role' => 'user','content' => $prompt]
+                    ['role' => 'user', 'content' => ChatLogic::wrapUserMessageWithPreprocess($prompt, $params)]
                 ]);
 
                 if ($uid == 0 && isset($params['unique_id'])) {
@@ -1665,6 +1737,9 @@ class KnowledgeLogic extends ApiLogic
                 $request['chat_type'] = 9006;
                 $request['now'] = time();
                 $request['knowledge_record'] = $record;
+                if (trim((string)($params['preprocess_reasoning'] ?? '')) !== '') {
+                    $request['preprocess_reasoning'] = trim((string)$params['preprocess_reasoning']);
+                }
                 //print_r($request);die;
                 if (in_array($request['model'],self::GPT_MODELS)){
                     $scene = self::OPENAI_CHAT;
@@ -1820,16 +1895,8 @@ class KnowledgeLogic extends ApiLogic
                 $request['task_id'] = $params['unique_id'];
             }
 
-            if (isset($params['file_content']) && !empty($params['file_content'])) {
-                $logs[] = ['role' => 'user', 'content' => $params['file_content']];
-            }
-
-            if (isset($params['net_content']) && !empty($params['net_content'])) {
-                $logs[] = [ 'role' => 'user', 'content' => $params['net_content']];
-            }
-
             $messages = array_merge($logs, [
-                ['role' => 'user','content' => $prompt]
+                ['role' => 'user', 'content' => ChatLogic::wrapUserMessageWithPreprocess($prompt, $params)]
             ]);
 
             $request = [
@@ -1864,6 +1931,17 @@ class KnowledgeLogic extends ApiLogic
             }
             if (!empty($params['skip_team_check'])) {
                 $request['skip_team_check'] = true;
+            }
+            $preprocess = $params['preprocess_usage'] ?? [];
+            if ((int)($preprocess['prompt_tokens'] ?? 0) > 0 || (int)($preprocess['completion_tokens'] ?? 0) > 0) {
+                $request['preprocess_usage'] = $preprocess;
+                $request['extra_usage'] = [
+                    'prompt_tokens' => (int)($preprocess['prompt_tokens'] ?? 0),
+                    'completion_tokens' => (int)($preprocess['completion_tokens'] ?? 0),
+                ];
+            }
+            if (trim((string)($params['preprocess_reasoning'] ?? '')) !== '') {
+                $request['preprocess_reasoning'] = trim((string)$params['preprocess_reasoning']);
             }
             $uid    = self::$uid;
             if ($uid == 0 && isset($params['unique_id'])) {
@@ -1939,20 +2017,34 @@ class KnowledgeLogic extends ApiLogic
             $robot = $params['robot'] ?? null;
             $vector = '';
             $response = [];
-            if ($robot != null && $robot['kb_type'] == 2) {
-                if (is_string($params['kb_id']) && str_contains($params['kb_id'], ',')){
-                    $params['kb_id'] = explode(',', $params['kb_id']);
-                }
-                if (is_array($params['kb_id']) && count($params['kb_id']) > 1) {
-                    $num   = 1;
-                    foreach ($params['kb_id'] as $kb_id) {
-                        $vector .= '知识库' . $num . '：' . \app\api\logic\kb\KbKnowLogic::embAiChatSearch($kb_id, $params['message']);
+            $enableAnnex = self::shouldIncludeKbAnnex((string)($params['scene'] ?? ''));
+            $kbAnnex = ['images' => [], 'video' => [], 'files' => []];
+            $kbType = is_array($robot) ? ($robot['kb_type'] ?? 0) : (is_object($robot) ? ($robot['kb_type'] ?? 0) : 0);
+            if ($robot != null && (int)$kbType === 2) {
+                $kbIds = self::normalizeRobotKbIds($params['kb_id'] ?? '');
+                $embSetting = self::buildRobotEmbSetting($robot);
+                $searchKb = static function ($kbId) use ($params, $enableAnnex, $embSetting, &$kbAnnex) {
+                    $part = ['images' => [], 'video' => [], 'files' => []];
+                    $text = \app\api\logic\kb\KbKnowLogic::embAiChatSearch(
+                        $kbId,
+                        $params['message'],
+                        $embSetting,
+                        $enableAnnex,
+                        $part
+                    );
+                    if ($enableAnnex) {
+                        $kbAnnex = \app\api\logic\kb\KbKnowLogic::mergeAnnexLists($kbAnnex, $part);
+                    }
+                    return $text;
+                };
+                if (count($kbIds) > 1) {
+                    $num = 1;
+                    foreach ($kbIds as $kb_id) {
+                        $vector .= '知识库' . $num . '：' . $searchKb($kb_id);
                         $num++;
                     }
-                } else if (is_array($params['kb_id']) && count($params['kb_id']) == 1) {
-                    $vector = \app\api\logic\kb\KbKnowLogic::embAiChatSearch($params['kb_id'][0], $params['message']);
-                } else {
-                    $vector = \app\api\logic\kb\KbKnowLogic::embAiChatSearch($params['kb_id'], $params['message']);
+                } elseif (count($kbIds) === 1) {
+                    $vector = $searchKb($kbIds[0]);
                 }
             } else {
                 $record = array(
@@ -2036,6 +2128,10 @@ class KnowledgeLogic extends ApiLogic
 
                 if (isset($result['code']) && (int)$result['code'] !== 10000) {
                     return [false, $result['message'] ?? '知识库检索失败'];
+                }
+
+                if ($enableAnnex && is_array($result)) {
+                    $result['kb_annex'] = $kbAnnex;
                 }
 
                 return [true, $result];

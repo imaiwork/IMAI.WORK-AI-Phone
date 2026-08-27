@@ -116,9 +116,10 @@ class MaterialReadinessVerify extends Command
                     $output->warning("  设备 {$deviceCode} 不存在,场景 2 跳过");
                 } else {
                     $originalSynW = (int)$device->synthesis_w;
+                    $originalSynWDate = $device->synthesis_w_date;
                     File::where('id', $file->id)->update(['transcode_status' => 2]);
-                    // 先把 synthesis_w 置 0,这样如果场景 2 误把它置 1 我们能检测
-                    SvDevice::where('device_code', $deviceCode)->update(['synthesis_w' => 0]);
+                    // 先把 synthesis_w 置 0(连同完成日期),这样如果场景 2 误把它置 1 我们能检测
+                    SvDevice::where('device_code', $deviceCode)->update(['synthesis_w' => 0, 'synthesis_w_date' => null]);
 
                     $result = VideoSynthesis::wechatVideoSynthesis($deviceCode);
                     $after = (int)SvDevice::where('device_code', $deviceCode)->value('synthesis_w');
@@ -126,8 +127,8 @@ class MaterialReadinessVerify extends Command
                     $ok = $result === false && $after === 0;
                     $this->mark($output, '  status=2 时:返回 false 且 synthesis_w 仍为 0(关键:不锁死设备)', $ok, $pass, $fail, $report);
 
-                    // 还原 synthesis_w
-                    SvDevice::where('device_code', $deviceCode)->update(['synthesis_w' => $originalSynW]);
+                    // 还原 synthesis_w 与完成日期
+                    SvDevice::where('device_code', $deviceCode)->update(['synthesis_w' => $originalSynW, 'synthesis_w_date' => $originalSynWDate]);
                 }
             } else {
                 $output->writeln("\n场景 2: 朋友圈合成入口 — 未提供 --device,跳过");

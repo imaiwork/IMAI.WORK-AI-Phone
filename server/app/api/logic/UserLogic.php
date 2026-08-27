@@ -446,9 +446,16 @@ class UserLogic extends BaseLogic
             if ($inviterAgent->isEmpty() || $inviterAgent->status == 0) {
                 throw new \Exception('上级用户还不是代理');
             }
+            $agent = DistributionAgent::where('user_id', $params['user_id'])->findOrEmpty();
+            // 幂等：已绑定的上级就是本次扫码的代理时直接返回成功（重复扫码/重复请求不报错，也不重复过人数校验）
+            if (!$agent->isEmpty() && $agent['parent_id'] == $inviter['id']) {
+                return true;
+            }
+            if (!$agent->isEmpty() && $agent['parent_id'] != 0) {
+                throw new \Exception('已存在上级用户，无法再次绑定');
+            }
             // 按后台 getSubLimits：对被绑用户当前等级做对应类型人数校验
             DistributionAgentConfigLogic::checkCanAcceptBind((int)$inviter['id'], (int)$params['user_id']);
-            $agent = DistributionAgent::where('user_id', $params['user_id'])->findOrEmpty();
             if ($agent->isEmpty()) {
                 DistributionAgent::create([
                     'user_id' => $params['user_id'],
@@ -457,8 +464,6 @@ class UserLogic extends BaseLogic
                     'status' => 1,  // 默认为启用
                     'become_time' => time(),
                 ]);
-            } else if ($agent['parent_id'] != 0) {
-                throw new \Exception('已存在上级用户，无法再次绑定');
             } else {
                 DistributionAgent::update([
                     'parent_id' => $inviter['id'],

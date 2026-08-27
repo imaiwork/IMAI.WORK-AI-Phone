@@ -247,7 +247,7 @@
                                     </view>
                                     <view
                                         v-if="
-                                            detailData.detail?.attachment_type == 2 &&
+                                            [2, 3].includes(Number(detailData.detail?.attachment_type)) &&
                                             detailData.detail?.attachment_content?.length > 0
                                         "
                                         :class="getImageGridClass(detailData.detail.attachment_content.length)"

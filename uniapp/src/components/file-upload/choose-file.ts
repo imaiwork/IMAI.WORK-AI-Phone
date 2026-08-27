@@ -50,10 +50,11 @@ function chooseImage(opts: ChooseMediaOption) {
             fail(res: any) {
                 if (res?.errno === 112) {
                     uni.$u.toast("请到对应小程序后台完善用户隐私保护指引");
-                    return;
                 }
+                // errno 112 也必须 reject，否则 Promise 永远挂起，外层表现为"点了没反应"
                 reject({
-                    errMsg: res.errMsg.replace("chooseImage:fail", ERR_MSG_FAIL),
+                    errMsg: (res?.errMsg || "").replace("chooseImage:fail", ERR_MSG_FAIL) || ERR_MSG_FAIL,
+                    errno: res?.errno,
                 });
             },
         });
@@ -78,7 +79,8 @@ function chooseVideo(opts: ChooseMediaOption) {
                     uni.$u.toast("请到对应小程序后台完善用户隐私保护指引");
                 }
                 reject({
-                    errMsg: res.errMsg.replace("chooseVideo:fail", ERR_MSG_FAIL),
+                    errMsg: (res?.errMsg || "").replace("chooseVideo:fail", ERR_MSG_FAIL) || ERR_MSG_FAIL,
+                    errno: res?.errno,
                 });
             },
         });
@@ -104,12 +106,13 @@ function chooseAll(opts: ChooseFileOptions) {
             success(res) {
                 resolve(normalizeFileRes(res as ChooseResult));
             },
-            fail(res) {
-                if (res.errno == 112) {
+            fail(res: any) {
+                if (res?.errno == 112) {
                     uni.$u.toast("请到对应小程序后台完善用户隐私保护指引");
                 }
                 reject({
-                    errMsg: res.errMsg.replace("chooseFile:fail", ERR_MSG_FAIL),
+                    errMsg: (res?.errMsg || "").replace("chooseFile:fail", ERR_MSG_FAIL) || ERR_MSG_FAIL,
+                    errno: res?.errno,
                 });
             },
         });

@@ -320,6 +320,7 @@ import { useAppStore } from "@/stores/app";
 import { replaceState } from "@/utils/util";
 import feedback from "@/utils/feedback";
 import { mapLeadExport } from "@/api/map_lead";
+import { CHAT_UPLOAD_ACCEPT } from "@/components/chatting/upload-rules";
 
 type WorkflowMode = "chat" | "image" | "ppt" | "map" | "video" | "digital";
 
@@ -1103,7 +1104,7 @@ const uploadButtonLabel = computed(() => {
 });
 const uploadAccept = computed(() => {
     if (activeMode.value === "digital") return "image/*,video/*"; // 素材可以是图/视频
-    if (activeMode.value === "chat") return ".html,.xml,.doc,.docx,.txt,.pdf,.csv,.xlsx";
+    if (activeMode.value === "chat") return CHAT_UPLOAD_ACCEPT;
     if (activeMode.value === "ppt") return ".pdf,.doc,.docx,.txt";
     return "image/*";
 });

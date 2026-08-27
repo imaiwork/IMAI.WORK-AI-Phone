@@ -1,5 +1,12 @@
-export function useScroll(emit: (event: string, ...args: any[]) => void) {
-    const scrollContainerRef = ref<HTMLDivElement | null>(null);
+/**
+ * 模板 ref 一律由组件声明后传进来，不要在 composable 内部声明再 return：
+ * <script setup> 的字符串 ref 只认 setup 作用域里的同名变量，
+ * 组件一旦忘记解构就会静默失效（TS 和 eslint 都抓不到）。改成入参后，漏传是编译期错误。
+ */
+export function useScroll(
+    scrollContainerRef: Ref<HTMLDivElement | null>,
+    emit: (event: string, ...args: any[]) => void,
+) {
     const previousScrollTop = ref(0);
     const disabledScroll = ref(false);
     const showBackToBottom = ref(false);
@@ -70,15 +77,7 @@ export function useScroll(emit: (event: string, ...args: any[]) => void) {
         disabledScroll.value = false;
     };
 
-    const triggerContentPushUp = (containerRef: Ref<HTMLDivElement | null>) => {
-        nextTick(() => {
-            if (!scrollContainerRef.value || !containerRef.value) return;
-            setTimeout(() => scrollToBottom(true), 100);
-        });
-    };
-
     return {
-        scrollContainerRef,
         disabledScroll,
         showBackToBottom,
         scroll,
@@ -86,6 +85,5 @@ export function useScroll(emit: (event: string, ...args: any[]) => void) {
         scrollToBottom,
         scrollTo,
         handleBackToBottom,
-        triggerContentPushUp,
     };
 }

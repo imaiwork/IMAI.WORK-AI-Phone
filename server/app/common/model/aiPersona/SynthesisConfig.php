@@ -54,6 +54,16 @@ class SynthesisConfig extends BaseModel
     const SPEECH_RATE_MIN = 0.5;
     const SPEECH_RATE_MAX = 2.0;
 
+    //文案生成类型: 1干货科普 2带货种草 3观点评论 4剧情段子 5情感共鸣 6揭秘避坑 7自定义
+    const COPYWRITING_GENERATION_TYPE_KNOWLEDGE = 1;
+    const COPYWRITING_GENERATION_TYPE_SELL = 2;
+    const COPYWRITING_GENERATION_TYPE_OPINION = 3;
+    const COPYWRITING_GENERATION_TYPE_SKIT = 4;
+    const COPYWRITING_GENERATION_TYPE_EMOTION = 5;
+    const COPYWRITING_GENERATION_TYPE_PITFALL = 6;
+    const COPYWRITING_GENERATION_TYPE_CUSTOM = 7;
+    const COPYWRITING_GENERATION_CUSTOM_MAX = 500;
+
     protected $json = ['generation_types', 'template_config'];
     protected $jsonAssoc = true;
 
@@ -115,5 +125,25 @@ class SynthesisConfig extends BaseModel
     public function setPicAttr($value)
     {
         return $value ? FileService::setFileUrl($value) : '';
+    }
+
+    public static function copywritingGenerationTypeMap(): array
+    {
+        return AiPersonaSynthesisConfig::copywritingGenerationTypeMap();
+    }
+
+    public static function normalizeCopywritingGenerationType($value): int
+    {
+        return AiPersonaSynthesisConfig::normalizeCopywritingGenerationType($value);
+    }
+
+    public static function normalizeCopywritingGenerationCustom($value): string
+    {
+        return AiPersonaSynthesisConfig::normalizeCopywritingGenerationCustom($value);
+    }
+
+    public static function buildCopywritingGenerationVoice(int $type, string $custom): string
+    {
+        return AiPersonaSynthesisConfig::buildCopywritingGenerationVoice($type, $custom);
     }
 }

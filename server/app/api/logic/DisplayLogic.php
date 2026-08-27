@@ -150,26 +150,18 @@ class DisplayLogic extends ApiLogic
                 ->count();
             $todayRate = $todayTaskCount > 0 ? round(($todayCompleteTaskCount / $todayTaskCount) * 100, 2) : 0;
 
-            $touchExposeNumber = SvLeadScrapingRecord::alias('r')
-                ->field('r.id')
-                ->join('sv_lead_scraping_setting s', 's.id = r.scraping_id and s.user_id = r.user_id')
-                ->where('r.user_id', self::$uid)
-                ->where('s.industry_type', 1)
-                ->where('r.create_time', 'between', [$st, $et])
-                ->count();
-            $msgExposeNumber = SvPrivateMessage::where('user_id', self::$uid)
-                ->where('create_time', 'between', [$st, $et])
-                ->where('reply_time', '<>', 'null')
-                ->count();
-            $todayExposeNumber = $touchExposeNumber + $msgExposeNumber;
+            // 当天意向客户（公私域划分，与意向客户列表口径一致）
+            $dayCustomers = IntentionCustomerService::customersInDay((int)self::$uid, $st, $et);
+            $dayCustomerCounts = IntentionCustomerService::customerCounts($dayCustomers);
 
-            $todayClueNumber = SvAddWechatRecord::where('user_id', self::$uid)
-                ->where('create_time', 'between', [$st, $et])
-                ->count();
-            $customerAssetCount = SvAddWechatRecord::where('user_id', self::$uid)
-                ->where('create_time', 'between', [$st, $et])
-                ->where('status', 'in', [1, 2])
-                ->count();
+            // 曝光/线索/客资按业务口径统计：
+            // 曝光数 = 同城曝光任务进到用户主页、未产生私信/评论交互的访问记录数；
+            // 线索数 = 获客任务当天交互记录数（截流评论/私信/留痕、同城触达、团购截流）；
+            // 客资数 = 各大平台识别到微信号/手机号的客户数
+            $acquisitionStats = IntentionCustomerService::acquisitionStatsInDay((int)self::$uid, $st, $et);
+            $todayExposeNumber = $acquisitionStats['expose_count'];
+            $todayClueNumber = $acquisitionStats['clue_count'];
+            $customerAssetCount = IntentionCustomerService::contactRecognizedCount($dayCustomers);
 
             $materialCount = AiPersonaMaterial::where('user_id', self::$uid)
                 ->where('create_time', 'between', [$st, $et])
@@ -220,9 +212,11 @@ class DisplayLogic extends ApiLogic
                 ->where('reply_time', 'between', [$startTimeText, $endTimeText])
                 ->group('account')
                 ->column('account');
+            // 今日建群数：与 intentionStatistics 的 create_group_count 同算法（distinct group_name），仅限定为当天
             $createGroupCount = AiWechatCreateGroupLog::where('user_id', self::$uid)
                 ->where('status', 1)
                 ->where('create_time', 'between', [$st, $et])
+                ->group('group_name')
                 ->count();
 
             $circleCommentCount = SvDeviceCircleLikeReplyRecord::where('user_id', self::$uid)
@@ -238,8 +232,10 @@ class DisplayLogic extends ApiLogic
                 'date' => $date, // 统计日期，格式 Y-m-d
                 'date_text' => date('m月d日', $timestamp), // 页面展示日期
                 'top' => [ // 顶部核心指标
-                    'today_expose_number' => $todayExposeNumber, // 今日曝光人数
-                    'today_clue_number' => $todayClueNumber, // 今日获客线索数
+                    'today_expose_number' => $todayExposeNumber, // 今日曝光数（进到用户主页但未交互）
+                    'today_public_customer_count' => $dayCustomerCounts['public'], // 今日公域意向客户数（对应列表 domain=public）
+                    'today_private_customer_count' => $dayCustomerCounts['private'], // 今日私域意向客户数（对应列表 domain=private）
+                    'today_clue_number' => $todayClueNumber, // 今日获客线索数（任务交互记录）
                     'today_rate' => $todayRate, // 今日任务完成率
                 ],
                 'core_tasks' => [ // 核心任务执行统计
@@ -248,7 +244,12 @@ class DisplayLogic extends ApiLogic
                     'viral_hit_count' => $viralHitCount, // 自动找爆款今日命中数
                     'video_publish_count' => $videoPublishCount, // 今日视频发布次数
                     'video_publish_success_count' => $videoPublishSuccessCount, // 今日视频发布成功次数
-                    'video_publish_all_success' => $videoPublishCount === $videoPublishSuccessCount, // 今日视频发布是否全部成功
+                    'video_publish_all_success' => match (true) {
+                        $videoPublishCount === 0 => 3, // 无任务
+                        $videoPublishSuccessCount === $videoPublishCount => 1, // 全部成功
+                        $videoPublishSuccessCount === 0 => 4, // 全部失败
+                        default => 2, // 部分完成
+                    },
                 ],
                 'peer_acquisition' => [ // 同行获客统计
                     'clue_count' => $todayClueNumber, // 今日找到线索数
@@ -1087,7 +1088,7 @@ class DisplayLogic extends ApiLogic
 
     private static function isCircleInteractionSourceKey(string $sourceKey): bool
     {
-        return in_array($sourceKey, ['lead_scraping', 'city_touch', 'group_buy'], true);
+        return in_array($sourceKey, ['lead_scraping', 'city_touch', 'group_buy', 'crawling'], true);
     }
 
     private static function circleInteractionFallbackSourceRefs(?int $platform, array $customer, array $params): array
@@ -1111,6 +1112,7 @@ class DisplayLogic extends ApiLogic
             'lead_scraping' => self::circleInteractionSourceIdsByCustomer('lead_scraping', $platform, $account, $names),
             'city_touch' => self::circleInteractionSourceIdsByCustomer('city_touch', $platform, $account, $names),
             'group_buy' => self::circleInteractionSourceIdsByCustomer('group_buy', $platform, $account, $names),
+            'crawling' => self::circleInteractionCrawlingSourceIds($names),
         ];
     }
 
@@ -1133,6 +1135,18 @@ class DisplayLogic extends ApiLogic
         return array_map('intval', $query->column('r.id'));
     }
 
+    private static function circleInteractionCrawlingSourceIds(array $names): array
+    {
+        if (empty($names)) {
+            return [];
+        }
+
+        return array_map('intval', self::circleInteractionSourceBaseQuery('crawling', null)
+            ->field('r.id')
+            ->where('r.reg_content', 'in', $names)
+            ->column('r.id'));
+    }
+
     private static function circleInteractionFetchSourceRows(string $sourceKey, array $ids, ?int $platform): array
     {
         $field = self::circleInteractionSourceFields($sourceKey);
@@ -1149,6 +1163,16 @@ class DisplayLogic extends ApiLogic
 
     private static function circleInteractionSourceBaseQuery(string $sourceKey, ?int $platform)
     {
+        if ($sourceKey === 'crawling') {
+            $query = SvCrawlingRecord::alias('r')
+                ->join('sv_crawling_task t', 't.id = r.task_id and t.user_id = r.user_id', 'left');
+            $query->where('r.user_id', self::$uid)
+                ->whereNull('r.delete_time')
+                ->where('r.reg_content', '<>', '')
+                ->where('r.hash', '<>', '');
+            return $query;
+        }
+
         if ($sourceKey === 'city_touch') {
             $query = SvCityTouchRecord::alias('r')
                 ->join('sv_city_touch_task t', 't.id = r.city_touch_id and t.user_id = r.user_id', 'left');
@@ -1198,6 +1222,9 @@ class DisplayLogic extends ApiLogic
         if ($sourceKey === 'lead_scraping') {
             return 'r.id,r.user_id,r.account,r.account_name,r.account_type,r.platform,r.avatar,r.content,r.filter_keyword,r.touch_content,r.comment_content,r.exec_time,r.create_time,r.task_type,r.device_code,r.task_id,r.image,s.task_type as setting_task_type';
         }
+        if ($sourceKey === 'crawling') {
+            return 'r.id,r.user_id,r.reg_content,r.clue_type,r.device_code,r.task_id,r.image,r.exec_time,r.create_time,t.name as task_name';
+        }
 
         return '';
     }
@@ -1205,7 +1232,7 @@ class DisplayLogic extends ApiLogic
     private static function formatCircleInteractionSourceRecord(array $row, string $sourceKey): array
     {
         $stats = IntentionCustomerService::sourceInteractionStats($row, $sourceKey);
-        if ($stats['interaction_count'] <= 0) {
+        if ($stats['interaction_count'] <= 0 && $sourceKey !== 'crawling') {
             return [];
         }
 
@@ -1224,6 +1251,7 @@ class DisplayLogic extends ApiLogic
             $row['content'] ?? '',
             $row['touch_content'] ?? '',
             $row['filter_keyword'] ?? '',
+            $row['reg_content'] ?? '',
         ]);
         $time = self::formatPrivateMessageTime($row['exec_time'] ?? '', $row['create_time'] ?? '');
         $recordId = (int)($row['id'] ?? 0);
@@ -1231,7 +1259,7 @@ class DisplayLogic extends ApiLogic
         return [
             'id' => self::circleInteractionSourceVirtualId($sourceKey, $recordId),
             'record_id' => $recordId,
-            'nickname' => (string)($row['account_name'] ?? ''),
+            'nickname' => (string)($row['account_name'] ?? ($row['reg_content'] ?? '')),
             'content' => $content,
             'image' => $images[0] ?? '',
             'images' => $images,
@@ -1658,6 +1686,7 @@ class DisplayLogic extends ApiLogic
             'source_key' => (string)($customer['source_key'] ?? ''),
             'source_name' => (string)($customer['source_name'] ?? ''),
             'source_text' => (string)($customer['source_text'] ?? ''),
+            'image' => (string)($customer['image'] ?? ''),
         ];
     }
 
@@ -1823,6 +1852,7 @@ class DisplayLogic extends ApiLogic
             'city_exposure' => '曝光',
             'city_touch' => '同城视频',
             'group_buy' => '团购',
+            'crawling' => '视频号获客',
             'sph_like' => '视频号点赞',
             'private_message' => '私信/评论',
         ];

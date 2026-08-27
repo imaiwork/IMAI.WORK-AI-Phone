@@ -129,6 +129,14 @@
                                 <view class="flex items-center gap-[16rpx] mt-[20rpx]">
                                     <view
                                         v-if="item.status === state.videoFailed"
+                                        class="flex items-center gap-[6rpx] text-[22rpx] text-primary"
+                                        @click.stop="actions.retryRecord(item)"
+                                    >
+                                        <u-icon name="reload" color="#0065FB" size="22"></u-icon>
+                                        <text>重试生成</text>
+                                    </view>
+                                    <view
+                                        v-if="item.status === state.videoFailed"
                                         class="flex items-center gap-[6rpx] text-[22rpx] text-[#EF4444]"
                                         @click.stop="actions.viewFailReason(item)"
                                     >
@@ -347,6 +355,7 @@ defineProps<{
         deleteRecord: (id: string) => void
         deleteImageRecord: (id: number | string) => void
         viewFailReason: (item: any) => void
+        retryRecord: (item: any) => void
     }
 }>()
 </script>

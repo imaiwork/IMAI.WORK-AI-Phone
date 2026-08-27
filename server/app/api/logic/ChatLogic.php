@@ -2,8 +2,8 @@
 
 namespace app\api\logic;
 
-use app\api\logic\coze\CozeToolsLogic;
 use app\api\logic\kb\KbKnowLogic;
+use app\api\logic\qwen\QwenToolsLogic;
 use app\common\enum\user\AccountLogEnum;
 use app\common\model\chat\Assistants;
 use app\common\model\chat\ChatLog;
@@ -41,6 +41,26 @@ class ChatLogic extends ApiLogic
     const OPENAI_CHAT = 'openai_chat'; //openai聊天
     const GEMINI_CHAT = 'gemini_chat'; //gemini聊天
 
+    /**
+     * 校验分享对话身份:share_id / apiKey 必须对应当前 robot_id 的有效发布记录
+     */
+    protected static function isValidShareChat(array $params): bool
+    {
+        $shareId = (int)($params['share_id'] ?? 0);
+        $apiKey  = trim((string)($params['apiKey'] ?? ''));
+        $robotId = (int)($params['robot_id'] ?? 0);
+        if ($robotId <= 0 || ($shareId <= 0 && $apiKey === '')) {
+            return false;
+        }
+        $query = (new KbRobotPublish())->where('robot_id', $robotId);
+        if ($shareId > 0) {
+            $query->where('id', $shareId);
+        } else {
+            $query->where('apikey', $apiKey);
+        }
+        return $query->count() > 0;
+    }
+
     public static function generalChat(array $params)
     {
         ini_set('max_execution_time', 0);
@@ -76,9 +96,13 @@ class ChatLogic extends ApiLogic
         }
 
         // 发布分享对话(v1/chat/commonChat):公开链路,不校验访问者/创建者当前团队空间
-        $isShareChat = !empty($params['share_id']) || !empty($params['apiKey']);
+        // 安全:share_id/apiKey 为客户端可控字段,必须与 kb_robot_publish 中该机器人的发布记录匹配才认定为分享对话,
+        // 否则任何登录用户传 share_id=1 即可绕过空间/团队/模型白名单校验
+        $isShareChat = self::isValidShareChat($params);
         if ($isShareChat) {
             $params['skip_team_check'] = true;
+        } else {
+            unset($params['share_id'], $params['apiKey']);
         }
 
         if (!empty($params['robot_id']) && empty($params['indexid']) && empty($params['kb_id'])) {
@@ -281,20 +305,63 @@ class ChatLogic extends ApiLogic
         }
 
         try {
-            if (isset($params['file_info']['url']) && !empty($params['file_info']['url'])) {
-                $content = CozeToolsLogic::fileParse($params['file_info']['url']);
-                if (empty($content)) {
-                    throw new \Exception(CozeToolsLogic::getError());
-                }
-                $params['file_content'] = $content;
+            $params['preprocess_usage'] = QwenToolsLogic::emptyUsage();
+            $params['preprocess_reasoning'] = (string)($params['preprocess_reasoning'] ?? '');
+            $needFile = isset($params['file_info']['url']) && !empty($params['file_info']['url']);
+            $needNet = isset($params['is_network_search']) && (int)$params['is_network_search'] === 1;
+            if ($needFile || $needNet) {
+                $status = $needFile ? self::preprocessStartStatus($params) : '【正在联网检索…】';
+                self::startClientChatStream($params, $status);
             }
 
-            if (isset($params['is_network_search']) && (int)$params['is_network_search'] === 1) {
-                $content = CozeToolsLogic::networkSearch($params['message']);
-                if (empty($content)) {
-                    throw new \Exception(CozeToolsLogic::getError());
+            $onPreprocessEvent = static function (string $event, string $text) use (&$params): void {
+                if ($text === '') {
+                    return;
                 }
-                $params['net_content'] = $content;
+                if ($event === 'progress') {
+                    ChatLogic::emitClientReasoning($params, $text . "\n");
+                    return;
+                }
+                // think（Qwen 思考过程）不进推理区：内容太长太慢，只转发 delta 结果正文
+                if ($event === 'delta') {
+                    $params['reasoning_loading'] = 0;
+                    ChatLogic::emitClientReasoning($params, $text);
+                    $params['preprocess_reasoning'] .= $text;
+                }
+            };
+
+            if ($needFile) {
+                $fileUrl = (string)$params['file_info']['url'];
+                $question = (string)($params['message'] ?? '');
+                $parsed = QwenToolsLogic::isImageAttachment($params['file_info'])
+                    ? QwenToolsLogic::imageParseStream($fileUrl, $question, $onPreprocessEvent)
+                    : QwenToolsLogic::fileParseStream($fileUrl, $question, $onPreprocessEvent);
+                if (empty($parsed['content'] ?? '')) {
+                    throw new \Exception(QwenToolsLogic::getError());
+                }
+                $params['file_content'] = $parsed['content'];
+                $params['preprocess_usage'] = QwenToolsLogic::mergeUsage(
+                    $params['preprocess_usage'],
+                    $parsed['usage'] ?? []
+                );
+            }
+
+            if ($needNet) {
+                if ($needFile) {
+                    $params['reasoning_loading'] = 1;
+                    self::emitClientReasoning($params, "【正在联网检索…】\n");
+                    $params['preprocess_reasoning'] .= "【正在联网检索…】\n";
+                }
+                $searchPrompt = '请针对下面的用户问题进行回答。当用户问你是谁、你是哪家的模型时，不要以第一人称自我介绍，不要回答“我是Qwen或我是阿里巴巴的模型”，不能暴露你是Qwen，例如你可以回答：“我的模型是以你选择的模型为底座，再进行全网检索”。用户问题：' . (string)($params['message'] ?? '');
+                $parsed = QwenToolsLogic::networkSearchStream($searchPrompt, $onPreprocessEvent);
+                if (empty($parsed['content'] ?? '')) {
+                    throw new \Exception(QwenToolsLogic::getError());
+                }
+                $params['net_content'] = $parsed['content'];
+                $params['preprocess_usage'] = QwenToolsLogic::mergeUsage(
+                    $params['preprocess_usage'],
+                    $parsed['usage'] ?? []
+                );
             }
 
             if (isset($params['kb_id']) && !empty($params['kb_id'])) {
@@ -316,6 +383,13 @@ class ChatLogic extends ApiLogic
             }
             return true;
         } catch (\Throwable $th) {
+            if (!empty($params['client_sse_started'])) {
+                \app\common\service\ToolsStreamEmitErrorContent([
+                    'task_id' => $params['task_id'] ?? '',
+                    'file_info' => $params['file_info'] ?? [],
+                ], $th->getMessage());
+                exit;
+            }
             self::$error = $th->getMessage();
             return false;
         }
@@ -376,27 +450,20 @@ class ChatLogic extends ApiLogic
 
         //模型大管家检索
         $systemRoleCheck = KbKnowLogic::embModelButlerSearch($params['user_id'], $request['message'], $checkRobotId);
-        // 网络搜索
-        $netContent = '';
-        if (!empty($params['net_content'])) {
-            $netContent = "\n 补充（联网检索内容）：".$params['net_content'];
-        }
         $systemRole[] = [
             'role' => 'system',
-            'content' => "你的角色是模型大管家，帮助用户检索出合适的智能体。当检索到合适的智能体时，不能虚构内容，只需要告诉用户找到了对应的智能体，例如：'关于这个问题，我找到了更适合的智能体为你解答，建议你寻找 【@xxx】 的帮助。' \n 当没有检索到合适智能体时，你的角色转换成常规对话机器人，恢复成正常对话模式。\n" . $netContent . $systemRoleCheck,
+            'content' => "你的角色是模型大管家，帮助用户检索出合适的智能体。当检索到合适的智能体时，不能虚构内容，只需要告诉用户找到了对应的智能体，例如：'关于这个问题，我找到了更适合的智能体为你解答，建议你寻找 【@xxx】 的帮助。' \n 当没有检索到合适智能体时，你的角色转换成常规对话机器人，恢复成正常对话模式。\n" . $systemRoleCheck,
         ];
         $request['check_robot_id'] = $checkRobotId ?? 0;
 
         if (!isset($params['unique_id'])) {
             if (isset($params['task_id']) && $params['task_id']) {
                 $request['task_id'] = $params['task_id'];
-
-                // 对话记录
-                $logs = self::chatLog($request['task_id'], 0, self::$uid);
-
-                if (!$logs) {
-
-                    message('对话记录ID错误');
+                if (empty($params['task_id_is_new'])) {
+                    $logs = self::chatLog($request['task_id'], 0, self::$uid);
+                    if (!$logs) {
+                        message('对话记录ID错误');
+                    }
                 }
             } else {
                 $request['task_id'] = generate_unique_task_id();
@@ -424,20 +491,6 @@ class ChatLogic extends ApiLogic
             $request['task_id'] = $params['unique_id'];
         }
 
-        if (isset($params['file_content']) && !empty($params['file_content'])) {
-            $logs[] = [
-                'role' => 'user',
-                'content' => $params['file_content']
-            ];
-        }
-
-//        if (isset($params['net_content']) && !empty($params['net_content'])) {
-//            $logs[] = [
-//                'role' => 'user',
-//                'content' => $params['net_content']
-//            ];
-//        }
-
         if (isset($params['robot_id']) && $params['robot_id'] != 0 && $params['robot_id'] != '0') {
             $robot_set = KbRobot::where('id', $params['robot_id'])->value('roles_prompt');
             if (!empty($robot_set)) {
@@ -450,11 +503,12 @@ class ChatLogic extends ApiLogic
         }
 
 
-        if (!empty($params['message'])) {
+        $userContent = self::wrapUserMessageWithPreprocess((string)($params['message'] ?? ''), $params);
+        if ($userContent !== '') {
             $messages = array_merge($logs, [
                 [
                     'role' => 'user',
-                    'content' => $params['message']
+                    'content' => $userContent
                 ]
             ]);
         } else {
@@ -497,6 +551,8 @@ class ChatLogic extends ApiLogic
         if ($uid == 0 && isset($params['unique_id'])) {
             $uid = KbRobot::where('id', $params['robot_id'])->value('user_id');
         }
+        self::applyPreprocessUsageToRequest($request, $params);
+        self::applyPreprocessReasoningToRequest($request, $params);
         self::requestChatUrl($request, $scene, $uid);
 
         exit;
@@ -556,13 +612,11 @@ class ChatLogic extends ApiLogic
         if (!isset($params['unique_id'])) {
             if (isset($params['task_id']) && $params['task_id']) {
                 $request['task_id'] = $params['task_id'];
-
-                // 对话记录
-                $logs = self::chatLog($request['task_id'], 0, self::$uid);
-
-                if (!$logs) {
-
-                    message('对话记录ID错误');
+                if (empty($params['task_id_is_new'])) {
+                    $logs = self::chatLog($request['task_id'], 0, self::$uid);
+                    if (!$logs) {
+                        message('对话记录ID错误');
+                    }
                 }
             } else {
                 $request['task_id'] = generate_unique_task_id();
@@ -590,20 +644,6 @@ class ChatLogic extends ApiLogic
             $request['task_id'] = $params['unique_id'];
         }
 
-        if (isset($params['file_content']) && !empty($params['file_content'])) {
-            $logs[] = [
-                'role' => 'user',
-                'content' => $params['file_content']
-            ];
-        }
-
-        if (isset($params['net_content']) && !empty($params['net_content'])) {
-            $logs[] = [
-                'role' => 'user',
-                'content' => $params['net_content']
-            ];
-        }
-
         if (isset($params['robot_id']) && $params['robot_id'] != 0 && $params['robot_id'] != '0') {
             $robot_set = KbRobot::where('id', $params['robot_id'])->value('roles_prompt');
             if (!empty($robot_set)) {
@@ -616,11 +656,12 @@ class ChatLogic extends ApiLogic
         }
 
 
-        if (!empty($params['message'])) {
+        $userContent = self::wrapUserMessageWithPreprocess((string)($params['message'] ?? ''), $params);
+        if ($userContent !== '') {
             $messages = array_merge($logs, [
                 [
                     'role' => 'user',
-                    'content' => $params['message']
+                    'content' => $userContent
                 ]
             ]);
         } else {
@@ -662,6 +703,8 @@ class ChatLogic extends ApiLogic
         if ($uid == 0 && isset($params['unique_id'])) {
             $uid = KbRobot::where('id', $params['robot_id'])->value('user_id');
         }
+        self::applyPreprocessUsageToRequest($request, $params);
+        self::applyPreprocessReasoningToRequest($request, $params);
         self::requestChatUrl($request, $scene, $uid);
 
         exit;
@@ -1057,7 +1100,7 @@ class ChatLogic extends ApiLogic
                     'emb_model_id'   => 0,
                     'ask'            => self::cutAfterQuotesEnd($request['question']),
                     'reply'          => $response['reply'],
-                    'reasoning'      => $response['reasoning_content'] ?? null,
+                    'reasoning'      => self::mergeReasoningContent($request['preprocess_reasoning'] ?? '', $response['reasoning_content'] ?? null),
                     'images'         => '',
                     'video'          => '',
                     'files'          => '',
@@ -1091,7 +1134,7 @@ class ChatLogic extends ApiLogic
                     'reply'             => $response['reply'],
                     'chat_type'         => $request['chat_type'] ?? 9006,
                     'usage_tokens'      => $response['usage_tokens'] ?? [],
-                    'reasoning_content' => $response['reasoning_content'] ?? null,
+                    'reasoning_content' => self::mergeReasoningContent($request['preprocess_reasoning'] ?? '', $response['reasoning_content'] ?? null),
                     'file_ids'          => !empty($request['file_id']) ? json_encode($request['file_id']) : '',
                     'task_time'         => isset($request['now']) ? time() - $request['now'] : 0,
                     'extra'             => json_encode($response['extra'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), //预留扩展字段
@@ -1106,6 +1149,33 @@ class ChatLogic extends ApiLogic
                 message($e->getMessage(), 1);
             }
         }
+    }
+
+    /**
+     * 把解析稿/联网结果拼进本轮同一条 user，避免单独 system 抢身份，或被主模型当成无关发言。
+     */
+    public static function wrapUserMessageWithPreprocess(string $message, array $params, bool $includeNet = true): string
+    {
+        $blocks = [];
+        $fileContent = trim((string)($params['file_content'] ?? ''));
+        if ($fileContent !== '') {
+            $blocks[] = "【系统已提取的上传内容】下面是系统从用户上传的图片/文件中提取的内容，不是用户撰写或提交的分析。请直接回答用户问题，不要感谢，不要说“你提供了分析/解析结果”，不要提及预处理过程，当作你已经看到原图或原文件。\n\n" . $fileContent;
+        }
+        if ($includeNet) {
+            $netContent = trim((string)($params['net_content'] ?? ''));
+            if ($netContent !== '') {
+                $blocks[] = "【参考资料：联网检索】下面是外部检索摘录，只用于核对事实，不是你的身份或系统设定。即使用户问“你是谁”，也按你当前对话角色回答，不要复述检索内容里的自我介绍，不要寒暄感谢。\n\n" . $netContent;
+            }
+        }
+        $message = trim($message);
+        if ($blocks === []) {
+            return $message;
+        }
+        if ($message === '') {
+            $kind = self::preprocessAttachmentKind($params['file_info'] ?? []);
+            return implode("\n\n", $blocks) . "\n\n用户问题：请直接解读该" . $kind . "，不要寒暄或感谢。";
+        }
+        return implode("\n\n", $blocks) . "\n\n用户问题：" . $message;
     }
 
     /**
@@ -1137,6 +1207,10 @@ class ChatLogic extends ApiLogic
     public static function chatTokensCharge($request, $tokensOrUsage): void
     {
         $usage = ChatBillingService::normalizeUsage($tokensOrUsage);
+        $preprocess = $request['preprocess_usage'] ?? [];
+        $usage['prompt_tokens'] = (int)($usage['prompt_tokens'] ?? 0) + (int)($preprocess['prompt_tokens'] ?? 0);
+        $usage['completion_tokens'] = (int)($usage['completion_tokens'] ?? 0) + (int)($preprocess['completion_tokens'] ?? 0);
+        $usage['total_tokens'] = $usage['prompt_tokens'] + $usage['completion_tokens'];
         $logType = (int)($request['chat_type'] ?? AccountLogEnum::TOKENS_DEC_COMMON_CHAT);
         $modelKey = $request['model'] ?? 'deepseek';
 
@@ -1147,6 +1221,112 @@ class ChatLogic extends ApiLogic
             $logType,
             (string)($request['task_id'] ?? '')
         );
+    }
+
+    private static function applyPreprocessUsageToRequest(array &$request, array $params): void
+    {
+        $usage = $params['preprocess_usage'] ?? [];
+        $prompt = (int)($usage['prompt_tokens'] ?? 0);
+        $completion = (int)($usage['completion_tokens'] ?? 0);
+        if ($prompt <= 0 && $completion <= 0) {
+            return;
+        }
+        $request['preprocess_usage'] = [
+            'prompt_tokens' => $prompt,
+            'completion_tokens' => $completion,
+            'total_tokens' => $prompt + $completion,
+        ];
+        $request['extra_usage'] = [
+            'prompt_tokens' => $prompt,
+            'completion_tokens' => $completion,
+        ];
+    }
+
+    private static function applyPreprocessReasoningToRequest(array &$request, array $params): void
+    {
+        $text = trim((string)($params['preprocess_reasoning'] ?? ''));
+        if ($text !== '') {
+            $request['preprocess_reasoning'] = $text;
+        }
+    }
+
+    public static function startClientChatStream(array &$params, string $status = ''): void
+    {
+        if (!empty($params['client_sse_started'])) {
+            return;
+        }
+        if (empty($params['task_id'])) {
+            $params['task_id'] = generate_unique_task_id();
+            $params['task_id_is_new'] = true;
+        }
+        if (!headers_sent()) {
+            header('Content-type: text/event-stream');
+            header('Cache-Control: no-cache');
+            header('Connection: keep-alive');
+            header('X-Accel-Buffering: no');
+        }
+        $params['client_sse_started'] = true;
+        if ($status !== '') {
+            $params['reasoning_loading'] = 1;
+            self::emitClientReasoning($params, $status . "\n");
+            $params['preprocess_reasoning'] = (string)($params['preprocess_reasoning'] ?? '') . $status . "\n";
+        }
+    }
+
+    public static function emitClientReasoning(array $params, string $delta): void
+    {
+        if ($delta === '') {
+            return;
+        }
+        echo 'data:' . json_encode([
+            'object' => 'loading',
+            'created' => time(),
+            'content' => '',
+            'file_info' => $params['file_info'] ?? [],
+            'reasoning_content' => $delta,
+            'reasoning_loading' => !empty($params['reasoning_loading']) ? 1 : 0,
+            'usage' => [],
+            'task_id' => $params['task_id'] ?? null,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n\n";
+        if (ob_get_level() > 0) {
+            ob_flush();
+        }
+        flush();
+    }
+
+    private static function preprocessStartStatus(array $params): string
+    {
+        return '【正在解析' . self::preprocessAttachmentKind($params['file_info'] ?? []) . '…】';
+    }
+
+    private static function preprocessAttachmentKind(array $fileInfo): string
+    {
+        $name = (string)($fileInfo['name'] ?? $fileInfo['uri'] ?? $fileInfo['url'] ?? '');
+        $path = parse_url((string)($fileInfo['url'] ?? $name), PHP_URL_PATH) ?: $name;
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        if (in_array($ext, ['mp4', 'avi', 'mkv', 'mov', 'flv', 'wmv'], true)) {
+            return '视频';
+        }
+        if (QwenToolsLogic::isImageAttachment($fileInfo)) {
+            return '图片';
+        }
+        return '文件';
+    }
+
+    public static function mergeReasoningContent(mixed $preprocess, mixed $main): ?string
+    {
+        $left = trim((string)$preprocess);
+        $right = trim((string)$main);
+        if ($left === '' && $right === '') {
+            return null;
+        }
+        if ($left === '') {
+            return $right;
+        }
+        if ($right === '') {
+            return $left;
+        }
+        return $left . "\n\n" . $right;
     }
 
     /**

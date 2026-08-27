@@ -101,7 +101,7 @@
 
                     <view class="bg-white rounded-[32rpx] overflow-hidden">
                         <view
-                            class="px-[32rpx] py-[24rpx] border-b-[2rpx] border-[#f9fafb] flex items-center gap-[12rpx]">
+                            class="px-[32rpx] py-[24rpx] border-[0] border-b-[2rpx] border-[#f9fafb] flex items-center gap-[12rpx]">
                             <text class="text-sm font-bold text-[#1f2937]">客户列表</text>
                             <text class="text-xs text-[#9ca3af]">{{ customers.length }} 条</text>
                         </view>

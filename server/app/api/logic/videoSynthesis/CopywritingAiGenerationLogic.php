@@ -364,7 +364,7 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
         if ($publishCount <= 0 || $generatedCount < $publishCount) {
             return;
         }
-        $device->synthesis_m = 1;
+        $device->markSynthesisDone(SvDevice::SYNTHESIS_SCENE_SOCIAL);
         $device->save();
         Log::channel('ipVideoSynthesis')->write(sprintf(
             '设备号%s%s合成已达发布数量，标记完成：publish=%d generated=%d',
@@ -756,7 +756,7 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
                     );
                 }
 
-                $aiCopywriting = self::generateAiCopywritingForTask($coze, $userId, $shanjianType);
+                $aiCopywriting = self::generateAiCopywritingForTask($coze, $config, $userId, $shanjianType);
                 $taskTitle = $aiCopywriting['title'];
                 $taskMsg = $aiCopywriting['msg'];
                 $materialKeywords = $aiCopywriting['material_keywords'];
@@ -859,7 +859,7 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
                     if ($coze === null) {
                         $coze = self::buildPersonaCopywritingParams($device, $persona);
                     }
-                    $aiCopywriting = self::generateAiCopywritingForTask($coze, $userId, $shanjianType);
+                    $aiCopywriting = self::generateAiCopywritingForTask($coze, $config, $userId, $shanjianType);
                     $taskTitle = $aiCopywriting['title'];
                     $taskMsg = $aiCopywriting['msg'];
                     $materialKeywords = $aiCopywriting['material_keywords'];
@@ -947,7 +947,7 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
     /**
      * 与 AI 合成一致的文案/标题生成（内部走 AutoDeviceSettingLogic::copywriting 扣费）
      */
-    private static function generateAiCopywritingForTask(array $coze, int $userId, int $shanjianType): array
+    private static function generateAiCopywritingForTask(array $coze, AiPersonaSynthesisConfig $config, int $userId, int $shanjianType): array
     {
         $cozeParams = $coze;
         switch ($shanjianType) {
@@ -974,19 +974,45 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
             default:
                 throw new \Exception('视频类型不存在');
         }
+        $voice = AiPersonaSynthesisConfig::buildCopywritingGenerationVoice(
+            (int)($config->copywriting_generation_type ?? AiPersonaSynthesisConfig::COPYWRITING_GENERATION_TYPE_KNOWLEDGE),
+            (string)($config->copywriting_generation_custom ?? '')
+        );
+       
+
+        $cozeParams['voice'] = $voice;
+        $cozeParams['hook'] = '';
+
+        $copywritingLogContext = [
+            'user_id' => (int)$userId,
+            'task_type' => (int)$shanjianType,
+            'sn' => (int)$cozeParams['sn'],
+            'number' => (int)$cozeParams['number'],
+            'length' => (int)$cozeParams['length'],
+            'keywords_preview' => mb_substr((string)($cozeParams['keywords'] ?? ''), 0, 500),
+            'copywriting_generation_type' => (int)($config->copywriting_generation_type ?? 1),
+            'voice' => $voice,
+            'hook' => '',
+        ];
+        Log::channel('ipVideoSynthesis')->write('纯AI文案生成请求：' . json_encode($copywritingLogContext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         $copywritingResult = AutoDeviceSettingLogic::copywriting($cozeParams, $userId, 6);
+        Log::channel('ipVideoSynthesis')->write('纯AI文案生成正文结果：' . json_encode($copywritingResult, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $taskMsg = $copywritingResult['content'][0] ?? '';
         if (empty($taskMsg) && $shanjianType != 3) {
             throw new \Exception('AI文案生成失败');
         }
+
 
         $titleResult = AutoDeviceSettingLogic::copywriting([
             'sn' => 8,
             'number' => 1,
             'length' => 10,
             'keywords' => $taskMsg ?: ($cozeParams['keywords'] ?? ''),
+            'voice' => $voice,
+            'hook' => '',
         ], $userId, 6);
+        Log::channel('ipVideoSynthesis')->write('纯AI文案生成标题结果：' . json_encode($titleResult, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $taskTitle = $titleResult['content'][0] ?? 'AI自动生成视频';
 
         if ($shanjianType == 4) {

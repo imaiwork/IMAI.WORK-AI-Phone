@@ -13,6 +13,7 @@ use app\api\lists\aiPersona\WechatCircleInteractionLists;
 use app\api\lists\aiPersona\WechatCreateGroupLists;
 use app\api\lists\aiPersona\WechatCustomerLists;
 use app\api\lists\aiPersona\WechatMessageReplyLists;
+use app\api\logic\aiPersona\PublishResendLogic;
 use app\api\validate\aiPersona\TaskValidate;
 use think\exception\HttpResponseException;
 
@@ -23,6 +24,40 @@ class TaskController extends BaseApiController
         try {
             (new TaskValidate())->get()->goCheck('publish');
             return $this->dataLists(new PublishTaskLists());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    /**
+     * 发布失败重发前置校验（类似 auto.device/checkOpt）
+     */
+    public function checkPublishResend()
+    {
+        try {
+            $params = (new TaskValidate())->post()->goCheck('checkPublishResend');
+            $result = PublishResendLogic::checkPublishResend($params);
+            if ($result) {
+                return $this->data(PublishResendLogic::getReturnData());
+            }
+            return $this->fail(PublishResendLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
+    /**
+     * 发布失败立即重新发送（类似 auto.device/opt）
+     */
+    public function publishResend()
+    {
+        try {
+            $params = (new TaskValidate())->post()->goCheck('publishResend');
+            $result = PublishResendLogic::publishResend($params);
+            if ($result) {
+                return $this->data(PublishResendLogic::getReturnData());
+            }
+            return $this->fail(PublishResendLogic::getError());
         } catch (HttpResponseException $e) {
             return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }

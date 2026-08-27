@@ -297,6 +297,13 @@ class AccountLogEnum
     const TOKENS_DEC_GEO_MATCH_BRAND = 14009; // AI匹配品牌信息(按次,向导第一步行业/别名回填)
     const TOKENS_DEC_GEO_REPORT = 14010;      // GEO诊断报告(按次,含报告内AI优化建议)
 
+    // 热点追踪 · TikHub 按次 / 方舟按模型
+    const TOKENS_DEC_HOTSPOT_HOT_DAY = 15001;
+    const TOKENS_DEC_HOTSPOT_HOT_WORDS = 15002;
+    const TOKENS_DEC_HOTSPOT_INSIGHT = 15003;
+    const TOKENS_DEC_HOTSPOT_ARK_CHAT = 15004;
+    const TOKENS_DEC_HOTSPOT_ARK_SEARCH = 15005;
+
     // 自动化功能
     // 社媒平台
     const TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED = 10301;  // 自动化社媒平台发布
@@ -541,6 +548,13 @@ class AccountLogEnum
         self::TOKENS_DEC_GEO_MATCH_BRAND,
         self::TOKENS_DEC_GEO_REPORT,
 
+        // 热点追踪
+        self::TOKENS_DEC_HOTSPOT_HOT_DAY,
+        self::TOKENS_DEC_HOTSPOT_HOT_WORDS,
+        self::TOKENS_DEC_HOTSPOT_INSIGHT,
+        self::TOKENS_DEC_HOTSPOT_ARK_CHAT,
+        self::TOKENS_DEC_HOTSPOT_ARK_SEARCH,
+
         // 视频复刻
         self::TOKENS_DEC_VIDEO_IMITATION,
         self::TOKENS_DEC_VIDEO_IMITATION_ADD,
@@ -700,6 +714,11 @@ class AccountLogEnum
             self::TOKENS_DEC_GEO_VIDEO => 'GEO文章转短视频减少算力',
             self::TOKENS_DEC_GEO_MATCH_BRAND => 'GEO匹配品牌信息减少算力',
             self::TOKENS_DEC_GEO_REPORT => 'GEO诊断报告减少算力',
+            self::TOKENS_DEC_HOTSPOT_HOT_DAY => '热点追踪热榜拉取减少算力',
+            self::TOKENS_DEC_HOTSPOT_HOT_WORDS => '热点追踪热搜词拉取减少算力',
+            self::TOKENS_DEC_HOTSPOT_INSIGHT => '热点追踪话题洞察减少算力',
+            self::TOKENS_DEC_HOTSPOT_ARK_CHAT => '热点追踪方舟对话减少算力',
+            self::TOKENS_DEC_HOTSPOT_ARK_SEARCH => '热点追踪方舟联网检索减少算力',
 
             self::KEYWORD_TO_TITLE => 'Ai标题生成费用扣除减少算力',
             self::KEYWORD_TO_SUBTITLE => 'Ai正文描述生成费用扣除减少算力',

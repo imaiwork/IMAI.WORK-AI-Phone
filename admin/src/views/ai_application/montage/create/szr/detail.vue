@@ -154,7 +154,7 @@ const getStatus = (status: number) => {
     const statusMap = {
         1: "生成中",
         2: "形象合成失败",
-        5: "音色合成失败",
+        5: "合成失败",
         6: "生成成功",
     };
     return statusMap[status as keyof typeof statusMap];

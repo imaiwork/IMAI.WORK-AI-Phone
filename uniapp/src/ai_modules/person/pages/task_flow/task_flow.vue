@@ -908,6 +908,7 @@ const handleEditTask = (task: TaskItem) => {
     const [start, end] = task.time.split("-");
     newTask.startTime = start;
     newTask.endTime = end;
+    updateEndTime();
 
     editingTaskId.value = task.id;
     addTaskError.value = "";

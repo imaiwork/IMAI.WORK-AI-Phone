@@ -958,12 +958,214 @@ class KbKnowLogic extends BaseLogic
 
 
     /**
+     * @notes 用知识库真实向量模型拼检索标识，禁止写死 3:3
+     * @param mixed $know
+     * @return string 如 6:20074，缺配置时返回空串
+     */
+    public static function resolveKnowEmbModels(mixed $know): string
+    {
+        if (is_array($know) || is_object($know)) {
+            $mainId = (int)($know['embedding_model_id'] ?? 0);
+            $subId = (int)($know['embedding_model_sub_id'] ?? 0);
+        } else {
+            return '';
+        }
+        if ($mainId <= 0 || $subId <= 0) {
+            return '';
+        }
+        return $mainId . ':' . $subId;
+    }
+
+    /**
+     * @notes 将召回 annex 拼成检索文本行（个微聊天专用）
+     * @param array $annex formatAnnex 结果
+     * @return string
+     */
+    public static function formatRecallAnnexText(array $annex): string
+    {
+        $lines = [];
+        foreach ($annex['images'] ?? [] as $item) {
+            $url = trim((string)($item['url'] ?? ''));
+            if ($url === '') {
+                continue;
+            }
+            $lines[] = '相关图片：' . $url;
+        }
+        foreach ($annex['video'] ?? [] as $item) {
+            $url = trim((string)($item['url'] ?? ''));
+            if ($url === '') {
+                continue;
+            }
+            $lines[] = '相关视频：' . $url;
+        }
+        foreach ($annex['files'] ?? [] as $item) {
+            $url = trim((string)($item['url'] ?? ''));
+            if ($url === '') {
+                continue;
+            }
+            $name = trim((string)($item['name'] ?? ''));
+            $lines[] = '相关附件：' . ($name !== '' ? $name . ' ' : '') . $url;
+        }
+        return $lines ? implode("\n", $lines) . "\n" : '';
+    }
+
+    /**
+     * @notes 合并去重 annex 列表
+     * @param array $base
+     * @param array $add
+     * @return array{images: array, video: array, files: array}
+     */
+    public static function mergeAnnexLists(array $base, array $add): array
+    {
+        foreach (['images', 'video', 'files'] as $key) {
+            $seen = [];
+            foreach (array_merge($base[$key] ?? [], $add[$key] ?? []) as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $url = trim((string)($item['url'] ?? ''));
+                if ($url === '') {
+                    continue;
+                }
+                $seen[$url] = [
+                    'name' => $item['name'] ?? '',
+                    'url'  => $url,
+                ];
+            }
+            $base[$key] = array_values($seen);
+        }
+        $base['images'] = $base['images'] ?? [];
+        $base['video'] = $base['video'] ?? [];
+        $base['files'] = $base['files'] ?? [];
+        return $base;
+    }
+
+    /**
+     * @notes 个微聊天发送前截断素材数量
+     * @param array $annex
+     * @return array{images: array, video: array, files: array}
+     */
+    public static function limitAnnexForWechatSend(array $annex): array
+    {
+        $limits = ['images' => 9, 'video' => 3, 'files' => 5];
+        $out = ['images' => [], 'video' => [], 'files' => []];
+        foreach ($limits as $key => $limit) {
+            $items = [];
+            foreach ($annex[$key] ?? [] as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $url = trim((string)($item['url'] ?? ''));
+                if ($url === '') {
+                    continue;
+                }
+                $items[] = [
+                    'name' => $item['name'] ?? '',
+                    'url'  => FileService::getFileUrl($url),
+                ];
+                if (count($items) >= $limit) {
+                    break;
+                }
+            }
+            $out[$key] = $items;
+        }
+        return $out;
+    }
+
+    /**
+     * @notes 取出 annex 全部 URL，供回复正文抠图去重
+     * @param array $annex
+     * @return array
+     */
+    public static function annexUrls(array $annex): array
+    {
+        $urls = [];
+        foreach (['images', 'video', 'files'] as $key) {
+            foreach ($annex[$key] ?? [] as $item) {
+                $url = trim((string)($item['url'] ?? ''));
+                if ($url !== '') {
+                    $urls[] = $url;
+                }
+            }
+        }
+        return array_values(array_unique($urls));
+    }
+
+    /**
+     * @notes 拼一条召回结果文本；includeAnnex 默认关闭
+     * @param int $num
+     * @param array $val
+     * @param bool $includeAnnex
+     * @param array|null $annexOut
+     * @return string
+     */
+    public static function buildAiChatSearchItemText(int $num, array $val, bool $includeAnnex = false, ?array &$annexOut = null): string
+    {
+        $text = '知识库检索出的内容' . $num . ':' . ($val['question'] ?? '') . " \n";
+        if (!empty($val['answer'])) {
+            $text .= '你的第' . $num . '参考回复是:' . $val['answer'] . "。\n";
+        } else {
+            $text .= '内容' . $num . "未设置回复，结合上下文，你来用简短的答案自行补充回复。\n";
+        }
+        if (!$includeAnnex) {
+            return $text;
+        }
+
+        $annex = KbEmbedding::formatAnnex($val['annex'] ?? []);
+        $text .= self::formatRecallAnnexText($annex);
+        if (is_array($annexOut)) {
+            $annexOut = self::mergeAnnexLists($annexOut, $annex);
+        }
+        return $text;
+    }
+
+    /**
+     * @notes 回复正文中的图片 URL 去掉已通过 annex 发送的
+     * @param array $replyImageUrls
+     * @param array $sentUrls
+     * @return array
+     */
+    public static function filterReplyImagesAlreadySent(array $replyImageUrls, array $sentUrls): array
+    {
+        $normalizedSent = [];
+        foreach ($sentUrls as $url) {
+            $url = trim((string)$url);
+            if ($url === '') {
+                continue;
+            }
+            $normalizedSent[FileService::getFileUrl($url)] = true;
+        }
+        $kept = [];
+        foreach ($replyImageUrls as $url) {
+            $url = trim((string)$url);
+            if ($url === '') {
+                continue;
+            }
+            $full = FileService::getFileUrl($url);
+            if (isset($normalizedSent[$full])) {
+                continue;
+            }
+            $kept[] = $url;
+        }
+        return $kept;
+    }
+
+    /**
      * @notes AI聊天绑向量知识库内容检索
+     * @param mixed $KbId
+     * @param mixed $content
+     * @param array $emb_setting
+     * @param bool $includeAnnex 仅个微聊天传 true
+     * @param array|null $annexOut
+     * @return string
      * @throws Exception
      * @author kb
      */
-    public static function embAiChatSearch($KbId,$content,$emb_setting = []): string
+    public static function embAiChatSearch($KbId, $content, $emb_setting = [], bool $includeAnnex = false, ?array &$annexOut = null): string
     {
+        if ($includeAnnex) {
+            $annexOut = is_array($annexOut) ? $annexOut : ['images' => [], 'video' => [], 'files' => []];
+        }
         if (empty($KbId)){
             return '知识库为空，未找到匹配内容';
         }
@@ -986,9 +1188,12 @@ class KbKnowLogic extends BaseLogic
         }
         $rankingStatus  = 0;
         $rankingScore   = 0.5;
-        $embModels      = '3:3';
+        $embModels      = self::resolveKnowEmbModels($know);
 
         $questions = [$question];
+        if (in_array($searchMode, ['similar', 'mix'], true) && $embModels === '') {
+            return '知识库存在变动，未找到匹配内容';
+        }
         // 发起检索
         $results = [];
         foreach ($questions as $query) {
@@ -1026,14 +1231,7 @@ class KbKnowLogic extends BaseLogic
         $searchContent = '对"'.$content.'"进行知识库检索'."\n";
         $num = 1;
         foreach ($pgList as $val) {
-
-            $searchContent .= '知识库检索出的内容'.$num.":".$val['question']." \n";
-            if (!empty($val['answer'])){
-                $searchContent .= '你的第'.$num.'参考回复是:'.$val['answer']."。\n";
-            }else{
-                $searchContent .= '内容'.$num."未设置回复，结合上下文，你来用简短的答案自行补充回复。\n";
-            }
-
+            $searchContent .= self::buildAiChatSearchItemText($num, $val, $includeAnnex, $annexOut);
             $num++;
         }
         $searchContent .= '知识库检索完毕。';
@@ -1050,7 +1248,7 @@ class KbKnowLogic extends BaseLogic
     {
         $know = KbKnow::where('name', '模型大管家')->where('user_id',$userId)->findOrEmpty();
         if ($know->isEmpty()){
-            return '--检索开始：'."\n".'对问题"'.$content.'" 进行检索：'."\n未找到合适的智能体。\n--检索结束。\n现在你没有角色，恢复成常规对话模式。";
+            return '--检索开始：'."\n".'对问题"'.$content.'" 进行检索：'."\n未找到相关的智能体。\n--检索结束。\n由于未检索到智能体，现在的你不是模型大管家，恢复成正常的AI对话模式。";
         }
         $KbId = $know['id'];
         // 接收参数
@@ -1095,7 +1293,7 @@ class KbKnowLogic extends BaseLogic
         $pgList = RecallUtils::filterMaxTokens($results, $searchTokens);
 
         if (!$pgList) {
-            return '--检索开始：'."\n".'对问题："'.$content.'" 进行检索：'."\n未找到相关智能体。\n--检索结束。\n现在你没有角色，恢复成常规对话模式。";
+            return '--检索开始：'."\n".'对问题："'.$content.'" 进行检索：'."\n未找到相关智能体。\n--检索结束。\n由于未检索到智能体，现在的你不是模型大管家，恢复成正常的AI对话模式。";
         }
 
         $searchContent = '--检索开始：'."\n".'对问题："'.$content.'" 进行检索：'."\n";
@@ -1108,7 +1306,7 @@ class KbKnowLogic extends BaseLogic
                 $robotName = KbRobot::where('id',$checkRobotId)->value('name','默认助理');
                 $searchContent .= '检索出的智能体结果是: 【@'.$robotName."】。\n";
             }else{
-                $searchContent .= "未找到匹配内容，现在你没有角色，恢复成常规对话模式。\n";
+                $searchContent .= "未找到匹配内容，由于未检索到智能体，现在的你不是模型大管家，恢复成正常的AI对话模式。\n";
             }
             break;
         }

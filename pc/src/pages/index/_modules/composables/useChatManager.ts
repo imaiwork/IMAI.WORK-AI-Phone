@@ -8,6 +8,7 @@ import { useChatEventBus } from "./useChatEventBus";
 import { AGENT_UNAVAILABLE_TIP, canUseAgent } from "@/utils/agentPermission";
 import dayjs from "dayjs";
 import { cancelRequestsByUrl } from "@/utils/http/cancel";
+import { handleSseFrames } from "@/utils/http/sse-frame";
 
 /**
  * @description useChatManager Composable
@@ -53,58 +54,51 @@ export function useChatManager() {
      * @param value - 从流中读取的数据。
      */
     const _handleStreamMessage = (value: string) => {
-        value
-            .trim()
-            .split("data:")
-            .forEach((text) => {
-                if (!text) return;
-                try {
-                    const {
-                        object,
-                        content,
-                        task_id: newTaskId,
-                        usage,
-                        reasoning_content,
-                        check_robot_id,
-                    } = JSON.parse(text);
-                    if (newTaskId && !taskId.value) {
-                        const firstMessage = chatContentList.value[0];
-                        if (firstMessage) {
-                            triggerHistoryRefresh({
-                                taskId: newTaskId,
-                                message: firstMessage?.message,
-                                createTime: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                            });
-                        }
-
-                        chatStore.replaceTaskId(newTaskId);
-                        replaceState({
-                            task_id: newTaskId,
-                            agent_id: agentValue.value?.id,
-                        });
-                    } else if (newTaskId && newTaskId !== taskId.value) {
-                        return;
-                    }
-                    const lastMessage = chatContentList.value[chatContentList.value.length - 1];
-                    if (object === "loading") {
-                        const update: Partial<ChatMessage> = {};
-                        if (reasoning_content) {
-                            update.is_reasoning_finished = false;
-                            update.reasoning_content = (lastMessage.reasoning_content || "") + reasoning_content;
-                        } else if (content) {
-                            update.is_reasoning_finished = true;
-                            update.reply = (lastMessage.reply || "") + content;
-                        }
-                        chatStore.updateLastMessage(update);
-                    } else if (object === "finished") {
-                        if (check_robot_id) {
-                            verifyAndBindCheckRobot(check_robot_id);
-                        }
-                        chatStore.updateLastMessage({ consume_tokens: usage });
-                    }
-                    chatScrollToBottom();
-                } catch (e) {}
-            });
+        handleSseFrames(value, (dataJson) => {
+            const {
+                object,
+                content,
+                task_id: newTaskId,
+                usage,
+                reasoning_content,
+                check_robot_id,
+            } = dataJson;
+            if (newTaskId && !taskId.value) {
+                const firstMessage = chatContentList.value[0];
+                if (firstMessage) {
+                    triggerHistoryRefresh({
+                        taskId: newTaskId,
+                        message: firstMessage?.message,
+                        createTime: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                    });
+                }
+                chatStore.replaceTaskId(newTaskId);
+                replaceState({
+                    task_id: newTaskId,
+                    agent_id: agentValue.value?.id,
+                });
+            } else if (newTaskId && newTaskId !== taskId.value) {
+                return;
+            }
+            const lastMessage = chatContentList.value[chatContentList.value.length - 1];
+            if (object === "loading") {
+                const update: Partial<ChatMessage> = {};
+                if (reasoning_content) {
+                    update.is_reasoning_finished = false;
+                    update.reasoning_content = (lastMessage.reasoning_content || "") + reasoning_content;
+                } else if (content) {
+                    update.is_reasoning_finished = true;
+                    update.reply = (lastMessage.reply || "") + content;
+                }
+                chatStore.updateLastMessage(update);
+            } else if (object === "finished") {
+                if (check_robot_id) {
+                    verifyAndBindCheckRobot(check_robot_id);
+                }
+                chatStore.updateLastMessage({ consume_tokens: usage });
+            }
+            chatScrollToBottom();
+        });
     };
 
     /**
@@ -161,7 +155,7 @@ export function useChatManager() {
                               },
                 ) ?? [];
 
-            chatStore.chatContentList = historyMessages;
+            chatStore.setMessages(historyMessages);
             chatScrollToBottom();
         } finally {
             chatStore.isLoading = false;
@@ -235,6 +229,7 @@ export function useChatManager() {
                     },
                     onmessage: _handleStreamMessage,
                     onclose: () => {
+                        streamReader.value = null;
                         chatStore.updateLastMessage({ loading: false });
                         chatStore.stopReceiving();
                         chatStore.clearFiles();
@@ -276,8 +271,16 @@ export function useChatManager() {
     /**
      * @description 滚动聊天窗口到底部。
      */
+    let scrollFrame = 0;
     const chatScrollToBottom = () => {
-        nextTick(() => chattingRef.value?.scrollToBottom());
+        // SSR 阶段没有可滚动的 DOM
+        if (typeof requestAnimationFrame === "undefined") return;
+        // 流式回复每帧都会调这里，用 rAF 合并成一帧一次，避免反复读 scrollHeight 触发 reflow
+        if (scrollFrame) return;
+        scrollFrame = requestAnimationFrame(() => {
+            scrollFrame = 0;
+            chattingRef.value?.scrollToBottom();
+        });
     };
 
     /**
@@ -305,7 +308,9 @@ export function useChatManager() {
             const lastMessage = chatContentList.value[chatContentList.value.length - 1];
             chatStore.updateLastMessage({
                 loading: false,
-                stop_reply: lastMessage.reply || "用户已停止内容生成",
+                // 只放提示语：stop_reply 在气泡里是纯文本渲染，
+                // 把已生成的正文搬进来会让渲染好的 Markdown 变成一坨灰色斜体纯文本
+                stop_reply: lastMessage?.reply ? "（已停止生成）" : "用户已停止内容生成",
             });
             chatStore.stopReceiving();
         }

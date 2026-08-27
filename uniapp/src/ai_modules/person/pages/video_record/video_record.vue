@@ -71,6 +71,12 @@
                                 <text class="text-[22rpx] text-[#EF4444] font-semibold">生成失败</text>
                                 <view class="flex flex-col items-center gap-[10rpx] z-40">
                                     <view
+                                        class="flex items-center gap-[6rpx] bg-[#DBEAFE] px-[16rpx] py-[6rpx] rounded-full active:bg-[#BFDBFE]"
+                                        @click.stop="handleRetry(item)">
+                                        <u-icon name="reload" color="#0065fb" size="18"></u-icon>
+                                        <text class="text-[20rpx] text-primary font-medium">重试生成</text>
+                                    </view>
+                                    <view
                                         class="flex items-center gap-[6rpx] bg-[#FEE2E2] px-[16rpx] py-[6rpx] rounded-full active:bg-[#FECACA]"
                                         @click.stop="handleViewFailReason(item)">
                                         <u-icon name="info-circle" color="#EF4444" size="18"></u-icon>
@@ -174,7 +180,7 @@
 </template>
 
 <script setup lang="ts">
-import { getGenerateRecordList } from "@/api/person";
+import { getGenerateRecordList, retryGenerateRecord } from "@/api/person";
 import { deleteShanjianTaskRecord } from "@/api/digital_human";
 import { formatAudioTime } from "@/utils/util";
 
@@ -246,9 +252,7 @@ const getTagList = (item: any): TagConfig[] => {
         item.is_downgrade === 1 ? AI_DOWNGRADE_TAG : MATERIAL_SOURCE_MAP[item.visual_material_source as number];
     // 朋友圈视频不展示文案来源标签（尤其是「爆款仿写」）
     const copyTag =
-        Number(item.wechat_type) === 1
-            ? undefined
-            : COPYWRITING_SOURCE_MAP[item.copywriting_source as number];
+        Number(item.wechat_type) === 1 ? undefined : COPYWRITING_SOURCE_MAP[item.copywriting_source as number];
 
     return [COVER_SOURCE_MAP[item.video_cover_source as number], materialTag, copyTag].filter(Boolean) as TagConfig[];
 };
@@ -266,6 +270,7 @@ const queryParams = reactive({
     page_no: 1,
     page_size: 20,
     persona_id: "",
+    auto_type: 1,
 });
 
 const showVideoPreview = ref<boolean>(false);
@@ -327,6 +332,37 @@ const handleViewFailReason = (item: any) => {
         content: String(item?.remark || "").trim() || "暂无失败原因",
         showCancel: false,
         confirmText: "知道了",
+    });
+};
+
+// 重试规则与后端一致：重试成功后按发布时间自动处理，已过时段需到发布记录手动重发
+const RETRY_CONFIRM_CONTENT =
+    "生成成功且未到发布时间：到点自动发布，无需操作；生成成功但已过发布时间：需到「发布记录」手动重新发送";
+
+const handleRetry = (item: any) => {
+    if (item.can_retry === false) {
+        uni.showToast({ title: item.retry_disabled_reason || "当前视频不可重试", icon: "none", duration: 3000 });
+        return;
+    }
+    uni.showModal({
+        title: "重试生成视频",
+        content: RETRY_CONFIRM_CONTENT,
+        confirmText: "开始重试",
+        cancelText: "取消",
+        success: async ({ confirm }) => {
+            if (!confirm) return;
+            uni.showLoading({ title: "提交中...", mask: true });
+            try {
+                await retryGenerateRecord({ id: item.id });
+                item.status = VideoStatus.pending;
+                item.remark = "";
+                uni.showToast({ title: "已开始重试", icon: "none", duration: 3000 });
+            } catch (error: any) {
+                uni.showToast({ title: error?.message || error || "重试失败", icon: "none", duration: 3000 });
+            } finally {
+                uni.hideLoading();
+            }
+        },
     });
 };
 

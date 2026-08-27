@@ -198,7 +198,7 @@
                         @query="handleQueryAgentList">
                         <view class="flex flex-col gap-[16rpx] px-[32rpx]">
                             <view
-                                class="bg-white rounded-[28rpx] flex p-[28rpx] relative shadow-sm border border-solid border-[#E5E7EB]"
+                                class="bg-white rounded-[28rpx] flex p-[28rpx] shadow-sm border border-solid border-[#E5E7EB]"
                                 :class="{ 'opacity-70': !canUseCurrentAgent(item) }"
                                 v-for="(item, index) in agentList"
                                 :key="index"
@@ -211,20 +211,17 @@
                                 </view>
 
                                 <view class="flex-1 min-w-0 ml-[24rpx]">
-                                    <view
-                                        class="agent-title-row"
-                                        :class="{
-                                            'agent-title-row--with-more': isUserOwnedAgent(item),
-                                        }">
-                                        <text class="agent-title-name">
+                                    <view class="flex min-w-0 items-center gap-x-[12rpx] mb-[8rpx]">
+                                        <text
+                                            class="min-w-0 flex-1 line-clamp-1 break-all text-[28rpx] font-bold text-[#212121]">
                                             {{ item.name }}
                                         </text>
-                                        <text
-                                            v-if="shouldShowAgentAccessTag(item)"
-                                            class="agent-access-tag"
-                                            :class="getAgentAccessTagClass(item)">
-                                            {{ getAgentAccessTagText(item) }}
-                                        </text>
+                                        <view
+                                            v-if="isAgentOwner(item)"
+                                            class="shrink-0 w-[48rpx] h-[48rpx] rounded-full bg-[#F4F6FB] flex items-center justify-center active:opacity-70"
+                                            @click.stop="handleMore(item)">
+                                            <u-icon name="more-dot-fill" :size="22" color="#94A3B8" />
+                                        </view>
                                     </view>
 
                                     <text
@@ -232,29 +229,30 @@
                                         {{ item.intro || item.introduced }}
                                     </text>
 
-                                    <view class="flex items-center justify-between">
+                                    <view class="flex items-center justify-between gap-[12rpx]">
                                         <view
-                                            class="flex items-center gap-x-[8rpx] bg-[#EEF4FF] rounded-full px-[20rpx] py-[10rpx] w-fit">
+                                            class="flex items-center gap-x-[8rpx] bg-[#EEF4FF] rounded-full px-[20rpx] py-[10rpx] w-fit shrink-0">
                                             <u-icon name="chat" :size="26" color="#0065fb" />
                                             <text class="text-[22rpx] font-medium text-primary">去对话</text>
                                         </view>
-                                        <view
-                                            class="shrink-0 rounded-full px-[14rpx] py-[4rpx] text-[20rpx] font-medium"
-                                            :class="
-                                                item.source == 1
-                                                    ? 'bg-[#EEF4FF] text-primary'
-                                                    : 'bg-[#FDF3E3] text-[#A13016]'
-                                            ">
-                                            {{ item.source == 0 ? "官方" : "用户" }}
+                                        <view class="flex items-center justify-end gap-[8rpx] min-w-0">
+                                            <text
+                                                v-if="shouldShowAgentAccessTag(item)"
+                                                class="agent-access-tag"
+                                                :class="getAgentAccessTagClass(item)">
+                                                {{ getAgentAccessTagText(item) }}
+                                            </text>
+                                            <view
+                                                class="shrink-0 rounded-full px-[14rpx] py-[4rpx] text-[20rpx] font-medium"
+                                                :class="
+                                                    item.source == 1
+                                                        ? 'bg-[#EEF4FF] text-primary'
+                                                        : 'bg-[#FDF3E3] text-[#A13016]'
+                                                ">
+                                                {{ item.source == 0 ? "官方" : "用户" }}
+                                            </view>
                                         </view>
                                     </view>
-                                </view>
-
-                                <view
-                                    v-if="isAgentOwner(item)"
-                                    class="absolute top-[16rpx] right-[16rpx] w-[48rpx] h-[48rpx] rounded-full bg-[#F4F6FB] flex items-center justify-center active:opacity-70 z-[22]"
-                                    @click.stop="handleMore(item)">
-                                    <u-icon name="more-dot-fill" :size="22" color="#94A3B8" />
                                 </view>
                             </view>
                         </view>
@@ -478,7 +476,6 @@ import {
     canUseAgent,
     getAgentAccessStatus,
     getAgentAccessTagText as getAgentPermissionTagText,
-    isUserOwnedAgent,
     shouldShowAgentAccessTag,
 } from "@/utils/agentPermission";
 import { parseChatStreamErrorPayload, resolveChatErrorMessage } from "@/utils/chatStream";
@@ -3027,18 +3024,6 @@ onUnmounted(() => uni.$off("agentCreated", handleAgentCreated));
 
 .navbar-center {
     @apply w-full flex items-center justify-center px-2;
-}
-
-.agent-title-row {
-    @apply flex min-w-0 items-center gap-x-[10rpx] mb-[8rpx];
-}
-
-.agent-title-row--with-more {
-    @apply pr-[64rpx];
-}
-
-.agent-title-name {
-    @apply min-w-0 flex-1 line-clamp-1 break-all text-[28rpx] font-bold text-[#212121];
 }
 
 .agent-access-tag {

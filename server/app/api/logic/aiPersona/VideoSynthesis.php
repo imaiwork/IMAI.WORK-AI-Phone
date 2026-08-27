@@ -295,7 +295,7 @@ class VideoSynthesis extends BasePersonaLogic
         } catch (\Exception $e) {
              $errorMsg = $e->getMessage();
             if ($errorMsg !== '-不存在') {
-                $device->synthesis_w = 1;
+                $device->markSynthesisDone(SvDevice::SYNTHESIS_SCENE_WECHAT);
                 $device->save();
             }
             $msg = '设备号' . $deviceCode . '视频合成任务失败：' . $e->getMessage();
@@ -704,7 +704,7 @@ class VideoSynthesis extends BasePersonaLogic
             if (empty($createdSettings)) {
                 throw new \Exception('未成功创建任何朋友圈视频合成任务');
             }
-            $device->synthesis_w = 1;
+            $device->markSynthesisDone(SvDevice::SYNTHESIS_SCENE_WECHAT);
             $device->save();
             Db::commit();
             return [

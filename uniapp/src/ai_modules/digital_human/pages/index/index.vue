@@ -132,7 +132,9 @@
                                                 <text class="text-[20rpx] text-white">AI智能剪辑完成</text>
                                             </template>
                                             <template v-if="item.clip_status == 4">
-                                                <text class="text-[20rpx] text-white">AI智能剪辑失败</text>
+                                                <text class="text-[20rpx] text-white">{{
+                                                    item.remark || "AI智能剪辑失败"
+                                                }}</text>
                                             </template>
                                         </view>
 
@@ -141,17 +143,14 @@
                                             class="absolute inset-0 flex flex-col items-center justify-center bg-[#000000]/40 z-20 px-[12rpx]"
                                             @click.stop>
                                             <template v-if="isDownloadFailed(item)">
-                                                <view
-                                                    class="bg-[#EF4444] px-[16rpx] py-[6rpx] rounded-full mb-[8rpx]">
+                                                <view class="bg-[#EF4444] px-[16rpx] py-[6rpx] rounded-full mb-[8rpx]">
                                                     <text class="text-[20rpx] text-white font-medium">下载失败</text>
                                                 </view>
                                                 <view
                                                     class="px-[20rpx] py-[8rpx] rounded-full bg-primary active:opacity-80"
                                                     @click.stop="handleRedownload(item)">
                                                     <text class="text-[20rpx] text-white font-medium">
-                                                        {{
-                                                            redownloadId === item.id ? "下载中..." : "重新下载"
-                                                        }}
+                                                        {{ redownloadId === item.id ? "下载中..." : "重新下载" }}
                                                     </text>
                                                 </view>
                                             </template>
@@ -253,9 +252,9 @@ import ToneCloneIcon from "@/ai_modules/digital_human/static/icons/tone_clone.sv
 import MeCreateIcon from "@/ai_modules/digital_human/static/icons/me_create.svg";
 import MontageScanIcon from "@/ai_modules/digital_human/static/icons/scan.svg";
 import MaterialLibraryIcon from "@/ai_modules/digital_human/static/icons/material_library.svg";
-import ImageCreateIcon from "@/ai_modules/digital_human/static/icons/image_create.svg";
 import StoryboardIcon from "@/ai_modules/digital_human/static/icons/storyboard.svg";
 import HotWriteIcon from "@/ai_modules/digital_human/static/icons/video3.svg";
+import HotspotIcon from "@/ai_modules/digital_human/static/icons/flame_menu.svg";
 import AnchorVideo from "@/ai_modules/digital_human/components/anchor-video/anchor-video.vue";
 
 enum MenuKey {
@@ -277,6 +276,7 @@ enum MenuKey {
     SCAN_PUBLISH_WORKS = "scan_publish_works",
     MONTAGE_MIX = "montage_mix",
     HOT_WRITE = "hot_write",
+    HOTSPOT = "hotspot",
 }
 
 const worksLists = ref<any[]>([]);
@@ -299,7 +299,7 @@ const utils_2 = [
     { label: "素材库", key: MenuKey.MATERIAL_LIBRARY, icon: MaterialLibraryIcon },
     { label: "数字人形象", key: MenuKey.ANCHOR, icon: AnchorCloneIcon },
     { label: "数字人声音", key: MenuKey.TONE, icon: ToneCloneIcon },
-    { label: "图片创作", key: MenuKey.IMAGE_CREATE, icon: ImageCreateIcon },
+    { label: "热点追踪", key: MenuKey.HOTSPOT, icon: HotspotIcon },
     { label: "分镜混剪", key: MenuKey.FRAGMENT_MIX, icon: StoryboardIcon },
     // { label: "爆款仿写", key: MenuKey.BOMB_COPY, icon: BombCopyIcon },
     // { label: "文案提取", key: MenuKey.TEXT_EXTRACT, icon: TextExtractIcon },
@@ -330,6 +330,7 @@ const pageMap: Record<string, string | (() => void)> = {
     [MenuKey.SCAN_PUBLISH_WORKS]: "/ai_modules/digital_human/pages/platform_publish_works/platform_publish_works",
     [MenuKey.MONTAGE_MIX]: "/ai_modules/digital_human/pages/montage_create/montage_create",
     [MenuKey.HOT_WRITE]: "/ai_modules/hot_write/pages/index/index",
+    [MenuKey.HOTSPOT]: "/ai_modules/hotspot/pages/index/index",
 };
 
 // 根据不同的类型获取不同的status值

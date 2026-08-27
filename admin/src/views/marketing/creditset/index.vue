@@ -43,6 +43,9 @@
             <el-tab-pane label="爆款仿写">
                 <ConfigTable v-model:globalRate="globalRate" :data="getHotWriteConfig" />
             </el-tab-pane>
+            <el-tab-pane label="热点追踪">
+                <ConfigTable v-model:globalRate="globalRate" :data="getHotspotConfig" />
+            </el-tab-pane>
             <el-tab-pane label="知识库">
                 <ConfigTable v-model:globalRate="globalRate" :data="getKnbConfig" />
             </el-tab-pane>
@@ -172,6 +175,9 @@ const getPhoneAutoConfig = computed(() =>
 const getHotWriteConfig = computed(() =>
     tableData.value.filter((item) => ["video_imitation_copywriting_parse"].includes(item.scene)),
 );
+
+const getHotspotConfig = computed(() => tableData.value.filter((item) => ["hotspot_insight"].includes(item.scene)));
+
 const getOtherConfig = computed(() =>
     tableData.value.filter((item) =>
         [

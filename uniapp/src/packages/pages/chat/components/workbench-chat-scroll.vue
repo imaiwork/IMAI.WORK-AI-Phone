@@ -97,7 +97,12 @@
                                             : 'text-xs bg-white rounded-[16rpx] px-2 h-[60rpx] inline-flex items-center gap-x-1',
                                         { 'is-hidden': currAgent.id || isPhoneCtrlActive },
                                     ]"
-                                    @click="guardToolbarAction(() => { showModel = true; hideKeyboard(); })">
+                                    @click="
+                                        guardToolbarAction(() => {
+                                            showModel = true;
+                                            hideKeyboard();
+                                        })
+                                    ">
                                     <image
                                         v-show="showDisplayModelAvatar"
                                         :src="displayModel.logo"
@@ -206,9 +211,7 @@
                                 </view>
                             </template>
                             <template v-if="isHome">
-                                <view
-                                    :class="tbPill(false)"
-                                    @click="guardToolbarAction(() => toPage('ladder_player'))">
+                                <view :class="tbPill(false)" @click="guardToolbarAction(() => toPage('ladder_player'))">
                                     <u-icon name="/static/images/icons/chat_line.svg" :size="24"></u-icon>
                                     <text class="text-xs">AI陪练</text>
                                 </view>
@@ -219,9 +222,7 @@
                                     <text class="text-xs">AI会议</text>
                                 </view>
                                 <!-- #ifdef MP-WEIXIN -->
-                                <view
-                                    :class="tbPill(false)"
-                                    @click="guardToolbarAction(() => toPage('interview'))">
+                                <view :class="tbPill(false)" @click="guardToolbarAction(() => toPage('interview'))">
                                     <u-icon
                                         :name="`${config.baseUrl}static/images/mp/interview.svg`"
                                         :size="24"></u-icon>
@@ -248,9 +249,7 @@
                         <view
                             class="flex-1 bg-[#F7F8FA] rounded-[32rpx] border border-solid border-[#ECECEE] overflow-hidden relative">
                             <!-- 对话附件；图像/视频参考图走专用缩略条，不走这里 -->
-                            <view
-                                class="p-2 flex"
-                                :class="{ 'is-hidden': !isChatWorkbench || !fileList.length }">
+                            <view class="p-2 flex" :class="{ 'is-hidden': !isChatWorkbench || !fileList.length }">
                                 <view v-for="(item, index) in fileList" :key="index">
                                     <FileItem :item="item" :index="index" @on-delete="deleteFile" />
                                 </view>
@@ -842,9 +841,7 @@ const tbMini = (active: boolean) =>
 
 const networkIconName = computed(() => {
     if (props.isHome) {
-        return selectedNetwork.value
-            ? "/static/images/icons/globe_blue.svg"
-            : "/static/images/icons/globe.svg";
+        return selectedNetwork.value ? "/static/images/icons/globe_blue.svg" : "/static/images/icons/globe.svg";
     }
     return selectedNetwork.value ? "/static/images/icons/deep_white.svg" : "/static/images/icons/deep.svg";
 });
@@ -987,7 +984,7 @@ const handleFileUpload = () => {
     }
     uni.$u.route({
         url: "/packages/pages/choose_file/choose_file",
-        params: { limit: 1 },
+        params: { limit: 1, sum_image: 1 },
     });
 };
 

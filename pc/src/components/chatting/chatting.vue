@@ -11,7 +11,7 @@
                     <div ref="containerRef" :class="{ 'space-y-1': showShare }">
                         <div
                             v-for="(item, index) in contentList"
-                            :key="index"
+                            :key="item._key ?? index"
                             :ref="(el) => setChatMessageRef(el, index)"
                             class="chat-message"
                             :class="{
@@ -58,8 +58,8 @@
                                     </template>
                                 </chat-msg-item>
                             </div>
-                            <div class="flex w-full flex-col gap-1 items-end rtl:items-start">
-                                <div class="max-w-[70%]" v-if="item.type === 1">
+                            <div class="flex w-full flex-col gap-1 items-end rtl:items-start" v-if="item.type === 1">
+                                <div class="max-w-[70%]">
                                     <div class="mb-1 flex items-center justify-end" v-if="item.quotes">
                                         <quote-item :quote="item.quotes" />
                                     </div>
@@ -273,6 +273,8 @@
                                         v-model="fileList"
                                         :file-limit="fileLimit"
                                         :accept="uploadAccept"
+                                        :image-max-size="CHAT_IMAGE_MAX_SIZE"
+                                        :file-max-size="CHAT_FILE_MAX_SIZE"
                                         @change="(list) => (fileList = list)"
                                         @update:modelValue="emit('update:fileList', fileList)">
                                         <div class="chat-toolbar-icon-btn dashed" title="文件上传">
@@ -344,6 +346,7 @@ import { useDragResize } from "./composables/useDragResize";
 import { useMention } from "./composables/useMention";
 import { useShare } from "./composables/useShare";
 import FileUpload from "./file-upload.vue";
+import { CHAT_UPLOAD_ACCEPT, CHAT_IMAGE_MAX_SIZE, CHAT_FILE_MAX_SIZE } from "./upload-rules";
 import FileLists from "./file-lists.vue";
 import ChatModelToolbar from "./chat-model-toolbar.vue";
 import HumanizePop from "./humanize-pop.vue";
@@ -380,6 +383,8 @@ const props = defineProps({
     avatar: { type: String },
     placeholder: { type: String, default: "在这里输入任何问题 ..." },
     isNetwork: { type: Boolean },
+    /** 联网搜索开关的当前值，配合 update:network 可用 v-model:network */
+    network: { type: Boolean, default: false },
     isUploadFile: { type: Boolean, default: true },
     isDisabledHumanize: { type: Boolean, default: false },
     isNewChat: { type: Boolean, default: false },
@@ -410,6 +415,11 @@ const { isLogin, toggleShowLogin } = userStore;
 
 const containerRef = ref<HTMLDivElement>(null);
 const inputRef = ref<HTMLTextAreaElement>(null);
+// 模板 ref 统一在这里声明后传给各 composable，不要让 composable 自己 new 一个再 return
+const scrollContainerRef = ref<HTMLDivElement | null>(null);
+const dragHandleRef = ref<HTMLDivElement | null>(null);
+const mentionPopRef = ref<any>(null);
+const previewShareRef = ref<any>(null);
 const chatModelToolbarRef = shallowRef<InstanceType<typeof ChatModelToolbar>>();
 const humanizePopRef = shallowRef<InstanceType<typeof HumanizePop>>();
 const toolbarModelId = ref("");
@@ -428,13 +438,15 @@ const fileIsLoad = ref(false);
 const quoteContent = ref("");
 const showEditDrawer = ref(false);
 const editContent = ref("");
-const selectedNetwork = ref(false);
+const selectedNetwork = ref(props.network);
 const isInputFocused = ref(false);
 const isInputBoxHovered = ref(false);
 const containerCurrentHeight = ref(0);
+/** 上一次上推的锚点（新消息的落点），resize 时按新视口重算预留用 */
+const pushUpAnchorTop = ref(0);
 
 const isInputBoxFocused = computed(() => isInputFocused.value || isInputBoxHovered.value);
-const uploadAccept = computed(() => ".html,.xml,.doc,.docx,.txt,.pdf,.csv,.xlsx");
+const uploadAccept = computed(() => CHAT_UPLOAD_ACCEPT);
 const showChattingBottom = computed(() => props.isUploadFile && props.isNetwork);
 const isSendDisabled = computed(() => {
     if (typeof props.sendEnabled === "boolean") return props.sendDisabled || !props.sendEnabled;
@@ -449,7 +461,6 @@ const contentContainerStyle = computed(() => {
 
 // ===== 使用 composables =====
 const {
-    scrollContainerRef,
     disabledScroll,
     showBackToBottom,
     scroll,
@@ -457,9 +468,9 @@ const {
     scrollToBottom,
     scrollTo,
     handleBackToBottom,
-} = useScroll(emit);
+} = useScroll(scrollContainerRef, emit);
 
-const { inputAreaHeight, isDragging, dragHandleRef, startDrag, startTouchDrag, resetHeight } = useDragResize();
+const { inputAreaHeight, isDragging, startDrag, startTouchDrag, resetHeight } = useDragResize(dragHandleRef);
 
 const agentListComputed = computed(() => props.agentList);
 const {
@@ -476,6 +487,7 @@ const {
     agentList: agentListComputed,
     inputRef,
     inputContent,
+    mentionPopRef,
     emit,
     disableMention: computed(() => props.disableMention),
 });
@@ -500,18 +512,34 @@ const {
     handleGenerateImage,
     handleGeneratePDF,
     handleGenerateLink,
-} = useShare(contentListComputed, containerRef, getWebsiteConfig);
+} = useShare(contentListComputed, containerRef, getWebsiteConfig, previewShareRef);
 
 // ===== 内容上推 =====
+/**
+ * 发送时把上一轮对话顶上去，让刚发送的内容正好落在可视区顶部。
+ * 1. anchorTop 在新消息插入前同步测量，它就是新消息的落点；
+ * 2. 视口高度要等输入区复位后再取（附件条 / 引用条 / 拖高的高度都会消失），否则预留会少一截；
+ * 3. 直接滚到 anchorTop，而不是滚到底 —— 新消息超过一屏时滚到底会滚过头。
+ */
 const triggerContentPushUp = () => {
+    const scroller = scrollContainerRef.value;
+    const container = containerRef.value;
+    if (!scroller || !container) return;
+
+    const anchorTop = container.scrollHeight;
+    pushUpAnchorTop.value = anchorTop;
+    // 先按当前视口预留，避免本轮渲染出现“先跳到底再回弹”
+    containerCurrentHeight.value = anchorTop + scroller.clientHeight;
+
     nextTick(() => {
-        if (!scrollContainerRef.value || !containerRef.value) return;
-        const viewportHeight = scrollContainerRef.value.clientHeight;
-        const currentContentHeight = containerRef.value.scrollHeight;
-        // 判断是否存在文件列表，如果存在，则加上文件列表的高度
-        const isFile = contentListComputed.value.some((item) => item.fileList.length > 0);
-        containerCurrentHeight.value = viewportHeight + currentContentHeight + (isFile ? 66 : 0);
-        setTimeout(() => scrollToBottom(true), 100);
+        requestAnimationFrame(async () => {
+            const el = scrollContainerRef.value;
+            if (!el) return;
+            // 输入区已复位，此时的 clientHeight 才是最终视口
+            containerCurrentHeight.value = anchorTop + el.clientHeight;
+            await nextTick(); // 等 min-height 落到 DOM，否则 scrollTop 会被裁剪
+            el.scrollTo({ top: anchorTop, behavior: "smooth" });
+        });
     });
 };
 
@@ -540,7 +568,6 @@ const cleanInput = () => {
     resetHeight();
     emit("update:modelValue", "");
     emit("update:fileList", []);
-    // resetMention();
 };
 
 const setInput = (val: string) => {
@@ -602,10 +629,12 @@ const contentPost = () => {
         feedback.msgError("文件正在上传中...");
         return;
     }
-    triggerContentPushUp();
     emit("contentPost", inputContent.value);
     resetScroll();
     cleanInput();
+    // 放在 cleanInput 之后：输入区已清空，且不会被 cleanInput 里的清零覆盖；
+    // 此刻新消息还没插入 DOM（父级 addMessage 要等下一次渲染），锚点仍是准确的
+    triggerContentPushUp();
 };
 
 const setChatMessageRef = (el: any, index: any) => {
@@ -615,8 +644,9 @@ const setChatMessageRef = (el: any, index: any) => {
 
 const handleItem = (index: any) => {
     if (showShare.value) {
-        const { error, stop_reply } = props.contentList[index];
-        if (error || stop_reply) return;
+        const { error, reply, message } = props.contentList[index];
+        // 与 useShare 的筛选口径保持一致：只拦报错和空气泡，停止生成但有正文的可以选
+        if (error || (!reply && !message)) return;
         handleShareContent(index);
     }
 };
@@ -640,8 +670,10 @@ const handleEdit = (item: any) => {
 };
 
 // ===== 生命周期 =====
+/** 窗口尺寸变化后按新视口重算上推预留，否则锚点会随视口变化而漂移 */
 const updateStableHeight = () => {
-    // 保留，供外部 resize 时更新
+    if (!containerCurrentHeight.value || !scrollContainerRef.value) return;
+    containerCurrentHeight.value = pushUpAnchorTop.value + scrollContainerRef.value.clientHeight;
 };
 
 onMounted(() => {
@@ -664,15 +696,25 @@ watch(
     { deep: true },
 );
 
+// 只关心「条数变化」和「整表被替换（切换会话）」两件事。
+// 不能用 deep：流式回复每个 token 都在改数组里的内容，deep 会让这里每帧做一次全量深遍历，
+// 而且会把刚进入的分享模式立刻重置掉
+watch([() => props.contentList, () => props.contentList.length], () => {
+    if (props.contentList.length === 0) {
+        containerCurrentHeight.value = 0;
+        pushUpAnchorTop.value = 0;
+    }
+    shareContentIndexList.value = [];
+    showShare.value = false;
+    if (!disabledScroll.value) showBackToBottom.value = false;
+});
+
+// 外部（如欢迎页发送后切到对话页）改变联网开关时，保持工具栏状态一致
 watch(
-    () => props.contentList,
-    (newVal) => {
-        if (newVal.length === 0) containerCurrentHeight.value = 0;
-        shareContentIndexList.value = [];
-        showShare.value = false;
-        if (!disabledScroll.value) showBackToBottom.value = false;
+    () => props.network,
+    (value) => {
+        if (value !== selectedNetwork.value) selectedNetwork.value = value;
     },
-    { deep: true },
 );
 
 watch(

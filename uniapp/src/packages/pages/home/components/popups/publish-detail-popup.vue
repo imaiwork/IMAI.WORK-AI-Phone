@@ -41,7 +41,7 @@
 
                     <!-- 失败原因 -->
                     <view
-                        v-if="isFailed && item.remark"
+                        v-if="isFailed && (item.remark || item.can_resend)"
                         class="bg-error-light-9 rounded-[24rpx] px-[28rpx] py-[20rpx] flex items-start gap-[12rpx]"
                     >
                         <u-icon
@@ -55,8 +55,16 @@
                                 >失败原因</text
                             >
                             <text class="block text-xs text-error leading-[36rpx] break-all">
-                                {{ item.remark }}
+                                {{ item.remark || '发布失败' }}
                             </text>
+                            <view
+                                v-if="item.can_resend"
+                                class="mt-[16rpx] w-full py-[16rpx] rounded-[20rpx] bg-error flex items-center justify-center gap-[10rpx] active:opacity-80"
+                                @click="emit('resend')"
+                            >
+                                <u-icon name="zhuanfa" color="#ffffff" :size="24"></u-icon>
+                                <text class="text-xs font-bold text-white">重新发送</text>
+                            </view>
                         </view>
                     </view>
 
@@ -229,6 +237,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'update:modelValue', v: boolean): void
+    (e: 'resend'): void
 }>()
 
 const show = computed({
@@ -304,8 +313,9 @@ const tags = computed<string[]>(() => {
     return []
 })
 
+// RPA 部分步骤（如收到任务、执行中）不产生截图，无图步骤不展示
 const steps = computed<PublishLogItem[]>(() =>
-    Array.isArray(props.item?.logs) ? props.item!.logs : []
+    (Array.isArray(props.item?.logs) ? props.item!.logs : []).filter((log) => !!log.image)
 )
 
 // 无步骤截图时的占位文案/图标跟随发布状态

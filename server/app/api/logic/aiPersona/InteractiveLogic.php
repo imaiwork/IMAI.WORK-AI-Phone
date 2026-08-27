@@ -16,6 +16,7 @@ use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaAgentConfig;
 use app\common\model\aiPersona\AiPersonaWechatInteractionConfig;
 use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\auto\AutoTaskSceneConfigService;
 use app\common\service\sv\CircleInteractionActionService;
 use app\common\service\sv\SvDeviceTaskExistenceService;
 use think\facade\Db;
@@ -352,6 +353,14 @@ class InteractiveLogic extends BasePersonaLogic
                 array_multisort($sort, SORT_ASC, $platforms);
                 $execTime = $schedule->start_time . '-' . $schedule->end_time;
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_WECHAT_CIRCLE_THUMB_COMMENT,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$item->device_code,
+                        '朋友圈点赞评论任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();
@@ -490,6 +499,14 @@ class InteractiveLogic extends BasePersonaLogic
                 $execTime = $schedule->start_time . '-' . $schedule->end_time;
                 
                 foreach ($platforms as $index => $platform) {
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_FRIENDS,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$item->device_code,
+                        '加好友任务'
+                    )) {
+                        continue;
+                    }
                     $startTime = $st + $index * $interval;
                     $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $item->user_id)->where('device_code', $item->device_code)->findOrEmpty();

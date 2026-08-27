@@ -2,10 +2,11 @@
 
 namespace app\common\service\videoImitation;
 
+use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
+use app\common\model\sv\SvMediaMaterial;
 use app\common\model\user\User;
-use app\common\model\user\UserTokensLog;
 use app\common\model\videoImitation\VideoImitationTask;
 use app\common\service\ConfigService;
 use app\common\service\draw\MediaModelsService;
@@ -20,14 +21,30 @@ use think\facade\Log;
  */
 class VideoImitationImageRewriteService
 {
-    public const PROCESSING_TIMEOUT_SECONDS = 1800;
+    public const PROCESSING_TIMEOUT_SECONDS = VideoImitationImageLifecycle::PROCESSING_TIMEOUT_SECONDS;
     /** 无心跳超过该秒数且运行锁空闲时，视为孤儿 PROCESSING，可立即续跑 */
-    public const ORPHAN_STALE_SECONDS = 240;
+    public const ORPHAN_STALE_SECONDS = VideoImitationImageLifecycle::ORPHAN_STALE_SECONDS;
     public const MAX_RETRY_COUNT = 2;
     public const MAX_REWRITE_IMAGE_COUNT = 12;
 
     /** 图生图计费模型（技术 alias，展示名 image-2） */
     private const BILLING_MODEL_ALIAS = 'gpt-image-2';
+
+    /**
+     * 测试钩子：仅 tests/ 注入，生产勿用。
+     * @var array<string, mixed>
+     */
+    private static array $testHooks = [];
+
+    public static function setTestHooks(array $hooks): void
+    {
+        self::$testHooks = $hooks;
+    }
+
+    public static function clearTestHooks(): void
+    {
+        self::$testHooks = [];
+    }
 
     private const FIXED_PROMPT = <<<'PROMPT'
 # 图片重绘提示词
@@ -100,6 +117,11 @@ PROMPT;
 
     public static function sync(VideoImitationTask $task, ?callable $onHeartbeat = null): bool
     {
+        if (VideoImitationImageLifecycle::isUserDeleted($task)) {
+            self::log(sprintf('sync跳过：任务已删除 task_id=%d', (int)$task->id));
+            return false;
+        }
+
         $status = (int)$task->image_rewrite_status;
         if ($status === VideoImitationTask::IMAGE_REWRITE_STATUS_WAIT) {
             return self::submit($task, $onHeartbeat);
@@ -122,11 +144,7 @@ PROMPT;
      */
     public static function isOrphanStale(int $startedAt, ?int $now = null): bool
     {
-        if ($startedAt <= 0) {
-            return true;
-        }
-        $now = $now ?? time();
-        return $startedAt <= $now - self::ORPHAN_STALE_SECONDS;
+        return VideoImitationImageLifecycle::isOrphanStale($startedAt, $now);
     }
 
     /**
@@ -140,6 +158,11 @@ PROMPT;
 
     public static function submit(VideoImitationTask $task, ?callable $onHeartbeat = null): bool
     {
+        if (VideoImitationImageLifecycle::isUserDeleted($task)) {
+            self::log(sprintf('submit跳过：任务已删除 task_id=%d', (int)$task->id));
+            return false;
+        }
+
         $taskId = (int)$task->id;
         $mediaType = (int)$task->media_type;
         $rewriteStatus = (int)$task->image_rewrite_status;
@@ -258,11 +281,13 @@ PROMPT;
                 return false;
             }
             $userId = (int)$task->user_id;
+            $platformType = (int)($task->platform_type ?? 0);
 
             return self::runRewriteBatch(
                 $taskId,
                 $attemptId,
                 $userId,
+                $platformType,
                 $billingTaskId,
                 $unit,
                 $images,
@@ -470,6 +495,7 @@ PROMPT;
             $taskId,
             $attemptId,
             $userId,
+            (int)($task->platform_type ?? 0),
             $billingTaskId,
             $unit,
             $images,
@@ -484,6 +510,11 @@ PROMPT;
 
     public static function recoverExpired(VideoImitationTask $task): bool
     {
+        if (VideoImitationImageLifecycle::isUserDeleted($task)) {
+            self::log(sprintf('超时回收跳过：任务已删除 task_id=%d', (int)$task->id));
+            return false;
+        }
+
         if ((int)$task->image_rewrite_status !== VideoImitationTask::IMAGE_REWRITE_STATUS_PROCESSING
             || !self::isProcessingExpired((int)$task->image_rewrite_started_at)
         ) {
@@ -611,12 +642,7 @@ PROMPT;
 
     public static function isProcessingExpired(int $startedAt, ?int $now = null): bool
     {
-        if ($startedAt <= 0) {
-            return true;
-        }
-
-        $now = $now ?? time();
-        return $startedAt <= $now - self::PROCESSING_TIMEOUT_SECONDS;
+        return VideoImitationImageLifecycle::isProcessingExpired($startedAt, $now);
     }
 
     public static function canRetry(int $retryCount): bool
@@ -790,7 +816,7 @@ PROMPT;
                     $taskId,
                     $userId > 0 ? $userId : (int)$task->user_id,
                     $successCount,
-                    $billingTaskId,
+                    max(1, (int)($task->billing_round ?? 1)),
                     $unit
                 );
                 Db::commit();
@@ -877,6 +903,7 @@ PROMPT;
         int $taskId,
         string $attemptId,
         int $userId,
+        int $platformType,
         string $billingTaskId,
         float $unit,
         array $images,
@@ -888,6 +915,10 @@ PROMPT;
         string $stage
     ): bool {
         $imageTotal = count($images);
+        $materialCtx = [
+            'user_id' => $userId,
+            'platform_type' => $platformType,
+        ];
 
         foreach ($images as $index => $originalImagePath) {
             if (function_exists('set_time_limit')) {
@@ -992,7 +1023,7 @@ PROMPT;
                     throw new \Exception('未返回可用图片');
                 }
 
-                $storedImage = self::storeGeneratedImage($generatedImage, $response);
+                $storedImage = self::storeGeneratedImage($generatedImage, $response, $materialCtx);
                 if ($storedImage === '') {
                     throw new \Exception('图片改写结果保存失败');
                 }
@@ -1406,21 +1437,27 @@ PROMPT;
         return '';
     }
 
-    private static function storeGeneratedImage(string $image, array $response = []): string
+    /**
+     * @param array{user_id?: int, platform_type?: int} $materialCtx
+     */
+    private static function storeGeneratedImage(string $image, array $response = [], array $materialCtx = []): string
     {
         if (preg_match('/^https?:\/\//i', $image)) {
             $storedImage = trim((string)FileService::downloadFileBySource($image, 'image'));
             if ($storedImage !== '' && !preg_match('/^https?:\/\//i', $storedImage)) {
-                return self::relocateToResultsDir($storedImage);
+                return self::relocateToResultsDir($storedImage, $materialCtx);
             }
             return '';
         }
 
         $format = $response['data']['output_format'] ?? '';
-        return self::saveBase64Image($image, $format);
+        return self::saveBase64Image($image, $format, $materialCtx);
     }
 
-    private static function relocateToResultsDir(string $relativePath): string
+    /**
+     * @param array{user_id?: int, platform_type?: int} $materialCtx
+     */
+    private static function relocateToResultsDir(string $relativePath, array $materialCtx = []): string
     {
         $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
         if ($relativePath === '' || preg_match('/^https?:\/\//i', $relativePath)) {
@@ -1430,7 +1467,7 @@ PROMPT;
             $existingAbsolute = rtrim(public_path(), '/\\') . DIRECTORY_SEPARATOR
                 . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
             if (is_file($existingAbsolute)) {
-                return self::persistResultImage($existingAbsolute, $relativePath);
+                return self::persistResultImage($existingAbsolute, $relativePath, $materialCtx);
             }
             return $relativePath;
         }
@@ -1458,10 +1495,13 @@ PROMPT;
         FileService::ensureWritableFile($targetPath);
 
         $relativeUri = 'uploads/rewrite/results/' . $date . '/' . $filename;
-        return self::persistResultImage($targetPath, $relativeUri);
+        return self::persistResultImage($targetPath, $relativeUri, $materialCtx);
     }
 
-    private static function saveBase64Image(string $base64, string $format = ''): string
+    /**
+     * @param array{user_id?: int, platform_type?: int} $materialCtx
+     */
+    private static function saveBase64Image(string $base64, string $format = '', array $materialCtx = []): string
     {
         $extension = '';
         if ($format !== '') {
@@ -1497,7 +1537,7 @@ PROMPT;
         FileService::ensureWritableFile($path);
 
         $relativeUri = 'uploads/rewrite/results/' . $date . '/' . $filename;
-        return self::persistResultImage($path, $relativeUri);
+        return self::persistResultImage($path, $relativeUri, $materialCtx);
     }
 
     /**
@@ -1690,8 +1730,10 @@ PROMPT;
     /**
      * 本地落盘后按存储配置收尾：local 保留文件；非 local 上传 OSS 并删本地。
      * 上传失败返回空串，由调用方记为该张改写失败。
+     *
+     * @param array{user_id?: int, platform_type?: int} $materialCtx
      */
-    private static function persistResultImage(string $absolutePath, string $relativeUri): string
+    private static function persistResultImage(string $absolutePath, string $relativeUri, array $materialCtx = []): string
     {
         $relativeUri = ltrim(str_replace('\\', '/', $relativeUri), '/');
         if ($absolutePath === '' || $relativeUri === '' || !is_file($absolutePath)) {
@@ -1712,8 +1754,15 @@ PROMPT;
             self::log('图片压缩后更新路径 uri=' . $relativeUri);
         }
 
-        $storageDefault = (string)ConfigService::get('storage', 'default', 'local');
+        $size = 0;
+        $gotSize = @filesize($absolutePath);
+        if ($gotSize !== false && $gotSize > 0) {
+            $size = (int)$gotSize;
+        }
+
+        $storageDefault = self::resolveStorageDefault();
         if ($storageDefault === 'local') {
+            self::persistRewrittenMaterial($materialCtx, $relativeUri, $size);
             return $relativeUri;
         }
 
@@ -1746,11 +1795,61 @@ PROMPT;
             ));
         }
 
+        self::persistRewrittenMaterial($materialCtx, $relativeUri, $size);
         return $relativeUri;
+    }
+
+    /**
+     * @param array{user_id?: int, platform_type?: int} $materialCtx
+     */
+    private static function persistRewrittenMaterial(array $materialCtx, string $relativeUri, int $size): void
+    {
+        $userId = (int)($materialCtx['user_id'] ?? 0);
+        $platformType = (int)($materialCtx['platform_type'] ?? 0);
+        if ($userId <= 0 || $relativeUri === '') {
+            return;
+        }
+        if ($platformType <= 0) {
+            $platformType = DeviceEnum::ACCOUNT_TYPE_XHS;
+        }
+        SvMediaMaterial::persistImageRewriteMaterial(
+            $userId,
+            $platformType,
+            SvMediaMaterial::IMAGE_REWRITE_SCENE_MANUAL,
+            $relativeUri,
+            $size
+        );
+    }
+
+    private static function resolveStorageDefault(): string
+    {
+        if (array_key_exists('storage', self::$testHooks)) {
+            return (string)self::$testHooks['storage'];
+        }
+        return (string)ConfigService::get('storage', 'default', 'local');
+    }
+
+    /**
+     * @param array{user_id?: int, platform_type?: int} $materialCtx
+     */
+    public static function persistResultImageForTest(string $absolutePath, string $relativeUri, array $materialCtx = []): string
+    {
+        return self::persistResultImage($absolutePath, $relativeUri, $materialCtx);
     }
 
     private static function uploadResultImageToRemote(string $absolutePath, string $relativeUri): void
     {
+        if (array_key_exists('uploadRemote', self::$testHooks)) {
+            $hook = self::$testHooks['uploadRemote'];
+            if ($hook instanceof \Throwable) {
+                throw $hook;
+            }
+            if (is_callable($hook)) {
+                $hook($absolutePath, $relativeUri);
+            }
+            return;
+        }
+
         $relativeUri = ltrim(str_replace('\\', '/', $relativeUri), '/');
         $filename = basename($relativeUri);
         $saveDir = dirname($relativeUri);
@@ -1774,7 +1873,7 @@ PROMPT;
         }
     }
 
-    private static function deductToken(int $taskId, int $userId, int $imgCount, string $taskIdKey, float $unit): void
+    private static function deductToken(int $taskId, int $userId, int $imgCount, int $billingRound, float $unit): void
     {
         $points = round($imgCount * $unit, 2);
         if ($points <= 0) {
@@ -1785,7 +1884,7 @@ PROMPT;
         if ($user->isEmpty()) {
             throw new \Exception('用户查询失败');
         }
-        if (self::hasTokenLog($userId, $taskIdKey)) {
+        if (self::hasTokenLog($userId, $taskId, $billingRound)) {
             return;
         }
 
@@ -1798,7 +1897,8 @@ PROMPT;
 
         User::userTokensChange($userId, $points);
         $modelDisplay = MediaModelsService::resolveDisplayName(self::BILLING_MODEL_ALIAS, self::BILLING_MODEL_ALIAS);
-        $extra = [
+        $oldBillingKey = VideoImitationImageBilling::rewriteBillingKey($taskId, $billingRound);
+        $extra = VideoImitationImageBilling::mergeExtra($taskId, $billingRound, $oldBillingKey, [
             '生成图片数'   => $imgCount,
             '算力单价'     => $unit,
             '实际消耗算力' => $points,
@@ -1806,25 +1906,26 @@ PROMPT;
             '模型名称'     => $modelDisplay,
             '场景'         => '手动-小红书图文仿写',
             'task_id'      => $taskId,
-        ];
+        ]);
         AccountLogLogic::recordUserTokensLog(
             true,
             $userId,
             AccountLogEnum::TOKENS_DEC_IMAGE_TO_IMAGE,
             $points,
-            $taskIdKey,
+            VideoImitationImageBilling::writeTaskId($taskId),
             $extra
         );
     }
 
-    private static function hasTokenLog(int $userId, string $taskIdKey): bool
+    private static function hasTokenLog(int $userId, int $taskId, int $billingRound): bool
     {
-        return !UserTokensLog::where('user_id', $userId)
-            ->where('task_id', $taskIdKey)
-            ->where('change_type', AccountLogEnum::TOKENS_DEC_IMAGE_TO_IMAGE)
-            ->where('action', AccountLogEnum::DEC)
-            ->findOrEmpty()
-            ->isEmpty();
+        return VideoImitationImageBilling::hasDec(
+            $userId,
+            $taskId,
+            AccountLogEnum::TOKENS_DEC_IMAGE_TO_IMAGE,
+            $billingRound,
+            VideoImitationImageBilling::rewriteBillingKey($taskId, $billingRound)
+        );
     }
 
     private static function sanitizeResponse(mixed $response)
@@ -1848,7 +1949,7 @@ PROMPT;
 
     private static function buildTaskId(int $taskId, int $billingRound = 1): string
     {
-        return 'video_imitation_img_' . $taskId . '_r' . max(1, $billingRound);
+        return VideoImitationImageBilling::rewriteBillingKey($taskId, $billingRound);
     }
 
     private static function buildAttemptTaskId(

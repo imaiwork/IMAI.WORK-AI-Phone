@@ -572,7 +572,7 @@ trait DeviceAutoTaskTrait
                     'taskId' => $task->id,
                     'body' => $publish['material_subtitle'],
                     'tag' => $publish['material_tag'] ?? '',
-
+                    'pic' => \app\common\service\FileService::getFileUrl($publish->pic ?? ''),
                     'is_shopping_cart' => in_array($task->account_type, [4]) ? ($persona->is_shopping_cart ?? 0) : 0,
                     'goods_name' => in_array($task->account_type, [4]) ? ($persona->goods_name ?? '') : '',
                     'is_content_location' => $isLocation,

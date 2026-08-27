@@ -1,4 +1,5 @@
 import { chatSendTextStream } from "@/api/chat";
+import { handleSseFrames } from "@/utils/http/sse-frame";
 import {
     getCozeAgentDetail as getCozeAgentDetailApi,
     getCopyWritingGenerate,
@@ -82,25 +83,17 @@ export default function useAgent(options: Options) {
                         isStopChat.value = true;
                     },
                     onmessage: (value) => {
-                        value
-                            .trim()
-                            .split("data:")
-                            .forEach((text, index) => {
-                                if (text !== "") {
-                                    try {
-                                        const dataJson = JSON.parse(text);
-                                        const { object, content, task_id, reasoning_content, usage } = dataJson;
-                                        if ((content || reasoning_content) && object === "loading") {
-                                            result.value += content;
-                                            onmessage?.(content);
-                                        }
-                                        if (object === "finished") {
-                                            onfinish?.();
-                                            return;
-                                        }
-                                    } catch (error) {}
-                                }
-                            });
+                        handleSseFrames(value, (dataJson) => {
+                            const { object, content, task_id, reasoning_content, usage } = dataJson;
+                            if ((content || reasoning_content) && object === "loading") {
+                                result.value += content;
+                                onmessage?.(content);
+                            }
+                            if (object === "finished") {
+                                onfinish?.();
+                                return;
+                            }
+                        });
                     },
                     onclose() {
                         onclose?.();
@@ -165,25 +158,17 @@ export default function useAgent(options: Options) {
                         isStopChat.value = true;
                     },
                     onmessage: (value) => {
-                        value
-                            .trim()
-                            .split("data:")
-                            .forEach((text, index) => {
-                                if (text !== "") {
-                                    try {
-                                        const dataJson = JSON.parse(text);
-                                        const { object, content, task_id, reasoning_content, usage } = dataJson;
-                                        if ((content || reasoning_content) && object === "loading") {
-                                            result.value += content;
-                                            onmessage?.(content);
-                                        }
-                                        if (object === "finished") {
-                                            onfinish?.();
-                                            return;
-                                        }
-                                    } catch (error) {}
-                                }
-                            });
+                        handleSseFrames(value, (dataJson) => {
+                            const { object, content, task_id, reasoning_content, usage } = dataJson;
+                            if ((content || reasoning_content) && object === "loading") {
+                                result.value += content;
+                                onmessage?.(content);
+                            }
+                            if (object === "finished") {
+                                onfinish?.();
+                                return;
+                            }
+                        });
                     },
                     onclose() {
                         onclose?.();

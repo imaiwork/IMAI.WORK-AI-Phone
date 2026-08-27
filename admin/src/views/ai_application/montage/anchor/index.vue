@@ -43,8 +43,8 @@
                 <el-table-column label="ID" prop="id" min-width="80" />
                 <el-table-column label="任务ID" prop="task_id" width="160" show-overflow-tooltip />
                 <el-table-column label="创建用户" prop="nickname" min-width="140" show-overflow-tooltip />
-                <!-- <el-table-column label="形象名称" prop="name" min-width="180" show-overflow-tooltip /> -->
-                <el-table-column label="形象视频" prop="name" min-width="200">
+                <el-table-column label="形象名称" prop="name" min-width="180" show-overflow-tooltip />
+                <el-table-column label="形象视频" min-width="200">
                     <template #default="{ row }">
                         <div
                             class="line-clamp-1 text-primary hover:underline cursor-pointer"
@@ -64,22 +64,22 @@
                 </el-table-column>
                 <el-table-column label="生成状态" width="140">
                     <template #default="{ row }">
-                        <el-tag v-if="row.status == 6" type="success">
+                        <el-tag v-if="row.status == 6 || (row.clone_type == 2 && row.status == 3)" type="success">
                             {{ "成功" }}
                         </el-tag>
-                        <el-tag v-if="row.status == 5" type="danger">
+                        <el-tag v-else-if="row.status == 5" type="danger">
                             {{ "音色合成失败" }}
                         </el-tag>
-                        <el-tag v-if="row.status == 4" type="warning">
+                        <el-tag v-else-if="row.status == 4" type="warning">
                             {{ "音色合成中" }}
                         </el-tag>
-                        <el-tag v-if="row.status == 3" type="warning">
+                        <el-tag v-else-if="row.status == 3" type="warning">
                             {{ "生成中" }}
                         </el-tag>
-                        <el-tag v-if="row.status == 2" type="danger">
+                        <el-tag v-else-if="row.status == 2" type="danger">
                             {{ "形象合成失败" }}
                         </el-tag>
-                        <el-tag v-if="row.status == 1" type="warning">
+                        <el-tag v-else-if="row.status == 1" type="warning">
                             {{ "形象合成中" }}
                         </el-tag>
                     </template>

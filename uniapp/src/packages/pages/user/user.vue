@@ -320,8 +320,8 @@
 
         <update-user-info
             v-model:show="showUpdateUserPopup"
-            :logo="websiteConfig.shop_logo"
-            :title="websiteConfig.shop_name"
+            :logo="siteShopLogo"
+            :title="siteName"
             :userInfo="userInfo"
             @update="handleUpdateUser" />
         <add-phone-popup
@@ -504,6 +504,9 @@ const { copy } = useCopy();
 
 const appStore = useAppStore();
 const websiteConfig = computed(() => appStore.getWebsiteConfig);
+// OEM 站点用 OEM 品牌,主站回落平台配置
+const siteShopLogo = computed(() => appStore.getSiteShopLogo);
+const siteName = computed(() => appStore.getSiteName);
 const rechargeConfig = computed(() => appStore.getRechargeConfig);
 const cardCodeConfig = computed(() => appStore.getCardCodeConfig);
 const copyrightConfig = computed(() => appStore.getCopyRightConfig);
@@ -574,9 +577,9 @@ const membershipRedeemSubmitting = ref(false);
 
 const avatarUrl = computed(() => {
     if (isLogin.value) {
-        return userInfo.value.avatar || websiteConfig.value.shop_logo;
+        return userInfo.value.avatar || siteShopLogo.value;
     }
-    return websiteConfig.value.shop_logo;
+    return siteShopLogo.value;
 });
 const userNickname = computed(() => (isLogin.value ? userInfo.value.nickname || "未命名用户" : "未登录"));
 const memberLabel = computed(() => userInfo.value.level_name);

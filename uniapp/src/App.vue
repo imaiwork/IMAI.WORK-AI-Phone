@@ -47,15 +47,16 @@ const cacheInvite = async (query: any = {}) => {
 
 //#ifdef H5
 const setH5WebIcon = () => {
-    const config = appStore.getWebsiteConfig;
+    // OEM 站点用 OEM logo,主站回落平台 shop_logo
+    const icon = appStore.getSiteShopLogo;
     let favicon: HTMLLinkElement = document.querySelector('link[rel="icon"]')!;
     if (favicon) {
-        favicon.href = config.shop_logo;
+        favicon.href = icon;
         return;
     }
     favicon = document.createElement("link");
     favicon.rel = "icon";
-    favicon.href = config.shop_logo;
+    favicon.href = icon;
     document.head.appendChild(favicon);
 };
 

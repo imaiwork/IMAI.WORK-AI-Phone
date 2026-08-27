@@ -159,6 +159,7 @@ class SynthesisConfigLogic extends ApiLogic
             if (array_key_exists('speech_rate', $params)) {
                 $params['speech_rate'] = AiPersonaSynthesisConfig::normalizeSpeechRate($params['speech_rate']);
             }
+            $params = self::applyCopywritingGenerationFields($params, $config);
             $params['update_time'] = time();
 
             $shouldResetVideoLibraryUse = CopywritingLibraryLogic::hasVideoLibraryRuleChanged($config, array_merge($config->toArray(), $params));
@@ -345,6 +346,8 @@ class SynthesisConfigLogic extends ApiLogic
             'music_source' => AiPersonaSynthesisConfig::MUSIC_SOURCE_SYSTEM,
             'music_volume' => AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT,
             'speech_rate' => AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT,
+            'copywriting_generation_type' => AiPersonaSynthesisConfig::COPYWRITING_GENERATION_TYPE_KNOWLEDGE,
+            'copywriting_generation_custom' => '',
             'create_time'        => $time,
             'update_time'        => $time,
         ];
@@ -374,6 +377,41 @@ class SynthesisConfigLogic extends ApiLogic
             'publish_mode' => $publishMode,
             'update_time' => time(),
         ]);
+    }
+
+    public static function applyCopywritingGenerationFields(array $params, $config): array
+    {
+        if (!array_key_exists('copywriting_generation_type', $params)
+            && !array_key_exists('copywriting_generation_custom', $params)
+            && !array_key_exists('copywriting_source', $params)
+        ) {
+            return $params;
+        }
+
+        $mergedType = array_key_exists('copywriting_generation_type', $params)
+            ? AiPersonaSynthesisConfig::normalizeCopywritingGenerationType($params['copywriting_generation_type'])
+            : (int)($config->copywriting_generation_type ?? AiPersonaSynthesisConfig::COPYWRITING_GENERATION_TYPE_KNOWLEDGE);
+        $mergedCustom = array_key_exists('copywriting_generation_custom', $params)
+            ? AiPersonaSynthesisConfig::normalizeCopywritingGenerationCustom($params['copywriting_generation_custom'])
+            : (string)($config->copywriting_generation_custom ?? '');
+        $mergedSource = array_key_exists('copywriting_source', $params)
+            ? (int)$params['copywriting_source']
+            : (int)($config->copywriting_source ?? 0);
+
+        if ($mergedSource === AiPersonaSynthesisConfig::COPYWRITING_SOURCE_AI
+            && $mergedType === AiPersonaSynthesisConfig::COPYWRITING_GENERATION_TYPE_CUSTOM
+            && $mergedCustom === ''
+        ) {
+            throw new \Exception('请填写自定义文案生成方向');
+        }
+        if (array_key_exists('copywriting_generation_type', $params)) {
+            $params['copywriting_generation_type'] = $mergedType;
+        }
+        if (array_key_exists('copywriting_generation_custom', $params)) {
+            $params['copywriting_generation_custom'] = $mergedCustom;
+        }
+
+        return $params;
     }
 
     public static function normalizeWorkMode($value): int

@@ -64,7 +64,9 @@
                                             <text class="text-[20rpx] text-white">AI智能剪辑完成</text>
                                         </template>
                                         <template v-if="item.clip_status == 4">
-                                            <text class="text-[20rpx] text-white">AI智能剪辑失败</text>
+                                            <text class="text-[20rpx] text-white">{{
+                                                item.remark || "AI智能剪辑失败"
+                                            }}</text>
                                         </template>
                                     </view>
 
@@ -371,6 +373,8 @@ enum VideoType {
     HOT_WRITE = 8,
     /** 闪剪数字人纯口播，展示归「数字人口播」 */
     DIGITAL_HUMAN_SHANJIAN = 9,
+    /** 热点追踪（闪剪任务按 extra.source=hotspot 区分） */
+    HOTSPOT = 10,
 }
 
 /** 视频创作队列状态 */
@@ -405,6 +409,7 @@ const typeList = computed(() => {
             { name: "一句话生成", key: VideoType.SENTENCE },
             { name: "分镜混剪", key: VideoType.MONTAGE_STORYBOARD },
             { name: "爆款仿写", key: VideoType.HOT_WRITE },
+            { name: "热点追踪", key: VideoType.HOTSPOT },
         ];
     } else if (currentTab.value == 1) {
         return [
@@ -661,7 +666,12 @@ const showVideoActions = (item: any, index: number) => {
         itemList,
         success: (res) => {
             if (res.tapIndex === 0) {
-                handleEdit(dataLists.value.findIndex((item: any) => item.id == operateItem.value.id));
+                // 多表 UNION 数据 id 会重复，须同时比对 type 定位
+                handleEdit(
+                    dataLists.value.findIndex(
+                        (item: any) => item.id == operateItem.value.id && item.type == operateItem.value.type,
+                    ),
+                );
             } else if (res.tapIndex === 1) {
                 if (!item.video_result_url && !item.clip_result_url) {
                     uni.$u.toast("视频未生成");
@@ -735,7 +745,9 @@ const handleEditConfirm = async () => {
             icon: "none",
             duration: 3000,
         });
-        const index = dataLists.value.findIndex((item: any) => item.id == operateItem.value.id);
+        const index = dataLists.value.findIndex(
+            (item: any) => item.id == operateItem.value.id && item.type == operateItem.value.type,
+        );
         if (index != -1) {
             dataLists.value[index].name = newName.value;
         }

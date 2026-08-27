@@ -3,15 +3,17 @@
 namespace app\api\lists\shanjian;
 
 use app\api\lists\BaseApiDataLists;
+use app\api\logic\shanjian\ShanjianVideoTaskLogic;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\service\TeamBillingService;
 
 class ShanjianVideoTaskLists extends BaseApiDataLists implements ListsSearchInterface
 {
     public function setSearch(): array
     {
         return [
-            '=' => ['video_setting_id', 'shanjian_type','persona_id','is_final'],
+            '=' => ['video_setting_id', 'shanjian_type','persona_id','is_final','auto_type'],
             'in' => ['status'],
         ];
     }
@@ -31,15 +33,25 @@ class ShanjianVideoTaskLists extends BaseApiDataLists implements ListsSearchInte
     {
         $this->searchWhere[] = ['user_id', '=', $this->userId];
         $this->applyFinalFilter();
+        $spendable = $this->getSpendableTokens();
         $list = ShanjianVideoTask::when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
             $query->whereBetween('create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
         })
             ->where($this->searchWhere)
             ->order(['id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
-            ->select()->each(function ($item) {
+            ->select()->each(function ($item) use ($spendable) {
                $item->append(['queue_status_text', 'download_status_text']);
-               if ($item->status == 2){
+               $failed = (int)$item->status === ShanjianVideoTask::STATUS_FAILED;
+               // 蝉镜 type5 桥接任务禁止重试（与 retryFailedGenerate 口径一致）
+               $chanjingBridge = $failed && ShanjianVideoTaskLogic::isChanjingBridgeTask($item);
+               $item->can_retry = $failed && !$chanjingBridge && $spendable > 0;
+               if ($failed && $chanjingBridge) {
+                   $item->retry_disabled_reason = '该视频由数字人引擎合成，暂不支持重试';
+               } else {
+                   $item->retry_disabled_reason = $failed && $spendable <= 0 ? '算力不足' : '';
+               }
+               if ($failed){
                    $item->video_token = 0;
                }
 
@@ -54,5 +66,14 @@ class ShanjianVideoTaskLists extends BaseApiDataLists implements ListsSearchInte
         return ShanjianVideoTask::when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
             $query->whereBetween('create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
         })->where($this->searchWhere)->count();
+    }
+
+    private function getSpendableTokens(): float
+    {
+        try {
+            return (float)TeamBillingService::spendableTokens((int)$this->userId);
+        } catch (\Throwable $e) {
+            return 0;
+        }
     }
 }

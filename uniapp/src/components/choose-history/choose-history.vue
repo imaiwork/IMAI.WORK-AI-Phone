@@ -88,7 +88,7 @@
                                 <view class="flex gap-2 px-3 py-2" style="width: max-content">
                                     <view
                                         v-for="item in group.items"
-                                        :key="item.id"
+                                        :key="recordKey(item)"
                                         class="relative flex-shrink-0 w-[120rpx] h-[160rpx] rounded-[12rpx] overflow-hidden">
                                         <image
                                             :src="item.image || item.pic"
@@ -401,13 +401,16 @@ const getStatus = (item: any) => {
     }
 };
 
-const isChoose = (data: any) => chooseLists.value.some((item) => item.id === data.id);
+// 创作记录是多张表 UNION，id 跨表会重复，须用 媒体类型+type/draw_type+id 复合键判重
+const recordKey = (item: any) => `${item.media_type || ""}_${item.type ?? item.draw_type ?? ""}_${item.id}`;
 
-const getChooseIndex = (data: any) => chooseLists.value.findIndex((item) => item.id === data.id) + 1;
+const isChoose = (data: any) => chooseLists.value.some((item) => recordKey(item) === recordKey(data));
+
+const getChooseIndex = (data: any) => chooseLists.value.findIndex((item) => recordKey(item) === recordKey(data)) + 1;
 
 const handleSelect = (data: any) => {
     if (isChoose(data)) {
-        chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
+        chooseLists.value = chooseLists.value.filter((item) => recordKey(item) !== recordKey(data));
         if (chooseLists.value.length === 0) showChoosePanel.value = false;
         return;
     }
@@ -424,8 +427,8 @@ const handleSelect = (data: any) => {
 
 const toggleSelect = () => {
     if (isCurrentPageAllSelected.value) {
-        const currentIds = new Set(displayLists.value.map((i) => i.id));
-        chooseLists.value = chooseLists.value.filter((i) => !currentIds.has(i.id));
+        const currentKeys = new Set(displayLists.value.map((i) => recordKey(i)));
+        chooseLists.value = chooseLists.value.filter((i) => !currentKeys.has(recordKey(i)));
         if (chooseLists.value.length === 0) showChoosePanel.value = false;
     } else {
         for (const item of displayLists.value) {

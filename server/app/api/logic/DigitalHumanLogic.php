@@ -641,6 +641,11 @@ class DigitalHumanLogic extends ApiLogic
 
 //            if (($task_ids['shanjian']['status'] == 2 || $task_ids['shanjian']['status'] == 5) && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 1) {
             if (($task_ids['shanjian']['status'] == 2 || $task_ids['shanjian']['status'] == 5) && $task_ids['chanjing']['status'] == 1) {
+                if ($cloneMode === 3 && !$shanjianPro->isEmpty()
+                    && !self::refundMiddleCloneModeThree((int)$item['id'], $shanjian, $shanjianPro, $chanjing)) {
+                    Log::channel('digital')->write('中台一克三整单退款失败，等待重试：' . $item['id']);
+                    continue;
+                }
                 // weiju失败退费
 //                self::refundTokens($weiju->user_id, $weiju->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR);
 //                $weiju->status = 2;
@@ -670,6 +675,11 @@ class DigitalHumanLogic extends ApiLogic
             } else
 //                if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 2 && $task_ids['chanjing']['status'] == 1) {
                 if ($task_ids['shanjian']['status'] == 6 && $task_ids['chanjing']['status'] == 1) {
+                    if ($cloneMode === 3 && !$shanjianPro->isEmpty()
+                        && !self::refundMiddleCloneModeThree((int)$item['id'], $shanjian, $shanjianPro, $chanjing)) {
+                        Log::channel('digital')->write('中台一克三整单退款失败，等待重试：' . $item['id']);
+                        continue;
+                    }
                     // shanjian失败退费
                     self::refundTokens($shanjian->user_id, $shanjian->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN);
                     $shanjian->status = 2;
@@ -693,6 +703,10 @@ class DigitalHumanLogic extends ApiLogic
                     }
                     $order = true;
                 } else if ($cloneMode === 3 && (($task_ids['shanjian_pro']['status'] ?? 0) == 2) && $task_ids['chanjing']['status'] == 1) {
+                    if (!self::refundMiddleCloneModeThree((int)$item['id'], $shanjian, $shanjianPro, $chanjing)) {
+                        Log::channel('digital')->write('中台一克三整单退款失败，等待重试：' . $item['id']);
+                        continue;
+                    }
                     // 专业克隆失败时退专业费，并连带退极速/禅镜（对齐现有公共失败退费策略）
                     self::refundTokens($shanjianPro->user_id, $shanjianPro->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN_PRO);
                     $shanjianPro->status = 2;
@@ -743,6 +757,47 @@ class DigitalHumanLogic extends ApiLogic
 
         }
         return true;
+    }
+
+    /**
+     * 将站长端已判定的一克三整单退款同步到中台。
+     * 中台接口按任务幂等，网络超时后可以安全重试。
+     */
+    private static function refundMiddleCloneModeThree(
+        int $digitalHumanId,
+        $shanjian,
+        $shanjianPro,
+        $chanjing
+    ): bool {
+        try {
+            $response = \app\common\service\ToolsService::Shanjian()->batchRefund([
+                'request_id' => 'digital-human-refund:' . $digitalHumanId,
+                'reason' => '一克三任一克隆失败，整单退款',
+                'tasks' => [
+                    [
+                        'station_task_id' => (string)$shanjian->task_id,
+                        'platform' => 'shanjian',
+                        'action' => 'shanjian_fast_train',
+                    ],
+                    [
+                        'station_task_id' => (string)$shanjianPro->task_id,
+                        'platform' => 'shanjian',
+                        'action' => 'shanjian_train_pro',
+                    ],
+                    [
+                        'station_task_id' => (string)$chanjing->task_id,
+                        'platform' => 'chanjing_human',
+                        'action' => 'chanjing_avatar',
+                    ],
+                ],
+            ]);
+            return isset($response['code']) && (int)$response['code'] === 10000;
+        } catch (\Throwable $e) {
+            Log::channel('digital')->write(
+                '中台一克三整单退款请求异常：' . $digitalHumanId . '，' . $e->getMessage()
+            );
+            return false;
+        }
     }
 
     /**

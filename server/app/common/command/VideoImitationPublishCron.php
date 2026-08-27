@@ -19,6 +19,7 @@ class VideoImitationPublishCron extends Command
         $output->writeln('video imitation auto publish start');
 
         ImitationPublishLogic::setImitationPublishDetail();
+        TaskLogic::autoConfirmWashTasksCron();
         TaskLogic::autoGenerateTasksCron();
 
         $output->writeln('video imitation auto publish end');

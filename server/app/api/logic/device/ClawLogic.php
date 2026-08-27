@@ -4,16 +4,19 @@
 namespace app\api\logic\device;
 
 use app\api\logic\ApiLogic;
+use app\api\logic\TeamLogic;
 use app\common\enum\DeviceEnum;
+use app\common\model\oem\Oem;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvDeviceUsed;
 use app\common\model\sv\SvSetting;
+use app\common\model\team\Team;
 use app\common\model\user\User;
 use app\common\service\ConfigService;
-use app\common\service\FileService;
 use app\common\service\device\RpaDeviceDispatchService;
+use app\common\service\FileService;
 use think\facade\Db;
 use think\facade\Log;
 
@@ -47,10 +50,15 @@ class ClawLogic extends ApiLogic
                 throw new \Exception('用户不存在');
             }
 
+            $userData = $user->toArray();
+            $oem = self::resolveUserOem((int)$user->id);
+            $userData['is_oem'] = $oem['is_oem'];
+            $userData['oem_domain'] = $oem['oem_domain'];
+
             self::$returnData = [
                 'is_used' => SvDeviceUsed::where('device_code', $params['device_code'])->where('user_id', $device->user_id)->value('is_used', 0),
                 'device' => $device->toArray(),
-                'user' => $user->toArray(),
+                'user' => $userData,
                 'demoSwitch' => intval(ConfigService::get('rpa', 'demo_switch', 0)),
             ];
             return true;
@@ -58,6 +66,61 @@ class ClawLogic extends ApiLogic
             self::setError($th->getMessage());
             return false;
         }
+    }
+
+    /**
+     * @return array{is_oem:int,oem_domain:string}
+     */
+    private static function resolveUserOem(int $userId): array
+    {
+        $result = [
+            'is_oem' => 0,
+            'oem_domain' => '',
+        ];
+        if ($userId <= 0) {
+            return $result;
+        }
+
+        $user = User::field('id,team_id,origin_team_id')->where('id', $userId)->findOrEmpty();
+        $candidateIds = [];
+        if (!$user->isEmpty()) {
+            $teamId = (int)$user->team_id;
+            $originTeamId = (int)$user->origin_team_id;
+            if ($teamId > 0) {
+                $candidateIds[] = $teamId;
+            }
+            if ($originTeamId > 0 && $originTeamId !== $teamId) {
+                $candidateIds[] = $originTeamId;
+            }
+        }
+        if ($candidateIds) {
+            $teamMap = [];
+            $teams = Team::whereIn('id', $candidateIds)
+                ->where('status', 1)
+                ->where('oem_status', 2)
+                ->field('id,domain')
+                ->select();
+            foreach ($teams as $team) {
+                $teamMap[(int)$team->id] = (string)($team->domain ?? '');
+            }
+            foreach ($candidateIds as $id) {
+                if (isset($teamMap[$id])) {
+                    $result['is_oem'] = 1;
+                    $result['oem_domain'] = TeamLogic::normalizeDomain($teamMap[$id]);
+                    break;
+                }
+            }
+        }
+
+        $oem = Oem::where('user_id', $userId)->where('status', 1)->field('id,domain')->findOrEmpty();
+        if (!$oem->isEmpty()) {
+            $result['is_oem'] = 1;
+            if ($result['oem_domain'] === '') {
+                $result['oem_domain'] = TeamLogic::normalizeDomain((string)($oem->domain ?? ''));
+            }
+        }
+
+        return $result;
     }
 
     public static function getTask(array $params)

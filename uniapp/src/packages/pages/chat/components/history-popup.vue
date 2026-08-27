@@ -59,6 +59,7 @@ import { getCreativeRecord } from "@/api/chat";
 import { drawConversationLists, normalizeConversationList } from "@/api/draw";
 import { deletePhoneAgentConversation, getPhoneAgentTaskHistory } from "@/api/phone_agent";
 import { getMapLeadConversations } from "@/api/map_lead";
+import { formatRecordTime } from "@/utils/util";
 
 const props = defineProps<{
     visible: boolean;
@@ -143,17 +144,6 @@ const getRecordTitle = (item: any) => {
         return item.title || item.query || item.last_query || item.conversation_id || "-";
     }
     return item.message || item.file_info?.name || "-";
-};
-
-const formatRecordTime = (time: number | string) => {
-    if (time === 0 || time === "0" || time == null || time === "") return "-";
-    if (typeof time === "string" && time.includes("-")) return time;
-
-    const numeric = Number(time);
-    if (!Number.isFinite(numeric) || numeric <= 0) return String(time);
-
-    const timestamp = numeric < 1e12 ? numeric * 1000 : numeric;
-    return uni.$u.timeFormat(timestamp, "yyyy-mm-dd hh:MM") || String(time);
 };
 
 const getPhoneAgentStatus = (item: any) => {

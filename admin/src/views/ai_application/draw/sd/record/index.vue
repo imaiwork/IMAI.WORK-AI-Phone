@@ -107,13 +107,11 @@
                 </el-table-column>
                 <el-table-column label="创作类型" prop="type_name" min-width="120" />
                 <el-table-column label="消耗算力" prop="points" min-width="120">
-                    <template #default="{ row }"> {{ row.points || 0 }}算力 </template>
+                    <template #default="{ row }"
+                        >{{ row.task_status == 2 ? "+" : "-" }}{{ row.points || 0 }}算力
+                    </template>
                 </el-table-column>
-                <el-table-column
-                    label="备注"
-                    prop="points_remark"
-                    min-width="140"
-                    show-overflow-tooltip />
+                <el-table-column label="备注" prop="points_remark" min-width="140" show-overflow-tooltip />
                 <el-table-column label="创建时间" prop="create_time" min-width="180" show-overflow-tooltip />
                 <el-table-column label="操作" width="120" fixed="right">
                     <template #default="{ row }">

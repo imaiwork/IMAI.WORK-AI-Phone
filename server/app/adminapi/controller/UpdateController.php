@@ -4,6 +4,7 @@ namespace app\adminapi\controller;
 
 use app\common\service\ConfigService;
 use app\common\service\station\StationV3MigrationService;
+use app\common\service\updater\DbBackupService;
 use app\common\service\updater\DbCompareService;
 use app\common\service\updater\FileCompareService;
 use think\facade\Cache;
@@ -14,6 +15,13 @@ use think\facade\Db;
  */
 class UpdateController extends BaseAdminController
 {
+    /**
+     * 可安全跳过的 DDL 错误码：目标已经处于想要的状态，再执行一次没有意义
+     *
+     * 1050 表已存在 / 1060 字段已存在 / 1061 索引名已存在 / 1091 要删的字段或索引不存在 / 1826 外键名重复
+     */
+    private const IDEMPOTENT_DDL_ERRORS = [1050, 1060, 1061, 1091, 1826];
+
     /**
      * @notes 检查更新
      */
@@ -39,33 +47,14 @@ class UpdateController extends BaseAdminController
     }
 
     /**
-     * @notes 执行更新
+     * @notes 执行更新（旧机制，已停用）
+     *
+     * 旧路径绕过 SQL 执行日志、版本号比较不经归一化、前缀替换为全文 str_replace，
+     * 与热更新机制并存会导致状态不一致，故统一改走新版热更新流程。
      */
     public function exec()
     {
-        $version     = ConfigService::get('website', 'version', []);
-        $nextVersion = $this->request->post('version', 0);
-
-        if ($version['version_number'] >= $nextVersion) {
-            return $this->fail('当前版本已是最新');
-        }
-
-        if ($nextVersion < $version['version_number']) {
-            return $this->fail('版本必须逐个更新，也不可回退版本');
-        }
-
-        $response = \app\common\service\ToolsService::Auth()->execUpdate([
-            'version'      => $version['version_number'] ?? '100',
-            'next_version' => $nextVersion,
-        ]);
-
-        $version['version_name']   = $response['data']['version_name'];
-        $version['version_number'] = $nextVersion;
-        $version['update_time']    = date('Y-m-d H:i:s');
-
-        ConfigService::set('website', 'version', $version);
-
-        return $this->success('success');
+        return $this->fail('旧版一键更新已停用，请使用新版热更新（文件同步 → 数据库结构同步 → 版本 SQL → 写入版本号）');
     }
 
     // ==================== 远端版本 ====================
@@ -126,17 +115,48 @@ class UpdateController extends BaseAdminController
 
     /**
      * @notes 写入版本号（热更新全部步骤完成后，前端手动触发）
+     *
+     * POST /adminapi/update/versionUpdate
+     * Body: { "force": 0 }   force=1 跳过"版本 SQL 是否全部执行"的校验（管理员明确知道自己在做什么时使用）
+     *
+     * 写入前校验：本地版本 → 远端版本之间的所有版本 SQL 文件必须都已执行成功，
+     * 否则版本号一旦前移，sqlCompare 的 "文件版本 > 本地版本" 过滤会把没跑的文件永久隐藏。
      */
     public function versionUpdate()
     {
+        if ($err = $this->acquireUpdateLock()) {
+            return $this->fail($err);
+        }
+
         try {
             $remote = $this->fetchRemoteVersion();
+            $force  = (int)$this->request->post('force', 0) === 1;
 
-            $local = ConfigService::get('website', 'version', []);
+            $local       = ConfigService::get('website', 'version', []);
+            $localTuple  = $this->anyToTuple($local['version_number'] ?? 0, $local['version_name'] ?? '');
+            $remoteTuple = $this->anyToTuple($remote['version_number'], $remote['version_name']);
 
-            // 原样写入远端返回的值，不做任何格式转换
-            $local['version_number'] = $remote['version_number'];
-            $local['version_name']   = $remote['version_name'];
+            if (!$this->tupleGt($remoteTuple, $localTuple)) {
+                return $this->fail('当前版本已是最新（' . $this->tupleToName($localTuple) . '），无需写入');
+            }
+
+            $pending = array_values(array_filter(
+                $this->collectPendingSqlTasks($localTuple, $remoteTuple),
+                fn($t) => empty($t['skip'])
+            ));
+
+            if (!empty($pending) && !$force) {
+                $names = array_column($pending, 'file');
+                return $this->fail(
+                    '还有 ' . count($pending) . ' 个版本 SQL 文件未执行成功，不能写入版本号：' . implode('、', $names)
+                        . '。请先执行完成；如确认无需执行，可传 force=1 强制写入。',
+                    ['pending' => $names]
+                );
+            }
+
+            // 统一写入标准格式：version_number 五位数字、version_name vX.Y.Z
+            $local['version_number'] = $this->calcVersionNumber(...$remoteTuple);
+            $local['version_name']   = $this->tupleToName($remoteTuple);
             $local['update_time']    = date('Y-m-d H:i:s');
 
             ConfigService::set('website', 'version', $local);
@@ -145,6 +165,8 @@ class UpdateController extends BaseAdminController
                 'version_number' => $local['version_number'],
                 'version_name'   => $local['version_name'],
                 'update_time'    => $local['update_time'],
+                'forced'         => $force && !empty($pending),
+                'skipped_files'  => $force ? array_column($pending, 'file') : [],
             ]);
         } catch (\Exception $e) {
             return $this->fail($e->getMessage());
@@ -159,6 +181,10 @@ class UpdateController extends BaseAdminController
      */
     public function versionManual()
     {
+        if ($err = $this->acquireUpdateLock()) {
+            return $this->fail($err);
+        }
+
         $versionName = trim($this->request->post('version', ''));
 
         if (!preg_match('/^v(\d+)\.(\d+)\.(\d+)$/i', $versionName, $m)) {
@@ -166,6 +192,7 @@ class UpdateController extends BaseAdminController
         }
 
         $versionNumber = $this->calcVersionNumber((int)$m[1], (int)$m[2], (int)$m[3]);
+        $versionName   = $this->tupleToName([(int)$m[1], (int)$m[2], (int)$m[3]]); // 归一化：小写 v、去前导零
 
         $local = ConfigService::get('website', 'version', []);
 
@@ -263,6 +290,10 @@ class UpdateController extends BaseAdminController
      */
     public function fileSync()
     {
+        if ($err = $this->acquireUpdateLock()) {
+            return $this->fail($err);
+        }
+
         $file = $this->request->post('file', '');
         if (empty($file)) {
             return $this->fail('文件路径不能为空');
@@ -271,6 +302,9 @@ class UpdateController extends BaseAdminController
         try {
             $service = new FileCompareService();
             $service->syncFile($file);
+            if (preg_match('/\.php$/i', $file)) {
+                $this->resetOpcache();
+            }
             return $this->success('同步成功', [], 1, 0);
         } catch (\Exception $e) {
             return $this->fail($e->getMessage());
@@ -282,9 +316,14 @@ class UpdateController extends BaseAdminController
      */
     public function fileSyncSilent()
     {
+        if ($err = $this->acquireUpdateLock()) {
+            return $this->fail($err);
+        }
+
         try {
             $service = new FileCompareService();
             $result  = $service->syncDirectOverwrite();
+            $this->resetOpcache();
 
             return $this->success('覆盖完成', [
                 'count'  => $result['count'],
@@ -315,6 +354,10 @@ class UpdateController extends BaseAdminController
      */
     public function overwriteAllByZip()
     {
+        if ($err = $this->acquireUpdateLock()) {
+            return $this->fail($err);
+        }
+
         $dirs = $this->request->post('dirs', []);
         if (empty($dirs)) {
             $dirs = config('updater.direct_overwrite', []);
@@ -353,10 +396,11 @@ class UpdateController extends BaseAdminController
         }
 
         $data = [
-            'total'   => count($dirs),
-            'success' => $success,
-            'failed'  => $failed,
-            'details' => $details,
+            'total'         => count($dirs),
+            'success'       => $success,
+            'failed'        => $failed,
+            'details'       => $details,
+            'opcache_reset' => $this->resetOpcache(),
         ];
 
 
@@ -375,6 +419,49 @@ class UpdateController extends BaseAdminController
         return $this->success('覆盖完成', $data);
     }
 
+    /**
+     * @notes 手动清理 OPcache（批量 fileSync 完成后前端可调用一次）
+     */
+    public function opcacheReset()
+    {
+        $ok = $this->resetOpcache();
+        return $this->success($ok ? 'OPcache 已清理' : 'OPcache 未启用或无法清理（请重启 PHP-FPM）', ['ok' => $ok], 1, 0);
+    }
+
+    // ==================== 数据库备份 ====================
+
+    /**
+     * @notes 手动备份数据库（纯 PHP 导出到 runtime/backup，库大时耗时较长，请确保 nginx/php-fpm 超时足够）
+     *
+     * POST /adminapi/update/dbBackup
+     * Body: { "tag": "before_v2.12.1" }  可选
+     */
+    public function dbBackup()
+    {
+        if ($err = $this->acquireUpdateLock()) {
+            return $this->fail($err);
+        }
+
+        @set_time_limit(0);
+
+        try {
+            $service = new DbBackupService();
+            $result  = $service->backup((string)$this->request->post('tag', ''));
+            unset($result['path']);
+            return $this->success('备份完成', $result);
+        } catch (\Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    /**
+     * @notes 备份列表
+     */
+    public function dbBackupList()
+    {
+        return $this->success('success', (new DbBackupService())->lists(), 1, 0);
+    }
+
     // ==================== 数据库结构同步 ====================
 
     /**
@@ -386,7 +473,9 @@ class UpdateController extends BaseAdminController
             $service = new DbCompareService();
             $result  = $service->compare();
 
-            $cacheKey = 'updater_db_sqls_' . session_id();
+            // adminapi 为 token 鉴权，不启用原生 session，session_id() 恒为空串，
+            // 改用 管理员ID + 随机串 做键，避免多管理员共用同一份 SQL 列表导致 index 错位
+            $cacheKey = 'updater_db_sqls_' . $this->adminId . '_' . bin2hex(random_bytes(8));
             Cache::set($cacheKey, $result['sqls'], 1800);
 
             return $this->success('success', [
@@ -404,11 +493,20 @@ class UpdateController extends BaseAdminController
      */
     public function dbExecute()
     {
+        if ($err = $this->acquireUpdateLock()) {
+            return $this->fail($err);
+        }
+
         $cacheKey = $this->request->post('cache_key', '');
         $index    = (int) $this->request->post('index', -1);
 
         if (empty($cacheKey) || $index < 0) {
             return $this->fail('参数错误');
+        }
+
+        // 只允许执行当前管理员自己比对出来的列表
+        if (!str_starts_with($cacheKey, 'updater_db_sqls_' . $this->adminId . '_')) {
+            return $this->fail('cache_key 无效，请重新比对');
         }
 
         $sqls = Cache::get($cacheKey);
@@ -455,78 +553,14 @@ class UpdateController extends BaseAdminController
             $remoteInfo  = $this->fetchRemoteVersion();
             $remoteTuple = $this->anyToTuple($remoteInfo['version_number'], $remoteInfo['version_name']);
 
-            $updateDir = public_path('update');
-            if (!is_dir($updateDir)) {
-                return $this->success('success', [
-                    'local_version'  => $localInfo['version_number'] ?? 0,
-                    'local_name'     => $this->tupleToName($localTuple),
-                    'remote_version' => $remoteInfo['version_number'],
-                    'remote_name'    => $this->tupleToName($remoteTuple),
-                    'tasks'          => [],
-                ]);
-            }
-
-            $files = glob($updateDir . DIRECTORY_SEPARATOR . '*.sql') ?: [];
-
-            // 已成功执行过的文件（防止版本号写入失败后重复执行）
-            $executedFiles = $this->getExecutedSqlFiles();
-
-            $versionTasks = [];
-            $tableTasks   = [];
-
-            foreach ($files as $filePath) {
-                $filename = basename($filePath);
-
-                $parsed = $this->parseVersionFile($filename);
-                if ($parsed !== null) {
-                    $fileTuple = $parsed['tuple'];
-
-                    // 跳过：文件版本 <= 本地版本（已执行过）
-                    if (!$this->tupleGt($fileTuple, $localTuple)) {
-                        continue;
-                    }
-                    // 跳过：文件版本 > 远端版本（还未发布）
-                    if ($this->tupleGt($fileTuple, $remoteTuple)) {
-                        continue;
-                    }
-
-                    $versionTasks[] = [
-                        'file'      => $filename,
-                        'kind'      => 'version',
-                        // version / name 均直接来自文件名解析，不经过数字反推
-                        // v2.9.40.sql → "v2.9.40"，绝不会变成 "v2.9.4"
-                        'version'   => $parsed['version'],
-                        'name'      => $this->tupleToName($fileTuple),
-                        'tuple'     => $fileTuple,
-                        // number 仅用于排序，前端显示请用 version / name 字段
-                        'number'    => $this->calcVersionNumber(...$fileTuple),
-                        'timestamp' => $parsed['timestamp'],
-                        'size'      => filesize($filePath),
-                        'skip'      => in_array($filename, $executedFiles, true),
-                    ];
-                    continue;
-                }
-
-                // --- 类型二：建表文件 update_xxx.sql ---
-                // $tableInfo = $this->parseTableFile($filename);
-                // if ($tableInfo !== null) { ... }
-            }
-
-            // 按版本号升序，同版本按时间戳升序
-            usort($versionTasks, function ($a, $b) {
-                return $a['number'] !== $b['number']
-                    ? $a['number'] <=> $b['number']
-                    : $a['timestamp'] <=> $b['timestamp'];
-            });
-
-            usort($tableTasks, fn($a, $b) => strcmp($a['file'], $b['file']));
+            $tasks = $this->collectPendingSqlTasks($localTuple, $remoteTuple);
 
             return $this->success('success', [
                 'local_version'  => $localInfo['version_number'] ?? 0,
                 'local_name'     => $this->tupleToName($localTuple),
                 'remote_version' => $remoteInfo['version_number'],
                 'remote_name'    => $this->tupleToName($remoteTuple),
-                'tasks'          => array_merge($versionTasks, $tableTasks),
+                'tasks'          => $tasks,
             ]);
         } catch (\Exception $e) {
             return $this->fail($e->getMessage());
@@ -534,10 +568,90 @@ class UpdateController extends BaseAdminController
     }
 
     /**
+     * 收集待执行的版本 SQL 文件任务（本地版本 < 文件版本 <= 远端版本），按版本升序
+     *
+     * sqlCompare 与 versionUpdate 共用，保证"列出来的"与"写版本号前校验的"是同一批文件
+     */
+    private function collectPendingSqlTasks(array $localTuple, array $remoteTuple): array
+    {
+        $updateDir = public_path('update');
+        if (!is_dir($updateDir)) {
+            return [];
+        }
+
+        $files = glob($updateDir . DIRECTORY_SEPARATOR . '*.sql') ?: [];
+
+        // 已成功执行过的文件（防止版本号写入失败后重复执行）
+        $executedFiles = $this->getExecutedSqlFiles();
+
+        $versionTasks = [];
+        $tableTasks   = [];
+
+        foreach ($files as $filePath) {
+            $filename = basename($filePath);
+
+            $parsed = $this->parseVersionFile($filename);
+            if ($parsed !== null) {
+                $fileTuple = $parsed['tuple'];
+
+                // 跳过：文件版本 <= 本地版本（已执行过）
+                if (!$this->tupleGt($fileTuple, $localTuple)) {
+                    continue;
+                }
+                // 跳过：文件版本 > 远端版本（还未发布）
+                if ($this->tupleGt($fileTuple, $remoteTuple)) {
+                    continue;
+                }
+
+                $parsedSql = $this->splitAndFilterSql((string)file_get_contents($filePath));
+
+                $versionTasks[] = [
+                    'file'      => $filename,
+                    'kind'      => 'version',
+                    // 执行前预解析：让管理员提前看到哪些语句会被跳过
+                    'statements'    => count($parsedSql['allowed']),
+                    'filtered'      => count($parsedSql['filtered']),
+                    'filtered_list' => $this->previewStatements($parsedSql['filtered'], $parsedSql['reasons']),
+                    // version / name 均直接来自文件名解析，不经过数字反推
+                    // v2.9.40.sql → "v2.9.40"，绝不会变成 "v2.9.4"
+                    'version'   => $parsed['version'],
+                    'name'      => $this->tupleToName($fileTuple),
+                    'tuple'     => $fileTuple,
+                    // number 仅用于排序，前端显示请用 version / name 字段
+                    'number'    => $this->calcVersionNumber(...$fileTuple),
+                    'timestamp' => $parsed['timestamp'],
+                    'size'      => filesize($filePath),
+                    'skip'      => in_array($filename, $executedFiles, true),
+                ];
+                continue;
+            }
+
+            // --- 类型二：建表文件 update_xxx.sql ---
+            // $tableInfo = $this->parseTableFile($filename);
+            // if ($tableInfo !== null) { ... }
+        }
+
+        // 按版本号升序，同版本按时间戳升序
+        usort($versionTasks, function ($a, $b) {
+            return $a['number'] !== $b['number']
+                ? $a['number'] <=> $b['number']
+                : $a['timestamp'] <=> $b['timestamp'];
+        });
+
+        usort($tableTasks, fn($a, $b) => strcmp($a['file'], $b['file']));
+
+        return array_merge($versionTasks, $tableTasks);
+    }
+
+    /**
      * @notes 执行指定 SQL 文件
      */
     public function sqlExecute()
     {
+        if ($err = $this->acquireUpdateLock()) {
+            return $this->fail($err);
+        }
+
         $filename = $this->request->post('file', '');
 
         if (empty($filename) || !preg_match('/^[a-zA-Z0-9_.v-]+\.sql$/', $filename)) {
@@ -577,31 +691,71 @@ class UpdateController extends BaseAdminController
         $result   = $this->splitAndFilterSql($sql);
         $allowed  = $result['allowed'];
         $filtered = $result['filtered'];
+        $md5      = md5($sql);
+        $total    = count($allowed);
 
-        // 只含 DML（DDL 已被过滤，无隐式提交），可安全包在单个事务里：要么全部生效，要么全部回滚
-        try {
-            Db::startTrans();
-            foreach ($allowed as $statement) {
-                Db::execute($statement);
-            }
-            Db::commit();
-        } catch (\Exception $e) {
-            Db::rollback();
-            $this->saveSqlLog($filename, md5($sql), 0, $e->getMessage());
-            return $this->fail("执行失败（已回滚，本次未写入任何数据）：" . $e->getMessage());
+        // 断点续跑：上次失败且文件内容未变，则跳过已成功提交的语句；文件内容变了从头执行
+        $startIndex = 0;
+        if ($log !== null && $log['md5'] === $md5) {
+            $startIndex = min((int)($log['progress'] ?? 0), $total);
         }
 
-        $this->saveSqlLog($filename, md5($sql), 1);
+        // 白名单里含 ALTER / CREATE 等 DDL，MySQL 对 DDL 隐式提交，整文件包一个事务并不能回滚。
+        // 因此：DDL 逐条单独执行；相邻的 DML 归为一组包事务。每组成功后立即记录进度。
+        $chunks  = $this->chunkStatements($allowed, $startIndex);
+        $done    = $startIndex;
+        $skipped = [];
+
+        foreach ($chunks as $chunk) {
+            $isDdl = $chunk['ddl'];
+            $from  = $chunk['from'];
+            $list  = $chunk['statements'];
+
+            try {
+                if ($isDdl) {
+                    $skipped = array_merge($skipped, $this->executeDdlStatement($list[0], $from + 1));
+                } else {
+                    Db::startTrans();
+                    foreach ($list as $statement) {
+                        Db::execute($statement);
+                    }
+                    Db::commit();
+                }
+            } catch (\Exception $e) {
+                if (!$isDdl) {
+                    Db::rollback();
+                }
+                $failedAt = $from + 1; // 人类可读的序号（DML 组里具体哪条失败无法精确定位，从组首重跑）
+                $msg = "执行失败：第 {$failedAt} 条起的语句出错（前 {$done}/{$total} 条已生效并记录，修正后重试将从第 " . ($done + 1) . " 条继续）：" . $e->getMessage();
+                $this->saveSqlLog($filename, $md5, 0, $msg, $done);
+                return $this->fail($msg, [
+                    'file'      => $filename,
+                    'total'     => $total,
+                    'done'      => $done,
+                    'failed_at' => $failedAt,
+                    'statement' => mb_substr(preg_replace('/\s+/', ' ', $list[0]) ?? $list[0], 0, 200),
+                ]);
+            }
+
+            $done = $from + count($list);
+            $this->saveSqlLog($filename, $md5, 0, '', $done);
+        }
+
+        $this->saveSqlLog($filename, $md5, 1, '', $total);
 
         $responseData = [
             'file'           => $filename,
             'skipped'        => false,
             'count'          => count($allowed),
+            'resumed_from'   => $startIndex,
             'filtered'       => count($filtered),
             'filtered_types' => array_values(array_unique(array_map(
                 fn($s) => strtoupper(strtok(ltrim($s), " \t\n\r(")),
                 $filtered
             ))),
+            'filtered_list'  => $this->previewStatements($filtered, $result['reasons']),
+            // 结构同步已经补过的字段/索引，这里会被逐条跳过，列出来让管理员心里有数
+            'skipped_clauses' => $skipped,
         ];
 
         // SQL 已提交并记录成功，迁移失败不影响 SQL 执行记录（迁移有独立的重试入口）
@@ -691,6 +845,10 @@ class UpdateController extends BaseAdminController
      */
     public function stationMigrationV3()
     {
+        if ($err = $this->acquireUpdateLock()) {
+            return $this->fail($err);
+        }
+
         if (StationV3MigrationService::isCompleted()) {
             return $this->fail('站长中台已迁移完成，无需重试', StationV3MigrationService::getStatus());
         }
@@ -713,6 +871,58 @@ class UpdateController extends BaseAdminController
         } catch (\Throwable $e) {
             return $this->fail($e->getMessage(), StationV3MigrationService::getStatus());
         }
+    }
+
+    // ==================== 并发锁 / OPcache ====================
+
+    /** @var resource|null */
+    private $lockHandle = null;
+
+    /**
+     * 获取全局更新锁（进程级互斥，flock 非阻塞）
+     *
+     * 所有会写文件 / 写库的更新接口都必须先拿锁，防止多管理员或多标签页并发执行。
+     * 锁在请求结束时随句柄释放。
+     *
+     * @return string|null  拿到锁返回 null，否则返回失败原因
+     */
+    private function acquireUpdateLock(): ?string
+    {
+        $lockFile = runtime_path() . 'updater.lock';
+
+        $fp = @fopen($lockFile, 'c+');
+        if ($fp === false) {
+            return "无法创建锁文件：{$lockFile}";
+        }
+
+        if (!flock($fp, LOCK_EX | LOCK_NB)) {
+            $owner = trim((string)stream_get_contents($fp));
+            fclose($fp);
+            return '另一个更新操作正在执行中' . ($owner !== '' ? "（{$owner}）" : '') . '，请稍后再试';
+        }
+
+        ftruncate($fp, 0);
+        rewind($fp);
+        fwrite($fp, "admin_id={$this->adminId} at " . date('Y-m-d H:i:s'));
+        fflush($fp);
+
+        $this->lockHandle = $fp; // 保持句柄直到请求结束
+        return null;
+    }
+
+    /**
+     * 同步 PHP 代码后清理 OPcache，否则新代码可能不会生效
+     */
+    private function resetOpcache(): bool
+    {
+        try {
+            if (function_exists('opcache_reset')) {
+                return (bool)@opcache_reset();
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+        return false;
     }
 
     // ==================== 私有辅助方法 ====================
@@ -976,11 +1186,238 @@ class UpdateController extends BaseAdminController
                 "`md5` char(32) NOT NULL DEFAULT '' COMMENT '文件内容MD5'," .
                 "`status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态:1-成功,0-失败'," .
                 "`error` text COMMENT '失败原因'," .
+                "`progress` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '已成功执行的语句数(断点续跑用)'," .
                 "`execute_time` datetime DEFAULT NULL COMMENT '执行时间'," .
                 "PRIMARY KEY (`id`)," .
                 "UNIQUE KEY `uk_file` (`file`)" .
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统更新SQL文件执行记录'"
         );
+
+        // 旧表兼容：补 progress 字段
+        try {
+            $database = Db::getConfig('database');
+            $rows = Db::query(
+                "SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = 'progress'",
+                [$database, $table]
+            );
+            if ((int)($rows[0]['cnt'] ?? 0) === 0) {
+                Db::execute("ALTER TABLE `{$table}` ADD COLUMN `progress` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '已成功执行的语句数(断点续跑用)' AFTER `error`");
+            }
+        } catch (\Throwable $e) {
+            // 忽略：加不上字段只会失去断点续跑能力，不影响执行
+        }
+    }
+
+    /**
+     * 语句预览列表（截断到 200 字）
+     *
+     * @return array<int, array{type:string, reason:string, preview:string}>
+     */
+    private function previewStatements(array $statements, array $reasons = []): array
+    {
+        $list = [];
+        foreach ($statements as $i => $statement) {
+            $preview = preg_replace('/\s+/', ' ', trim($statement)) ?? trim($statement);
+            $list[]  = [
+                'type'    => strtoupper((string)strtok(ltrim($statement), " \t\n\r(")),
+                'reason'  => $reasons[$i] ?? '',
+                'preview' => mb_substr($preview, 0, 200),
+            ];
+        }
+        return $list;
+    }
+
+    /**
+     * 执行单条 DDL，已经生效过的部分跳过
+     *
+     * 一键更新是「先结构同步、后跑版本 SQL」：步骤一已按参考库补齐字段和索引，
+     * 步骤三版本 SQL 里的 ALTER 再跑一遍必然撞 1060/1061。
+     * 但整条跳过会连带漏掉同一条 ALTER 里尚未生效的子句（三个 ADD COLUMN 只存在一个时，
+     * 另外两个就永远补不上），所以撞到幂等错误后拆成单子句逐条重试，
+     * 只放过「已经是目标状态」的子句，其余错误照常抛出中止。
+     *
+     * @return array<int, array{index:int, clause:string, error:string}> 被跳过的子句
+     */
+    private function executeDdlStatement(string $statement, int $humanIndex): array
+    {
+        try {
+            Db::execute($statement);
+            return [];
+        } catch (\Exception $e) {
+            // 只有「已经是目标状态」这类错误才值得重试，其余（如 1071 索引过长）直接中止
+            if (!$this->isIdempotentDdlError($e)) {
+                throw $e;
+            }
+
+            $parsed = $this->splitAlterClauses($statement);
+            if ($parsed === null) {
+                return [$this->describeSkippedClause($humanIndex, $statement, $e)];
+            }
+
+            $skipped = [];
+            foreach ($parsed['clauses'] as $clause) {
+                $single = "ALTER TABLE {$parsed['table']} {$clause}";
+                try {
+                    Db::execute($single);
+                } catch (\Exception $inner) {
+                    if (!$this->isIdempotentDdlError($inner)) {
+                        throw $inner;
+                    }
+                    $skipped[] = $this->describeSkippedClause($humanIndex, $single, $inner);
+                }
+            }
+            return $skipped;
+        }
+    }
+
+    /**
+     * @return array{index:int, clause:string, error:string}
+     */
+    private function describeSkippedClause(int $humanIndex, string $sql, \Throwable $e): array
+    {
+        return [
+            'index'  => $humanIndex,
+            'clause' => mb_substr(preg_replace('/\s+/', ' ', trim($sql)) ?? trim($sql), 0, 200),
+            'error'  => mb_substr($e->getMessage(), 0, 200),
+        ];
+    }
+
+    /**
+     * 把 ALTER TABLE 拆成表名 + 各个子句，非 ALTER TABLE 或拆不出多个子句时返回 null
+     *
+     * 顶层逗号才算分隔符：引号、反引号、括号内的逗号（COMMENT '一,二'、KEY idx (a,b)）不能切。
+     *
+     * @return array{table:string, clauses:string[]}|null
+     */
+    private function splitAlterClauses(string $statement): ?array
+    {
+        if (!preg_match('/^\s*ALTER\s+(?:ONLINE\s+|IGNORE\s+)?TABLE\s+(`[^`]+`|[A-Za-z0-9_$]+)\s+(.+)$/is', $statement, $m)) {
+            return null;
+        }
+
+        $table = $m[1];
+        $rest  = rtrim(trim($m[2]), ';');
+
+        $clauses  = [];
+        $buffer   = '';
+        $depth    = 0;
+        $inString = null;
+        $len      = strlen($rest);
+
+        for ($i = 0; $i < $len; $i++) {
+            $ch = $rest[$i];
+
+            if ($inString !== null) {
+                $buffer .= $ch;
+                if ($ch === '\\' && $inString !== '`') {
+                    if ($i + 1 < $len) {
+                        $buffer .= $rest[$i + 1];
+                        $i++;
+                    }
+                } elseif ($ch === $inString) {
+                    if ($i + 1 < $len && $rest[$i + 1] === $inString) {
+                        $buffer .= $rest[$i + 1];
+                        $i++;
+                    } else {
+                        $inString = null;
+                    }
+                }
+                continue;
+            }
+
+            if ($ch === "'" || $ch === '"' || $ch === '`') {
+                $inString = $ch;
+                $buffer  .= $ch;
+                continue;
+            }
+            if ($ch === '(') {
+                $depth++;
+            } elseif ($ch === ')') {
+                $depth--;
+            } elseif ($ch === ',' && $depth === 0) {
+                $clauses[] = trim($buffer);
+                $buffer    = '';
+                continue;
+            }
+
+            $buffer .= $ch;
+        }
+        $clauses[] = trim($buffer);
+
+        $clauses = array_values(array_filter($clauses, static fn(string $c): bool => $c !== ''));
+
+        // 引号/括号没闭合说明拆错了，宁可不拆；单子句拆了也没意义
+        if ($inString !== null || $depth !== 0 || count($clauses) < 2) {
+            return null;
+        }
+
+        // ALGORITHM=INPLACE, LOCK=NONE 这类是整条语句的执行选项，拆开单跑不合法
+        foreach ($clauses as $clause) {
+            if (preg_match('/^(ALGORITHM|LOCK)\s*=/i', $clause)) {
+                return null;
+            }
+        }
+
+        return ['table' => $table, 'clauses' => $clauses];
+    }
+
+    /**
+     * 判断异常是不是「目标已经是想要的状态」那一类
+     *
+     * ThinkPHP 会把 PDOException 包一层，优先顺着 previous 链取驱动错误码，
+     * 取不到再从 "SQLSTATE[42S21]: Column already exists: 1060 ..." 这种消息里抠。
+     */
+    private function isIdempotentDdlError(\Throwable $e): bool
+    {
+        for ($cur = $e; $cur !== null; $cur = $cur->getPrevious()) {
+            if ($cur instanceof \PDOException && isset($cur->errorInfo[1])) {
+                return in_array((int)$cur->errorInfo[1], self::IDEMPOTENT_DDL_ERRORS, true);
+            }
+        }
+
+        if (preg_match('/SQLSTATE\[\w+\]:.*?:\s*(\d{4})\s/s', $e->getMessage(), $m)) {
+            return in_array((int)$m[1], self::IDEMPOTENT_DDL_ERRORS, true);
+        }
+
+        return false;
+    }
+
+    /**
+     * 将语句按「DDL 单独一组 / 相邻 DML 合并一组」切块
+     *
+     * @return array<int, array{ddl: bool, from: int, statements: string[]}>
+     */
+    private function chunkStatements(array $statements, int $startIndex = 0): array
+    {
+        $ddlWords = ['ALTER', 'CREATE', 'DROP', 'TRUNCATE', 'RENAME'];
+        $chunks   = [];
+        $current  = null;
+
+        for ($i = $startIndex, $n = count($statements); $i < $n; $i++) {
+            $statement = $statements[$i];
+            $firstWord = strtoupper((string)strtok(ltrim($statement), " \t\n\r("));
+            $isDdl     = in_array($firstWord, $ddlWords, true);
+
+            if ($isDdl) {
+                if ($current !== null) {
+                    $chunks[] = $current;
+                    $current  = null;
+                }
+                $chunks[] = ['ddl' => true, 'from' => $i, 'statements' => [$statement]];
+                continue;
+            }
+
+            if ($current === null) {
+                $current = ['ddl' => false, 'from' => $i, 'statements' => []];
+            }
+            $current['statements'][] = $statement;
+        }
+
+        if ($current !== null) {
+            $chunks[] = $current;
+        }
+
+        return $chunks;
     }
 
     /**
@@ -996,18 +1433,29 @@ class UpdateController extends BaseAdminController
     /**
      * 写入/更新 SQL 文件执行记录（失败不阻断主流程）
      */
-    private function saveSqlLog(string $filename, string $md5, int $status, string $error = ''): void
+    private function saveSqlLog(string $filename, string $md5, int $status, string $error = '', int $progress = 0): void
     {
         try {
             $table = $this->sqlLogTable();
             Db::execute(
-                "INSERT INTO `{$table}` (`file`, `md5`, `status`, `error`, `execute_time`) VALUES (?, ?, ?, ?, NOW()) " .
+                "INSERT INTO `{$table}` (`file`, `md5`, `status`, `error`, `progress`, `execute_time`) VALUES (?, ?, ?, ?, ?, NOW()) " .
                     "ON DUPLICATE KEY UPDATE `md5` = VALUES(`md5`), `status` = VALUES(`status`), " .
-                    "`error` = VALUES(`error`), `execute_time` = VALUES(`execute_time`)",
-                [$filename, $md5, $status, $error]
+                    "`error` = VALUES(`error`), `progress` = VALUES(`progress`), `execute_time` = VALUES(`execute_time`)",
+                [$filename, $md5, $status, $error, $progress]
             );
         } catch (\Throwable $e) {
-            // 忽略：日志表异常不应影响 SQL 本身的执行结果
+            // 兼容 progress 字段缺失的旧表：退回旧写法，至少保住成功/失败记录
+            try {
+                $table = $this->sqlLogTable();
+                Db::execute(
+                    "INSERT INTO `{$table}` (`file`, `md5`, `status`, `error`, `execute_time`) VALUES (?, ?, ?, ?, NOW()) " .
+                        "ON DUPLICATE KEY UPDATE `md5` = VALUES(`md5`), `status` = VALUES(`status`), " .
+                        "`error` = VALUES(`error`), `execute_time` = VALUES(`execute_time`)",
+                    [$filename, $md5, $status, $error]
+                );
+            } catch (\Throwable $e2) {
+                // 忽略：日志表异常不应影响 SQL 本身的执行结果
+            }
         }
     }
 
@@ -1126,38 +1574,30 @@ class UpdateController extends BaseAdminController
     /**
      * 将 SQL 文件内容拆分为单条语句。
      * 放行版本升级所需的 DML/DDL；拦截 DROP / TRUNCATE / GRANT 等危险语句。
+     *
+     * 返回：
+     *   allowed   将被执行的语句
+     *   filtered  被跳过的语句原文
+     *   reasons   与 filtered 一一对应的跳过原因（blocked=危险语句 / unknown=不在白名单）
      */
     private function splitAndFilterSql(string $sql): array
     {
         $envPrefix      = env('DATABASE.PREFIX', '');
         $standardPrefix = 'la_';
 
-        $lines   = explode("\n", $sql);
-        $cleaned = [];
-
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '' || str_starts_with($line, '--') || str_starts_with($line, '#')) {
-                continue;
-            }
-            $cleaned[] = $line;
-        }
-
-        // 按引号状态拆分语句，避免字符串值里的分号被错误截断
-        $all = $this->splitSqlStatements(implode("\n", $cleaned));
+        // 注释（-- / # / /* */）在拆分器里按引号状态剥离，字符串里的 "--" 不会被误伤
+        $all = $this->splitSqlStatements($sql);
 
         if (!empty($envPrefix) && $envPrefix !== $standardPrefix) {
-            $all = array_map(function ($statement) use ($standardPrefix, $envPrefix) {
-                return preg_replace(
-                    '/`' . preg_quote($standardPrefix, '/') . '([^`]*)`/',
-                    '`' . $envPrefix . '$1`',
-                    $statement
-                );
-            }, $all);
+            $all = array_map(
+                fn($statement) => $this->replacePrefixOutsideStrings($statement, $standardPrefix, $envPrefix),
+                $all
+            );
         }
 
         $allowedWords = [
             'INSERT',
+            'REPLACE',
             'UPDATE',
             'DELETE',
             'ALTER',
@@ -1167,26 +1607,95 @@ class UpdateController extends BaseAdminController
             'EXECUTE',
             'DEALLOCATE',
             'DO',
+            'CALL',
+            'WITH',
         ];
         $blockedWords = ['DROP', 'TRUNCATE', 'GRANT', 'REVOKE'];
 
         $allowed  = [];
         $filtered = [];
+        $reasons  = [];
 
         foreach ($all as $statement) {
-            $firstWord = strtoupper(strtok(ltrim($statement), " \t\n\r("));
+            $firstWord = strtoupper((string)strtok(ltrim($statement), " \t\n\r("));
             if (in_array($firstWord, $blockedWords, true)) {
                 $filtered[] = $statement;
+                $reasons[]  = 'blocked';
                 continue;
             }
             if (in_array($firstWord, $allowedWords, true)) {
                 $allowed[] = $statement;
             } else {
                 $filtered[] = $statement;
+                $reasons[]  = 'unknown';
             }
         }
 
-        return ['allowed' => $allowed, 'filtered' => $filtered];
+        return ['allowed' => $allowed, 'filtered' => $filtered, 'reasons' => $reasons];
+    }
+
+    /**
+     * 在字符串字面量之外替换表前缀（反引号内的标识符也替换）
+     *
+     * 覆盖 `la_user` 与裸写 la_user；'la_xxx' / "la_xxx" 引号内是数据值（MySQL 默认模式下双引号是字符串），不动。
+     */
+    private function replacePrefixOutsideStrings(string $statement, string $from, string $to): string
+    {
+        $out       = '';
+        $len       = strlen($statement);
+        $inString  = null;
+        $segment   = '';
+        $strBuffer = '';
+        $pattern   = '/(?<![A-Za-z0-9_])' . preg_quote($from, '/') . '(?=[A-Za-z0-9_])/';
+
+        // 字符串里的动态 SQL：PREPARE p FROM 'ALTER TABLE `la_x` ...'、
+        // TABLE_NAME = TRIM(BOTH '`' FROM '`la_x`') 这类写法，表名躲在引号里，
+        // 不替换的话前缀不是 la_ 的站点会去操作一张不存在的表。
+        // 只认「反引号包起来的标识符」，纯文本值（COMMENT '关联la_draw_task.id'）不碰。
+        $quotedIdent = '/(?<=`)' . preg_quote($from, '/') . '(?=[A-Za-z0-9_]*`)/';
+
+        $flush = function () use (&$segment, &$out, $pattern, $to) {
+            $out    .= preg_replace($pattern, $to, $segment);
+            $segment = '';
+        };
+
+        for ($i = 0; $i < $len; $i++) {
+            $ch = $statement[$i];
+
+            if ($inString !== null) {
+                $strBuffer .= $ch;
+                if ($ch === '\\' && $inString !== '`') {
+                    if ($i + 1 < $len) {
+                        $strBuffer .= $statement[++$i];
+                    }
+                } elseif ($ch === $inString) {
+                    if ($i + 1 < $len && $statement[$i + 1] === $inString) {
+                        $strBuffer .= $statement[++$i];
+                    } else {
+                        $inString   = null;
+                        $out       .= preg_replace($quotedIdent, $to, $strBuffer);
+                        $strBuffer  = '';
+                    }
+                }
+                continue;
+            }
+
+            // 反引号内是标识符，需要替换；单/双引号内是值，只替换其中被反引号包住的标识符
+            if ($ch === "'" || $ch === '"') {
+                $flush();
+                $inString  = $ch;
+                $strBuffer = $ch;
+                continue;
+            }
+
+            $segment .= $ch;
+        }
+        $flush();
+
+        // 引号没闭合说明语句本身有问题，原样吐出，不做替换
+        $out .= $strBuffer;
+
+        return $out;
     }
 
     /**
@@ -1225,6 +1734,40 @@ class UpdateController extends BaseAdminController
             if ($ch === "'" || $ch === '"' || $ch === '`') {
                 $inString = $ch;
                 $buffer  .= $ch;
+                continue;
+            }
+
+            // 行注释：# 或 --
+            // MySQL 规范要求 -- 后跟空白，但历史文件里有 "--标题" 这种写法，
+            // 因此：-- 后跟空白/行尾，或 -- 位于行首（前面只有空白），都视为注释
+            $isDashComment = false;
+            if ($ch === '-' && $i + 1 < $len && $sql[$i + 1] === '-') {
+                if ($i + 2 >= $len || ctype_space($sql[$i + 2])) {
+                    $isDashComment = true;
+                } else {
+                    $lineStart     = strrpos(substr($sql, 0, $i), "\n");
+                    $lineStart     = $lineStart === false ? 0 : $lineStart + 1;
+                    $isDashComment = trim(substr($sql, $lineStart, $i - $lineStart)) === '';
+                }
+            }
+            if ($ch === '#' || $isDashComment) {
+                $nl = strpos($sql, "\n", $i);
+                if ($nl === false) {
+                    break;
+                }
+                $i = $nl; // 保留换行本身
+                $buffer .= "\n";
+                continue;
+            }
+
+            // 块注释 /* ... */（含 /*!40101 ... */ 条件注释，一并剥离）
+            if ($ch === '/' && $i + 1 < $len && $sql[$i + 1] === '*') {
+                $close = strpos($sql, '*/', $i + 2);
+                if ($close === false) {
+                    break; // 未闭合：丢弃剩余内容
+                }
+                $i = $close + 1;
+                $buffer .= ' ';
                 continue;
             }
 

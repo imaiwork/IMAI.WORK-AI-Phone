@@ -35,12 +35,15 @@ class IntentionCustomerLists extends BaseApiDataLists implements ListsExtendInte
     public function lists(): array
     {
         $items = $this->getDomainItems($this->domain);
-        $items = array_slice($items, $this->limitOffset, $this->limitLength);
+        $pageItems = array_slice($items, $this->limitOffset, $this->limitLength);
         $includeSourceInteraction = $this->domain === 'public';
+
+        // 批量预加载朋友圈互动统计（一次查询，避免 responseItem 中的 N+1）
+        IntentionCustomerService::prefetchCircleInteractionStats($this->getCurrentUserId(), $pageItems);
 
         return array_map(static function (array $item) use ($includeSourceInteraction) {
             return IntentionCustomerService::responseItem($item, $includeSourceInteraction);
-        }, $items);
+        }, $pageItems);
     }
 
     public function count(): int

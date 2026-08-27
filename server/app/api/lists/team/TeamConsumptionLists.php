@@ -105,6 +105,13 @@ class TeamConsumptionLists extends BaseApiDataLists implements ListsExtendInterf
             'social' => ['社媒获客', [], [[10301, 10399]]],
             'meeting' => ['会议纪要', [], [[3001, 3999]]],
             'mind' => ['思维导图', [], [[4001, 4999]]],
+            'hotspot' => ['热点追踪', [
+                AccountLogEnum::TOKENS_DEC_HOTSPOT_HOT_DAY,
+                AccountLogEnum::TOKENS_DEC_HOTSPOT_HOT_WORDS,
+                AccountLogEnum::TOKENS_DEC_HOTSPOT_INSIGHT,
+                AccountLogEnum::TOKENS_DEC_HOTSPOT_ARK_CHAT,
+                AccountLogEnum::TOKENS_DEC_HOTSPOT_ARK_SEARCH,
+            ], []],
         ];
     }
 
@@ -191,6 +198,15 @@ class TeamConsumptionLists extends BaseApiDataLists implements ListsExtendInterf
         }
         if ($ct === AccountLogEnum::TOKENS_DEC_EXTRACT_KEYWORDS) {
             return ['extract_keywords', '关键词提取', 'text'];
+        }
+        if (in_array($ct, [
+            AccountLogEnum::TOKENS_DEC_HOTSPOT_HOT_DAY,
+            AccountLogEnum::TOKENS_DEC_HOTSPOT_HOT_WORDS,
+            AccountLogEnum::TOKENS_DEC_HOTSPOT_INSIGHT,
+            AccountLogEnum::TOKENS_DEC_HOTSPOT_ARK_CHAT,
+            AccountLogEnum::TOKENS_DEC_HOTSPOT_ARK_SEARCH,
+        ], true)) {
+            return ['hotspot', '热点追踪', 'text'];
         }
         // 图文爆款仿写(勿落入下方社媒获客段)
         if ($ct === AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE) {

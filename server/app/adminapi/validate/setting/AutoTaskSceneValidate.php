@@ -42,7 +42,7 @@ class AutoTaskSceneValidate extends BaseValidate
                 return '配置项格式错误';
             }
             $scene = filter_var($item['scene'] ?? null, FILTER_VALIDATE_INT);
-            if (false === $scene || $scene < 1 || $scene > 17) {
+            if (false === $scene || $scene < 1 || $scene > 15) {
                 return '任务场景不合法';
             }
             if (in_array($scene, $scenes, true)) {
@@ -52,6 +52,16 @@ class AutoTaskSceneValidate extends BaseValidate
 
             if (!in_array($item['allow_add'] ?? null, [0, 1, '0', '1'], true)) {
                 return '是否允许添加参数错误';
+            }
+
+            if (array_key_exists('allow_platforms', $item)) {
+                $platformCheck = \app\common\service\auto\AutoTaskSceneConfigService::validateAllowPlatformsInput(
+                    $scene,
+                    $item['allow_platforms']
+                );
+                if (true !== $platformCheck) {
+                    return $platformCheck;
+                }
             }
         }
 

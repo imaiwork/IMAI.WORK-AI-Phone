@@ -3,6 +3,7 @@
 namespace app\common\service;
 
 use app\api\logic\ChatLogic;
+use app\common\service\hotspot\HotspotMidClient;
 use GuzzleHttp\Client;
 use PDO;
 use think\facade\Log;
@@ -85,6 +86,8 @@ if (!defined('IMAI_TOOLS_CONFIG_LOADED')) {
  * @method static AiPersonaService AiPersona()
  * @method static MinimaxService Minimax()
  * @method static GeoService Geo()
+ * @method static TikHubService TikHub()
+ * @method static ArkService Ark()
  */
 class ToolsService
 {
@@ -402,15 +405,105 @@ class ToolsService
             $this->check();
         }
 
-        header('Content-type: text/event-stream');
-        header('Cache-Control: no-cache');
-        header('Connection: keep-alive');
-        header('X-Accel-Buffering: no');
+        if (!headers_sent()) {
+            header('Content-type: text/event-stream');
+            header('Cache-Control: no-cache');
+            header('Connection: keep-alive');
+            header('X-Accel-Buffering: no');
+        }
 
         //设置签名
         $this->setSignHeader();
 
         ToolsSteamCurlRequest($this->url, $this->request, $this->headers, $callback);
+    }
+
+    /**
+     * 消费中台 SSE 事件流（progress/think/delta/done/error）。think 只回调，不并入 output。
+     */
+    public function streamCollectEvents(callable $onEvent, bool $check = true): array
+    {
+        if ($check) {
+            $this->check();
+        }
+        $this->setSignHeader();
+
+        $buffer = '';
+        $output = '';
+        $usage = [];
+        $capability = '';
+        $error = '';
+        $done = false;
+        $callback = function (string $chunk) use (&$buffer, &$output, &$usage, &$capability, &$error, &$done, $onEvent): int {
+            $buffer .= $chunk;
+            while (($pos = strpos($buffer, "\n")) !== false) {
+                $line = trim(substr($buffer, 0, $pos));
+                $buffer = substr($buffer, $pos + 1);
+                if ($line === '' || !str_starts_with($line, 'data:')) {
+                    continue;
+                }
+                $payload = trim(substr($line, 5));
+                if ($payload === '' || $payload === '[DONE]') {
+                    continue;
+                }
+                $decoded = json_decode($payload, true);
+                if (!is_array($decoded)) {
+                    continue;
+                }
+                $event = (string)($decoded['event'] ?? '');
+                if ($event === 'progress') {
+                    $onEvent('progress', (string)($decoded['message'] ?? ''));
+                    continue;
+                }
+                if ($event === 'think') {
+                    $onEvent('think', (string)($decoded['output'] ?? ''));
+                    continue;
+                }
+                if ($event === 'delta') {
+                    $delta = (string)($decoded['output'] ?? '');
+                    $output .= $delta;
+                    $onEvent('delta', $delta);
+                    continue;
+                }
+                if ($event === 'done') {
+                    $done = true;
+                    $data = is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
+                    $output = (string)($data['output'] ?? $output);
+                    $usage = is_array($data['usage'] ?? null) ? $data['usage'] : $usage;
+                    $capability = (string)($data['capability'] ?? $capability);
+                    $onEvent('done', $output);
+                    continue;
+                }
+                if ($event === 'error') {
+                    $error = (string)($decoded['message'] ?? $decoded['msg'] ?? '预处理失败');
+                    $onEvent('error', $error);
+                }
+            }
+            return strlen($chunk);
+        };
+
+        ToolsSteamCurlRequest($this->url, $this->request, $this->headers, $callback);
+        if ($error !== '') {
+            return ['code' => 40000, 'message' => $error, 'data' => []];
+        }
+        if (!$done && $output === '') {
+            return ['code' => 40000, 'message' => '预处理流式响应为空', 'data' => []];
+        }
+        $prompt = (int)($usage['prompt_tokens'] ?? 0);
+        $completion = (int)($usage['completion_tokens'] ?? 0);
+        return [
+            'code' => 10000,
+            'message' => '操作成功',
+            'data' => [
+                'output' => $output,
+                'usage' => [
+                    'prompt_tokens' => $prompt,
+                    'completion_tokens' => $completion,
+                    'total_tokens' => (int)($usage['total_tokens'] ?? ($prompt + $completion)),
+                ],
+                'capability' => $capability,
+            ],
+        ];
     }
 
     public function streamCollect(bool $check = true): array
@@ -1560,7 +1653,6 @@ class CozeService
             ->response;
     }
 
-
     public function cozeAgentChat($params): array
     {
         return app(ToolsService::class)
@@ -1630,7 +1722,7 @@ class CozeService
             ->send()
             ->response;
     }
-     public function setseniortext($params): array
+    public function setseniortext($params): array
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/coze/setseniortext')
@@ -1886,16 +1978,167 @@ class AutoGlmService
 
 class TikHubService
 {
-    
+
     public function getXhsImageNoteDetail(string $shareText): array
     {
-         return app(ToolsService::class)
+        return app(ToolsService::class)
             ->setApiUrl('/api/xhs/note/detail')
             ->setRequest(['share_text' => $shareText])
             ->setMethod('POST')
             ->setTimeout(10, 120)
             ->send()
             ->response;
+    }
+
+    public function fetchDouyinHotTopic(): array
+    {
+        return HotspotMidClient::request('/api/hotspot/hot_day', ["platform" => "douyin"]);
+    }
+
+    public function fetchKuaishouHotList(): array
+    {
+        return HotspotMidClient::request('/api/v1/kuaishou/web/fetch_kuaishou_hot_list_v1');
+    }
+
+    public function fetchXiaohongshuHotList(): array
+    {
+        return HotspotMidClient::request('/api/v1/xiaohongshu/web_v3/fetch_hot_list');
+    }
+
+    public function fetchWeiboHotSearch(): array
+    {
+        return HotspotMidClient::request('/api/v1/weibo/web_v2/fetch_hot_search');
+    }
+
+    public function fetchDouyinRiseList(int $pageSize = 30): array
+    {
+        return HotspotMidClient::request('/api/hotspot/hot_rise', [
+            'platform' => "douyin",
+            'page' => 1,
+            'page_size' => max($pageSize, 30),
+            'order' => 'rank_diff',
+        ]);
+    }
+
+    public function fetchDouyinHotDetail(string $topicName): array
+    {
+        return HotspotMidClient::request('/api/hotspot/insight', [
+            'topic_name' => $topicName,
+        ]);
+    }
+
+    public function fetchDouyinHotWords(string $appName = 'aweme'): array
+    {
+        $payload = HotspotMidClient::request('/api/hotspot/hot_words', [
+            'app_name' => $appName,
+        ]);
+        $data = $payload['data'] ?? [];
+        if (!is_array($data)) {
+            return [];
+        }
+        if ($data === [] || array_keys($data) === range(0, count($data) - 1)) {
+            return $data;
+        }
+        return is_array($data['hot_words'] ?? null) ? $data['hot_words'] : [];
+    }
+}
+
+class ArkService
+{
+    public function webSearch(string $prompt): array
+    {
+        $payload = HotspotMidClient::request('/api/hotspot/research', [
+            'model' => (string)config('hotspot.ark_search_model'),
+            'input' => $prompt,
+            'tools' => [['type' => 'web_search']],
+            'stream' => false,
+        ], HotspotMidClient::KIND_ARK);
+
+        $textParts = [];
+        $citations = [];
+        $queries = [];
+        $seen = [];
+        foreach ($payload['output'] ?? [] as $item) {
+            $kind = $item['type'] ?? '';
+            if ($kind === 'web_search_call') {
+                $q = (string)(($item['action'] ?? [])['query'] ?? '');
+                foreach (preg_split('/[;；]/u', $q) ?: [] as $part) {
+                    $part = trim($part);
+                    if ($part !== '') {
+                        $queries[] = $part;
+                    }
+                }
+            } elseif ($kind === 'message') {
+                foreach ($item['content'] ?? [] as $block) {
+                    if (($block['type'] ?? '') !== 'output_text') {
+                        continue;
+                    }
+                    $textParts[] = (string)($block['text'] ?? '');
+                    foreach ($block['annotations'] ?? [] as $ann) {
+                        if (($ann['type'] ?? '') !== 'url_citation') {
+                            continue;
+                        }
+                        $url = (string)($ann['url'] ?? '');
+                        if ($url === '' || isset($seen[$url])) {
+                            continue;
+                        }
+                        $seen[$url] = true;
+                        $citations[] = [
+                            'title' => (string)($ann['title'] ?? ''),
+                            'url' => $url,
+                            'site_name' => (string)($ann['site_name'] ?? ''),
+                            'publish_time' => (string)($ann['publish_time'] ?? ''),
+                            'logo_url' => (string)($ann['logo_url'] ?? ''),
+                        ];
+                    }
+                }
+            }
+        }
+
+        $model = (string)config('hotspot.ark_search_model');
+        $result = [
+            'text' => trim(implode("\n", array_filter($textParts))),
+            'citations' => $citations,
+            'queries' => $queries,
+            'model' => $model,
+            'usage' => \app\common\service\hotspot\HotspotChargeService::extractArkUsage($payload),
+        ];
+        \app\common\service\hotspot\HotspotLog::write(sprintf(
+            '方舟联网搜索完成：摘要长度=%d 引用数=%d 检索词数=%d',
+            mb_strlen($result['text']),
+            count($citations),
+            count($queries)
+        ));
+        return $result;
+    }
+
+    /**
+     * @return array{text:string,model:string,usage:array{prompt_tokens:int,completion_tokens:int,total_tokens:int}}
+     */
+    public function chat(string $system, string $user, float $temperature = 0.7): array
+    {
+        $model = (string)config('hotspot.ark_writer_model');
+
+        $payload = HotspotMidClient::request('/api/hotspot/chat', [
+            'model' => $model,
+            'messages' => [
+                ['role' => 'system', 'content' => $system],
+                ['role' => 'user', 'content' => $user],
+            ],
+            'temperature' => $temperature,
+            'stream' => false,
+        ], HotspotMidClient::KIND_ARK);
+
+        $choices = $payload['choices'] ?? [];
+        $text = '';
+        if ($choices !== []) {
+            $text = (string)(($choices[0]['message'] ?? [])['content'] ?? '');
+        }
+        return [
+            'text' => $text,
+            'model' => $model,
+            'usage' => \app\common\service\hotspot\HotspotChargeService::extractArkUsage($payload),
+        ];
     }
 }
 
@@ -2494,6 +2737,82 @@ class QWenService
             ->setRequest($params)
             ->send()
             ->response;
+    }
+
+    public function fileParse(string $file_url, string $question = ''): array
+    {
+        return app(ToolsService::class)
+            ->setApiUrl('/api/qwen/file/parse')
+            ->setRequest([
+                'file_url' => $file_url,
+                'question' => $question,
+            ])
+            ->setMethod('POST')
+            ->send()
+            ->response;
+    }
+
+    public function imageParse(string $file_url, string $question = ''): array
+    {
+        return app(ToolsService::class)
+            ->setApiUrl('/api/qwen/image/parse')
+            ->setRequest([
+                'file_url' => $file_url,
+                'question' => $question,
+            ])
+            ->setMethod('POST')
+            ->send()
+            ->response;
+    }
+
+    public function networkSearch(string $prompt): array
+    {
+        return app(ToolsService::class)
+            ->setApiUrl('/api/qwen/network/search')
+            ->setRequest([
+                'prompt' => $prompt,
+            ])
+            ->setMethod('POST')
+            ->send()
+            ->response;
+    }
+
+    public function fileParseStream(string $file_url, string $question, callable $onEvent): array
+    {
+        return app(ToolsService::class)
+            ->setApiUrl('/api/qwen/file/parse')
+            ->setRequest([
+                'file_url' => $file_url,
+                'question' => $question,
+                'stream' => true,
+            ])
+            ->setMethod('POST')
+            ->streamCollectEvents($onEvent);
+    }
+
+    public function imageParseStream(string $file_url, string $question, callable $onEvent): array
+    {
+        return app(ToolsService::class)
+            ->setApiUrl('/api/qwen/image/parse')
+            ->setRequest([
+                'file_url' => $file_url,
+                'question' => $question,
+                'stream' => true,
+            ])
+            ->setMethod('POST')
+            ->streamCollectEvents($onEvent);
+    }
+
+    public function networkSearchStream(string $prompt, callable $onEvent): array
+    {
+        return app(ToolsService::class)
+            ->setApiUrl('/api/qwen/network/search')
+            ->setRequest([
+                'prompt' => $prompt,
+                'stream' => true,
+            ])
+            ->setMethod('POST')
+            ->streamCollectEvents($onEvent);
     }
 }
 
@@ -3120,7 +3439,7 @@ class InterviewService
 {
 
 
-// 替换为：
+    // 替换为：
     const URL         = IMAI_INTERVIEW_URL;
     const WORKFLOW_ID = IMAI_INTERVIEW_WORKFLOW_ID;
     const TOKEN       = IMAI_INTERVIEW_TOKEN;
@@ -3167,7 +3486,7 @@ class InterviewService
         $params['action'] = 'stt';
 
         return app(ToolsService::class)
-            ->setApiUrl('/api/interview/stt')
+            ->setApiUrl('/api/v2/interview/chat')
             ->setRequest($params)
             ->setMethod('POST')
             ->send()
@@ -3177,10 +3496,10 @@ class InterviewService
     public function tts(array $params = []): array
     {
 
-        $params['action'] = 'stt';
+        $params['action'] = 'tts';
 
         return app(ToolsService::class)
-            ->setApiUrl('/api/interview/tts')
+            ->setApiUrl('/api/v2/interview/chat')
             ->setRequest($params)
             ->setMethod('POST')
             ->send()
@@ -4009,8 +4328,7 @@ function ToolsCurlPostRequest(
     array $headers = [],
     int $connectTimeout = 0,
     int $requestTimeout = 0
-): array
-{
+): array {
 
     $ch = curl_init();
     $methodUpper = strtoupper($method ?: 'POST');
@@ -4441,7 +4759,7 @@ class SvService
 {
 
     private string $wechatVerifyUrl = IMAI_TOOLS_WECHAT_VERIFY_URL;
-       /**
+    /**
      * 聊天
      * @return array
      */
@@ -4814,6 +5132,19 @@ class ShanjianService
     }
 
     /**
+     * 一克三整单补偿退款。
+     */
+    public function batchRefund(array $params): array
+    {
+        return app(ToolsService::class)
+            ->setApiUrl('/api/task/batch-refund')
+            ->setMethod('POST')
+            ->setRequest($params)
+            ->send()
+            ->response;
+    }
+
+    /**
      * 智能剪辑模板列表
      */
     public function template(array $params): array
@@ -4959,7 +5290,7 @@ class ShanjianService
             ->response;
     }
 
-     public function aiCover(array $params): array
+    public function aiCover(array $params): array
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/shanjian/aicover')
@@ -5014,7 +5345,7 @@ class SoraService
     {
         $modelVersion = $params['model_version'];
         $api = '';
-        switch ($modelVersion){
+        switch ($modelVersion) {
             case 3:
                 $api = '/api/doubao/seedance/480image2video';
                 break;
@@ -5578,16 +5909,34 @@ class CopywritingService
 class VideoImitationService
 {
     /**
-     * @desc 根据视频链接提取视频文案
+     * @desc 根据视频链接提取视频文案（兼容旧调用，统一走 V2 阿里云百炼）
      * @param string $videoUrl 视频链接（分享链接）
      * @return array
      */
     public function video2text(string $videoUrl): array
     {
+        return $this->video2textV2($videoUrl);
+    }
+
+    /**
+     * @desc 根据视频链接提取视频文案（V2 阿里云百炼）
+     * @param string $videoUrl 视频链接（分享链接）
+     * @return array
+     */
+    public function video2textV2(string $videoUrl): array
+    {
+        return $this->requestVideo2text($videoUrl, '/api/v2/videoImitation/video2text');
+    }
+
+    /**
+     * 统一视频文案提取请求，避免 V1/V2 请求协议出现差异。
+     */
+    private function requestVideo2text(string $videoUrl, string $apiUrl): array
+    {
         $params['shareUrl'] = $videoUrl;
 
         return app(ToolsService::class)
-            ->setApiUrl('/api/videoImitation/video2text')
+            ->setApiUrl($apiUrl)
             ->setRequest($params)
             ->setMethod('POST')
             ->send()

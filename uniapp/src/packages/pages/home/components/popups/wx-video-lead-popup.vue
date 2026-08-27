@@ -53,9 +53,7 @@
                                         class="rounded-[16rpx] px-[20rpx] py-[8rpx] text-xs text-primary bg-primary-light-9">
                                         {{ term }}
                                     </text>
-                                    <text
-                                        v-if="!config.clue_keywords.length"
-                                        class="text-[22rpx] text-[#9ca3af]">
+                                    <text v-if="!config.clue_keywords.length" class="text-[22rpx] text-[#9ca3af]">
                                         暂无
                                     </text>
                                 </view>
@@ -63,10 +61,7 @@
                             <view
                                 class="flex-shrink-0 flex items-center gap-[8rpx] text-xs font-medium text-primary bg-primary-light-9 px-[20rpx] py-[12rpx] rounded-full"
                                 @click="emit('edit-tracking')">
-                                <image
-                                    :src="settingsIcon"
-                                    mode="aspectFit"
-                                    class="w-[24rpx] h-[24rpx]" />
+                                <image :src="settingsIcon" mode="aspectFit" class="w-[24rpx] h-[24rpx]" />
                                 <text>前往修改</text>
                             </view>
                         </view>
@@ -93,14 +88,14 @@
 
                     <view class="bg-white rounded-[32rpx] overflow-hidden">
                         <view
-                            class="px-[32rpx] py-[24rpx] border-b-[2rpx] border-[#f9fafb] flex items-center gap-[12rpx]">
+                            class="px-[32rpx] py-[24rpx] border-[0] border-b-[2rpx] border-[#f9fafb] flex items-center gap-[12rpx]">
                             <text class="text-sm font-bold text-[#1f2937]">招商客户列表</text>
                             <text class="text-xs text-[#9ca3af]">{{ leads.length }} 个</text>
                         </view>
                         <view
                             v-for="lead in leads"
                             :key="lead.id"
-                            class="px-[28rpx] py-[24rpx] border-b-[2rpx] border-[#f9fafb] last:border-b-0">
+                            class="px-[28rpx] py-[24rpx] border-[0] border-b-[2rpx] border-[#f9fafb] last:border-b-0">
                             <view class="flex items-center justify-between mb-[12rpx]">
                                 <text class="text-sm font-bold text-[#1f2937] line-clamp-1">
                                     {{ lead.account }}
@@ -112,10 +107,7 @@
                                 </text>
                             </view>
                             <view v-if="lead.ip" class="flex items-center gap-[8rpx] mb-[20rpx]">
-                                <image
-                                    :src="mapPinIcon"
-                                    mode="aspectFit"
-                                    class="w-[22rpx] h-[22rpx] flex-shrink-0" />
+                                <image :src="mapPinIcon" mode="aspectFit" class="w-[22rpx] h-[22rpx] flex-shrink-0" />
                                 <text class="text-[22rpx] text-[#9ca3af]">地区：</text>
                                 <text class="text-[22rpx] text-[#4b5563] font-medium">
                                     {{ lead.ip }}
@@ -127,23 +119,19 @@
                                 <view
                                     v-for="contact in lead.contacts"
                                     :key="contact.type + contact.value"
-                                    class="flex items-center gap-[16rpx] py-[12rpx] border-b-[2rpx] border-[#f3f4f6] last:border-b-0">
+                                    class="flex items-center gap-[16rpx] py-[12rpx] border-[0] border-b-[2rpx] border-[#f3f4f6] last:border-b-0">
                                     <text
                                         class="rounded-full px-[16rpx] py-[4rpx] text-[20rpx] font-semibold flex-shrink-0"
                                         :class="contactBadge(contact.type).cls">
                                         {{ contactBadge(contact.type).label }}
                                     </text>
-                                    <text
-                                        class="flex-1 text-xs text-[#374151] font-medium line-clamp-1">
+                                    <text class="flex-1 text-xs text-[#374151] font-medium line-clamp-1">
                                         {{ contact.value }}
                                     </text>
                                     <view
                                         class="flex items-center gap-[6rpx] text-[20rpx] text-primary bg-white border-[2rpx] border-[#dbeafe] px-[12rpx] py-[6rpx] rounded-[10rpx]"
                                         @click="emit('copy', contact.value)">
-                                        <image
-                                            :src="copyIcon"
-                                            mode="aspectFit"
-                                            class="w-[22rpx] h-[22rpx]" />
+                                        <image :src="copyIcon" mode="aspectFit" class="w-[22rpx] h-[22rpx]" />
                                         <text>复制</text>
                                     </view>
                                 </view>
@@ -160,10 +148,7 @@
                                     v-if="lead.screenshot_url"
                                     class="flex items-center gap-[6rpx] text-[22rpx] text-primary bg-primary-light-9 px-[16rpx] py-[6rpx] rounded-full"
                                     @click="emit('preview', lead.screenshot_url)">
-                                    <image
-                                        :src="imageIcon"
-                                        mode="aspectFit"
-                                        class="w-[22rpx] h-[22rpx]" />
+                                    <image :src="imageIcon" mode="aspectFit" class="w-[22rpx] h-[22rpx]" />
                                     <text>查看截图</text>
                                 </view>
                             </view>
@@ -266,12 +251,8 @@ const queryList = async (page_no: number, page_size: number) => {
         overview.title = ext.title || "";
         overview.subtitle = ext.subtitle || "";
         if (ext.config) {
-            config.clue_keywords = Array.isArray(ext.config.clue_keywords)
-                ? ext.config.clue_keywords
-                : [];
-            config.execute_times = Array.isArray(ext.config.execute_times)
-                ? ext.config.execute_times
-                : [];
+            config.clue_keywords = Array.isArray(ext.config.clue_keywords) ? ext.config.clue_keywords : [];
+            config.execute_times = Array.isArray(ext.config.execute_times) ? ext.config.execute_times : [];
         }
         if (ext.summary) {
             summary.today_count = Number(ext.summary.today_count) || 0;

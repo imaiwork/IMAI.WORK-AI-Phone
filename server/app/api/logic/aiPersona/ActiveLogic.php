@@ -12,6 +12,7 @@ use app\common\model\sv\SvDeviceActiveAccount;
 
 use app\common\model\sv\SvDevice;
 use app\common\model\aiPersona\AiPersona;
+use app\common\service\auto\AutoTaskSceneConfigService;
 use app\common\service\sv\SvDeviceTaskExistenceService;
 use think\facade\Db;
 
@@ -61,6 +62,14 @@ class ActiveLogic extends BasePersonaLogic
                 $execTime = $schedule->start_time . '-' . $schedule->end_time;
                 foreach ($platforms as $index => $platform) {
                     if ((int)$platform['account_type'] === DeviceEnum::ACCOUNT_TYPE_XHS) {
+                        continue;
+                    }
+                    if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                        DeviceEnum::AUTO_TASK_SCENE_ACTIVE,
+                        (int)($platform['account_type'] ?? 0),
+                        (string)$device->device_code,
+                        '养号任务'
+                    )) {
                         continue;
                     }
                     $startTime = $st + $index * $interval;

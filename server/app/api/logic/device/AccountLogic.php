@@ -30,14 +30,12 @@ class AccountLogic extends ApiLogic
                 return false;
             }
 
-            if (!RpaDeviceDispatchService::isOnline($deviceCode)) {
+            if (!self::isRpaDeviceOnline($deviceCode)) {
                 self::setError("设备{$deviceCode}不在线,无法获取账号信息");
                 return false;
             }
 
-            $redis = Cache::store('redis');
-            $redis->select((int)env('redis.WS_SELECT', 8));
-            $redis->set("xhs:getUser:{$deviceCode}", (string)self::$uid);
+            self::rememberGetUserCaller($deviceCode);
 
             $sent = RpaDeviceDispatchService::notifyGetUserInfo($deviceCode, $type);
             if (!$sent) {
@@ -56,5 +54,76 @@ class AccountLogic extends ApiLogic
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 按 Workerman 原始键读取在线状态（不拼 Cache prefix，兼容 PHP 序列化值）。
+     * 只看 status，与设备列表 / GUI 口径一致。
+     */
+    private static function isRpaDeviceOnline(string $deviceCode): bool
+    {
+        $deviceCode = trim($deviceCode);
+        if ($deviceCode === '') {
+            return false;
+        }
+
+        try {
+            $handler = Cache::store('redis')->handler();
+            $prevDb = self::currentRedisDb($handler);
+            try {
+                $handler->select((int)env('redis.WS_SELECT', 8));
+                $status = $handler->get("xhs:device:{$deviceCode}:status");
+            } finally {
+                $handler->select($prevDb);
+            }
+
+            return self::decodeDeviceStatus($status) === 'online';
+        } catch (\Throwable $e) {
+            Log::channel('device')->write('检查设备在线状态失败:' . $e->getMessage(), 'account');
+            return false;
+        }
+    }
+
+    /**
+     * 无 prefix 写入调用方 uid，供 Workerman UserHandler 读取。
+     */
+    private static function rememberGetUserCaller(string $deviceCode): void
+    {
+        $handler = Cache::store('redis')->handler();
+        $prevDb = self::currentRedisDb($handler);
+        try {
+            $handler->select((int)env('redis.WS_SELECT', 8));
+            $handler->set("xhs:getUser:{$deviceCode}", (string)self::$uid);
+        } finally {
+            $handler->select($prevDb);
+        }
+    }
+
+    private static function currentRedisDb(object $handler): int
+    {
+        return method_exists($handler, 'getDbNum')
+            ? (int)$handler->getDbNum()
+            : (int)env('CACHE.SELECT', 2);
+    }
+
+    /**
+     * 兼容裸字符串与 PHP 序列化（如 s:6:"online";）。
+     */
+    private static function decodeDeviceStatus(mixed $status)
+    {
+        if (!is_string($status)) {
+            return $status;
+        }
+
+        if ($status === 'online') {
+            return $status;
+        }
+
+        $decoded = @unserialize($status, ['allowed_classes' => false]);
+        if ($decoded !== false || $status === 'b:0;') {
+            return $decoded;
+        }
+
+        return $status;
     }
 }

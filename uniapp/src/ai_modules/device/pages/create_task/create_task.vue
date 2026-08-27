@@ -708,6 +708,7 @@
 <script setup lang="ts">
 import { getVideoCreationRecord } from "@/api/app";
 import { getHotWriteDetail } from "@/api/hot_write";
+import { getHotspotTaskDetail } from "@/api/hotspot";
 import { getPuzzleTaskResultList } from "@/api/drawing";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
@@ -871,17 +872,14 @@ onLoad(async (options: any) => {
         const isImageText = Number(detail?.media_type) === TaskType.IMAGE;
         // 以详情 media_type 为准，避免图文误进「发布视频」
         taskType.value = isImageText ? TaskType.IMAGE : TaskType.VIDEO;
-        formData.name = `${isImageText ? "图文" : "视频"}矩阵任务${uni.$u.timeFormat(
-            new Date(),
-            "yyyymmddhhMM",
-        )}`;
+        formData.name = `${isImageText ? "图文" : "视频"}矩阵任务${uni.$u.timeFormat(new Date(), "yyyymmddhhMM")}`;
         if (isImageText) {
             const images = (
                 Array.isArray(detail?.rewritten_images) && detail.rewritten_images.length
                     ? detail.rewritten_images
                     : Array.isArray(detail?.original_images)
-                      ? detail.original_images
-                      : []
+                    ? detail.original_images
+                    : []
             ).filter(Boolean);
             if (images.length) {
                 formData.materialList.push({ url: images });
@@ -894,6 +892,20 @@ onLoad(async (options: any) => {
             title: detail.title,
             content: detail.publish_text || detail.rewritten_text || "",
             topic: isJson(detail.publish_topic) ? JSON.parse(detail.publish_topic) : [],
+        });
+    }
+    // 来源：热点追踪（成片 + 标题/口播文案/话题标签）
+    else if (options?.source === "hotspot") {
+        const data = JSON.parse(options.data);
+        const detail = await getHotspotTaskDetail({ id: data.id });
+        if (detail?.video_url) {
+            formData.materialList.push({ url: [detail.pic || "", detail.video_url] });
+        }
+        formData.copywriterList.push({
+            is_title_show: 1,
+            title: detail?.publish_title || "",
+            content: detail?.publish_content || "",
+            topic: Array.isArray(detail?.options?.hashtags) ? detail.options.hashtags : [detail.topic],
         });
     }
 

@@ -8,8 +8,11 @@
                 background: 'transparent',
             }">
             <template #custom-back-icon>
-                <view>
+                <view class="flex items-center gap-x-4 leading-[0]">
                     <u-icon name="/static/images/icons/back_black.svg" size="32"></u-icon>
+                    <view v-if="hasSession" class="p-[6rpx]" @click.stop="addSession">
+                        <image src="/static/images/icons/chat_new.svg" class="w-[36rpx] h-[36rpx]" mode="aspectFit" />
+                    </view>
                 </view>
             </template>
             <view class="flex items-center gap-2">
@@ -62,6 +65,13 @@
                         </view>
                     </view>
                 </template>
+                <template #sendLeft>
+                    <view
+                        class="flex-shrink-0 flex items-center justify-center w-[76rpx] h-[76rpx] rounded-full bg-[#F7F8FA] border border-solid border-[#ECECEE]"
+                        @click="openHistory">
+                        <u-icon name="/static/images/icons/history.svg" :size="40"></u-icon>
+                    </view>
+                </template>
             </chat-scroll-view>
         </view>
         <dragon-button :size="96" :y-edge="150" :x-edge="5">
@@ -73,6 +83,11 @@
         </dragon-button>
     </view>
     <Sidebar ref="sidebarRef" :form-list="getFormLists" :title="detail.name" @success="getSliderParams" />
+    <HistoryPopup
+        v-model="showHistory"
+        :assistant-id="detail.id"
+        :curr-task-id="taskId"
+        @select="handleSelectRecord" />
     <recharge-popup ref="rechargePopupRef"></recharge-popup>
 </template>
 
@@ -81,6 +96,7 @@ import { robotDetail } from "@/api/agent";
 import { useUserStore } from "@/stores/user";
 import { chatRobotSendTextStream, getChatLog } from "@/api/chat";
 import Sidebar from "./components/sidebar.vue";
+import HistoryPopup from "./components/popups/history-popup.vue";
 import { TokensSceneEnum, KnbTypeEnum } from "@/enums/appEnums";
 import { RequestCodeEnum } from "@/enums/requestEnums";
 import { parseChatStreamErrorPayload, resolveChatErrorMessage } from "@/utils/chatStream";
@@ -292,15 +308,48 @@ const openSlider = async () => {
     sidebarRef.value?.open();
 };
 
+const showHistory = ref(false);
+
+// 已有 task_id 或已有消息，才需要「新会话」入口
+const hasSession = computed(() => !!taskId.value || chatContentList.value.length > 0);
+
+const openHistory = () => {
+    chattingRef.value?.hideKeyboard();
+    showHistory.value = true;
+};
+
+const handleSelectRecord = async (item: any) => {
+    if (isReceiving.value) {
+        uni.$u.toast("当前有内容生成，请稍后再试");
+        return;
+    }
+    showHistory.value = false;
+    if (!item?.task_id || item.task_id === taskId.value) return;
+
+    taskId.value = item.task_id;
+    uni.showLoading({ title: "加载中", mask: true });
+    try {
+        await getChatList();
+        nextTick(() => chattingRef.value?.scrollToBottom());
+    } finally {
+        uni.hideLoading();
+    }
+};
+
 const addSession = () => {
-    if (!taskId.value) {
+    if (isReceiving.value) {
+        uni.$u.toast("当前有内容生成，请稍后再试");
+        return;
+    }
+    if (!hasSession.value) {
         uni.$u.toast("当前会话已经是最新的了");
         return;
     }
     taskId.value = "";
     chatContentList.value = [];
     resetChat();
-    contentPost("你好", true);
+    // 该页面靠表单发起提问，新会话回到「填表 -> 提问」的初始流程
+    openSlider();
 };
 
 const resetChat = () => {

@@ -49,7 +49,9 @@ class WechatVideoSynthesis extends Command
                 ->join('ai_persona p', 'd.persona_id = p.id')
                 ->where('d.auto_type', 1)
                 ->whereIn('p.wechat_publish_mode', [1, 3])
-                  ->where('d.synthesis_w', 0)
+                ->where('d.synthesis_w', 0)
+                // 过渡期交集条件：旧布尔锁与完成日期都判定"今天未完成"才挑选，日期化稳定后旧条件下线
+                ->whereRaw(SvDevice::synthesisPendingDateSql(SvDevice::SYNTHESIS_SCENE_WECHAT, 'd'))
                 ->where('p.status', 1)
                 ->where('d.is_first', 0)
                 ->where('d.persona_id', '>', 0)
@@ -63,7 +65,7 @@ class WechatVideoSynthesis extends Command
                 }
                 if (!AiPersonaOptionService::isEnabledForPersonaId((int)$device->persona_id, 'video_clip')) {
                     Log::channel('wechatVideoSynthesis')->write('global_option.video_clip=0，跳过设备视频合成：' . $device->device_code);
-                    SvDevice::where('device_code', $device->device_code)->update(['synthesis_w' => 1]);
+                    SvDevice::markSynthesisDoneWhere(['device_code' => $device->device_code], SvDevice::SYNTHESIS_SCENE_WECHAT);
                     continue;
                 }
 

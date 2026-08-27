@@ -9,10 +9,9 @@ const VIEWPORT_BOTTOM_GAP = 24;
 /** 拉高时上方对话区至少保留的可见高度 */
 const MIN_CONTENT_ABOVE = 100;
 
-export function useDragResize() {
+export function useDragResize(dragHandleRef: Ref<HTMLDivElement | null>) {
     const inputAreaHeight = ref(INPUT_HEIGHT);
     const isDragging = ref(false);
-    const dragHandleRef = ref<HTMLDivElement | null>(null);
 
     let dragStartY = 0;
     let dragStartHeight = 0;
@@ -92,7 +91,6 @@ export function useDragResize() {
     return {
         inputAreaHeight,
         isDragging,
-        dragHandleRef,
         startDrag,
         startTouchDrag,
         resetHeight,

@@ -62,8 +62,9 @@ const del = (index: number) => {
 };
 
 const getFileTypeValue = computed(() => {
-    const { name } = props.item;
-    const fileName = name.split(".").pop();
+    // name/url 可能缺失（历史消息 file_info 字段不全），不能直接 .split，否则整个卡片渲染失败
+    const name = props.item?.name || props.item?.url || "";
+    const fileName = String(name).split(".").pop()?.toLowerCase() || "";
     switch (fileName) {
         case "txt":
             return { theme: "#FF5588", fileType: "文档", icon: IconFileText };
@@ -80,6 +81,7 @@ const getFileTypeValue = computed(() => {
 });
 
 const isImage = (file: any) => {
+    if (typeof file !== "string" || !file) return false;
     return isImageUrl(file) || isBase64Image(file);
 };
 

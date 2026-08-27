@@ -1613,7 +1613,13 @@ class ViralRewriterHandler extends BaseMessageHandler
                         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
                         'viral_rewrite'
                     );
-                    $imitationResult = \app\api\logic\auto\AutoDeviceSettingLogic::copywriting($titlecoze, $task->user_id, 5, true);
+                    $titlecoze['persona'] = $rule->getClueContent($persona);
+                    $titlecoze['original'] = $audioText;
+                    $titlecoze['voice'] = '';
+                    $titlecoze['hook'] = '';
+                    $titlecoze['model'] = 0;
+
+                    $imitationResult = \app\api\logic\auto\AutoDeviceSettingLogic::copywriting($titlecoze, $task->user_id, 7, true);
                     $lastException = null;
                 } catch (\Throwable $e) {
                     $this->setLog($record->device_code . "文案仿写第{$attempt}次异常: {$e->getMessage()}", 'viral_rewrite');
@@ -1769,7 +1775,13 @@ class ViralRewriterHandler extends BaseMessageHandler
                 ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
                 'viral_rewrite'
             );
-            $imitationResult = \app\api\logic\auto\AutoDeviceSettingLogic::copywriting($titlecoze, $task->user_id, 5, true);
+            $titlecoze['persona'] = $rule->getClueContent($persona);
+            $titlecoze['original'] = '';
+            $titlecoze['voice'] = '';
+            $titlecoze['hook'] = '';
+            $titlecoze['model'] = 0;
+
+            $imitationResult = \app\api\logic\auto\AutoDeviceSettingLogic::copywriting($titlecoze, $task->user_id, 7, true);
 
             // 修复#4：降级结果校验 rewritten_text，为空则退费并标记失败（降级不重试，按计划仅正常仿写重试3次）
             $degradedText = trim((string)($imitationResult['content']['rewritten_text'] ?? ''));

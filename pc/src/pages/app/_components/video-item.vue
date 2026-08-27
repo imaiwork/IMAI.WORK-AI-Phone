@@ -79,7 +79,7 @@
                                 AI 智能剪辑中...
                             </template>
                             <template v-if="item.clip_status == 3"> AI 智能剪辑完成 </template>
-                            <template v-if="item.clip_status == 4"> AI 智能剪辑失败 </template>
+                            <template v-if="item.clip_status == 4">{{ item.remark || "AI智能剪辑失败" }}</template>
                         </span>
                     </div>
                 </div>

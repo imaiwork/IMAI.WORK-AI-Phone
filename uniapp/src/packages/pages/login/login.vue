@@ -13,7 +13,7 @@
                 <view class="h-full flex flex-col">
                     <view class="flex justify-center items-center grow min-h-0">
                         <image
-                            :src="websiteConfig.pc_logo"
+                            :src="siteLogo"
                             mode="aspectFit"
                             class="h-[88rpx] w-[88rpx] rounded-full"></image>
                     </view>
@@ -25,9 +25,11 @@
         </view>
         <update-user-info
             v-model:show="showLoginPopup"
-            :logo="websiteConfig.shop_logo"
-            :title="websiteConfig.shop_name"
+            :logo="siteShopLogo"
+            :title="siteName"
             :userInfo="loginData"
+            :require-invite="needInviteCode"
+            :invite-code="defaultInviteCode"
             @update="handleUpdateUser" />
         <bind-mobile
             v-model:show="showBindMobilePopup"
@@ -47,11 +49,15 @@ import { useLoginWay, LoginWayEnum } from "./components/hooks";
 
 const {
     loginWay,
-    websiteConfig,
+    siteLogo,
+    siteShopLogo,
+    siteName,
     loginData,
     showLoginPopup,
     showBindMobilePopup,
     showRegisterClosedPopup,
+    needInviteCode,
+    defaultInviteCode,
     wxIsLock,
     isLoginAfter,
     bindMobileSuccess,
@@ -64,13 +70,27 @@ const {
 loginWay.value = LoginWayEnum.WEIXIN;
 
 const authKey = ref("");
+// 扫码登录命中「补邀请码注册」时,先扣住授权结果,等注册拿到 token 再回传 PC
+const pendingPcRes = ref<any>(null);
 
 const wxLogin = async (res: any) => {
     await wxLoginLock(res);
-    if (authKey.value) {
-        pcLogin({ ...res, authKey: authKey.value });
+    if (!authKey.value) return;
+    if (needInviteCode.value) {
+        pendingPcRes.value = res;
+        return;
     }
+    pcLogin({ ...res, authKey: authKey.value });
 };
+
+// 邀请码补完(注册成功)后再回传 PC;用户取消弹窗则没有 token,直接丢弃
+watch(needInviteCode, (val) => {
+    if (val || !pendingPcRes.value) return;
+    const res = pendingPcRes.value;
+    pendingPcRes.value = null;
+    if (!loginData.value?.token) return;
+    pcLogin({ ...res, authKey: authKey.value });
+});
 
 onLoad((options: any) => {
     const scene = decodeURIComponent(options.scene);

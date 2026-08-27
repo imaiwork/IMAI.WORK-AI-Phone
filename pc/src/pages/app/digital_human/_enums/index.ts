@@ -27,6 +27,12 @@ export const DIGITAL_HUMAN_DRIVE_MODEL_VERSIONS: number[] = [
 /** 蝉镜「视频原音」占位 voice_id，提交时不传 voice_id，由服务端从形象视频克隆原音 */
 export const CHANJING_ORIGINAL_VOICE_ID = "-1";
 
+/** 纯口播文案字数：蝉镜无包装 4000，蝉镜有包装 / 标准版 / 优质版 1500 */
+export const SPEECH_TEXT_LIMIT = {
+    CHANJING_NO_PACK: 4000,
+    DEFAULT: 1500,
+} as const;
+
 /** 数字人纯口播 type5 无包装引擎 */
 export enum SpeechEngineTypeEnum {
     /** 闪剪 */
@@ -127,6 +133,8 @@ export enum CreateVideoTypeEnum {
     HOT_WRITE = 8,
     /** 闪剪数字人纯口播（展示仍归「数字人口播」） */
     DIGITAL_HUMAN_SHANJIAN = 9,
+    /** 热点追踪（闪剪任务按 extra.source=hotspot 区分） */
+    HOTSPOT = 10,
 }
 
 /** 闪剪成片下载状态 */

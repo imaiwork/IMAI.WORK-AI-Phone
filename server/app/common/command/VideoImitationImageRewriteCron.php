@@ -4,6 +4,7 @@ namespace app\common\command;
 
 use app\api\logic\videoImitation\TaskLogic;
 use app\common\model\videoImitation\VideoImitationTask;
+use app\common\service\videoImitation\VideoImitationImageLifecycle;
 use app\common\service\videoImitation\VideoImitationImageRewriteService;
 use think\console\Command;
 use think\console\Input;
@@ -17,8 +18,6 @@ use think\facade\Log;
 class VideoImitationImageRewriteCron extends Command
 {
     private const RUNNING_LOCK_KEY = 'video_imitation_image_rewrite_cron:running';
-    /** 运行锁 TTL；正常处理中会续期，异常残留最多阻塞该时长；调整为30分钟以适配大批量图片处理 */
-    private const RUNNING_LOCK_TTL = 1800;
     private const BATCH_SIZE = 3;
     private const RECOVER_BATCH_SIZE = 5;
     private const AUTO_CONFIRM_BATCH_SIZE = 20;
@@ -99,6 +98,7 @@ class VideoImitationImageRewriteCron extends Command
 
             $processingTasks = VideoImitationTask::where('media_type', VideoImitationTask::MEDIA_TYPE_IMAGE_TEXT)
                 ->where('image_rewrite_status', VideoImitationTask::IMAGE_REWRITE_STATUS_PROCESSING)
+                ->where('task_delete', 0)
                 ->order('id', 'asc')
                 ->limit(self::RECOVER_BATCH_SIZE)
                 ->select();
@@ -115,6 +115,15 @@ class VideoImitationImageRewriteCron extends Command
 
             foreach ($processingTasks as $task) {
                 $taskId = (int)$task->id;
+                if (!VideoImitationImageLifecycle::canScanRewrite($task)) {
+                    self::log(sprintf(
+                        '回收跳过：任务已删除或不属于图文 task_id=%d task_delete=%d media_type=%d',
+                        $taskId,
+                        (int)$task->task_delete,
+                        (int)$task->media_type
+                    ));
+                    continue;
+                }
                 $beforeStatus = (int)$task->image_rewrite_status;
                 $startedAt = (int)$task->image_rewrite_started_at;
                 $age = $startedAt > 0 ? max(0, time() - $startedAt) : -1;
@@ -241,6 +250,7 @@ class VideoImitationImageRewriteCron extends Command
                     VideoImitationTask::STATUS_GENERATING,
                     VideoImitationTask::STATUS_FAIL,
                 ])
+                ->where('task_delete', 0)
                 ->order('id', 'asc')
                 ->limit(self::BATCH_SIZE)
                 ->select();
@@ -257,6 +267,15 @@ class VideoImitationImageRewriteCron extends Command
 
             foreach ($waitingTasks as $task) {
                 $taskId = (int)$task->id;
+                if (!VideoImitationImageLifecycle::canScanRewrite($task)) {
+                    self::log(sprintf(
+                        '提交跳过：任务已删除或不属于图文 task_id=%d task_delete=%d media_type=%d',
+                        $taskId,
+                        (int)$task->task_delete,
+                        (int)$task->media_type
+                    ));
+                    continue;
+                }
                 $userId = (int)$task->user_id;
                 $selectedCount = is_array($task->selected_images) ? count($task->selected_images) : 0;
                 $chargedCount = (int)$task->image_rewrite_charged_count;
@@ -397,7 +416,7 @@ class VideoImitationImageRewriteCron extends Command
             return (bool)$redis->set(
                 self::RUNNING_LOCK_KEY,
                 $lockValue,
-                ['nx', 'ex' => self::RUNNING_LOCK_TTL]
+                ['nx', 'ex' => VideoImitationImageLifecycle::REWRITE_CRON_LOCK_TTL]
             );
         } catch (\Throwable $th) {
             self::log('获取运行锁失败：' . $th->getMessage());
@@ -415,7 +434,7 @@ if redis.call('get', KEYS[1]) == ARGV[1] then
 end
 return 0
 LUA;
-            $redis->eval($script, [self::RUNNING_LOCK_KEY, $lockValue, self::RUNNING_LOCK_TTL], 1);
+            $redis->eval($script, [self::RUNNING_LOCK_KEY, $lockValue, VideoImitationImageLifecycle::REWRITE_CRON_LOCK_TTL], 1);
         } catch (\Throwable $th) {
             self::log('续期运行锁失败：' . $th->getMessage());
         }
@@ -481,7 +500,7 @@ LUA;
         $holderTimestamp = (float)$parts[1];
         $ageSeconds = microtime(true) - $holderTimestamp;
 
-        return $ageSeconds > self::RUNNING_LOCK_TTL;
+        return $ageSeconds > VideoImitationImageLifecycle::REWRITE_CRON_LOCK_TTL;
     }
 
     /**

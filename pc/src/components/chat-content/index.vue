@@ -4,7 +4,8 @@
             <div v-if="error" class="italic text-[#444746]">
                 {{ error }}
             </div>
-            <div v-if="stopReply" class="italic text-[#444746]">
+            <!-- 只有在一个字都没生成时才整块替换；有正文时走下面的补充提示，保留 Markdown 渲染 -->
+            <div v-if="stopReply && !content" class="italic text-[#444746]">
                 {{ stopReply }}
             </div>
             <template v-else>
@@ -53,6 +54,7 @@
                         <Icon :name="isContentExpanded ? 'el-icon-ArrowUp' : 'el-icon-ArrowDown'" :size="16"></Icon>
                     </div>
                 </ElTooltip>
+                <div v-if="stopReply" class="mt-2 text-xs italic text-[#8A939D]">{{ stopReply }}</div>
             </template>
         </div>
     </div>

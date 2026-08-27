@@ -1,0 +1,12 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="failBg" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F87171"/>
+      <stop offset="100%" stop-color="#EF4444"/>
+    </linearGradient>
+  </defs>
+  <circle cx="18" cy="18" r="18" fill="url(#failBg)"/>
+  <circle cx="18" cy="18" r="18" fill="white" fill-opacity="0.15"/>
+  <line x1="11.5" y1="11.5" x2="24.5" y2="24.5" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+  <line x1="24.5" y1="11.5" x2="11.5" y2="24.5" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+</svg>

@@ -18,6 +18,7 @@ use app\common\model\sv\SvDeviceUsed;
 use app\common\model\user\User;
 use app\common\service\ConfigService;
 use app\common\service\deviceauth\DeviceAuthCodeSyncService;
+use app\api\logic\sv\DeviceLogic as SvDeviceLogic;
 use think\facade\Db;
 use think\facade\Log;
 
@@ -203,22 +204,22 @@ class DeviceAuthLogic extends BaseLogic
             if ($code->isEmpty()) {
                 throw new \Exception('设备CDK不存在');
             }
-            if ($code->owner_user_id != $params['user_id']) {
-                throw new \Exception('该设备CDK不属于当前用户');
-            }
             if ((int)$code->status === DeviceAuthCodeEnum::STATUS_USED) {
                 throw new \Exception('设备CDK已使用');
             }
             if ((int)$code->status === DeviceAuthCodeEnum::STATUS_DISABLED) {
                 throw new \Exception('设备CDK已作废');
             }
-            $device = SvDevice::where([
-                'device_code' => $params['device_code'],
-                'user_id'     => $params['user_id'],
-            ])->lock(true)->findOrEmpty();
+            $userId = (int)$params['user_id'];
+            $device = SvDevice::where('device_code', $params['device_code'])->lock(true)->findOrEmpty();
             if ($device->isEmpty()) {
                 throw new \Exception('设备不存在');
             }
+            if ((int)$device->user_id !== $userId) {
+                throw new \Exception('该设备不属于当前用户');
+            }
+            // CDK 不记名：不校验归属，任何未使用的码都可激活到该设备上。
+            // owner_user_id 保留为购买人用于溯源，user_id 记录实际使用人
 
             $now = time();
             $days = DeviceAuthCodeEnum::resolveDurationDays((int)$code->type, (int)$code->duration_days);
@@ -273,39 +274,50 @@ class DeviceAuthLogic extends BaseLogic
     public static function notice(array $params): bool
     {
         Log::channel('device')->write(date('Y-m-d H:i:s') . ' 旧设备激活通知：' . time() . json_encode($params));
-        Db::startTrans();
         try {
-            $device_code = SvDevice::where('device_code', $params['device_code'])->lock(true)->findOrEmpty();
-            if ($device_code->isEmpty()) {
-                throw new \Exception('设备不存在');
-            }
-            if ($device_code->user_id != $params['user_id']) {
-                throw new \Exception('该设备不属于当前用户');
-            }
-            $device = SvDevice::where([
-                                          'device_code' => $params['device_code'],
-                                          'user_id'     => $params['user_id'],
-                                      ])->lock(true)->findOrEmpty();
-            if ($device->isEmpty()) {
-                throw new \Exception('设备不存在');
+            $deviceCode = trim((string)($params['device_code'] ?? ''));
+            if ($deviceCode === '') {
+                throw new \Exception('设备号不能为空');
             }
 
-            $now = time();
+            // 该接口允许免登录调用，入参携带的授权时间不可信，
+            // 一律向中台核实该设备的真实授权状态，中台确认已授权才写入本地。
+            // 中台是外部请求，放在事务和行锁之外，避免长时间持锁
+            $res = SvDeviceLogic::applyMiddleDeviceAuthFields(['device_code' => $deviceCode]);
+            if (isset($res['error'])) {
+                throw new \Exception($res['error']);
+            }
+            if ((int)($res['auth_status'] ?? 0) !== DeviceAuthCodeEnum::DEVICE_AUTH_ACTIVE) {
+                throw new \Exception('该设备暂无有效授权');
+            }
 
-            $device->auth_status      = DeviceAuthCodeEnum::DEVICE_AUTH_ACTIVE;
-            $device->auth_start_time  = $device->auth_start_time == 0 ? ($params['auth_start_time'] ?? 0) : $device->auth_start_time;
-            $device->auth_expire_time = $device->auth_expire_time == 0 ? ($params['auth_expire_time'] ?? 0) : $device->auth_expire_time;
-            $device->update_time      = $now;
-            $device->save();
+            Db::startTrans();
+            try {
+                $device = SvDevice::where('device_code', $deviceCode)->lock(true)->findOrEmpty();
+                if ($device->isEmpty()) {
+                    throw new \Exception('设备不存在');
+                }
+                if (!empty($params['user_id']) && (int)$device->user_id !== (int)$params['user_id']) {
+                    throw new \Exception('该设备不属于当前用户');
+                }
 
-            Db::commit();
+                $device->auth_status      = DeviceAuthCodeEnum::DEVICE_AUTH_ACTIVE;
+                $device->auth_start_time  = $device->auth_start_time == 0 ? (int)($res['auth_start_time'] ?? 0) : $device->auth_start_time;
+                $device->auth_expire_time = $device->auth_expire_time == 0 ? (int)($res['auth_expire_time'] ?? 0) : $device->auth_expire_time;
+                $device->update_time      = time();
+                $device->save();
+
+                Db::commit();
+            } catch (\Exception $e) {
+                Db::rollback();
+                throw $e;
+            }
 
             self::$returnData = [
                 'device_code' => $device->device_code,
             ];
             return true;
         } catch (\Exception $e) {
-            Db::rollback();
             self::setError($e->getMessage());
             return false;
         }
@@ -485,9 +497,8 @@ class DeviceAuthLogic extends BaseLogic
         int $userId,
         ?int $orderId = null
     ): array {
-        if ((int)$code->owner_user_id !== $userId) {
-            throw new \Exception('该设备CDK不属于当前用户');
-        }
+        // CDK 不记名：不校验归属，任何未使用的码都可兑换到该设备上。
+        // owner_user_id 保留为购买人用于溯源，user_id 记录实际使用人
         if ((int)$code->status === DeviceAuthCodeEnum::STATUS_USED) {
             throw new \Exception('设备CDK已使用');
         }

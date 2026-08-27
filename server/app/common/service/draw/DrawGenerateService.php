@@ -150,7 +150,8 @@ class DrawGenerateService
                 if (isset($response['data']['created']) && is_numeric($response['data']['created'])) {
                     $created = (int)$response['data']['created'];
                 }
-                $fingerprint = md5(($assets[0]['kind'] ?? '') . substr((string)($assets[0]['value'] ?? ''), 0, 64));
+                // 同上：产物前缀高度雷同，指纹必须按完整内容算，否则同秒的两次生图会撞同一个 id
+                $fingerprint = md5(($assets[0]['kind'] ?? '') . (string)($assets[0]['value'] ?? ''));
                 $midTaskId = 'sync_' . ($created > 0 ? $created : time()) . '_' . substr($fingerprint, 0, 8);
             }
 
@@ -608,11 +609,13 @@ class DrawGenerateService
             }
         }
 
-        // 去重：url 按值；b64 按前缀指纹
+        // 去重按完整内容取指纹：同一次生图的多张图前缀高度雷同
+        // （PNG 签名 + IHDR + C2PA caBX/jumb 块头都是定长定值，只有块长度一个字段在变），
+        // 截断前缀会把不同的图误判成重复丢掉
         $unique = [];
         $seen = [];
         foreach ($sources as $source) {
-            $fp = ($source['kind'] ?? '') . ':' . substr((string)($source['value'] ?? ''), 0, 96);
+            $fp = ($source['kind'] ?? '') . ':' . md5((string)($source['value'] ?? ''));
             if (isset($seen[$fp])) {
                 continue;
             }

@@ -475,6 +475,16 @@ const openTrack = async (customer: Customer) => {
 };
 
 const openActivity = async (customer: Customer, type: ActivityType) => {
+    // 爬取来源(crawling)的线索没有聊天记录,"查看全部"直接预览截图
+    if (type === "chat" && customer.sourceKey === "crawling") {
+        if (customer.image) {
+            uni.previewImage({ urls: [customer.image] });
+        } else {
+            uni.showToast({ title: "暂无图片", icon: "none" });
+        }
+        return;
+    }
+
     activeCustomer.value = customer;
     activityType.value = type;
     showActivityPopup.value = true;
@@ -623,6 +633,7 @@ function normalizeCustomer(data: Record<string, any>, index: number): Customer {
         source,
         sourceName: data.source_name || "",
         sourceKey: data.source_key || "",
+        image: data.image || "",
         avatarClass: avatarClassList[index % avatarClassList.length],
         privateMessages,
         momentActions,

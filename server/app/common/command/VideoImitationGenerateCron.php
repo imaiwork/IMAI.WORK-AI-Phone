@@ -17,6 +17,7 @@ class VideoImitationGenerateCron extends Command
     {
         $output->writeln('video imitation auto genarate start');
 
+        TaskLogic::autoConfirmWashTasksCron();
         TaskLogic::autoGenerateTasksCron();
 
         $output->writeln('video imitation auto genarate end');

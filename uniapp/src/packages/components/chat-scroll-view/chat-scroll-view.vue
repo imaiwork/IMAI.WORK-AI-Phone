@@ -48,8 +48,15 @@
             ]">
             <view class="relative z-[79] chat-bottom-box" @tap.stop>
                 <view class="flex flex-col">
-                    <scroll-view v-if="!isCoze && !isStaff && spacerHeight == 0" scroll-x class="mb-1">
-                        <view class="flex items-center gap-x-2 whitespace-nowrap pt-1">
+                    <!-- 工具栏：键盘期折叠隐藏（不卸载，避免小程序把输入框那次点击补派发到工具栏）；收起后延迟展开防点穿 -->
+                    <scroll-view
+                        v-if="!isCoze && !isStaff"
+                        scroll-x
+                        class="mb-1"
+                        :class="{ 'toolbar-collapsed': !showToolbar }">
+                        <view
+                            class="flex items-center gap-x-2 whitespace-nowrap pt-1"
+                            :class="{ 'pointer-events-none': !showToolbar }">
                             <template v-if="!isAgent">
                                 <!-- 非手机操控时始终展示：有模型显示名称，无模型显示「选择模型」（挂载清空后不能丢入口） -->
                                 <view
@@ -60,8 +67,10 @@
                                             : 'text-xs bg-white rounded-[16rpx] px-2 h-[60rpx] inline-flex items-center gap-x-1'
                                     "
                                     @click="
-                                        showModel = true;
-                                        hideKeyboard();
+                                        guardToolbarAction(() => {
+                                            showModel = true;
+                                            hideKeyboard();
+                                        })
                                     ">
                                     <image
                                         v-if="showDisplayModelAvatar"
@@ -80,7 +89,7 @@
                                 <view
                                     v-if="currAgent.id"
                                     class="bg-white rounded-[16rpx] px-2 h-[60rpx] gap-x-1 border border-solid border-[#E9EBEC] inline-flex items-center relative"
-                                    @click="openAgentPopup">
+                                    @click="guardToolbarAction(() => openAgentPopup())">
                                     <image
                                         v-if="showCurrAgentAvatar"
                                         :src="currAgent.logo"
@@ -98,7 +107,7 @@
                                     </view>
                                 </view>
                             </template>
-                            <view v-if="isHome" :class="tbPill(mountedDevices.length > 0)" @click="openMount">
+                            <view v-if="isHome" :class="tbPill(mountedDevices.length > 0)" @click="guardToolbarAction(() => openMount())">
                                 <u-icon
                                     :name="`/static/images/icons/mount${mountedDevices.length ? '_blue' : ''}.svg`"
                                     :size="24"></u-icon>
@@ -117,7 +126,7 @@
                                         ? tbMini(selectedNetwork)
                                         : [pillClassLegacy, { '!bg-primary !text-white': selectedNetwork }]
                                 "
-                                @click="handleNetwork">
+                                @click="guardToolbarAction(() => handleNetwork())">
                                 <u-icon
                                     v-if="!selectedNetwork"
                                     :name="isHome ? '/static/images/icons/globe.svg' : '/static/images/icons/deep.svg'"
@@ -135,8 +144,10 @@
                             <view
                                 :class="isHome ? tbPill(false) : pillClassLegacy"
                                 @click="
-                                    emit('showHistory');
-                                    hideKeyboard();
+                                    guardToolbarAction(() => {
+                                        emit('showHistory');
+                                        hideKeyboard();
+                                    })
                                 ">
                                 <u-icon
                                     :name="
@@ -152,20 +163,20 @@
                                         ? tbMini(false)
                                         : 'flex-shrink-0 leading-[0] h-[60rpx] w-[60rpx] flex items-center justify-center rounded-full bg-white'
                                 "
-                                @click="handleSetting">
+                                @click="guardToolbarAction(() => handleSetting())">
                                 <u-icon name="/static/images/icons/setting.svg" :size="28"></u-icon>
                             </view>
                             <template v-if="isHome">
-                                <view :class="tbPill(false)" @click="toPage('ladder_player')">
+                                <view :class="tbPill(false)" @click="guardToolbarAction(() => toPage('ladder_player'))">
                                     <u-icon name="/static/images/icons/chat_line.svg" :size="24"></u-icon>
                                     <text class="text-xs">AI陪练</text>
                                 </view>
-                                <view :class="tbPill(false)" @click="toPage('meeting_minutes')">
+                                <view :class="tbPill(false)" @click="guardToolbarAction(() => toPage('meeting_minutes'))">
                                     <u-icon name="/static/images/icons/doc_lines.svg" :size="24"></u-icon>
                                     <text class="text-xs">AI会议</text>
                                 </view>
                                 <!-- #ifdef MP-WEIXIN -->
-                                <view :class="tbPill(false)" @click="toPage('interview')">
+                                <view :class="tbPill(false)" @click="guardToolbarAction(() => toPage('interview'))">
                                     <u-icon
                                         :name="`${config.baseUrl}static/images/mp/interview.svg`"
                                         :size="24"></u-icon>
@@ -218,7 +229,7 @@
                                     :placeholder="currentPlaceholder"
                                     :show-confirm-bar="false"
                                     :disable-default-padding="true"
-                                    @focus="onTextareaFocus"
+                                    @focus="handleTextareaFocus"
                                     @blur="onTextareaBlur"
                                     @input="handleInput"></textarea>
                                 <view class="flex-shrink-0 flex items-center gap-2.5 mr-2">
@@ -568,6 +579,8 @@ import { getAllAgentList as getAgentListApi, getAgentDetail } from "@/api/agent"
 import { getRect, setFormData } from "@/utils/util";
 import useKeyboardHeight from "@/hooks/useKeyboardHeight";
 import { useStableTextareaAutoHeight } from "@/packages/pages/chat/composables/useStableTextareaAutoHeight";
+import { useToolbarRevealGuard } from "@/packages/pages/chat/composables/useToolbarRevealGuard";
+import { useUploadMisfireGuard } from "@/packages/pages/chat/composables/useStudioKeyboardSpacer";
 import { useAppStore } from "@/stores/app";
 import { ModelIdEnum } from "@/enums/appEnums";
 import FileItem from "./components/file-item.vue";
@@ -884,10 +897,12 @@ const isSendDisabled = computed(() => {
 });
 
 const handleFileUpload = () => {
+    // 输入框聚焦/键盘收起瞬间，小程序会把那次点击补派发到加号，需短时忽略
+    if (isUploadMisfire()) return;
     checkLogin();
     uni.$u.route({
         url: "/packages/pages/choose_file/choose_file",
-        params: { limit: 1 },
+        params: { limit: 1, sum_image: 1 },
     });
 };
 
@@ -1096,10 +1111,21 @@ const bottomOffset = computed(() => {
     return props.isHome ? tabbarHeight.value + otherHeight : otherHeight;
 });
 
+const keyboardOpen = computed(() => dynamicHeight.value > 0);
+
 const spacerHeight = computed(() => {
-    const height = dynamicHeight.value;
-    return height > 0 ? (height * 750) / windowWidth - bottomOffset.value : 0;
+    if (!keyboardOpen.value) return 0;
+    return Math.max(0, (dynamicHeight.value * 750) / windowWidth - bottomOffset.value);
 });
+
+const { showToolbar, guardToolbarAction } = useToolbarRevealGuard(keyboardOpen);
+const { markSent, isUploadMisfire } = useUploadMisfireGuard();
+// 聚焦与键盘弹起/收起都会让底栏位移，这段时间内的点击视为误触
+watch(keyboardOpen, () => markSent(), { flush: "sync" });
+const handleTextareaFocus = () => {
+    markSent();
+    onTextareaFocus();
+};
 
 const handleInput = (e: any) => {
     if (props.isAgent) return;
@@ -1145,6 +1171,7 @@ const contentPost = async () => {
     }
     if (!(await ensureCurrAgentAvailable())) return;
     if (props.sendDisabled) return;
+    markSent();
     emit("contentPost", userInput.value);
 
     // 发送消息时重置滚动禁用状态，确保新消息可以自动滚到底部
@@ -1389,6 +1416,9 @@ defineExpose({
 }
 .agent-access-tag--member {
     @apply border-[#DDD6FE] bg-[#F5F3FF] text-[#8B5CF6];
+}
+.toolbar-collapsed {
+    @apply h-0 mb-0 opacity-0 overflow-hidden pointer-events-none;
 }
 .chat-textarea {
     min-height: 40rpx;

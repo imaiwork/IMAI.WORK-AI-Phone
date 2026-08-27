@@ -7,7 +7,8 @@
         :mask-close-able="true"
         @input="emit('update:modelValue', $event)">
         <template #header>
-            <view class="px-[40rpx] py-[32rpx] border-b-[2rpx] border-[#f3f4f6] flex items-center justify-between">
+            <view
+                class="px-[40rpx] py-[32rpx] border-[0] border-b-[2rpx] border-[#f3f4f6] flex items-center justify-between">
                 <view>
                     <text class="block text-xl font-bold text-[#1f2937]">原视频文案</text>
                     <text class="block mt-[4rpx] text-xs text-[#9ca3af]"> AI 从原视频提取的口播内容 </text>

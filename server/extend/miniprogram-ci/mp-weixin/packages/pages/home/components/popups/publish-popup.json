@@ -5,6 +5,7 @@
     "empty": "../../../../../components/empty/empty",
     "z-paging": "../../../../../node-modules/z-paging/components/z-paging/z-paging",
     "popup-bottom": "../../../../../components/popup-bottom/popup-bottom",
-    "publish-detail-popup": "./publish-detail-popup"
+    "publish-detail-popup": "./publish-detail-popup",
+    "publish-resend-popup": "./publish-resend-popup"
   }
 }

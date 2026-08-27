@@ -82,20 +82,37 @@ export class Request {
             mergeOptions = requestInterceptorsHook(mergeOptions);
         }
         const { onmessage, onclose, onstart } = requestOptions;
+        // SSE 帧以空行分隔。网络分片既可能切在帧中间，也可能把一个多字节汉字切成两半，
+        // 所以这里复用同一个 decoder 做流式解码，并把不完整的尾帧留到下一片再交付上层。
+        const decoder = new TextDecoder();
+        let sseBuffer = "";
+        const emitFrames = (chunk: string) => {
+            sseBuffer += chunk;
+            const frames = sseBuffer.split("\n\n");
+            sseBuffer = frames.pop() ?? "";
+            frames.forEach((frame) => frame.trim() && onmessage?.(frame));
+        };
+        const flushFrames = () => {
+            const rest = sseBuffer + decoder.decode();
+            sseBuffer = "";
+            if (rest.trim()) onmessage?.(rest);
+        };
         return new Promise((resolve, reject) => {
             const push = async (controllerStream, reader) => {
                 try {
                     const { value, done } = await reader.read();
                     if (done) {
+                        flushFrames();
                         controllerStream.close();
                         onclose?.();
                         cancelTokenManager.removeRequest(requestKey);
                     } else {
-                        onmessage?.(new TextDecoder().decode(value));
+                        emitFrames(decoder.decode(value, { stream: true }));
                         controllerStream.enqueue(value);
                         push(controllerStream, reader);
                     }
                 } catch (error) {
+                    sseBuffer = "";
                     onclose?.();
                     if (error.name !== "AbortError") {
                         cancelTokenManager.removeRequest(requestKey);

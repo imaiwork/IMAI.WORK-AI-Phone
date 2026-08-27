@@ -420,7 +420,10 @@ class AutoDeviceSettingLogic extends ApiLogic
             ->where('wechat_type', 0)
             ->whereBetween('create_time', [$start, $end])
             ->count();
-        if ((int)$generated > 0 || (int)($device['synthesis_m'] ?? 0) === 1) {
+        // synthesis_m 布尔锁白天会被 reset_video_synthesis 清 0，完成日期=今天可兜底判定已完成
+        if ((int)$generated > 0
+            || (int)($device['synthesis_m'] ?? 0) === 1
+            || ($device['synthesis_m_date'] ?? '') === date('Y-m-d')) {
             return self::TASK_STATUS_FINISHED;
         }
 
@@ -448,7 +451,7 @@ class AutoDeviceSettingLogic extends ApiLogic
     private static function getAutoPublishDevices(string $deviceCode): array
     {
         $query = SvDevice::alias('d')
-            ->field('d.device_code,d.persona_id,d.synthesis_m')
+            ->field('d.device_code,d.persona_id,d.synthesis_m,d.synthesis_m_date')
             ->join('ai_persona p', 'p.id = d.persona_id')
             ->where('d.user_id', self::$uid)
             ->where('d.auto_type', 1)
@@ -1398,6 +1401,13 @@ class AutoDeviceSettingLogic extends ApiLogic
                     $sn = $data['sn'] ?? 0;
                     $length = $data['length'] ?? 60;
                     break;
+                case 7:
+                    $scene = self::COZE_COPYWRITING;
+                    $channelVersion = 24;
+                    $number = $data['number'] ?? 1;
+                    $sn = $data['sn'] ?? 0;
+                    $length = $data['length'] ?? 60;
+                    break;
                 default:
                     throw new \Exception('参数错误');
             }
@@ -1419,13 +1429,24 @@ class AutoDeviceSettingLogic extends ApiLogic
                     'keywords' => $keywords,
                     'number' => $number,
                     'sn' => $sn,
-                    'length' => $length
+                    'length' => $length,
+                    'persona' => $data['persona'] ?? '',
+                    'original' => $data['original'] ?? '',
+                    'voice' => $data['voice'] ?? '',
+                    'hook' => $data['hook'] ?? '',
+                    'model' => $data['model'] ?? 0,
+                    'channelVersion' => 18,
                 ];
             } else {
                 $request = [
                     'keywords' => $keywords,
                     'number' => $number,
                     'channelVersion' => $channelVersion,
+                    'persona' => $data['persona'] ?? '',
+                    'original' => $data['original'] ?? '',
+                    'voice' => $data['voice'] ?? '',
+                    'hook' => $data['hook'] ?? '',
+                    'model' => $data['model'] ?? 0,
                 ];
             }
 

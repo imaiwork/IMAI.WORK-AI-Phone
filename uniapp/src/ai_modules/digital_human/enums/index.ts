@@ -35,6 +35,12 @@ export enum CreateTypeEnum {
     AUDIO = 2, // 音频
 }
 
+/** 纯口播文案字数：蝉镜无包装 4000，蝉镜有包装 / 标准版 / 优质版 1500 */
+export const SPEECH_TEXT_LIMIT = {
+    CHANJING_NO_PACK: 4000,
+    DEFAULT: 1500,
+} as const;
+
 /** 数字人纯口播 type5 无包装引擎 */
 export enum SpeechEngineTypeEnum {
     /** 闪剪 */

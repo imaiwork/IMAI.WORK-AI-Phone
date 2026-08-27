@@ -7,8 +7,8 @@ use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaCopywritingLibrary;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryPlatformUse;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryUseLog;
+use app\common\service\SpreadsheetService;
 use app\common\service\aiPersona\IdRoundRobinPicker;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 use think\facade\Db;
 
 class CopywritingLibraryLogic extends ApiLogic
@@ -178,7 +178,7 @@ class CopywritingLibraryLogic extends ApiLogic
         try {
             self::assertPersona((int)$params['persona_id'], self::$uid);
             $tempFile = self::downloadImportFile($fileUrl);
-            $spreadsheet = IOFactory::load($tempFile);
+            $spreadsheet = SpreadsheetService::load($tempFile);
             $rows = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
 
             $expectedHeaders = self::expectedHeaders((int)$params['library_type'], (int)$params['driver_type']);

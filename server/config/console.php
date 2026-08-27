@@ -63,6 +63,8 @@ return [
         'sph_clues_add_wechat' => 'app\common\command\SphCluesAddWechat',
         //闪剪视频合成
         'shanjian_video_task' => 'app\common\command\ShanjianVideoTaskCron',
+        //热点追踪视频后台下发
+        'hotspot_video_dispatch' => 'app\common\command\HotspotVideoDispatchCron',
         //闪剪中台单队列状态
         'shanjian_queue_status' => 'app\common\command\ShanjianQueueStatusCron',
         //手动加微信任务
@@ -118,6 +120,8 @@ return [
         // 'wechat_local_video_synthesis' => 'app\common\command\WechatLocalVideoSynthesis',
         // 重置合成视频任务
         'reset_video_synthesis' => 'app\common\command\ResetVideoSynthesis',
+        // 自动合成视频任务覆盖率核对
+        'video_synthesis_coverage' => 'app\common\command\VideoSynthesisCoverageCheck',
         // 【已合并】自动合成模仿视频任务 -> 统一入口 auto_video_synthesis
         // 'auto_imitation_video_synthesis' => 'app\common\command\AutoImitationVideoSynthesis',
         // 合成minimax音频，兼容闪剪任务

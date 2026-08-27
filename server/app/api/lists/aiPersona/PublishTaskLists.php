@@ -3,11 +3,15 @@
 namespace app\api\lists\aiPersona;
 
 use app\api\lists\BaseApiDataLists;
+use app\api\logic\aiPersona\PublishResendLogic;
 use app\common\enum\DeviceEnum;
 use app\common\lists\ListsExtendInterface;
 use app\common\lists\ListsSearchInterface;
+use app\common\model\aiPersona\AiPersona;
+use app\common\model\marketing\MarketingTemplateSchedule;
 use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvDeviceTaskLog;
+use app\common\service\auto\AutoTaskSceneScheduleSyncService;
 use app\common\service\FileService;
 use think\db\Query;
 
@@ -17,6 +21,9 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
     private ?array $groups = null;
     private ?array $summary = null;
     private ?array $logsByTaskId = null;
+    private ?array $generatedVideoByPersona = null;
+    private ?array $runningDeviceMap = null;
+    private ?array $publishWindowsByStart = null;
 
     public function setSearch(): array
     {
@@ -83,16 +90,7 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
             });
         }
 
-        $timeRange = $this->getQueryTimeRange();
-        if ($timeRange !== '') {
-            $compactTimeRange = str_replace(' ', '', $timeRange);
-            $query->where(function ($query) use ($timeRange, $compactTimeRange) {
-                $query->where('dt.time_config', 'like', '%' . $compactTimeRange . '%');
-                if ($timeRange !== $compactTimeRange) {
-                    $query->whereOr('dt.time_config', 'like', '%' . $timeRange . '%');
-                }
-            });
-        }
+        $this->applyTimeRangeFilter($query);
 
         if (!empty($this->params['keyword'])) {
             $keyword = '%' . trim((string)$this->params['keyword']) . '%';
@@ -135,16 +133,7 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
             }
         }
 
-        $timeRange = $this->getQueryTimeRange();
-        if ($timeRange !== '') {
-            $compactTimeRange = str_replace(' ', '', $timeRange);
-            $query->where(function ($query) use ($timeRange, $compactTimeRange) {
-                $query->where('dt.time_config', 'like', '%' . $compactTimeRange . '%');
-                if ($timeRange !== $compactTimeRange) {
-                    $query->whereOr('dt.time_config', 'like', '%' . $timeRange . '%');
-                }
-            });
-        }
+        $this->applyTimeRangeFilter($query);
 
         if (!empty($this->params['keyword'])) {
             $keyword = '%' . trim((string)$this->params['keyword']) . '%';
@@ -176,6 +165,7 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
                 'dt.end_time' => 'end_time',
                 'dt.day' => 'day',
                 'dt.time_config' => 'time_config',
+                'dt.task_scene' => 'task_scene',
                 'pa.id' => 'publish_account_id',
                 'pa.name' => 'publish_account_name',
                 'pa.account' => 'publish_account',
@@ -218,6 +208,7 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
                 'dt.end_time' => 'end_time',
                 'dt.day' => 'day',
                 'dt.time_config' => 'time_config',
+                'dt.task_scene' => 'task_scene',
                 'ct.wechat_id' => 'detail_account',
                 'ct.id' => 'detail_id',
                 'ct.attachment_type' => 'circle_attachment_type',
@@ -273,6 +264,7 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
             'end_time' => $row['end_time'] ?? 0,
             'day' => $row['day'] ?? '',
             'time_config' => $row['time_config'] ?? '',
+            'task_scene' => (int)($row['task_scene'] ?? DeviceEnum::AUTO_TASK_SCENE_WECHAT_CIRCLE_PUBLISH),
             'publish_account_id' => 0,
             'publish_account_name' => '',
             'publish_account' => '',
@@ -434,11 +426,15 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
         $nickname = $this->rowNickname($row);
         $avatar = $this->rowAvatar($row);
         $taskStatus = $this->resolveItemTaskStatus($row);
+        $deviceCode = (string)($row['device_code'] ?? '');
+        $canResend = $this->canResendItem($row, $taskStatus, $platform, $mediaType);
+        $hasGeneratedVideo = $canResend ? $this->personaHasGeneratedVideo() : false;
+        $deviceRunning = $canResend ? $this->isDeviceRunningCached($deviceCode) : false;
 
         return [
             'task_id' => (int)$row['task_id'],
             'detail_id' => (int)$row['detail_id'],
-            'device_code' => (string)($row['device_code'] ?? ''),
+            'device_code' => $deviceCode,
             'account' => $account,
             'nickname' => $nickname,
             'avatar' => $this->formatFileUrl($avatar),
@@ -455,9 +451,71 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
             'task_status' => $taskStatus,
             'task_status_text' => $this->taskStatusText($taskStatus),
             'remark' => $this->resolvePublishRemark($row),
+            'can_resend' => $canResend,
+            'has_generated_video' => $hasGeneratedVideo,
+            'generated_disabled_reason' => ($canResend && !$hasGeneratedVideo)
+                ? PublishResendLogic::NO_GENERATED_VIDEO_MSG
+                : '',
+            'device_running' => $deviceRunning,
+            'resend_tip' => $canResend ? PublishResendLogic::RESEND_TIP : '',
             'latest_log' => $logs ? end($logs) : [],
             'logs' => $logs,
         ];
+    }
+
+    private function canResendItem(array $row, int $taskStatus, int $platform, int $mediaType): bool
+    {
+        if ($taskStatus !== DeviceEnum::TASK_STATUS_FAILED) {
+            return false;
+        }
+        // 仅短视频可重发（社媒 material_type=1 / 朋友圈 attachment 视频）
+        if ($mediaType !== 1) {
+            return false;
+        }
+        if ((int)($row['detail_id'] ?? 0) <= 0) {
+            return false;
+        }
+        // 社媒：需有发布账号；朋友圈：platform=2
+        if ($platform === DeviceEnum::PUBLISH_PLATFORM_WX) {
+            return true;
+        }
+        return (int)($row['publish_account_id'] ?? 0) > 0;
+    }
+
+    private function personaHasGeneratedVideo(): bool
+    {
+        $personaId = (int)($this->params['persona_id'] ?? 0);
+        if ($personaId <= 0) {
+            return false;
+        }
+        if ($this->generatedVideoByPersona === null) {
+            $this->generatedVideoByPersona = [];
+        }
+        if (!array_key_exists($personaId, $this->generatedVideoByPersona)) {
+            $this->generatedVideoByPersona[$personaId] = PublishResendLogic::hasGeneratedVideo($personaId);
+        }
+        return (bool)$this->generatedVideoByPersona[$personaId];
+    }
+
+    private function isDeviceRunningCached(string $deviceCode): bool
+    {
+        if ($deviceCode === '') {
+            return false;
+        }
+        if ($this->runningDeviceMap === null) {
+            $codes = SvDeviceTask::where('user_id', $this->userId)
+                ->where('status', DeviceEnum::TASK_STATUS_RUNNING)
+                ->whereNull('delete_time')
+                ->column('device_code');
+            $this->runningDeviceMap = [];
+            foreach ($codes as $code) {
+                $code = (string)$code;
+                if ($code !== '') {
+                    $this->runningDeviceMap[$code] = true;
+                }
+            }
+        }
+        return isset($this->runningDeviceMap[$deviceCode]);
     }
 
     /** 明细失败(status=2)时对外统一展示为执行失败 */
@@ -744,6 +802,31 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
 
     private function timeSlot(array $row): array
     {
+        $slot = $this->buildRawTimeSlot($row);
+        if ((int)($row['task_scene'] ?? DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH) !== DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH) {
+            return $slot;
+        }
+
+        $locked = $this->lookupLockedPublishWindow($slot['start_time']);
+        if ($locked === null) {
+            return $slot;
+        }
+        $range = $this->parseTimeRange($locked['start_time'] . '-' . $locked['end_time']);
+        if (empty($range)) {
+            return $slot;
+        }
+
+        return [
+            'slot_key' => 'time_config:' . $range['time_range'],
+            'time_config' => $range['time_range'],
+            'time_range' => $range['time_range'],
+            'start_time' => $range['start_time'],
+            'end_time' => $range['end_time'],
+        ];
+    }
+
+    private function buildRawTimeSlot(array $row): array
+    {
         $timeConfig = $this->normalizeTimeConfig($row['time_config'] ?? '');
         $range = $this->parseTimeRange($timeConfig);
 
@@ -768,6 +851,83 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
             'start_time' => $startTime,
             'end_time' => $endTime,
         ];
+    }
+
+    private function lookupLockedPublishWindow(string $startTime): ?array
+    {
+        $startTime = trim($startTime);
+        if ($startTime === '') {
+            return null;
+        }
+
+        $map = $this->getPublishWindowsByStart();
+        if (isset($map[$startTime])) {
+            return $map[$startTime];
+        }
+        if (preg_match('/^(\d{1,2}):(\d{2})$/', $startTime, $matches)) {
+            $normalized = sprintf('%02d:%02d', (int)$matches[1], (int)$matches[2]);
+            return $map[$normalized] ?? null;
+        }
+        return null;
+    }
+
+    private function getPublishWindowsByStart(): array
+    {
+        if ($this->publishWindowsByStart !== null) {
+            return $this->publishWindowsByStart;
+        }
+
+        $this->publishWindowsByStart = [];
+        $personaId = (int)($this->params['persona_id'] ?? 0);
+        if ($personaId <= 0) {
+            return $this->publishWindowsByStart;
+        }
+
+        try {
+            $persona = AiPersona::where('id', $personaId)
+                ->where('user_id', $this->userId)
+                ->findOrEmpty();
+            if ($persona->isEmpty() || (int)$persona->workflow_template_id <= 0) {
+                return $this->publishWindowsByStart;
+            }
+
+            $schedules = MarketingTemplateSchedule::where('template_id', (int)$persona->workflow_template_id)
+                ->where('scene', DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH)
+                ->select()
+                ->toArray();
+            $this->publishWindowsByStart = $this->indexLockedPublishWindows($schedules);
+        } catch (\Throwable $e) {
+            $this->publishWindowsByStart = [];
+        }
+
+        return $this->publishWindowsByStart;
+    }
+
+    /**
+     * 按开始时钟索引锁定后的发布窗口，便于单测且不依赖已生成任务数。
+     *
+     * @param array $schedules
+     * @param array|null $configMap
+     * @return array<string, array>
+     */
+    public static function indexLockedPublishWindows(array $schedules, ?array $configMap = null): array
+    {
+        $map = [];
+        foreach ($schedules as $schedule) {
+            if (!is_array($schedule)) {
+                continue;
+            }
+            $window = AutoTaskSceneScheduleSyncService::resolveEffectiveWindow($schedule, $configMap);
+            $start = (string)($window['start_time'] ?? '');
+            if ($start === '') {
+                continue;
+            }
+            $rawStart = trim((string)($schedule['start_time'] ?? $start));
+            $rawEnd = trim((string)($schedule['end_time'] ?? ''));
+            $window['raw_time_range'] = ($rawStart !== '' && $rawEnd !== '') ? $rawStart . '-' . $rawEnd : '';
+            $map[$start] = $window;
+        }
+        return $map;
     }
 
     private function normalizeTimeConfig($timeConfig): string
@@ -969,6 +1129,64 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
     private function getDate(): string
     {
         return !empty($this->params['date']) ? (string)$this->params['date'] : date('Y-m-d');
+    }
+
+    private function applyTimeRangeFilter(Query $query): void
+    {
+        $timeRange = $this->getQueryTimeRange();
+        if ($timeRange === '') {
+            return;
+        }
+        $patterns = $this->timeConfigSearchPatterns($timeRange);
+        if ($patterns === []) {
+            return;
+        }
+        $query->where(function ($query) use ($patterns) {
+            foreach ($patterns as $index => $pattern) {
+                if ($index === 0) {
+                    $query->where('dt.time_config', 'like', '%' . $pattern . '%');
+                    continue;
+                }
+                $query->whereOr('dt.time_config', 'like', '%' . $pattern . '%');
+            }
+        });
+    }
+
+    /**
+     * 锁定展示窗与库内原始 time_config 都要能筛到。
+     *
+     * @return string[]
+     */
+    private function timeConfigSearchPatterns(string $timeRange): array
+    {
+        $compact = str_replace(' ', '', $timeRange);
+        $patterns = [];
+        foreach ([$timeRange, $compact] as $item) {
+            $item = trim((string)$item);
+            if ($item !== '') {
+                $patterns[$item] = $item;
+            }
+        }
+
+        $parsed = $this->parseTimeRange($compact !== '' ? $compact : $timeRange);
+        if (empty($parsed)) {
+            return array_values($patterns);
+        }
+
+        $locked = $this->lookupLockedPublishWindow($parsed['start_time']);
+        if ($locked !== null && ($locked['start_time'] ?? '') === $parsed['start_time']) {
+            $raw = trim((string)($locked['raw_time_range'] ?? ''));
+            if ($raw !== '') {
+                $patterns[$raw] = $raw;
+                $patterns[str_replace(' ', '', $raw)] = str_replace(' ', '', $raw);
+            }
+            $lockedCompact = trim((string)($locked['start_time'] ?? '') . '-' . (string)($locked['end_time'] ?? ''));
+            if ($lockedCompact !== '-') {
+                $patterns[$lockedCompact] = $lockedCompact;
+            }
+        }
+
+        return array_values($patterns);
     }
 
     private function getQueryTimeRange(): string

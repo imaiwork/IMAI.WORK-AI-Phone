@@ -58,6 +58,16 @@ class AiPersonaSynthesisConfig extends BaseModel
     const SPEECH_RATE_MIN = 0.5;
     const SPEECH_RATE_MAX = 2.0;
 
+    //文案生成类型: 1干货科普 2带货种草 3观点评论 4剧情段子 5情感共鸣 6揭秘避坑 7自定义
+    const COPYWRITING_GENERATION_TYPE_KNOWLEDGE = 1;
+    const COPYWRITING_GENERATION_TYPE_SELL = 2;
+    const COPYWRITING_GENERATION_TYPE_OPINION = 3;
+    const COPYWRITING_GENERATION_TYPE_SKIT = 4;
+    const COPYWRITING_GENERATION_TYPE_EMOTION = 5;
+    const COPYWRITING_GENERATION_TYPE_PITFALL = 6;
+    const COPYWRITING_GENERATION_TYPE_CUSTOM = 7;
+    const COPYWRITING_GENERATION_CUSTOM_MAX = 500;
+
     protected $json = ['generation_types', 'template_config'];
     protected $jsonAssoc = true;
 
@@ -108,5 +118,65 @@ class AiPersonaSynthesisConfig extends BaseModel
     public function getNewsMixcutDurationAttr($value): int
     {
         return self::normalizeNewsMixcutDuration($value);
+    }
+
+    public static function copywritingGenerationTypeMap(): array
+    {
+        return [
+            self::COPYWRITING_GENERATION_TYPE_KNOWLEDGE => [
+                'label' => '干货科普',
+                'desc' => '把卖点讲成知识点，先给结论再讲原因，适合建立专业信任。',
+            ],
+            self::COPYWRITING_GENERATION_TYPE_SELL => [
+                'label' => '带货种草',
+                'desc' => '突出使用场景与前后对比，结尾直接引导下单或进店。',
+            ],
+            self::COPYWRITING_GENERATION_TYPE_OPINION => [
+                'label' => '观点评论',
+                'desc' => '对行业现象亮明态度，争议感强，评论区互动率高。',
+            ],
+            self::COPYWRITING_GENERATION_TYPE_SKIT => [
+                'label' => '剧情段子',
+                'desc' => '小剧情加反转带出产品，完播率高，适合泛流量涨粉。',
+            ],
+            self::COPYWRITING_GENERATION_TYPE_EMOTION => [
+                'label' => '情感共鸣',
+                'desc' => '讲人和故事，唤起共鸣后自然带出品牌，转化路径更软。',
+            ],
+            self::COPYWRITING_GENERATION_TYPE_PITFALL => [
+                'label' => '揭秘避坑',
+                'desc' => '用「内行人才知道」的口吻拆行业内幕，信任感与收藏率高。',
+            ],
+            self::COPYWRITING_GENERATION_TYPE_CUSTOM => [
+                'label' => '自定义',
+                'desc' => '',
+            ],
+        ];
+    }
+
+    public static function normalizeCopywritingGenerationType($value): int
+    {
+        $value = (int)$value;
+        return array_key_exists($value, self::copywritingGenerationTypeMap())
+            ? $value
+            : self::COPYWRITING_GENERATION_TYPE_KNOWLEDGE;
+    }
+
+    public static function normalizeCopywritingGenerationCustom($value): string
+    {
+        $value = trim((string)$value);
+        if (mb_strlen($value, 'UTF-8') > self::COPYWRITING_GENERATION_CUSTOM_MAX) {
+            return mb_substr($value, 0, self::COPYWRITING_GENERATION_CUSTOM_MAX, 'UTF-8');
+        }
+        return $value;
+    }
+
+    public static function buildCopywritingGenerationVoice(int $type, string $custom): string
+    {
+        $type = self::normalizeCopywritingGenerationType($type);
+        if ($type === self::COPYWRITING_GENERATION_TYPE_CUSTOM) {
+            return self::normalizeCopywritingGenerationCustom($custom);
+        }
+        return (string)(self::copywritingGenerationTypeMap()[$type]['label'] ?? '');
     }
 }

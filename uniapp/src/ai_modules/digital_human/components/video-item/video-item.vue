@@ -30,7 +30,7 @@
                         class="absolute bottom-[160rpx] left-0 w-full z-[51] text-[#ffffff80] text-[22rpx] text-center">
                         <template v-if="item.clip_status == 1 || item.clip_status == 2"> AI智能剪辑中... </template>
                         <template v-if="item.clip_status == 3">AI智能剪辑完成</template>
-                        <template v-if="item.clip_status == 4">AI智能剪辑失败</template>
+                        <template v-if="item.clip_status == 4">{{ item.remark || "AI智能剪辑失败" }}</template>
                     </view>
                 </template>
                 <template v-else>

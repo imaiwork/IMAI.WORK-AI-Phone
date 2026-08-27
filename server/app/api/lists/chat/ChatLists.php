@@ -30,8 +30,15 @@ class ChatLists extends BaseApiDataLists implements ListsSearchInterface
     public function lists(): array
     {
         $this->searchWhere[] = ['user_id', '=', $this->userId];
+
+        // 指定助理时按助理维度筛选会话(AI助理聊天的历史会话)，不再走场景映射
+        $assistantId = (int)$this->request->get('assistant_id');
+        if ($assistantId) {
+            $this->searchWhere[] = ['assistant_id', '=', $assistantId];
+        }
+
         $sceneId = $this->request->get('scene_id');
-        if ($sceneId || $sceneId == 0) {
+        if (!$assistantId && ($sceneId || $sceneId == 0)) {
             // 获取所有子集场景ID
             $sceneIds = Scene::where('pid', $sceneId)->column('id');
             if($sceneId == 0){
@@ -110,8 +117,15 @@ class ChatLists extends BaseApiDataLists implements ListsSearchInterface
     {
 
         $this->searchWhere[] = ['user_id', '=', $this->userId];
+
+        // 指定助理时按助理维度筛选会话(AI助理聊天的历史会话)，不再走场景映射
+        $assistantId = (int)$this->request->get('assistant_id');
+        if ($assistantId) {
+            $this->searchWhere[] = ['assistant_id', '=', $assistantId];
+        }
+
         $sceneId = $this->request->get('scene_id');
-        if ($sceneId || $sceneId == 0) {
+        if (!$assistantId && ($sceneId || $sceneId == 0)) {
             // 获取所有子集场景ID
             $sceneIds = Scene::where('pid', $sceneId)->column('id');
             if($sceneId == 0){

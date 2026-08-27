@@ -11,6 +11,7 @@ use app\common\model\auto\AutoDeviceConfig;
 use app\common\model\auto\AutoNeedsAnalysis;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvDeviceTask;
+use app\common\service\FileService;
 use app\common\service\UserDisplaySanitizer;
 
 
@@ -412,6 +413,32 @@ class DeviceLogic extends ApiLogic
         return $status;
     }
 
+    /**
+     * 设备是否在线。状态键由 workerman RPA 连接生命周期维护（连接/心跳=online，断开=offline），
+     * 指令经 Channel 实时推送，离线设备收不到，下发前应校验。读取后恢复缓存连接原 db，避免 select 泄漏。
+     */
+    public static function isDeviceOnline(string $deviceCode): bool
+    {
+        // 写入侧（ConnectionRepository::normalizeDeviceId）会 trim，读取侧保持一致
+        $deviceCode = trim($deviceCode);
+        if ($deviceCode === '') {
+            return false;
+        }
+
+        $handler = \think\facade\Cache::store('redis')->handler();
+        $prevDb = method_exists($handler, 'getDbNum')
+            ? (int)$handler->getDbNum()
+            : (int)env('CACHE.SELECT', 2);
+        try {
+            $handler->select((int)env('redis.WS_SELECT', 8));
+            $status = $handler->get("xhs:device:{$deviceCode}:status");
+        } finally {
+            $handler->select($prevDb);
+        }
+
+        return self::decodeDeviceStatus($status) === 'online';
+    }
+
     private static function buildOptMessageId(): string
     {
         return 0;
@@ -519,6 +546,7 @@ class DeviceLogic extends ApiLogic
                         'type' => $find['material_type'],
                         'list' => $find['material_url'],
                         'isLocation' => !empty($find['poi']) ? 1 : 0,
+                        'pic' => $find['pic'],
                         'location' => $find['poi'],
                         'isScheduledTime' => true,
                         'scheduledTime' => $find['publish_time'],
@@ -1431,6 +1459,7 @@ class DeviceLogic extends ApiLogic
                 'https://demo.imai.work/uploads/demo/2.png',
                 'https://demo.imai.work/uploads/demo/3.png'
             ],
+            'pic' => '',
             'poi' => 0,
             'publish_time' => date('Y-m-d H:i:s', time()),
             'task_id' => 0,
@@ -1476,6 +1505,7 @@ class DeviceLogic extends ApiLogic
 
 
         $publish->material_url = explode(',', $publish->material_url);
+        $publish->pic = FileService::getFileUrl($publish->pic ?? '');
         $publish->is_demo_data = 0;
         return $publish->toArray();
     }

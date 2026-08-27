@@ -25,6 +25,16 @@ class TaskValidate extends BaseValidate
         'exec_keyword' => 'max:255',
         'start_time' => 'date',
         'end_time' => 'date',
+        'task_id' => 'number',
+        'detail_id' => 'number',
+        'video_source' => 'require|in:generated,upload',
+        'video_url' => 'max:1000',
+        'video_task_id' => 'number',
+        'pic' => 'max:1000',
+        'material_title' => 'max:20',
+        'material_subtitle' => 'max:1000',
+        'material_tag' => 'max:500',
+        'poi' => 'max:255',
     ];
 
     protected $message = [
@@ -41,6 +51,13 @@ class TaskValidate extends BaseValidate
         'time_start.max' => '开始时间长度不能超过20个字符',
         'time_end.max' => '结束时间长度不能超过20个字符',
         'keyword.max' => '关键词长度不能超过255个字符',
+        'video_source.require' => '请选择视频来源',
+        'video_source.in' => '视频来源不正确',
+        'video_url.max' => '视频地址过长',
+        'material_title.max' => '发布标题最多20个字符',
+        'material_subtitle.max' => '发布文案最多1000个字符',
+        'material_tag.max' => '话题过长',
+        'poi.max' => '位置过长',
     ];
 
     public function scenePublish()
@@ -101,6 +118,27 @@ class TaskValidate extends BaseValidate
     public function sceneWechatMessageReply()
     {
         return $this->only(['persona_id', 'date', 'keyword', 'start_time', 'end_time']);
+    }
+
+    public function sceneCheckPublishResend()
+    {
+        return $this->only(['task_id', 'detail_id']);
+    }
+
+    public function scenePublishResend()
+    {
+        return $this->only([
+            'task_id',
+            'detail_id',
+            'video_source',
+            'video_url',
+            'video_task_id',
+            'pic',
+            'material_title',
+            'material_subtitle',
+            'material_tag',
+            'poi',
+        ]);
     }
 
     protected function checkStatus($value): bool|string

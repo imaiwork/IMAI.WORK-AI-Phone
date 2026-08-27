@@ -807,7 +807,7 @@ class DeviceLogic extends BasePersonaLogic
         } catch (\Exception $e) {
             $errorMsg = $e->getMessage();
             if ($errorMsg !== '-不存在') {
-                $device->synthesis_m = 1;
+                $device->markSynthesisDone(SvDevice::SYNTHESIS_SCENE_SOCIAL);
                 $device->save();
             }
             $msg = '设备号' . $deviceCode . '视频合成任务失败：' . $errorMsg;
@@ -1296,7 +1296,7 @@ class DeviceLogic extends BasePersonaLogic
                 ];
                 MaterialUseLog::insertAll($material_use_log);
             }
-            $device->synthesis_m = 1;
+            $device->markSynthesisDone(SvDevice::SYNTHESIS_SCENE_SOCIAL);
             $device->save();
             Db::commit();
             return [

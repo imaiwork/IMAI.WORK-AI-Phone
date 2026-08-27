@@ -71,12 +71,31 @@
                 <view class="flex items-center justify-between">
                     <text class="text-base font-bold text-[#111827]">粘贴作品链接</text>
                     <view
+                        v-if="!isWashMode"
                         class="flex items-center gap-[6rpx] bg-[#F3F4F6] rounded-full px-[24rpx] py-[12rpx]"
                         @click="onSelectIP">
                         <text class="text-xs" :class="selectedPerson ? 'text-[#374151]' : 'text-[#9CA3AF]'">
                             IP: {{ selectedPerson?.persona_name || "请选择人设" }}
                         </text>
                         <u-icon name="arrow-down" :color="selectedPerson ? '#6B7280' : '#9CA3AF'" size="22"></u-icon>
+                    </view>
+                    <view v-else class="flex items-center gap-[6rpx] bg-[#FFFBEB] rounded-full px-[24rpx] py-[12rpx]">
+                        <text class="text-xs text-[#D97706] font-semibold">洗稿模式 · 无需人设</text>
+                    </view>
+                </view>
+
+                <!-- 文案模式：人设仿写 / 洗稿（洗稿仅视频链路开放，小红书图文不显示） -->
+                <view
+                    v-if="isDouyinPlatform"
+                    class="inline-flex items-center bg-[#F3F4F6] rounded-full p-[6rpx] mt-[20rpx]">
+                    <view
+                        v-for="opt in rewriteModeOptions"
+                        :key="opt.val"
+                        class="px-[24rpx] py-[12rpx] rounded-full text-[22rpx]"
+                        :class="rewriteMode === opt.val ? 'bg-white text-primary font-semibold' : 'text-[#9CA3AF]'"
+                        :style="rewriteMode === opt.val ? 'box-shadow: 0 1px 2px rgba(0,0,0,0.05)' : ''"
+                        @click="handleRewriteModeChange(opt.val)">
+                        {{ opt.label }}
                     </view>
                 </view>
 
@@ -96,13 +115,14 @@
                                 v-for="opt in materialSourceOptions"
                                 :key="opt.val"
                                 class="px-[18rpx] py-[12rpx] rounded-full text-[22rpx]"
-                                :class="
+                                :class="[
                                     materialSource === opt.val
                                         ? 'bg-white text-primary font-semibold'
-                                        : 'text-[#9CA3AF]'
-                                "
+                                        : 'text-[#9CA3AF]',
+                                    isWashMode && opt.val !== 1 ? 'opacity-40' : '',
+                                ]"
                                 :style="materialSource === opt.val ? 'box-shadow: 0 1px 2px rgba(0,0,0,0.05)' : ''"
-                                @click="materialSource = opt.val">
+                                @click="onPickMaterialSource(opt)">
                                 {{ opt.label }}
                             </view>
                         </view>
@@ -116,6 +136,15 @@
                         <u-icon name="warning" color="#F59E0B" size="22"></u-icon>
                         <text class="text-xs text-[#D97706]">需额外消耗算力</text>
                     </view>
+                </view>
+
+                <view v-if="isWashMode" class="flex items-start gap-[10rpx] mt-[24rpx] px-[4rpx]">
+                    <text class="mt-[4rpx]">
+                        <u-icon name="info-circle" color="#2563EB" size="24"></u-icon>
+                    </text>
+                    <text class="text-xs text-[#2563EB] leading-relaxed flex-1">
+                        洗稿模式：不使用人设，AI 同义改写原文案；视频类型、数字人形象与音色将在任务流程中由你自选
+                    </text>
                 </view>
 
                 <view class="flex items-start gap-[10rpx] mt-[24rpx] px-[4rpx]">
@@ -226,12 +255,8 @@
                                 (isImageTextTask(task) &&
                                     task.status === 1 &&
                                     Number(task.image_rewrite_status) === ImageRewriteStatus.SELECTING) ||
-                                (!isImageTextTask(task) &&
-                                    [2, 3].includes(task.status) &&
-                                    task.publish_confirm == 0) ||
-                                (!isImageTextTask(task) &&
-                                    task.status === 1 &&
-                                    task.shanjian_task_id == '')
+                                (!isImageTextTask(task) && [2, 3].includes(task.status) && task.publish_confirm == 0) ||
+                                (!isImageTextTask(task) && task.status === 1 && task.shanjian_task_id == '')
                             "
                             class="text-[18rpx] mt-[4rpx] leading-[1.4] mb-2">
                             <text
@@ -245,9 +270,7 @@
                             </text>
                             <text
                                 v-else-if="
-                                    !isImageTextTask(task) &&
-                                    [2, 3].includes(task.status) &&
-                                    task.publish_confirm == 0
+                                    !isImageTextTask(task) && [2, 3].includes(task.status) && task.publish_confirm == 0
                                 "
                                 class="text-[#EF4444]">
                                 提示：发布文案未确认，请点击任务查看并前往确认发布文案。
@@ -255,9 +278,15 @@
                             <text
                                 v-else-if="
                                     !isImageTextTask(task) &&
+                                    isWashTask(task) &&
                                     task.status === 1 &&
-                                    task.shanjian_task_id == ''
+                                    Number(task.generation_config_confirmed) !== 1
                                 "
+                                class="text-[#D97706]">
+                                提示：洗稿文案已生成，请点击任务选择视频类型、形象和音色。
+                            </text>
+                            <text
+                                v-else-if="!isImageTextTask(task) && task.status === 1 && task.shanjian_task_id == ''"
                                 class="text-[#EF4444]">
                                 提示：仿写文案未确认，请点击任务查看并前往确认仿写文案。
                             </text>
@@ -315,9 +344,11 @@ import {
     HOT_WRITE_IMAGE_MODEL_NAME,
     HOT_WRITE_PLATFORM_OPTIONS,
     HotWritePlatform,
+    HotWriteRewriteMode,
     ImageRewriteStatus,
     getTaskPreviewImages,
     isImageTextTask,
+    isWashTask,
 } from "@/ai_modules/hot_write/enums";
 import QueueTaskCard from "./components/queue-task-card.vue";
 import StepDone from "@/ai_modules/hot_write/static/icons/step_done.svg";
@@ -386,6 +417,8 @@ const createCostScore = computed(() =>
 const handlePlatformChange = (key: HotWritePlatform) => {
     if (currentPlatform.value === key) return;
     currentPlatform.value = key;
+    // 小红书图文不开放洗稿，切过去时回到人设仿写，避免带着洗稿参数提交
+    if (key !== HotWritePlatform.DOUYIN) rewriteMode.value = HotWriteRewriteMode.PERSONA;
 };
 
 const tabs = [
@@ -423,6 +456,32 @@ const materialSource = ref(2);
 const currentMaterialOption = computed(
     () => materialSourceOptions.find((o) => o.val === materialSource.value) ?? materialSourceOptions[0],
 );
+
+// ────────── 文案模式：人设仿写 / 洗稿 ──────────
+
+const rewriteMode = ref<HotWriteRewriteMode>(HotWriteRewriteMode.PERSONA);
+const isWashMode = computed(() => rewriteMode.value === HotWriteRewriteMode.WASH);
+const rewriteModeOptions = [
+    { val: HotWriteRewriteMode.PERSONA, label: "人设仿写" },
+    { val: HotWriteRewriteMode.WASH, label: "洗稿 · 自选形象音色" },
+];
+
+const handleRewriteModeChange = (val: HotWriteRewriteMode) => {
+    if (rewriteMode.value === val) return;
+    rewriteMode.value = val;
+    // 洗稿无人设，素材来源强制 AI 找素材
+    if (val === HotWriteRewriteMode.WASH) {
+        materialSource.value = 1;
+    }
+};
+
+const onPickMaterialSource = (opt: { val: number }) => {
+    if (isWashMode.value && opt.val !== 1) {
+        uni.$u.toast("洗稿模式仅支持AI找素材");
+        return;
+    }
+    materialSource.value = opt.val;
+};
 
 // ────────── 步骤相关 ──────────
 
@@ -463,31 +522,50 @@ const IMAGE_TEXT_STEP_SHORT: Record<string, string> = {
     done: "完成",
 };
 
+/** 洗稿视频进度短标签（后端 wash 步骤流） */
+const WASH_VIDEO_STEP_SHORT: Record<string, string> = {
+    wash_mode: "模式",
+    extract: "提取",
+    rewrite: "洗稿",
+    generation_type: "类型",
+    avatar: "形象",
+    voice: "音色",
+    confirm: "确认",
+    render: "渲染",
+};
+
 const mapProgressSteps = (item: any) => {
     const list = Array.isArray(item.progress_steps) ? item.progress_steps : [];
     if (!list.length) return null;
-    const selecting =
-        Number(item.image_rewrite_status) === ImageRewriteStatus.SELECTING;
-    return list.map((step: any, index: number) => {
+    const imageText = isImageTextTask(item);
+    const wash = !imageText && isWashTask(item);
+    const shortMap = imageText ? IMAGE_TEXT_STEP_SHORT : WASH_VIDEO_STEP_SHORT;
+    const selecting = imageText && Number(item.image_rewrite_status) === ImageRewriteStatus.SELECTING;
+    // 洗稿视频：文案就绪但配置未确认时，类型/形象/音色属于用户自选步骤
+    const washWaiting = wash && Number(item.status) === 1 && Number(item.generation_config_confirmed) !== 1;
+    // 卡片空间有限：洗稿隐藏恒完成的「模式」与随确认自动完成的「确认」两步
+    const steps = wash ? list.filter((s: any) => !["wash_mode", "confirm"].includes(s.key)) : list;
+    return steps.map((step: any, index: number) => {
         let status: "done" | "running" | "pending" | "failed" | "wait" = "pending";
         if (step.failed) status = "failed";
         else if (step.done) status = "done";
-        else if (index === 0 || list[index - 1]?.done) {
+        else if (index === 0 || steps[index - 1]?.done) {
             // 待选图：当前「选图」步用等待态（琥珀），与设计稿一致
-            status =
-                selecting && step.key === "select_images" ? "wait" : "running";
+            if (selecting && step.key === "select_images") status = "wait";
+            else if (washWaiting && ["generation_type", "avatar", "voice"].includes(step.key)) status = "wait";
+            else status = "running";
         }
         return {
             status,
             key: step.key || "",
-            name: IMAGE_TEXT_STEP_SHORT[step.key] || step.name || "",
+            name: shortMap[step.key] || step.name || "",
             remark: step.remarks || item.remarks,
         };
     });
 };
 
 const normalizeTask = (item: any) => {
-    const progressSteps = isImageTextTask(item) ? mapProgressSteps(item) : null;
+    const progressSteps = isImageTextTask(item) || isWashTask(item) ? mapProgressSteps(item) : null;
     return {
         ...item,
         name: item.title || "提取文案中...",
@@ -618,8 +696,7 @@ function stepLineWrapStyle(leftStatus: string, rightStatus: string) {
     if (leftStatus === "done" && rightStatus === "done") return "background: linear-gradient(90deg, #34D399, #059669)";
     if (leftStatus === "done" && rightStatus === "running")
         return "background: linear-gradient(90deg, #34D399, #60A5FA)";
-    if (leftStatus === "done" && rightStatus === "wait")
-        return "background: linear-gradient(90deg, #34D399, #FBBF24)";
+    if (leftStatus === "done" && rightStatus === "wait") return "background: linear-gradient(90deg, #34D399, #FBBF24)";
     if (leftStatus === "done" && rightStatus === "failed")
         return "background: linear-gradient(90deg, #34D399, #FCA5A5)";
     if (leftStatus === "done" && rightStatus === "pending")
@@ -669,7 +746,7 @@ const handleCreate = async () => {
         uni.$u.toast(isDouyinPlatform.value ? "请粘贴抖音作品链接" : "请粘贴小红书图文链接");
         return;
     }
-    if (!selectedPerson.value) {
+    if (!isWashMode.value && !selectedPerson.value) {
         uni.$u.toast("请选择人设");
         showChoosePerson.value = true;
         return;
@@ -681,16 +758,19 @@ const handleCreate = async () => {
     isCreating.value = true;
     uni.showLoading({ title: "开始复刻..." });
     try {
+        const personaId = isWashMode.value ? 0 : selectedPerson.value?.id;
         if (currentPlatform.value === HotWritePlatform.XHS) {
             await createHotWriteImageText({
                 url: inputUrl.value,
-                persona_id: selectedPerson.value?.id,
+                persona_id: personaId,
+                rewrite_mode: rewriteMode.value,
             });
         } else {
             await createHotWrite({
                 url: inputUrl.value,
-                persona_id: selectedPerson.value?.id,
-                visual_material_source: materialSource.value,
+                persona_id: personaId,
+                visual_material_source: isWashMode.value ? 1 : materialSource.value,
+                rewrite_mode: rewriteMode.value,
             });
         }
         inputUrl.value = "";
@@ -748,15 +828,17 @@ const onRetryTask = async (task: any) => {
     if (Number(task.status) !== 4) return;
     if (retryingTaskId.value != null) return;
     const url = String(task.prompt || task.url || "").trim();
-    const personaId = task.persona_id;
+    const washTask = isWashTask(task);
+    const personaId = washTask ? 0 : task.persona_id;
     if (!url) {
         uni.$u.toast("缺少原链接，无法重试");
         return;
     }
-    if (!personaId) {
+    if (!washTask && !personaId) {
         uni.$u.toast("缺少人设信息，无法重试");
         return;
     }
+    const taskRewriteMode = Number(task.rewrite_mode) || HotWriteRewriteMode.PERSONA;
     retryingTaskId.value = task.id;
     uni.showLoading({ title: "重试中...", mask: true });
     try {
@@ -765,13 +847,15 @@ const onRetryTask = async (task: any) => {
                 id: task.id,
                 url,
                 persona_id: personaId,
+                rewrite_mode: taskRewriteMode,
             });
         } else {
             await createHotWrite({
                 id: task.id,
                 url,
                 persona_id: personaId,
-                visual_material_source: task.visual_material_source ?? 3,
+                visual_material_source: washTask ? 1 : task.visual_material_source ?? 3,
+                rewrite_mode: taskRewriteMode,
             });
         }
         uni.hideLoading();

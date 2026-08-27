@@ -16,6 +16,7 @@ class CopywritingValidate extends BaseValidate
         'id'  => 'integer|min:0',
         'persona_id' => 'require|integer',
         'visual_material_source' => 'in:1,2,3',
+        'rewrite_mode' => 'in:1,2',
     ];
 
     protected $message = [
@@ -23,16 +24,17 @@ class CopywritingValidate extends BaseValidate
         'id.integer'  => 'ID必须是整数',
         'id.min'      => 'ID不能小于0',
         'persona_id.require' => '必须选择IP人设',
-        'persona_id.integer' => '人设ID格式不正确'
+        'persona_id.integer' => '人设ID格式不正确',
+        'rewrite_mode.in' => '改写模式仅支持1（人设复刻）或2（洗稿）',
     ];
 
     public function sceneVideo2text()
     {
-        return $this->only(['url', 'id', 'persona_id', 'visual_material_source']);
+        return $this->only(['url', 'id', 'persona_id', 'visual_material_source', 'rewrite_mode']);
     }
 
     public function sceneImage2text()
     {
-        return $this->only(['url', 'id', 'persona_id']);
+        return $this->only(['url', 'id', 'persona_id', 'rewrite_mode']);
     }
 }

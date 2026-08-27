@@ -65,15 +65,20 @@ export function useShareMessage() {
         })
 
         const { share_title, share_image, share_desc } = appStore.getShareConfig
-        const { shop_name, shop_logo } = appStore.getWebsiteConfig
+        // OEM 站点分享用 OEM 品牌,主站回落平台 shop_name / shop_logo
+        const shop_name = appStore.getSiteName
+        const shop_logo = appStore.getSiteShopLogo
+        // share_title / share_image 是平台后台配的,OEM 站点不能露主站品牌:有 OEM 值时直接顶掉
+        const shareTitle = appStore.getOemName || share_title
+        const shareImage = appStore.getOemLogo || share_image
         // 分享为首页
         const isShareWithHome = false
         const link = await generateSharePath(isShareWithHome)
         let resolved = {
-            title: share_title,
+            title: shareTitle,
             path: link,
             desc: share_desc,
-            imageUrl: share_image
+            imageUrl: shareImage
         }
 
         // 非首页可以合并外部参数

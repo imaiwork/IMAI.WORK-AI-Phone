@@ -16,6 +16,16 @@ class ShanjianClipTemplateSyncService
         'realMan',
     ];
 
+    /** 参与「内容是否变化」比对的字段；时间戳由本地维护，不参与比对 */
+    private const CONTENT_FIELDS = [
+        'name',
+        'cover_url',
+        'scene',
+        'demo_url',
+        'auto_type',
+        'sort',
+    ];
+
     public static function syncFromPlatform(): array
     {
         $response = ToolsService::Shanjian()->clipTemplate([]);
@@ -37,6 +47,7 @@ class ShanjianClipTemplateSyncService
         $stats = [
             'created' => 0,
             'updated' => 0,
+            'unchanged' => 0,
             'deleted' => 0,
             'downloaded' => 0,
             'uploaded' => 0,
@@ -67,18 +78,47 @@ class ShanjianClipTemplateSyncService
         Db::startTrans();
         try {
             $remoteIds = array_keys($rows);
-            $existingIds = ShanjianClipTemplate::whereIn('id', $remoteIds)->column('id');
-            $existingMap = array_fill_keys(array_map('strval', $existingIds), true);
+            // 走 Db 门面取原始值：模型的 create_time/update_time 读取器会把时间戳格式化成字符串，不能用于比对
+            $existingRows = Db::name('shanjian_clip_template')
+                ->whereIn('id', $remoteIds)
+                ->field('id,' . implode(',', self::CONTENT_FIELDS) . ',create_time,update_time')
+                ->select()
+                ->toArray();
+            $existingMap = [];
+            foreach ($existingRows as $existingRow) {
+                $existingMap[(string)$existingRow['id']] = $existingRow;
+            }
 
+            $now = time();
             foreach ($rows as $id => $row) {
-                if (isset($existingMap[$id])) {
-                    ShanjianClipTemplate::where('id', $id)->update($row);
-                    $stats['updated']++;
+                $existing = $existingMap[$id] ?? null;
+
+                if ($existing === null) {
+                    $row['create_time'] = $row['create_time'] ?: $now;
+                    $row['update_time'] = $now;
+                    ShanjianClipTemplate::create($row);
+                    $stats['created']++;
                     continue;
                 }
 
-                ShanjianClipTemplate::create($row);
-                $stats['created']++;
+                $existingCreateTime = (int)($existing['create_time'] ?? 0);
+                $existingUpdateTime = (int)($existing['update_time'] ?? 0);
+                $changed = self::hasContentChanged($existing, $row);
+                // 历史数据时间戳为 0（中台就返回 '0'）时补一次当前时间，否则将永远停留在 0
+                $needsTimeBackfill = $existingCreateTime <= 0 || $existingUpdateTime <= 0;
+
+                if (!$changed && !$needsTimeBackfill) {
+                    $stats['unchanged']++;
+                    continue;
+                }
+
+                // create_time 只认第一次：中台有值优先，其次沿用本地已有值，最后才补当前时间
+                $row['create_time'] = $row['create_time'] ?: ($existingCreateTime ?: $now);
+                // 内容有变化才刷新 update_time；仅补历史空值时沿用已有值
+                $row['update_time'] = $changed ? $now : ($existingUpdateTime ?: $now);
+
+                ShanjianClipTemplate::where('id', $id)->update($row);
+                $stats['updated']++;
             }
 
             $stats['deleted'] = ShanjianClipTemplate::whereNotIn('id', $remoteIds)->delete();
@@ -91,6 +131,18 @@ class ShanjianClipTemplateSyncService
         }
 
         return $stats;
+    }
+
+    /** 只比对业务内容字段，时间戳不参与，避免中台返回 '0' 导致每轮都判定为「有变化」 */
+    private static function hasContentChanged(array $existing, array $row): bool
+    {
+        foreach (self::CONTENT_FIELDS as $field) {
+            if ((string)($existing[$field] ?? '') !== (string)($row[$field] ?? '')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function normalizeTemplate(array $item, array &$stats): ?array
@@ -110,8 +162,11 @@ class ShanjianClipTemplateSyncService
             'scene' => $scene,
             'demo_url' => self::downloadTemplateAsset(trim((string)($item['demo_url'] ?? '')), 'video', $stats),
             'auto_type' => (int)($item['auto_type'] ?? 0),
-            'create_time' => max(0, (int)($item['create_time'] ?? time())),
-            'update_time' => max(0, (int)($item['update_time'] ?? time())),
+            // 中台对部分模板不下发 sort（键直接缺失），归 0 排在最后
+            'sort' => max(0, (int)($item['sort'] ?? 0)),
+            // 原样带出中台值(缺失/为 '0' 都归零)，由 syncFromPayload 统一决定最终写入的时间戳
+            'create_time' => max(0, (int)($item['create_time'] ?? 0)),
+            'update_time' => max(0, (int)($item['update_time'] ?? 0)),
         ];
     }
 

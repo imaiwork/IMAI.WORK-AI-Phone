@@ -38,7 +38,7 @@ class VideoLogic extends ApiLogic
             ['media_type', '=', VideoImitationTask::MEDIA_TYPE_VIDEO],
         ];
 
-        // type → shanjian_type：2→1, 3→2, 4→3, 5→4, 9→5
+        // type → shanjian_type：2→1, 3→2, 4→3, 5→4, 9→5；type=10 为热点追踪（按 extra.source 区分，不看 shanjian_type）
         $shanjianTypeMap = [2 => 1, 3 => 2, 4 => 3, 5 => 4, 9 => 5];
         $selectedShanjianTypes = [];
         foreach ($types as $t) {
@@ -51,6 +51,23 @@ class VideoLogic extends ApiLogic
             $shanjianWhere = [['shanjian_type', '=', $selectedShanjianTypes[0]]];
         } elseif (count($selectedShanjianTypes) > 1) {
             $shanjianWhere = [['shanjian_type', 'in', $selectedShanjianTypes]];
+        }
+
+        // 热点追踪(type=10)与常规闪剪类型的互斥拆分：
+        // 只选 10 → 仅热点来源；只选 2-5/9 → 排除热点来源；混选 → (常规类型且非热点) OR 热点
+        $hotspotSelected = in_array(10, $types, true);
+        $plainShanjianSelected = !empty(array_intersect($types, [2, 3, 4, 5, 9]));
+        $shanjianRaw = '';
+        if ($hotspotSelected && !$plainShanjianSelected) {
+            $shanjianRaw = self::shanjianHotspotCond();
+        } elseif (!$hotspotSelected && $plainShanjianSelected) {
+            $shanjianRaw = self::shanjianNotHotspotCond();
+        } elseif ($hotspotSelected && $plainShanjianSelected) {
+            $typeCond = count($selectedShanjianTypes) === 1
+                ? 'shanjian_type = ' . $selectedShanjianTypes[0]
+                : 'shanjian_type IN (' . implode(',', $selectedShanjianTypes) . ')';
+            $shanjianRaw = '((' . $typeCond . ' AND ' . self::shanjianNotHotspotCond() . ') OR ' . self::shanjianHotspotCond() . ')';
+            $shanjianWhere = [];
         }
 
         if ($success) {
@@ -100,11 +117,12 @@ class VideoLogic extends ApiLogic
                     ->where(self::prefixHumanWhere($where, 'hvt'))
                     ->where(self::prefixHumanWhere($humanWhere, 'hvt'))
                     ->whereNotExists(function ($sub) {
+                        // 不看 delete_time：桥接记录即使被软删也持续抑制 human 行，
+                        // 否则删除 type9 记录后同一创作会以 type=1 复活
                         $sub->name('shanjian_video_task')
                             ->alias('sj_bridge')
                             ->whereRaw('sj_bridge.task_id = hvt.task_id')
-                            ->where('sj_bridge.shanjian_type', 5)
-                            ->whereNull('sj_bridge.delete_time');
+                            ->where('sj_bridge.shanjian_type', 5);
                     })
                     ->buildSql();
 
@@ -116,7 +134,7 @@ class VideoLogic extends ApiLogic
                 return $condition;
             }, $shanjianWhere);
 
-            $query2 = Db::name('shanjian_video_task')
+            $query2Builder = Db::name('shanjian_video_task')
                         ->alias('sj')
                         ->leftJoin('shanjian_video_task package_task', 'package_task.id = sj.packaging_task_id AND package_task.delete_time IS NULL AND package_task.shanjian_type = 2')
                         ->field([
@@ -146,9 +164,13 @@ class VideoLogic extends ApiLogic
                                 ])
                         ->where([['sj.user_id', '=', $userId], ['sj.delete_time', '=', null]])
                         ->where($shanjianQueryWhere)
-                        ->buildSql();
+                        // 与通用分支/计数一致：排除派生任务(当前 shanjian_type=5 过滤下为兜底)
+                        ->where('sj.origin_task_id', 0);
+            // 纯 type=9 场景排除热点来源（join 场景 extra 列有歧义，须带 sj. 前缀）
+            $query2Builder->whereRaw(self::shanjianNotHotspotCond('sj.'));
+            $query2 = $query2Builder->buildSql();
         } else {
-            $query2 = Db::name('shanjian_video_task')
+            $query2Builder = Db::name('shanjian_video_task')
                         ->field([
                                     'id',
                                     'name',
@@ -163,8 +185,8 @@ class VideoLogic extends ApiLogic
                                     'create_time',
                                     'update_time',
                                     'remark',
-                                    // shanjian_type 1~4 → type 2~5；shanjian_type=5（数字人口播无包装）→ type=9，避免与 Sora(type=6) 冲突
-                                    'CASE WHEN shanjian_type = 5 THEN 9 ELSE shanjian_type + 1 END as type',
+                                    // 热点追踪来源 → type=10；shanjian_type 1~4 → type 2~5；shanjian_type=5（数字人口播无包装）→ type=9，避免与 Sora(type=6) 冲突
+                                    'CASE WHEN ' . self::shanjianHotspotCond() . ' THEN 10 WHEN shanjian_type = 5 THEN 9 ELSE shanjian_type + 1 END as type',
                                     'duration',
                                     'queue_status',
                                     'queue_position',
@@ -173,7 +195,13 @@ class VideoLogic extends ApiLogic
                                 ])
                         ->where($where)
                         ->where($shanjianWhere)
-                        ->buildSql();
+                        // 派生任务(origin_task_id>0,如 type5 智剪派生的包装任务)是中间产物，
+                        // 其状态/成片已合并进源记录展示；须与 getTotalCount 保持一致
+                        ->where('origin_task_id', 0);
+            if ($shanjianRaw !== '') {
+                $query2Builder->whereRaw($shanjianRaw);
+            }
+            $query2 = $query2Builder->buildSql();
         }
 
         $query3 = Db::name('sora_video_task')
@@ -259,7 +287,7 @@ class VideoLogic extends ApiLogic
         if (empty($types) || in_array(1, $types, true)) {
             $unionParts[] = $query1;
         }
-        if (empty($types) || !empty(array_intersect($types, [2, 3, 4, 5, 9]))) {
+        if (empty($types) || !empty(array_intersect($types, [2, 3, 4, 5, 9, 10]))) {
             $unionParts[] = $query2;
         }
         if (empty($types) || in_array(6, $types, true)) {
@@ -333,7 +361,7 @@ class VideoLogic extends ApiLogic
             ];
         }
 
-        $total = self::getTotalCount($where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $imitationWhere, $types, $success);
+        $total = self::getTotalCount($where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $imitationWhere, $types, $success, $shanjianRaw);
 
         return [
             'count'      => $total,
@@ -348,6 +376,27 @@ class VideoLogic extends ApiLogic
      * 解析创作记录 type 参数，支持 1 / 1,9 / [1,9]
      * @return int[] 空数组表示查全部
      */
+    /**
+     * 热点追踪来源判定（extra 为 text 存 json，JSON_VALID 防无效串报错；命中为真、其余为假）
+     */
+    private static function shanjianHotspotCond(string $prefix = ''): string
+    {
+        $col = $prefix . 'extra';
+        return "({$col} IS NOT NULL AND {$col} <> '' AND JSON_VALID({$col})"
+            . " AND JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.source')) = 'hotspot')";
+    }
+
+    /**
+     * 非热点来源判定：显式枚举各空值/无效分支，规避 SQL 三值逻辑把无 source 键的行误过滤
+     */
+    private static function shanjianNotHotspotCond(string $prefix = ''): string
+    {
+        $col = $prefix . 'extra';
+        return "({$col} IS NULL OR {$col} = '' OR NOT JSON_VALID({$col})"
+            . " OR JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.source')) IS NULL"
+            . " OR JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.source')) <> 'hotspot')";
+    }
+
     private static function parseCreationRecordTypes($typeParam): array
     {
         if ($typeParam === null || $typeParam === '' || $typeParam === 0 || $typeParam === '0') {
@@ -488,11 +537,11 @@ class VideoLogic extends ApiLogic
             $query->where(self::prefixHumanWhere($humanWhere, 'hvt'));
         }
         $query->whereNotExists(function ($sub) {
+            // 与列表一致：桥接记录含软删均抑制，防止删除后以 type=1 复活
             $sub->name('shanjian_video_task')
                 ->alias('sj_bridge')
                 ->whereRaw('sj_bridge.task_id = hvt.task_id')
-                ->where('sj_bridge.shanjian_type', 5)
-                ->whereNull('sj_bridge.delete_time');
+                ->where('sj_bridge.shanjian_type', 5);
         });
         return (int)$query->count();
     }
@@ -500,19 +549,29 @@ class VideoLogic extends ApiLogic
     /**
      * 计算选中类型的总记录数，$types 为空表示全部
      */
-    private static function getTotalCount(array $where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $imitationWhere, array $types, $success): int
+    private static function getTotalCount(array $where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $imitationWhere, array $types, $success, string $shanjianRaw = ''): int
     {
+        $shanjianCount = function () use ($where, $shanjianWhere, $shanjianRaw): int {
+            $query = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)
+                // 与列表一致：排除派生任务(origin_task_id>0)
+                ->where('origin_task_id', 0);
+            if ($shanjianRaw !== '') {
+                $query->whereRaw($shanjianRaw);
+            }
+            return $query->count();
+        };
+
         if (empty($types)) {
             if ($success) {
                 $count1 = self::countHumanVideoTaskWithoutType5Bridge($where, $humanWhere);
-                $count2 = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)->count();
+                $count2 = $shanjianCount();
                 $count3 = Db::name('sora_video_task')->where($where)->where($soraWhere)->count();
                 $count4 = Db::name('storyboard_video_task')->where($where)->where($storyboardWhere)->count();
                 $count5 = Db::name('video_imitation_task')->where($where)->where($imitationWhere)->count();
             } else {
                 // 与列表一致：默认仍排除 is_ai!=0 时由调用方 humanWhere 控制；此处非 success 原先未带 humanWhere，保持兼容并叠加桥接过滤
                 $count1 = self::countHumanVideoTaskWithoutType5Bridge($where, [['is_ai', '=', 0]]);
-                $count2 = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)->count();
+                $count2 = $shanjianCount();
                 $count3 = Db::name('sora_video_task')->where($where)->count();
                 $count4 = Db::name('storyboard_video_task')->where($where)->count();
                 $count5 = Db::name('video_imitation_task')->where($where)->where($imitationWhere)->count();
@@ -528,8 +587,8 @@ class VideoLogic extends ApiLogic
                 $total += self::countHumanVideoTaskWithoutType5Bridge($where, [['is_ai', '=', 0]]);
             }
         }
-        if (!empty(array_intersect($types, [2, 3, 4, 5, 9]))) {
-            $total += Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)->count();
+        if (!empty(array_intersect($types, [2, 3, 4, 5, 9, 10]))) {
+            $total += $shanjianCount();
         }
         if (in_array(6, $types, true)) {
             if ($success) {
@@ -575,7 +634,7 @@ class VideoLogic extends ApiLogic
                 }
                 $task->delete();
             }
-            if (in_array($type, [2, 3, 4, 5, 9])) {
+            if (in_array($type, [2, 3, 4, 5, 9, 10])) {
                 $task = ShanjianVideoTask::where('id', $id)
                                          ->where('task_id', $task_id)
                                          ->where('user_id', self::$uid)
@@ -583,7 +642,20 @@ class VideoLogic extends ApiLogic
                 if (!$task) {
                     throw new \Exception('视频任务不存在');
                 }
-                $task->delete();
+                Db::startTrans();
+                try {
+                    if ((int)$task->shanjian_type === 5) {
+                        // 终态的派生包装任务随源任务一并删；处理中的保留等回调结算(列表本就不展示)
+                        ShanjianVideoTask::deleteDerivedPackaging([(int)$task->id]);
+                    }
+                    // 蝉镜桥接的 human_video_task 不删：桥接记录(含软删)会持续抑制其在
+                    // 创作记录出现，保留可让生成中任务的回调/退费正常走完
+                    $task->delete();
+                    Db::commit();
+                } catch (\Throwable $e) {
+                    Db::rollback();
+                    throw new \Exception($e->getMessage());
+                }
             }
             if ($type == 6) {
                 $task = SoraVideoTask::where('id', $id)
@@ -644,7 +716,7 @@ class VideoLogic extends ApiLogic
                 $task->name = $name;
                 $task->save();
             }
-            if (in_array($type, [2, 3, 4, 5, 9])) {
+            if (in_array($type, [2, 3, 4, 5, 9, 10])) {
                 $task = ShanjianVideoTask::where('id', $id)
                                          ->where('task_id', $task_id)
                                          ->where('user_id', self::$uid)

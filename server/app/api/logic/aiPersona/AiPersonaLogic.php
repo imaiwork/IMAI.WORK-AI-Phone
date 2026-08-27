@@ -396,6 +396,8 @@ class AiPersonaLogic extends ApiLogic
                 'news_mixcut_duration' => \app\common\model\aiPersona\AiPersonaSynthesisConfig::NEWS_MIXCUT_DURATION_DEFAULT,
                 'library_use_mode' => \app\common\model\aiPersona\AiPersonaSynthesisConfig::LIBRARY_USE_MODE_RANDOM,
                 'library_reuse_mode' => \app\common\model\aiPersona\AiPersonaSynthesisConfig::LIBRARY_REUSE_MODE_ONCE,
+                'copywriting_generation_type' => \app\common\model\aiPersona\AiPersonaSynthesisConfig::COPYWRITING_GENERATION_TYPE_KNOWLEDGE,
+                'copywriting_generation_custom' => '',
                 'create_time' => time(),
                 'update_time' => time(),
             ];

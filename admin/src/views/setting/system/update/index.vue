@@ -205,6 +205,25 @@
                 </button>
 
                 <button
+                    class="inline-flex items-center gap-2 px-5 py-[10px] rounded-[8px] text-[14px] font-semibold border border-[#e5e7eb] cursor-pointer transition-all tracking-tight bg-white text-[#374151] hover:bg-[#f8fafc] hover:border-[#cbd5e1] disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="backup.running || oneKey.running || db.executing || sql.batchRunning"
+                    :title="backup.list.length > 0 ? `最近备份：${backup.list[0].file}（${backup.list[0].mtime}）` : '尚无备份'"
+                    @click="onDbBackup">
+                    <span class="flex items-center justify-center w-[17px] h-[17px]">
+                        <span v-if="backup.running" class="spin-ring"></span>
+                        <svg v-else width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <ellipse cx="8" cy="4" rx="5" ry="2" stroke="currentColor" stroke-width="1.3" />
+                            <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4" stroke="currentColor" stroke-width="1.3" />
+                            <path d="M3 8c0 1.1 2.2 2 5 2s5-.9 5-2" stroke="currentColor" stroke-width="1.3" />
+                        </svg>
+                    </span>
+                    {{ backup.running ? "备份中…" : "备份数据库" }}
+                    <span v-if="backup.list.length > 0" class="text-[11px] font-normal text-[#9ca3af]"
+                        >{{ backup.list[0].mtime.slice(5, 16) }}</span
+                    >
+                </button>
+
+                <button
                     v-if="showVersionSaveBtn"
                     class="inline-flex items-center gap-2 px-5 py-[10px] rounded-[8px] text-[14px] font-semibold border-none cursor-pointer transition-all tracking-tight text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     :class="hasAnyStepError ? 'bg-[#f59e0b] hover:bg-[#d97706]' : 'bg-[#0891b2] hover:bg-[#0e7490]'"
@@ -851,10 +870,9 @@
                                 {{ group.label }}
                                 <span class="ml-auto text-[11px] opacity-65">{{ group.list.length }}</span>
                             </div>
+                            <div v-for="item in group.list" :key="item.file" class="border-b border-[#f0f0f0] last:border-b-0">
                             <div
-                                v-for="item in group.list"
-                                :key="item.file"
-                                class="flex items-center gap-2 px-[14px] py-2 border-b border-[#f0f0f0] last:border-b-0 bg-white hover:bg-[#fafbff] transition-colors text-[12.5px] font-mono"
+                                class="flex items-center gap-2 px-[14px] py-2 bg-white hover:bg-[#fafbff] transition-colors text-[12.5px] font-mono"
                                 :class="sqlRowClass(item)">
                                 <span
                                     class="px-[7px] py-[2px] rounded-[4px] text-[10px] font-bold uppercase tracking-[0.04em] shrink-0 bg-[#f5f3ff] text-[#5b21b6]">
@@ -864,6 +882,31 @@
                                     class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-[#374151]"
                                     :title="item.file"
                                     >{{ item.file }}</span
+                                >
+                                <span
+                                    v-if="item.statements !== undefined"
+                                    class="text-[11px] shrink-0 px-[6px] py-[1px] rounded-[4px] text-[#6b7280] bg-[#f3f4f6]"
+                                    :title="`将执行 ${item.statements} 条语句`"
+                                    >{{ item.statements }} 条</span
+                                >
+                                <button
+                                    v-if="(item.filtered ?? 0) > 0"
+                                    class="text-[11px] shrink-0 px-[6px] py-[1px] rounded-[4px] border cursor-pointer transition-colors"
+                                    :class="
+                                        sql.expanded[item.file]
+                                            ? 'bg-[#f59e0b] border-[#f59e0b] text-white'
+                                            : 'bg-[#fffbeb] border-[#fde68a] text-[#b45309] hover:bg-[#fef3c7]'
+                                    "
+                                    :title="`${item.filtered} 条语句将被跳过，点击查看`"
+                                    @click.stop="toggleSqlExpand(item.file)">
+                                    ⚠ 跳过 {{ item.filtered }} 条 {{ sql.expanded[item.file] ? "▴" : "▾" }}
+                                </button>
+                                <span
+                                    v-if="sql.taskError[item.file]"
+                                    class="text-[11px] shrink-0 px-[6px] py-[1px] rounded-[4px] text-[#b91c1c] bg-[#fee2e2]"
+                                    :title="sql.taskError[item.file].statement"
+                                    >已生效 {{ sql.taskError[item.file].done }}/{{ sql.taskError[item.file].total }}，重试从第
+                                    {{ sql.taskError[item.file].done + 1 }} 条继续</span
                                 >
                                 <span
                                     v-if="item.kind === 'version' && item.timestamp"
@@ -927,6 +970,26 @@
                                         </button>
                                     </template>
                                 </div>
+                            </div>
+                            <!-- 将被跳过的语句明细 -->
+                            <div
+                                v-if="sql.expanded[item.file] && (item.filtered_list ?? []).length > 0"
+                                class="px-[14px] py-2 bg-[#fffbeb] border-t border-[#fde68a] text-[11.5px] font-mono flex flex-col gap-1">
+                                <div class="text-[#92400e] font-sans font-semibold text-[12px]">
+                                    以下语句不会被执行（blocked = DROP/TRUNCATE 等危险语句被拦截；unknown = 不在白名单）：
+                                </div>
+                                <div
+                                    v-for="(f, fi) in item.filtered_list"
+                                    :key="fi"
+                                    class="flex items-start gap-2 text-[#78350f]">
+                                    <span
+                                        class="shrink-0 px-[5px] rounded-[3px] text-[10px] font-bold"
+                                        :class="f.reason === 'blocked' ? 'bg-[#fee2e2] text-[#b91c1c]' : 'bg-[#e5e7eb] text-[#374151]'"
+                                        >{{ f.reason }}</span
+                                    >
+                                    <span class="break-all">{{ f.preview }}</span>
+                                </div>
+                            </div>
                             </div>
                         </template>
                         <div
@@ -1006,6 +1069,11 @@
             <div class="flex flex-col items-center gap-[10px] text-center py-2">
                 <div class="text-[38px]">🚀</div>
                 <div class="text-[15px] text-[#111827]">即将依次执行以下操作：</div>
+                <div
+                    v-if="(pendingDiffs.length > 0 || pendingSqlTasks.length > 0) && backup.list.length === 0"
+                    class="w-full text-left text-[12px] text-[#b45309] bg-[#fffbeb] border border-[#fde68a] rounded-[6px] px-3 py-2">
+                    ⚠ 本次会修改数据库，且尚未检测到任何备份。建议先点「备份数据库」再更新。
+                </div>
                 <div class="w-full text-left flex flex-col gap-2 py-[2px]">
                     <!-- 数据库 -->
                     <div v-if="pendingDiffs.length > 0" class="flex items-center gap-[10px] text-[13px] text-[#111827]">
@@ -1171,7 +1239,11 @@ import {
     versionUpdate,
     checkVersion,
     getNotice,
+    opcacheReset,
+    dbBackup,
+    dbBackupList,
 } from "@/api/setting/update";
+import type { RawResponse } from "@/api/setting/update";
 
 import useAppStore from "@/stores/modules/app";
 import feedback from "@/utils/feedback";
@@ -1183,6 +1255,17 @@ interface DbDiffItem {
     _key: string;
     _originIndex: number;
 }
+interface FilteredStatement {
+    type: string;
+    reason: "blocked" | "unknown" | string;
+    preview: string;
+}
+// 结构同步已经补过的字段/索引，跑版本 SQL 时会被逐条跳过
+interface SkippedClause {
+    index: number;
+    clause: string;
+    error: string;
+}
 interface SqlTask {
     file: string;
     kind: "version" | "table";
@@ -1193,6 +1276,24 @@ interface SqlTask {
     size: number;
     skip: boolean;
     reason?: string;
+    /** 预解析：将执行的语句数 */
+    statements?: number;
+    /** 预解析：将被跳过的语句数 */
+    filtered?: number;
+    /** 预解析：被跳过语句的原文预览 */
+    filtered_list?: FilteredStatement[];
+}
+/** sqlExecute 失败时后端返回的断点信息 */
+interface SqlBreakpoint {
+    total: number;
+    done: number;
+    failed_at: number;
+    statement: string;
+}
+interface BackupItem {
+    file: string;
+    size: number;
+    mtime: string;
 }
 interface DiffLine {
     type: "context" | "delete" | "insert";
@@ -1355,7 +1456,56 @@ const sql = reactive({
     progressStatus: "" as "" | "success" | "exception",
     taskStatus: {} as Record<string, string>,
     taskRunning: {} as Record<string, boolean>,
+    /** 失败文件的断点信息，重试时提示"从第 N 条继续" */
+    taskError: {} as Record<string, SqlBreakpoint>,
+    /** 展开显示"将被跳过的语句"的文件 */
+    expanded: {} as Record<string, boolean>,
 });
+function toggleSqlExpand(file: string) {
+    sql.expanded[file] = !sql.expanded[file];
+}
+
+// ==================== 数据库备份 ====================
+const backup = reactive({
+    running: false,
+    list: [] as BackupItem[],
+});
+
+async function loadBackupList() {
+    try {
+        backup.list = ((await dbBackupList()) as any) ?? [];
+    } catch {
+        backup.list = [];
+    }
+}
+
+async function onDbBackup() {
+    if (backup.running) return;
+    try {
+        await feedback.confirm(
+            "将把当前数据库完整导出到服务器 runtime/backup/ 目录（gzip 压缩）。数据量大时耗时较长，期间请勿关闭页面。",
+            "备份数据库",
+        );
+    } catch {
+        return;
+    }
+    backup.running = true;
+    addLog("💾 开始备份数据库...");
+    try {
+        const tag = versionInfo.remoteName ? `before_${versionInfo.remoteName}` : "";
+        const res = (await dbBackup(tag)) as any;
+        addLog(
+            `💾 备份完成：${res.file}（${res.tables} 张表，${res.rows} 行，${formatSize(res.size ?? 0)}，耗时 ${res.seconds}s）`,
+            "success",
+        );
+        feedback.msgSuccess("数据库备份完成");
+        await loadBackupList();
+    } catch (e: any) {
+        addLog(`💾 备份失败：${e.message ?? e}`, "error");
+    } finally {
+        backup.running = false;
+    }
+}
 
 // ==================== diff 抽屉 ====================
 const diffState = reactive({ visible: false, loading: false, loadingFile: "", file: "", hunks: [] as DiffHunk[] });
@@ -1674,17 +1824,53 @@ async function loadVersionInfo() {
     }
 }
 
+/**
+ * 写入版本号；后端会校验所有版本 SQL 是否已执行，未执行时弹窗让管理员决定是否强制写入
+ * @returns 是否写入成功
+ */
+async function saveVersion(): Promise<boolean> {
+    let res: RawResponse = await versionUpdate(false);
+
+    if (res.code !== 1) {
+        const pending: string[] = res.data?.pending ?? [];
+        if (pending.length === 0) {
+            addLog(`版本号写入失败：${res.msg}`, "error");
+            return false;
+        }
+        addLog(`⚠️ 还有 ${pending.length} 个 SQL 文件未执行成功：${pending.join("、")}`, "warning");
+        try {
+            await feedback.confirm(
+                `以下 ${pending.length} 个版本 SQL 文件尚未执行成功：${pending.join("、")}。` +
+                    "写入版本号后这些文件将不再出现在待执行列表中。确认这些文件无需执行，强制写入版本号？",
+                "版本 SQL 未执行完",
+                { confirmButtonText: "强制写入", cancelButtonText: "先去执行" },
+            );
+        } catch {
+            addLog("已取消写入版本号，请先执行完剩余 SQL 文件", "info");
+            return false;
+        }
+        res = await versionUpdate(true);
+        if (res.code !== 1) {
+            addLog(`版本号写入失败：${res.msg}`, "error");
+            return false;
+        }
+        addLog(`⚠️ 已强制写入版本号，跳过文件：${(res.data?.skipped_files ?? []).join("、")}`, "warning");
+    }
+
+    versionInfo.localName = res.data?.version_name ?? versionInfo.remoteName;
+    versionInfo.localNumber = res.data?.version_number ?? versionInfo.remoteNumber;
+    versionInfo.upToDate = true;
+    versionInfo.saved = true;
+    addLog(`✅ 版本号已更新为 ${versionInfo.localName}`, "success");
+    return true;
+}
+
 async function onVersionSave() {
     versionInfo.saving = true;
     addLog("📌 写入版本号...");
     try {
-        const res = (await versionUpdate()) as any;
-        versionInfo.localName = res.version_name ?? versionInfo.remoteName;
-        versionInfo.localNumber = res.version_number ?? versionInfo.remoteNumber;
-        versionInfo.upToDate = true;
-        versionInfo.saved = true;
-        addLog(`✅ 版本号已更新为 ${versionInfo.localName}`, "success");
-        feedback.msgSuccess(`版本号已更新为 ${versionInfo.localName}`);
+        if (await saveVersion()) feedback.msgSuccess(`版本号已更新为 ${versionInfo.localName}`);
+        else feedback.msgError("版本号未写入，请查看日志");
     } catch (e: any) {
         addLog(`版本号写入失败：${e.message ?? e}`, "error");
         feedback.msgError("版本号写入失败，请稍后重试");
@@ -1696,6 +1882,7 @@ async function onVersionSave() {
 onMounted(() => {
     loadVersionInfo();
     loadNotice();
+    loadBackupList();
 });
 
 // ==================== 检测差异 ====================
@@ -1745,6 +1932,7 @@ async function onDetectAll() {
     sql.progressLabel = "";
     sql.taskStatus = {};
     sql.taskRunning = {};
+    sql.taskError = {};
     currentSqlType.value = "all";
 
     detectStep.value = "file";
@@ -1811,6 +1999,14 @@ async function onDetectAll() {
         );
         const skipped = sql.tasks.filter((t: SqlTask) => t.skip);
         if (skipped.length > 0) addLog(`📜 SQL：${skipped.length} 个文件已跳过（已执行过或表已存在）`, "info");
+        pending
+            .filter((t: SqlTask) => (t.filtered ?? 0) > 0)
+            .forEach((t: SqlTask) =>
+                addLog(
+                    `📜 ${t.file}：${t.filtered} 条语句将被跳过（${summarizeFiltered(t.filtered_list)}），点击文件行可查看`,
+                    "warning",
+                ),
+            );
     } catch (e: any) {
         addLog(`📜 SQL 版本检测失败：${e.message ?? e}`, "error");
     }
@@ -1908,13 +2104,7 @@ async function onOneKeyUpdate() {
     oneKey.currentStep = "version";
     addLog("📌 步骤四：写入版本号...");
     try {
-        const res = (await versionUpdate()) as any;
-        versionInfo.localName = res.version_name ?? versionInfo.remoteName;
-        versionInfo.localNumber = res.version_number ?? versionInfo.remoteNumber;
-        versionInfo.upToDate = true;
-        versionInfo.saved = true;
-        oneKey.stepStatus["version"] = "success";
-        addLog(`✅ 版本号已更新为 ${versionInfo.localName}`, "success");
+        oneKey.stepStatus["version"] = (await saveVersion()) ? "success" : "error";
     } catch (e: any) {
         oneKey.stepStatus["version"] = "error";
         addLog(`版本号写入失败：${e.message ?? e}`, "error");
@@ -2005,6 +2195,13 @@ async function runFileSync(): Promise<number> {
             file.progressDone = i + 1;
             file.progressPercent = Math.round(((i + 1) / total) * 100);
         }
+        // 同步了 PHP 代码后清理 OPcache，否则新代码可能不会立即生效
+        try {
+            const r = (await opcacheReset()) as any;
+            addLog(r?.ok ? "♻️ OPcache 已清理，新代码已生效" : "♻️ OPcache 未启用或无法清理，如有异常请重启 PHP-FPM", "info");
+        } catch (e: any) {
+            addLog(`♻️ OPcache 清理失败（不影响同步结果）：${e.message ?? e}`, "warning");
+        }
     } else {
         file.progressPercent = 100;
         addLog("⏭️ 无普通差异文件需要同步", "info");
@@ -2065,6 +2262,65 @@ async function runDbExecute(): Promise<number> {
     return errCount;
 }
 
+// ==================== SQL 执行结果处理（批量 / 单个共用）====================
+function summarizeFiltered(list?: FilteredStatement[]): string {
+    if (!list || list.length === 0) return "";
+    const blocked = list.filter((f) => f.reason === "blocked").length;
+    const unknown = list.length - blocked;
+    const parts: string[] = [];
+    if (blocked > 0) parts.push(`${blocked} 条危险语句 DROP/TRUNCATE`);
+    if (unknown > 0) parts.push(`${unknown} 条不在白名单`);
+    return parts.join("，");
+}
+
+/**
+ * 执行单个 SQL 文件并处理响应；返回是否成功
+ */
+async function execSqlFile(file: string): Promise<boolean> {
+    const res: RawResponse = await sqlExecute(file);
+    const data = res.data ?? {};
+
+    if (res.code === 1) {
+        sql.taskStatus[file] = "success";
+        delete sql.taskError[file];
+        if (data.skipped) {
+            addLog(`已跳过：${file}（${data.reason ?? "表已存在"}）`, "info");
+            return true;
+        }
+        const resumed = data.resumed_from > 0 ? `，从第 ${data.resumed_from + 1} 条续跑` : "";
+        addLog(`执行成功：${file}（共 ${data.count ?? 0} 条语句${resumed}）`, "success");
+        if ((data.filtered ?? 0) > 0) {
+            addLog(`   ↳ ${data.filtered} 条语句已跳过：${summarizeFiltered(data.filtered_list)}`, "warning");
+            (data.filtered_list ?? []).forEach((f: FilteredStatement) =>
+                addLog(`      [${f.reason}] ${f.preview}`, "info"),
+            );
+        }
+        const skippedClauses: SkippedClause[] = data.skipped_clauses ?? [];
+        if (skippedClauses.length > 0) {
+            addLog(`   ↳ ${skippedClauses.length} 条子句已经生效过，自动跳过（多半是结构同步先补上了）`, "warning");
+            skippedClauses.forEach((c) => addLog(`      [第 ${c.index} 条] ${c.clause}`, "info"));
+        }
+        return true;
+    }
+
+    sql.taskStatus[file] = "error";
+    addLog(`执行失败：${file} — ${res.msg}`, "error");
+    if (typeof data.done === "number") {
+        sql.taskError[file] = {
+            total: data.total ?? 0,
+            done: data.done,
+            failed_at: data.failed_at ?? data.done + 1,
+            statement: data.statement ?? "",
+        };
+        addLog(
+            `   ↳ 前 ${data.done}/${data.total} 条已生效并记录；修正后点"重试"将从第 ${data.done + 1} 条继续，不会重复执行`,
+            "warning",
+        );
+        if (data.statement) addLog(`   ↳ 出错语句：${data.statement}`, "info");
+    }
+    return false;
+}
+
 // ==================== SQL 批量执行 ====================
 async function runSqlBatch(): Promise<number> {
     const pending = pendingSqlTasks.value;
@@ -2081,14 +2337,19 @@ async function runSqlBatch(): Promise<number> {
         const task = pending[i];
         sql.progressLabel = `正在执行：${task.file}`;
         try {
-            const res = (await sqlExecute(task.file)) as any;
-            sql.taskStatus[task.file] = "success";
-            if (res?.skipped) addLog(`已跳过：${task.file}（${res.reason ?? "表已存在"}）`, "info");
-            else addLog(`执行成功：${task.file}（共 ${res?.count ?? 0} 条语句）`, "success");
+            if (!(await execSqlFile(task.file))) {
+                errCount++;
+                // 版本文件必须按顺序执行，前一个失败后续不再继续
+                addLog(`⏸ ${task.file} 失败，后续 SQL 文件暂停执行（请修正后重试）`, "warning");
+                sql.progressDone = i + 1;
+                sql.progressPercent = Math.round(((i + 1) / pending.length) * 100);
+                break;
+            }
         } catch (e: any) {
             sql.taskStatus[task.file] = "error";
             addLog(`执行失败：${task.file} — ${e.message ?? e}`, "error");
             errCount++;
+            break;
         }
         sql.progressDone = i + 1;
         sql.progressPercent = Math.round(((i + 1) / pending.length) * 100);
@@ -2182,12 +2443,10 @@ async function onSqlSingleExecute(item: SqlTask) {
     if (sql.taskRunning[item.file]) return;
     sql.taskRunning[item.file] = true;
     sql.taskStatus[item.file] = "";
-    addLog(`▶ 开始执行：${item.file}`);
+    const bp = sql.taskError[item.file];
+    addLog(bp ? `▶ 重试执行：${item.file}（从第 ${bp.done + 1} 条继续）` : `▶ 开始执行：${item.file}`);
     try {
-        const res = (await sqlExecute(item.file)) as any;
-        sql.taskStatus[item.file] = "success";
-        if (res?.skipped) addLog(`已跳过：${item.file}（${res.reason ?? "表已存在"}）`, "info");
-        else addLog(`执行成功：${item.file}（共 ${res?.count ?? 0} 条语句）`, "success");
+        await execSqlFile(item.file);
     } catch (e: any) {
         sql.taskStatus[item.file] = "error";
         addLog(`执行失败：${item.file} — ${e.message ?? e}`, "error");

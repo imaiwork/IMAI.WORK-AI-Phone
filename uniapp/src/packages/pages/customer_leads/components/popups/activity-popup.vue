@@ -93,7 +93,7 @@
                                     v-if="item.image"
                                     :src="item.image"
                                     class="w-full h-[320rpx] rounded-[20rpx] bg-[#F4F6FA] mt-[18rpx]"
-                                    mode="aspectFill"></image>
+                                    mode="aspectFit"></image>
                                 <view class="flex flex-wrap gap-[10rpx] mt-[18rpx]">
                                     <text
                                         v-if="item.liked"

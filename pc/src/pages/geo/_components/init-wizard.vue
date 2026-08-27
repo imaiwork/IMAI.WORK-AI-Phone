@@ -47,7 +47,7 @@
                         <div>
                             <label class="text-sm font-semibold text-slate-800">品牌 / 公司名称 <span class="text-rose-500">*</span></label>
                             <div class="flex items-center gap-2 mt-2">
-                                <ElInput v-model="brand.brand_name" size="large" class="flex-1" placeholder="如 IMAI数字员工" @keyup.enter="onReDiagnose" />
+                                <ElInput v-model="brand.brand_name" size="large" class="flex-1" placeholder="请输入品牌名称" @keyup.enter="onReDiagnose" />
                                 <ElSelect v-if="matchModelList.length" v-model="matchModel" filterable size="large" style="width:148px" placeholder="模型">
                                     <ElOption v-for="m in matchModelList" :key="m.value" :value="m.value" :label="m.label" />
                                 </ElSelect>
@@ -503,17 +503,29 @@ const toQuestions = async () => {
     busy.questions = true
     try {
         const existing: any = await geoTopics(projectId.value)
-        const existNames: string[] = (existing?.list || []).map((t: any) => t.name)
-        // 先建后删:反过来的话，中途失败会出现"旧话题已删、新话题没建全"的空档，
-        // 用户重进向导看到的是被削掉一半的话题列表。
-        for (const name of topics.value) {
+        const existingList: any[] = existing?.list || []
+        const max = Number(existing?.max || maxTopics.value) || maxTopics.value
+        const desiredNames = topics.value.map((n) => String(n || '').trim()).filter(Boolean)
+        const desiredSet = new Set(desiredNames)
+        const existNames = new Set(existingList.map((t: any) => String(t?.name || '').trim()).filter(Boolean))
+        const toCreate = desiredNames.filter((name) => !existNames.has(name))
+        const toDelete = existingList.filter((t: any) => !desiredSet.has(String(t?.name || '').trim()))
+        // 服务端仍占满上限时必须先删后建，否则用户在第 2 步删改后再点「继续」会直接报「话题数量已达上限」。
+        // 名额足够时仍先建后删，避免中途失败把旧话题清光。
+        const overflow = existingList.length + toCreate.length > max
+        const deleteRemoved = overflow ? toDelete : []
+        const deleteLater = overflow ? [] : toDelete
+        for (const t of deleteRemoved) {
             if (disposed) return
-            if (existNames.includes(name)) continue
+            await geoTopicDelete(projectId.value, t.id)
+        }
+        for (const name of toCreate) {
+            if (disposed) return
             await geoTopicSave({ project_id: projectId.value, name, question_target: questionCount.value })
         }
-        for (const t of existing?.list || []) {
+        for (const t of deleteLater) {
             if (disposed) return
-            if (!topics.value.includes(t.name)) await geoTopicDelete(projectId.value, t.id)
+            await geoTopicDelete(projectId.value, t.id)
         }
         // 逐话题生成场景问题(每次都是一轮真实 AI 调用，慢且计费)
         const tRes: any = await geoTopics(projectId.value)

@@ -23,6 +23,8 @@ class SynthesisConfigValidate extends BaseValidate
         'music_source' => 'in:1,2,3',
         'music_volume' => 'float|between:0,1',
         'speech_rate' => 'float|between:0.5,2',
+        'copywriting_generation_type' => 'in:1,2,3,4,5,6,7',
+        'copywriting_generation_custom' => 'max:500',
         'ids' => 'require|array',
     ];
 
@@ -47,6 +49,8 @@ class SynthesisConfigValidate extends BaseValidate
         'music_volume.between' => '背景音乐音量必须在0到1之间',
         'speech_rate.float' => '数字人语速必须是数字',
         'speech_rate.between' => '数字人语速必须在0.5到2之间',
+        'copywriting_generation_type.in' => '文案生成类型值只能是1到7',
+        'copywriting_generation_custom.max' => '自定义文案生成方向不能超过500个字符',
         'ids.require' => '删除ID是必填项',
         'ids.array' => '删除ID必须是数组',
     ];
@@ -69,6 +73,8 @@ class SynthesisConfigValidate extends BaseValidate
             'music_source',
             'music_volume',
             'speech_rate',
+            'copywriting_generation_type',
+            'copywriting_generation_custom',
         ])->append('generation_types', 'require');
     }
 
@@ -90,6 +96,8 @@ class SynthesisConfigValidate extends BaseValidate
             'music_source',
             'music_volume',
             'speech_rate',
+            'copywriting_generation_type',
+            'copywriting_generation_custom',
         ]);
     }
 

@@ -1,0 +1,1 @@
+.skel.data-v-c233d7fa{background:linear-gradient(90deg,#eff2f7 0%,#e4e9f2 50%,#eff2f7 100%);background-size:200% 100%;animation:hotspot-shimmer-c233d7fa 1.4s infinite;border-radius:8rpx}@keyframes hotspot-shimmer-c233d7fa{0%{background-position:200% 0}to{background-position:-200% 0}}@media (prefers-reduced-motion: reduce){.skel.data-v-c233d7fa{animation:none}}

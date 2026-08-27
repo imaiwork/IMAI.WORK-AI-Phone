@@ -39,9 +39,16 @@ class SvMediaMaterialLists extends BaseApiDataLists implements ListsSearchInterf
             ->limit($this->limitOffset, $this->limitLength)
             ->select()->toArray();
 
+        $defaultPic = 'static/images/scfmt.jpg';
         foreach ($list as &$item) {
             if (in_array($item['m_type'], [1, 2])){
                 $item['content'] = $item['content'] ? FileService::getFileUrl($item['content']) : '';
+            }
+            // pic为空时使用默认封面图
+            if (empty($item['pic'])) {
+                $item['pic'] = FileService::getFileUrl($defaultPic);
+            } else {
+                $item['pic'] = FileService::getFileUrl($item['pic']);
             }
         }
         return  $list;

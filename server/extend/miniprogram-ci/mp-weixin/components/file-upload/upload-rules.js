@@ -1,0 +1,1 @@
+"use strict";const e=["jpg","jpeg","png","gif","bmp","webp"],t=["txt","docx","pdf","xlsx","epub","mobi","md","csv","json",...e,"mp4","avi","mkv","mov","flv","wmv"];exports.CHAT_FILE_MAX_SIZE=150,exports.CHAT_IMAGE_MAX_SIZE=20,exports.CHAT_UPLOAD_EXTS=t,exports.getChatSizeLimit=t=>(t=>e.includes((t||"").toLowerCase()))(t)?20:150;

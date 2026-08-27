@@ -96,7 +96,9 @@
                 <template v-if="hasExtracted">
                     <view class="flex items-center gap-[12rpx] mt-[32rpx] mb-[16rpx]">
                         <view class="step-no" :class="stepClass(3)">3</view>
-                        <text class="text-[28rpx] font-bold text-[#111827]">人设内容仿写</text>
+                        <text class="text-[28rpx] font-bold text-[#111827]">
+                            {{ isWash ? "洗稿改写" : "人设内容仿写" }}
+                        </text>
                     </view>
                     <view class="card">
                         <template v-if="hasRewrittenCopy">
@@ -152,7 +154,7 @@
                         <view v-else class="flex items-center gap-[16rpx]">
                             <u-loading mode="circle" size="28" color="#2563EB"></u-loading>
                             <text class="text-[26rpx] font-semibold text-[#2563EB]">
-                                正在按人设口吻仿写标题与正文…
+                                {{ isWash ? "正在洗稿改写标题与正文…" : "正在按人设口吻仿写标题与正文…" }}
                             </text>
                         </view>
                     </view>
@@ -311,7 +313,13 @@
 
 <script setup lang="ts">
 import { confirmImageRewrite, createHotWriteImageText } from "@/api/hot_write";
-import { HotWriteTaskStatus, ImageRewriteStatus, getTaskPreviewImages } from "@/ai_modules/hot_write/enums";
+import {
+    HotWriteRewriteMode,
+    HotWriteTaskStatus,
+    ImageRewriteStatus,
+    getTaskPreviewImages,
+    isWashTask,
+} from "@/ai_modules/hot_write/enums";
 
 const props = defineProps<{
     detail: any;
@@ -341,6 +349,7 @@ const rewrittenImages = computed(() =>
 const rewriteStatus = computed(() => Number(props.detail?.image_rewrite_status ?? 0));
 const taskStatus = computed(() => Number(props.detail?.status ?? 0));
 
+const isWash = computed(() => isWashTask(props.detail));
 const isFailed = computed(() => taskStatus.value === HotWriteTaskStatus.FAIL);
 const isSelecting = computed(
     () =>
@@ -584,12 +593,13 @@ const handleConfirm = async () => {
 const handleRetry = async () => {
     if (retrying.value || !isFailed.value) return;
     const url = String(props.detail?.prompt || props.detail?.url || "").trim();
-    const personaId = props.detail?.persona_id;
+    const washTask = isWashTask(props.detail);
+    const personaId = washTask ? 0 : props.detail?.persona_id;
     if (!url) {
         uni.$u.toast("缺少原链接，无法重试");
         return;
     }
-    if (!personaId) {
+    if (!washTask && !personaId) {
         uni.$u.toast("缺少人设信息，无法重试");
         return;
     }
@@ -600,6 +610,7 @@ const handleRetry = async () => {
             id: props.detail.id,
             url,
             persona_id: personaId,
+            rewrite_mode: Number(props.detail?.rewrite_mode) || HotWriteRewriteMode.PERSONA,
         });
         uni.hideLoading();
         uni.showToast({ title: "已重新提交", icon: "none", duration: 2500 });

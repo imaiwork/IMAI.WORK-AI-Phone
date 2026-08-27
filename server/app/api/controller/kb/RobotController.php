@@ -201,6 +201,8 @@ class RobotController extends BaseApiController
     {
         $params = $this->request->post();
         $params['user_id'] =  $this->userId ;
+        // skip_charge 仅供系统内部纠错重试使用（ScriptService），禁止客户端传入绕过扣费
+        unset($params['skip_charge']);
         return KbRobotLogic::getCopywriting($params) ? $this->success(data: KbRobotLogic::getReturnData()) : $this->fail(KbRobotLogic::getError());
     }
 }

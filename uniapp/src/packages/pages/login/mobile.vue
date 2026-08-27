@@ -180,8 +180,8 @@
         </view>
         <update-user-info
             v-model:show="showLoginPopup"
-            :logo="websiteConfig.shop_logo"
-            :title="websiteConfig.shop_name"
+            :logo="siteShopLogo"
+            :title="siteName"
             :userInfo="loginData"
             @update="handleUpdateUser" />
         <bind-mobile
@@ -210,6 +210,8 @@ const {
     loginWay,
     loginConfig,
     websiteConfig,
+    siteShopLogo,
+    siteName,
     isRegisterClosed,
     isRequireInvite,
     loginData,

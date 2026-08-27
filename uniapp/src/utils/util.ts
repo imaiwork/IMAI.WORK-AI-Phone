@@ -278,7 +278,9 @@ export function formatAudioTime(seconds: number, isShowHours = false): string {
  * @returns {boolean}
  */
 export const isImageUrl = (url: string) => {
-    return url.match(/\.(jpeg|jpg|gif|png|bmp|svg|webp)$/i) !== null
+    if (typeof url !== 'string' || !url) return false
+    // 兼容带签名/查询串的 OSS 地址：xxx.png?sign=... / xxx.jpg#hash
+    return url.match(/\.(jpeg|jpg|gif|png|bmp|svg|webp)(\?|#|$)/i) !== null
 }
 
 /**
@@ -349,4 +351,22 @@ export const formatNumberToWanOrYi = (num: number) => {
     if (num < 100000000000000) return `${(num / 1000000000000).toFixed(1)}亿`
     if (num < 10000000000000000) return `${(num / 100000000000000).toFixed(1)}亿`
     return `${(num / 10000000000000000).toFixed(1)}亿`
+}
+
+/**
+ * 会话/创作记录列表的时间展示
+ *
+ * 后端在不同接口里可能返回秒级时间戳、毫秒级时间戳或已格式化的字符串，这里统一兜住
+ * @param time 时间戳或时间字符串
+ * @returns 形如 2026-08-25 10:04 的字符串，无效值返回 '-'
+ */
+export const formatRecordTime = (time: number | string) => {
+    if (time === 0 || time === '0' || time == null || time === '') return '-'
+    if (typeof time === 'string' && time.includes('-')) return time
+
+    const numeric = Number(time)
+    if (!Number.isFinite(numeric) || numeric <= 0) return String(time)
+
+    const timestamp = numeric < 1e12 ? numeric * 1000 : numeric
+    return uni.$u.timeFormat(timestamp, 'yyyy-mm-dd hh:MM') || String(time)
 }

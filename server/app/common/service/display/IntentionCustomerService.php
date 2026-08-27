@@ -3,8 +3,13 @@
 namespace app\common\service\display;
 
 use app\common\enum\DeviceEnum;
+use think\facade\Cache;
+use think\facade\Db;
+use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvCityExposureRecord;
 use app\common\model\sv\SvCityTouchRecord;
+use app\common\model\sv\SvCrawlingRecord;
+use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvDeviceCircleLikeReplyRecord;
 use app\common\model\sv\SvDeviceTakeOverRecord;
 use app\common\model\sv\SvGroupBuyRecord;
@@ -19,11 +24,17 @@ class IntentionCustomerService
         'city_exposure' => '曝光',
         'city_touch' => '同城视频',
         'group_buy' => '团购',
+        'crawling' => '视频号获客',
         'sph_like' => '视频号点赞',
         'private_message' => '私信/评论',
     ];
 
     private static array $circleInteractionStatsCache = [];
+
+    /** 意向客户全量结果 Redis 缓存秒数（页面内 statistics/intentionStatistics/intentionCustomerLists 三个接口共用同一份快照） */
+    public const CACHE_TTL = 60;
+    private const CACHE_STORE = 'redis';
+    private const CACHE_TAG_PREFIX = 'intention_customers:';
 
     public static function parsePlatform(mixed $platform): ?int
     {
@@ -53,11 +64,61 @@ class IntentionCustomerService
     public static function customers(int $userId, mixed $platform = null): array
     {
         $platform = self::parsePlatform($platform);
+
+        return self::cacheRemember(
+            $userId,
+            'customers:' . ($platform ?? 'all'),
+            fn() => self::buildCustomers($userId, $platform)
+        );
+    }
+
+    /**
+     * 清除某用户的意向客户缓存（如需写入即可见，可在意向客户写入口调用）
+     */
+    public static function clearCache(int $userId): void
+    {
+        try {
+            Cache::store(self::CACHE_STORE)->tag(self::CACHE_TAG_PREFIX . $userId)->clear();
+        } catch (\Throwable $e) {
+            // 缓存不可用时静默降级
+        }
+    }
+
+    private static function cacheRemember(int $userId, string $suffix, callable $builder): array
+    {
+        if ($userId <= 0) {
+            return $builder();
+        }
+
+        $key = self::CACHE_TAG_PREFIX . $userId . ':' . $suffix;
+        try {
+            $cache = Cache::store(self::CACHE_STORE);
+            $cached = $cache->get($key);
+            if (is_array($cached)) {
+                return $cached;
+            }
+        } catch (\Throwable $e) {
+            return $builder();
+        }
+
+        $data = $builder();
+        try {
+            $cache->tag(self::CACHE_TAG_PREFIX . $userId)->set($key, $data, self::CACHE_TTL);
+        } catch (\Throwable $e) {
+            // 写缓存失败不影响业务
+        }
+
+        return $data;
+    }
+
+    private static function buildCustomers(int $userId, ?int $platform): array
+    {
         $items = array_merge(
             self::leadScrapingItems($userId, $platform),
             self::cityExposureItems($userId, $platform),
             self::cityTouchItems($userId, $platform),
             self::groupBuyItems($userId, $platform),
+            self::crawlingItems($userId, $platform),
             self::sphLikeItems($userId, $platform),
             self::privateMessageItems($userId, $platform)
         );
@@ -68,6 +129,17 @@ class IntentionCustomerService
         });
 
         return $items;
+    }
+
+    /**
+     * 指定日期内触达的意向客户（与 customers 口径一致，仅按时间戳过滤到当天）
+     */
+    public static function customersInDay(int $userId, int $startTime, int $endTime, mixed $platform = null): array
+    {
+        return array_values(array_filter(self::customers($userId, $platform), static function (array $item) use ($startTime, $endTime) {
+            $timestamp = (int)($item['_timestamp'] ?? 0);
+            return $timestamp >= $startTime && $timestamp <= $endTime;
+        }));
     }
 
     public static function customerCounts(array $customers): array
@@ -89,9 +161,75 @@ class IntentionCustomerService
         ];
     }
 
+    /**
+     * 指定日期获客行为统计
+     * - expose_count 曝光数：同城曝光（电子传单）任务进到用户主页、未产生私信/评论交互的访问记录数
+     * - clue_count 线索数：获客任务当天产生的交互记录数（截流评论获客/截流私信获客/留痕获客、同城触达、团购截流），
+     *   过滤条件与意向客户列表一致（status<>4、account<>''）
+     */
+    public static function acquisitionStatsInDay(int $userId, int $startTime, int $endTime): array
+    {
+        // 曝光：同城曝光任务只访问主页、无触达内容，每条记录即一次曝光行为
+        // 该表 account 普遍为空（不记录目标账号），故不做 account 过滤，否则曝光恒为 0
+        $exposeCount = SvCityExposureRecord::where('user_id', $userId)
+            ->where('status', '<>', 4)
+            ->where('exec_time', 'between', [$startTime, $endTime])
+            ->count();
+
+        // 线索：交互类获客任务记录（截流评论/私信/留痕 + 同城触达 + 团购截流）
+        $clueCount = SvLeadScrapingRecord::where('user_id', $userId)
+                ->where('status', '<>', 4)
+                ->where('account', '<>', '')
+                ->where('exec_time', 'between', [$startTime, $endTime])
+                ->count()
+            + SvCityTouchRecord::where('user_id', $userId)
+                ->where('status', '<>', 4)
+                ->where('account', '<>', '')
+                ->where('exec_time', 'between', [$startTime, $endTime])
+                ->count()
+            + SvGroupBuyRecord::where('user_id', $userId)
+                ->where('status', '<>', 4)
+                ->where('account', '<>', '')
+                ->where('exec_time', 'between', [$startTime, $endTime])
+                ->count();
+
+        return [
+            'expose_count' => (int)$exposeCount,
+            'clue_count' => (int)$clueCount,
+        ];
+    }
+
+    /**
+     * 识别到微信号/手机号的客户数（各大平台来源，客户维度去重后）
+     */
+    public static function contactRecognizedCount(array $customers): int
+    {
+        $count = 0;
+        foreach ($customers as $customer) {
+            if (trim((string)($customer['wechat_no'] ?? '')) !== '') {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * 来源统计：统一按查库口径（各来源内去重），列表与 intentionStatistics 共用同一份 Redis 缓存
+     */
     public static function summarySourceStats(int $userId, mixed $platform = null): array
     {
         $platform = self::parsePlatform($platform);
+
+        return self::cacheRemember(
+            $userId,
+            'source_stats:' . ($platform ?? 'all'),
+            fn() => self::buildSummarySourceStats($userId, $platform)
+        );
+    }
+
+    private static function buildSummarySourceStats(int $userId, ?int $platform): array
+    {
         $douyinNearbyItems = array_merge(
             self::leadScrapingItems($userId, $platform, [
                 'account_type' => DeviceEnum::ACCOUNT_TYPE_DY,
@@ -107,6 +245,7 @@ class IntentionCustomerService
             'join_setting' => true,
         ]);
         $groupBuyItems = self::groupBuyItems($userId, $platform);
+        $crawlingItems = self::crawlingItems($userId, $platform);
 
         return [
             [
@@ -127,6 +266,12 @@ class IntentionCustomerService
                 'count' => count(self::dedupeItems($groupBuyItems)),
                 'unit' => '人',
             ],
+            [
+                'key' => 'crawling',
+                'name' => '视频号获客的客户',
+                'count' => count(self::dedupeItems($crawlingItems)),
+                'unit' => '人',
+            ],
         ];
     }
 
@@ -140,9 +285,15 @@ class IntentionCustomerService
         if ($includeSourceInteraction) {
             $likeCount = (int)($item['_source_like_count'] ?? 0) + $stats['like_count'];
             $commentCount = (int)($item['_source_comment_count'] ?? 0) + $stats['comment_count'];
+            $interactionCount = $likeCount + $commentCount;
+            // 部分来源（如视频号获客）的互动记录不在 circle_like_reply 表中，需要单独计入
+            $sourceInteractionCount = (int)($item['_source_interaction_count'] ?? 0);
+            if ($sourceInteractionCount > $interactionCount) {
+                $interactionCount = $sourceInteractionCount;
+            }
             $item['circle_like_count'] = $likeCount;
             $item['circle_comment_count'] = $commentCount;
-            $item['circle_interaction_count'] = $likeCount + $commentCount;
+            $item['circle_interaction_count'] = $interactionCount;
         } else {
             $item['circle_interaction_count'] = max((int)($item['circle_interaction_count'] ?? 0), $stats['interaction_count']);
             $item['circle_like_count'] = max((int)($item['circle_like_count'] ?? 0), $stats['like_count']);
@@ -251,6 +402,10 @@ class IntentionCustomerService
             $timestamp = self::toTimestamp($item['create_time'] ?? 0);
             $account = trim((string)($item['user_account'] ?? ''));
             $customerName = trim((string)($item['user_nickname'] ?? ''));
+            // user_account 为空时用 user_nickname 兜底（设备端有时只上报昵称不上报账号）
+            if ($account === '' && $customerName !== '') {
+                $account = $customerName;
+            }
             $contact = self::extractContactToken([$item['content'] ?? '']);
             $isPrivate = $contact !== '';
 
@@ -275,11 +430,96 @@ class IntentionCustomerService
             ]);
         }, SvDeviceTakeOverRecord::where('user_id', $userId)
             ->where('type', 3)
-            ->where('user_account', '<>', '')
             ->whereNull('delete_time')
+            ->where(function ($query) {
+                $query->where('user_account', '<>', '')
+                    ->whereOr('user_nickname', '<>', '');
+            })
             ->field('id,user_id,user_account,user_nickname,user_avatar,content,create_time')
             ->select()
             ->toArray());
+    }
+
+    /**
+     * 视频号获客：爬虫线索表（私信接管任务中匹配到的联系方式）
+     */
+    private static function crawlingItems(int $userId, ?int $platform): array
+    {
+        if ($platform !== null && $platform !== DeviceEnum::ACCOUNT_TYPE_SPH) {
+            return [];
+        }
+
+        try {
+            $prefix = config('database.connections.mysql.prefix', 'iw_');
+            $sql = "SELECT r.id, r.user_id, r.device_code, r.reg_content, r.clue_type, r.create_time, t.name AS task_name, r.image"
+                . " FROM {$prefix}sv_crawling_record r"
+                . " LEFT JOIN {$prefix}sv_crawling_task t ON t.id = r.task_id AND t.user_id = r.user_id"
+                . " WHERE r.user_id = :uid AND r.reg_content != '' AND r.hash != ''"
+                . " GROUP BY r.task_id, r.reg_content"
+                . " ORDER BY r.create_time DESC";
+            $rows = Db::query($sql, ['uid' => $userId]);
+        } catch (\Throwable $e) {
+            $rows = [];
+        }
+
+        // 批量查询执行账号，避免 N+1
+        $deviceCodes = array_values(array_unique(array_filter(array_map(static function (array $item): string {
+            return trim((string)($item['device_code'] ?? ''));
+        }, $rows))));
+        $accountMap = [];
+        if (!empty($deviceCodes)) {
+            $accounts = SvAccount::where('user_id', $userId)
+                ->where('device_code', 'in', $deviceCodes)
+                ->where('type', DeviceEnum::ACCOUNT_TYPE_SPH)
+                ->field('device_code,nickname')
+                ->select()
+                ->toArray();
+            foreach ($accounts as $account) {
+                $code = trim((string)($account['device_code'] ?? ''));
+                if ($code !== '' && !isset($accountMap[$code])) {
+                    $accountMap[$code] = trim((string)($account['nickname'] ?? ''));
+                }
+            }
+        }
+
+        return array_map(function (array $item) use ($userId, $accountMap) {
+            $timestamp = self::toTimestamp($item['create_time'] ?? 0);
+            $regContent = trim((string)($item['reg_content'] ?? ''));
+            $taskName = trim((string)($item['task_name'] ?? ''));
+            $deviceCode = trim((string)($item['device_code'] ?? ''));
+
+            // 从 reg_content 提取联系方式
+            $contact = self::extractContactToken([$regContent]);
+            $isPrivate = $contact !== '';
+
+            // 从预查询的 map 中获取执行账号名称
+            $accountName = $accountMap[$deviceCode] ?? '';
+
+            return self::formatItem([
+                'id' => 'crawling:' . $item['id'],
+                '_user_id' => $userId,
+                'source_key' => 'crawling',
+                'source_name' => self::SOURCE_NAMES['crawling'],
+                'source_text' => '通过【' . self::SOURCE_NAMES['crawling'] . '】流入',
+                'account_name' => $accountName,
+                'customer_name' => $regContent !== '' ? $regContent : ($accountName !== '' ? $accountName : '未知客户'),
+                'avatar' => '',
+                'platform' => DeviceEnum::ACCOUNT_TYPE_SPH,
+                'account' => '', // 不用设备账号做去重，避免多条获客记录被错误合并
+                'image' => self::completeFileUrl((string)($item['image'] ?? '')),
+                'wechat_no' => $contact,
+                'wechat_status' => $isPrivate ? 'recognized' : 'unrecognized',
+                'latest_intention' => $taskName !== '' ? "在{$taskName}中匹配到【{$regContent}】自动录入" : $regContent,
+                'create_time' => $timestamp > 0 ? date('Y-m-d H:i:s', $timestamp) : self::formatTime($item['create_time'] ?? ''),
+                '_timestamp' => $timestamp,
+                '_contact_token' => $contact,
+                '_is_private' => $isPrivate,
+                // 视频号获客记录本身算作1次互动（通过朋友圈互动获取的线索），但不是点赞/评论
+                '_source_interaction_count' => 1,
+                '_source_like_count' => 0,
+                '_source_comment_count' => 0,
+            ]);
+        }, $rows);
     }
 
     private static function privateMessageItems(int $userId, ?int $platform): array
@@ -535,8 +775,10 @@ class IntentionCustomerService
 
     private static function dedupeItems(array $items): array
     {
+        // 分组 id 固定不变（不做 array_values 重排），键索引只在合并时局部更新，整体 O(n)
         $groups = [];
         $keyIndex = [];
+        $nextId = 0;
 
         foreach ($items as $item) {
             $keys = array_values(array_unique(array_filter($item['_dedupe_keys'] ?? [])));
@@ -544,35 +786,36 @@ class IntentionCustomerService
                 $keys = [$item['id']];
             }
 
-            $matchedIndexes = [];
+            $matchedIds = [];
             foreach ($keys as $key) {
                 if (isset($keyIndex[$key])) {
-                    $matchedIndexes[] = $keyIndex[$key];
+                    $matchedIds[$keyIndex[$key]] = true;
                 }
             }
-            $matchedIndexes = array_values(array_unique($matchedIndexes));
+            $matchedIds = array_keys($matchedIds);
 
-            if (empty($matchedIndexes)) {
-                $groups[] = $item;
-                $groupIndex = array_key_last($groups);
+            if (empty($matchedIds)) {
+                $groupId = $nextId++;
+                $groups[$groupId] = $item;
             } else {
-                sort($matchedIndexes);
-                $groupIndex = $matchedIndexes[0];
-                $groups[$groupIndex] = self::mergeItem($groups[$groupIndex], $item);
+                sort($matchedIds);
+                $groupId = $matchedIds[0];
+                $merged = self::mergeItem($groups[$groupId], $item);
 
-                for ($i = count($matchedIndexes) - 1; $i >= 1; $i--) {
-                    $mergeIndex = $matchedIndexes[$i];
-                    $groups[$groupIndex] = self::mergeItem($groups[$groupIndex], $groups[$mergeIndex]);
-                    unset($groups[$mergeIndex]);
+                for ($i = count($matchedIds) - 1; $i >= 1; $i--) {
+                    $mergeId = $matchedIds[$i];
+                    $merged = self::mergeItem($merged, $groups[$mergeId]);
+                    unset($groups[$mergeId]);
                 }
 
-                $groups = array_values($groups);
-                $keyIndex = self::rebuildKeyIndex($groups);
-                $groupIndex = $keyIndex[$keys[0]] ?? $groupIndex;
+                $groups[$groupId] = $merged;
+                foreach ($merged['_dedupe_keys'] ?? [] as $key) {
+                    $keyIndex[$key] = $groupId;
+                }
             }
 
             foreach ($keys as $key) {
-                $keyIndex[$key] = $groupIndex;
+                $keyIndex[$key] = $groupId;
             }
         }
 
@@ -682,18 +925,6 @@ class IntentionCustomerService
             'friend_id' => trim((string)($source['friend_id'] ?? '')),
             'count' => $count,
         ];
-    }
-
-    private static function rebuildKeyIndex(array $groups): array
-    {
-        $keyIndex = [];
-        foreach ($groups as $index => $group) {
-            foreach ($group['_dedupe_keys'] ?? [] as $key) {
-                $keyIndex[$key] = $index;
-            }
-        }
-
-        return $keyIndex;
     }
 
     private static function dedupeKeys(array $item): array
@@ -904,6 +1135,88 @@ class IntentionCustomerService
 
         self::$circleInteractionStatsCache[$cacheKey] = $result;
         return $result;
+    }
+
+    /**
+     * 批量预加载朋友圈互动统计（一次查询，填充缓存，避免 responseItem 中的 N+1）
+     */
+    public static function prefetchCircleInteractionStats(int $userId, array $items): void
+    {
+        if ($userId <= 0 || empty($items)) {
+            return;
+        }
+
+        // 收集所有需要查询的昵称
+        $allNicknames = [];
+        foreach ($items as $item) {
+            foreach ([$item['customer_name'] ?? '', $item['account_name'] ?? ''] as $nickname) {
+                $nickname = trim((string)$nickname);
+                if ($nickname !== '' && strtolower($nickname) !== 'null' && $nickname !== '未知客户') {
+                    $allNicknames[$nickname] = true;
+                }
+            }
+        }
+
+        $allNicknames = array_keys($allNicknames);
+        if (empty($allNicknames)) {
+            return;
+        }
+
+        // 一次性查询所有记录
+        $records = SvDeviceCircleLikeReplyRecord::where('user_id', $userId)
+            ->whereNull('delete_time')
+            ->where('nickname', 'in', $allNicknames)
+            ->field('nickname,type')
+            ->select()
+            ->toArray();
+
+        // 按昵称分组统计
+        $nicknameStats = [];
+        foreach ($records as $record) {
+            $nickname = (string)($record['nickname'] ?? '');
+            if (!isset($nicknameStats[$nickname])) {
+                $nicknameStats[$nickname] = ['interaction_count' => 0, 'like_count' => 0, 'comment_count' => 0];
+            }
+            $type = (int)($record['type'] ?? 0);
+            $nicknameStats[$nickname]['interaction_count']++;
+            if (in_array($type, [1, 3], true)) {
+                $nicknameStats[$nickname]['like_count']++;
+            }
+            if (in_array($type, [2, 3], true)) {
+                $nicknameStats[$nickname]['comment_count']++;
+            }
+        }
+
+        // 为每条 item 预计算并缓存（模拟 circleInteractionStats 的缓存 key 格式）
+        foreach ($items as $item) {
+            $nicknames = array_values(array_unique(array_filter(array_map(static function (mixed $value): string {
+                $value = trim((string)$value);
+                if ($value === '' || strtolower($value) === 'null' || $value === '未知客户') {
+                    return '';
+                }
+                return $value;
+            }, [$item['customer_name'] ?? '', $item['account_name'] ?? '']))));
+
+            if (empty($nicknames)) {
+                continue;
+            }
+
+            sort($nicknames);
+            $cacheKey = $userId . ':' . md5((string)json_encode($nicknames, JSON_UNESCAPED_UNICODE));
+            if (isset(self::$circleInteractionStatsCache[$cacheKey])) {
+                continue;
+            }
+
+            $result = ['interaction_count' => 0, 'like_count' => 0, 'comment_count' => 0];
+            foreach ($nicknames as $nickname) {
+                if (isset($nicknameStats[$nickname])) {
+                    $result['interaction_count'] += $nicknameStats[$nickname]['interaction_count'];
+                    $result['like_count'] += $nicknameStats[$nickname]['like_count'];
+                    $result['comment_count'] += $nicknameStats[$nickname]['comment_count'];
+                }
+            }
+            self::$circleInteractionStatsCache[$cacheKey] = $result;
+        }
     }
 
     private static function completeFileUrl(string $url): string

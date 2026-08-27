@@ -324,6 +324,7 @@
 </template>
 
 <script setup lang="ts">
+import { handleSseFrames } from "@/utils/http/sse-frame";
 import { robotDetail, robotAdd, robotEdit } from "@/api/robot";
 import { chatRobotSendTextStream } from "@/api/chat";
 import { knowledgeBaseLists } from "@/api/knowledge_base";
@@ -627,24 +628,16 @@ const contentPost = async (userInput: any) => {
                     isStopChat.value = true;
                 },
                 onmessage(value) {
-                    value
-                        .trim()
-                        .split("data:")
-                        .forEach((text, index) => {
-                            if (text !== "") {
-                                try {
-                                    const dataJson = JSON.parse(text);
-                                    const { object, content } = dataJson;
-                                    if (content && object === "load") {
-                                        result.reply += content;
-                                    }
-                                    if (object === "finish") {
-                                        result.loading = false;
-                                        return;
-                                    }
-                                } catch (error) {}
-                            }
-                        });
+                    handleSseFrames(value, (dataJson) => {
+                        const { object, content } = dataJson;
+                        if (content && object === "load") {
+                            result.reply += content;
+                        }
+                        if (object === "finish") {
+                            result.loading = false;
+                            return;
+                        }
+                    });
                 },
                 onclose() {
                     result.loading = false;

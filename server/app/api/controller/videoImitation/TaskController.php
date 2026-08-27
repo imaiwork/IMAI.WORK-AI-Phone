@@ -64,6 +64,65 @@ class TaskController extends BaseApiController
         }
     }
 
+    /** 获取洗稿任务可用的已有形象、音色 */
+    public function generationOptions()
+    {
+        try {
+            $params = (new TaskValidate())->get()->goCheck('generationOptions');
+            $result = TaskLogic::generationOptions((int)$params['id'], (int)$this->userId);
+            return $result !== false
+                ? $this->success('获取成功', $result)
+                : $this->fail(TaskLogic::getError() ?: '获取失败');
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '请求异常');
+        } catch (\Throwable $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    /** 洗稿任务：单独确认洗稿文案（不触发合成） */
+    public function confirmRewrittenText()
+    {
+        try {
+            $params = (new TaskValidate())->post()->goCheck('confirmRewrittenText');
+            $result = TaskLogic::confirmRewrittenText(
+                (int)$params['id'],
+                (int)$this->userId,
+                (string)$this->request->post('rewritten_text', '')
+            );
+            return $result !== false
+                ? $this->success('文案已确认', $result)
+                : $this->fail(TaskLogic::getError() ?: '确认失败');
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '请求异常');
+        } catch (\Throwable $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    /** 确认洗稿视频生成配置并启动现有生成流程 */
+    public function confirmGenerationOptions()
+    {
+        try {
+            $params = (new TaskValidate())->post()->goCheck('confirmGenerationOptions');
+            $result = TaskLogic::confirmGenerationOptions(
+                (int)$params['id'],
+                (int)$this->userId,
+                (int)$params['generation_type'],
+                (int)($params['avatar_id'] ?? 0),
+                (int)($params['voice_id'] ?? 0),
+                (string)$this->request->post('rewritten_text', '')
+            );
+            return $result !== false
+                ? $this->success('生成配置已确认，任务已提交', $result)
+                : $this->fail(TaskLogic::getError() ?: '确认失败');
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '请求异常');
+        } catch (\Throwable $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
     /**
      * 确认发布文案
      */

@@ -9,6 +9,7 @@
     "chat-scroll-view": "../../components/chat-scroll-view/chat-scroll-view",
     "dragon-button": "../../../components/dragon-button/dragon-button",
     "recharge-popup": "../../../components/recharge-popup/recharge-popup",
-    "sidebar": "./components/sidebar"
+    "sidebar": "./components/sidebar",
+    "history-popup": "./components/popups/history-popup"
   }
 }

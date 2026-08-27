@@ -19,9 +19,9 @@ class AiPersonaLocal extends BaseModel
         $store_atmosphere = AiPersonaTextService::join($this->store_atmosphere);
         $content_preference = AiPersonaTextService::join($this->content_preference);
         $spokesperson = AiPersonaTextService::join($this->spokesperson);
-        $this->clue_content = "我的IP名称是{$persona->devicpersona_namee_code}。
+        $this->clue_content = "我的IP人设名称是{$persona->devicpersona_namee_code}。
 
-                    IP介绍如下：
+                    IP人设介绍如下：
                     {$persona->persona_desc}
 
                     账号类型是{$persona->persona_type}。

@@ -107,6 +107,21 @@ class TaskLists extends BaseApiDataLists
             $item['platform_type'] = (int)($item['platform_type'] ?? 4);
             $item['media_type'] = (int)($item['media_type'] ?? 1);
             $item['image_rewrite_status'] = (int)($item['image_rewrite_status'] ?? 0);
+            $item['rewrite_mode'] = (int)($item['rewrite_mode'] ?? VideoImitationTask::REWRITE_MODE_PERSONA);
+            $item['generation_type'] = (int)($item['generation_type'] ?? VideoImitationTask::GENERATION_TYPE_NONE);
+            $item['generation_config_confirmed'] = (int)($item['generation_config_confirmed'] ?? 0);
+            $item['wash_avatar_id'] = (int)($item['wash_avatar_id'] ?? 0);
+            $item['wash_voice_id'] = (int)($item['wash_voice_id'] ?? 0);
+            if ($item['rewrite_mode'] === VideoImitationTask::REWRITE_MODE_WASH
+                && $item['media_type'] === VideoImitationTask::MEDIA_TYPE_VIDEO
+            ) {
+                $item['generation_next_step'] = (int)$item['status'] >= VideoImitationTask::STATUS_GENERATING
+                    ? ((int)$item['status'] === VideoImitationTask::STATUS_SUCCESS ? 'done' : 'render')
+                    : \app\common\service\videoImitation\ManualGenerationAssetService::nextStep($taskModel);
+            } else {
+                $item['generation_next_step'] = '';
+            }
+            unset($item['wash_third_avatar_id'], $item['wash_third_voice_id']);
             $item['progress_steps'] = \app\api\logic\videoImitation\TaskLogic::buildProgressSteps($taskModel);
         }
 

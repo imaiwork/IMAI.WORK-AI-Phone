@@ -7,6 +7,7 @@
     "u-loading": "../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading",
     "video-preview-v2": "../../../../components/video-preview-v2/video-preview-v2",
     "step-content": "./components/step-content",
-    "image-text-detail": "./components/image-text-detail"
+    "image-text-detail": "./components/image-text-detail",
+    "wash-config": "./components/wash-config"
   }
 }

@@ -16,12 +16,15 @@ export default function usePolling(fun: any, options: Options = {}) {
     let endTime: any = null
     let totalCount = 0
     let stopped = false // 添加一个stopped标志
+    // 轮询代际：fun() 在途时调用 start() 会让旧链的 .then 回调再次 run()，
+    // 与新链并行出双倍轮询且旧链无法被 end() 停掉；每次 start/end 递增代际，旧链回调直接失效
+    let generation = 0
 
     const result = ref(null)
     const error = ref(null)
 
-    function run() {
-        if (stopped) return // 如果stopped为true，则不再执行轮询
+    function run(gen: number) {
+        if (stopped || gen !== generation) return // stopped 或代际过期都不再执行轮询
         if (endTime && endTime <= Date.now()) {
             end()
             callback()
@@ -37,7 +40,7 @@ export default function usePolling(fun: any, options: Options = {}) {
             fun()
                 .then((res: any) => {
                     result.value = res
-                    run()
+                    run(gen)
                 })
                 .catch((err: any) => {
                     error.value = err
@@ -48,18 +51,20 @@ export default function usePolling(fun: any, options: Options = {}) {
     const start = () => {
         end() // 先收口旧轮询（end 会把 stopped 置 true）
         stopped = false // 再重置stopped标志，保证 run() 能启动
+        generation++
         if (key && pollingDict[key]) {
             pollingDict[key].end()
             delete pollingDict[key]
         }
         endTime = totalTime ? Date.now() + totalTime : null
-        run()
+        run(generation)
         if (key) {
             pollingDict[key] = { end }
         }
     }
 
     const end = () => {
+        generation++ // 让在途 fun() 的 .then 回调失效，避免 end 后旧链继续调度
         if (timer) {
             clearTimeout(timer)
             timer = null

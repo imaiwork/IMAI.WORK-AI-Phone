@@ -7,7 +7,7 @@ use app\api\validate\DeviceAuthValidate;
 
 class DeviceAuthController extends BaseApiController
 {
-    public array $notNeedLogin = ['activate','notice'];
+    public array $notNeedLogin = ['notice'];
 
     public function phoneList()
     {
@@ -57,25 +57,20 @@ class DeviceAuthController extends BaseApiController
 
     public function activate()
     {
-        if (empty($this->userId)) {
-            $params = (new DeviceAuthValidate())->post()->goCheck('activateDevice');
-        } else {
-            $params = (new DeviceAuthValidate())->post()->goCheck('activate', [
-                'user_id' => $this->userId,
-            ]);
-        }
+        $params = (new DeviceAuthValidate())->post()->goCheck('activate', [
+            'user_id' => $this->userId,
+        ]);
 
         $result = DeviceAuthLogic::activate($params);
         if ($result === false) {
-            //通知不返回错误
-            return $this->success(DeviceAuthLogic::getError());
+            return $this->fail(DeviceAuthLogic::getError());
         }
         return $this->success('激活成功', DeviceAuthLogic::getReturnData());
     }
 
     public function notice()
     {
-        $params = $this->request->post();
+        $params = (new DeviceAuthValidate())->post()->goCheck('notice');
 
         $result = DeviceAuthLogic::notice($params);
         if ($result === false) {

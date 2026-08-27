@@ -25,7 +25,7 @@ class EmQueueJob
         try {
             $modelKbEmbedding = new KbEmbedding();
             $kbEmbedding = $modelKbEmbedding
-                ->field(['uuid,user_id,kb_id,status,question,answer'])
+                ->field(['uuid,user_id,kb_id,status,question,answer,annex'])
                 ->where(['uuid' => $uuid,'status' => 0,'is_delete' => 0])
                 ->findOrEmpty();
             if ($kbEmbedding->isEmpty()){
@@ -85,7 +85,15 @@ class EmQueueJob
         try {
             echo "开始转向量: ". $uuid . "\n";
             $vectorService = new VectorService($kbKnow->embedding_model_id);
-            $embedding = $vectorService->toEmbedding($modelCost['channel'], $modelCost['name'], $kbEmbedding->question,$kbEmbedding->user_id);
+            $trainText = KbEmbedding::buildSearchableText(
+                $kbEmbedding->question,
+                $kbEmbedding->answer,
+                $kbEmbedding->annex
+            );
+            if ($trainText === '') {
+                $trainText = (string)$kbEmbedding->question;
+            }
+            $embedding = $vectorService->toEmbedding($modelCost['channel'], $modelCost['name'], $trainText, $kbEmbedding->user_id);
             echo "转向量成功: ". $uuid . "\n";
             echo "向量的维度: ". count($embedding) . "\n";
             echo "全程的耗时: ". time() - $startTime . "s\n";

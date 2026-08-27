@@ -1,5 +1,5 @@
 import { deleteShanjianTaskRecord } from "@/api/digital_human";
-import { deleteImageRecord, getGenerateRecordList, getImageRecordList } from "@/api/person";
+import { deleteImageRecord, getGenerateRecordList, getImageRecordList, retryGenerateRecord } from "@/api/person";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { reactive, ref, type Ref } from "vue";
 
@@ -115,6 +115,7 @@ export const useHistoryTab = (
         page_no: 1,
         page_size: 20,
         persona_id: "",
+        auto_type: 1,
     });
     const imageParams = reactive({
         page_no: 1,
@@ -310,6 +311,42 @@ export const useHistoryTab = (
         });
     };
 
+    // 重试规则与后端一致：重试成功后按发布时间自动处理，已过时段需到发布记录手动重发
+    const RETRY_CONFIRM_CONTENT =
+        "生成成功且未到发布时间：到点自动发布，无需操作；生成成功但已过发布时间：需到「发布记录」手动重新发送";
+
+    const handleRetryRecord = (item: any) => {
+        if (!item) return;
+        if (item.can_retry === false) {
+            uni.showToast({ title: item.retry_disabled_reason || "当前视频不可重试", icon: "none", duration: 3000 });
+            return;
+        }
+        uni.showModal({
+            title: "重试生成视频",
+            content: RETRY_CONFIRM_CONTENT,
+            confirmText: "开始重试",
+            cancelText: "取消",
+            success: async ({ confirm }) => {
+                if (!confirm) return;
+                uni.showLoading({ title: "提交中...", mask: true });
+                try {
+                    await retryGenerateRecord({ id: item.id });
+                    item.status = VideoStatus.pending;
+                    item.remark = "";
+                    uni.showToast({ title: "已开始重试", icon: "none", duration: 3000 });
+                } catch (error: any) {
+                    uni.showToast({
+                        title: error?.message || error || "重试失败",
+                        icon: "none",
+                        duration: 3000,
+                    });
+                } finally {
+                    uni.hideLoading();
+                }
+            },
+        });
+    };
+
     const handleImageClick = (item: any) => {
         if (!item) return;
         currentImageDetail.value = item;
@@ -407,6 +444,7 @@ export const useHistoryTab = (
         handleDeleteVideoRecord,
         handleImageClick,
         handlePlayVideoDetail,
+        handleRetryRecord,
         handleSwitchHistoryTab,
         handleVideoClick,
         handleViewFailReason,

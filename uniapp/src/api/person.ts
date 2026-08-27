@@ -212,6 +212,21 @@ export const getGenerateRecordList = (data: Record<string, any>) => {
     return request.get({ url: '/aiPersona.videoRecord/lists', data })
 }
 
+// 人设内容记录 · 视频生成失败重试
+export const retryGenerateRecord = (data: { id: number | string }) => {
+    return request.post({ url: '/aiPersona.videoRecord/retry', data })
+}
+
+// 发布失败重发 · 前置校验（返回可重发状态、已生成视频、原文案等）
+export const checkPublishResend = (data: { task_id?: number; detail_id?: number }) => {
+    return request.post({ url: '/aiPersona.task/checkPublishResend', data })
+}
+
+// 发布失败重发 · 确认重新发送（video_source: generated=用已生成视频 upload=换视频上传）
+export const publishResend = (data: Record<string, any>) => {
+    return request.post({ url: '/aiPersona.task/publishResend', data })
+}
+
 /** 人设内容记录 · 自动生成的图片（图文仿写） */
 export const getImageRecordList = (data: Record<string, any>) => {
     return request.get({ url: '/aiPersona.imageRecord/lists', data })

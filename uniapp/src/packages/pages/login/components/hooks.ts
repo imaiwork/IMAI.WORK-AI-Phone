@@ -47,8 +47,13 @@ const isRegisterClosedError = (msg: any) => isKeywordError(msg, REGISTER_CLOSED_
 const isUnregisteredUserError = (msg: any) => isKeywordError(msg, UNREGISTERED_USER_KEYWORDS);
 const shouldShowRegisterClosedPopup = (error: any, closed: boolean) =>
     isRegisterClosedError(error) || (closed && isUnregisteredUserError(error));
+// 后端要求邀请码时的提示(邀请码为空/无效)
+const INVITE_CODE_KEYWORDS = ["请输入邀请码", "邀请码无效", "邀请码错误"];
+const isInviteCodeError = (msg: any) => isKeywordError(msg, INVITE_CODE_KEYWORDS);
 // 一键登录命中注册关闭时的 reject 标记,避免上层 wxLoginLock 再次 toast
 const REGISTER_CLOSED_FLAG = "__register_closed__";
+// 一键登录命中「邀请码注册」时的 reject 标记,改由完善资料弹窗补邀请码后重试
+const INVITE_REQUIRED_FLAG = "__invite_required__";
 
 export function useLoginWay() {
     const appStore = useAppStore();
@@ -67,6 +72,10 @@ export function useLoginWay() {
     const showOtherWayBtn = computed(() => appStore.getLoginConfig.login_way?.length > 1);
     const isLoginAfter = ref(true);
     const websiteConfig = computed(() => appStore.getWebsiteConfig);
+    // OEM 站点统一展示 OEM 自己的品牌,主站回落平台配置
+    const siteLogo = computed(() => appStore.getSiteLogo);
+    const siteShopLogo = computed(() => appStore.getSiteShopLogo);
+    const siteName = computed(() => appStore.getSiteName);
     const loginConfig = computed(() => appStore.getLoginConfig);
     const registerConfig = computed(() => appStore.getRegisterConfig);
     // closed/require_invite 优先按 register_mode 判定,兼容后端已派生的布尔字段
@@ -81,6 +90,10 @@ export function useLoginWay() {
         loginWay.value = way;
     };
     const loginData = ref<any>({});
+    // 一键登录:后台注册方式=邀请码且未带码时,后端不建号。此处缓存微信授权参数,
+    // 由「绑定身份信息」弹窗补填邀请码后再重试注册。
+    const pendingWxRegister = ref<any>(null);
+    const needInviteCode = computed(() => !!pendingWxRegister.value);
 
     // 邀请码取值优先级:手填 -> 代理二维码 sn(USER_SN) -> 旧版 query.code(USER_ID)
     // 注意:default_invite_source 是用户列表「邀请来源」展示文案,不是邀请码,切勿当作 invite_code 提交
@@ -89,6 +102,9 @@ export function useLoginWay() {
         cache.get(USER_SN) ||
         cache.get(USER_ID) ||
         "";
+
+    // 弹窗预填:带过来的代理 sn / 旧版 code(可能就是那个无效码,方便用户改)
+    const defaultInviteCode = computed(() => resolveInviteCode());
 
     const oaLogin = async (options: any = { getUrl: true }) => {
         const { code, getUrl } = options;
@@ -123,6 +139,22 @@ export function useLoginWay() {
             if (shouldShowRegisterClosedPopup(error, isRegisterClosed.value)) {
                 showRegisterClosedPopup.value = true;
                 return Promise.reject(REGISTER_CLOSED_FLAG);
+            }
+            // 邀请码模式的新用户:后端拒绝建号,弹「绑定身份信息」让其补填邀请码再注册。
+            // 仅限邀请码模式:开放注册模式下报「邀请码无效」是缓存的旧码脏了,弹补码框反而没法填
+            if (isRequireInvite.value && (isInviteCodeError(error) || isUnregisteredUserError(error))) {
+                if (!pendingWxRegister.value) {
+                    pendingWxRegister.value = { ...(params || {}) };
+                    showLoginPopup.value = true;
+                    return Promise.reject(INVITE_REQUIRED_FLAG);
+                }
+                // 弹窗内重试失败(邀请码无效):提示后保持弹窗,让用户改
+                uni.showToast({
+                    title: error || "邀请码无效",
+                    icon: "none",
+                    duration: 3000,
+                });
+                return Promise.reject(INVITE_REQUIRED_FLAG);
             }
             uni.showToast({
                 title: error,
@@ -307,7 +339,7 @@ export function useLoginWay() {
                 }
             }
         } catch (error: any) {
-            if (error === REGISTER_CLOSED_FLAG) return;
+            if (error === REGISTER_CLOSED_FLAG || error === INVITE_REQUIRED_FLAG) return;
             uni.showToast({
                 title: error || "登录失败",
                 icon: "none",
@@ -356,11 +388,40 @@ export function useLoginWay() {
         }
     });
 
-    const handleUpdateUser = async (value: any) => {
-        await updateUser(value, { token: loginData.value.token });
+    // 加锁:连点「下一步」会并发跑注册接口
+    const { lockFn: handleUpdateUser } = useLockFn(async (value: any) => {
+        const { invite_code, ...profile } = value || {};
+        // 一键登录待注册:先带邀请码把账号建出来,拿到 token 再写头像昵称
+        if (pendingWxRegister.value) {
+            const code = String(invite_code || "").trim();
+            if (!code) return uni.$u.toast("请输入邀请码");
+            let data: any = null;
+            try {
+                data = await mnpLogin({ ...pendingWxRegister.value, invite_code: code });
+            } catch (error) {
+                // 失败提示已在 mnpLogin 内处理,保持弹窗让用户重填
+                return;
+            }
+            if (!data) return;
+            loginData.value = data;
+            pendingWxRegister.value = null;
+            // 注册完成,弹窗切到头像/昵称步骤(有 token 才能传头像),等用户再次提交
+            showLoginPopup.value = true;
+            // 与正常一键登录注册对齐:绑代理关系 + 清 USER_SN(弹窗开着时 series 会停在这一步)
+            if (isLoginAfter.value) {
+                loginAfter().catch(() => undefined);
+            }
+            return;
+        }
+        await updateUser(profile, { token: loginData.value.token });
         showLoginPopup.value = false;
         checkIsBindMobile();
-    };
+    });
+
+    // 用户取消弹窗时丢弃待注册状态,下次一键登录重新走授权
+    watch(showLoginPopup, (val) => {
+        if (!val) pendingWxRegister.value = null;
+    });
 
     watch(
         () => appStore.getLoginConfig,
@@ -414,6 +475,9 @@ export function useLoginWay() {
     return {
         loginConfig,
         websiteConfig,
+        siteLogo,
+        siteShopLogo,
+        siteName,
         registerConfig,
         isRegisterClosed,
         isRequireInvite,
@@ -422,6 +486,8 @@ export function useLoginWay() {
         showBindMobilePopup,
         showRegisterClosedPopup,
         showOtherWayBtn,
+        needInviteCode,
+        defaultInviteCode,
         loginWay,
         wxIsLock,
         isLoginAfter,

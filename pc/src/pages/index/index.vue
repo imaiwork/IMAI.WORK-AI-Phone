@@ -36,6 +36,7 @@
                         :send-disabled="isReceiving"
                         :tokens="getChatTokens"
                         :is-network="true"
+                        :network="isNetwork"
                         :is-new-chat="!!taskId"
                         :is-disabled-humanize="!!displayAgent"
                         :is-quote="true"
@@ -48,8 +49,7 @@
                         @update:file-list="(files) => (fileLists = files)"
                         @update:network="(value) => (isNetwork = value)"
                         @quote="handleQuote"
-                        @change-mode="handleSelectMainMode"
-                        @update:inputContent="handleUpdateInputContent">
+                        @change-mode="handleSelectMainMode">
                         <template #content>
                             <div v-if="displayAgent" class="h-full flex flex-col items-center justify-center py-10">
                                 <div class="relative mb-5">
@@ -372,7 +372,7 @@ const contentPost = (text: string) => {
         feedback.msgWarning(AGENT_UNAVAILABLE_TIP);
         return;
     }
-    chattingRef?.value?.triggerContentPushUp();
+    // 上推由 chatting 组件内部的 contentPost 统一触发，这里不再重复调用
     sendMessage(text);
     chatStore.clearFiles();
     chattingRef.value?.cleanInput();
@@ -382,7 +382,6 @@ const handleQuote = (text: string) => {
     chatStore.setQuoteText(text);
 };
 
-const handleUpdateInputContent = (value: string) => {};
 
 const welcomeHeroRef = ref<any>(null);
 
@@ -505,6 +504,9 @@ watch(
 );
 
 onUnmounted(() => {
+    // 先停流：否则后端继续生成继续扣 tokens，晚到的分片还会用 replaceState
+    // 把 ?task_id=... 写进用户此刻所在的其它页面 URL
+    stopStream();
     chatStore.clearChat();
 });
 
@@ -514,36 +516,6 @@ definePageMeta({
 </script>
 
 <style lang="scss" scoped>
-:deep(.chat-area-pc) {
-    * {
-        font-size: var(--el-font-size-medium);
-    }
-    svg {
-        display: inline;
-    }
-
-    .chat-rich-text {
-        font-size: var(--el-font-size-medium);
-        padding: 8px 0;
-        min-height: 80px;
-        .chat-grid-input {
-            font-size: var(--el-font-size-medium);
-        }
-        .at-input {
-            line-height: 1;
-        }
-        .at-user,
-        .at-tag {
-            font-weight: bold;
-        }
-    }
-    .chat-placeholder-wrap {
-        padding: 8px 0;
-        font-size: var(--el-font-size-medium);
-        font-style: inherit;
-    }
-}
-
 /* loading 蒙层淡入淡出 */
 .agent-fade-enter-active,
 .agent-fade-leave-active {

@@ -22,10 +22,11 @@ class CopywritingController extends BaseApiController
             $url = $params['url'] ?? '';
             $id = $params['id'] ?? 0;
             $personaId = $params['persona_id'] ?? 0;
-            $visualMaterialSource = $params['visual_material_source'] ?? 3;
+            $visualMaterialSource = (int)($params['visual_material_source'] ?? 0);
+            $rewriteMode = (int)($params['rewrite_mode'] ?? 0);
 
             // 调用 VideoImitationLogic 核心逻辑
-            $result = VideoImitationLogic::createOrUpdateTask($url, $this->userId, $personaId, $id, $visualMaterialSource);
+            $result = VideoImitationLogic::createOrUpdateTask($url, $this->userId, $personaId, $id, $visualMaterialSource, $rewriteMode);
 
             if ($result) {
                 $msg = '';
@@ -56,8 +57,9 @@ class CopywritingController extends BaseApiController
             $url = $params['url'] ?? '';
             $id = (int)($params['id'] ?? 0);
             $personaId = (int)($params['persona_id'] ?? 0);
+            $rewriteMode = (int)($params['rewrite_mode'] ?? 0);
 
-            $result = VideoImitationLogic::createOrUpdateImageTextTask($url, $this->userId, $personaId, $id);
+            $result = VideoImitationLogic::createOrUpdateImageTextTask($url, $this->userId, $personaId, $id, $rewriteMode);
 
             if ($result) {
                 return $this->success(data: $result);

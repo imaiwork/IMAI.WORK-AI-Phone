@@ -82,6 +82,27 @@ class ShanjianVideoTask extends BaseModel
     }
     
     /**
+     * 软删 type5 任务派生的 type=2 智剪包装任务。
+     * 按 origin_task_id 反查而非 packaging_task_id 正向指针，
+     * 兼容回写丢失与重复派生行；仅删终态行——处理中的包装任务已向闪剪
+     * 提交并预扣算力，须保留到回调完成失败退费/按时长多退少补，
+     * 且包装行不在创作记录单独展示，保留无副作用。
+     * 不做 user_id 过滤：派生行与源任务同属主，调用方须已校验源任务归属。
+     */
+    public static function deleteDerivedPackaging(array $type5Ids): void
+    {
+        $ids = array_values(array_filter(array_map('intval', $type5Ids)));
+        if (empty($ids)) {
+            return;
+        }
+        self::whereIn('origin_task_id', $ids)
+            ->where('shanjian_type', 2)
+            ->whereIn('status', [self::STATUS_FAILED, self::STATUS_SUCCESS])
+            ->select()
+            ->delete();
+    }
+
+    /**
      * 关联用户
      * @return \think\model\relation\BelongsTo
      */

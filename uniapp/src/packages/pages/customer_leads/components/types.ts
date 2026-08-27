@@ -66,6 +66,7 @@ export interface Customer {
     source: string
     sourceName: string
     sourceKey: string
+    image: string
     avatarClass: string
     privateMessages: number
     momentActions: number

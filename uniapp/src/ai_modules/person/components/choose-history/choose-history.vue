@@ -95,6 +95,8 @@ enum VideoType {
     MONTAGE_STORYBOARD = 7,
     /** 闪剪数字人纯口播，展示归「数字人口播」 */
     DIGITAL_HUMAN_SHANJIAN = 9,
+    /** 热点追踪（闪剪任务按 extra.source=hotspot 区分） */
+    HOTSPOT = 10,
 }
 
 // ✅ 与 creation.vue 保持一致的分类列表
@@ -107,6 +109,7 @@ const typeList = [
     { name: "新闻体", key: VideoType.NEWS },
     { name: "一句话生成", key: VideoType.SENTENCE },
     { name: "分镜混剪", key: VideoType.MONTAGE_STORYBOARD },
+    { name: "热点追踪", key: VideoType.HOTSPOT },
 ];
 
 const props = withDefaults(defineProps<{ modelValue: boolean; type?: number; limit?: number }>(), {
@@ -171,14 +174,17 @@ const getStatus = (item: any) => {
     }
 };
 
+// 创作记录是多张表 UNION，id 跨表会重复，须用 type+id 复合键判重
+const recordKey = (item: any) => `${item.type}_${item.id}`;
+
 const isChoose = (data: any) => {
-    return chooseLists.value.some((item) => item.id === data.id);
+    return chooseLists.value.some((item) => recordKey(item) === recordKey(data));
 };
 
 const handleSelect = (data: any) => {
     const isSelected = isChoose(data);
     if (isSelected) {
-        chooseLists.value = chooseLists.value.filter((item) => item.id !== data.id);
+        chooseLists.value = chooseLists.value.filter((item) => recordKey(item) !== recordKey(data));
         return;
     }
     if (props.limit === 1) {

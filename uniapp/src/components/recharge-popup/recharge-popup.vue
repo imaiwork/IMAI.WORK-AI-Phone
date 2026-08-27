@@ -12,7 +12,7 @@
                 <view class="pt-[100rpx]">
                     <view class="shop-name-text">
                         <view>
-                            {{ webSiteConfig.shop_name }}
+                            {{ siteName }}
                         </view>
                         <view> 引擎驱动未来智能，AI从此高效运转。 </view>
                     </view>
@@ -44,8 +44,9 @@ const emit = defineEmits<{
 }>();
 
 const appStore = useAppStore();
-const webSiteConfig = computed(() => appStore.getWebsiteConfig);
 const isOemSite = computed(() => appStore.isOemSite);
+// OEM 站点用 OEM 品牌名,主站回落平台 shop_name
+const siteName = computed(() => appStore.getSiteName);
 
 const show = ref(false);
 const showOem = ref(false);

@@ -14,6 +14,7 @@ use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\user\UserTokensLog;
 use app\common\enum\ChatEnum;
 use app\common\model\chat\Models;
+use think\facade\Db;
 
 /**
  * 视频列表
@@ -24,6 +25,17 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
      * 剪辑消耗对应的 change_type
      */
     protected const CLIP_CHANGE_TYPE = 5101;
+
+    /**
+     * 禅境 / 闪剪在任务表中的 model_version
+     */
+    protected const MODEL_VERSION_CHANJING = 7;
+    protected const MODEL_VERSION_SHANJIAN = 8;
+
+    /**
+     * 闪剪在 la_models 中的主键（model_version=8）
+     */
+    protected const MODEL_ID_SHANJIAN = 9;
 
     /**
      * 闪剪数字人口播(type=5)合成扣费
@@ -58,126 +70,176 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
-     * @author 段誉
-     * @date 2023/2/23 18:43
      */
     public function lists(): array
     {
         $modelVersion = $this->request->get('model_version');
-        
-        // model_version=8 时，只使用闪剪视频任务列表
+
+        // 指定闪剪：只查闪剪任务表
         if ($modelVersion == 8) {
             return $this->getShanjianLists();
         }
 
+        // 指定其它模型：只查普通数字人视频表
+        if (!empty($modelVersion)) {
+            return $this->getNormalLists();
+        }
+
+        // 未指定 model_version：两个来源要按 create_time 做「全局」排序分页。
+        // 全局前 offset+length 名的记录，必定落在各自来源的前 offset+length 条之内，
+        // 所以两边各取这么多行的排序键即可，合并排序后再切出当页。
+        $take = $this->limitOffset + $this->limitLength;
+
+        $keys = [];
+        foreach ($this->normalKeys($take) as $id => $createTime) {
+            $keys[] = ['source' => 'normal', 'id' => $id, 'create_time' => $createTime];
+        }
+        foreach ($this->shanjianKeys($take) as $id => $createTime) {
+            $keys[] = ['source' => 'shanjian', 'id' => $id, 'create_time' => $createTime];
+        }
+
+        // 排序规则必须与两条 SQL 的 ORDER BY 一致，否则同秒记录会在翻页时错位
+        usort($keys, function ($a, $b) {
+            return ($b['create_time'] <=> $a['create_time']) ?: ($b['id'] <=> $a['id']);
+        });
+
+        $page = array_slice($keys, $this->limitOffset, $this->limitLength);
+        if (empty($page)) {
+            return [];
+        }
+
+        $normalIds = $shanjianIds = [];
+        foreach ($page as $key) {
+            if ($key['source'] === 'normal') {
+                $normalIds[] = $key['id'];
+            } else {
+                $shanjianIds[] = $key['id'];
+            }
+        }
+
+        // 只对当页命中的记录取详情
+        $normalMap   = $normalIds ? array_column($this->getNormalLists($normalIds), null, 'id') : [];
+        $shanjianMap = $shanjianIds ? array_column($this->getShanjianLists($shanjianIds), null, 'id') : [];
+
+        $list = [];
+        foreach ($page as $key) {
+            $row = $key['source'] === 'normal'
+                ? ($normalMap[$key['id']] ?? null)
+                : ($shanjianMap[$key['id']] ?? null);
+            if ($row !== null) {
+                $list[] = $row;
+            }
+        }
+
+        return $list;
+    }
+
+    /**
+     * 普通数字人视频的排序键（id => create_time）
+     */
+    protected function normalKeys(int $take): array
+    {
+        return $this->buildQuery()
+            ->order(['hv.create_time' => 'desc', 'hv.id' => 'desc'])
+            ->limit(0, $take)
+            ->column('hv.create_time', 'hv.id');
+    }
+
+    /**
+     * 闪剪视频任务的排序键（id => create_time）
+     */
+    protected function shanjianKeys(int $take): array
+    {
+        return $this->shanjianQuery()
+            ->order(['hv.create_time' => 'desc', 'hv.id' => 'desc'])
+            ->limit(0, $take)
+            ->column('hv.create_time', 'hv.id');
+    }
+
+    /**
+     * 获取普通数字人视频列表
+     *
+     * @param array|null $ids 传入时只取这批 id（合并分页场景），为 null 时按 limit/offset 自行分页
+     */
+    protected function getNormalLists(?array $ids = null): array
+    {
         // 模型列表（以 id 为键，便于 O(1) 查找）
         $modelMap = $this->getModelMap();
 
         // 主播列表预加载（避免循环内多次查库）
         $anchorMap = $this->getAnchorMap();
 
-        // 获取普通数字人视频列表
-        $normalList = $this->buildQuery()
+        $query = $this->buildQuery()
             ->field('hv.voice_name,hv.id,hv.name,hv.user_id,hv.model_version,hv.anchor_id,
                 hv.create_time,hv.update_time,hv.pic,hv.clip_result_url,hv.clip_status,hv.automatic_clip,
                 hv.clip_type,hv.result_url,hv.gender,hv.status,hv.audio_type,hv.task_id,
-                u.nickname,u.avatar,hv.remark')
-            ->order(['hv.create_time' => 'desc'])
-            ->limit($this->limitOffset, $this->limitLength)
-            ->select()
-            ->each(function ($item) use ($modelMap, $anchorMap) {
-                // 文件 URL
-                $item['pic']             = FileService::getFileUrl($item['pic']);
-                $item['clip_result_url'] = FileService::getFileUrl($item['clip_result_url']);
-                $item['result_url']      = FileService::getFileUrl($item['result_url']);
-                $item['avatar']          = FileService::getFileUrl($item['avatar']);
+                u.nickname,u.avatar,hv.remark');
 
-                // 主播名称
-                $item['anchor_name'] = $anchorMap[$item['anchor_id']] ?? '';
-
-                // 模型名称
-                $item['model_name'] = $modelMap[$item['model_version']]['name'] ?? '';
-
-                // 视频生成消耗
-                $changeType = $this->getChangeType((int)$item['model_version']);
-                [$videoPoints, $duration] = $changeType
-                    ? $this->getTokensCost($item['user_id'], $item['task_id'], $changeType)
-                    : [0, 0];
-
-                $item['video_points'] = $videoPoints;
-                $item['duration']     = $duration;
-
-                // 剪辑消耗（仅当剪辑完成时统计）
-                $item['clip_points'] = $item['clip_status'] == 3
-                    ? $this->getTokensCost($item['user_id'], $item['task_id'], self::CLIP_CHANGE_TYPE)[0]
-                    : 0;
-            })
-            ->toArray();
-
-        // 如果未指定 model_version，同时获取闪剪视频列表并合并
-        if (empty($modelVersion)) {
-            $shanjianList = $this->getShanjianLists();
-            $normalList = array_merge($normalList, $shanjianList);
-            
-            // 按创建时间倒序排序
-            usort($normalList, function ($a, $b) {
-                return $b['create_time'] <=> $a['create_time'];
-            });
-            
-            // 重新分页（取当前页数据）
-            $normalList = array_slice($normalList, $this->limitOffset, $this->limitLength);
+        if ($ids === null) {
+            $query->order(['hv.create_time' => 'desc', 'hv.id' => 'desc'])
+                ->limit($this->limitOffset, $this->limitLength);
+        } else {
+            $query->whereIn('hv.id', $ids);
         }
 
-        return $normalList;
+        return $query
+            ->select()
+            ->toArray();
     }
 
     /**
      * 获取闪剪视频任务列表（model_version=8）
+     *
+     * @param array|null $ids 传入时只取这批 id（合并分页场景），为 null 时按 limit/offset 自行分页
      */
-    protected function getShanjianLists(): array
+    protected function getShanjianLists(?array $ids = null): array
     {
-        $list = $this->buildShanjianQuery(
-                $this->request->get('user'),
-                $this->request->get('start_time'),
-                $this->request->get('end_time')
-            )
+        $query = $this->shanjianQuery()
             ->field('hv.id,hv.name,hv.user_id,8 as model_version,hv.anchor_id,hv.voice_id,
                 hv.create_time,hv.update_time,hv.status,hv.task_id,hv.pic,hv.remark,
                 hv.audio_type,hv.duration,hv.video_token,hv.extra,hv.packaging_task_id,
-                u.nickname,u.avatar,hv.video_result_url as result_url')
-            ->order(['hv.create_time' => 'desc'])
-            ->limit($this->limitOffset, $this->limitLength)
-            ->select()
-            ->toArray();
+                u.nickname,u.avatar,hv.video_result_url as result_url');
+
+        if ($ids === null) {
+            $query->order(['hv.create_time' => 'desc', 'hv.id' => 'desc'])
+                ->limit($this->limitOffset, $this->limitLength);
+        } else {
+            $query->whereIn('hv.id', $ids);
+        }
+
+        $list = $query->select()->toArray();
 
         $packagingMap = $this->getPackagingMap($list);
+        $costTaskIds = array_merge($this->collectTaskIds($list), $this->collectTaskIds($packagingMap));
+        $costMap = $this->batchTokensCost($costTaskIds);
         $voiceMap = $this->getVoiceNameMap($list);
-        $anchorMap = $this->getAnchorMap();
+        $anchorMap = $this->getAnchorMapByIds(array_column($list, 'anchor_id'));
         $shanjianAnchorMap = $this->getShanjianAnchorMap($list);
+        $modelMap = $this->getModelMap();
+        $shanjianName = $this->resolveModelName($modelMap, self::MODEL_VERSION_SHANJIAN) ?: '闪剪';
 
         foreach ($list as &$item) {
             $item['pic']        = FileService::getFileUrl($item['pic'] ?? '');
             $item['result_url'] = FileService::getFileUrl($item['result_url'] ?? '');
             $item['avatar']     = FileService::getFileUrl($item['avatar'] ?? '');
 
-            $item['anchor_name'] = $anchorMap[$item['anchor_id']]
-                ?? $shanjianAnchorMap[$item['anchor_id']]
+            $item['anchor_name']   = $anchorMap[$item['anchor_id'] ?? '']
+                ?? $shanjianAnchorMap[$item['anchor_id'] ?? '']
                 ?? '';
-            $item['anchor_id']  = $item['anchor_id'] ?? 0;
-            $item['model_name'] = '闪剪';
-            $item['voice_name'] = $voiceMap[$item['voice_id'] ?? ''] ?? '';
-            $item['gender']     = 0;
-            $item['clip_type']  = 0;
-            $item['audio_type'] = (int)($item['audio_type'] ?? 0);
-            $item['remark']     = $item['remark'] ?? '';
-            $item['duration']   = $item['duration'] ?? 0;
+            $item['anchor_id']    = $item['anchor_id'] ?? 0;
+            $item['model_version'] = self::MODEL_VERSION_SHANJIAN;
+            $item['model_name']   = $shanjianName;
+            $item['voice_name']   = $voiceMap[$item['voice_id'] ?? ''] ?? '';
+            $item['gender']       = 0;
+            $item['clip_type']    = 0;
+            $item['audio_type']   = (int)($item['audio_type'] ?? 0);
+            $item['remark']       = $item['remark'] ?? '';
+            $item['duration']     = $item['duration'] ?? 0;
+            $item['status']       = $this->mapShanjianStatusToHuman((int)($item['status'] ?? 0));
 
-            // 后台前端按 human 任务状态渲染：1成功 2失败 0/5生成中
-            $item['status'] = $this->mapShanjianStatusToHuman((int)($item['status'] ?? 0));
+            $item['video_points'] = $this->resolveShanjianVideoPoints($item, $costMap);
 
-            $item['video_points'] = $this->resolveShanjianVideoPoints($item);
-
-            $clip = $this->resolveShanjianClipFields($item, $packagingMap);
+            $clip = $this->resolveShanjianClipFields($item, $packagingMap, $costMap);
             $item['automatic_clip']  = $clip['automatic_clip'];
             $item['clip_status']     = $clip['clip_status'];
             $item['clip_points']     = $clip['clip_points'];
@@ -191,40 +253,29 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
     }
 
     /**
-     * @notes 获取数量
-     * @return int
-     * @author 段誉
-     * @date 2023/2/23 18:43
+     * 空串视为不筛选；models.id=9 兼容为闪剪
      */
-    public function count(): int
+    protected function normalizedModelVersion(): ?int
     {
         $modelVersion = $this->request->get('model_version');
-        
+
         // model_version=8 时，统计闪剪视频任务数量
         if ($modelVersion == 8) {
-            return $this->buildShanjianQuery(
-                $this->request->get('user'),
-                $this->request->get('start_time'),
-                $this->request->get('end_time')
-            )->count();
+            return $this->shanjianQuery()->count();
         }
-        
+
         $count = $this->buildQuery()->count();
-        
+
         // 未指定 model_version 时，加上闪剪视频数量
         if (empty($modelVersion)) {
-            $count += $this->buildShanjianQuery(
-                $this->request->get('user'),
-                $this->request->get('start_time'),
-                $this->request->get('end_time')
-            )->count();
+            $count += $this->shanjianQuery()->count();
         }
-        
+
         return $count;
     }
 
     /**
-     * 构建公共查询条件
+     * 把搜索条件挂到 hv 别名上，避免 join user 后字段歧义
      */
     protected function buildQuery()
     {
@@ -247,14 +298,26 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
                 $query->whereBetween('hv.create_time', [strtotime($startTime), strtotime($endTime)]);
             })
             // 蝉镜 type5 桥接：同一 task_id 会同时出现在 human 与闪剪列表，后台只保留闪剪侧
-            ->whereNotExists(function ($query) {
+            // 用 NOT IN 让子查询只物化一次；原 NOT EXISTS 是相关子查询，human 每行都要全表扫一遍闪剪表
+            ->whereNotIn('hv.task_id', function ($query) {
                 $query->name('shanjian_video_task')
-                    ->alias('sj_bridge')
-                    ->whereRaw('sj_bridge.task_id = hv.task_id')
-                    ->where('sj_bridge.shanjian_type', 5)
-                    ->whereNull('sj_bridge.delete_time');
+                    ->where('shanjian_type', 5)
+                    ->whereNull('delete_time')
+                    ->field('task_id');
             })
             ->where($this->searchWhere);
+    }
+
+    /**
+     * 按当前请求参数构建闪剪视频任务查询
+     */
+    protected function shanjianQuery()
+    {
+        return $this->buildShanjianQuery(
+            $this->request->get('user'),
+            $this->request->get('start_time'),
+            $this->request->get('end_time')
+        );
     }
 
     /**
@@ -274,32 +337,55 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
     }
 
     /**
-     * 获取模型列表，以 id 为键
+     * 获取模型列表，同时以 id、model_version 为键
      */
     protected function getModelMap(): array
     {
-        // 如果项目里模型版本来自数据库，用 Models 表
         $list = (new Models())
-            ->field(['id', 'type', 'channel', 'logo', 'name', 'is_enable'])
+            ->field(['id', 'type', 'channel', 'logo', 'name', 'is_enable', 'model_version'])
             ->where(['type' => ChatEnum::MODEL_TYPE_HUMAN])
             ->order('sort asc, id desc')
             ->select()
             ->toArray();
 
-        return array_column($list, null, 'id');
+        $map = [];
+        foreach ($list as $row) {
+            $map[(int)$row['id']] = $row;
+            $version = (int)($row['model_version'] ?? 0);
+            if ($version > 0) {
+                $map[$version] = $row;
+            }
+        }
 
-        // 如果你的原始数据真的来自 ConfigService，改成这样：
-        // $list = ConfigService::get('model', 'list', []);
-        // return array_column($list['channel'] ?? [], null, 'id');
+        return $map;
+    }
+
+    protected function resolveModelName(array $modelMap, int $modelVersion): string
+    {
+        if ($modelVersion <= 0) {
+            return '';
+        }
+
+        return (string)($modelMap[$modelVersion]['name'] ?? '');
     }
 
     /**
-     * 预加载当前页涉及的主播名称
-     * 注：这里简单返回全部，如数据量大可改为只查当前页涉及的 anchor_id
+     * 只加载当前页涉及的主播名称
      */
-    protected function getAnchorMap(): array
+    protected function getAnchorMapByIds(array $anchorIds): array
     {
-        return HumanAnchor::column('name', 'anchor_id');
+        $ids = [];
+        foreach ($anchorIds as $anchorId) {
+            $anchorId = trim((string)$anchorId);
+            if ($anchorId !== '' && $anchorId !== '0') {
+                $ids[] = $anchorId;
+            }
+        }
+        if ($ids === []) {
+            return [];
+        }
+
+        return HumanAnchor::whereIn('anchor_id', array_unique($ids))->column('name', 'anchor_id');
     }
 
     /**
@@ -319,14 +405,97 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
     }
 
     /**
-     * 统计某任务的 tokens 消耗
+     * 一次性查出本页任务流水，避免逐条扫 user_tokens_log
+     *
+     * @return array<string, array<int, array{points:float|int, duration:mixed}>>
+     */
+    protected function batchTokensCost(array $taskIds): array
+    {
+        $taskIds = $this->collectTaskIds($taskIds);
+        if ($taskIds === []) {
+            return [];
+        }
+
+        $changeTypes = array_values(array_unique(array_filter(array_merge(
+            [
+                AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO,
+                AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_PRO,
+                AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_YM,
+                AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_YMT,
+                AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_CHANJING,
+                self::CLIP_CHANGE_TYPE,
+            ],
+            self::SHANJIAN_VIDEO_CHANGE_TYPES,
+            self::SHANJIAN_CLIP_CHANGE_TYPES
+        ))));
+
+        $logs = UserTokensLog::whereIn('task_id', $taskIds)
+            ->whereIn('change_type', $changeTypes)
+            ->field('task_id,extra,change_type,action,change_amount')
+            ->select()
+            ->toArray();
+
+        $map = [];
+        foreach ($logs as $log) {
+            $taskId = (string)($log['task_id'] ?? '');
+            $changeType = (int)($log['change_type'] ?? 0);
+            if ($taskId === '' || $changeType === 0) {
+                continue;
+            }
+            if (!isset($map[$taskId][$changeType])) {
+                $map[$taskId][$changeType] = ['points' => 0, 'duration' => 0];
+            }
+            if ((int)$log['action'] === AccountLogEnum::INC) {
+                $map[$taskId][$changeType]['points'] -= $log['change_amount'] ?? 0;
+                continue;
+            }
+            $map[$taskId][$changeType]['points'] += $log['change_amount'] ?? 0;
+            $extra = is_array($log['extra'] ?? null)
+                ? $log['extra']
+                : json_decode((string)($log['extra'] ?? ''), true);
+            if (is_array($extra)) {
+                $map[$taskId][$changeType]['duration'] = $extra['音视频时长']
+                    ?? $extra['实际视频时长']
+                    ?? $map[$taskId][$changeType]['duration'];
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param  int|array  $changeType
+     * @return array{0:float|int,1:mixed}
+     */
+    protected function sumCost(array $costMap, string $taskId, int|array $changeType): array
+    {
+        if ($taskId === '') {
+            return [0, 0];
+        }
+
+        $points = 0;
+        $duration = 0;
+        foreach ((array)$changeType as $type) {
+            $row = $costMap[$taskId][(int)$type] ?? null;
+            if (!$row) {
+                continue;
+            }
+            $points += $row['points'] ?? 0;
+            if (!empty($row['duration'])) {
+                $duration = $row['duration'];
+            }
+        }
+
+        return [$points, $duration];
+    }
+
+    /**
+     * 统计某任务的 tokens 消耗（单条兜底）
      *
      * @param  int        $userId
      * @param  mixed      $taskId
      * @param  int|array  $changeType
      * @return array  [points, duration]
-     *   - action=1 退还:  points -= change_amount
-     *   - action=2 扣减:  points += change_amount，并从 extra.音视频时长 中提取 duration
      */
     protected function getTokensCost(int $userId, $taskId, int|array $changeType): array
     {
@@ -362,18 +531,23 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
     /**
      * 闪剪合成算力：优先任务表已结算的 video_token，否则按流水净消耗回填
      */
-    protected function resolveShanjianVideoPoints(array $item): float|int
+    protected function resolveShanjianVideoPoints(array $item, array $costMap = []): float|int
     {
         $videoToken = (float)($item['video_token'] ?? 0);
         if ($videoToken > 0) {
             return $videoToken;
         }
 
-        [$points] = $this->getTokensCost(
-            (int)$item['user_id'],
-            $item['task_id'] ?? '',
-            self::SHANJIAN_VIDEO_CHANGE_TYPES
-        );
+        $taskId = (string)($item['task_id'] ?? '');
+        if ($costMap !== []) {
+            [$points] = $this->sumCost($costMap, $taskId, self::SHANJIAN_VIDEO_CHANGE_TYPES);
+        } else {
+            [$points] = $this->getTokensCost(
+                (int)$item['user_id'],
+                $taskId,
+                self::SHANJIAN_VIDEO_CHANGE_TYPES
+            );
+        }
 
         return $points > 0 ? $points : 0;
     }
@@ -381,7 +555,7 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
     /**
      * 闪剪智剪字段：type=5 派生的 type=2 包装任务对应后台「剪辑」
      */
-    protected function resolveShanjianClipFields(array $item, array $packagingMap): array
+    protected function resolveShanjianClipFields(array $item, array $packagingMap, array $costMap = []): array
     {
         $extra = $item['extra'] ?? [];
         if (is_string($extra)) {
@@ -413,13 +587,21 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
             if ($clipStatus === 3) {
                 $clipResultUrl = FileService::getFileUrl($packaging['video_result_url'] ?? '');
                 $clipToken = (float)($packaging['video_token'] ?? 0);
-                $clipPoints = $clipToken > 0
-                    ? $clipToken
-                    : $this->getTokensCost(
+                if ($clipToken > 0) {
+                    $clipPoints = $clipToken;
+                } elseif ($costMap !== []) {
+                    $clipPoints = $this->sumCost(
+                        $costMap,
+                        (string)($packaging['task_id'] ?? ''),
+                        self::SHANJIAN_CLIP_CHANGE_TYPES
+                    )[0];
+                } else {
+                    $clipPoints = $this->getTokensCost(
                         (int)($packaging['user_id'] ?? $item['user_id']),
                         $packaging['task_id'] ?? '',
                         self::SHANJIAN_CLIP_CHANGE_TYPES
                     )[0];
+                }
                 $clipPoints = $clipPoints > 0 ? $clipPoints : 0;
             }
         }
@@ -444,6 +626,22 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
         };
     }
 
+    protected function getType5BridgeMap(array $taskIds): array
+    {
+        $taskIds = $this->collectTaskIds($taskIds);
+        if ($taskIds === []) {
+            return [];
+        }
+
+        $rows = ShanjianVideoTask::whereIn('task_id', $taskIds)
+            ->where('shanjian_type', 5)
+            ->field('id,task_id,user_id,status,video_token,duration,video_result_url,packaging_task_id,extra,name')
+            ->select()
+            ->toArray();
+
+        return array_column($rows, null, 'task_id');
+    }
+
     protected function getPackagingMap(array $list): array
     {
         $ids = [];
@@ -453,7 +651,7 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
                 $ids[] = $id;
             }
         }
-        if (empty($ids)) {
+        if ($ids === []) {
             return [];
         }
 
@@ -474,7 +672,7 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
                 $voiceIds[] = $voiceId;
             }
         }
-        if (empty($voiceIds)) {
+        if ($voiceIds === []) {
             return [];
         }
 
@@ -490,10 +688,31 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
                 $anchorIds[] = $anchorId;
             }
         }
-        if (empty($anchorIds)) {
+        if ($anchorIds === []) {
             return [];
         }
 
         return ShanjianAnchor::whereIn('anchor_id', array_unique($anchorIds))->column('name', 'anchor_id');
+    }
+
+    /**
+     * @param array $items
+     * @return string[]
+     */
+    protected function collectTaskIds(array $items): array
+    {
+        $ids = [];
+        foreach ($items as $item) {
+            if (is_array($item)) {
+                $taskId = trim((string)($item['task_id'] ?? ''));
+            } else {
+                $taskId = trim((string)$item);
+            }
+            if ($taskId !== '') {
+                $ids[] = $taskId;
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 }

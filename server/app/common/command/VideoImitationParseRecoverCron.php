@@ -4,6 +4,7 @@ namespace app\common\command;
 
 use app\api\logic\videoImitation\VideoImitationLogic;
 use app\common\model\videoImitation\VideoImitationTask;
+use app\common\service\videoImitation\VideoImitationImageLifecycle;
 use think\console\Command;
 use think\console\Input;
 use think\console\Output;
@@ -16,7 +17,6 @@ use think\facade\Log;
 class VideoImitationParseRecoverCron extends Command
 {
     private const RUNNING_LOCK_KEY = 'video_imitation_parse_recover_cron:running';
-    private const RUNNING_LOCK_TTL = 120;
     private const BATCH_SIZE = 20;
 
     protected function configure()
@@ -43,9 +43,10 @@ class VideoImitationParseRecoverCron extends Command
         $locked = 0;
 
         try {
-            $staleBefore = time() - VideoImitationLogic::PARSE_STALE_SECONDS;
+            $staleBefore = time() - VideoImitationImageLifecycle::PARSE_STALE_SECONDS;
             $tasks = VideoImitationTask::where('media_type', VideoImitationTask::MEDIA_TYPE_IMAGE_TEXT)
                 ->where('status', VideoImitationTask::STATUS_PARSING)
+                ->where('task_delete', 0)
                 ->where('update_time', '<=', $staleBefore)
                 ->order('id', 'asc')
                 ->limit(self::BATCH_SIZE)
@@ -56,7 +57,7 @@ class VideoImitationParseRecoverCron extends Command
             self::log(sprintf(
                 '开始扫描 stale_before=%d stale_seconds=%d count=%d',
                 $staleBefore,
-                VideoImitationLogic::PARSE_STALE_SECONDS,
+                VideoImitationImageLifecycle::PARSE_STALE_SECONDS,
                 count($tasks)
             ));
 
@@ -92,7 +93,7 @@ class VideoImitationParseRecoverCron extends Command
             return (bool)$redis->set(
                 self::RUNNING_LOCK_KEY,
                 $lockValue,
-                ['nx', 'ex' => self::RUNNING_LOCK_TTL]
+                ['nx', 'ex' => VideoImitationImageLifecycle::PARSE_CRON_LOCK_TTL]
             );
         } catch (\Throwable $th) {
             self::log('获取运行锁失败：' . $th->getMessage());

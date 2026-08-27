@@ -340,7 +340,7 @@ trait DeviceTaskTrait
                     'taskId' => $task->id,
                     'body' => $publish['material_subtitle'],
                     'tag' => $publish['material_tag'] ?? '',
-
+                    'pic' => FileService::getFileUrl($publish->pic ?? ''),
 
                 ], JSON_UNESCAPED_UNICODE)
             );

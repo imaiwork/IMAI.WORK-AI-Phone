@@ -1727,6 +1727,31 @@
 					}
 				}
 			]
+		},
+		{
+			"root": "ai_modules/hotspot",
+			"pages": [
+				{
+					"path": "pages/index/index",
+					"style": {
+						"navigationBarTitleText": "热点追踪",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/detail/detail",
+					"style": {
+						"navigationBarTitleText": "创作详情",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				}
+			]
 		}
 	],
 	"globalStyle": {

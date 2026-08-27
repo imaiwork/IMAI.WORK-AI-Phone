@@ -68,9 +68,9 @@
                             v-if="currHandleType == HandleType.ABOUT"
                             class="grow min-h-0 flex flex-col w-full px-[60rpx]">
                             <view class="flex flex-col items-center justify-center w-full grow min-h-0">
-                                <image :src="websiteConfig.shop_logo" class="w-[140rpx] h-[136rpx]" />
+                                <image :src="siteShopLogo" class="w-[140rpx] h-[136rpx]" />
                                 <text class="font-medium text-[30rpx] mt-[40rpx]">
-                                    {{ websiteConfig.shop_name }}
+                                    {{ siteName }}
                                 </text>
                                 <text class="opacity-50 mt-[20rpx]"> 专为企业打造的下一代 AI 工具 </text>
                                 <view
@@ -166,8 +166,8 @@
     </popup-bottom>
     <update-user-info
         v-model:show="showUpdateUserPopup"
-        :logo="websiteConfig.shop_logo"
-        :title="websiteConfig.shop_name"
+        :logo="siteShopLogo"
+        :title="siteName"
         :userInfo="userInfo"
         @update="handleUpdateUser" />
 </template>
@@ -187,7 +187,9 @@ const userStore = useUserStore();
 const { userInfo, isLogin } = toRefs(userStore);
 
 const domain = computed(() => appStore.config.domain);
-const websiteConfig = computed(() => appStore.getWebsiteConfig);
+// OEM 站点用 OEM 品牌,主站回落平台配置
+const siteShopLogo = computed(() => appStore.getSiteShopLogo);
+const siteName = computed(() => appStore.getSiteName);
 const copyrightConfig = computed(() => appStore.getCopyRightConfig);
 const getVersion = computed(() => appStore.getVersion?.version_name);
 const byName = computed(() => appStore.getByName);

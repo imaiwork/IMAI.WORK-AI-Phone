@@ -11,6 +11,7 @@ use app\common\model\user\UserTokensLog;
 use app\common\model\videoImitation\VideoImitationTask;
 use app\common\service\FileService;
 use app\common\service\ShanjianQueueService;
+use app\common\service\videoImitation\VideoImitationImageBilling;
 
 /**
  * 视频复刻任务列表
@@ -116,10 +117,12 @@ class TaskLists extends BaseAdminDataLists implements ListsSearchInterface
         if (!empty($taskIds)) {
             $imageTextTaskIds = [];
             $videoTaskIds = [];
+            $billingRoundByTaskId = [];
             foreach ($lists as $row) {
                 $id = (int)$row['id'];
                 if ((int)($row['media_type'] ?? VideoImitationTask::MEDIA_TYPE_VIDEO) === VideoImitationTask::MEDIA_TYPE_IMAGE_TEXT) {
                     $imageTextTaskIds[] = $id;
+                    $billingRoundByTaskId[$id] = (int)($row['billing_round'] ?? 1);
                 } else {
                     $videoTaskIds[] = $id;
                 }
@@ -144,32 +147,14 @@ class TaskLists extends BaseAdminDataLists implements ListsSearchInterface
             }
 
             // 图文：仅抓取(10321)+改写(2002)；忽略视频文案提取/视频生成等侧流水
-            // 说明：10321 计费键在 task_id；2002 因 checkCode 未命中 ModelConfig，计费键落在 source_sn
+            // 新数据：数字 task_id + 判别；旧数据：枚举复合键 IN，不再 LIKE
             if (!empty($imageTextTaskIds)) {
-                $orSql = [];
-                $binds = [];
-                foreach ($imageTextTaskIds as $id) {
-                    $orSql[] = 'task_id LIKE ?';
-                    $binds[] = 'video_imitation_info_extract_' . $id . '_%';
-                    $orSql[] = 'task_id LIKE ?';
-                    $binds[] = 'video_imitation_img_' . $id . '_%';
-                    $orSql[] = 'source_sn LIKE ?';
-                    $binds[] = 'video_imitation_img_' . $id . '_%';
-                }
-                $imageLogs = UserTokensLog::whereRaw('(' . implode(' OR ', $orSql) . ')', $binds)
-                    ->where('change_type', 'in', [
-                        AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE,
-                        AccountLogEnum::TOKENS_DEC_IMAGE_TO_IMAGE,
-                    ])
-                    ->select()
-                    ->toArray();
-                foreach ($imageLogs as $log) {
-                    $resolvedId = self::resolveImageTextTaskIdFromLog($log);
-                    if ($resolvedId === null || !in_array($resolvedId, $imageTextTaskIds, true)) {
-                        continue;
+                $imageLogsByTask = self::collectImageTextTokenLogs($imageTextTaskIds, $billingRoundByTaskId);
+                foreach ($imageLogsByTask as $tid => $taskLogs) {
+                    foreach ($taskLogs as $log) {
+                        self::accumulateTokenCost($logsGrouped, (int)$tid, $log);
+                        self::appendTokenCostDetail($detailsByTask, (int)$tid, $log);
                     }
-                    self::accumulateTokenCost($logsGrouped, $resolvedId, $log);
-                    self::appendTokenCostDetail($detailsByTask, $resolvedId, $log);
                 }
             }
 
@@ -334,6 +319,84 @@ class TaskLists extends BaseAdminDataLists implements ListsSearchInterface
     }
 
     /**
+     * 图文算力流水一次归集：数字 task_id + 枚举旧复合键 IN
+     *
+     * @param list<int> $imageTextTaskIds
+     * @param array<int,int> $billingRoundByTaskId  任务id => billing_round
+     * @return array<int, list<array<string,mixed>>>  任务id => 流水行
+     */
+    public static function collectImageTextTokenLogs(array $imageTextTaskIds, array $billingRoundByTaskId): array
+    {
+        $normalizedIds = [];
+        foreach ($imageTextTaskIds as $id) {
+            $id = (int)$id;
+            if ($id > 0) {
+                $normalizedIds[] = $id;
+            }
+        }
+        $imageTextTaskIds = array_values(array_unique($normalizedIds));
+        if ($imageTextTaskIds === []) {
+            return [];
+        }
+
+        $taskIdKeys = [];
+        $sourceSns = [];
+        foreach ($imageTextTaskIds as $taskId) {
+            $maxRound = (int)($billingRoundByTaskId[$taskId] ?? 1);
+            $taskIdKeys[] = (string)$taskId;
+            foreach (VideoImitationImageBilling::legacyTaskIds($taskId, $maxRound) as $key) {
+                $taskIdKeys[] = $key;
+            }
+            foreach (VideoImitationImageBilling::legacySourceSns($taskId, $maxRound) as $key) {
+                $sourceSns[] = $key;
+            }
+        }
+        $taskIdKeys = array_values(array_unique($taskIdKeys));
+        $sourceSns = array_values(array_unique($sourceSns));
+
+        $query = UserTokensLog::where('change_type', 'in', [
+            AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE,
+            AccountLogEnum::TOKENS_DEC_IMAGE_TO_IMAGE,
+        ]);
+        $query->where(function ($q) use ($taskIdKeys, $sourceSns) {
+            $q->where('task_id', 'in', $taskIdKeys);
+            if ($sourceSns !== []) {
+                $q->whereOr('source_sn', 'in', $sourceSns);
+            }
+        });
+        $logs = $query->select()->toArray();
+
+        $consumedLogIds = [];
+        $result = [];
+        foreach ($logs as $log) {
+            $logId = (int)($log['id'] ?? 0);
+            if ($logId > 0 && isset($consumedLogIds[$logId])) {
+                continue;
+            }
+
+            $rowTaskId = (string)($log['task_id'] ?? '');
+            if ($rowTaskId !== '' && ctype_digit($rowTaskId) && !VideoImitationImageBilling::isImageTextLog($log)) {
+                continue;
+            }
+
+            $resolvedId = self::resolveImageTextTaskIdFromLog($log);
+            if ($resolvedId === null || !in_array($resolvedId, $imageTextTaskIds, true)) {
+                continue;
+            }
+
+            if ($logId > 0) {
+                $consumedLogIds[$logId] = true;
+            }
+            if (!isset($result[$resolvedId])) {
+                $result[$resolvedId] = [];
+            }
+            $result[$resolvedId][] = $log;
+        }
+
+        return $result;
+    }
+
+    /**
      * 从图文流水解析任务主键（task_id / source_sn 计费键，或 extra.task_id）
      */
     private static function resolveImageTextTaskIdFromLog(array $log): ?int
@@ -350,6 +413,13 @@ class TaskLists extends BaseAdminDataLists implements ListsSearchInterface
         }
         if (is_array($extra) && isset($extra['task_id']) && is_numeric($extra['task_id'])) {
             return (int)$extra['task_id'];
+        }
+
+        if (VideoImitationImageBilling::isImageTextLog($log)) {
+            $numericTaskId = (string)($log['task_id'] ?? '');
+            if ($numericTaskId !== '' && ctype_digit($numericTaskId)) {
+                return (int)$numericTaskId;
+            }
         }
 
         return null;

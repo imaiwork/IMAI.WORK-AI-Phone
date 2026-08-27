@@ -410,16 +410,16 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
                 library_type: copyTab.value,
                 driver_type: driverType,
             });
-            uni.showToast({ title: "导入成功", icon: "none", duration: 2000 });
+            uni.hideLoading();
+            uni.showToast({ title: "导入成功", icon: "none", duration: 3000 });
             // 视频驱动：导入后切到对应类型，方便查看结果
             if (copyTab.value === CopyLibraryTypeEnum.DRIVE) {
                 copyDriveType.value = driverType;
             }
             queryCopyList();
         } catch (error: any) {
-            uni.showToast({ title: error || "导入失败，请重试", icon: "none", duration: 3000 });
-        } finally {
             uni.hideLoading();
+            uni.showToast({ title: error || "导入失败，请重试", icon: "none", duration: 3000 });
         }
     };
 

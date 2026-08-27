@@ -7,6 +7,7 @@ use app\common\logic\BaseLogic;
 use app\common\model\decorate\DecorateTabbar;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
+use app\common\service\wechat\MnpCiService;
 use Exception;
 
 /**
@@ -162,7 +163,7 @@ class MnpSettingsLogic extends BaseLogic
                 'appid'   => $appid,
             ];
             $json_data = json_encode($data);
-            $command = 'node ../extend/miniprogram-ci/upload.js ' . escapeshellarg($json_data) . ' 2>&1';
+            $command = MnpCiService::buildUploadCommand('../extend/miniprogram-ci/upload.js', $json_data);
             $output = null;
             $retval = null;
             exec($command, $output, $retval);

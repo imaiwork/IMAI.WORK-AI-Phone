@@ -26,17 +26,17 @@ CREATE TABLE IF NOT EXISTS `la_geo_project` (
 
 -- ---------- 2) GEO 关键词/问题库 ----------
 CREATE TABLE IF NOT EXISTS `la_geo_keyword` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `project_id` int(11) NOT NULL DEFAULT 0,
-  `type` varchar(30) NOT NULL DEFAULT '' COMMENT '品牌词|行业词|产品词|长尾词|AI问题|场景问题|...',
-  `value` varchar(500) NOT NULL DEFAULT '',
-  `topic_id` int(11) NOT NULL DEFAULT 0 COMMENT '所属话题；0=未挂话题的旧关键词',
-  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '0=停用 1=启用',
-  `source` varchar(20) NOT NULL DEFAULT '' COMMENT 'init|ai|ai_search|monitor|manual',
-  `create_time` int(11) DEFAULT NULL,
-  `delete_time` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`), KEY `idx_project` (`project_id`), KEY `idx_topic` (`topic_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='GEO关键词/问题库';
+                                                `id` int(11) NOT NULL AUTO_INCREMENT,
+    `project_id` int(11) NOT NULL DEFAULT 0,
+    `type` varchar(30) NOT NULL DEFAULT '' COMMENT '品牌词|行业词|产品词|长尾词|AI问题|场景问题|...',
+    `value` varchar(500) NOT NULL DEFAULT '',
+    `topic_id` int(11) NOT NULL DEFAULT 0 COMMENT '所属话题；0=未挂话题的旧关键词',
+    `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '0=停用 1=启用',
+    `source` varchar(20) NOT NULL DEFAULT '' COMMENT 'init|ai|ai_search|monitor|manual',
+    `create_time` int(11) DEFAULT NULL,
+    `delete_time` int(11) DEFAULT NULL,
+    PRIMARY KEY (`id`), KEY `idx_project` (`project_id`), KEY `idx_topic` (`topic_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='GEO关键词/问题库';
 
 -- ---------- 3) GEO 知识实体 ----------
 CREATE TABLE IF NOT EXISTS `la_geo_knowledge` (
@@ -179,41 +179,41 @@ CREATE TABLE IF NOT EXISTS `la_geo_site_task` (
 
 -- ---------- 10) GEO 内容投递记录(含 v5 投稿类型、v8 效果回收列) ----------
 CREATE TABLE IF NOT EXISTS `la_geo_publish` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `project_id` int(11) NOT NULL DEFAULT 0,
-  `content_id` int(11) NOT NULL DEFAULT 0,
-  `media_id` int(11) NOT NULL DEFAULT 0,
-  `site_id` int(11) NOT NULL DEFAULT 0 COMMENT '官网发布的站点ID；0=媒体投递',
-  `channel` varchar(20) NOT NULL DEFAULT '' COMMENT '发布来源 空=媒体投递 site=官网站点 auth=授权直发 phone=AI手机',
-  `user_id` int(11) NOT NULL DEFAULT 0 COMMENT '扣费人ID,退费按此原路退回',
-  `media_name` varchar(100) NOT NULL DEFAULT '',
-  `title` varchar(255) NOT NULL DEFAULT '',
-  `status` varchar(20) NOT NULL DEFAULT 'pending' COMMENT 'pending|published|failed',
-  `mode` varchar(20) NOT NULL DEFAULT 'manual' COMMENT 'manual|api|register|auth|phone',
-  `media_type` varchar(10) NOT NULL DEFAULT 'article' COMMENT '投稿类型 article=图文 video=视频',
-  `video_id` int(11) NOT NULL DEFAULT 0 COMMENT '视频投稿关联 geo_video_task.id',
-  `cost` decimal(10,2) NOT NULL DEFAULT 0 COMMENT '投递扣费(元)',
-  `published_url` varchar(1024) NOT NULL DEFAULT '' COMMENT '已发布文章/视频链接(签名链可能较长)',
-  `channel_type` varchar(30) NOT NULL DEFAULT '' COMMENT '登记渠道类型 portal|we_media|official|baike',
-  `site_name` varchar(100) NOT NULL DEFAULT '' COMMENT '登记发布站点名',
-  `account` varchar(500) NOT NULL DEFAULT '' COMMENT '媒体号名称(AI手机多账号逗号拼接)',
-  `publish_time` int(11) NOT NULL DEFAULT 0 COMMENT '登记的发布时间',
-  `error_msg` varchar(500) NOT NULL DEFAULT '' COMMENT '发布失败原因',
-  `provider_order` varchar(64) NOT NULL DEFAULT '' COMMENT '发稿平台订单号(mode=api)；AI手机为 sv_publish_setting.id',
-  `api_quota` int(11) NOT NULL DEFAULT 0 COMMENT '中台发稿场景扣费额度(quota),api 模式退款时回传',
-  `stat_views` int(11) NOT NULL DEFAULT 0 COMMENT '播放/阅读数',
-  `stat_likes` int(11) NOT NULL DEFAULT 0 COMMENT '点赞数',
-  `stat_comments` int(11) NOT NULL DEFAULT 0 COMMENT '评论数',
-  `stat_collects` int(11) NOT NULL DEFAULT 0 COMMENT '收藏数',
-  `stat_shares` int(11) NOT NULL DEFAULT 0 COMMENT '分享数',
-  `stat_sync_time` int(11) NOT NULL DEFAULT 0 COMMENT '最近一次回收时间',
-  `stat_status` varchar(16) NOT NULL DEFAULT '' COMMENT '回收状态 空=未回收 ok|unsupported|failed',
-  `stat_error` varchar(200) NOT NULL DEFAULT '' COMMENT '回收失败原因',
-  `create_time` int(11) DEFAULT NULL,
-  `update_time` int(11) DEFAULT NULL,
-  `delete_time` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`), KEY `idx_project` (`project_id`), KEY `idx_content` (`content_id`), KEY `idx_site` (`site_id`), KEY `idx_stat_sync` (`status`, `stat_sync_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='GEO内容投递记录';
+                                                `id` int(11) NOT NULL AUTO_INCREMENT,
+    `project_id` int(11) NOT NULL DEFAULT 0,
+    `content_id` int(11) NOT NULL DEFAULT 0,
+    `media_id` int(11) NOT NULL DEFAULT 0,
+    `site_id` int(11) NOT NULL DEFAULT 0 COMMENT '官网发布的站点ID；0=媒体投递',
+    `channel` varchar(20) NOT NULL DEFAULT '' COMMENT '发布来源 空=媒体投递 site=官网站点 auth=授权直发 phone=AI手机',
+    `user_id` int(11) NOT NULL DEFAULT 0 COMMENT '扣费人ID,退费按此原路退回',
+    `media_name` varchar(100) NOT NULL DEFAULT '',
+    `title` varchar(255) NOT NULL DEFAULT '',
+    `status` varchar(20) NOT NULL DEFAULT 'pending' COMMENT 'pending|published|failed',
+    `mode` varchar(20) NOT NULL DEFAULT 'manual' COMMENT 'manual|api|register|auth|phone',
+    `media_type` varchar(10) NOT NULL DEFAULT 'article' COMMENT '投稿类型 article=图文 video=视频',
+    `video_id` int(11) NOT NULL DEFAULT 0 COMMENT '视频投稿关联 geo_video_task.id',
+    `cost` decimal(10,2) NOT NULL DEFAULT 0 COMMENT '投递扣费(元)',
+    `published_url` varchar(1024) NOT NULL DEFAULT '' COMMENT '已发布文章/视频链接(签名链可能较长)',
+    `channel_type` varchar(30) NOT NULL DEFAULT '' COMMENT '登记渠道类型 portal|we_media|official|baike',
+    `site_name` varchar(100) NOT NULL DEFAULT '' COMMENT '登记发布站点名',
+    `account` varchar(500) NOT NULL DEFAULT '' COMMENT '媒体号名称(AI手机多账号逗号拼接)',
+    `publish_time` int(11) NOT NULL DEFAULT 0 COMMENT '登记的发布时间',
+    `error_msg` varchar(500) NOT NULL DEFAULT '' COMMENT '发布失败原因',
+    `provider_order` varchar(64) NOT NULL DEFAULT '' COMMENT '发稿平台订单号(mode=api)；AI手机为 sv_publish_setting.id',
+    `api_quota` int(11) NOT NULL DEFAULT 0 COMMENT '中台发稿场景扣费额度(quota),api 模式退款时回传',
+    `stat_views` int(11) NOT NULL DEFAULT 0 COMMENT '播放/阅读数',
+    `stat_likes` int(11) NOT NULL DEFAULT 0 COMMENT '点赞数',
+    `stat_comments` int(11) NOT NULL DEFAULT 0 COMMENT '评论数',
+    `stat_collects` int(11) NOT NULL DEFAULT 0 COMMENT '收藏数',
+    `stat_shares` int(11) NOT NULL DEFAULT 0 COMMENT '分享数',
+    `stat_sync_time` int(11) NOT NULL DEFAULT 0 COMMENT '最近一次回收时间',
+    `stat_status` varchar(16) NOT NULL DEFAULT '' COMMENT '回收状态 空=未回收 ok|unsupported|failed',
+    `stat_error` varchar(200) NOT NULL DEFAULT '' COMMENT '回收失败原因',
+    `create_time` int(11) DEFAULT NULL,
+    `update_time` int(11) DEFAULT NULL,
+    `delete_time` int(11) DEFAULT NULL,
+    PRIMARY KEY (`id`), KEY `idx_project` (`project_id`), KEY `idx_content` (`content_id`), KEY `idx_site` (`site_id`), KEY `idx_stat_sync` (`status`, `stat_sync_time`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='GEO内容投递记录';
 
 -- ---------- 11) GEO 媒体库(后台预置投放渠道;含 v5 content_form/platform_code) ----------
 CREATE TABLE IF NOT EXISTS `la_geo_media` (
@@ -285,25 +285,25 @@ CREATE TABLE IF NOT EXISTS `la_geo_report` (
 
 -- ---------- 14) GEO 授权账号(v5 Web API 发布通道) ----------
 CREATE TABLE IF NOT EXISTS `la_geo_auth_account` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL DEFAULT 0,
-  `team_id` int(11) NOT NULL DEFAULT 0 COMMENT '企业空间共享；0=个人',
-  `platform` varchar(30) NOT NULL DEFAULT '' COMMENT '平台标识(GeoAuthLogic::PLATFORMS)',
-  `name` varchar(100) NOT NULL DEFAULT '' COMMENT '账号备注名',
-  `credentials` text COMMENT '凭据 JSON(appid/secret/token 等,密钥字段为AES-GCM密文)',
-  `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '投稿路由开关 0关1开',
-  `last_check` varchar(255) NOT NULL DEFAULT '' COMMENT '最近连通性检测结果',
-  `create_time` int(11) DEFAULT NULL,
-  `update_time` int(11) DEFAULT NULL,
-  `delete_time` int(11) DEFAULT NULL,
-  `active_key` varchar(80) GENERATED ALWAYS AS (
-    IF(`delete_time` IS NULL, CONCAT(`team_id`, ':', `user_id`, ':', `platform`), NULL)
-  ) STORED COMMENT '活跃行唯一键(软删后为NULL,允许多条历史)',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_active_key` (`active_key`),
-  KEY `idx_space` (`team_id`,`user_id`),
-  KEY `idx_platform` (`platform`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='GEO授权账号(Web API发布通道)';
+                                                     `id` int(11) NOT NULL AUTO_INCREMENT,
+    `user_id` int(11) NOT NULL DEFAULT 0,
+    `team_id` int(11) NOT NULL DEFAULT 0 COMMENT '企业空间共享；0=个人',
+    `platform` varchar(30) NOT NULL DEFAULT '' COMMENT '平台标识(GeoAuthLogic::PLATFORMS)',
+    `name` varchar(100) NOT NULL DEFAULT '' COMMENT '账号备注名',
+    `credentials` text COMMENT '凭据 JSON(appid/secret/token 等,密钥字段为AES-GCM密文)',
+    `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '投稿路由开关 0关1开',
+    `last_check` varchar(255) NOT NULL DEFAULT '' COMMENT '最近连通性检测结果',
+    `create_time` int(11) DEFAULT NULL,
+    `update_time` int(11) DEFAULT NULL,
+    `delete_time` int(11) DEFAULT NULL,
+    `active_key` varchar(80) GENERATED ALWAYS AS (
+                                                     IF(`delete_time` IS NULL, CONCAT(`team_id`, ':', `user_id`, ':', `platform`), NULL)
+    ) STORED COMMENT '活跃行唯一键(软删后为NULL,允许多条历史)',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_active_key` (`active_key`),
+    KEY `idx_space` (`team_id`,`user_id`),
+    KEY `idx_platform` (`platform`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='GEO授权账号(Web API发布通道)';
 
 -- ============================================================
 -- 种子一:GEO 计费 —— 已切换为【模型计费】(2026-08-18)
@@ -313,17 +313,57 @@ CREATE TABLE IF NOT EXISTS `la_geo_auth_account` (
 -- 此处清理历史 geo_* 场景行(幂等;新装库本就无这些行)。
 -- ============================================================
 
-DELETE FROM `la_model_config` WHERE `scene` LIKE 'geo\_%';
+INSERT INTO `la_model_config` (`scene`, `code`, `unit`, `name`, `score`, `description`, `status`, `create_time`, `update_time`)
+SELECT 'geo_content', 14001, 'tokens/算力', 'AI生成文章', 200, '(GEO内容创作)聊天式/批量生成文章,按实际消耗token计费(200tokens/算力)；失败不扣', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+    WHERE NOT EXISTS (SELECT 1 FROM `la_model_config` WHERE `scene` = 'geo_content');
 
--- 监测引擎的上游模型需在 models_cost 有计价行(缺行则该次调用免费并告警)。
--- 四引擎监测模型(deepseek-v4-pro / doubao-seed-2-0-lite-260428 / qwen-flash / hy3)
--- 均随中台对话模型同步下发,无需本地种子;模型同步后会按
--- GeoChargeService::MONITOR_PRICE_MODELS 清单检查计价行并在后台提示。
--- (曾误种 doubao-seed-1-6-250615 / doubao-1-5-pro-32k-250115 两行:监测实际
---  不用这两个模型,已从本文件移除;老库若已插入,用下面语句清理,幂等)
-DELETE FROM `la_models_cost`
-WHERE `model_id` = 0 AND `type` = 1
-  AND `alias` IN ('doubao-seed-1-6-250615', 'doubao-1-5-pro-32k-250115');
+INSERT INTO `la_model_config` (`scene`, `code`, `unit`, `name`, `score`, `description`, `status`, `create_time`, `update_time`)
+SELECT 'geo_monitor', 14002, 'tokens/算力', 'AI搜索监测', 200, '(GEO监测/诊断)按 场景问题×AI引擎 逐次监测,按实际消耗token计费(200tokens/算力)；引擎失败不扣', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+    WHERE NOT EXISTS (SELECT 1 FROM `la_model_config` WHERE `scene` = 'geo_monitor');
+
+INSERT INTO `la_model_config` (`scene`, `code`, `unit`, `name`, `score`, `description`, `status`, `create_time`, `update_time`)
+SELECT 'geo_topic_ai', 14003, 'tokens/算力', 'AI推荐话题', 400, '(GEO初始化/设置)AI智能推荐话题,按实际消耗token计费(400tokens/算力)', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+    WHERE NOT EXISTS (SELECT 1 FROM `la_model_config` WHERE `scene` = 'geo_topic_ai');
+
+INSERT INTO `la_model_config` (`scene`, `code`, `unit`, `name`, `score`, `description`, `status`, `create_time`, `update_time`)
+SELECT 'geo_question_ai', 14004, 'tokens/算力', 'AI生成场景问题', 200, '(GEO话题)AI为话题生成场景问题,按实际消耗token计费(200tokens/算力)', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+    WHERE NOT EXISTS (SELECT 1 FROM `la_model_config` WHERE `scene` = 'geo_question_ai');
+
+INSERT INTO `la_model_config` (`scene`, `code`, `unit`, `name`, `score`, `description`, `status`, `create_time`, `update_time`)
+SELECT 'geo_knowledge', 14005, 'tokens/算力', '知识解析导入', 500, '(GEO知识库)AI从导入文档/文本抽取知识实体,按实际消耗token计费(500tokens/算力)', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+    WHERE NOT EXISTS (SELECT 1 FROM `la_model_config` WHERE `scene` = 'geo_knowledge');
+
+INSERT INTO `la_model_config` (`scene`, `code`, `unit`, `name`, `score`, `description`, `status`, `create_time`, `update_time`)
+SELECT 'geo_analyze', 14006, 'tokens/算力', '品牌分析', 300, '(GEO品牌分析)AI分析行业覆盖/竞争/机会并链式生成关键词,按实际消耗token计费(300tokens/算力)', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+    WHERE NOT EXISTS (SELECT 1 FROM `la_model_config` WHERE `scene` = 'geo_analyze');
+
+INSERT INTO `la_model_config` (`scene`, `code`, `unit`, `name`, `score`, `description`, `status`, `create_time`, `update_time`)
+SELECT 'geo_suggestion', 14007, 'tokens/算力', '优化建议', 600, '(GEO智能体)基于近期监测生成优化建议,按实际消耗token计费(600tokens/算力)', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+    WHERE NOT EXISTS (SELECT 1 FROM `la_model_config` WHERE `scene` = 'geo_suggestion');
+
+INSERT INTO `la_model_config` (`scene`, `code`, `unit`, `name`, `score`, `description`, `status`, `create_time`, `update_time`)
+SELECT 'geo_video', 14008, 'tokens/算力', '文章转短视频', 50, '(GEO智能体)文章提炼口播文案,按实际消耗token计费(50tokens/算力)；视频合成请使用系统视频接口', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+    WHERE NOT EXISTS (SELECT 1 FROM `la_model_config` WHERE `scene` = 'geo_video');
+
+INSERT INTO `la_model_config` (`scene`, `code`, `unit`, `name`, `score`, `description`, `status`, `create_time`, `update_time`)
+SELECT 'geo_match_brand', 14009, 'tokens/算力', 'AI匹配品牌信息', 150, '(GEO初始化)根据品牌/公司名称AI匹配所属行业与品牌别名,按实际消耗token计费(150tokens/算力)；失败不扣', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+    WHERE NOT EXISTS (SELECT 1 FROM `la_model_config` WHERE `scene` = 'geo_match_brand');
+
+INSERT INTO `la_model_config` (`scene`, `code`, `unit`, `name`, `score`, `description`, `status`, `create_time`, `update_time`)
+SELECT 'geo_report', 14010, 'tokens/算力', 'GEO诊断报告', 250, '(GEO助手)生成/重新生成GEO诊断报告,含报告内AI优化建议刷新,按实际消耗token计费(250tokens/算力)；查看已生成报告免费', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+    WHERE NOT EXISTS (SELECT 1 FROM `la_model_config` WHERE `scene` = 'geo_report');
+
+-- 兼容已执行过旧版(固定价)种子的库:把生成类 8 场景统一刷成按量计费单价(幂等,可重复执行)
+UPDATE `la_model_config` SET `score`=200, `unit`='tokens/算力', `update_time`=UNIX_TIMESTAMP() WHERE `scene`='geo_content';
+UPDATE `la_model_config` SET `score`=400, `unit`='tokens/算力', `update_time`=UNIX_TIMESTAMP() WHERE `scene`='geo_topic_ai';
+UPDATE `la_model_config` SET `score`=200, `unit`='tokens/算力', `update_time`=UNIX_TIMESTAMP() WHERE `scene`='geo_question_ai';
+UPDATE `la_model_config` SET `score`=500, `unit`='tokens/算力', `update_time`=UNIX_TIMESTAMP() WHERE `scene`='geo_knowledge';
+UPDATE `la_model_config` SET `score`=300, `unit`='tokens/算力', `update_time`=UNIX_TIMESTAMP() WHERE `scene`='geo_analyze';
+UPDATE `la_model_config` SET `score`=600, `unit`='tokens/算力', `update_time`=UNIX_TIMESTAMP() WHERE `scene`='geo_suggestion';
+UPDATE `la_model_config` SET `score`=150, `unit`='tokens/算力', `update_time`=UNIX_TIMESTAMP() WHERE `scene`='geo_match_brand';
+UPDATE `la_model_config` SET `score`=250, `unit`='tokens/算力', `update_time`=UNIX_TIMESTAMP() WHERE `scene`='geo_report';
+UPDATE `la_model_config` SET `score`=200, `unit`='tokens/算力', `update_time`=UNIX_TIMESTAMP() WHERE `scene`='geo_monitor';
+UPDATE `la_model_config` SET `score`=50, `unit`='tokens/算力', `update_time`=UNIX_TIMESTAMP() WHERE `scene`='geo_video';
 
 -- ============================================================
 -- 种子二:GEO 媒体库(la_geo_media,8 条)。
@@ -340,41 +380,41 @@ SELECT '博客园','blog','IT科技','综合全国',7,7,98,'当日','包网页�
 WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='cnblogs' AND `delete_time` IS NULL);
 
 INSERT INTO `la_geo_media`
-  (name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
+(name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
 SELECT '百家号','media_v','综合','综合全国',8,7,75,'当日','包资讯收录',1,1,0.00,'发到你自己的百家号,需先在「设置-授权账号」授权；发文走平台统一审核',1,'baijiahao','article','baijiahao',25,UNIX_TIMESTAMP()
-WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='baijiahao' AND `delete_time` IS NULL);
+    WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='baijiahao' AND `delete_time` IS NULL);
 
 -- --- 官方授权自有账号(v5;price=0,需先在「设置-授权账号」授权) ---
 INSERT INTO `la_geo_media`
-  (name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
+(name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
 SELECT '微信公众号(自有)','media_v','综合','综合全国',7,9,99,'当日','平台内收录',1,1,0.00,'发到你自己的公众号,需先在「设置-授权账号」授权；走草稿箱+自动群发,不收代发费',1,'wechat_oa','article','wechat_oa',9995,UNIX_TIMESTAMP()
-WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='wechat_oa' AND `delete_time` IS NULL);
+    WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='wechat_oa' AND `delete_time` IS NULL);
 
 INSERT INTO `la_geo_media`
-  (name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
+(name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
 SELECT '语雀(自有知识库)','blog','IT科技','综合全国',6,5,99,'当日','包网页收录',1,1,0.00,'发到你自己的语雀知识库,需先在「设置-授权账号」授权；公开文档可被搜索引擎与AI收录',1,'yuque','article','yuque',9994,UNIX_TIMESTAMP()
-WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='yuque' AND `delete_time` IS NULL);
+    WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='yuque' AND `delete_time` IS NULL);
 
 -- --- AI 手机渠道 4 条(price=0;用系统已绑定的 AI 手机账号自动发布) ---
 INSERT INTO `la_geo_media`
-  (name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
+(name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
 SELECT '小红书','ai_phone','综合','综合全国',6,9,95,'当日','平台内收录',0,1,0.00,'使用系统中已绑定的 AI 手机账号自动发布(图文/视频)',1,'xhs','article,video','xhs',9999,UNIX_TIMESTAMP()
-WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='xhs' AND `delete_time` IS NULL);
+    WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='xhs' AND `delete_time` IS NULL);
 
 INSERT INTO `la_geo_media`
-  (name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
+(name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
 SELECT '抖音','ai_phone','综合','综合全国',6,9,95,'当日','平台内收录',0,1,0.00,'使用系统中已绑定的 AI 手机账号自动发布(视频/图文)',1,'douyin','article,video','douyin_phone',9998,UNIX_TIMESTAMP()
-WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='douyin' AND `delete_time` IS NULL);
+    WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='douyin' AND `delete_time` IS NULL);
 
 INSERT INTO `la_geo_media`
-  (name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
+(name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
 SELECT '快手','ai_phone','综合','综合全国',5,8,95,'当日','平台内收录',0,1,0.00,'使用系统中已绑定的 AI 手机账号自动发布(视频)',1,'kuaishou','video','kuaishou_phone',9997,UNIX_TIMESTAMP()
-WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='kuaishou' AND `delete_time` IS NULL);
+    WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='kuaishou' AND `delete_time` IS NULL);
 
 INSERT INTO `la_geo_media`
-  (name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
+(name,type,category,region,pc_weight,mobile_weight,success_rate,publish_speed,include_status,allow_url,can_geo_rank,price,remark,status,provider_code,content_form,platform_code,sort,create_time)
 SELECT '视频号','ai_phone','综合','综合全国',5,8,95,'当日','平台内收录',0,1,0.00,'使用系统中已绑定的 AI 手机账号自动发布(视频)',1,'sph','video','wx_channels',9996,UNIX_TIMESTAMP()
-WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='sph' AND `delete_time` IS NULL);
+    WHERE NOT EXISTS (SELECT 1 FROM `la_geo_media` WHERE `provider_code`='sph' AND `delete_time` IS NULL);
 
 -- ============================================================
 -- 种子三:GEO 定时任务(la_dev_crontab,4 条;幂等)
@@ -522,5 +562,4 @@ WHERE NOT EXISTS (
 -- GEO/矩阵发布文案超过 varchar(2000) 会 1406，副标题改为 text
 ALTER TABLE `la_sv_publish_setting_detail`
 MODIFY COLUMN `material_subtitle` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '发布内容副标题';
-
 

@@ -321,6 +321,7 @@ const SCENE_CONFIG: Record<number, { label: string; platforms: PlatformItem[] }>
         platforms: [
             { type: DOYIN_TYPE, name: "抖音" },
             { type: XHS_TYPE, name: "小红书" },
+            { type: KUAISHOU_TYPE, name: "快手" },
         ],
     },
     2: {
@@ -328,6 +329,7 @@ const SCENE_CONFIG: Record<number, { label: string; platforms: PlatformItem[] }>
         platforms: [
             { type: DOYIN_TYPE, name: "抖音" },
             { type: XHS_TYPE, name: "小红书" },
+            { type: KUAISHOU_TYPE, name: "快手" },
         ],
     },
     3: {
@@ -373,7 +375,10 @@ const SCENE_CONFIG: Record<number, { label: string; platforms: PlatformItem[] }>
     },
     10: {
         label: "自动养号",
-        platforms: [{ type: DOYIN_TYPE, name: "抖音" }],
+        platforms: [
+            { type: DOYIN_TYPE, name: "抖音" },
+            { type: KUAISHOU_TYPE, name: "快手" },
+        ],
     },
     11: {
         label: "评论接管",
@@ -412,7 +417,20 @@ const ALL_SCENE_OPTIONS: SceneOption[] = Object.entries(SCENE_CONFIG).map(([v, c
     label: c.label,
 }));
 
-const getAvailablePlatforms = (scene: number): PlatformItem[] => SCENE_CONFIG[scene]?.platforms ?? [];
+/** 可选平台：本地平台配置 ∩ 后台「开放平台」开关；配置未加载或拉取失败时不过滤 */
+const getAvailablePlatforms = (scene: number): PlatformItem[] => {
+    const platforms = SCENE_CONFIG[scene]?.platforms ?? [];
+    const openTypes = openPlatformMap.value.get(scene);
+    if (!openTypes) return platforms;
+    return platforms.filter((p) => openTypes.has(p.type));
+};
+
+/** 回显/提交时剔除已关闭平台，避免关快手后仍按旧平台数锁定结束时间 */
+const filterOpenAccountTypes = (scene: number, accountTypes: number[]): number[] => {
+    const openTypes = openPlatformMap.value.get(scene);
+    if (!openTypes) return accountTypes;
+    return accountTypes.filter((type) => openTypes.has(type));
+};
 
 const getPlatformName = (scene: number, type: number): string =>
     SCENE_CONFIG[scene]?.platforms.find((p) => p.type == type)?.name ?? String(type);
@@ -465,6 +483,8 @@ const categoryOptions = ref<CategoryOption[]>([]);
 const categoryLoading = ref(false);
 /** 允许添加的场景；未加载完成前为空，避免短暂露出已关闭类型 */
 const allowAddSceneSet = ref<Set<number>>(new Set());
+/** scene → 后台开放的平台 account_type；无该 scene 的键表示不过滤 */
+const openPlatformMap = ref<Map<number, Set<number>>>(new Map());
 const sceneConfigLoaded = ref(false);
 
 const formData = reactive<TemplateForm>({
@@ -549,20 +569,37 @@ const fetchSceneAllowConfig = async () => {
                 .filter((item: any) => Number(item.allow_add) === 1)
                 .map((item: any) => Number(item.scene)),
         );
+        const platformMap = new Map<number, Set<number>>();
+        list.forEach((item: any) => {
+            if (!Array.isArray(item.allow_platforms)) return;
+            platformMap.set(
+                Number(item.scene),
+                new Set(
+                    item.allow_platforms
+                        .filter((platform: any) => Number(platform.status) === 1)
+                        .map((platform: any) => Number(platform.account_type)),
+                ),
+            );
+        });
+        openPlatformMap.value = platformMap;
     } catch {
-        // 配置拉取失败时不拦截编辑，回退展示全部类型
+        // 配置拉取失败时不拦截编辑，回退展示全部类型与全部平台
         allowAddSceneSet.value = new Set(ALL_SCENE_OPTIONS.map((item) => item.value));
+        openPlatformMap.value = new Map();
     } finally {
         sceneConfigLoaded.value = true;
     }
 };
 
+// 平台全部关闭的类型同样不可添加：加了也不会生成 24h 任务
 const addableSceneOptions = computed<SceneOption[]>(() =>
-    ALL_SCENE_OPTIONS.filter((item) => allowAddSceneSet.value.has(item.value)),
+    ALL_SCENE_OPTIONS.filter(
+        (item) => allowAddSceneSet.value.has(item.value) && getAvailablePlatforms(item.value).length > 0,
+    ),
 );
 
 /**
- * 下拉选项：仅 allow_add=1；
+ * 下拉选项：仅 allow_add=1 且有开放平台；
  * 当前行若已是关闭类型，仅临时回显该选项（禁用），避免污染「添加节点」可选列表。
  */
 const getSceneOptions = (task: TaskNode): SceneOption[] => {
@@ -615,6 +652,12 @@ const calcEndTime = (task: TaskNode): string => {
 };
 
 const getEndTime = (task: TaskNode): string => (task.scene === SCENE_VIDEO_PUBLISH ? calcEndTime(task) : task.end_time);
+
+const syncVideoPublishEndTime = (task: TaskNode) => {
+    if (task.scene !== SCENE_VIDEO_PUBLISH) return;
+    const endTime = calcEndTime(task);
+    if (endTime !== "--:--") task.end_time = endTime;
+};
 
 // ─── 校验单个任务的时间间隔（≥ 5 分钟）─────────────────────
 const checkDuration = (task: TaskNode): boolean => {
@@ -773,16 +816,22 @@ const setFormData = (data: any) => {
 
     if (Array.isArray(data.schedule)) {
         formData.schedule = data.schedule.map((node: any) => {
-            const sortedPlatforms: number[] = [...(node.platform ?? [])]
-                .sort((a: any, b: any) => a.order - b.order)
-                .map((p: any) => Number(p.account_type));
-            return {
+            const scene = node.scene ?? DEFAULT_SCENE;
+            const sortedPlatforms: number[] = filterOpenAccountTypes(
+                scene,
+                [...(node.platform ?? [])]
+                    .sort((a: any, b: any) => a.order - b.order)
+                    .map((p: any) => Number(p.account_type)),
+            );
+            const task: TaskNode = {
                 _key: Date.now() + Math.random(),
-                scene: node.scene ?? DEFAULT_SCENE,
+                scene,
                 account_types: sortedPlatforms,
                 start_time: normalizeTimeStr(node.start_time ?? ""),
                 end_time: normalizeTimeStr(node.end_time ?? ""),
             };
+            syncVideoPublishEndTime(task);
+            return task;
         });
     }
 };
@@ -921,15 +970,19 @@ const buildPayload = () => ({
     status: formData.status,
     description: formData.description,
     detail_content: formData.detail_content,
-    schedule: formData.schedule.map((t) => ({
-        scene: t.scene,
-        start_time: t.start_time,
-        end_time: getEndTime(t),
-        platform: t.account_types.map((account_type, idx) => ({
-            order: idx + 1,
-            account_type,
-        })),
-    })),
+    schedule: formData.schedule.map((t) => {
+        const accountTypes = filterOpenAccountTypes(t.scene, t.account_types);
+        const task = { ...t, account_types: accountTypes };
+        return {
+            scene: task.scene,
+            start_time: task.start_time,
+            end_time: getEndTime(task),
+            platform: accountTypes.map((account_type, idx) => ({
+                order: idx + 1,
+                account_type,
+            })),
+        };
+    }),
 });
 
 // ─── 提交 ────────────────────────────────────────────────────

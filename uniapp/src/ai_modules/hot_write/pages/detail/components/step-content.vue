@@ -93,6 +93,13 @@
                 </view>
             </view>
 
+            <view
+                v-if="step.confirmTip"
+                class="mx-[24rpx] mt-[14rpx] px-[18rpx] py-[12rpx] rounded-[12rpx] bg-[#fffbeb] border border-solid border-[#fde68a] flex items-start gap-[8rpx]">
+                <u-icon name="info-circle" color="#f59e0b" size="22"></u-icon>
+                <text class="text-[20rpx] text-[#d97706] leading-[1.6] flex-1">{{ step.confirmTip }}</text>
+            </view>
+
             <view class="px-[24rpx] pt-[16rpx] pb-[12rpx]">
                 <textarea
                     v-model="step.confirmContent"
@@ -246,6 +253,8 @@ interface Step {
     hashtags?: string[];
     needConfirm?: boolean;
     confirmContent?: string;
+    /** 待确认态的补充提示（如 AI 未生成出文案） */
+    confirmTip?: string;
     confirmLabel?: string;
     rejectLabel?: string;
     videoUrl?: string;

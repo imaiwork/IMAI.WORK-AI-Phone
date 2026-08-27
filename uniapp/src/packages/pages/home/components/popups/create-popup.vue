@@ -50,7 +50,7 @@
                     <view v-for="item in items" v-else :key="item.id" class="bg-white rounded-[32rpx] overflow-hidden">
                         <view
                             v-if="!isSocial(item) && item.publish_time"
-                            class="flex items-center gap-[12rpx] px-[28rpx] pt-[24rpx] pb-[20rpx] border-b-[2rpx] border-[#f9fafb]">
+                            class="flex items-center gap-[12rpx] px-[28rpx] pt-[24rpx] pb-[20rpx] border-[0] border-b-[2rpx] border-[#f9fafb]">
                             <text class="text-xs font-bold text-[#374151]">
                                 {{ formatPublishTime(item.publish_time) }}
                             </text>
@@ -78,7 +78,7 @@
                                 class="absolute top-[20rpx] left-[20rpx] px-[18rpx] py-[6rpx] rounded-full text-[20rpx] font-bold"
                                 :style="{
                                     background: shanjianTag(item).bg,
-                                    color: shanjianTag(item).color
+                                    color: shanjianTag(item).color,
                                 }">
                                 {{ shanjianTag(item).label }}
                             </view>
@@ -134,7 +134,7 @@
                         <view class="p-[28rpx] flex flex-col gap-[24rpx]">
                             <view
                                 v-if="canRegenerate(item)"
-                                class="flex gap-[16rpx] pb-[20rpx] border-b-[2rpx] border-[#f9fafb]">
+                                class="flex gap-[16rpx] pb-[20rpx] border-[0] border-b-[2rpx] border-[#f9fafb]">
                                 <view
                                     class="flex-1 flex items-center justify-center rounded-[24rpx] px-[24rpx] py-[20rpx] text-xs font-semibold text-primary bg-primary-light-9"
                                     @click="handleRegenerate(item)">
@@ -151,10 +151,7 @@
                                 v-model="item.content"
                                 multiline
                                 @save="handleSave(item)" />
-                            <editable-tags
-                                v-if="isSocial(item)"
-                                v-model="item._topicTags"
-                                @save="handleSave(item)" />
+                            <editable-tags v-if="isSocial(item)" v-model="item._topicTags" @save="handleSave(item)" />
                             <text v-if="item.poi || item.location" class="text-xs text-[#9ca3af]">
                                 ⌖ {{ item.poi || item.location }}
                             </text>

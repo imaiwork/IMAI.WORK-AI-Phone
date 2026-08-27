@@ -6,12 +6,13 @@ import feedback from "@/utils/feedback";
 export function useShare(
     contentList: ComputedRef<any[]>,
     containerRef: Ref<HTMLDivElement | null>,
-    getWebsiteConfig: any
+    getWebsiteConfig: any,
+    /** preview-share 的模板 ref，由组件声明后传入 */
+    previewShareRef: Ref<any>
 ) {
     const showShare = ref(false);
     const showPreviewShare = ref(false);
     const shareContentIndexList = ref<number[]>([]);
-    const previewShareRef = ref<any>(null);
 
     const isAllSelected = computed(
         () => shareContentIndexList.value.length === contentList.value.length && contentList.value.length > 0
@@ -20,7 +21,8 @@ export function useShare(
     const handleShare = () => {
         showShare.value = true;
         shareContentIndexList.value = contentList.value
-            .map((item, index) => (!item.error && !item.stop_reply ? index : false))
+            // 只排除报错和完全空的气泡；停止生成但已经有正文的仍然可以导出
+            .map((item, index) => (!item.error && (item.reply || item.message) ? index : false))
             .filter((v) => v !== false) as number[];
     };
 
@@ -180,7 +182,6 @@ export function useShare(
         showShare,
         showPreviewShare,
         shareContentIndexList,
-        previewShareRef,
         isAllSelected,
         handleShare,
         handleSelectAll,

@@ -4,10 +4,12 @@ namespace app\common\model\sv;
 
 use app\common\model\BaseModel;
 use app\common\service\FileService;
-
+use think\model\concern\SoftDelete;
 class SvAddWechatRecord extends BaseModel {
 
+    use SoftDelete;
 
+    protected $deleteTime = 'delete_time';
 
 
      /**

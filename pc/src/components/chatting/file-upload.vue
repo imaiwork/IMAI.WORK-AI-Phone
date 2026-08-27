@@ -20,6 +20,7 @@ import { FileParams, UPLOAD_STATUS } from "@/composables/usePasteImage";
 import { cancelRequest } from "@/utils/http";
 import feedback from "@/utils/feedback";
 import dayjs from "dayjs";
+import { getFileExt, isImageFile } from "./upload-rules";
 
 const props = withDefaults(
   defineProps<{
@@ -29,6 +30,10 @@ const props = withDefaults(
     isPaste?: boolean;
     multiple?: boolean;
     type?: string;
+    /** 图片上限 (MB) */
+    imageMaxSize?: number;
+    /** 非图片文件上限 (MB) */
+    fileMaxSize?: number;
   }>(),
   {
     value: () => [],
@@ -36,7 +41,18 @@ const props = withDefaults(
     accept: "*",
     isPaste: true,
     multiple: true,
+    imageMaxSize: 20,
+    fileMaxSize: 20,
   }
+);
+
+// accept 中显式列出的扩展名（如 ".pdf,.docx"），用于 JS 层校验；"*" / "image/*" 等 MIME 形式不做扩展名校验
+const acceptExts = computed(() =>
+  props.accept
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.startsWith("."))
+    .map((s) => s.slice(1))
 );
 
 const emit = defineEmits<{
@@ -62,10 +78,25 @@ const changeFile = async (e: Event) => {
     target.value = "";
     return;
   }
-  // 判断文件不能超过20M
-  const isOverSize = files.some((item: File) => item.size > 20 * 1024 * 1024);
-  if (isOverSize) {
-    feedback.msgError(`文件大小超出限制,最大支持20M`);
+  // 扩展名校验（防止用户在选择框切换"所有文件"绕过 accept）
+  if (acceptExts.value.length) {
+    const invalid = files.find((item: File) => !acceptExts.value.includes(getFileExt(item.name)));
+    if (invalid) {
+      feedback.msgError(`不支持的文件格式："${invalid.name}"`);
+      target.value = "";
+      return;
+    }
+  }
+  // 大小校验：图片与其他文件分别限制
+  const overSize = files.find((item: File) => {
+    const limit = isImageFile(item) ? props.imageMaxSize : props.fileMaxSize;
+    return item.size > limit * 1024 * 1024;
+  });
+  if (overSize) {
+    const limit = isImageFile(overSize) ? props.imageMaxSize : props.fileMaxSize;
+    feedback.msgError(
+      `${isImageFile(overSize) ? "图片" : "文件"}大小超出限制,最大支持${limit}M："${overSize.name}"`
+    );
     target.value = "";
     return;
   }

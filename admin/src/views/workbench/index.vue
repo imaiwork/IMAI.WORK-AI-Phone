@@ -198,6 +198,9 @@
                 <el-tab-pane label="爆款仿写">
                     <ConfigTable :data="getHotWriteConfig" />
                 </el-tab-pane>
+                <el-tab-pane label="热点追踪">
+                    <ConfigTable :data="getHotspotConfig" />
+                </el-tab-pane>
                 <el-tab-pane label="知识库">
                     <ConfigTable :data="getKnbConfig" />
                 </el-tab-pane>
@@ -371,6 +374,10 @@ const getSphConfig = computed(() => {
 
 const getHotWriteConfig = computed(() => {
     return workbenchData.tokens_lists.filter((item: any) => ["video_imitation_copywriting_parse"].includes(item.scene));
+});
+
+const getHotspotConfig = computed(() => {
+    return workbenchData.tokens_lists.filter((item: any) => ["hotspot_insight"].includes(item.scene));
 });
 
 const getOtherConfig = computed(() => {
