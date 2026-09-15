@@ -25,8 +25,17 @@ class PlayVideoTemplateSyncService
 
     /** 参与「内容是否变化」比对的字段 */
     private const CONTENT_FIELDS = [
-        'play', 'name', 'category', 'heat', 'duration_sec',
-        'video_url', 'cover_url', 'face_count', 'allow_bg_replace', 'script', 'sort',
+        'play',
+        'name',
+        'category',
+        'heat',
+        'duration_sec',
+        'video_url',
+        'cover_url',
+        'face_count',
+        'allow_bg_replace',
+        'script',
+        'sort',
     ];
 
     public static function syncFromTemplateCenter(): array
@@ -34,17 +43,43 @@ class PlayVideoTemplateSyncService
         $templates = TemplateCenterClient::playTemplates();
 
         $stats = [
-            'created' => 0, 'updated' => 0, 'unchanged' => 0, 'deleted' => 0,
-            'downloaded' => 0, 'uploaded' => 0, 'reused' => 0, 'skipped' => 0, 'total' => 0,
+            'created' => 0,
+            'updated' => 0,
+            'unchanged' => 0,
+            'deleted' => 0,
+            'downloaded' => 0,
+            'uploaded' => 0,
+            'reused' => 0,
+            'skipped' => 0,
+            'failed' => 0,
+            'failed_items' => [],
+            'total' => 0,
         ];
 
         $rows = [];
+        // 资源转存失败的模板：本轮跳过，但仍算「模板中心在架」，本地已有的旧行不被当成下架删掉
+        $failedIds = [];
         foreach ($templates as $item) {
             if (!is_array($item)) {
                 $stats['skipped']++;
                 continue;
             }
-            $row = self::normalizeTemplate($item, $stats);
+            try {
+                $row = self::normalizeTemplate($item, $stats);
+            } catch (\Throwable $e) {
+                // 单条资源挂了只跳过这一条（2026-09-15 qny.imai.work 被七牛下线，2 条模板把 23 条全堵死）
+                $failedId = trim((string)($item['ref_id'] ?? $item['id'] ?? ''));
+                if ($failedId !== '') {
+                    $failedIds[] = $failedId;
+                }
+                $stats['failed']++;
+                $stats['failed_items'][] = [
+                    'id'    => $failedId,
+                    'name'  => trim((string)($item['name'] ?? '')),
+                    'error' => $e->getMessage(),
+                ];
+                continue;
+            }
             if ($row === null) {
                 $stats['skipped']++;
                 continue;
@@ -53,12 +88,16 @@ class PlayVideoTemplateSyncService
         }
 
         if (empty($rows)) {
-            throw new Exception('玩法模板为空，已跳过清洗，避免误删本地数据');
+            $reason = $stats['failed'] > 0
+                ? '玩法模板资源全部转存失败(' . $stats['failed'] . '条)，首条: ' . $stats['failed_items'][0]['error']
+                : '玩法模板为空';
+            throw new Exception($reason . '，已跳过清洗，避免误删本地数据');
         }
 
         Db::startTrans();
         try {
             $remoteIds = array_keys($rows);
+            $keepIds = array_values(array_unique(array_merge($remoteIds, $failedIds)));
             $existingRows = Db::name('play_video_template')
                 ->whereIn('id', $remoteIds)
                 ->select()
@@ -87,7 +126,7 @@ class PlayVideoTemplateSyncService
                 $stats['updated']++;
             }
 
-            $stats['deleted'] = Db::name('play_video_template')->whereNotIn('id', $remoteIds)->delete();
+            $stats['deleted'] = Db::name('play_video_template')->whereNotIn('id', $keepIds)->delete();
             $stats['total'] = count($rows);
             Db::commit();
         } catch (\Throwable $e) {

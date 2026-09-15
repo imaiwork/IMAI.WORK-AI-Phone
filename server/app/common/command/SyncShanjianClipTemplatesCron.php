@@ -49,9 +49,15 @@ class SyncShanjianClipTemplatesCron extends Command
             // 爆款玩法模板走同一个定时任务（2026-09-02）；两域互不阻塞
             try {
                 $playResult = \app\common\service\PlayVideoTemplateSyncService::syncFromTemplateCenter();
-                $message = '同步玩法模板成功: ' . json_encode($playResult, JSON_UNESCAPED_UNICODE);
+                $partialFailed = ($playResult['failed'] ?? 0) > 0;
+                $message = ($partialFailed ? '同步玩法模板部分失败(已跳过失败条目): ' : '同步玩法模板成功: ')
+                    . json_encode($playResult, JSON_UNESCAPED_UNICODE);
                 $output->writeln($message);
-                Log::channel('crontab')->info($message);
+                if ($partialFailed) {
+                    Log::channel('crontab')->error($message);
+                } else {
+                    Log::channel('crontab')->info($message);
+                }
             } catch (\Throwable $e) {
                 $ok = false;
                 $message = '同步玩法模板失败: ' . $e->getMessage();

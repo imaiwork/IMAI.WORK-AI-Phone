@@ -77,7 +77,7 @@
                 isHome ? 'bg-white chat-bottom-white pb-[16rpx]' : '',
                 isCoze || isStaff ? 'mb-[40rpx]' : isHome ? '' : 'mb-[20rpx]',
             ]">
-            <view class="relative z-[79] chat-bottom-box" @tap.stop>
+            <view class="relative z-[79] chat-bottom-box">
                 <view class="flex flex-col">
                     <!-- 对话工具栏：键盘期折叠隐藏（不卸载，避免丢横向滚动/输入跳动）；收起后延迟展开防点穿 -->
                     <scroll-view
@@ -200,10 +200,10 @@
                                             opt.mode === 'image'
                                                 ? 'photo'
                                                 : opt.mode === 'map'
-                                                ? 'map'
-                                                : opt.mode === 'video'
-                                                ? 'play-right'
-                                                : 'file-text'
+                                                  ? 'map'
+                                                  : opt.mode === 'video'
+                                                    ? 'play-right'
+                                                    : 'file-text'
                                         "
                                         :size="24"
                                         color="#6B7280"></u-icon>
@@ -1379,7 +1379,7 @@ watch(
 );
 
 onUnmounted(() => {
-    chatClose();
+    // 父页在切模式/离开时已停止对话；卸载时再 emit 会命中新面板复用的原生事件编号。
     hideKeyboard();
     if (scrollToLowerTimer) clearTimeout(scrollToLowerTimer);
 });
